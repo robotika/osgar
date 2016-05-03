@@ -1,0 +1,3 @@
+[submodule "apyros"]
+	path = apyros
+	url = https://github.com/robotika/apyros.git
