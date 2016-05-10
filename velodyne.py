@@ -67,9 +67,11 @@ if __name__ == "__main__":
         print __doc__
         sys.exit(2)
     metalog=None
-    if len(sys.argv) > 2:
-        metalog = MetaLog( filename=sys.argv[2] )
-    if len(sys.argv) > 3 and sys.argv[3] == 'F':
+    if 'meta_' in sys.argv[1]:
+        metalog = MetaLog(filename=sys.argv[1])
+    elif len(sys.argv) > 2:
+        metalog = MetaLog(filename=sys.argv[2])
+    if len(sys.argv) > 2 and sys.argv[-1] == 'F':
         disableAsserts()
 
     sensor = Velodyne(metalog=metalog)
