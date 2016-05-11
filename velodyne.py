@@ -21,6 +21,12 @@ PORT = 2368
 LASER_ANGLES = [-15, 1, -13, 3, -11, 5, -9, 7, -7, 9, -5, 11, -3, 13, -1, 15]
 NUM_LASERS = 16
 
+def min_dist(data):
+    mask = (data > 0)
+    if np.any(mask):
+        return np.min(data[mask]) * 0.002
+    return None
+
 class Velodyne:
     def __init__(self, metalog=None):
         if metalog is None:
@@ -31,6 +37,9 @@ class Velodyne:
         self.buf = ""
         self.time = None
         self.dist = np.zeros( (360, NUM_LASERS), dtype=np.uint16)
+        self.scan_index = 0
+        self.prev_azimuth = None
+        self.safe_dist = None
         
 
     def parse(self, data):
@@ -43,6 +52,12 @@ class Velodyne:
             flag, azi = struct.unpack_from("<HH", block)
             assert flag == 0xEEFF, hex(flag)
             azimuth = azi/100.0
+            if self.prev_azimuth is not None and azimuth < self.prev_azimuth:
+                self.scan_index += 1
+                self.safe_dist = min_dist(self.dist[160:200])
+                if self.scan_index % 10 == 0:
+                    print self.scan_index, self.safe_dist
+            self.prev_azimuth = azimuth
             # H-distance (2mm step), B-reflectivity (0
             arr = struct.unpack_from('<' + "HB"*32, block, 4)
             for i in xrange(NUM_LASERS):
@@ -50,8 +65,6 @@ class Velodyne:
         timestamp, factory = struct.unpack_from("<IH", data)
         assert factory == 0x2237, hex(factory)  # 0x22=VLP-16, 0x37=Strongest Return
         self.time = timestamp/1000000.0
-
-
 
     def update(self):
         while True:
@@ -77,8 +90,6 @@ if __name__ == "__main__":
     sensor = Velodyne(metalog=metalog)
     for i in xrange(10000):
         sensor.update()
-    for i in xrange(0, 360, 10):
-        print sensor.dist[i]
 
 # vim: expandtab sw=4 ts=4 
 
