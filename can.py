@@ -200,7 +200,8 @@ class CAN():
         ser = serial.Serial('COM4',115200,dsrdtr=0) # alt COM9
         useDTR = True
       else:
-        ser = RTSerial('/dev/rtp0')                 # alt /dev/ttyS0
+#        ser = RTSerial('/dev/rtp0')                 # alt /dev/ttyS0
+        ser = serial.Serial('/dev/ttyS0', 115200, dsrdtr=0)
         useDTR = False
       if useDTR:
         ser.setDTR(0)
