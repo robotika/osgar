@@ -2,16 +2,17 @@
 """
   Velodyne VLP-16 wrapper
   usage:
-       ./velodyne.py <task> [<metalog> [<F>]]
+       ./velodyne.py <task|thread> [<metalog> [<F>]]
 """
 import sys
 import socket
-import datetime
+from datetime import datetime, timedelta
 import struct
 import time
 import numpy as np
 
 from apyros.metalog import MetaLog, disableAsserts
+from threading import Thread,Event,Lock
 
 
 HOST = "192.168.1.201"
@@ -74,6 +75,36 @@ class Velodyne:
                 break
         self.parse(data)
 
+# TODO general wrapper for threaded sources
+class VelodyneThread(Thread):
+    def __init__(self, sensor):
+        Thread.__init__(self)
+        self.setDaemon(True)
+        self.lock = Lock()
+        self.shouldIRun = Event()
+        self.shouldIRun.set()
+        self.sensor = sensor
+        self._result = None
+        self._last_index = None
+
+    def run(self):
+        while self.shouldIRun.isSet():
+            sensor.update()
+            if self._last_index != sensor.scan_index:
+                self.lock.acquire()
+                self._result = sensor.scan_index, sensor.safe_dist
+                self._last_index = sensor.scan_index
+                self.lock.release()
+
+    def scan_safe_dist(self):
+        self.lock.acquire()
+        ret = self._result  # copy?
+        self.lock.release()
+        return ret
+
+    def requestStop(self):
+        self.shouldIRun.clear()
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -88,8 +119,21 @@ if __name__ == "__main__":
         disableAsserts()
 
     sensor = Velodyne(metalog=metalog)
-    for i in xrange(10000):
-        sensor.update()
+    if sys.argv[1] == 'thread':
+        thr = VelodyneThread(sensor)
+        start_time = datetime.now()
+        thr.start()
+        prev = None
+        while datetime.now() - start_time < timedelta(seconds=3.0):
+            curr = thr.scan_safe_dist()
+            if prev != curr:
+                print curr
+            prev = curr
+        thr.requestStop()
+        thr.join()
+    else:
+        for i in xrange(1000):
+            sensor.update()
 
 # vim: expandtab sw=4 ts=4 
 
