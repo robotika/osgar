@@ -197,7 +197,7 @@ class CAN():
       self.com = com
     else:
       if os.name == 'nt': # windows (could be also used sys.platform == 'win32'
-        ser = serial.Serial('COM4',115200,dsrdtr=0) # alt COM9
+        ser = serial.Serial('COM20',115200,dsrdtr=0) # alt COM9
         useDTR = True
       else:
 #        ser = RTSerial('/dev/rtp0')                 # alt /dev/ttyS0
@@ -279,8 +279,9 @@ class CAN():
   def collectPeriodPackets( self ):
     packets = {}
     id = 0
-    while id!=128:
+    while id != 0x281:  #id!=128:
       id,data=self.readPacket()
+      print id, data
       packets[ id ] = data
     return packets
 

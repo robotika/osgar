@@ -6,9 +6,15 @@
 """
 import sys
 from can import CAN, DummyMemoryLog
+from time import sleep
+
+PULSE_DURATION = 0.3  #0.5  # seconds
+
+CENTER_GAS_MIN = 14500
+CENTER_GAS_MAX = 16500
 
 class JohnDeer(object):
-    UPDATE_TIME_FREQUENCY = 20.0  # Hz 
+    UPDATE_TIME_FREQUENCY = 5.0  #20.0  # Hz 
 
     def __init__(self, can=None):
         if can is None:
@@ -17,6 +23,8 @@ class JohnDeer(object):
         else:
             self.can = can
         self.time = 0.0
+        self.gas = None
+        self.buttonGo = None
         self.desired_speed = 0.0
         self.extensions = []
         self.data_sources = []
@@ -50,6 +58,12 @@ class JohnDeer(object):
                 print "RUNNING", moduleId
                 self.modulesForRestart.remove(moduleId)
 
+    def update_gas_status(self, (id, data)):
+        if id == 0x281:
+            assert( len(data)>=8 ) 
+            self.gas = data[1]*256 + data[0]
+            self.buttonGo = (data[-1] > 64)
+
     def update_encoders(self, packet):
         pass
 
@@ -59,17 +73,31 @@ class JohnDeer(object):
     def send_speed(self):
         pass
 
+    def pulse_forward(self, duration=PULSE_DURATION):
+        print "PULSE FORWARD", duration
+        self.can.sendData(0x201, [0xC])
+        sleep(duration)
+        self.can.sendData(0x201, [0])
+
+    def pulse_backward(self, duration=PULSE_DURATION):
+        print "PULSE BACKWARD", duration
+        self.can.sendData(0x201, [3])
+        sleep(duration)
+        self.can.sendData(0x201, [0])
+
     def update(self):
         while True:
             packet = self.can.readPacket()
             self.update_encoders(packet)
+            self.update_gas_status(packet)
             self.update_emergency_stop(packet)
             self.check_modules(packet)
             for (name,e) in self.extensions:
                 e(self, packet[0], packet[1])
             
             # make sure that all updates get also termination SYNC (0x80)
-            if packet[0] == 0x80:  
+#            print packet
+            if packet[0] == 0x281:  # 0x80:  
                 break
 
             # send data related to other sources
@@ -89,16 +117,57 @@ class JohnDeer(object):
             self.update()
             # TODO verify encoders/motion
 
+def center(robot):
+  print "CENTER"
+  for i in xrange(10):
+    start_time = robot.time
+    arr = []
+    while robot.time - start_time < 1.0:
+        robot.update()
+        print robot.time, robot.gas
+        arr.append(robot.gas)
+    assert len(arr) > 0
+    avr = sum(arr)/float(len(arr))
+    print avr
+    if avr < CENTER_GAS_MIN:
+        robot.pulse_forward(0.05)
+    elif avr > CENTER_GAS_MAX:
+        robot.pulse_backward(0.05)
+    else:
+        break
+  print "CENTER DONE"
+
+
+def wait_for_start(robot):
+    print "WAIT FOR START"
+    while not robot.buttonGo:
+        robot.update()
+    print "!!! GO !!!"
 
 def self_test():
-    com = DummyMemoryLog()
-    com.data += [0x80>>3, 0]*10000  # just test/hack without CAN module
-    robot = JohnDeer(can=CAN(com=com))
+#    com = DummyMemoryLog()
+#    com.data += [0x80>>3, 0]*10000  # just test/hack without CAN module
+    robot = JohnDeer() # can=CAN(com=com))
+    center(robot)
+    wait_for_start(robot)
     robot.desired_speed = 0.5
     start_time = robot.time
+#    robot.can.sendData(0x201, [0xC])
+    robot.pulse_forward()
+#    robot.pulse_backward()
     while robot.time - start_time < 10.0:
         robot.update()
-    robot.stop()
+        print robot.time, robot.gas
+        if not robot.buttonGo:
+            print "STOP!"
+            break
+#    robot.pulse_backward()
+#    start_time = robot.time
+#    while robot.time - start_time < 2.0:
+#        robot.update()
+#        print robot.time, robot.gas
+#    robot.stop()
+    center(robot)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
