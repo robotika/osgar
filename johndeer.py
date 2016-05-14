@@ -13,6 +13,8 @@ PULSE_DURATION = 0.3  #0.5  # seconds
 CENTER_GAS_MIN = 14500
 CENTER_GAS_MAX = 16500
 
+GO_LIMIT = 18000
+
 class JohnDeer(object):
     UPDATE_TIME_FREQUENCY = 5.0  #20.0  # Hz 
 
@@ -144,6 +146,24 @@ def wait_for_start(robot):
         robot.update()
     print "!!! GO !!!"
 
+def go(robot):
+    print "GO"
+    for i in xrange(10):
+        start_time = robot.time
+        arr = []
+        while robot.time - start_time < 1.0:
+            robot.update()
+            print robot.time, robot.gas
+            arr.append(robot.gas)
+        assert len(arr) > 0
+        avr = sum(arr)/float(len(arr))
+        print avr
+        if avr < GO_LIMIT:
+            robot.pulse_forward(0.1)
+        else:
+            break
+    print "RUNNING!"
+
 def self_test():
 #    com = DummyMemoryLog()
 #    com.data += [0x80>>3, 0]*10000  # just test/hack without CAN module
@@ -153,9 +173,10 @@ def self_test():
     robot.desired_speed = 0.5
     start_time = robot.time
 #    robot.can.sendData(0x201, [0xC])
-    robot.pulse_forward()
+#    robot.pulse_forward()
+    go(robot)
 #    robot.pulse_backward()
-    while robot.time - start_time < 10.0:
+    while robot.time - start_time < 333.0:
         robot.update()
         print robot.time, robot.gas
         if not robot.buttonGo:
