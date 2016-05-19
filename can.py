@@ -202,7 +202,7 @@ class CAN():
       else:
 #        ser = RTSerial('/dev/rtp0')                 # alt /dev/ttyS0
         ser = serial.Serial('/dev/ttyS0', 115200, dsrdtr=1)
-	ser.setRTS()
+        ser.setRTS()
         useDTR = True #False
       if useDTR:
         ser.setDTR(0)
