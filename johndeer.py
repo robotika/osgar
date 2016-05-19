@@ -5,7 +5,7 @@
        ./johndeer.py <task> [<metalog> [<F>]]
 """
 import sys
-from can import CAN, DummyMemoryLog
+from can import CAN, ReplayLogInputsOnly
 from time import sleep
 
 PULSE_DURATION = 0.3  #0.5  # seconds
@@ -164,10 +164,11 @@ def go(robot):
             break
     print "RUNNING!"
 
-def self_test():
-#    com = DummyMemoryLog()
-#    com.data += [0x80>>3, 0]*10000  # just test/hack without CAN module
-    robot = JohnDeer() # can=CAN(com=com))
+def self_test(replay_filename=None):
+    if replay_filename is None:
+        robot = JohnDeer()
+    else:
+        robot = JohnDeer(can=CAN(ReplayLogInputsOnly(replay_filename)))
     center(robot)
     wait_for_start(robot)
     robot.desired_speed = 0.5
@@ -194,7 +195,10 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print __doc__
         sys.exit(2)
-    self_test()
+    if sys.argv[1].endswith('.log'):
+        self_test(replay_filename=sys.argv[1])
+    else:
+        self_test()
 
 # vim: expandtab sw=4 ts=4 
 

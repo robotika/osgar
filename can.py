@@ -49,7 +49,7 @@ class LogIt():
 
 #-------------------------------------------------------------------
 
-class ReplyLog():
+class ReplayLog():
   "Read & verify log"
   def __init__( self, filename, assertWrite=True ):
     print "ReplyLog", filename
@@ -82,7 +82,7 @@ class ReplyLog():
 
 #-------------------------------------------------------------------
 
-class ReplyLogInputsOnly():
+class ReplayLogInputsOnly():
   "Read & verify log"
   def __init__( self, filename ):
     print "ReplyLogInputOnly", filename
