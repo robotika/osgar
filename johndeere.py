@@ -2,7 +2,7 @@
 """
   Wrapper for modified tractor John Deer X300R for autonomous driving.
   usage:
-       ./johndeer.py <task> [<metalog> [<F>]]
+       ./johndeere.py <task> [<metalog> [<F>]]
 """
 import sys
 from can import CAN, ReplayLogInputsOnly
@@ -15,7 +15,7 @@ CENTER_GAS_MAX = 16500
 
 GO_LIMIT = 18000
 
-class JohnDeer(object):
+class JohnDeere(object):
     UPDATE_TIME_FREQUENCY = 5.0  #20.0  # Hz 
 
     def __init__(self, can=None):
@@ -65,6 +65,7 @@ class JohnDeer(object):
             assert( len(data)>=8 ) 
             self.gas = data[1]*256 + data[0]
             self.buttonGo = (data[-1] > 64)
+            print "gas\t{}".format(self.gas)
 
     def update_encoders(self, packet):
         pass
@@ -98,7 +99,6 @@ class JohnDeer(object):
                 e(self, packet[0], packet[1])
             
             # make sure that all updates get also termination SYNC (0x80)
-#            print packet
             if packet[0] == 0x281:  # 0x80:  
                 break
 
@@ -166,9 +166,9 @@ def go(robot):
 
 def self_test(replay_filename=None):
     if replay_filename is None:
-        robot = JohnDeer()
+        robot = JohnDeere()
     else:
-        robot = JohnDeer(can=CAN(ReplayLogInputsOnly(replay_filename)))
+        robot = JohnDeere(can=CAN(ReplayLogInputsOnly(replay_filename)))
     center(robot)
     wait_for_start(robot)
     robot.desired_speed = 0.5
