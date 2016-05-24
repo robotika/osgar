@@ -7,6 +7,7 @@
 import sys
 from can import CAN, ReplayLogInputsOnly
 from time import sleep
+from sdoplg import ReadSDO, WriteSDO 
 
 PULSE_DURATION = 0.3  #0.5  # seconds
 
@@ -14,6 +15,28 @@ CENTER_GAS_MIN = 14500
 CENTER_GAS_MAX = 16500
 
 GO_LIMIT = 18000
+
+# TODO move inside or remove when CAN module is upgraded
+def setup_faster_update(can):
+    reader = ReadSDO( 1, 0x1801, 5 )
+    for packet in reader.generator():
+        if packet != None:
+            can.sendData( *packet )
+        reader.update( can.readPacket() )
+    print "RESULT DATA (before):", reader.result 
+
+    writer = WriteSDO( 1, 0x1801, 5, [50, 0] )
+    for cmd in writer.generator():
+        if cmd:
+            can.sendData( *cmd )
+        writer.update( can.readPacket() ) 
+
+    for packet in reader.generator():
+        if packet != None:
+            can.sendData( *packet )
+        reader.update( can.readPacket() )
+    print "RESULT DATA (after):", reader.result 
+
 
 class JohnDeere(object):
     UPDATE_TIME_FREQUENCY = 5.0  #20.0  # Hz 
