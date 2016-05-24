@@ -7,7 +7,8 @@
 import sys
 from can import CAN, DummyMemoryLog, ReplayLogInputsOnly
 from gps import GPS, DummyGPS
-from johndeere import JohnDeere, center, go, wait_for_start
+from johndeere import (JohnDeere, center, go, wait_for_start, 
+                       setup_faster_update)
 from apyros.metalog import MetaLog, disableAsserts
 
 class RoboOrienteering:
@@ -56,7 +57,7 @@ def ver0(metalog):
     if not metalog.replay:
         can = CAN()
         can.relog(metalog.getLog('can'))
-        can.resetModules()
+        can.resetModules(configFn=setup_faster_update)
         robot = JohnDeere(can=can)  # TODO persistent CAN
     else:
         robot = JohnDeere(can=CAN(ReplayLogInputsOnly(metalog.getLog('can'))))
