@@ -54,7 +54,10 @@ def ver0(metalog):
     assert metalog is not None
 
     if not metalog.replay:
-        robot = JohnDeere(can=CAN())  # TODO persistent CAN with can.relog('logs/r')
+        can = CAN()
+        can.relog(metalog.getLog('can'))
+        can.resetModules()
+        robot = JohnDeere(can=can)  # TODO persistent CAN
     else:
         robot = JohnDeere(can=CAN(ReplayLogInputsOnly(metalog.getLog('can'))))
     mount_sensor(GPS, robot, metalog)
