@@ -5,7 +5,7 @@
        ./ro.py <task> [<metalog> [<F>]]
 """
 import sys
-from can import CAN, DummyMemoryLog, ReplayLogInputsOnly
+from can import CAN, DummyMemoryLog, ReplayLogInputsOnly, ReplayLog
 from gps import GPS, DummyGPS
 from johndeere import (JohnDeere, center, go, wait_for_start, 
                        setup_faster_update)
@@ -60,7 +60,12 @@ def ver0(metalog):
         can.resetModules(configFn=setup_faster_update)
         robot = JohnDeere(can=can)  # TODO persistent CAN
     else:
-        robot = JohnDeere(can=CAN(ReplayLogInputsOnly(metalog.getLog('can'))))
+        if metalog.areAssertsEnabled():
+            can=CAN(ReplayLog(metalog.getLog('can')), skipInit=True)
+        else:
+            can=CAN(ReplayLogInputsOnly(metalog.getLog('can')), skipInit=True)
+        can.resetModules(configFn=setup_faster_update)
+        robot = JohnDeere(can=can)
     mount_sensor(GPS, robot, metalog)
     center(robot)
     wait_for_start(robot)
