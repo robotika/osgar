@@ -27,7 +27,12 @@ class LogIt():
   def relog( self, prefix ):
     today = datetime.date.today()
     t = time.localtime()[3:6]
-    filename = prefix + "%02d%02d%02d_%02d%02d%02d.log" % ( today.year % 100, today.month, today.day, t[0], t[1], t[2] )
+    suffix = "%02d%02d%02d_%02d%02d%02d.log" % ( today.year % 100, today.month, today.day, t[0], t[1], t[2] )
+    if prefix.endswith(suffix):
+      # hack for already whole name - note, that 1s delay will cause detection failure
+      filename = prefix
+    else:
+      filename = prefix + suffix
     self._logFile = open( filename, "wb" )
     print "LogIt:", filename
     return filename
