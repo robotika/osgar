@@ -43,9 +43,6 @@ EduroMaxi code:
     self.addExtension( gpsDataExtension ) 
 """
 
-def setup_faster_update(can):
-    pass  # TODO and remove it when configured properly
-
 def mount_sensor(sensor_factory, robot, metalog):
     if metalog.replay:
         pass
