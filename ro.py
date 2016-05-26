@@ -6,10 +6,14 @@
 """
 import sys
 from can import CAN, DummyMemoryLog, ReplayLogInputsOnly, ReplayLog
-from gps import GPS, DummyGPS
+from gps import GPS
+from gps import DummyGPS as DummySensor  # TODO move to apyros, as mock
+from velodyne import VelodyneThread
 from johndeere import (JohnDeere, center, go, wait_for_start, 
                        setup_faster_update)
 from apyros.metalog import MetaLog, disableAsserts
+from apyros.sourcelogger import SourceLogger
+
 
 class RoboOrienteering:
     def __init__(self, robot, configFilename, verbose=False):
@@ -43,27 +47,45 @@ EduroMaxi code:
     self.addExtension( gpsDataExtension ) 
 """
 
-def mount_sensor(sensor_factory, robot, metalog):
-    if metalog.replay:
-        pass
-
+def gps_data_extension(robot, id, data):
+    if id=='gps':
+        robot.gps_data = data
+        if robot.localization is not None:
+            robot.localization.updateGPS(data) 
 
 def ver0(metalog):
     assert metalog is not None
 
-    if not metalog.replay:
-        can = CAN()
-        can.relog(metalog.getLog('can'))
-        can.resetModules(configFn=setup_faster_update)
-        robot = JohnDeere(can=can)  # TODO persistent CAN
-    else:
+    can_log_name = metalog.getLog('can')
+    if metalog.replay:
         if metalog.areAssertsEnabled():
-            can=CAN(ReplayLog(metalog.getLog('can')), skipInit=True)
+            can = CAN(ReplayLog(can_log_name), skipInit=True)
         else:
-            can=CAN(ReplayLogInputsOnly(metalog.getLog('can')), skipInit=True)
-        can.resetModules(configFn=setup_faster_update)
-        robot = JohnDeere(can=can)
-    mount_sensor(GPS, robot, metalog)
+            can = CAN(ReplayLogInputsOnly(can_log_name), skipInit=True)
+    else:
+        can = CAN()
+        can.relog(can_log_name)
+    can.resetModules(configFn=setup_faster_update)
+    robot = JohnDeere(can=can)
+    robot.UPDATE_TIME_FREQUENCY = 20.0  # TODO change internal and integrate setup
+
+    robot.localization = None  # TODO
+
+    # mount_sensor(GPS, robot, metalog)
+    gps_log_name = metalog.getLog('gps')
+    print gps_log_name
+    if metalog.replay:
+        robot.gps = DummySensor()
+        function = SourceLogger(None, gps_log_name).get
+    else:
+        robot.gps = GPS(verbose=0)
+        function = SourceLogger(robot.gps.coord, gps_log_name).get
+    robot.gps_data = None
+    robot.register_data_source('gps', function, gps_data_extension) 
+
+
+    robot.gps.start()
+
     center(robot)
     wait_for_start(robot)
     robot.desired_speed = 0.5
@@ -71,11 +93,13 @@ def ver0(metalog):
     go(robot)
     while robot.time - start_time < 30*60:  # RO timelimit 30 minutes
         robot.update()
-        print robot.time, robot.gas
+        print robot.time, robot.gas, robot.gps_data
         if not robot.buttonGo:
             print "STOP!"
             break
     center(robot)
+    robot.gps.requestStop()
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

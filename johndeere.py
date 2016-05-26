@@ -83,6 +83,11 @@ class JohnDeere(object):
                 print "RUNNING", moduleId
                 self.modulesForRestart.remove(moduleId)
 
+    def register_data_source(self, name, function, extension=None):
+        self.data_sources.append((name, function))
+        if extension is not None:
+            self.extensions.append((name, extension))
+
     def update_gas_status(self, (id, data)):
         if id == 0x281:
             assert( len(data)>=8 ) 
