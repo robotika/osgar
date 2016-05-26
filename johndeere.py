@@ -93,7 +93,6 @@ class JohnDeere(object):
             assert( len(data)>=8 ) 
             self.gas = data[1]*256 + data[0]
             self.buttonGo = (data[-1] > 64)
-            print "gas\t{}".format(self.gas)
 
     def update_encoders(self, packet):
         pass
@@ -154,7 +153,6 @@ def center(robot):
     arr = []
     while robot.time - start_time < 1.0:
         robot.update()
-        print robot.time, robot.gas
         arr.append(robot.gas)
     assert len(arr) > 0
     avr = sum(arr)/float(len(arr))
@@ -172,7 +170,7 @@ def wait_for_start(robot):
     print "WAIT FOR START"
     while not robot.buttonGo:
         robot.update()
-    print "!!! GO !!!"
+    print "STARTED ..."
 
 def go(robot):
     print "GO"
@@ -181,7 +179,6 @@ def go(robot):
         arr = []
         while robot.time - start_time < 1.0:
             robot.update()
-            print robot.time, robot.gas
             arr.append(robot.gas)
         assert len(arr) > 0
         avr = sum(arr)/float(len(arr))

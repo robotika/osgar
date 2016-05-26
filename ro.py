@@ -15,43 +15,20 @@ from apyros.metalog import MetaLog, disableAsserts
 from apyros.sourcelogger import SourceLogger
 
 
-class RoboOrienteering:
-    def __init__(self, robot, configFilename, verbose=False):
-        self.robot = robot
-        self.mount_sensor(GPS)
-
-    def mount_sensor(self, sensor_factory):
-        """Register sensor as robot extension"""
-        # sensor specific start-up params
-        # global start, global terminate
-        pass
-"""
-EduroMaxi code:
-  def attachGPS(self):
-    if self.replyLog is None:
-      self.gps = GPS( verbose=0 )
-      name = timeName( "logs/src_gps_", "log" )
-      if self.metaLog:
-        self.metaLog.write("GPSLOG:\t" + name + "\n")
-        self.metaLog.flush()
-      self.registerDataSource( 'gps', SourceLogger( self.gps.coord, name ).get )
-    else:
-      self.gps = DummyGPS()
-      if self.metaLog:
-        gpsSrcLog = self.metaLogName( "GPSLOG:" )
-      else:
-        gpsSrcLog = self.replyLog[:-18]+"src_gps_"+self.replyLog[-17:]
-      print "GPSLOG:", gpsSrcLog
-      self.registerDataSource( 'gps', SourceLogger( None, gpsSrcLog ).get )
-    self.gpsData = None
-    self.addExtension( gpsDataExtension ) 
-"""
+SAFE_DISTANCE_STOP = 2.5  # meters
+SAFE_DISTANCE_GO = SAFE_DISTANCE_STOP + 0.5
 
 def gps_data_extension(robot, id, data):
     if id=='gps':
         robot.gps_data = data
         if robot.localization is not None:
             robot.localization.updateGPS(data) 
+
+def velodyne_data_extension(robot, id, data):
+    if id=='velodyne':
+        robot.velodyne_data = data
+
+
 
 def ver0(metalog):
     assert metalog is not None
@@ -71,6 +48,7 @@ def ver0(metalog):
 
     robot.localization = None  # TODO
 
+
     # mount_sensor(GPS, robot, metalog)
     gps_log_name = metalog.getLog('gps')
     print gps_log_name
@@ -83,21 +61,50 @@ def ver0(metalog):
     robot.gps_data = None
     robot.register_data_source('gps', function, gps_data_extension) 
 
+    # mount_sensor(VelodyneThread, robot, metalog)
+    velodyne_log_name = metalog.getLog('velodyne')
+    print velodyne_log_name
+    if metalog.replay:
+        robot.velodyne = DummySensor()
+        function = SourceLogger(None, velodyne_log_name).get
+    else:
+        robot.velodyne = VelodyneThread(verbose=0)
+        function = SourceLogger(robot.velodyne.scan_safe_dist, velodyne_log_name).get
+    robot.velodyne_data = None
+    robot.register_data_source('velodyne', function, velodyne_data_extension) 
 
-    robot.gps.start()
+
+    robot.gps.start()  # ASAP so we get GPS fix
 
     center(robot)
     wait_for_start(robot)
+
+    robot.velodyne.start()  # after start to minimize amount of useless data
+
+    moving = False
     robot.desired_speed = 0.5
     start_time = robot.time
-    go(robot)
+    prev_gps = robot.gps_data
     while robot.time - start_time < 30*60:  # RO timelimit 30 minutes
         robot.update()
-        print robot.time, robot.gas, robot.gps_data
+        if robot.gps_data != prev_gps:
+            print robot.time, robot.gas, robot.gps_data, robot.velodyne_data
+            prev_gps = robot.gps_data
+        if moving:
+            if robot.velodyne_data is None or robot.velodyne_data < SAFE_DISTANCE_STOP:
+                print "!!! STOP !!! -",  robot.velodyne_data
+                center(robot)
+                moving = False
+        else:  # not moving
+            if robot.velodyne_data is not None and robot.velodyne_data > SAFE_DISTANCE_GO:
+                print "GO",  robot.velodyne_data
+                go(robot)
+                moving = True
         if not robot.buttonGo:
             print "STOP!"
             break
     center(robot)
+    robot.velodyne.requestStop()
     robot.gps.requestStop()
 
 
