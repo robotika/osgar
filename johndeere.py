@@ -130,12 +130,12 @@ class JohnDeere(object):
             if packet[0] == 0x281:  # 0x80:  
                 break
 
-            # send data related to other sources
-            for (id,fce) in self.data_sources:
-                data = fce()
-                if data != None:
-                    for (name,e) in self.extensions:
-                        e(self, id, data)
+        # send data related to other sources
+        for (id,fce) in self.data_sources:
+            data = fce()
+            if data != None:
+                for (name,e) in self.extensions:
+                    e(self, id, data)
 
         self.time += 1.0/self.UPDATE_TIME_FREQUENCY  
         self.send_speed()
