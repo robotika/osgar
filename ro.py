@@ -68,7 +68,7 @@ def ver0(metalog):
         robot.velodyne = DummySensor()
         function = SourceLogger(None, velodyne_log_name).get
     else:
-        robot.velodyne = VelodyneThread(verbose=0)
+        robot.velodyne = VelodyneThread()
         function = SourceLogger(robot.velodyne.scan_safe_dist, velodyne_log_name).get
     robot.velodyne_data = None
     robot.register_data_source('velodyne', function, velodyne_data_extension) 
