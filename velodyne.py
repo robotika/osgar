@@ -90,10 +90,10 @@ class VelodyneThread(Thread):
     def run(self):
         while self.shouldIRun.isSet():
             self.sensor.update()
-            if self._last_index != sensor.scan_index:
+            if self._last_index != self.sensor.scan_index:
                 self.lock.acquire()
-                self._result = sensor.scan_index, sensor.safe_dist
-                self._last_index = sensor.scan_index
+                self._result = self.sensor.scan_index, self.sensor.safe_dist
+                self._last_index = self.sensor.scan_index
                 self.lock.release()
 
     def scan_safe_dist(self):
