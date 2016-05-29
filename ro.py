@@ -8,7 +8,7 @@ import sys
 from can import CAN, DummyMemoryLog, ReplayLogInputsOnly, ReplayLog
 from gps import GPS
 from gps import DummyGPS as DummySensor  # TODO move to apyros, as mock
-from velodyne import VelodyneThread
+from velodyne import VelodyneThread, Velodyne
 from johndeere import (JohnDeere, center, go, wait_for_start, 
                        setup_faster_update)
 from apyros.metalog import MetaLog, disableAsserts
@@ -64,11 +64,12 @@ def ver0(metalog):
     # mount_sensor(VelodyneThread, robot, metalog)
     velodyne_log_name = metalog.getLog('velodyne')
     print velodyne_log_name
+    sensor = Velodyne(metalog=metalog)
     if metalog.replay:
         robot.velodyne = DummySensor()
         function = SourceLogger(None, velodyne_log_name).get
     else:
-        robot.velodyne = VelodyneThread(verbose=0)
+        robot.velodyne = VelodyneThread(sensor)
         function = SourceLogger(robot.velodyne.scan_safe_dist, velodyne_log_name).get
     robot.velodyne_data = None
     robot.register_data_source('velodyne', function, velodyne_data_extension) 
