@@ -91,13 +91,16 @@ def ver0(metalog):
         if robot.gps_data != prev_gps:
             print robot.time, robot.gas, robot.gps_data, robot.velodyne_data
             prev_gps = robot.gps_data
+        dist = None
+        if robot.velodyne_data is not None:
+            index, dist = robot.velodyne_data
         if moving:
-            if robot.velodyne_data is None or robot.velodyne_data < SAFE_DISTANCE_STOP:
+            if dist is None or dist < SAFE_DISTANCE_STOP:
                 print "!!! STOP !!! -",  robot.velodyne_data
                 center(robot)
                 moving = False
         else:  # not moving
-            if robot.velodyne_data is not None and robot.velodyne_data > SAFE_DISTANCE_GO:
+            if dist is not None and dist > SAFE_DISTANCE_GO:
                 print "GO",  robot.velodyne_data
                 go(robot)
                 moving = True
