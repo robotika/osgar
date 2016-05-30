@@ -62,7 +62,7 @@ def ver0(metalog):
     robot.register_data_source('gps', function, gps_data_extension) 
 
     # mount_sensor(VelodyneThread, robot, metalog)
-    velodyne_log_name = metalog.getLog('velodyne')
+    velodyne_log_name = metalog.getLog('velodyne_dist')
     print velodyne_log_name
     sensor = Velodyne(metalog=metalog)
     if metalog.replay:
