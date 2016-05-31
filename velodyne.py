@@ -55,7 +55,8 @@ class Velodyne:
             azimuth = azi/100.0
             if self.prev_azimuth is not None and azimuth < self.prev_azimuth:
                 self.scan_index += 1
-                self.safe_dist = min_dist(self.dist[160:200])
+# rotated 180deg -> this is back now:     self.safe_dist = min_dist(self.dist[160:200])
+                self.safe_dist = (min_dist(self.dist[340:360]), min_dist(self.dist[0:20]))  # (left, right)
                 if self.scan_index % 10 == 0:
                     print self.scan_index, self.safe_dist
             self.prev_azimuth = azimuth
