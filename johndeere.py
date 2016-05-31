@@ -15,6 +15,8 @@ CENTER_GAS_MAX = 16500
 
 GO_LIMIT = 18000
 
+SCALE_NEW = 0.5  # 0.0 < x < 1.0
+
 # TODO move inside or remove when CAN module is upgraded
 def setup_faster_update(can):
     reader = ReadSDO( 1, 0x1801, 5 )
@@ -50,6 +52,7 @@ class JohnDeere(object):
         self.gas = None
         self.buttonGo = None
         self.desired_speed = 0.0
+        self.filteredGas = None
         self.extensions = []
         self.data_sources = []
         self.modulesForRestart = []
@@ -92,6 +95,10 @@ class JohnDeere(object):
             assert( len(data)>=8 ) 
             self.gas = data[1]*256 + data[0]
             self.buttonGo = (data[-1] > 64)
+            if self.filteredGas is None:
+                self.filteredGas = self.gas
+            else:
+                self.filteredGas = SCALE_NEW*self.gas + (1.0 - SCALE_NEW)*self.filteredGas
 
     def update_encoders(self, packet):
         pass
@@ -152,10 +159,12 @@ class JohnDeere(object):
 
 def center(robot):
   print "CENTER"
-  for i in xrange(10):
+  if robot.filteredGas > GO_LIMIT:
+    robot.pulse_backward(0.1)
+  for i in xrange(20):
     start_time = robot.time
     arr = []
-    while robot.time - start_time < 1.0:
+    while robot.time - start_time < 0.2:
         robot.update()
         arr.append(robot.gas)
     assert len(arr) > 0
