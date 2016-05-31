@@ -38,6 +38,12 @@ def setup_faster_update(can):
         reader.update( can.readPacket() )
     print "RESULT DATA (after):", reader.result 
 
+# TODO revise with Python struct
+def sint16( data ):
+    ret = data[1]*256+data[0]
+    if ret > 0x8000:
+        ret = ret-0x10000
+    return ret 
 
 class JohnDeere(object):
     UPDATE_TIME_FREQUENCY = 5.0  #20.0  # Hz 
@@ -53,6 +59,8 @@ class JohnDeere(object):
         self.buttonGo = None
         self.desired_speed = 0.0
         self.filteredGas = None
+        self.compassRaw = None
+        self.compassAccRaw = None
         self.extensions = []
         self.data_sources = []
         self.modulesForRestart = []
@@ -106,6 +114,14 @@ class JohnDeere(object):
     def update_emergency_stop(self, packet):
         pass
 
+    def update_compass(self, (id, data)):
+        if id == 0x187:
+            pass
+        if id == 0x387: # 3D accelerometer
+            self.compassAccRaw = (sint16(data[0:2]), sint16(data[2:4]), sint16(data[4:6]) ) 
+        if id == 0x487: # 3D raw compass data
+            self.compassRaw = (sint16(data[0:2]), sint16(data[2:4]), sint16(data[4:6]) )
+
     def send_speed(self):
         pass
 
@@ -131,6 +147,7 @@ class JohnDeere(object):
             packet = self.can.readPacket()
             self.update_encoders(packet)
             self.update_gas_status(packet)
+            self.update_compass(packet)
             self.update_emergency_stop(packet)
             self.check_modules(packet)
             for (name,e) in self.extensions:
