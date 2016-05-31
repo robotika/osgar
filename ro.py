@@ -94,7 +94,8 @@ def ver0(metalog):
         dist = None
         if robot.velodyne_data is not None:
             index, dist = robot.velodyne_data
-            dist = min(dist)  # currently supported tupple of readings
+            if dist is not None:
+                dist = min(dist)  # currently supported tupple of readings
         if moving:
             if dist is None or dist < SAFE_DISTANCE_STOP:
                 print "!!! STOP !!! -",  robot.velodyne_data
