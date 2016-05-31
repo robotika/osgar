@@ -6,7 +6,6 @@
 """
 import sys
 from can import CAN, ReplayLogInputsOnly
-from time import sleep
 from sdoplg import ReadSDO, WriteSDO 
 
 PULSE_DURATION = 0.3  #0.5  # seconds
@@ -103,16 +102,21 @@ class JohnDeere(object):
     def send_speed(self):
         pass
 
+    def wait(self, duration):
+        start_time = self.time
+        while self.time - start_time < duration:
+            self.update()
+
     def pulse_forward(self, duration=PULSE_DURATION):
         print "PULSE FORWARD", duration
         self.can.sendData(0x201, [0xC])
-        sleep(duration)
+        self.wait(duration)
         self.can.sendData(0x201, [0])
 
     def pulse_backward(self, duration=PULSE_DURATION):
         print "PULSE BACKWARD", duration
         self.can.sendData(0x201, [3])
-        sleep(duration)
+        self.wait(duration)
         self.can.sendData(0x201, [0])
 
     def update(self):
