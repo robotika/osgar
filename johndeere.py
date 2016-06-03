@@ -5,6 +5,7 @@
        ./johndeere.py <task> [<metalog> [<F>]]
 """
 import sys
+import math
 from can import CAN, ReplayLogInputsOnly
 from sdoplg import ReadSDO, WriteSDO 
 
@@ -16,6 +17,8 @@ CENTER_GAS_MAX = 16500
 GO_LIMIT = 18000
 
 SCALE_NEW = 0.5  # 0.0 < x < 1.0
+ACC_SMOOTHING = 0.1 # scale factor (0..1) for old measurement, 0.0 = only new measurements will be used 
+
 
 # TODO move inside or remove when CAN module is upgraded
 def setup_faster_update(can):
@@ -45,6 +48,24 @@ def sint16( data ):
         ret = ret-0x10000
     return ret 
 
+def analyseCompass(compassRaw, compassAcc):
+    # copy & paste from eduro/compass.py
+    # horizontal plane is given by ax+by+cz+d=0, where (a,b,c)=compassAcc and d=0  
+    # incination in Prague is 66deg, declination is 11deg
+    inc = math.radians(66.0)
+    vecB = (math.cos(inc), 0.0, math.sin(inc)) # handle declination afterwards
+
+    compassOffset = (-150, 550, 2250)
+
+    # vector multiplication
+    # C = A x B = (AyBz - ByAz, AzBx-BzAx, AxBy-BxAy)
+    A = compassAcc # in reality z-coordinate
+    B = (compassRaw[0]-compassOffset[0], compassRaw[1]-compassOffset[1], compassRaw[2]-compassOffset[2])
+    C = (A[1]*B[2]-B[1]*A[2], A[2]*B[0]-B[2]*A[0], A[0]*B[1]-B[0]*A[1])
+    return int(10*math.degrees(math.atan2(C[0],C[1])))
+
+
+
 class JohnDeere(object):
     UPDATE_TIME_FREQUENCY = 5.0  #20.0  # Hz 
 
@@ -59,7 +80,9 @@ class JohnDeere(object):
         self.buttonGo = None
         self.desired_speed = 0.0
         self.filteredGas = None
+        self.compass = None
         self.compassRaw = None
+        self.compassAcc = None
         self.compassAccRaw = None
         self.extensions = []
         self.data_sources = []
@@ -118,9 +141,17 @@ class JohnDeere(object):
         if id == 0x187:
             pass
         if id == 0x387: # 3D accelerometer
-            self.compassAccRaw = (sint16(data[0:2]), sint16(data[2:4]), sint16(data[4:6]) ) 
+            self.compassAccRaw = (sint16(data[0:2]), sint16(data[2:4]), sint16(data[4:6]) )
+            if self.compassAcc is not None:
+                self.compassAcc = (
+                    (1.0-ACC_SMOOTHING)*self.compassAcc[0] + ACC_SMOOTHING*self.compassAccRaw[0], 
+                    (1.0-ACC_SMOOTHING)*self.compassAcc[1] + ACC_SMOOTHING*self.compassAccRaw[1], 
+                    (1.0-ACC_SMOOTHING)*self.compassAcc[2] + ACC_SMOOTHING*self.compassAccRaw[2])
+            else:
+                self.compassAcc = self.compassAccRaw  # init value for averaging 
         if id == 0x487: # 3D raw compass data
             self.compassRaw = (sint16(data[0:2]), sint16(data[2:4]), sint16(data[4:6]) )
+            self.compass = analyseCompass(self.compassRaw, self.compassAcc)
 
     def send_speed(self):
         pass
