@@ -28,6 +28,12 @@ def velodyne_data_extension(robot, id, data):
     if id=='velodyne':
         robot.velodyne_data = data
 
+def testGas( robot ):
+    for ii in range(10):
+        robot.pulse_forward( 0.3 )
+        robot.wait(10)
+        robot.pulse_backward( 0.3 )
+        robot.wait(10)
 
 
 def ver0(metalog):
@@ -79,6 +85,7 @@ def ver0(metalog):
 
     center(robot)
     wait_for_start(robot)
+    testGas( robot )
 
     moving = False
     robot.desired_speed = 0.5
