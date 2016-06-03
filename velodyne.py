@@ -22,6 +22,9 @@ PORT = 2368
 LASER_ANGLES = [-15, 1, -13, 3, -11, 5, -9, 7, -7, 9, -5, 11, -3, 13, -1, 15]
 NUM_LASERS = 16
 
+EXPECTED_PACKET_TIME = 0.001327  # valid only in "the strongest return mode"
+EXPECTED_SCAN_DURATION = 0.1
+
 def min_dist(data):
     mask = (data > 0)
     if np.any(mask):
@@ -37,6 +40,7 @@ class Velodyne:
         self.metalog = metalog
         self.buf = ""
         self.time = None
+        self.last_blocked = None
         self.dist = np.zeros( (360, NUM_LASERS), dtype=np.uint16)
         self.scan_index = 0
         self.prev_azimuth = None
@@ -45,6 +49,21 @@ class Velodyne:
 
     def parse(self, data):
         assert len(data) == 1206, len(data)
+        timestamp, factory = struct.unpack_from("<IH", data, offset=1200)
+        assert factory == 0x2237, hex(factory)  # 0x22=VLP-16, 0x37=Strongest Return
+        time = timestamp/1000000.0
+        if self.time is not None:
+            lost_packets = int(round((time - self.time)/EXPECTED_PACKET_TIME)) - 1
+        else:
+            lost_packets = 0
+        self.time = time
+        if lost_packets > 0 and (self.last_blocked is None or self.time > self.last_blocked + EXPECTED_SCAN_DURATION):
+            self.last_blocked = self.time + EXPECTED_SCAN_DURATION
+            self.scan_index += 1
+            print "DROPPED index", self.scan_index
+        if self.last_blocked is not None and self.time < self.last_blocked:
+            return  # to catch up-to-date packets again ...
+
         while True:
             block, data = data[:100], data[100:]
             if len(data) < 100:
@@ -57,16 +76,12 @@ class Velodyne:
                 self.scan_index += 1
 # rotated 180deg -> this is back now:     self.safe_dist = min_dist(self.dist[160:200])
                 self.safe_dist = (min_dist(self.dist[340:360]), min_dist(self.dist[0:20]))  # (left, right)
-                if self.scan_index % 10 == 0:
-                    print self.scan_index, self.safe_dist
             self.prev_azimuth = azimuth
             # H-distance (2mm step), B-reflectivity (0
             arr = struct.unpack_from('<' + "HB"*32, block, 4)
             for i in xrange(NUM_LASERS):
                 self.dist[int(azimuth)][i] = arr[i*2]
-        timestamp, factory = struct.unpack_from("<IH", data)
-        assert factory == 0x2237, hex(factory)  # 0x22=VLP-16, 0x37=Strongest Return
-        self.time = timestamp/1000000.0
+
 
     def update(self):
         while True:
@@ -133,8 +148,14 @@ if __name__ == "__main__":
         thr.requestStop()
         thr.join()
     else:
-        for i in xrange(1000):
+        prev = None
+        for i in xrange(10000):
             sensor.update()
+            curr = sensor.scan_index, sensor.safe_dist
+            if prev != curr:
+                if sensor.scan_index % 10 == 0:
+                    print curr
+            prev = curr
 
 # vim: expandtab sw=4 ts=4 
 
