@@ -175,13 +175,13 @@ class JohnDeere(object):
 
     def pulse_left(self, duration):
         print "PULSE LEFT", duration
-        self.can.sendData(0x20C, [5])
+        self.can.sendData(0x20C, [9])
         self.wait(duration)
         self.can.sendData(0x20C, [0])
 
     def pulse_right(self, duration):
         print "PULSE RIGHT", duration
-        self.can.sendData(0x20C, [6])
+        self.can.sendData(0x20C, [0xA])
         self.wait(duration)
         self.can.sendData(0x20C, [0])
 
