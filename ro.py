@@ -74,13 +74,11 @@ def ver0(metalog):
     robot.velodyne_data = None
     robot.register_data_source('velodyne', function, velodyne_data_extension) 
 
-
     robot.gps.start()  # ASAP so we get GPS fix
+    robot.velodyne.start()  # the data source is active, so it is necessary to read-out data
 
     center(robot)
     wait_for_start(robot)
-
-    robot.velodyne.start()  # after start to minimize amount of useless data
 
     moving = False
     robot.desired_speed = 0.5
