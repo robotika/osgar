@@ -64,7 +64,7 @@ class Velodyne:
         if self.last_blocked is not None and self.time < self.last_blocked:
             return  # to catch up-to-date packets again ...
 
-        for offset in xrange(0, 1200, 100):
+        for offset in xrange(0, 1200, 200):  # skip every second packet (we need 1deg resolution input 0.4)
             flag, azi = struct.unpack_from("<HH", data, offset)
             assert flag == 0xEEFF, hex(flag)
             azimuth = azi/100.0
