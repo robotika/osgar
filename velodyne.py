@@ -64,12 +64,8 @@ class Velodyne:
         if self.last_blocked is not None and self.time < self.last_blocked:
             return  # to catch up-to-date packets again ...
 
-        while True:
-            block, data = data[:100], data[100:]
-            if len(data) < 100:
-                assert len(data) == 6, len(data)
-                break
-            flag, azi = struct.unpack_from("<HH", block)
+        for offset in xrange(0, 1200, 100):
+            flag, azi = struct.unpack_from("<HH", data, offset)
             assert flag == 0xEEFF, hex(flag)
             azimuth = azi/100.0
             if self.prev_azimuth is not None and azimuth < self.prev_azimuth:
@@ -78,7 +74,7 @@ class Velodyne:
                 self.safe_dist = (min_dist(self.dist[340:360]), min_dist(self.dist[0:20]))  # (left, right)
             self.prev_azimuth = azimuth
             # H-distance (2mm step), B-reflectivity (0
-            arr = struct.unpack_from('<' + "HB"*32, block, 4)
+            arr = struct.unpack_from('<' + "HB"*32, data, offset + 4)
             for i in xrange(NUM_LASERS):
                 self.dist[int(azimuth)][i] = arr[i*2]
 
