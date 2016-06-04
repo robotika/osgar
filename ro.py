@@ -18,7 +18,7 @@ from apyros.sourcelogger import SourceLogger
 
 SAFE_DISTANCE_STOP = 2.5  # meters
 SAFE_DISTANCE_GO = SAFE_DISTANCE_STOP + 0.5
-TURN_DISTANCE = 3.5
+TURN_DISTANCE = 4.0
 STRAIGHT_EPS = math.radians(10)
 NO_TURN_DISTANCE = TURN_DISTANCE + 0.5
 
@@ -123,11 +123,11 @@ def ver0(metalog, waypoints=None):
                 moving = False
             elif dist < TURN_DISTANCE:
                 if abs(robot.steering_angle) < STRAIGHT_EPS:
-                    robot.pulse_right(1.0)
+                    robot.pulse_right(1.5)
                     robot.steering_angle = math.radians(-30)  # TODO replace by autodetect
             elif dist > NO_TURN_DISTANCE:
                 if abs(robot.steering_angle) > STRAIGHT_EPS:
-                    robot.pulse_left(0.8)
+                    robot.pulse_left(1.2)
                     robot.steering_angle = 0.0  # TODO replace by autodetect
 
         else:  # not moving
