@@ -140,6 +140,12 @@ def ver0(metalog, waypoints=None):
                         i = dist_arr.index(dist)  # ugly, but ...
                         print "INDEX", i
                         del waypoints[i]
+                        center(robot)
+                        moving = False
+                        robot.wait(1.0)
+                        robot.drop_ball = False
+                        robot.wait(3.0)
+                        dist = None
                 prev_destination_dist = dist
 
         dist = None
