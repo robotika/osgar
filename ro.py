@@ -15,6 +15,9 @@ from johndeere import (JohnDeere, center, go, wait_for_start,
 from apyros.metalog import MetaLog, disableAsserts
 from apyros.sourcelogger import SourceLogger
 
+from route import Convertor, Route
+from line import distance
+
 
 SAFE_DISTANCE_STOP = 2.5  # meters
 SAFE_DISTANCE_GO = SAFE_DISTANCE_STOP + 0.5
@@ -63,10 +66,9 @@ def test_drop_ball(robot):
 
 def ver0(metalog, waypoints=None):
     assert metalog is not None
+    assert waypoints is not None  # for simplicity (first is start)
 
-    destination = None
-    if waypoints is not None:
-        destination = waypoints[1]
+    conv = Convertor(refPoint = waypoints[0]) 
 
     can_log_name = metalog.getLog('can')
     if metalog.replay:
@@ -119,11 +121,21 @@ def ver0(metalog, waypoints=None):
     robot.desired_speed = 0.5
     start_time = robot.time
     prev_gps = robot.gps_data
+    prev_destination_dist = None
     while robot.time - start_time < 30*60:  # RO timelimit 30 minutes
         robot.update()
         if robot.gps_data != prev_gps:
             print robot.time, robot.gas, robot.gps_data, robot.velodyne_data
             prev_gps = robot.gps_data
+            if robot.gps_data is not None:
+                dist = min([distance( conv.geo2planar((robot.gps_data[1], robot.gps_data[0])), 
+                                      conv.geo2planar(destination) ) for destination in waypoints[1:]])
+                print "DIST-GPS", dist
+                if prev_destination_dist is not None:
+                    if prev_destination_dist < dist and dist < 10.0:
+                        robot.drop_ball = True
+                prev_destination_dist = dist
+
         dist = None
         if robot.velodyne_data is not None:
             index, dist = robot.velodyne_data
