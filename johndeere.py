@@ -77,6 +77,7 @@ class JohnDeere(object):
             self.can = can
         self.time = 0.0
         self.gas = None
+        self.steering_angle = 0.0  # in the future None and auto-detect
         self.buttonGo = None
         self.desired_speed = 0.0
         self.filteredGas = None

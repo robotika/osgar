@@ -5,6 +5,7 @@
        ./ro.py <task> [<metalog> [<F>]]
 """
 import sys
+import math
 from can import CAN, DummyMemoryLog, ReplayLogInputsOnly, ReplayLog
 from gps import GPS
 from gps import DummyGPS as DummySensor  # TODO move to apyros, as mock
@@ -17,6 +18,9 @@ from apyros.sourcelogger import SourceLogger
 
 SAFE_DISTANCE_STOP = 2.5  # meters
 SAFE_DISTANCE_GO = SAFE_DISTANCE_STOP + 0.5
+TURN_DISTANCE = 3.5
+STRAIGHT_EPS = math.radians(10)
+NO_TURN_DISTANCE = TURN_DISTANCE + 0.5
 
 def gps_data_extension(robot, id, data):
     if id=='gps':
@@ -93,7 +97,6 @@ def ver0(metalog):
 
     center(robot)
     wait_for_start(robot)
-    test_turn( robot )
 
     moving = False
     robot.desired_speed = 0.5
@@ -114,6 +117,15 @@ def ver0(metalog):
                 print "!!! STOP !!! -",  robot.velodyne_data
                 center(robot)
                 moving = False
+            elif dist < TURN_DISTANCE:
+                if abs(robot.steering_angle) < STRAIGHT_EPS:
+                    robot.pulse_right(1.0)
+                    robot.steering_angle = math.radians(-30)  # TODO replace by autodetect
+            elif dist > NO_TURN_DISTANCE:
+                if abs(robot.steering_angle) > STRAIGHT_EPS:
+                    robot.pulse_left(0.8)
+                    robot.steering_angle = 0.0  # TODO replace by autodetect
+
         else:  # not moving
             if dist is not None and dist > SAFE_DISTANCE_GO:
                 print "GO",  robot.velodyne_data
