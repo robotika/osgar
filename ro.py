@@ -48,8 +48,12 @@ def test_turn( robot ):
         robot.wait(2)
 
 
-def ver0(metalog):
+def ver0(metalog, waypoints=None):
     assert metalog is not None
+
+    destination = None
+    if waypoints is not None:
+        destination = waypoints[1]
 
     can_log_name = metalog.getLog('can')
     if metalog.replay:
@@ -139,6 +143,14 @@ def ver0(metalog):
     robot.gps.requestStop()
 
 
+def load_waypoints(filename):
+    arr = []
+    for line in open(filename):
+        s = line.split()
+        if len(s) >= 3:
+            arr.append( (float(s[2]), float(s[1])) )  # lon, lat format
+    return arr
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print __doc__
@@ -152,8 +164,12 @@ if __name__ == "__main__":
         disableAsserts()
     
     if metalog is None:
-        metalog = MetaLog()    
-    ver0(metalog)
+        metalog = MetaLog()
+
+    waypoints = None
+    if sys.argv[1].endswith('.dat'):
+        waypoints = load_waypoints(sys.argv[1])
+    ver0(metalog, waypoints)
 
 
 # There are too many TODOs at the moment, including basic CAN modules integration (EmergencySTOP etc)
