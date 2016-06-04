@@ -69,6 +69,7 @@ def ver0(metalog, waypoints=None):
     assert waypoints is not None  # for simplicity (first is start)
 
     conv = Convertor(refPoint = waypoints[0]) 
+    waypoints = waypoints[1:-1]  # remove start/finish
 
     can_log_name = metalog.getLog('can')
     if metalog.replay:
@@ -128,12 +129,17 @@ def ver0(metalog, waypoints=None):
             print robot.time, robot.gas, robot.gps_data, robot.velodyne_data
             prev_gps = robot.gps_data
             if robot.gps_data is not None:
-                dist = min([distance( conv.geo2planar((robot.gps_data[1], robot.gps_data[0])), 
-                                      conv.geo2planar(destination) ) for destination in waypoints[1:-1]])
+                dist_arr = [distance( conv.geo2planar((robot.gps_data[1], robot.gps_data[0])), 
+                                      conv.geo2planar(destination) ) for destination in waypoints]
+                dist = min(dist_arr)
                 print "DIST-GPS", dist
                 if prev_destination_dist is not None:
                     if prev_destination_dist < dist and dist < 10.0:
                         robot.drop_ball = True
+                        # remove nearest
+                        i = dist_arr.index(dist)  # ugly, but ...
+                        print "INDEX", i
+                        del waypoints[i]
                 prev_destination_dist = dist
 
         dist = None
