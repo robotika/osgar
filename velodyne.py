@@ -71,7 +71,8 @@ class Velodyne:
             if self.prev_azimuth is not None and azimuth < self.prev_azimuth:
                 self.scan_index += 1
 # rotated 180deg -> this is back now:     self.safe_dist = min_dist(self.dist[160:200])
-                self.safe_dist = (min_dist(self.dist[340:360]), min_dist(self.dist[0:20]))  # (left, right)
+                self.safe_dist = (min_dist(self.dist[335:340]), min_dist(self.dist[340:345]), min_dist(self.dist[345:360]), 
+                                  min_dist(self.dist[0:15]), min_dist(self.dist[15:20]), min_dist(self.dist[20:25]))  # (left, right)
             self.prev_azimuth = azimuth
             # H-distance (2mm step), B-reflectivity (0
             arr = struct.unpack_from('<' + "HB"*32, data, offset + 4)
@@ -86,6 +87,7 @@ class Velodyne:
                 assert len(data) == 1206, len(data)
                 break
         self.parse(data)
+
 
 # TODO general wrapper for threaded sources
 class VelodyneThread(Thread):
