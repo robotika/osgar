@@ -25,8 +25,8 @@ TURN_DISTANCE = 4.0
 STRAIGHT_EPS = math.radians(10)
 NO_TURN_DISTANCE = TURN_DISTANCE + 0.5
 
-LEFT_TURN_TIME = 1.2
-RIGHT_TURN_TIME = 1.5
+LEFT_TURN_TIME = 0.9  #1.2
+RIGHT_TURN_TIME = 1.125  #1.5
 
 def gps_data_extension(robot, id, data):
     if id=='gps':
