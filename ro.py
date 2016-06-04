@@ -129,7 +129,7 @@ def ver0(metalog, waypoints=None):
             prev_gps = robot.gps_data
             if robot.gps_data is not None:
                 dist = min([distance( conv.geo2planar((robot.gps_data[1], robot.gps_data[0])), 
-                                      conv.geo2planar(destination) ) for destination in waypoints[1:]])
+                                      conv.geo2planar(destination) ) for destination in waypoints[1:-1]])
                 print "DIST-GPS", dist
                 if prev_destination_dist is not None:
                     if prev_destination_dist < dist and dist < 10.0:
