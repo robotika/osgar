@@ -22,6 +22,9 @@ TURN_DISTANCE = 4.0
 STRAIGHT_EPS = math.radians(10)
 NO_TURN_DISTANCE = TURN_DISTANCE + 0.5
 
+LEFT_TURN_TIME = 1.2
+RIGHT_TURN_TIME = 1.5
+
 def gps_data_extension(robot, id, data):
     if id=='gps':
         robot.gps_data = data
@@ -121,13 +124,26 @@ def ver0(metalog, waypoints=None):
                 print "!!! STOP !!! -",  robot.velodyne_data
                 center(robot)
                 moving = False
+
             elif dist < TURN_DISTANCE:
                 if abs(robot.steering_angle) < STRAIGHT_EPS:
-                    robot.pulse_right(1.5)
-                    robot.steering_angle = math.radians(-30)  # TODO replace by autodetect
+                    arr = robot.velodyne_data[1]
+                    num = len(arr)
+                    left, right = min(arr[:num/2]), min(arr[num/2:])
+                    print "DECIDE", left, right, robot.velodyne_data
+                    if left <= right:
+                        robot.pulse_right(RIGHT_TURN_TIME)
+                        robot.steering_angle = math.radians(-30)  # TODO replace by autodetect
+                    else:
+                        robot.pulse_left(LEFT_TURN_TIME)
+                        robot.steering_angle = math.radians(30)  # TODO replace by autodetect
+
             elif dist > NO_TURN_DISTANCE:
                 if abs(robot.steering_angle) > STRAIGHT_EPS:
-                    robot.pulse_left(1.2)
+                    if robot.steering_angle < 0:
+                        robot.pulse_left(LEFT_TURN_TIME)
+                    else:
+                        robot.pulse_right(RIGHT_TURN_TIME)
                     robot.steering_angle = 0.0  # TODO replace by autodetect
 
         else:  # not moving
