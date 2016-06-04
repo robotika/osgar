@@ -51,6 +51,16 @@ def test_turn( robot ):
         robot.wait(2)
 
 
+def test_drop_ball(robot):
+    print "TEST BALLS"
+    for ii in xrange(3):
+        print "DROP BALL"
+        robot.drop_ball = True
+        robot.wait(1.0)
+        print "CLOSE"
+        robot.drop_ball = False
+        robot.wait(3.0)
+
 def ver0(metalog, waypoints=None):
     assert metalog is not None
 
@@ -104,6 +114,7 @@ def ver0(metalog, waypoints=None):
 
     center(robot)
     wait_for_start(robot)
+    test_drop_ball(robot)
 
     moving = False
     robot.desired_speed = 0.5

@@ -41,6 +41,15 @@ def setup_faster_update(can):
         reader.update( can.readPacket() )
     print "RESULT DATA (after):", reader.result 
 
+    # ball dispenser
+    writer = WriteSDO( 5, 0x2100, 1, [3] )
+    for cmd in writer.generator():
+        if cmd:
+            can.sendData( *cmd )
+        writer.update( can.readPacket() ) 
+
+
+
 # TODO revise with Python struct
 def sint16( data ):
     ret = data[1]*256+data[0]
@@ -85,6 +94,7 @@ class JohnDeere(object):
         self.compassRaw = None
         self.compassAcc = None
         self.compassAccRaw = None
+        self.drop_ball = False  # TODO move to ro.py only
         self.extensions = []
         self.data_sources = []
         self.modulesForRestart = []
@@ -157,6 +167,13 @@ class JohnDeere(object):
     def send_speed(self):
         pass
 
+    def send_ball_dispenser(self):
+        if self.drop_ball:
+            cmd = 127
+        else:
+            cmd = 128
+        self.can.sendData(0x305, [0, cmd, 0, 0, 0, 0, 0, 0])
+
     def wait(self, duration):
         start_time = self.time
         while self.time - start_time < duration:
@@ -210,6 +227,7 @@ class JohnDeere(object):
 
         self.time += 1.0/self.UPDATE_TIME_FREQUENCY  
         self.send_speed()
+        self.send_ball_dispenser()
 
     def stop(self):
         "send stop command and make sure robot really stops"
