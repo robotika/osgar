@@ -114,7 +114,6 @@ def ver0(metalog, waypoints=None):
 
     center(robot)
     wait_for_start(robot)
-    test_drop_ball(robot)
 
     moving = False
     robot.desired_speed = 0.5

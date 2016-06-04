@@ -14,7 +14,7 @@ PULSE_DURATION = 0.3  #0.5  # seconds
 CENTER_GAS_MIN = 14500
 CENTER_GAS_MAX = 16500
 
-GO_LIMIT = 18000
+GO_LIMIT = 19000
 
 SCALE_NEW = 0.5  # 0.0 < x < 1.0
 ACC_SMOOTHING = 0.1 # scale factor (0..1) for old measurement, 0.0 = only new measurements will be used 
