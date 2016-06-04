@@ -42,7 +42,7 @@ def setup_faster_update(can):
     print "RESULT DATA (after):", reader.result 
 
     # ball dispenser
-    writer = WriteSDO( 5, 0x2100, 1, [3] )
+    writer = WriteSDO( 0x7F, 0x2100, 1, [3] )
     for cmd in writer.generator():
         if cmd:
             can.sendData( *cmd )
@@ -172,7 +172,7 @@ class JohnDeere(object):
             cmd = 127
         else:
             cmd = 128
-        self.can.sendData(0x305, [0, cmd, 0, 0, 0, 0, 0, 0])
+        self.can.sendData(0x37F, [0, cmd, 0, 0, 0, 0, 0, 0])
 
     def wait(self, duration):
         start_time = self.time
