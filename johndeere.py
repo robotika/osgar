@@ -6,8 +6,9 @@
 """
 import sys
 import math
-from can import CAN, ReplayLogInputsOnly
+from can import CAN, ReplayLogInputsOnly, ReplayLog
 from sdoplg import ReadSDO, WriteSDO 
+from apyros.metalog import MetaLog, disableAsserts
 
 PULSE_DURATION = 0.3  #0.5  # seconds
 
@@ -281,41 +282,48 @@ def go(robot):
             break
     print "RUNNING!"
 
-def self_test(replay_filename=None):
-    if replay_filename is None:
-        robot = JohnDeere()
+def self_test(metalog):
+    assert metalog is not None
+    can_log_name = metalog.getLog('can')
+    if metalog.replay:
+        if metalog.areAssertsEnabled():
+            can = CAN(ReplayLog(can_log_name), skipInit=True)
+        else:
+            can = CAN(ReplayLogInputsOnly(can_log_name), skipInit=True)
     else:
-        robot = JohnDeere(can=CAN(ReplayLogInputsOnly(replay_filename)))
+        can = CAN()
+        can.relog(can_log_name)
+    can.resetModules(configFn=setup_faster_update)
+    robot = JohnDeere(can=can)
+    robot.UPDATE_TIME_FREQUENCY = 20.0  # TODO change internal and integrate setup
+
     center(robot)
     wait_for_start(robot)
     robot.desired_speed = 0.5
     start_time = robot.time
-#    robot.can.sendData(0x201, [0xC])
-#    robot.pulse_forward()
     go(robot)
-#    robot.pulse_backward()
     while robot.time - start_time < 333.0:
         robot.update()
         print robot.time, robot.gas
         if not robot.buttonGo:
             print "STOP!"
             break
-#    robot.pulse_backward()
-#    start_time = robot.time
-#    while robot.time - start_time < 2.0:
-#        robot.update()
-#        print robot.time, robot.gas
-#    robot.stop()
     center(robot)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print __doc__
         sys.exit(2)
-    if sys.argv[1].endswith('.log'):
-        self_test(replay_filename=sys.argv[1])
-    else:
-        self_test()
+    metalog=None
+    if 'meta_' in sys.argv[1]:
+        metalog = MetaLog(filename=sys.argv[1])
+    elif len(sys.argv) > 2:
+        metalog = MetaLog(filename=sys.argv[2])
+    if len(sys.argv) > 2 and sys.argv[-1] == 'F':
+        disableAsserts()    
+    if metalog is None:
+        metalog = MetaLog()
+    self_test(metalog)
 
 # vim: expandtab sw=4 ts=4 
 
