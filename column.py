@@ -59,6 +59,39 @@ def analyse_pose(prev_pose, new_data):
     return (x, y, angle), dist
 
 
+def detect_columns(scan):
+    data = []
+    for arr in scan:
+        mask = arr > 0
+        mask[0] = False   # -15deg scan sees often ground
+        if max(mask):
+            data.append(arr[mask].min())
+        else:
+            data.append(10000)  # None??
+
+    MIN_STEP = 500  # 1m
+    MAX_VAR = 100 # 20cm, probably too much
+
+    assert len(data) == 360, len(data)
+    ret = []
+    for i in xrange(len(data)):
+        if data[i-1] - MIN_STEP <= data[i]:
+            continue
+        tmp = []
+        while data[i-1] + MIN_STEP >= data[i]:
+            tmp.append(data[i])
+            if abs(int(data[i]) - tmp[0]) > MAX_VAR:
+                tmp = []
+                break
+            i += 1
+            if i >= len(data):
+                break
+        if len(tmp) > 0:
+            print i, tmp
+            ret.append( (i + len(tmp)/2, 0.002*sum(tmp)/len(tmp)) )
+    return ret
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print __doc__
@@ -75,44 +108,12 @@ if __name__ == "__main__":
         if prev != curr:
             if sensor.scan_index % 1 == 0:
                 print '-----', sensor.scan_index, '-----'
-#                if sensor.scan_index == 33:
-#                    print_scan(sensor.dist)
-
-                candidates = []
-                for i, arr in enumerate(sensor.dist):
-                    num_zeros = sum(arr == 0)
-                    if num_zeros < 4:
-                        mask = arr > 0
-                        min_arr = min(arr[mask])
-                        if (max(arr)-min_arr)/float(min_arr) < MAX_TOLERANCE:
-                            candidates.append((i, min_arr*0.002))
-
-                # find continuous interval
-                if len(candidates) > 0:
-                    results = []
-                    base = candidates[0]
-                    count = 0
-                    for c in candidates[1:]:
-                        if base[0] + 1 == c[0]:
-                            count += 1
-                        else:
-                            results.append( (count, base) )
-                            count = 0
-                        base = c
-                    results.append( (count, base) )
-
-                    data = []
-                    for r in results:
-                        width = math.radians(r[0] + 1) * r[1][1]
-                        if width < MAX_COLUMN_WIDTH:
-                            data.append(r[1])
-                            print r[1],
-                    print
-                    pose = analyse_pose(None, data)
-                    if pose is not None:
-                        pose, dist = pose
-                        print_pose(pose)
-                        print dist
+                data = detect_columns(sensor.dist)
+                pose = analyse_pose(None, data)
+                if pose is not None:
+                    pose, dist = pose
+                    print_pose(pose)
+                    print dist
 
             prev = curr
 
