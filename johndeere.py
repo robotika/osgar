@@ -7,6 +7,7 @@
 import sys
 import math
 from can import CAN, ReplayLogInputsOnly, ReplayLog
+from canproxy import CANProxy
 from sdoplg import ReadSDO, WriteSDO 
 from apyros.metalog import MetaLog, disableAsserts
 
@@ -86,6 +87,7 @@ class JohnDeere(object):
             self.can.resetModules()
         else:
             self.can = can
+        self.canproxy = CANProxy(self.can)
         self.time = 0.0
         self.gas = None
         self.steering_angle = 0.0  # in the future None and auto-detect
@@ -214,6 +216,7 @@ class JohnDeere(object):
             self.update_encoders(packet)
             self.update_gas_status(packet)
             self.update_compass(packet)
+            self.canproxy.update(packet)
             self.update_emergency_stop(packet)
             self.check_modules(packet)
             for (name,e) in self.extensions:
@@ -231,7 +234,8 @@ class JohnDeere(object):
                     e(self, id, data)
 
         self.time += 1.0/self.UPDATE_TIME_FREQUENCY  
-        self.send_speed()
+        self.canproxy.set_time(self.time)
+        self.canproxy.send_speed()
         self.send_ball_dispenser()
 
     def stop(self):
@@ -301,18 +305,18 @@ def self_test(metalog):
     robot = JohnDeere(can=can)
     robot.UPDATE_TIME_FREQUENCY = 20.0  # TODO change internal and integrate setup
 
-    center(robot)
+    robot.canproxy.stop()  # center(robot)
     wait_for_start(robot)
     robot.desired_speed = 0.5
     start_time = robot.time
-    go(robot)
+    robot.canproxy.go()  # go(robot)
     while robot.time - start_time < 333.0:
         robot.update()
         print robot.time, robot.gas
         if not robot.buttonGo:
             print "STOP!"
             break
-    center(robot)
+    center(robot)  # keep old version for the first test
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
