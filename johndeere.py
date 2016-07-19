@@ -43,11 +43,11 @@ def setup_faster_update(can):
     print "RESULT DATA (after):", reader.result 
 
     # ball dispenser
-    writer = WriteSDO( 0x7F, 0x2100, 1, [3] )
-    for cmd in writer.generator():
-        if cmd:
-            can.sendData( *cmd )
-        writer.update( can.readPacket() ) 
+#    writer = WriteSDO( 0x7F, 0x2100, 1, [3] )
+#    for cmd in writer.generator():
+#        if cmd:
+#            can.sendData( *cmd )
+#        writer.update( can.readPacket() ) 
 
 
 
@@ -59,6 +59,7 @@ def sint16( data ):
     return ret 
 
 def analyseCompass(compassRaw, compassAcc):
+#    print "COMPASS\t%d\t%d" % compassRaw[:2]
     # copy & paste from eduro/compass.py
     # horizontal plane is given by ax+by+cz+d=0, where (a,b,c)=compassAcc and d=0  
     # incination in Prague is 66deg, declination is 11deg
@@ -143,8 +144,11 @@ class JohnDeere(object):
             else:
                 self.filteredGas = SCALE_NEW*self.gas + (1.0 - SCALE_NEW)*self.filteredGas
 
-    def update_encoders(self, packet):
-        pass
+    def update_encoders(self, (id, data)):
+        if id == 0x2FF:
+            assert len(data) == 8, data
+            arr = [data[2*i+1]*256 + data[2*i] for i in xrange(4)]
+#            print "ENC\t{}\t{}\t{}\t{}".format(*arr)
 
     def update_emergency_stop(self, packet):
         pass
