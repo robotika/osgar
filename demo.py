@@ -143,7 +143,8 @@ def ver0(metalog, waypoints=None):
                         i = dist_arr.index(dist)  # ugly, but ...
                         print "INDEX", i
                         del waypoints[i]
-                        center(robot)
+                        #center(robot)
+                        robot.canproxy.stop()
                         moving = False
                         robot.wait(1.0)
                         robot.drop_ball = False
@@ -159,7 +160,8 @@ def ver0(metalog, waypoints=None):
         if moving:
             if dist is None or dist < SAFE_DISTANCE_STOP:
                 print "!!! STOP !!! -",  robot.velodyne_data
-                center(robot)
+                #center(robot)
+                robot.canproxy.stop()
                 moving = False
 
             elif dist < TURN_DISTANCE:
@@ -186,7 +188,8 @@ def ver0(metalog, waypoints=None):
         else:  # not moving
             if dist is not None and dist > SAFE_DISTANCE_GO:
                 print "GO",  robot.velodyne_data
-                go(robot)
+                #go(robot)
+                robot.canproxy.go()
                 moving = True
         if not robot.buttonGo:
             print "STOP!"
