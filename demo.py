@@ -1,8 +1,8 @@
 #!/usr/bin/python
 """
-  RoboOrienteering contest with John Deere
+  Demo - drive and avoid obstacles
   usage:
-       ./ro.py <task> [<metalog> [<F>]]
+       ./demo.py <task-note> [<metalog> [<F>]]
 """
 import sys
 import math
@@ -38,40 +38,8 @@ def velodyne_data_extension(robot, id, data):
     if id=='velodyne':
         robot.velodyne_data = data
 
-def test_gas( robot ):
-    for ii in range(10):
-        robot.pulse_forward( 0.3 )
-        robot.wait(10)
-        robot.pulse_backward( 0.3 )
-        robot.wait(10)
-
-
-def test_turn( robot ):
-    for ii in range(3):
-        robot.pulse_left(0.8)  # should be in ratio 4:5
-        robot.wait(2)
-        robot.pulse_right(1.0)
-        robot.wait(2)
-
-
-def test_drop_ball(robot):
-    print "TEST BALLS"
-    for ii in xrange(3):
-        print "DROP BALL"
-        robot.drop_ball = True
-        robot.wait(1.0)
-        print "CLOSE"
-        robot.drop_ball = False
-        robot.wait(3.0)
-
-def ver0(metalog, waypoints=None):
+def demo(metalog):
     assert metalog is not None
-    """
-    assert waypoints is not None  # for simplicity (first is start)
-
-    conv = Convertor(refPoint = waypoints[0]) 
-    waypoints = waypoints[1:-1]  # remove start/finish
-    """
 
     can_log_name = metalog.getLog('can')
     if metalog.replay:
@@ -89,7 +57,7 @@ def ver0(metalog, waypoints=None):
     robot.localization = None  # TODO
 
 
-    # mount_sensor(GPS, robot, metalog)
+    # GPS
     gps_log_name = metalog.getLog('gps')
     print gps_log_name
     if metalog.replay:
@@ -101,7 +69,7 @@ def ver0(metalog, waypoints=None):
     robot.gps_data = None
     robot.register_data_source('gps', function, gps_data_extension) 
 
-    # mount_sensor(VelodyneThread, robot, metalog)
+    # Velodyne
     velodyne_log_name = metalog.getLog('velodyne_dist')
     print velodyne_log_name
     sensor = Velodyne(metalog=metalog)
@@ -125,33 +93,11 @@ def ver0(metalog, waypoints=None):
     start_time = robot.time
     prev_gps = robot.gps_data
     prev_destination_dist = None
-    while robot.time - start_time < 30*60:  # RO timelimit 30 minutes
+    while robot.time - start_time < 30*60:  # limit 30 minutes
         robot.update()
         if robot.gps_data != prev_gps:
             print robot.time, robot.gas, robot.gps_data, robot.velodyne_data
             prev_gps = robot.gps_data
-            """
-            if robot.gps_data is not None:
-                dist_arr = [distance( conv.geo2planar((robot.gps_data[1], robot.gps_data[0])), 
-                                      conv.geo2planar(destination) ) for destination in waypoints]
-                dist = min(dist_arr)
-                print "DIST-GPS", dist
-                if prev_destination_dist is not None:
-                    if prev_destination_dist < dist and dist < 10.0:
-                        robot.drop_ball = True
-                        # remove nearest
-                        i = dist_arr.index(dist)  # ugly, but ...
-                        print "INDEX", i
-                        del waypoints[i]
-                        #center(robot)
-                        robot.canproxy.stop()
-                        moving = False
-                        robot.wait(1.0)
-                        robot.drop_ball = False
-                        robot.wait(3.0)
-                        dist = None
-                prev_destination_dist = dist
-            """
         dist = None
         if robot.velodyne_data is not None:
             index, dist = robot.velodyne_data
@@ -199,14 +145,6 @@ def ver0(metalog, waypoints=None):
     robot.gps.requestStop()
 
 
-def load_waypoints(filename):
-    arr = []
-    for line in open(filename):
-        s = line.split()
-        if len(s) >= 3:
-            arr.append( (float(s[2]), float(s[1])) )  # lon, lat format
-    return arr
-
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print __doc__
@@ -222,18 +160,7 @@ if __name__ == "__main__":
     if metalog is None:
         metalog = MetaLog()
 
-    waypoints = None
-    if sys.argv[1].endswith('.dat'):
-        waypoints = load_waypoints(sys.argv[1])
-    ver0(metalog, waypoints)
-
-
-# There are too many TODOs at the moment, including basic CAN modules integration (EmergencySTOP etc)
-# Common launcher will be postponed.
-#if __name__ == "__main__":
-#    from johndeere import JohnDeere
-#    import launcher
-#    launcher.launch(sys.argv, JohnDeere, RoboOrienteering, configFn=setup_faster_update) 
+    demo(metalog)
 
 # vim: expandtab sw=4 ts=4 
 
