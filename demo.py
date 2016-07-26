@@ -117,18 +117,18 @@ def demo(metalog):
                     left, right = min(arr[:num/2]), min(arr[num/2:])
                     print "DECIDE", left, right, robot.velodyne_data
                     if left <= right:
-                        robot.pulse_right(RIGHT_TURN_TIME)
+                        robot.canproxy.pulse_right(RIGHT_TURN_TIME)
                         robot.steering_angle = math.radians(-30)  # TODO replace by autodetect
                     else:
-                        robot.pulse_left(LEFT_TURN_TIME)
+                        robot.canproxy.pulse_left(LEFT_TURN_TIME)
                         robot.steering_angle = math.radians(30)  # TODO replace by autodetect
 
             elif dist > NO_TURN_DISTANCE:
                 if abs(robot.steering_angle) > STRAIGHT_EPS:
                     if robot.steering_angle < 0:
-                        robot.pulse_left(LEFT_TURN_TIME)
+                        robot.canproxy.pulse_left(LEFT_TURN_TIME)
                     else:
-                        robot.pulse_right(RIGHT_TURN_TIME)
+                        robot.canproxy.pulse_right(RIGHT_TURN_TIME)
                     robot.steering_angle = 0.0  # TODO replace by autodetect
 
         else:  # not moving
