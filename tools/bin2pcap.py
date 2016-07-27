@@ -40,14 +40,24 @@ def bin2pcap(filename, output_dir):
         out.write(packet)
 
 
+def velodyne_bin_file(filename):
+    for line in open(filename):
+        if line.startswith('velodyne:'):
+            return os.path.join(os.path.split(filename)[0], 
+                                line.split('/')[-1].strip())
+    return None
+
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 3:
         print __doc__
         sys.exit(2)
 
     output_dir = sys.argv[-1]
     for filename in sys.argv[1:-1]:
-        bin2pcap(filename, output_dir)
+        if 'meta_' in filename:
+            filename = velodyne_bin_file(filename)
+        if filename:
+            bin2pcap(filename, output_dir)
 
 # vim: expandtab sw=4 ts=4 
 
