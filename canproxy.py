@@ -67,16 +67,16 @@ class CANProxy:
             assert len(data) == 4, data
             arr = [data[2*i+1]*256 + data[2*i] for i in xrange(2)]
             if self.prev_enc_raw is not None:
-                diffL = sint16_diff(arr[1], self.prev_enc_raw[1])
-                diffR = sint16_diff(arr[0], self.prev_enc_raw[0])
+                diffL = sint16_diff(arr[0], self.prev_enc_raw[0])
+                diffR = sint16_diff(arr[1], self.prev_enc_raw[1])
 
                 if abs(diffL) > 128:
-                    print "ERR-L\t{}\t{}\t{}".format(self.dist_left_raw, self.prev_enc_raw[1], arr[1])
+                    print "ERR-L\t{}\t{}\t{}".format(self.dist_left_raw, self.prev_enc_raw[0], arr[0])
                 else:
                     self.dist_left_raw += diffL
 
                 if abs(diffR) > 128:
-                    print "ERR-R\t{}".format(self.dist_right_raw)
+                    print "ERR-R\t{}\t{}\t{}".format(self.dist_right_raw, self.prev_enc_raw[1], arr[1])
                 else:
                     self.dist_right_raw += diffR
             self.prev_enc_raw = arr
