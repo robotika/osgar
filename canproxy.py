@@ -38,6 +38,8 @@ class CANProxy:
         self.dist_left_raw = 0
         self.dist_right_raw = 0
 
+        self.wheel_angle = None
+
     def go(self):
         self.cmd = 'go'
 
@@ -80,12 +82,21 @@ class CANProxy:
                 else:
                     self.dist_right_raw += diffR
             self.prev_enc_raw = arr
-#            print "ENC\t{}\t{}".format(self.dist_left_raw, self.dist_right_raw)
+#            print "ENC\t{}\t{}\t{}".format(self.time, self.dist_left_raw, self.dist_right_raw)
+        if id == 0x184:  # change report
+            assert len(data) == 1, data
+#            print "CHANGE", data[0] & 0x3, (data[0] >> 2) & 0x3, self.dist_right_raw
 
+    def update_wheel_angle_status(self, (id, data)):
+        if id == 0x182:
+            assert(len(data) == 2) 
+            self.wheel_angle = ctypes.c_short(data[1]*256 + data[0]).value
+            print "WHEEL", self.wheel_angle
 
     def update(self, packet):
         self.update_gas_status(packet)
         self.update_encoders(packet)
+        self.update_wheel_angle_status(packet)
 
     def set_time(self, time):
         self.time = time
@@ -109,13 +120,13 @@ class CANProxy:
 
         if self.turn_cmd is not None:
             if self.turn_stop_time <= self.time:
-                self.can.sendData(0x20C, [0])
+                self.can.sendData(0x202, [0])
                 self.turn_cmd = None
             else:
                 if self.turn_cmd == 'left':
-                    self.can.sendData(0x20C, [9])
+                    self.can.sendData(0x202, [5])
                 elif self.turn_cmd == 'right':
-                    self.can.sendData(0x20C, [0xA])
+                    self.can.sendData(0x202, [0x6])
                 else:
                     assert 0, self.turn_cmd  # unknown turn_cmd
 
