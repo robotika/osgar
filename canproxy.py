@@ -25,8 +25,9 @@ def sint16_diff(a, b):
 
 class CANProxy:
 
-    def __init__(self, can):
+    def __init__(self, can, verbose=False):
         self.can = can
+        self.verbose = verbose
         self.time = 0.0
         self.gas = None
         self.filteredGas = None
@@ -82,7 +83,8 @@ class CANProxy:
                 else:
                     self.dist_right_raw += diffR
             self.prev_enc_raw = arr
-#            print "ENC\t{}\t{}\t{}".format(self.time, self.dist_left_raw, self.dist_right_raw)
+            if self.verbose:
+                print "ENC\t{}\t{}\t{}".format(self.time, self.dist_left_raw, self.dist_right_raw)
         if id == 0x184:  # change report
             assert len(data) == 1, data
 #            print "CHANGE", data[0] & 0x3, (data[0] >> 2) & 0x3, self.dist_right_raw
@@ -91,7 +93,8 @@ class CANProxy:
         if id == 0x182:
             assert(len(data) == 2) 
             self.wheel_angle = ctypes.c_short(data[1]*256 + data[0]).value
-            print "WHEEL", self.wheel_angle
+            if self.verbose:
+                print "WHEEL", self.time, self.wheel_angle
 
     def update(self, packet):
         self.update_gas_status(packet)
