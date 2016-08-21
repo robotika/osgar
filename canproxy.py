@@ -55,7 +55,7 @@ class CANProxy:
 
     def stop_turn(self):
         "immediately stop turning = close valves"
-        self.can.sendData(0x201, [0])
+        self.can.sendData(0x202, [0])
         self.desired_wheel_angle_raw = None
 
     def update_gas_status(self, (id, data)):
@@ -132,7 +132,7 @@ class CANProxy:
                     self.can.sendData(0x202, [0x6])  # right
             else:
                 self.can.sendData(0x202, [0])
-                self.desired_wheel_angle_raw
+                self.desired_wheel_angle_raw = None
 
 
 
