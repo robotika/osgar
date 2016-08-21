@@ -135,6 +135,7 @@ def demo(metalog):
         if not robot.buttonGo:
             print "STOP!"
             break
+    robot.canproxy.stop_turn()
     center(robot)
     robot.velodyne.requestStop()
     robot.gps.requestStop()

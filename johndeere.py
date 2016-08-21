@@ -305,6 +305,7 @@ def self_test(metalog):
         if not robot.buttonGo:
             print "STOP!"
             break
+    robot.canproxy.stop_turn()
     center(robot)  # keep old version for the first test
 
 if __name__ == "__main__":

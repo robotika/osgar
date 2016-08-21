@@ -53,6 +53,11 @@ class CANProxy:
     def set_turn_raw(self, raw_angle):
         self.desired_wheel_angle_raw = raw_angle
 
+    def stop_turn(self):
+        "immediately stop turning = close valves"
+        self.can.sendData(0x201, [0])
+        self.desired_wheel_angle_raw = None
+
     def update_gas_status(self, (id, data)):
         # note partial duplicity with johndeere.py
         if id == 0x281:
