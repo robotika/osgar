@@ -1,9 +1,10 @@
 #!/usr/bin/python
 """
-  Demo - drive and avoid obstacles
+  Follow Me - navigation demo to nearest "obstacle"
   usage:
-       ./demo.py <task-note> [<metalog> [<F>]]
+       ./followme.py <task-note> [<metalog> [<F>]]
 """
+# based on Copy & Paste of demo.py
 import sys
 import math
 from can import CAN, DummyMemoryLog, ReplayLogInputsOnly, ReplayLog
@@ -36,7 +37,7 @@ def velodyne_data_extension(robot, id, data):
     if id=='velodyne':
         robot.velodyne_data = data
 
-def demo(metalog):
+def followme(metalog):
     assert metalog is not None
 
     can_log_name = metalog.getLog('can')
@@ -108,22 +109,12 @@ def demo(metalog):
         if moving:
             if dist is None or dist < SAFE_DISTANCE_STOP:
                 print "!!! STOP !!! -",  robot.velodyne_data
-                #center(robot)
                 robot.canproxy.stop()
                 moving = False
 
-            elif dist < TURN_DISTANCE:
-                if abs(robot.steering_angle) < STRAIGHT_EPS:
-                    arr = robot.velodyne_data[1]
-                    num = len(arr)
-                    left, right = min(arr[:num/2]), min(arr[num/2:])
-                    print "DECIDE", left, right, robot.velodyne_data
-                    if left <= right:
-                        robot.canproxy.set_turn_raw(-100)
-                        robot.steering_angle = math.radians(-30)  # TODO replace by autodetect
-                    else:
-                        robot.canproxy.set_turn_raw(100)
-                        robot.steering_angle = math.radians(30)  # TODO replace by autodetect
+            elif dist_index is not None:
+                target_index, target_dist = dist_index
+                robot.canproxy.set_turn_raw(int((-100/45.)*target_index))
 
             elif dist > NO_TURN_DISTANCE:
                 if abs(robot.steering_angle) > STRAIGHT_EPS:
@@ -133,8 +124,7 @@ def demo(metalog):
         else:  # not moving
             if dist is not None and dist > SAFE_DISTANCE_GO:
                 print "GO",  robot.velodyne_data
-                #go(robot)
-                robot.canproxy.go()
+#                robot.canproxy.go()  # disabled for test only
                 moving = True
         if not robot.buttonGo:
             print "STOP!"
@@ -160,7 +150,7 @@ if __name__ == "__main__":
     if metalog is None:
         metalog = MetaLog()
 
-    demo(metalog)
+    followme(metalog)
 
 # vim: expandtab sw=4 ts=4 
 

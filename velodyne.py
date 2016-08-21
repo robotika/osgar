@@ -31,6 +31,12 @@ def min_dist(data):
         return np.min(data[mask]) * 0.002
     return None
 
+def min_dist_index(data):
+    mask = (data > 0)
+    if np.any(mask):
+        return np.unravel_index(np.argmin(data[mask]), data.shape)[0], np.min(data[mask]) * 0.002
+    return None
+
 class Velodyne:
     def __init__(self, metalog=None):
         if metalog is None:
@@ -45,6 +51,7 @@ class Velodyne:
         self.scan_index = 0
         self.prev_azimuth = None
         self.safe_dist = None
+        self.dist_index = None
         
 
     def parse(self, data):
@@ -73,6 +80,13 @@ class Velodyne:
 # rotated 180deg -> this is back now:     self.safe_dist = min_dist(self.dist[160:200])
                 self.safe_dist = (min_dist(self.dist[335:340]), min_dist(self.dist[340:345]), min_dist(self.dist[345:360]), 
                                   min_dist(self.dist[0:15]), min_dist(self.dist[15:20]), min_dist(self.dist[20:25]))  # (left, right)
+                left = min_dist_index(self.dist[-45:])
+                if left is not None:
+                    left = (left[0]-45, left[1])
+                right = min_dist_index(self.dist[:45])
+                self.dist_index = left
+                if left is None or (right is not None and left[1] > right[1]):
+                    self.dist_index = right
             self.prev_azimuth = azimuth
             # H-distance (2mm step), B-reflectivity (0
             arr = struct.unpack_from('<' + "HB"*32, data, offset + 4)
@@ -106,7 +120,7 @@ class VelodyneThread(Thread):
             self.sensor.update()
             if self._last_index != self.sensor.scan_index:
                 self.lock.acquire()
-                self._result = self.sensor.scan_index, self.sensor.safe_dist
+                self._result = self.sensor.scan_index, self.sensor.safe_dist, self.sensor.dist_index
                 self._last_index = self.sensor.scan_index
                 self.lock.release()
 
@@ -149,7 +163,7 @@ if __name__ == "__main__":
         prev = None
         for i in xrange(10000):
             sensor.update()
-            curr = sensor.scan_index, sensor.safe_dist
+            curr = sensor.scan_index, sensor.dist_index
             if prev != curr:
                 if sensor.scan_index % 10 == 0:
                     print curr
