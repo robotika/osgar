@@ -297,6 +297,7 @@ def self_test(metalog):
     wait_for_start(robot)
     robot.desired_speed = 0.5
     start_time = robot.time
+    robot.canproxy.set_turn_raw(0)
     robot.canproxy.go()  # go(robot)
     while robot.time - start_time < 333.0:
         robot.update()

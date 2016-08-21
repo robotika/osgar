@@ -16,6 +16,10 @@ GO_LIMIT = 19000
 
 SCALE_NEW = 0.5  # 0.0 < x < 1.0
 
+# accepted +/- for completed turn
+TURN_TOLERANCE = 10
+
+
 def sint16_diff(a, b):
     '''clip integer value (a - b) to signed int16'''
     assert 0 <= a <= 0xFFFF, a
@@ -32,14 +36,13 @@ class CANProxy:
         self.gas = None
         self.filteredGas = None
         self.cmd = None
-        self.turn_cmd = None
-        self.turn_stop_time = 0.0
 
         self.prev_enc_raw = None
         self.dist_left_raw = 0
         self.dist_right_raw = 0
 
-        self.wheel_angle = None
+        self.wheel_angle_raw = None
+        self.desired_wheel_angle_raw = None
 
     def go(self):
         self.cmd = 'go'
@@ -47,13 +50,8 @@ class CANProxy:
     def stop(self):
         self.cmd = 'stop'
 
-    def pulse_left(self, duration):
-        self.turn_cmd = 'left'
-        self.turn_stop_time = self.time + duration
-
-    def pulse_right(self, duration):
-        self.turn_cmd = 'right'
-        self.turn_stop_time = self.time + duration
+    def set_turn_raw(self, raw_angle):
+        self.desired_wheel_angle_raw = raw_angle
 
     def update_gas_status(self, (id, data)):
         # note partial duplicity with johndeere.py
@@ -92,9 +90,9 @@ class CANProxy:
     def update_wheel_angle_status(self, (id, data)):
         if id == 0x182:
             assert(len(data) == 2) 
-            self.wheel_angle = ctypes.c_short(data[1]*256 + data[0]).value
+            self.wheel_angle_raw = ctypes.c_short(data[1]*256 + data[0]).value
             if self.verbose:
-                print "WHEEL", self.time, self.wheel_angle
+                print "WHEEL", self.time, self.wheel_angle_raw
 
     def update(self, packet):
         self.update_gas_status(packet)
@@ -104,7 +102,7 @@ class CANProxy:
     def set_time(self, time):
         self.time = time
 
-    def send_speed(self):
+    def send_speed(self):  # and turning commands
         if self.cmd == 'go':
             if self.filteredGas < GO_LIMIT:
                 self.can.sendData(0x201, [0xC])  # pulse forward
@@ -121,17 +119,17 @@ class CANProxy:
                 self.can.sendData(0x201, [0])
                 self.cmd = None
 
-        if self.turn_cmd is not None:
-            if self.turn_stop_time <= self.time:
-                self.can.sendData(0x202, [0])
-                self.turn_cmd = None
-            else:
-                if self.turn_cmd == 'left':
-                    self.can.sendData(0x202, [5])
-                elif self.turn_cmd == 'right':
-                    self.can.sendData(0x202, [0x6])
+        if self.desired_wheel_angle_raw is not None and self.wheel_angle_raw is not None:
+            if abs(self.desired_wheel_angle_raw - self.wheel_angle_raw) > TURN_TOLERANCE:
+                if self.desired_wheel_angle_raw > self.wheel_angle_raw:
+                    self.can.sendData(0x202, [5])  # left
                 else:
-                    assert 0, self.turn_cmd  # unknown turn_cmd
+                    self.can.sendData(0x202, [0x6])  # right
+            else:
+                self.can.sendData(0x202, [0])
+                self.desired_wheel_angle_raw
+
+
 
 # vim: expandtab sw=4 ts=4 
 
