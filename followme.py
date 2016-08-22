@@ -88,6 +88,7 @@ def followme(metalog):
     wait_for_start(robot)
 
     moving = False
+    target_detected = False
     robot.desired_speed = 0.5
     start_time = robot.time
     prev_gps = robot.gps_data
@@ -95,36 +96,36 @@ def followme(metalog):
     while robot.time - start_time < 30*60:  # limit 30 minutes
         robot.update()
         if robot.gps_data != prev_gps:
-            print robot.time, robot.gas, robot.gps_data, robot.velodyne_data
+            if robot.velodyne_data is not None:
+                print (robot.velodyne_data[-1], robot.canproxy.wheel_angle_raw, 
+                       robot.canproxy.desired_wheel_angle_raw)
             prev_gps = robot.gps_data
-        dist = None
+
+        dist, dist_index = None, None
         if robot.velodyne_data is not None:
-            dist_index = None
+            
             if len(robot.velodyne_data) == 2:
                 index, dist = robot.velodyne_data
             else:
                 index, dist, dist_index = robot.velodyne_data
             if dist is not None:
                 dist = min(dist)  # currently supported tupple of readings
+
+        if dist_index is not None:
+            target_index, target_dist = dist_index
+            robot.canproxy.set_turn_raw(int((-100/45.)*target_index))
+
         if moving:
             if dist is None or dist < SAFE_DISTANCE_STOP:
                 print "!!! STOP !!! -",  robot.velodyne_data
                 robot.canproxy.stop()
                 moving = False
 
-            elif dist_index is not None:
-                target_index, target_dist = dist_index
-                robot.canproxy.set_turn_raw(int((-100/45.)*target_index))
-
-            elif dist > NO_TURN_DISTANCE:
-                if abs(robot.steering_angle) > STRAIGHT_EPS:
-                    robot.canproxy.set_turn_raw(0)
-                    robot.steering_angle = 0.0  # TODO replace by autodetect
-
         else:  # not moving
             if dist is not None and dist > SAFE_DISTANCE_GO:
-                print "GO",  robot.velodyne_data
-#                robot.canproxy.go()  # disabled for test only
+                print "GO", target_detected, robot.velodyne_data
+                if target_detected:
+                    robot.canproxy.go()
                 moving = True
         if not robot.buttonGo:
             print "STOP!"
