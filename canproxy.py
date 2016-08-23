@@ -13,6 +13,9 @@ CENTER_GAS_MIN = 14500
 CENTER_GAS_MAX = 16500
 
 GO_LIMIT = 19000
+SLOW_SPEED_MIN = 1.0
+SLOW_SPEED_MAX = 2.0
+
 
 SCALE_NEW = 0.5  # 0.0 < x < 1.0
 
@@ -36,16 +39,22 @@ class CANProxy:
         self.gas = None
         self.filteredGas = None
         self.cmd = None
+        self.no_change_time = None
 
         self.prev_enc_raw = None
         self.dist_left_raw = 0
         self.dist_right_raw = 0
+        self.speed_raw = 0
+        self.speed_average = 0
 
         self.wheel_angle_raw = None
         self.desired_wheel_angle_raw = None
 
     def go(self):
         self.cmd = 'go'
+
+    def go_slowly(self):
+        self.cmd = 'go_slowly'
 
     def stop(self):
         self.cmd = 'stop'
@@ -85,6 +94,14 @@ class CANProxy:
                     print "ERR-R\t{}\t{}\t{}".format(self.dist_right_raw, self.prev_enc_raw[1], arr[1])
                 else:
                     self.dist_right_raw += diffR
+
+                speed = (diffL + diffR)/2.0
+                if abs(speed) < 100:
+                    self.speed_raw = speed
+                FRAC = 0.2
+                self.speed_average = FRAC*self.speed_raw + (1 - FRAC)*self.speed_average
+                if self.verbose:
+                    print "SPEED", self.time, self.speed_raw, self.speed_average
             self.prev_enc_raw = arr
             if self.verbose:
                 print "ENC\t{}\t{}\t{}".format(self.time, self.dist_left_raw, self.dist_right_raw)
@@ -114,6 +131,29 @@ class CANProxy:
             else:
                 self.can.sendData(0x201, [0])
                 self.cmd = None
+
+        if self.cmd == 'go_slowly':
+            if self.no_change_time is None or self.no_change_time < self.time:
+                if self.speed_average < SLOW_SPEED_MIN:
+                    self.cmd = 'go_slowly_up'
+                elif self.speed_average > SLOW_SPEED_MAX:
+                    self.cmd = 'go_slowly_down'
+
+        if self.cmd == 'go_slowly_up':
+            if self.filteredGas < GO_LIMIT and self.speed_average < SLOW_SPEED_MIN:
+                self.can.sendData(0x201, [0xC])  # pulse forward
+            else:
+                self.can.sendData(0x201, [0])
+                self.no_change_time = self.time + 0.5  # sec
+                self.cmd = 'go_slowly'
+
+        if self.cmd == 'go_slowly_down':
+            if self.speed_average > SLOW_SPEED_MAX and self.filteredGas > CENTER_GAS_MAX:
+                self.can.sendData(0x201, [3])  # pulse backward
+            else:
+                self.can.sendData(0x201, [0])
+                self.no_change_time = self.time + 0.5  # sec
+                self.cmd = 'go_slowly'
 
         elif self.cmd == 'stop':
             if self.filteredGas < CENTER_GAS_MIN:

@@ -22,7 +22,7 @@ from line import distance
 
 SAFE_DISTANCE_STOP = 2.5  # meters
 SAFE_DISTANCE_GO = SAFE_DISTANCE_STOP + 0.5
-TARGET_DISTANCE = 4.0
+TARGET_DISTANCE = 4.5
 STRAIGHT_EPS = math.radians(10)
 
 
@@ -127,7 +127,7 @@ def followme(metalog):
             if dist is not None and dist > SAFE_DISTANCE_GO:
                 print "GO", target_detected, robot.velodyne_data
                 if target_detected:
-                    robot.canproxy.go()
+                    robot.canproxy.go_slowly()
                     moving = True
         if not robot.buttonGo:
             print "STOP!"
