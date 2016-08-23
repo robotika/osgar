@@ -22,9 +22,8 @@ from line import distance
 
 SAFE_DISTANCE_STOP = 2.5  # meters
 SAFE_DISTANCE_GO = SAFE_DISTANCE_STOP + 0.5
-TURN_DISTANCE = 4.0
+TARGET_DISTANCE = 4.0
 STRAIGHT_EPS = math.radians(10)
-NO_TURN_DISTANCE = TURN_DISTANCE + 0.5
 
 
 def gps_data_extension(robot, id, data):
@@ -114,9 +113,12 @@ def followme(metalog):
         if dist_index is not None:
             target_index, target_dist = dist_index
             robot.canproxy.set_turn_raw(int((-100/45.)*target_index))
+            target_detected = target_dist < TARGET_DISTANCE
+        else:
+            dist_index = False
 
         if moving:
-            if dist is None or dist < SAFE_DISTANCE_STOP:
+            if dist is None or dist < SAFE_DISTANCE_STOP or not target_detected:
                 print "!!! STOP !!! -",  robot.velodyne_data
                 robot.canproxy.stop()
                 moving = False
@@ -126,7 +128,7 @@ def followme(metalog):
                 print "GO", target_detected, robot.velodyne_data
                 if target_detected:
                     robot.canproxy.go()
-                moving = True
+                    moving = True
         if not robot.buttonGo:
             print "STOP!"
             break
