@@ -34,7 +34,11 @@ def min_dist(data):
 def min_dist_index(data):
     mask = (data > 0)
     if np.any(mask):
-        return np.unravel_index(np.argmin(data[mask]), data.shape)[0], np.min(data[mask]) * 0.002
+        # dirty hack for argmin counting only masked elements :(
+        ugly = data.copy()
+        inv_mask = ugly == 0
+        ugly[inv_mask] = 100000
+        return np.unravel_index(np.argmin(ugly), data.shape)[0], np.min(data[mask]) * 0.002
     return None
 
 class Velodyne:
