@@ -69,6 +69,6 @@ if __name__=="__main__":
     from sys import argv
     logfn=r'..\logs\can_160823_183916.log'
     if len(argv)>1:
-        logfn=arv[1]
+        logfn=argv[1]
     filtration(logfn)
 
