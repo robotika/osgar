@@ -13,6 +13,7 @@ CENTER_GAS_MIN = 14500
 CENTER_GAS_MAX = 16500
 
 GO_LIMIT = 19000
+PULSE_STEP = 500
 SLOW_SPEED_MIN = 1.0
 SLOW_SPEED_MAX = 2.0
 
@@ -36,8 +37,10 @@ class CANProxy:
         self.can = can
         self.verbose = verbose
         self.time = 0.0
-        self.gas = None
+        self.gas = None  # pedal_position would be more appropriate name
         self.filteredGas = None
+        self.desired_gas = None
+        self.last_gas_dx = 0  # "derivative" for debouncing
         self.cmd = None
         self.no_change_time = None
 
@@ -125,6 +128,25 @@ class CANProxy:
         self.time = time
 
     def send_speed(self):  # and turning commands
+        if self.desired_gas is not None:
+            # make sure the desired value is in safe=slow forward range
+            assert CENTER_GAS_MIN <= self.desired_gas <= GO_LIMIT, self.desired_gas
+            if self.filteredGas < self.desired_gas - PULSE_STEP and self.last_gas_dx >= 0:
+                self.can.sendData(0x201, [0xC])  # pulse forward
+                self.last_gas_dx = 1
+                self.no_change_time = self.time + 0.5
+            elif self.filteredGas > self.desired_gas + PULSE_STEP and self.last_gas_dx <= 0:
+                self.can.sendData(0x201, [3])  # pulse backward
+                self.last_gas_dx = -1
+                self.no_change_time = self.time + 0.5
+            else:
+                self.can.sendData(0x201, [0])
+                if self.no_change_time is None or self.no_change_time >= self.time:
+                    self.last_gas_dx = 0
+                    self.no_change_time = None
+
+        # REFACTORING NEEDED coliding control methods (!!!)
+
         if self.cmd == 'go':
             if self.filteredGas < GO_LIMIT:
                 self.can.sendData(0x201, [0xC])  # pulse forward

@@ -298,13 +298,14 @@ def self_test(metalog):
     robot.desired_speed = 0.5
     start_time = robot.time
     robot.canproxy.set_turn_raw(0)
-    robot.canproxy.go()  # go(robot)
+    robot.canproxy.desired_gas = 18000  # robot.canproxy.go()  # go(robot)
     while robot.time - start_time < 333.0:
         robot.update()
         print robot.time, robot.gas
         if not robot.buttonGo:
             print "STOP!"
             break
+    robot.canproxy.desired_gas = None
     robot.canproxy.stop_turn()
     center(robot)  # keep old version for the first test
 
