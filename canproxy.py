@@ -38,6 +38,9 @@ class CANProxy:
         self.verbose = verbose
         self.time = 0.0
         self.gas = None  # pedal_position would be more appropriate name
+        self.gas_count = 0  # compute average between SYNC
+        self.gas_sum = 0
+        self.gas_min_max = 0x10000, 0
         self.filteredGas = None
         self.desired_gas = None
         self.last_gas_dx = 0  # "derivative" for debouncing
@@ -75,10 +78,23 @@ class CANProxy:
         if id == 0x281:
             assert( len(data)>=8 ) 
             self.gas = data[1]*256 + data[0]
+            self.gas_count += 1
+            self.gas_sum += self.gas
+            self.gas_min_max = (min(self.gas_min_max[0], self.gas), max(self.gas_min_max[1], self.gas))
             if self.filteredGas is None:
                 self.filteredGas = self.gas
             else:
                 self.filteredGas = SCALE_NEW*self.gas + (1.0 - SCALE_NEW)*self.filteredGas
+        
+        elif id == 0x80:
+            if self.verbose:
+                if self.gas_count > 0:
+                    print "SYNC", self.gas_count, self.gas_min_max, self.gas_sum/float(self.gas_count)
+                else:
+                    print "SYNC 0"
+            self.gas_count = 0
+            self.gas_sum = 0
+            self.gas_min_max = 0x10000, 0
 
     def update_encoders(self, (id, data)):
         if id == 0x284:
