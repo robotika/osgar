@@ -81,12 +81,11 @@ class CANProxy:
             self.gas_count += 1
             self.gas_sum += self.gas
             self.gas_min_max = (min(self.gas_min_max[0], self.gas), max(self.gas_min_max[1], self.gas))
-            if self.filteredGas is None:
-                self.filteredGas = self.gas
-            else:
-                self.filteredGas = SCALE_NEW*self.gas + (1.0 - SCALE_NEW)*self.filteredGas
         
         elif id == 0x80:
+            if self.gas_count > 0:
+                self.filteredGas = self.gas_sum/float(self.gas_count)
+
             if self.verbose:
                 if self.gas_count > 0:
                     print "SYNC", self.gas_count, self.gas_min_max, self.gas_sum/float(self.gas_count)
