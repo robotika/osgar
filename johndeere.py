@@ -31,7 +31,7 @@ def setup_faster_update(can):
         reader.update( can.readPacket() )
     print "RESULT DATA (before):", reader.result 
 
-    writer = WriteSDO( 1, 0x1801, 5, [50, 0] )
+    writer = WriteSDO( 1, 0x1801, 5, [5, 0] )
     for cmd in writer.generator():
         if cmd:
             can.sendData( *cmd )
@@ -211,7 +211,7 @@ class JohnDeere(object):
                 e(self, packet[0], packet[1])
             
             # make sure that all updates get also termination SYNC (0x80)
-            if packet[0] == 0x281:  # 0x80:  
+            if packet[0] == 0x80:  
                 break
 
         # send data related to other sources
@@ -298,8 +298,8 @@ def self_test(metalog):
     robot.desired_speed = 0.5
     start_time = robot.time
     robot.canproxy.set_turn_raw(0)
-    robot.canproxy.desired_gas = 18000  # robot.canproxy.go()  # go(robot)
-    while robot.time - start_time < 333.0:
+    robot.canproxy.go()
+    while robot.time - start_time < 3.0:
         robot.update()
         print robot.time, robot.gas
         if not robot.buttonGo:
