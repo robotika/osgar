@@ -1,15 +1,16 @@
 #!/usr/bin/python
 """
   Demo - drive and avoid obstacles
+  (alternative version without Velodyne)
   usage:
-       ./demo.py <task-note> [<metalog> [<F>]]
+       ./demo2.py <task-note> [<metalog> [<F>]]
 """
 import sys
 import math
 from can import CAN, DummyMemoryLog, ReplayLogInputsOnly, ReplayLog
 from gps import GPS
 from gps import DummyGPS as DummySensor  # TODO move to apyros, as mock
-from velodyne import VelodyneThread, Velodyne
+from laser import LaserIP
 from johndeere import (JohnDeere, center, go, wait_for_start, 
                        setup_faster_update)
 from apyros.metalog import MetaLog, disableAsserts
@@ -32,9 +33,11 @@ def gps_data_extension(robot, id, data):
         if robot.localization is not None:
             robot.localization.updateGPS(data) 
 
-def velodyne_data_extension(robot, id, data):
-    if id=='velodyne':
-        robot.velodyne_data = data
+
+def laser_data_extension(robot, id, data):
+    if id=='laser':
+        robot.laser_data = data
+
 
 def demo(metalog):
     assert metalog is not None
@@ -67,21 +70,20 @@ def demo(metalog):
     robot.gps_data = None
     robot.register_data_source('gps', function, gps_data_extension) 
 
-    # Velodyne
-    velodyne_log_name = metalog.getLog('velodyne_dist')
-    print velodyne_log_name
-    sensor = Velodyne(metalog=metalog)
+    # Laser
+    laser_log_name = metalog.getLog('laser')
+    print laser_log_name
     if metalog.replay:
-        robot.velodyne = DummySensor()
-        function = SourceLogger(None, velodyne_log_name).get
+        robot.laser = DummySensor()
+        function = SourceLogger(None, laser_log_name).get
     else:
-        robot.velodyne = VelodyneThread(sensor)
-        function = SourceLogger(robot.velodyne.scan_safe_dist, velodyne_log_name).get
-    robot.velodyne_data = None
-    robot.register_data_source('velodyne', function, velodyne_data_extension) 
+        robot.laser = LaserIP()
+        function = SourceLogger(robot.laser.scan, laser_log_name).get
+    robot.laser_data = None
+    robot.register_data_source('laser', function, laser_data_extension) 
 
     robot.gps.start()  # ASAP so we get GPS fix
-    robot.velodyne.start()  # the data source is active, so it is necessary to read-out data
+    robot.laser.start()
 
     center(robot)
     wait_for_start(robot)
@@ -94,46 +96,38 @@ def demo(metalog):
     while robot.time - start_time < 30*60:  # limit 30 minutes
         robot.update()
         if robot.gps_data != prev_gps:
-            print robot.time, robot.gas, robot.gps_data, robot.velodyne_data
+            print robot.time, robot.gas, robot.gps_data, robot.laser_data
             prev_gps = robot.gps_data
         dist = None
-        if robot.velodyne_data is not None:
-            dist_index = None
-            if len(robot.velodyne_data) == 2:
-                index, dist = robot.velodyne_data
-            else:
-                index, dist, dist_index = robot.velodyne_data
-            if dist is not None:
-                dist = min(dist)  # currently supported tupple of readings
+        if robot.laser_data is not None:
+            pass # TODO
         if moving:
             if dist is None or dist < SAFE_DISTANCE_STOP:
-                print "!!! STOP !!! -",  robot.velodyne_data
-                #center(robot)
+                print "!!! STOP !!! -",  robot.laser_data
                 robot.canproxy.stop()
                 moving = False
 
-            elif dist < TURN_DISTANCE:
-                if abs(robot.steering_angle) < STRAIGHT_EPS:
-                    arr = robot.velodyne_data[1]
-                    num = len(arr)
-                    left, right = min(arr[:num/2]), min(arr[num/2:])
-                    print "DECIDE", left, right, robot.velodyne_data
-                    if left <= right:
-                        robot.canproxy.set_turn_raw(-100)
-                        robot.steering_angle = math.radians(-30)  # TODO replace by autodetect
-                    else:
-                        robot.canproxy.set_turn_raw(100)
-                        robot.steering_angle = math.radians(30)  # TODO replace by autodetect
+#            elif dist < TURN_DISTANCE:
+#                if abs(robot.steering_angle) < STRAIGHT_EPS:
+#                    arr = robot.velodyne_data[1]
+#                    num = len(arr)
+#                    left, right = min(arr[:num/2]), min(arr[num/2:])
+#                    print "DECIDE", left, right, robot.velodyne_data
+#                    if left <= right:
+#                        robot.canproxy.set_turn_raw(-100)
+#                        robot.steering_angle = math.radians(-30)
+#                    else:
+#                        robot.canproxy.set_turn_raw(100)
+#                        robot.steering_angle = math.radians(30)
 
             elif dist > NO_TURN_DISTANCE:
                 if abs(robot.steering_angle) > STRAIGHT_EPS:
                     robot.canproxy.set_turn_raw(0)
-                    robot.steering_angle = 0.0  # TODO replace by autodetect
+                    robot.steering_angle = 0.0
 
         else:  # not moving
             if dist is not None and dist > SAFE_DISTANCE_GO:
-                print "GO",  robot.velodyne_data
-                #go(robot)
+                print "GO",  robot.laser_data
                 robot.canproxy.go()
                 moving = True
         if not robot.buttonGo:
@@ -141,7 +135,7 @@ def demo(metalog):
             break
     robot.canproxy.stop_turn()
     center(robot)
-    robot.velodyne.requestStop()
+    robot.laser.requestStop()
     robot.gps.requestStop()
 
 
