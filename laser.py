@@ -16,7 +16,7 @@ from threading import Thread,Event,Lock
 #import usb.core
 #import usb.util
 
-HOST = '192.168.2.1'    # The remote host
+HOST = '192.168.2.23'    # The remote host
 PORT = 2111             # The same port as used by the server
 
 STX = chr(2)

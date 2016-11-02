@@ -85,6 +85,9 @@ def demo(metalog):
     robot.gps.start()  # ASAP so we get GPS fix
     robot.laser.start()
 
+    while robot.gas is None:
+        robot.update()
+
     center(robot)
     wait_for_start(robot)
 

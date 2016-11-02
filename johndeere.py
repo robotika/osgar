@@ -301,7 +301,7 @@ def self_test(metalog):
     robot.canproxy.go()
     while robot.time - start_time < 3.0:
         robot.update()
-        print robot.time, robot.gas
+        print robot.time, robot.canproxy.filteredGas
         if not robot.buttonGo:
             print "STOP!"
             break
