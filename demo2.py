@@ -25,7 +25,7 @@ from line import distance
 
 SAFE_DISTANCE_STOP = 1.5  # meters
 SAFE_DISTANCE_GO = SAFE_DISTANCE_STOP + 0.5
-TURN_DISTANCE = 4.0
+TURN_DISTANCE = 3.0
 STRAIGHT_EPS = math.radians(10)
 NO_TURN_DISTANCE = TURN_DISTANCE + 0.5
 
@@ -118,9 +118,11 @@ def demo(metalog):
         if robot.laser_data is not None:
             assert len(robot.laser_data) == 541,  len(robot.laser_data)
             distL, distR = min_dist_arr(robot.laser_data[200:-200])
+            distL = 20.0 if distL is None else distL
+            distR = 20.0 if distR is None else distR
             dist = min(distL, distR)
         if robot.gps_data != prev_gps:
-            print robot.time, robot.gas, robot.gps_data, dist
+            print robot.time, robot.gas, robot.gps_data, (distL, distR)
             prev_gps = robot.gps_data
         if moving:
             if dist is None or dist < SAFE_DISTANCE_STOP:
@@ -128,18 +130,15 @@ def demo(metalog):
                 robot.canproxy.stop()
                 moving = False
 
-#            elif dist < TURN_DISTANCE:
-#                if abs(robot.steering_angle) < STRAIGHT_EPS:
-#                    arr = robot.velodyne_data[1]
-#                    num = len(arr)
-#                    left, right = min(arr[:num/2]), min(arr[num/2:])
-#                    print "DECIDE", left, right, robot.velodyne_data
-#                    if left <= right:
-#                        robot.canproxy.set_turn_raw(-100)
-#                        robot.steering_angle = math.radians(-30)
-#                    else:
-#                        robot.canproxy.set_turn_raw(100)
-#                        robot.steering_angle = math.radians(30)
+            elif dist < TURN_DISTANCE:
+                if abs(robot.steering_angle) < STRAIGHT_EPS:
+                    print "DECIDE", distL, distR
+                    if distL <= distR:
+                        robot.canproxy.set_turn_raw(-100)
+                        robot.steering_angle = math.radians(-30)
+                    else:
+                        robot.canproxy.set_turn_raw(100)
+                        robot.steering_angle = math.radians(30)
 
             elif dist > NO_TURN_DISTANCE:
                 if abs(robot.steering_angle) > STRAIGHT_EPS:
