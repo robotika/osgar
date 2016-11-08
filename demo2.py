@@ -23,7 +23,7 @@ from route import Convertor, Route
 from line import distance
 
 
-SAFE_DISTANCE_STOP = 2.5  # meters
+SAFE_DISTANCE_STOP = 1.5  # meters
 SAFE_DISTANCE_GO = SAFE_DISTANCE_STOP + 0.5
 TURN_DISTANCE = 4.0
 STRAIGHT_EPS = math.radians(10)
@@ -43,11 +43,17 @@ def laser_data_extension(robot, id, data):
 
 
 def min_dist(data):
+    data = np.array(data)
     mask = (data > 0)
     if np.any(mask):
         return np.min(data[mask]) * 0.001
     return None 
 
+def min_dist_arr(data):
+    """Fake segments as in demo.py for Velodyne"""
+    num = len(data)
+    # laser data are anticlockwise -> swap left, right
+    return min_dist(data[num/2:]), min_dist(data[:num/2])
 
 def demo(metalog):
     assert metalog is not None
@@ -111,13 +117,14 @@ def demo(metalog):
         dist = None
         if robot.laser_data is not None:
             assert len(robot.laser_data) == 541,  len(robot.laser_data)
-            dist = min_dist(robot.laser_data[100:-100])
+            distL, distR = min_dist_arr(robot.laser_data[200:-200])
+            dist = min(distL, distR)
         if robot.gps_data != prev_gps:
             print robot.time, robot.gas, robot.gps_data, dist
             prev_gps = robot.gps_data
         if moving:
             if dist is None or dist < SAFE_DISTANCE_STOP:
-                print "!!! STOP !!! -",  robot.laser_data
+                print "!!! STOP !!!",  dist, (distL, distR)
                 robot.canproxy.stop()
                 moving = False
 
