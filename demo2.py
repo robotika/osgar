@@ -7,6 +7,9 @@
 """
 import sys
 import math
+
+import numpy as np
+
 from can import CAN, DummyMemoryLog, ReplayLogInputsOnly, ReplayLog
 from gps import GPS
 from gps import DummyGPS as DummySensor  # TODO move to apyros, as mock
@@ -37,6 +40,13 @@ def gps_data_extension(robot, id, data):
 def laser_data_extension(robot, id, data):
     if id=='laser':
         robot.laser_data = data
+
+
+def min_dist(data):
+    mask = (data > 0)
+    if np.any(mask):
+        return np.min(data[mask]) * 0.001
+    return None 
 
 
 def demo(metalog):
@@ -98,12 +108,13 @@ def demo(metalog):
     prev_destination_dist = None
     while robot.time - start_time < 30*60:  # limit 30 minutes
         robot.update()
-        if robot.gps_data != prev_gps:
-            print robot.time, robot.gas, robot.gps_data, robot.laser_data
-            prev_gps = robot.gps_data
         dist = None
         if robot.laser_data is not None:
-            pass # TODO
+            assert len(robot.laser_data) == 541,  len(robot.laser_data)
+            dist = min_dist(robot.laser_data[100:-100])
+        if robot.gps_data != prev_gps:
+            print robot.time, robot.gas, robot.gps_data, dist
+            prev_gps = robot.gps_data
         if moving:
             if dist is None or dist < SAFE_DISTANCE_STOP:
                 print "!!! STOP !!! -",  robot.laser_data
@@ -130,7 +141,7 @@ def demo(metalog):
 
         else:  # not moving
             if dist is not None and dist > SAFE_DISTANCE_GO:
-                print "GO",  robot.laser_data
+                print "GO",  dist
                 robot.canproxy.go()
                 moving = True
         if not robot.buttonGo:
