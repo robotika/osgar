@@ -128,11 +128,13 @@ def demo(metalog):
     robot.gps.start()  # ASAP so we get GPS fix
     robot.laser.start()
 
-    while robot.gas is None:
+    print "Wait for gas"
+    while robot.canproxy.gas is None:
         robot.update()
 
-    center(robot)
-    wait_for_start(robot)
+    print "Wait for center"
+    robot.canproxy.stop()
+    # not available now :( ... wait_for_start(robot)
 
     moving = False
     robot.desired_speed = 0.5
@@ -151,7 +153,7 @@ def demo(metalog):
             dist = min(distL, distR)
             turn_angle = follow_wall_angle(robot.laser_data)
         if robot.gps_data != prev_gps:
-#            print robot.time, robot.gas, robot.gps_data, (distL, distR)
+            print robot.time, robot.gas, robot.gps_data, (distL, distR)
             prev_gps = robot.gps_data
         if moving:
             if dist is None or dist < SAFE_DISTANCE_STOP:
@@ -166,11 +168,14 @@ def demo(metalog):
         if turn_angle is not None:
             turn_cmd = max(-100, min(100, math.degrees(turn_angle)))
             robot.canproxy.set_turn_raw(turn_cmd)
-        if not robot.buttonGo:
-            print "STOP!"
-            break
+#            print turn_cmd
+#        if not robot.buttonGo:
+#            print "STOP!"
+#            break
     robot.canproxy.stop_turn()
-    center(robot)
+    robot.canproxy.stop()
+    for i in xrange(20):
+        robot.update()
     robot.laser.requestStop()
     robot.gps.requestStop()
 

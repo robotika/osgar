@@ -9,10 +9,10 @@ import ctypes
 
 PULSE_DURATION = 0.3  #0.5  # seconds
 
-CENTER_GAS_MIN = 14500
-CENTER_GAS_MAX = 16500
+CENTER_GAS_MIN = -3768  # 14500
+CENTER_GAS_MAX = 232  # 16500
 
-GO_LIMIT = 19000
+GO_LIMIT = 5232  # 19000
 PULSE_STEP = 500
 SLOW_SPEED_MIN = 1.0
 SLOW_SPEED_MAX = 2.0
@@ -76,12 +76,20 @@ class CANProxy:
     def update_gas_status(self, (id, data)):
         # note partial duplicity with johndeere.py
         if id == 0x281:
+            # obsolete, remove it
             assert( len(data)>=8 ) 
             self.gas = data[1]*256 + data[0]
             self.gas_count += 1
             self.gas_sum += self.gas
             self.gas_min_max = (min(self.gas_min_max[0], self.gas), max(self.gas_min_max[1], self.gas))
-        
+
+        if id == 0x181:
+            assert len(data)==2, data
+            self.gas = ctypes.c_short(data[1]*256 + data[0]).value
+            self.gas_count += 1
+            self.gas_sum += self.gas
+            self.gas_min_max = (min(self.gas_min_max[0], self.gas), max(self.gas_min_max[1], self.gas))
+
         elif id == 0x80:
             if self.gas_count > 0:
                 self.filteredGas = self.gas_sum/float(self.gas_count)
@@ -193,6 +201,7 @@ class CANProxy:
                 self.cmd = 'go_slowly'
 
         elif self.cmd == 'stop':
+            print self.filteredGas
             if self.filteredGas < CENTER_GAS_MIN:
                 self.can.sendData(0x201, [0xC])  # pulse forward
             elif self.filteredGas > CENTER_GAS_MAX:
@@ -200,6 +209,7 @@ class CANProxy:
             else:
                 self.can.sendData(0x201, [0])
                 self.cmd = None
+                print "stop STOP"
 
         if self.desired_wheel_angle_raw is not None and self.wheel_angle_raw is not None:
             if abs(self.desired_wheel_angle_raw - self.wheel_angle_raw) > TURN_TOLERANCE:
