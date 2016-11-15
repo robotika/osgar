@@ -26,15 +26,16 @@ def dump_pose(out, pose):
 
 def dump_laser(out, data):
     assert len(data) == 541, len(data)
+    step = 2
     out.write('Geometry')
-    for angle in xrange(-135, 135, 5):
+    for angle in xrange(-135, 135, step/2):
         s = 0, 0, math.radians(angle)
         out.write(' %.2f %.2f %.4f' % s)
     out.write('\n')
 
     pose = (0, 0, 0)
     out.write('Ranger %.2f %.2f %.4f ' % pose)
-    for i in xrange(0, 540, 10):
+    for i in xrange(0, 540, step):
         dist = data[i]/1000.0
         out.write(' %.3f' % dist)
     out.write('\n')
