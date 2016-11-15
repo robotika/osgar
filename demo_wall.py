@@ -151,7 +151,7 @@ def demo(metalog):
             distL = 20.0 if distL is None else distL
             distR = 20.0 if distR is None else distR
             dist = min(distL, distR)
-            turn_angle = follow_wall_angle(robot.laser_data)
+            turn_angle = follow_wall_angle(robot.laser_data, radius=1.5)
         if robot.gps_data != prev_gps:
             print robot.time, robot.gas, robot.gps_data, (distL, distR)
             prev_gps = robot.gps_data
