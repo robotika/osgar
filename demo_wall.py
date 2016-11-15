@@ -64,6 +64,25 @@ def min_dist_arr(data):
     return min_dist(data[num/2:]), min_dist(data[:num/2])
 
 
+def tangent_circle(dist, radius):
+    if dist < 2 * radius:
+        if dist >= radius:
+            return math.asin(radius/float(dist))
+        return math.radians(100)
+    return None
+
+
+def follow_wall_angle(laser_data, radius = 2.0):
+    max_angle = None
+    for i, dist in enumerate(laser_data):
+        dist = dist/1000.0
+        laser_angle = math.radians((270-i)/2.0)
+        angle = tangent_circle(dist, radius)
+        if angle is not None:
+            max_angle = max(max_angle, laser_angle + angle)
+    return max_angle
+
+
 def demo(metalog):
     assert metalog is not None
 
@@ -123,12 +142,14 @@ def demo(metalog):
     while robot.time - start_time < 30*60:  # limit 30 minutes
         robot.update()
         dist = None
+        turn_angle = None
         if robot.laser_data is not None:
             assert len(robot.laser_data) == 541,  len(robot.laser_data)
             distL, distR = min_dist_arr(robot.laser_data[200:-200])
             distL = 20.0 if distL is None else distL
             distR = 20.0 if distR is None else distR
             dist = min(distL, distR)
+            turn_angle = follow_wall_angle(robot.laser_data)
         if robot.gps_data != prev_gps:
 #            print robot.time, robot.gas, robot.gps_data, (distL, distR)
             prev_gps = robot.gps_data
@@ -137,12 +158,14 @@ def demo(metalog):
                 print "!!! STOP !!!",  dist, (distL, distR)
                 robot.canproxy.stop()
                 moving = False
-
         else:  # not moving
             if dist is not None and dist > SAFE_DISTANCE_GO:
                 print "GO",  dist
                 robot.canproxy.go()
                 moving = True
+        if turn_angle is not None:
+            turn_cmd = max(-100, min(100, math.degrees(turn_angle)))
+            robot.canproxy.set_turn_raw(turn_cmd)
         if not robot.buttonGo:
             print "STOP!"
             break
