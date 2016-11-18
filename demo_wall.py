@@ -73,14 +73,17 @@ def tangent_circle(dist, radius):
 
 
 def follow_wall_angle(laser_data, radius = 2.0):
-    max_angle = None
-    for i, dist in enumerate(laser_data[:len(laser_data)/2]):
-        dist = dist/1000.0
-        laser_angle = math.radians((-270+i)/2.0)
-        angle = tangent_circle(dist, radius)
-        if angle is not None:
-            max_angle = max(max_angle, laser_angle + angle)
-    return max_angle
+    data = np.array(laser_data)
+    mask = (data == 0)
+    data[mask] = 20000
+    index = np.argmin(data[:-2*90])  # ignore 90deg on the left/back
+    dist = data[index]/1000.0
+    laser_angle = math.radians((-270+index)/2.0)
+    angle = tangent_circle(dist, radius)
+    if angle is not None:
+        # print '(%d, %.3f) %.1f' % (index, dist, math.degrees(laser_angle + angle))
+        return laser_angle + angle
+    return None
 
 
 def demo(metalog):
