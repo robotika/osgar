@@ -141,17 +141,27 @@ def demo(metalog):
     start_time = robot.time
     prev_gps = robot.gps_data
     prev_destination_dist = None
+    last_laser_update = None
+    prev_laser = None
     while robot.time - start_time < 30:  # limit test to 30s
         robot.update()
         dist = None
         turn_angle = None
         if robot.laser_data is not None:
-            assert len(robot.laser_data) == 541,  len(robot.laser_data)
+            assert len(robot.laser_data) == 541, len(robot.laser_data)
+            if robot.laser_data != prev_laser:
+                prev_laser = robot.laser_data
+                last_laser_update = robot.time
             distL, distR = min_dist_arr(robot.laser_data[200:-200])
             distL = 20.0 if distL is None else distL
             distR = 20.0 if distR is None else distR
             dist = min(distL, distR)
             turn_angle = follow_wall_angle(robot.laser_data, radius=1.5)
+
+        if last_laser_update is not None and robot.time - last_laser_update > 0.3:
+            print "!!!WARNING!!! Missing laser updates for last {:.1f}s".format(robot.time - last_laser_update)
+            dist = None  # no longer valid distance measurements
+
         if robot.gps_data != prev_gps:
             print robot.time, robot.gas, robot.gps_data, (distL, distR)
             prev_gps = robot.gps_data
