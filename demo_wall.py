@@ -141,7 +141,7 @@ def demo(metalog):
     start_time = robot.time
     prev_gps = robot.gps_data
     prev_destination_dist = None
-    while robot.time - start_time < 30*60:  # limit 30 minutes
+    while robot.time - start_time < 30:  # limit test to 30s
         robot.update()
         dist = None
         turn_angle = None
