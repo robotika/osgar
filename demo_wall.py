@@ -30,9 +30,9 @@ from route import Convertor, Route
 from line import distance
 
 
-SAFE_DISTANCE_STOP = 1.5  # meters
-SAFE_DISTANCE_GO = SAFE_DISTANCE_STOP + 0.5
-WALL_DISTANCE = 2.0
+SAFE_DISTANCE_STOP = 1.0 #1.5  # meters
+SAFE_DISTANCE_GO = SAFE_DISTANCE_STOP + 0.3 #0.5
+WALL_DISTANCE = 2.0 # 1.5 #2.0
 
 STRAIGHT_EPS = math.radians(10)
 
@@ -146,7 +146,7 @@ def demo(metalog):
     prev_destination_dist = None
     last_laser_update = None
     prev_laser = None
-    while robot.time - start_time < 30:  # limit test to 30s
+    while robot.time - start_time < 3*60:  # 3min
         robot.update()
         dist = None
         turn_angle = None
