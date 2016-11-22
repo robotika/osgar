@@ -76,7 +76,7 @@ def follow_wall_angle(laser_data, radius = 2.0):
     data = np.array(laser_data)
     mask = (data == 0)
     data[mask] = 20000
-    index = np.argmin(data[:-2*90])  # ignore 90deg on the left/back
+    index = np.argmin(data[:2*135])  # only right side
     dist = data[index]/1000.0
     laser_angle = math.radians((-270+index)/2.0)
     angle = tangent_circle(dist, radius)
@@ -166,7 +166,10 @@ def demo(metalog):
             dist = None  # no longer valid distance measurements
 
         if robot.gps_data != prev_gps:
-            print robot.time, robot.gas, robot.gps_data, (distL, distR)
+            if turn_angle is not None:
+                print robot.time, robot.canproxy.gas, "(%.3f, %.3f)" % (distL, distR), math.degrees(turn_angle)
+            else:
+                print robot.time, robot.canproxy.gas, "(%.3f, %.3f)" % (distL, distR), turn_angle
             prev_gps = robot.gps_data
         if moving:
             if dist is None or dist < SAFE_DISTANCE_STOP:
@@ -179,7 +182,7 @@ def demo(metalog):
                 robot.canproxy.go()
                 moving = True
         if turn_angle is not None:
-            turn_cmd = max(-100, min(100, math.degrees(turn_angle)))
+            turn_cmd = max(-120, min(120, 2*math.degrees(turn_angle)))
             robot.canproxy.set_turn_raw(turn_cmd)
 #            print turn_cmd
 #        if not robot.buttonGo:
