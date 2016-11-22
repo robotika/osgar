@@ -39,14 +39,7 @@ class CANProxy:
         self.verbose = verbose
         self.time = 0.0
         self.gas = None  # pedal_position would be more appropriate name
-        self.gas_count = 0  # compute average between SYNC
-        self.gas_sum = 0
-        self.gas_min_max = 0x10000, 0
-        self.filteredGas = None
-        self.desired_gas = None
-        self.last_gas_dx = 0  # "derivative" for debouncing
         self.cmd = None
-        self.no_change_time = None
 
         self.prev_enc_raw = None
         self.dist_left_raw = 0
@@ -75,35 +68,11 @@ class CANProxy:
         self.desired_wheel_angle_raw = None
 
     def update_gas_status(self, (id, data)):
-        # note partial duplicity with johndeere.py
-        if id == 0x281:
-            # obsolete, remove it
-            assert( len(data)>=8 ) 
-            self.gas = data[1]*256 + data[0]
-            self.gas_count += 1
-            self.gas_sum += self.gas
-            self.gas_min_max = (min(self.gas_min_max[0], self.gas), max(self.gas_min_max[1], self.gas))
-
         if id == 0x181:
             assert len(data)==2, data
             self.gas = ctypes.c_short(data[1]*256 + data[0]).value
-#            print "GAS", self.gas
-            self.gas_count += 1
-            self.gas_sum += self.gas
-            self.gas_min_max = (min(self.gas_min_max[0], self.gas), max(self.gas_min_max[1], self.gas))
-
-        elif id == 0x80:
-            if self.gas_count > 0:
-                self.filteredGas = self.gas_sum/float(self.gas_count)
-
             if self.verbose:
-                if self.gas_count > 0:
-                    print "SYNC", self.gas_count, self.gas_min_max, self.gas_sum/float(self.gas_count)
-                else:
-                    print "SYNC 0"
-            self.gas_count = 0
-            self.gas_sum = 0
-            self.gas_min_max = 0x10000, 0
+                print "GAS", self.gas
 
     def update_encoders(self, (id, data)):
         if id == 0x284:
@@ -152,51 +121,17 @@ class CANProxy:
     def set_time(self, time):
         self.time = time
 
-    def send_desired_gas(self, position):
+    def _send_desired_gas(self, position):
         self.can.sendData(0x201, [position & 0xFF, (position>>8)&0xFF])
 
     def send_speed(self):  # and turning commands
-        if self.desired_gas is not None:
-            assert 0
-            # make sure the desired value is in safe=slow forward range
-            assert CENTER_GAS_MIN <= self.desired_gas <= GO_LIMIT, self.desired_gas
-            if self.filteredGas < self.desired_gas - PULSE_STEP and self.last_gas_dx >= 0:
-                self.can.sendData(0x201, [0xC])  # pulse forward
-                self.last_gas_dx = 1
-                self.no_change_time = self.time + 0.5
-            elif self.filteredGas > self.desired_gas + PULSE_STEP and self.last_gas_dx <= 0:
-                self.can.sendData(0x201, [3])  # pulse backward
-                self.last_gas_dx = -1
-                self.no_change_time = self.time + 0.5
-            else:
-                self.can.sendData(0x201, [0])
-                if self.no_change_time is None or self.no_change_time >= self.time:
-                    self.last_gas_dx = 0
-                    self.no_change_time = None
-
-        # REFACTORING NEEDED coliding control methods (!!!)
-
         if self.cmd == 'go':
-            self.send_desired_gas(GO_LIMIT)
+            self._send_desired_gas(GO_LIMIT)
             self.cmd = None
-#            if self.filteredGas < GO_LIMIT:
-#                self.can.sendData(0x201, [0xC])  # pulse forward
-#            else:
-#                self.can.sendData(0x201, [0])
-#                self.cmd = None
 
         elif self.cmd == 'stop':
-            print self.filteredGas
-            self.send_desired_gas((CENTER_GAS_MIN + CENTER_GAS_MAX)/2)
+            self._send_desired_gas((CENTER_GAS_MIN + CENTER_GAS_MAX)/2)
             self.cmd = None
-#            if self.filteredGas < CENTER_GAS_MIN:
-#                self.can.sendData(0x201, [0xC])  # pulse forward
-#            elif self.filteredGas > CENTER_GAS_MAX:
-#                self.can.sendData(0x201, [3])  # pulse backward
-#            else:
-#                self.can.sendData(0x201, [0])
-#                self.cmd = None
-#                print "stop STOP"
 
         if self.desired_wheel_angle_raw is not None and self.wheel_angle_raw is not None:
             if abs(self.desired_wheel_angle_raw - self.wheel_angle_raw) > TURN_TOLERANCE:
@@ -208,7 +143,4 @@ class CANProxy:
                 self.can.sendData(0x202, [0])
                 self.desired_wheel_angle_raw = None
 
-
-
-# vim: expandtab sw=4 ts=4 
-
+# vim: expandtab sw=4 ts=4
