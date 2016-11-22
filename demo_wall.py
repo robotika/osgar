@@ -21,8 +21,7 @@ from can import CAN, DummyMemoryLog, ReplayLogInputsOnly, ReplayLog
 from gps import GPS
 from gps import DummyGPS as DummySensor  # TODO move to apyros, as mock
 from laser import LaserIP
-from johndeere import (JohnDeere, center, go, wait_for_start, 
-                       setup_faster_update)
+from johndeere import (JohnDeere, wait_for_start, setup_faster_update)
 from apyros.metalog import MetaLog, disableAsserts
 from apyros.sourcelogger import SourceLogger
 
