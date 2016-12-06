@@ -142,7 +142,7 @@ class CANProxy:
             assert(len(data) == 2) 
             self.wheel_angle_raw = ctypes.c_short(data[1]*256 + data[0]).value
             if self.verbose:
-                print "WHEEL", self.time, self.wheel_angle_raw
+                print "WHEEL", self.time, self.wheel_angle_raw, self.desired_wheel_angle_raw
 
     def update(self, packet):
         self.update_gas_status(packet)
