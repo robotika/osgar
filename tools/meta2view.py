@@ -12,6 +12,15 @@ import sys
 sys.path.append(os.path.join(os.path.split(__file__)[0], '..'))
 from can import parseFileG
 
+FRONT_REAR_DIST = 1.3
+LEFT_WHEEL_DIST_OFFSET = 0.4  # from central axis
+TURN_ANGLE_OFFSET = math.radians(5.5)
+TURN_SCALE = 0.0041
+
+# (252, 257) corresponds to 339cm
+ENC_SCALE = 2*3.39/float(252 + 257)
+
+LASER_OFFSET = (1.78, 0.0, 0.39)
 
 def can_gen(filename):
     m = {
@@ -53,7 +62,7 @@ def dump_pose(out, pose):
     out.write('{} {} {}\n'.format(*pose))
 
 
-def dump_laser(out, data):
+def dump_laser(out, pose, data):
     assert len(data) == 541, len(data)
     step = 2
     out.write('Geometry')
@@ -62,19 +71,16 @@ def dump_laser(out, data):
         out.write(' %.2f %.2f %.4f' % s)
     out.write('\n')
 
-    pose = (0, 0, 0)
-    out.write('Ranger %.2f %.2f %.4f ' % pose)
+    x, y, heading = pose
+    laser_pose = x + math.cos(heading)*LASER_OFFSET[0], y + math.sin(heading)*LASER_OFFSET[0], heading
+    out.write('Ranger %.2f %.2f %.4f ' % laser_pose)
     for i in xrange(0, 540, step):
         dist = data[i]/1000.0
         out.write(' %.3f' % dist)
     out.write('\n')
 
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print(__doc__)
-        sys.exit(2)
-
+def main():
     meta_filename = sys.argv[1]
     meta_dir = os.path.split(meta_filename)[0]
     can = None
@@ -91,7 +97,7 @@ if __name__ == "__main__":
 
     out = open('view.log', 'w')
     pose = [0, 0, 0]
-    enc = (0, 0)
+    enc = [0, 0]
     # unknown start
     for i in xrange(80):
         can.next()
@@ -101,18 +107,33 @@ if __name__ == "__main__":
                 sensors = can.next()
                 if 'encoders' in sensors:
                     encL, encR = sensors['encoders']
-                    dist = ((encL - enc[0]) + (encR - enc[1])) * 0.01
-                    angle = sensors['steering'] * 0.001
-
-                    print dist, sensors
-                    enc = (encL, encR)
+                    if abs(encL - enc[0]) > 255:
+                        enc[0] = encL
+                    if abs(encR - enc[1]) > 255:
+                        enc[1] = encR
+                    distL = (encL - enc[0]) * ENC_SCALE
+                    angle = sensors['steering'] * TURN_SCALE + TURN_ANGLE_OFFSET  # radians
+                    
+                    dh = math.sin(angle) * distL / FRONT_REAR_DIST
+                    dist = math.cos(angle) * distL + LEFT_WHEEL_DIST_OFFSET * dh 
+                    
+                    enc = [encL, encR]
                     x, y, heading = pose
                     x += math.cos(heading) * dist
                     y += math.sin(heading) * dist
-                    heading += angle
+                    heading += dh
                     pose = x, y, heading
                 dump_pose(out, pose)
-            dump_laser(out, data)
+            dump_laser(out, pose, data)
+    return pose
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print(__doc__)
+        sys.exit(2)
+    pose = main()
+    print TURN_SCALE, pose
+    print math.degrees(pose[2])/360.0, int(math.degrees(pose[2])) % 360
 
 # vim: expandtab sw=4 ts=4 
 
