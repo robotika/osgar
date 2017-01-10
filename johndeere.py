@@ -147,6 +147,8 @@ def wait_for_start(robot):
     print "STARTED ..."
 
 
+ENC_SCALE = 2*3.39/float(252 + 257)
+
 def self_test(metalog):
     assert metalog is not None
     can_log_name = metalog.getLog('can')
@@ -163,19 +165,49 @@ def self_test(metalog):
     robot.UPDATE_TIME_FREQUENCY = 20.0  # TODO change internal and integrate setup
 
     robot.canproxy.stop()
-    wait_for_start(robot)
+#    wait_for_start(robot)
     robot.desired_speed = 0.5
     start_time = robot.time
     robot.canproxy.set_turn_raw(0)
     robot.canproxy.go()
-    while robot.time - start_time < 3.0:
+    start_dist = robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw
+    while robot.time - start_time < 10.0:
         robot.update()
-        print robot.time, robot.canproxy.gas
-        if not robot.buttonGo:
-            print "STOP!"
+        dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
+                          - start_dist)/2.0
+        if dist > 1.0:
+            print "Dist OK"
             break
+    print dist
+    robot.stop()
+    robot.wait(3.0)
+    dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
+                      - start_dist)/2.0
+    print dist
+
+    robot.canproxy.go_back()
+    start_time = robot.time
+    start_dist = robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw
+    while robot.time - start_time < 10.0:
+        robot.update()
+        dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
+                          - start_dist)/2.0
+        if dist < -1.0:
+            print "Dist back OK"
+            break
+    print dist
+
+
+#        print robot.time, robot.canproxy.gas
+#        if not robot.buttonGo:
+#            print "STOP!"
+#            break
     robot.canproxy.stop_turn()
     robot.stop()
+    robot.wait(3.0)
+    dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
+                      - start_dist)/2.0
+    print dist
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

@@ -14,6 +14,8 @@ CENTER_GAS_MAX = 232  # 16500
 
 #GO_LIMIT = 5232  # 19000
 GO_LIMIT = 6000  # go-go action?
+GO_BACK_LIMIT = -7000
+
 PULSE_STEP = 500
 SLOW_SPEED_MIN = 1.0
 SLOW_SPEED_MAX = 2.0
@@ -52,6 +54,9 @@ class CANProxy:
 
     def go(self):
         self.cmd = 'go'
+
+    def go_back(self):
+        self.cmd = 'go_back'
 
     def go_slowly(self):
         self.cmd = 'go_slowly'
@@ -127,6 +132,10 @@ class CANProxy:
     def send_speed(self):  # and turning commands
         if self.cmd == 'go':
             self._send_desired_gas(GO_LIMIT)
+            self.cmd = None
+
+        elif self.cmd == 'go_back':
+            self._send_desired_gas(GO_BACK_LIMIT)
             self.cmd = None
 
         elif self.cmd == 'stop':
