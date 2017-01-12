@@ -171,12 +171,14 @@ def self_test(metalog):
     robot.canproxy.set_turn_raw(0)
     robot.canproxy.go()
     start_dist = robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw
+    arr = []
     while robot.time - start_time < 10.0:
         robot.update()
+        arr.append(robot.canproxy.gas)
         dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
                           - start_dist)/2.0
         if dist > 1.0:
-            print "Dist OK"
+            print "Dist OK at {}s".format(robot.time - start_time), sorted(arr)[len(arr)/2]
             break
     print dist
     robot.stop()
@@ -184,16 +186,19 @@ def self_test(metalog):
     dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
                       - start_dist)/2.0
     print dist
+    print
 
     robot.canproxy.go_back()
     start_time = robot.time
     start_dist = robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw
+    arr = []
     while robot.time - start_time < 10.0:
         robot.update()
+        arr.append(robot.canproxy.gas)
         dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
                           - start_dist)/2.0
         if dist < -1.0:
-            print "Dist back OK"
+            print "Dist back OK at {}s".format(robot.time - start_time), sorted(arr)[len(arr)/2]
             break
     print dist
 
