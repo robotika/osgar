@@ -19,6 +19,30 @@ class Driver:
     pass
 
 
+def go_one_meter(robot, gas, timeout=10.0, with_stop=True):
+    robot.desired_speed = 0.5
+    start_time = robot.time
+    robot.canproxy.cmd = gas
+    start_dist = robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw
+    arr = []
+    while robot.time - start_time < timeout:
+        robot.update()
+        arr.append(robot.canproxy.gas)
+        dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
+                          - start_dist)/2.0
+        if abs(dist) > 1.0:
+            print "Dist OK at {}s".format(robot.time - start_time), sorted(arr)[len(arr)/2]
+            break
+    print dist
+    if with_stop:
+        robot.stop()
+        robot.wait(3.0)
+        dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
+                          - start_dist)/2.0
+        print dist
+        print
+
+
 def driver_self_test(driver, metalog):
     assert metalog is not None
     can_log_name = metalog.getLog('can')
@@ -37,55 +61,14 @@ def driver_self_test(driver, metalog):
     robot.localization = None  # TODO
 
     robot.canproxy.stop()
-#    wait_for_start(robot)
-    robot.desired_speed = 0.5
-    start_time = robot.time
     robot.canproxy.set_turn_raw(0)
-    robot.canproxy.go()
-    start_dist = robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw
-    arr = []
-    while robot.time - start_time < 10.0:
-        robot.update()
-        arr.append(robot.canproxy.gas)
-        dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
-                          - start_dist)/2.0
-        if dist > 1.0:
-            print "Dist OK at {}s".format(robot.time - start_time), sorted(arr)[len(arr)/2]
-            break
-    print dist
-    robot.stop()
-    robot.wait(3.0)
-    dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
-                      - start_dist)/2.0
-    print dist
-    print
 
-    robot.canproxy.go_back()
-    start_time = robot.time
-    start_dist = robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw
-    arr = []
-    while robot.time - start_time < 10.0:
-        robot.update()
-        arr.append(robot.canproxy.gas)
-        dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
-                          - start_dist)/2.0
-        if dist < -1.0:
-            print "Dist back OK at {}s".format(robot.time - start_time), sorted(arr)[len(arr)/2]
-            break
-    print dist
+    go_one_meter(robot, 6000)
+    go_one_meter(robot, -7000, with_stop=False)
 
-
-#        print robot.time, robot.canproxy.gas
-#        if not robot.buttonGo:
-#            print "STOP!"
-#            break
     robot.canproxy.stop_turn()
     robot.stop()
     robot.wait(3.0)
-    dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
-                      - start_dist)/2.0
-    print dist
-
 
 
 if __name__ == "__main__":

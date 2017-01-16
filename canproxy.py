@@ -142,6 +142,10 @@ class CANProxy:
             self._send_desired_gas((CENTER_GAS_MIN + CENTER_GAS_MAX)/2)
             self.cmd = None
 
+        elif self.cmd is not None:
+            self._send_desired_gas(self.cmd)
+            self.cmd = None
+
         if self.desired_wheel_angle_raw is not None and self.wheel_angle_raw is not None:
             if abs(self.desired_wheel_angle_raw - self.wheel_angle_raw) > TURN_TOLERANCE:
                 if self.desired_wheel_angle_raw > self.wheel_angle_raw:
