@@ -63,11 +63,15 @@ def driver_self_test(driver, metalog):
     robot.canproxy.stop()
     robot.canproxy.set_turn_raw(0)
 
+    go_one_meter(robot, 6000, with_stop=False)
+    go_one_meter(robot, 6000, with_stop=False)
     go_one_meter(robot, 6000)
+
     go_one_meter(robot, -7000, with_stop=False)
+    go_one_meter(robot, -7000, with_stop=False)
+    go_one_meter(robot, -7000)
 
     robot.canproxy.stop_turn()
-    robot.stop()
     robot.wait(3.0)
 
 
