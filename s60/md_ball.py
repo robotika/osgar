@@ -12,10 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# MD:
+# Hacked to send commands via UDP port
+
 import appuifw
 from graphics import *
 import e32
 from key_codes import *
+import socket
+
+#host, port = '192.168.23.14', 5555
+host, port = '192.168.2.16', 5555  # APU2 in John Deere
+
+soc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+soc.connect( (host,port) )
+print(soc.send('START\n'), port)
 
 class Keyboard(object):
     def __init__(self,onevent=lambda:None):
@@ -102,10 +113,18 @@ while running:
         speed[0]=0.90*speed[0]
         speed[1]=-0.80*speed[1]
         
-    if keyboard.is_down(EScancodeLeftArrow):  speed[0] -= acceleration
-    if keyboard.is_down(EScancodeRightArrow): speed[0] += acceleration
-    if keyboard.is_down(EScancodeDownArrow):  speed[1] += acceleration
-    if keyboard.is_down(EScancodeUpArrow):    speed[1] -= acceleration
+    if keyboard.is_down(EScancodeLeftArrow):
+        speed[0] -= acceleration
+        soc.send('LEFT\n')
+    if keyboard.is_down(EScancodeRightArrow):
+        speed[0] += acceleration
+        soc.send('RIGHT\n')
+    if keyboard.is_down(EScancodeDownArrow):
+        speed[1] += acceleration
+        soc.send('DOWN\n')
+    if keyboard.is_down(EScancodeUpArrow):
+        speed[1] -= acceleration
+        soc.send('UP\n')
     if keyboard.pressed(EScancodeHash):
         filename=u'e:\\screenshot.png'
         canvas.text((0,32),u'Saving screenshot to:',fill=0xffff00)
@@ -113,6 +132,7 @@ while running:
         img.save(filename)
 
     n_frames+=1
+soc.send('END\n')
 end_time=time.clock()
 total=end_time-start_time
 
