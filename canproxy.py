@@ -14,11 +14,14 @@ CENTER_GAS_MAX = 232  # 16500
 
 #GO_LIMIT = 5232  # 19000
 GO_LIMIT = 6000  # go-go action?
+STOP_CENTER = (CENTER_GAS_MIN + CENTER_GAS_MAX)/2
 GO_BACK_LIMIT = -7000
 
-PULSE_STEP = 500
-SLOW_SPEED_MIN = 1.0
-SLOW_SPEED_MAX = 2.0
+MAX_GAS_LIMIT = 9000
+MIN_GAS_LIMIT = -9000
+GAS_STEP = 500
+
+SPEED_TOLERANCE = 10
 
 
 SCALE_NEW = 0.5  # 0.0 < x < 1.0
@@ -41,28 +44,49 @@ class CANProxy:
         self.verbose = verbose
         self.time = 0.0
         self.gas = None  # pedal_position would be more appropriate name
-        self.cmd = None
+        self.cmd = None  # single shot command (can be issued by speed control)
+        self.last_sent_speed_cmd = None
 
         self.prev_enc_raw = None
         self.dist_left_raw = 0
         self.dist_right_raw = 0
         self.speed_raw = 0
         self.speed_average = 0
+        self.speed_arr = [0]*20  # well, this should correspond to 1sec
+        self.desired_speed_raw = None  # if not None then regulate speed
+        self.valid_speed_ref = False  # was speed measured for the whole period
 
         self.wheel_angle_raw = None
         self.desired_wheel_angle_raw = None
 
     def go(self):
         self.cmd = 'go'
+        self.desired_speed_raw = None
 
     def go_back(self):
         self.cmd = 'go_back'
+        self.desired_speed_raw = None
 
     def go_slowly(self):
         self.cmd = 'go_slowly'
+        self.desired_speed_raw = None
 
     def stop(self):
         self.cmd = 'stop'
+        self.desired_speed_raw = None
+
+    def set_desired_speed_raw(self, raw_speed):
+        if raw_speed != self.desired_speed_raw:
+            # TODO more suitable conversion table for initial command
+            if raw_speed is not None:
+                if raw_speed == 0:
+                    self.cmd = STOP_CENTER
+                elif raw_speed > 0:
+                    self.cmd = GO_LIMIT
+                else:
+                    self.cmd = GO_BACK_LIMIT
+                self.valid_speed_ref = False
+        self.desired_speed_raw = raw_speed
 
     def set_turn_raw(self, raw_angle):
         self.desired_wheel_angle_raw = raw_angle
@@ -100,6 +124,7 @@ class CANProxy:
                 speed = (diffL + diffR)/2.0
                 if abs(speed) < 100:
                     self.speed_raw = speed
+                self.speed_arr = self.speed_arr[1:] + [self.speed_raw]
                 FRAC = 0.2
                 self.speed_average = FRAC*self.speed_raw + (1 - FRAC)*self.speed_average
                 if self.verbose:
@@ -124,9 +149,21 @@ class CANProxy:
         self.update_wheel_angle_status(packet)
 
     def set_time(self, time):
+        if int(self.time) != int(time):
+            speed = sum(self.speed_arr)
+            print 'ref speed at', time, speed, self.last_sent_speed_cmd
+            if self.desired_speed_raw is not None and self.valid_speed_ref:
+                if speed + SPEED_TOLERANCE < self.desired_speed_raw:
+                    self.cmd = min(self.last_sent_speed_cmd + GAS_STEP, MAX_GAS_LIMIT)
+                elif speed - SPEED_TOLERANCE > self.desired_speed_raw:
+                    self.cmd = max(self.last_sent_speed_cmd - GAS_STEP, MIN_GAS_LIMIT)
+                print "-->", self.cmd
+            self.valid_speed_ref = True  # ignore first, but accept following measurements
+
         self.time = time
 
     def _send_desired_gas(self, position):
+        self.last_sent_speed_cmd = position
         self.can.sendData(0x201, [position & 0xFF, (position>>8)&0xFF])
 
     def send_speed(self):  # and turning commands

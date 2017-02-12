@@ -19,10 +19,18 @@ class Driver:
     pass
 
 
-def go_one_meter(robot, gas, timeout=10.0, with_stop=True):
-    robot.desired_speed = 0.5
+def go_one_meter(robot, gas=None, speed=None, timeout=10.0, with_stop=True):
+    """ Drive 1m with given speed or given gas value """
     start_time = robot.time
-    robot.canproxy.cmd = gas
+    if speed is not None:
+        assert gas is None  # only one of them has to be set
+        robot.set_desired_speed(speed)
+    elif gas is not None:
+        assert speed is None
+        robot.canproxy.cmd = gas
+    else:
+        assert 0  # one of [gas, speed] has to be set
+
     start_dist = robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw
     arr = []
     while robot.time - start_time < timeout:
@@ -31,8 +39,8 @@ def go_one_meter(robot, gas, timeout=10.0, with_stop=True):
         dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
                           - start_dist)/2.0
         if abs(dist) > 1.0:
-            print "Dist OK at {}s".format(robot.time - start_time), sorted(arr)[len(arr)/2]
             break
+    print "Dist OK at {}s".format(robot.time - start_time), sorted(arr)[len(arr)/2]
     print dist
     if with_stop:
         robot.stop()
@@ -63,13 +71,13 @@ def driver_self_test(driver, metalog):
     robot.canproxy.stop()
     robot.canproxy.set_turn_raw(0)
 
-    go_one_meter(robot, 6000, with_stop=False)
-    go_one_meter(robot, 6000, with_stop=False)
-    go_one_meter(robot, 6000)
+    go_one_meter(robot, speed=0.3, with_stop=False)
+    go_one_meter(robot, speed=0.3, with_stop=False)
+    go_one_meter(robot, speed=0.3)
 
-    go_one_meter(robot, -7000, with_stop=False)
-    go_one_meter(robot, -7000, with_stop=False)
-    go_one_meter(robot, -7000)
+    go_one_meter(robot, -9000, with_stop=False)
+    go_one_meter(robot, -9000, with_stop=False)
+    go_one_meter(robot, -9000)
 
     robot.canproxy.stop_turn()
     robot.wait(3.0)
