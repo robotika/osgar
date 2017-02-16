@@ -84,6 +84,9 @@ text_img=Image.new((textrect[2]-textrect[0],textrect[3]-textrect[1]))
 text_img.clear(0)
 text_img.text((-textrect[0],-textrect[1]),labeltext,fill=0xffffff,font='normal')
 
+num_keys = [EScancode0, EScancode1, EScancode2, EScancode3, EScancode4,
+            EScancode5, EScancode6, EScancode7, EScancode8, EScancode9]
+
 while running:
     img.clear(0)
     img.blit(text_img, (0,0))
@@ -125,6 +128,9 @@ while running:
     if keyboard.is_down(EScancodeUpArrow):
         speed[1] -= acceleration
         soc.send('UP\n')
+    for i, key in enumerate(num_keys):
+        if keyboard.is_down(key):
+            soc.send('SPEED' + str(i) + '\n')
     if keyboard.pressed(EScancodeHash):
         filename=u'e:\\screenshot.png'
         canvas.text((0,32),u'Saving screenshot to:',fill=0xffff00)
