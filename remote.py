@@ -92,6 +92,8 @@ def drive_remotely(metalog):
         robot.remote = RemoteThread(soc)
         function = SourceLogger(robot.remote.get_data, remote_cmd_log_name).get
 
+    max_speed = None
+
     robot.remote_data = None
     robot.register_data_source('remote', function, remote_data_extension) 
     robot.remote.start()
@@ -118,8 +120,12 @@ def drive_remotely(metalog):
                 print "STOP turn"
                 turning = False
         elif robot.remote_data == 'UP\n' and not moving:
-            robot.canproxy.go()
-            print "GO"
+            if max_speed is None:
+                robot.canproxy.go()
+                print "GO"
+            else:
+                robot.set_desired_speed(max_speed)
+                print "GO", max_speed
             moving = True
         elif robot.remote_data == 'DOWN\n' and not moving:
             robot.canproxy.go_back()
@@ -133,6 +139,11 @@ def drive_remotely(metalog):
             robot.canproxy.set_turn_raw(-200)
             print "Right"
             turning = True
+        elif robot.remote_data == 'SPEED0\n':
+            max_speed = None
+        elif robot.remote_data.startswith('SPEED'):
+            max_speed = int(robot.remote_data[len('SPEED'):])/10.0
+            print "Max Speed", max_speed
 
     print "received", robot.remote_data.strip()
 
