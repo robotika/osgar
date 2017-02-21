@@ -128,8 +128,12 @@ def drive_remotely(metalog):
                 print "GO", max_speed
             moving = True
         elif robot.remote_data == 'DOWN\n' and not moving:
-            robot.canproxy.go_back()
-            print "GO back"
+            if max_speed is None:
+                robot.canproxy.go_back()
+                print "GO back"
+            else:
+                robot.set_desired_speed(-max_speed)
+                print "GO back", max_speed
             moving = True
         elif robot.remote_data == 'LEFT\n':
             robot.canproxy.set_turn_raw(200)
