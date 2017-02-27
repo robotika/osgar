@@ -22,7 +22,7 @@ MIN_GAS_LIMIT = -12000
 GAS_STEP = 500
 
 SPEED_TOLERANCE = 10
-
+SPEED_UPDATE_CONTROL_FREQ = 2  # Hz
 
 SCALE_NEW = 0.5  # 0.0 < x < 1.0
 
@@ -149,7 +149,8 @@ class CANProxy:
         self.update_wheel_angle_status(packet)
 
     def set_time(self, time):
-        if int(self.time) != int(time):
+        if (int(self.time * SPEED_UPDATE_CONTROL_FREQ) != 
+            int(time * SPEED_UPDATE_CONTROL_FREQ)):
             speed = sum(self.speed_arr)
             print 'ref speed at', time, speed, self.last_sent_speed_cmd
             if self.desired_speed_raw is not None and self.valid_speed_ref:
