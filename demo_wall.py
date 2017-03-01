@@ -35,7 +35,7 @@ WALL_DISTANCE = 2.0 # 1.5 #2.0
 
 STRAIGHT_EPS = math.radians(10)
 
-DESIRED_SPEED = 0.3  # m/s
+DESIRED_SPEED = 0.5  # m/s
 
 
 def gps_data_extension(robot, id, data):
