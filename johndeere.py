@@ -15,6 +15,9 @@ from apyros.metalog import MetaLog, disableAsserts
 # meters per single encoder tick
 ENC_SCALE = 2*3.39/float(252 + 257)
 
+TURN_ANGLE_OFFSET = math.radians(5.5)
+TURN_SCALE = 0.0041
+
 
 # TODO move inside or remove when CAN module is upgraded
 def setup_faster_update(can):
@@ -140,6 +143,12 @@ class JohnDeere(object):
         ... can be called in every cycle without side-effects
         """
         self.canproxy.set_desired_speed_raw(int(speed/ENC_SCALE))
+
+    def set_desired_steering(self, angle):
+        """set desired steering angle of left wheel"""
+        # angle = sensors['steering'] * TURN_SCALE + TURN_ANGLE_OFFSET  # radians
+        raw = (angle - TURN_ANGLE_OFFSET)/TURN_SCALE
+        self.canproxy.set_turn_raw(int(raw))
 
     def stop(self):
         "send stop command and make sure robot really stops"
