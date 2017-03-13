@@ -35,6 +35,8 @@ WALL_DISTANCE = 2.0 # 1.5 #2.0
 
 STRAIGHT_EPS = math.radians(10)
 
+DESIRED_SPEED = 0.5  # m/s
+
 
 def gps_data_extension(robot, id, data):
     if id=='gps':
@@ -178,7 +180,7 @@ def demo(metalog):
         else:  # not moving
             if dist is not None and dist > SAFE_DISTANCE_GO:
                 print "GO",  dist
-                robot.canproxy.go()
+                robot.set_desired_speed(DESIRED_SPEED)
                 moving = True
         if turn_angle is not None:
             turn_cmd = max(-120, min(120, 2*math.degrees(turn_angle)))

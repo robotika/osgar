@@ -12,6 +12,13 @@ from sdoplg import ReadSDO, WriteSDO
 from apyros.metalog import MetaLog, disableAsserts
 
 
+# meters per single encoder tick
+ENC_SCALE = 2*3.39/float(252 + 257)
+
+TURN_ANGLE_OFFSET = math.radians(5.5)
+TURN_SCALE = 0.0041
+
+
 # TODO move inside or remove when CAN module is upgraded
 def setup_faster_update(can):
     reader = ReadSDO( 1, 0x1801, 5 )
@@ -55,7 +62,6 @@ class JohnDeere(object):
         self.canproxy = CANProxy(self.can)
         self.time = 0.0
         self.buttonGo = None  # TODO currently not available (!)
-        self.desired_speed = 0.0
         self.drop_ball = False  # TODO move to ro.py only
         self.extensions = []
         self.data_sources = []
@@ -131,9 +137,21 @@ class JohnDeere(object):
         self.canproxy.send_speed()
         self.send_ball_dispenser()
 
+    def set_desired_speed(self, speed):
+        """set desired speed in meters per second.
+        speed = None ... disable speed control
+        ... can be called in every cycle without side-effects
+        """
+        self.canproxy.set_desired_speed_raw(int(speed/ENC_SCALE))
+
+    def set_desired_steering(self, angle):
+        """set desired steering angle of left wheel"""
+        # angle = sensors['steering'] * TURN_SCALE + TURN_ANGLE_OFFSET  # radians
+        raw = (angle - TURN_ANGLE_OFFSET)/TURN_SCALE
+        self.canproxy.set_turn_raw(int(raw))
+
     def stop(self):
         "send stop command and make sure robot really stops"
-        self.desired_speed = 0.0
         self.canproxy.stop()
         for i in xrange(10):
             self.update()
@@ -146,8 +164,6 @@ def wait_for_start(robot):
         robot.update()
     print "STARTED ..."
 
-
-ENC_SCALE = 2*3.39/float(252 + 257)
 
 def self_test(metalog):
     assert metalog is not None
@@ -166,7 +182,7 @@ def self_test(metalog):
 
     robot.canproxy.stop()
 #    wait_for_start(robot)
-    robot.desired_speed = 0.5
+    robot.set_desired_speed(0.5)
     start_time = robot.time
     robot.canproxy.set_turn_raw(0)
     robot.canproxy.go()
