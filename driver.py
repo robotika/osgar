@@ -23,8 +23,8 @@ class Driver:
     pass
 
 
-def go_one_meter(robot, gas=None, speed=None, timeout=10.0, with_stop=True):
-    """ Drive 1m with given speed or given gas value """
+def go_straight(robot, distance, gas=None, speed=None, timeout=10.0, with_stop=True):
+    """ Drive 'distance' meters with given speed or given gas value """
     start_time = robot.time
     if speed is not None:
         assert gas is None  # only one of them has to be set
@@ -42,7 +42,7 @@ def go_one_meter(robot, gas=None, speed=None, timeout=10.0, with_stop=True):
         arr.append(robot.canproxy.gas)
         dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
                           - start_dist)/2.0
-        if abs(dist) > 1.0:
+        if abs(dist) > distance:
             break
     print "Dist OK at {}s".format(robot.time - start_time), sorted(arr)[len(arr)/2]
     print dist
@@ -89,12 +89,6 @@ def turn(robot, angle, radius, speed, timeout=10.0, with_stop=True):
         robot.stop()
         robot.wait(1.0)
 
-#
-#                    angle = sensors['steering'] * TURN_SCALE + TURN_ANGLE_OFFSET  # radians
-#                    dh = math.sin(angle) * distL / FRONT_REAR_DIST
-#                    dist = math.cos(angle) * distL + LEFT_WHEEL_DIST_OFFSET * dh 
-# 
-
 
 def driver_self_test(driver, metalog):
     assert metalog is not None
@@ -116,17 +110,11 @@ def driver_self_test(driver, metalog):
     robot.canproxy.stop()
     robot.canproxy.set_turn_raw(0)
 
-#    go_one_meter(robot, speed=0.3, with_stop=False)
-#    go_one_meter(robot, speed=0.3, with_stop=False)
-#    go_one_meter(robot, speed=0.3)
+    go_straight(robot, distance=1.0, speed=0.3, with_stop=True)
 
     for i in xrange(3):
         turn(robot, math.radians(-45), radius=2.6, speed=0.5)
         turn(robot, math.radians(-45), radius=2.6, speed=-0.5)
-
-#    go_one_meter(robot, -9000, with_stop=False)
-#    go_one_meter(robot, -9000, with_stop=False)
-#    go_one_meter(robot, -9000)
 
     robot.canproxy.stop_turn()
     robot.wait(3.0)
