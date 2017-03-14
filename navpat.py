@@ -15,7 +15,7 @@ from can import CAN, DummyMemoryLog, ReplayLogInputsOnly, ReplayLog
 from johndeere import JohnDeere, setup_faster_update, ENC_SCALE
 
 from driver import go_straight, turn
-
+from helper import attach_sensor, detach_all_sensors
 
 def navigate_pattern(metalog):
     assert metalog is not None
@@ -33,6 +33,8 @@ def navigate_pattern(metalog):
     robot.UPDATE_TIME_FREQUENCY = 20.0  # TODO change internal and integrate setup
 
     robot.localization = None  # TODO
+    for sensor_name in ['gps', 'laser']: # TODO camera
+        attach_sensor(robot, sensor_name, metalog)
 
     robot.canproxy.stop()
     robot.canproxy.set_turn_raw(0)
@@ -49,6 +51,8 @@ def navigate_pattern(metalog):
     robot.canproxy.stop()
     robot.canproxy.stop_turn()
     robot.wait(3.0)
+    
+    detach_all(robot)
 
 
 if __name__ == "__main__":
