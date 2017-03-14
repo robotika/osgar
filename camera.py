@@ -170,19 +170,20 @@ class Camera( Thread ):
         self.lock.release()
         if imageProc:
           tmpResult = imageProc.processPicture( filename )
-          self.lock.acquire()
-          self._logFile.write( str(self.queryCount) + "\n" )
-          self.queryCount = 0
-          self._lastResult = tmpResult
-          self._lastResultFile = filename
-          self.lock.release()
-          self._logFile.write( filename + "\t" + str(self._lastResult) )
-          self._logFile.flush()
-          if self.verbose>1:
-            print "Camera:", self._lastResult
-        elif self.sleep:
+        else:
+          tmpResult = None
+        self.lock.acquire()
+        self._logFile.write( str(self.queryCount) + "\n" )
+        self.queryCount = 0
+        self._lastResult = tmpResult
+        self._lastResultFile = filename
+        self.lock.release()
+        self._logFile.write( filename + "\t" + str(self._lastResult) )
+        self._logFile.flush()
+        if self.verbose>1:
+          print "Camera:", self._lastResult
+        if self.sleep:
           time.sleep(self.sleep)
-
       else:
         # read picture failed
         time.sleep(1.0)
