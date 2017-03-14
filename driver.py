@@ -37,6 +37,9 @@ def go_straight(robot, distance, gas=None, speed=None, timeout=10.0, with_stop=T
 
     start_dist = robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw
     arr = []
+
+    robot.set_desired_steering(0.0)  # i.e. go straight (!)
+
     while robot.time - start_time < timeout:
         robot.update()
         arr.append(robot.canproxy.gas)
@@ -72,7 +75,7 @@ def turn(robot, angle, radius, speed, timeout=10.0, with_stop=True):
     else:
         base = radius + LEFT_WHEEL_DIST_OFFSET
 
-    left_radius = math.sqrt(base)
+    left_radius = math.sqrt(base*base + FRONT_REAR_DIST*FRONT_REAR_DIST)
     steering_angle = math.atan2(FRONT_REAR_DIST, base)
     if angle < 0:
         steering_angle = -steering_angle
@@ -84,7 +87,11 @@ def turn(robot, angle, radius, speed, timeout=10.0, with_stop=True):
         robot.update()
         dist_left = (robot.canproxy.dist_left_raw - start_left) * ENC_SCALE
         if abs(dist_left) > abs(angle * left_radius):
+            print 'turned distance', dist_left
             break
+    if robot.time - start_time >= timeout:
+        print "TURN TIMEOUT!", robot.time - start_time
+
     if with_stop:
         robot.stop()
         robot.wait(1.0)
