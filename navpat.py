@@ -7,6 +7,7 @@
 
 import sys
 import math
+import numpy as np
 
 from apyros.metalog import MetaLog, disableAsserts
 from apyros.sourcelogger import SourceLogger
@@ -16,6 +17,26 @@ from johndeere import JohnDeere, setup_faster_update, ENC_SCALE
 
 from driver import go_straight, turn
 from helper import attach_sensor, detach_all_sensors
+
+
+class NearObstacle:
+    pass
+
+
+def min_dist(data):
+    data = np.array(data)
+    mask = (data > 0)
+    if np.any(mask):
+        return np.min(data[mask]) * 0.001
+    return None 
+
+
+def detect_near_extension(robot, id, data):
+    if id=='laser':
+        if data is not None and data != []:
+            if min_dist(data) < 0.5:
+                raise NearObstacle()
+
 
 def navigate_pattern(metalog):
     assert metalog is not None
@@ -40,19 +61,26 @@ def navigate_pattern(metalog):
     robot.canproxy.set_turn_raw(0)
 
     speed = 0.5
-    for i in xrange(10):
-        go_straight(robot, distance=4.0, speed=speed, with_stop=False)
-        turn(robot, math.radians(180), radius=2.0, speed=speed, with_stop=False)
+
+    try:
+        robot.extensions.append(('detect_near', detect_near_extension))
+
+        for i in xrange(10):
+            go_straight(robot, distance=4.0, speed=speed, with_stop=False)
+            turn(robot, math.radians(180), radius=2.0, speed=speed, with_stop=False, timeout=20.0)
         
-        # TODO change second radius once the localization & navigation are repeatable
-        go_straight(robot, distance=4.0, speed=speed, with_stop=False)
-        turn(robot, math.radians(180), radius=2.0, speed=speed, with_stop=False)
+            # TODO change second radius once the localization & navigation are repeatable
+            go_straight(robot, distance=4.0, speed=speed, with_stop=False)
+            turn(robot, math.radians(180), radius=2.0, speed=speed, with_stop=False, timeout=20.0)
+    except NearObstacle:
+        print "Near Exception Raised!"
+        robot.extensions = []  # hack
 
     robot.canproxy.stop()
     robot.canproxy.stop_turn()
     robot.wait(3.0)
     
-    detach_all(robot)
+    detach_all_sensors(robot)
 
 
 if __name__ == "__main__":

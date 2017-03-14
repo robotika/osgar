@@ -27,14 +27,6 @@ def camera_data_extension(robot, id, data):
         robot.camera_data = data
 
 
-def min_dist(data):
-    data = np.array(data)
-    mask = (data > 0)
-    if np.any(mask):
-        return np.min(data[mask]) * 0.001
-    return None 
-
-
 def attach_sensor(robot, sensor_name, metalog):
     assert sensor_name in ['gps', 'laser', 'camera'], sensor_name
 
