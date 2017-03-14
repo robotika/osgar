@@ -5,6 +5,7 @@
 from gps import GPS
 from gps import DummyGPS as DummySensor  # TODO move to apyros, as mock
 from laser import LaserIP
+from camera import Camera
 from apyros.metalog import MetaLog, disableAsserts
 from apyros.sourcelogger import SourceLogger
 
@@ -19,6 +20,11 @@ def gps_data_extension(robot, id, data):
 def laser_data_extension(robot, id, data):
     if id=='laser':
         robot.laser_data = data
+
+
+def camera_data_extension(robot, id, data):
+    if id=='camera':
+        robot.camera_data = data
 
 
 def min_dist(data):
@@ -60,9 +66,27 @@ def attach_sensor(robot, sensor_name, metalog):
         robot.register_data_source('laser', function, laser_data_extension)   
         robot.laser.start()
 
+    elif sensor_name == 'camera':
+        # Camera
+        camera_log_name = metalog.getLog('camera')
+        print camera_log_name
+        if metalog.replay:
+            robot.camera = DummySensor()
+            function = SourceLogger(None, camera_log_name).get
+        else:
+            robot.camera = Camera(sleep=0.2)  # TODO
+            function = SourceLogger(robot.camera.lastResult, camera_log_name).get
+        robot.camera_data = None
+        robot.register_data_source('camera', function, camera_data_extension)
+        robot.camera.start()
+
+    else:
+        assert False, sensor_name  # unsuported sensor
+
 def detach_all_sensors(robot):
     # TODO unregister all modules
     # TODO conditional stopping
+    robot.camera.requestStop()
     robot.laser.requestStop()
     robot.gps.requestStop()
 

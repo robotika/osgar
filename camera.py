@@ -17,7 +17,7 @@ import sys
 import os
 
 # Default camera URL
-DEFAULT_URL = "http://192.168.0.99/img.jpg"
+DEFAULT_URL = "http://192.168.1.6/img.jpg"
 
 # move this to some "common utility"
 def timeName( prefix, ext, index = None ):
@@ -122,6 +122,7 @@ class Camera( Thread ):
     self.url = url
     self.queryCount = 0
     self.sleepProc = DummyProc( sleep )
+    self.sleep = sleep
     self.pausedProcessing = False
     self.snapshotOnly = False
 
@@ -179,6 +180,9 @@ class Camera( Thread ):
           self._logFile.flush()
           if self.verbose>1:
             print "Camera:", self._lastResult
+        elif self.sleep:
+          time.sleep(self.sleep)
+
       else:
         # read picture failed
         time.sleep(1.0)
@@ -301,7 +305,7 @@ if __name__ == "__main__":
 #    usage()
 #    sys.exit(2)
 
-  cam = Camera( ImageProc(verbose = 2), verbose = 2 )
+  cam = Camera( verbose = 2, sleep=0.2 )
   #cam = RemoteCamera(('', 8431))
   cam.start()
   for i in xrange(10):

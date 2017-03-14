@@ -33,7 +33,7 @@ def navigate_pattern(metalog):
     robot.UPDATE_TIME_FREQUENCY = 20.0  # TODO change internal and integrate setup
 
     robot.localization = None  # TODO
-    for sensor_name in ['gps', 'laser']: # TODO camera
+    for sensor_name in ['gps', 'laser', 'camera']:
         attach_sensor(robot, sensor_name, metalog)
 
     robot.canproxy.stop()
