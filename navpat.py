@@ -18,6 +18,7 @@ from johndeere import JohnDeere, setup_faster_update, ENC_SCALE
 from driver import go_straight, turn
 from helper import attach_sensor, detach_all_sensors
 
+from lib.landmarks import ConeLandmarks
 
 class NearObstacle:
     pass
@@ -37,6 +38,7 @@ def detect_near_extension(robot, id, data):
             if min_dist(data) < 0.5:
                 raise NearObstacle()
 
+            cones = ConeLandmarks(data)
             """
             ZONE_RADIUS = 2.0
             arr = []
