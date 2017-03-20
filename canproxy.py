@@ -152,13 +152,15 @@ class CANProxy:
         if (int(self.time * SPEED_UPDATE_CONTROL_FREQ) != 
             int(time * SPEED_UPDATE_CONTROL_FREQ)):
             speed = sum(self.speed_arr)
-            print 'ref speed at', time, speed, self.last_sent_speed_cmd
+            if self.verbose:
+                print 'ref speed at', time, speed, self.last_sent_speed_cmd
             if self.desired_speed_raw is not None and self.valid_speed_ref:
                 if speed + SPEED_TOLERANCE < self.desired_speed_raw:
                     self.cmd = min(self.last_sent_speed_cmd + GAS_STEP, MAX_GAS_LIMIT)
                 elif speed - SPEED_TOLERANCE > self.desired_speed_raw:
                     self.cmd = max(self.last_sent_speed_cmd - GAS_STEP, MIN_GAS_LIMIT)
-                print "-->", self.cmd
+                if self.verbose:
+                    print "-->", self.cmd
             self.valid_speed_ref = True  # ignore first, but accept following measurements
 
         self.time = time
