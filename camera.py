@@ -159,7 +159,7 @@ class Camera( Thread ):
           sys.stderr.write('.')
         else:
           print "Getting picture", filename
-      result = self.getPicture( filename ):
+      result = self.getPicture( filename )
       if result is not None:
         at, __ = result
         if self.pausedProcessing:
