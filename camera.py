@@ -141,10 +141,11 @@ class Camera( Thread ):
     try:
       url = urllib.urlopen( self.url )
       img = url.read()
+      t = time.time()
       file = open( filename, "wb" )
       file.write( img )
       file.close()
-      return img
+      return t, img
     except IOError, e:
       print e
       return None
@@ -158,7 +159,9 @@ class Camera( Thread ):
           sys.stderr.write('.')
         else:
           print "Getting picture", filename
-      if self.getPicture( filename ):
+      result = self.getPicture( filename ):
+      if result is not None:
+        at, __ = result
         if self.pausedProcessing:
           imageProc = self.sleepProc
         else:
@@ -173,7 +176,7 @@ class Camera( Thread ):
         else:
           tmpResult = None
         self.lock.acquire()
-        self._logFile.write( str(self.queryCount) + "\n" )
+        self._logFile.write( str(self.queryCount) + '\t' + str(at) + "\n" )
         self.queryCount = 0
         self._lastResult = tmpResult
         self._lastResultFile = filename
