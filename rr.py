@@ -37,7 +37,6 @@ def robot_go_straight(metalog):
     robot.canproxy.set_turn_raw(0)
 
     speed = 0.5
-    speed = 0.5
 
     try:
         robot.extensions.append(('detect_near', detect_near_extension))
