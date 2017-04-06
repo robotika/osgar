@@ -174,7 +174,7 @@ class Camera( Thread ):
         if imageProc:
           tmpResult = imageProc.processPicture( filename )
         else:
-          tmpResult = None
+          tmpResult = filename, None
         self.lock.acquire()
         self._logFile.write( str(self.queryCount) + '\t' + str(at) + "\n" )
         self.queryCount = 0
