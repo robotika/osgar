@@ -193,9 +193,11 @@ class RTSerial():
 #-------------------------------------------------------------------
 
 class CAN():
-  def __init__(self, com = None, defaultDTR = False, verbose = 1, skipInit = False):
+  def __init__(self, com = None, defaultDTR = False, verbose = 1,
+               skipInit = False,  timestamps_log=None):
     self.verbose = verbose
     self.skipInit = skipInit
+    self.timestamps_log = timestamps_log  # optional file descriptor to log timestamps
     
     if com:
       useDTR = defaultDTR
@@ -266,6 +268,10 @@ class CAN():
     else:
       #print "id ",id,"len",len,"rtr ",rtr
       data=[ord(x) for x in self.com.read(len)]
+      if self.timestamps_log:
+        s = '(%.3f, 0x%X, %s)\n' % (time.time(), id, str(data))
+        self.timestamps_log.write(s)
+        self.timestamps_log.flush()
       return id,data
 
   def sendData(self,id,data):
@@ -291,9 +297,10 @@ class CAN():
       packets[ id ] = data
     return packets
 
-  def relog( self, prefix ):
+  def relog( self, prefix, timestamps_log=None ):
     if "relog" in dir(self.com):
       return self.com.relog( prefix )
+    self.timestamps_log = timestamps_log
 
   def resetModules( self, configFn=None ):
     print "Reset all modules"
