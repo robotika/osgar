@@ -18,7 +18,7 @@ from johndeere import JohnDeere, setup_faster_update, ENC_SCALE
 from driver import go_straight, turn
 from helper import attach_sensor, detach_all_sensors
 
-from lib.landmarks import ConeLandmarks
+from lib.landmarks import ConeLandmarkFinder
 
 class NearObstacle:
     pass
@@ -38,31 +38,15 @@ def detect_near_extension(robot, id, data):
             if min_dist(data) < 0.5:
                 raise NearObstacle()
 
-            cones = ConeLandmarks(data)
-            """
-            ZONE_RADIUS = 2.0
-            arr = []
-            for i in xrange(0, len(data), 10):
-                arr.append(min_dist(data[i:i+10]))
-
-            for i in xrange(1, len(arr) - 3):
-                if (arr[i] is not None and
-                   (arr[i-1] is None or arr[i] < arr[i-1] - ZONE_RADIUS) and
-                   (arr[i+1] is None or arr[i] < arr[i+1] - ZONE_RADIUS)):
-                    print i, arr[i-1:i+2],
-                elif (arr[i] is not None and arr[i+1] is not None and
-                     (abs(arr[i] - arr[i+1]) < 0.3) and
-                     (arr[i-1] is None or arr[i] < arr[i-1] - ZONE_RADIUS) and
-                     (arr[i+2] is None or arr[i] < arr[i+2] - ZONE_RADIUS)):
-                    print i, arr[i-1:i+3],
-            print
+            cones = ConeLandmarkFinder()
+            print cones.find_cones(data)
             # TODO:
             #  - collection of all potential cones
             #  - cross distance verification
             #  - "feature tracking"
             #  - localization
             #  - camera verification
-            """
+
 
 def navigate_pattern(metalog):
     assert metalog is not None
