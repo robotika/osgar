@@ -52,7 +52,7 @@ def laser_gen(filename):
             arr = eval(line)
             yield num, arr
         else:
-            num = int(line)
+            num = int(line.split()[0])  # support for offset + timestamp format
 
         # TODO handle timestamps
 
