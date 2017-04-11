@@ -24,7 +24,7 @@ def robot_go_straight(metalog):
             can = CAN(ReplayLogInputsOnly(can_log_name), skipInit=True)
     else:
         can = CAN()
-        can.relog(can_log_name)
+        can.relog(can_log_name, timestamps_log=open(metalog.getLog('timestamps'), 'w'))
     can.resetModules(configFn=setup_faster_update)
     robot = JohnDeere(can=can)
     robot.UPDATE_TIME_FREQUENCY = 20.0  # TODO change internal and integrate setup

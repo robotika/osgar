@@ -24,6 +24,7 @@ from laser import LaserIP
 from johndeere import (JohnDeere, wait_for_start, setup_faster_update)
 from apyros.metalog import MetaLog, disableAsserts
 from apyros.sourcelogger import SourceLogger
+from helper import attach_sensor, detach_all_sensors
 
 from route import Convertor, Route
 from line import distance
@@ -98,39 +99,15 @@ def demo(metalog):
             can = CAN(ReplayLogInputsOnly(can_log_name), skipInit=True)
     else:
         can = CAN()
-        can.relog(can_log_name)
+        can.relog(can_log_name, timestamps_log=open(metalog.getLog('timestamps'), 'w'))
     can.resetModules(configFn=setup_faster_update)
     robot = JohnDeere(can=can)
     robot.UPDATE_TIME_FREQUENCY = 20.0  # TODO change internal and integrate setup
 
     robot.localization = None  # TODO
 
-    # GPS
-    gps_log_name = metalog.getLog('gps')
-    print gps_log_name
-    if metalog.replay:
-        robot.gps = DummySensor()
-        function = SourceLogger(None, gps_log_name).get
-    else:
-        robot.gps = GPS(verbose=0)
-        function = SourceLogger(robot.gps.coord, gps_log_name).get
-    robot.gps_data = None
-    robot.register_data_source('gps', function, gps_data_extension) 
-
-    # Laser
-    laser_log_name = metalog.getLog('laser')
-    print laser_log_name
-    if metalog.replay:
-        robot.laser = DummySensor()
-        function = SourceLogger(None, laser_log_name).get
-    else:
-        robot.laser = LaserIP()
-        function = SourceLogger(robot.laser.scan, laser_log_name).get
-    robot.laser_data = None
-    robot.register_data_source('laser', function, laser_data_extension) 
-
-    robot.gps.start()  # ASAP so we get GPS fix
-    robot.laser.start()
+    for sensor_name in ['gps', 'laser', 'camera']:
+        attach_sensor(robot, sensor_name, metalog)
 
     print "Wait for gas"
     while robot.canproxy.gas is None:
@@ -193,8 +170,7 @@ def demo(metalog):
     robot.canproxy.stop()
     for i in xrange(20):
         robot.update()
-    robot.laser.requestStop()
-    robot.gps.requestStop()
+    detach_all_sensors(robot)
 
 
 if __name__ == "__main__":
