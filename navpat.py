@@ -31,15 +31,18 @@ def min_dist(data):
         return np.min(data[mask]) * 0.001
     return None 
 
-
+prev_cones = []
 def detect_near_extension(robot, id, data):
     if id=='laser':
         if data is not None and data != []:
             if min_dist(data) < 0.5:
                 raise NearObstacle()
 
-            cones = ConeLandmarkFinder()
-            print cones.find_cones(data)
+            finder = ConeLandmarkFinder()
+            global prev_cones
+            cones = finder.find_cones(data)
+            print finder.match_pairs(prev_cones, cones)
+            prev_cones = cones
             # TODO:
             #  - collection of all potential cones
             #  - cross distance verification

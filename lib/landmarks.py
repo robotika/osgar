@@ -46,4 +46,24 @@ class ConeLandmarkFinder(object):
                 ret.append( (ii, data[ii]) )
         return ret
 
+    def match_pairs(self, old, new):
+        if len(old)==0 or len(new)==0:
+            return []
+        s = [((angle, dist), 0) for angle, dist in old]
+        s += [((angle, dist), 1) for angle, dist in new]
+        s = sorted(s)
+        ret = []
+        for prev, curr in zip(s[:-1], s[1:]):
+            if abs(prev[0][0]-curr[0][0]) > 2*5:
+                # accept only angle difference smaller than 5deg
+                continue
+            if abs(prev[0][1]-curr[0][1]) > 200:
+                # ignore distances difference bigger than 20cm
+                continue
+            if prev[1] < curr[1]:
+                ret.append((prev[0], curr[0]))
+            elif prev[1] > curr[1]:
+                ret.append((curr[0], prev[0]))
+        return ret
+
 # vim: expandtab sw=4 ts=4
