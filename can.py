@@ -298,9 +298,9 @@ class CAN():
     return packets
 
   def relog( self, prefix, timestamps_log=None ):
+    self.timestamps_log = timestamps_log
     if "relog" in dir(self.com):
       return self.com.relog( prefix )
-    self.timestamps_log = timestamps_log
 
   def resetModules( self, configFn=None ):
     print "Reset all modules"
