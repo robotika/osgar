@@ -136,6 +136,11 @@ class CANProxy:
             assert len(data) == 1, data
 #            print "CHANGE", data[0] & 0x3, (data[0] >> 2) & 0x3, self.dist_right_raw
 
+    def update_buttons(self, (id, data)):
+        if id == 0x185:
+            print "DATA", data
+            self.can.sendData(0x205, [(0x0F & data[0])<<4])
+
     def update_wheel_angle_status(self, (id, data)):
         if id == 0x182:
             assert(len(data) == 2) 
@@ -147,6 +152,7 @@ class CANProxy:
         self.update_gas_status(packet)
         self.update_encoders(packet)
         self.update_wheel_angle_status(packet)
+        self.update_buttons(packet)
 
     def set_time(self, time):
         if (int(self.time * SPEED_UPDATE_CONTROL_FREQ) != 
