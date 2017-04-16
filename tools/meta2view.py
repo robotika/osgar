@@ -11,6 +11,7 @@ import sys
 
 sys.path.append(os.path.join(os.path.split(__file__)[0], '..'))
 from can import parseFileG
+from logparser2 import sensor_gen
 
 FRONT_REAR_DIST = 1.3
 LEFT_WHEEL_DIST_OFFSET = 0.4  # from central axis
@@ -47,12 +48,15 @@ def can_gen(filename):
 def laser_gen(filename):
     print(filename)
     num = None
+    timestamp = None
     for line in open(filename):
         if line.startswith('['):
             arr = eval(line)
-            yield num, arr
+            yield num, timestamp, arr
         else:
             num = int(line.split()[0])  # support for offset + timestamp format
+            if len(line.split()) > 1:
+                timestamp = float(line.split()[1])
 
         # TODO handle timestamps
 
@@ -80,11 +84,19 @@ def dump_laser(out, pose, data):
     out.write('\n')
 
 
+def dump_camera(out, img_dir, data):
+    filename = os.path.join(img_dir, data[0][5:])
+    out.write( "Image %s\n" % filename )
+    out.write( "ImageResult %s\n" % data[1]) 
+
+
 def main():
     meta_filename = sys.argv[1]
     meta_dir = os.path.split(meta_filename)[0]
+    camera_gen = sensor_gen(meta_filename, ['camera'])
     can = None
     laser = None
+    camera_timestamp, __, camera_data = camera_gen.next()
     for line in open(meta_filename):
         print(line)
         if line.startswith('can:'):
@@ -102,7 +114,13 @@ def main():
     for i in xrange(80):
         can.next()
     if laser is not None:
-        for num, data in laser:
+        for num, laser_time, data in laser:
+            if camera_timestamp is not None and laser_time > camera_timestamp:
+                dump_camera(out, meta_dir, camera_data)
+                try:
+                    camera_timestamp, __, camera_data = camera_gen.next()
+                except StopIteration:
+                    camera_timestamp = None
             for i in xrange(num):
                 sensors = can.next()
                 if 'encoders' in sensors:
