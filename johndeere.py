@@ -53,13 +53,14 @@ def setup_faster_update(can):
 class JohnDeere(object):
     UPDATE_TIME_FREQUENCY = 5.0  #20.0  # Hz 
 
-    def __init__(self, can=None):
+    def __init__(self, can=None, localization=None):
         if can is None:
             self.can = CAN()
             self.can.resetModules()
         else:
             self.can = can
         self.canproxy = CANProxy(self.can)
+        self.localization = localization
         self.time = 0.0
         self.buttonGo = None  # TODO currently not available (!)
         self.drop_ball = False  # TODO move to ro.py only
@@ -113,6 +114,7 @@ class JohnDeere(object):
             self.update()
 
     def update(self):
+        prev_enc = self.canproxy.dist_left_raw, self.canproxy.dist_right_raw
         while True:
             packet = self.can.readPacket()
             self.canproxy.update(packet)
@@ -124,6 +126,14 @@ class JohnDeere(object):
             # make sure that all updates get also termination SYNC (0x80)
             if packet[0] == 0x80:  
                 break
+        
+        if (self.localization is not None and
+            prev_enc[0] is not None and prev_enc[1] is not None and
+            self.canproxy.wheel_angle_raw is not None):
+            dist_left = ENC_SCALE * (self.canproxy.dist_left_raw - prev_enc[0])
+            dist_right = ENC_SCALE * (self.canproxy.dist_right_raw - prev_enc[1])
+            angle_left = self.canproxy.wheel_angle_raw * TURN_SCALE + TURN_ANGLE_OFFSET
+            self.localization.update_odometry(angle_left, dist_left, dist_right)
 
         # send data related to other sources
         for (id,fce) in self.data_sources:

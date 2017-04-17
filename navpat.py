@@ -19,6 +19,7 @@ from driver import go_straight, turn
 from helper import attach_sensor, detach_all_sensors
 
 from lib.landmarks import ConeLandmarkFinder
+from lib.localization import SimpleOdometry
 
 class NearObstacle:
     pass
@@ -41,7 +42,7 @@ def detect_near_extension(robot, id, data):
             finder = ConeLandmarkFinder()
             global prev_cones
             cones = finder.find_cones(data)
-            print finder.match_pairs(prev_cones, cones)
+            print '(%.2f, %.2f, %.3f)' % robot.localization.pose(), finder.match_pairs(prev_cones, cones)
             prev_cones = cones
             # TODO:
             #  - collection of all potential cones
@@ -63,10 +64,9 @@ def navigate_pattern(metalog):
         can = CAN()
         can.relog(can_log_name, timestamps_log=open(metalog.getLog('timestamps'), 'w'))
     can.resetModules(configFn=setup_faster_update)
-    robot = JohnDeere(can=can)
+    robot = JohnDeere(can=can, localization=SimpleOdometry())
     robot.UPDATE_TIME_FREQUENCY = 20.0  # TODO change internal and integrate setup
 
-    robot.localization = None  # TODO
     for sensor_name in ['gps', 'laser', 'camera']:
         attach_sensor(robot, sensor_name, metalog)
 
