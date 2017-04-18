@@ -80,6 +80,7 @@ def navigate_pattern(metalog):
         robot.extensions.append(('detect_near', detect_near_extension))
 
         for i in xrange(10):
+            robot.set_desired_speed(speed)
             line = Line((0, 0), (4.0, 0))
             for angle in follow_line_gen(robot, line, stopDistance=0.0, turnScale=4.0, 
                                          offsetSpeed=math.radians(20), offsetDistance=0.03):
