@@ -40,7 +40,7 @@ def robot_go_straight(metalog):
 
     try:
         robot.extensions.append(('detect_near', detect_near_extension))
-        go_straight(robot, distance=400.0, speed=speed, with_stop=False)
+        go_straight(robot, distance=400.0, speed=speed, with_stop=False, timeout=3600.0)
     except NearObstacle:
         print "Near Exception Raised!"
         robot.extensions = []  # hack
