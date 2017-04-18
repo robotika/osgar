@@ -15,8 +15,9 @@ from apyros.sourcelogger import SourceLogger
 from can import CAN, DummyMemoryLog, ReplayLogInputsOnly, ReplayLog
 from johndeere import JohnDeere, setup_faster_update, ENC_SCALE
 
-from driver import go_straight, turn
+from driver import go_straight, turn, follow_line_gen
 from helper import attach_sensor, detach_all_sensors
+from line import Line
 
 from lib.landmarks import ConeLandmarkFinder
 from lib.localization import SimpleOdometry
@@ -79,11 +80,19 @@ def navigate_pattern(metalog):
         robot.extensions.append(('detect_near', detect_near_extension))
 
         for i in xrange(10):
-            go_straight(robot, distance=4.0, speed=speed, with_stop=False, timeout=20.0)
+            line = Line((0, 0), (4.0, 0))
+            for angle in follow_line_gen(robot, line, stopDistance=0.0, turnScale=4.0, 
+                                         offsetSpeed=math.radians(20), offsetDistance=0.03):
+                robot.set_desired_steering(angle)
+                robot.update()
             turn(robot, math.radians(180), radius=2.0, speed=speed, with_stop=False, timeout=20.0)
         
             # TODO change second radius once the localization & navigation are repeatable
-            go_straight(robot, distance=4.0, speed=speed, with_stop=False, timeout=20.0)
+            line = Line((4.0, 4.0), (0, 4.0))
+            for angle in follow_line_gen(robot, line, stopDistance=0.0, turnScale=4.0, 
+                                         offsetSpeed=math.radians(20), offsetDistance=0.03):
+                robot.set_desired_steering(angle)
+                robot.update()
             turn(robot, math.radians(180), radius=2.0, speed=speed, with_stop=False, timeout=20.0)
     except NearObstacle:
         print "Near Exception Raised!"

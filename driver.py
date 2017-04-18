@@ -97,6 +97,38 @@ def turn(robot, angle, radius, speed, timeout=10.0, with_stop=True):
         robot.wait(1.0)
 
 
+def normalizeAnglePIPI( angle ):
+    while angle < -math.pi:
+        angle += 2*math.pi
+    while angle > math.pi:
+        angle -= 2*math.pi
+    return angle 
+
+
+def follow_line_gen(robot, line, stopDistance=0.0, turnScale=4.0, offsetSpeed=math.radians(20), offsetDistance=0.03):
+    """
+    line           ... A line to follow.
+    stopDistance   ... The robot stops when closer than this to the endpoint. [m]
+    turnScale      ... Magic parameter for the rotational speed. [scaling factor]
+    offsetSpeed    ... This extra rotational speed is added when the robot is too far from the line. [rad/s]
+    offsetDistance ... When the robot is further than this from the line, some extra correction may be needed. [m]
+    """
+    while line.distanceToFinishLine(robot.localization.pose()) > stopDistance:
+        diff = normalizeAnglePIPI(line.angle - robot.localization.pose()[2])
+        signedDistance = line.signedDistance(robot.localization.pose()) # + self.centerOffset
+#        print "deg %.1f" %( math.degrees(diff),), "dist=%0.3f" % (signedDistance,)
+        if math.fabs( signedDistance ) > offsetDistance:
+            step = max(0.0, min(offsetSpeed, offsetSpeed * (abs(signedDistance)-offsetDistance)/offsetDistance ))
+            if signedDistance < 0:
+                diff += step
+            else:
+                diff -= step
+#        turn = restrictedTurn(turnScale * diff)
+#        speed = self.restrictedSpeed(turn)
+#        yield  speed, turn 
+        yield diff
+
+
 def driver_self_test(driver, metalog):
     assert metalog is not None
     can_log_name = metalog.getLog('can')
