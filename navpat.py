@@ -79,11 +79,11 @@ def navigate_pattern(metalog):
         robot.extensions.append(('detect_near', detect_near_extension))
 
         for i in xrange(10):
-            go_straight(robot, distance=4.0, speed=speed, with_stop=False)
+            go_straight(robot, distance=4.0, speed=speed, with_stop=False, timeout=20.0)
             turn(robot, math.radians(180), radius=2.0, speed=speed, with_stop=False, timeout=20.0)
         
             # TODO change second radius once the localization & navigation are repeatable
-            go_straight(robot, distance=4.0, speed=speed, with_stop=False)
+            go_straight(robot, distance=4.0, speed=speed, with_stop=False, timeout=20.0)
             turn(robot, math.radians(180), radius=2.0, speed=speed, with_stop=False, timeout=20.0)
     except NearObstacle:
         print "Near Exception Raised!"
