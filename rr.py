@@ -12,6 +12,7 @@ from johndeere import JohnDeere, setup_faster_update
 from driver import go_straight
 from helper import attach_sensor, detach_all_sensors
 from navpat import NearObstacle, detect_near_extension
+from lib.localization import SimpleOdometry
 
 
 def robot_go_straight(metalog):
@@ -26,10 +27,9 @@ def robot_go_straight(metalog):
         can = CAN()
         can.relog(can_log_name, timestamps_log=open(metalog.getLog('timestamps'), 'w'))
     can.resetModules(configFn=setup_faster_update)
-    robot = JohnDeere(can=can)
+    robot = JohnDeere(can=can, localization=SimpleOdometry())
     robot.UPDATE_TIME_FREQUENCY = 20.0  # TODO change internal and integrate setup
 
-    robot.localization = None  # TODO
     for sensor_name in ['gps', 'laser', 'camera']:
         attach_sensor(robot, sensor_name, metalog)
 
