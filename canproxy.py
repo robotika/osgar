@@ -59,6 +59,9 @@ class CANProxy:
         self.wheel_angle_raw = None
         self.desired_wheel_angle_raw = None
 
+        self.buttons_and_LEDs = None  # upper nybble contains LED status
+        self.cmd_LEDs = None
+
     def go(self):
         self.cmd = 'go'
         self.desired_speed_raw = None
@@ -139,6 +142,7 @@ class CANProxy:
     def update_buttons(self, (id, data)):
         if id == 0x185:
             print "DATA", data
+            self.buttons_and_LEDs = data[0]
             self.can.sendData(0x205, [(0x0F & data[0])<<4])
 
     def update_wheel_angle_status(self, (id, data)):
@@ -201,5 +205,10 @@ class CANProxy:
             else:
                 self.can.sendData(0x202, [0])
                 self.desired_wheel_angle_raw = None
+
+    def send_LEDs(self):
+        """Send command to set new LEDs status"""
+        if self.cmd_LEDs is not None:
+            self.can.sendData(0x205, [self.cmd_LEDs])
 
 # vim: expandtab sw=4 ts=4

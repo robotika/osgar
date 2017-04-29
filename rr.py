@@ -8,7 +8,7 @@ import sys
 
 from apyros.metalog import MetaLog, disableAsserts
 from can import CAN, DummyMemoryLog, ReplayLogInputsOnly, ReplayLog
-from johndeere import JohnDeere, setup_faster_update
+from johndeere import JohnDeere, setup_faster_update, wait_for_start
 from driver import go_straight
 from helper import attach_sensor, detach_all_sensors
 from navpat import NearObstacle, detect_near_extension
@@ -36,6 +36,9 @@ def robot_go_straight(metalog):
     robot.canproxy.stop()
     robot.canproxy.set_turn_raw(0)
 
+    print robot.canproxy.buttons_and_LEDs
+    wait_for_start(robot)
+    print robot.canproxy.buttons_and_LEDs
     speed = 0.5
 
     try:

@@ -18,6 +18,9 @@ ENC_SCALE = 2*3.39/float(252 + 257)
 TURN_ANGLE_OFFSET = math.radians(5.5)
 TURN_SCALE = 0.0041
 
+GREEN_BUTTON = 0x01
+ALL_LEDS = 0xF0
+GREEN_LED = 0x10
 
 # TODO move inside or remove when CAN module is upgraded
 def setup_faster_update(can):
@@ -145,6 +148,7 @@ class JohnDeere(object):
         self.time += 1.0/self.UPDATE_TIME_FREQUENCY  
         self.canproxy.set_time(self.time)
         self.canproxy.send_speed()
+        self.canproxy.send_LEDs()
         self.send_ball_dispenser()
 
     def set_desired_speed(self, speed):
@@ -170,8 +174,12 @@ class JohnDeere(object):
 
 def wait_for_start(robot):
     print "WAIT FOR START"
-    while not robot.buttonGo:
+
+    robot.canproxy.cmd_LEDs = ALL_LEDS
+    while (robot.canproxy.buttons_and_LEDs is None or
+           robot.canproxy.buttons_and_LEDs & GREEN_BUTTON != 0):
         robot.update()
+    robot.canproxy.cmd_LEDs = GREEN_LED
     print "STARTED ..."
 
 
