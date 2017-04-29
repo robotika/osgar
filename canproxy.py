@@ -61,6 +61,7 @@ class CANProxy:
 
         self.buttons_and_LEDs = None  # upper nybble contains LED status
         self.cmd_LEDs = None
+        self.bumpers = None
 
     def go(self):
         self.cmd = 'go'
@@ -152,11 +153,18 @@ class CANProxy:
             if self.verbose:
                 print "WHEEL", self.time, self.wheel_angle_raw, self.desired_wheel_angle_raw
 
+    def update_bumpers(self, (id, data)):
+        if id == 0x183:
+            assert len(data) == 1, data
+            assert data[0] & 0x10 == 0x10, data  # reserved unused bit
+            self.bumpers = data[0]
+
     def update(self, packet):
         self.update_gas_status(packet)
         self.update_encoders(packet)
         self.update_wheel_angle_status(packet)
         self.update_buttons(packet)
+        self.update_bumpers(packet)
 
     def set_time(self, time):
         if (int(self.time * SPEED_UPDATE_CONTROL_FREQ) != 

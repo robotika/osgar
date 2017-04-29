@@ -22,6 +22,19 @@ GREEN_BUTTON = 0x01
 ALL_LEDS = 0xF0
 GREEN_LED = 0x10
 
+EMERGENCY_STOP_MASK = 0xEF
+
+
+class EmergencyStopException(Exception):
+    pass
+
+
+def emergency_stop_extension(robot, id, data):
+    if (robot.canproxy.bumpers is not None and 
+        robot.canproxy.bumpers & EMERGENCY_STOP_MASK != 0):
+        raise EmergencyStopException()
+
+
 # TODO move inside or remove when CAN module is upgraded
 def setup_faster_update(can):
     reader = ReadSDO( 1, 0x1801, 5 )

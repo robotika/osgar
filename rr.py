@@ -8,7 +8,8 @@ import sys
 
 from apyros.metalog import MetaLog, disableAsserts
 from can import CAN, DummyMemoryLog, ReplayLogInputsOnly, ReplayLog
-from johndeere import JohnDeere, setup_faster_update, wait_for_start
+from johndeere import (JohnDeere, setup_faster_update, wait_for_start,
+                       emergency_stop_extension, EmergencyStopException)
 from driver import go_straight
 from helper import attach_sensor, detach_all_sensors
 from navpat import NearObstacle, detect_near_extension
@@ -43,9 +44,13 @@ def robot_go_straight(metalog):
 
     try:
         robot.extensions.append(('detect_near', detect_near_extension))
+        robot.extensions.append(('emergency_stop', emergency_stop_extension))
         go_straight(robot, distance=400.0, speed=speed, with_stop=False, timeout=3600.0)
     except NearObstacle:
         print "Near Exception Raised!"
+        robot.extensions = []  # hack
+    except EmergencyStopException:
+        print "Emergency STOP Exception!"
         robot.extensions = []  # hack
 
     robot.canproxy.stop()
