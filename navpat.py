@@ -22,6 +22,7 @@ from line import Line
 from lib.landmarks import ConeLandmarkFinder
 from lib.localization import SimpleOdometry
 
+
 class NearObstacle:
     pass
 
@@ -43,7 +44,8 @@ def detect_near_extension(robot, id, data):
             finder = ConeLandmarkFinder()
             global prev_cones
             cones = finder.find_cones(data)
-            print '(%.2f, %.2f, %.3f)' % robot.localization.pose(), finder.match_pairs(prev_cones, cones)
+#            print '(%.2f, %.2f, %.3f)' % robot.localization.pose(), finder.match_pairs(prev_cones, cones)
+            robot.localization.update_landmarks(id, cones)
             prev_cones = cones
             # TODO:
             #  - collection of all potential cones
@@ -70,6 +72,8 @@ def navigate_pattern(metalog):
 
     for sensor_name in ['gps', 'laser', 'camera']:
         attach_sensor(robot, sensor_name, metalog)
+
+    robot.localization.global_map = [(10.0, 0.0), (10.0, 5.0)]
 
     robot.canproxy.stop()
     robot.canproxy.set_turn_raw(0)

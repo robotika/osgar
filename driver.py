@@ -117,7 +117,7 @@ def follow_line_gen(robot, line, stopDistance=0.0, turnScale=4.0, offsetSpeed=ma
         diff = normalizeAnglePIPI(line.angle - robot.localization.pose()[2])
         x, y, a = robot.localization.pose()
         d = 1.3  # FRONT_REAR_DIST
-        print "deg %.1f" %( math.degrees(diff),), 
+#        print "deg %.1f" %( math.degrees(diff),), 
         signedDistance = line.signedDistance((x+d*math.cos(a), y+d*math.sin(a))) # + self.centerOffset
         if math.fabs( signedDistance ) > offsetDistance:
             step = max(0.0, min(offsetSpeed, offsetSpeed * (abs(signedDistance)-offsetDistance)/offsetDistance ))
@@ -129,7 +129,7 @@ def follow_line_gen(robot, line, stopDistance=0.0, turnScale=4.0, offsetSpeed=ma
 #        turn = restrictedTurn(turnScale * diff)
 #        speed = self.restrictedSpeed(turn)
 #        yield  speed, turn 
-        print "dist=%0.3f, diff=%.2f" % (signedDistance, math.degrees(diff)), robot.localization.pose()
+#        print "dist=%0.3f, diff=%.2f" % (signedDistance, math.degrees(diff)), robot.localization.pose()
         yield diff
 
 
