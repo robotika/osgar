@@ -55,6 +55,13 @@ def detect_near_extension(robot, id, data):
             #  - camera verification
 
 
+def follow_line(robot, line):
+            for angle in follow_line_gen(robot, line, stopDistance=0.0, turnScale=4.0, 
+                                         offsetSpeed=math.radians(20), offsetDistance=0.03):
+                robot.set_desired_steering(angle)
+                robot.update()
+
+
 def navigate_pattern(metalog):
     assert metalog is not None
     can_log_name = metalog.getLog('can')
@@ -85,20 +92,12 @@ def navigate_pattern(metalog):
 
         for i in xrange(10):
             robot.set_desired_speed(speed)
-            line = Line((0, 0), (4.0, 0))
-            for angle in follow_line_gen(robot, line, stopDistance=0.0, turnScale=4.0, 
-                                         offsetSpeed=math.radians(20), offsetDistance=0.03):
-                robot.set_desired_steering(angle)
-                robot.update()
-            turn(robot, math.radians(180), radius=2.0, speed=speed, with_stop=False, timeout=20.0)
-        
+            follow_line(robot, Line((0, 0), (4.0, 0)))
+            turn(robot, math.radians(180), radius=2.0, speed=speed, with_stop=False, timeout=20.0)       
             # TODO change second radius once the localization & navigation are repeatable
-            line = Line((4.0, 4.0), (0, 4.0))
-            for angle in follow_line_gen(robot, line, stopDistance=0.0, turnScale=4.0, 
-                                         offsetSpeed=math.radians(20), offsetDistance=0.03):
-                robot.set_desired_steering(angle)
-                robot.update()
+            follow_line(robot, Line((4.0, 4.0), (0, 4.0)))
             turn(robot, math.radians(180), radius=2.0, speed=speed, with_stop=False, timeout=20.0)
+
     except NearObstacle:
         print "Near Exception Raised!"
         robot.extensions = []  # hack
