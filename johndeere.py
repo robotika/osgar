@@ -32,6 +32,7 @@ class EmergencyStopException(Exception):
 def emergency_stop_extension(robot, id, data):
     if (robot.canproxy.bumpers is not None and 
         robot.canproxy.bumpers & EMERGENCY_STOP_MASK != 0):
+        print "raising EMERGENCY EXCEPTION!"
         raise EmergencyStopException()
 
 
@@ -190,7 +191,7 @@ def wait_for_start(robot):
 
     robot.canproxy.cmd_LEDs = ALL_LEDS
     while (robot.canproxy.buttons_and_LEDs is None or
-           robot.canproxy.buttons_and_LEDs & GREEN_BUTTON != 0):
+           robot.canproxy.buttons_and_LEDs & GREEN_BUTTON == 0):
         robot.update()
     robot.canproxy.cmd_LEDs = GREEN_LED
     print "STARTED ..."
