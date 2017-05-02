@@ -142,7 +142,6 @@ class CANProxy:
 
     def update_buttons(self, (id, data)):
         if id == 0x185:
-            print "DATA", data
             self.buttons_and_LEDs = data[0]
             self.can.sendData(0x205, [(0x0F & data[0])<<4])
 
@@ -156,7 +155,7 @@ class CANProxy:
     def update_bumpers(self, (id, data)):
         if id == 0x183:
             assert len(data) == 1, data
-            assert data[0] & 0x10 == 0x10, data  # reserved unused bit
+            # 0x10 - set for computer controlled gas pedal
             self.bumpers = data[0]
 
     def update(self, packet):
