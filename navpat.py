@@ -55,11 +55,43 @@ def detect_near_extension(robot, id, data):
             #  - camera verification
 
 
-def follow_line(robot, line):
-            for angle in follow_line_gen(robot, line, stopDistance=0.0, turnScale=4.0, 
-                                         offsetSpeed=math.radians(20), offsetDistance=0.03):
-                robot.set_desired_steering(angle)
-                robot.update()
+def follow_line(robot, line, speed=None, timeout=None):
+    if timeout is not None:
+        timeout = 20  # TODO set default to 2 * line length * speed
+
+    if speed is not None:
+        robot.set_desired_speed(speed)
+
+    start_time = robot.time
+    for angle in follow_line_gen(robot, line, stopDistance=0.0, turnScale=4.0, 
+                                 offsetSpeed=math.radians(20), offsetDistance=0.03):
+        robot.set_desired_steering(angle)
+        robot.update()
+        if robot.time - start_time > timeout:
+            print "TIMEOUT!", timeout
+            break
+
+
+def turn_back(robot, speed):
+    turn(robot, math.radians(-60), radius=2.0, speed=speed, with_stop=True, timeout=20.0)  # right
+    turn(robot, math.radians(-60), radius=2.0, speed=-speed, with_stop=True, timeout=20.0)  # backup
+    turn(robot, math.radians(-60), radius=2.0, speed=speed, with_stop=True, timeout=20.0)  # right again
+
+
+def run_oval(robot, speed):
+    robot.set_desired_speed(speed)
+    follow_line(robot, Line((0, 0), (4.0, 0)))
+    turn(robot, math.radians(180), radius=2.0, speed=speed, with_stop=False, timeout=20.0)       
+    # TODO change second radius once the localization & navigation are repeatable
+    follow_line(robot, Line((4.0, 4.0), (0, 4.0)))
+    turn(robot, math.radians(180), radius=2.0, speed=speed, with_stop=False, timeout=20.0)
+
+
+def run_there_and_back(robot, speed):
+    follow_line(robot, Line((0, 2.0), (10.0, 2.0)), speed=speed, timeout=30)
+    turn_back(robot, speed)
+    follow_line(robot, Line((10.0, 2.0), (0, 2.0)), speed=speed, timeout=30)
+    turn_back(robot, speed)
 
 
 def navigate_pattern(metalog):
@@ -91,12 +123,8 @@ def navigate_pattern(metalog):
         robot.extensions.append(('detect_near', detect_near_extension))
 
         for i in xrange(10):
-            robot.set_desired_speed(speed)
-            follow_line(robot, Line((0, 0), (4.0, 0)))
-            turn(robot, math.radians(180), radius=2.0, speed=speed, with_stop=False, timeout=20.0)       
-            # TODO change second radius once the localization & navigation are repeatable
-            follow_line(robot, Line((4.0, 4.0), (0, 4.0)))
-            turn(robot, math.radians(180), radius=2.0, speed=speed, with_stop=False, timeout=20.0)
+#            run_oval(robot, speed)
+            run_there_and_back(robot, speed)
 
     except NearObstacle:
         print "Near Exception Raised!"
