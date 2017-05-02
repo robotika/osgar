@@ -56,7 +56,7 @@ def detect_near_extension(robot, id, data):
 
 
 def follow_line(robot, line, speed=None, timeout=None):
-    if timeout is not None:
+    if timeout is None:
         timeout = 20  # TODO set default to 2 * line length * speed
 
     if speed is not None:
@@ -73,9 +73,9 @@ def follow_line(robot, line, speed=None, timeout=None):
 
 
 def turn_back(robot, speed):
-    turn(robot, math.radians(-60), radius=2.0, speed=speed, with_stop=True, timeout=20.0)  # right
-    turn(robot, math.radians(-60), radius=2.0, speed=-speed, with_stop=True, timeout=20.0)  # backup
-    turn(robot, math.radians(-60), radius=2.0, speed=speed, with_stop=True, timeout=20.0)  # right again
+    turn(robot, math.radians(-60), radius=2.0, speed=speed, with_stop=True, timeout=30.0)  # right
+    turn(robot, math.radians(-60), radius=2.0, speed=-speed, with_stop=True, timeout=30.0)  # backup
+    turn(robot, math.radians(-60), radius=2.0, speed=speed, with_stop=True, timeout=30.0)  # right again
 
 
 def run_oval(robot, speed):
@@ -88,9 +88,9 @@ def run_oval(robot, speed):
 
 
 def run_there_and_back(robot, speed):
-    follow_line(robot, Line((0, 2.0), (10.0, 2.0)), speed=speed, timeout=30)
+    follow_line(robot, Line((0, 2.3), (14.0, 2.3)), speed=speed, timeout=60)
     turn_back(robot, speed)
-    follow_line(robot, Line((10.0, 2.0), (0, 2.0)), speed=speed, timeout=30)
+    follow_line(robot, Line((14.0, 2.3), (0, 2.3)), speed=speed, timeout=60)
     turn_back(robot, speed)
 
 
@@ -112,7 +112,8 @@ def navigate_pattern(metalog):
     for sensor_name in ['gps', 'laser', 'camera']:
         attach_sensor(robot, sensor_name, metalog)
 
-    robot.localization.global_map = [(10.0, 0.0), (10.0, 5.0)]
+    robot.localization.global_map = [(0.0, 0.0), (13.6, 0.0), (13.6, 4.7), (0.0, 4.7)]  # note not correct!
+    robot.localization.set_pose((0.0, 2.3, 0.0))
 
     robot.canproxy.stop()
     robot.canproxy.set_turn_raw(0)
