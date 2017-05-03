@@ -2,6 +2,7 @@
   Laser landmarks detector
 """
 
+import math
 import numpy as np
 
 MAX_CONE_SIZE = 0.3
@@ -65,5 +66,13 @@ class ConeLandmarkFinder(object):
             elif prev[1] > curr[1]:
                 ret.append((curr[0], prev[0]))
         return ret
+
+    def pair_distance(self, polarA, polarB):
+        tick_angleA, tick_distA = polarA
+        tick_angleB, tick_distB = polarB
+        dA, dB = tick_distA/1000.0, tick_distB/1000.0
+        angle = math.radians((tick_angleA - tick_angleB)/2.0)
+        d = dA*dA + dB*dB - 2*math.cos(angle)*dA*dB
+        return math.sqrt(d)
 
 # vim: expandtab sw=4 ts=4

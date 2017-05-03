@@ -35,8 +35,14 @@ class ConeLandmarkFinderTest(unittest.TestCase):
     def test_pair_distance(self):
         finder = ConeLandmarkFinder()
         self.assertAlmostEqual(finder.pair_distance((100, 1000), (100, 1000)), 0.0)
-
         self.assertAlmostEqual(finder.pair_distance((100, 1000), (100, 1100)), 0.1)
+
+        # example of detection of 3 cones
+        # [(13, 2749), (285, 12683), (522, 2841)]
+        self.assertAlmostEqual(finder.pair_distance((13, 2749), (285, 12683)), 14.78, 2)
+        self.assertAlmostEqual(finder.pair_distance((285, 12683), (522, 2841)), 14.26, 2)
+        self.assertAlmostEqual(finder.pair_distance((13, 2749), (522, 2841)), 4.45, 2)
+
 
 if __name__ == "__main__":
     unittest.main() 
