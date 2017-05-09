@@ -12,8 +12,12 @@ from johndeere import (JohnDeere, setup_faster_update, wait_for_start,
                        emergency_stop_extension, EmergencyStopException)
 from driver import go_straight
 from helper import attach_sensor, detach_all_sensors
-from navpat import NearObstacle, detect_near_extension
+from navpat import NearObstacle, detect_near_extension, min_dist
 from lib.localization import SimpleOdometry
+
+SAFE_DISTANCE_STOP = 1.0 # meters
+SAFE_DISTANCE_GO = SAFE_DISTANCE_STOP + 0.3
+DESIRED_SPEED = 0.5  # m/s
 
 
 def robot_go_straight(metalog):
@@ -37,19 +41,46 @@ def robot_go_straight(metalog):
     robot.canproxy.stop()
     robot.canproxy.set_turn_raw(0)
 
-    speed = 0.5
-
     try:
+        robot.extensions.append(('emergency_stop', emergency_stop_extension))
         print robot.canproxy.buttons_and_LEDs
         wait_for_start(robot)
         print robot.canproxy.buttons_and_LEDs
 
-        robot.extensions.append(('detect_near', detect_near_extension))
-        robot.extensions.append(('emergency_stop', emergency_stop_extension))
-        go_straight(robot, distance=400.0, speed=speed, with_stop=False, timeout=3600.0)
-    except NearObstacle:
-        print "Near Exception Raised!"
-        robot.extensions = []  # hack
+        robot.set_desired_steering(0.0)  # i.e. go straight (!)
+        # wait some time?
+        robot.wait(1.0)
+
+        prev_laser = None
+        last_laser_update = None
+        moving = False
+        dist = None
+        
+        while True:
+            robot.update()
+            if robot.laser_data is not None:
+                assert len(robot.laser_data) == 541, len(robot.laser_data)
+                if robot.laser_data != prev_laser:
+                    prev_laser = robot.laser_data
+                    last_laser_update = robot.time
+                    dist = min_dist(robot.laser_data)
+                    print "dist", dist
+            
+            if moving:
+                if dist is None or dist < SAFE_DISTANCE_STOP:
+                    print "!!! STOP !!!",  dist
+                    robot.canproxy.stop()
+                    moving = False
+            else:  # not moving
+                if dist is not None and dist > SAFE_DISTANCE_GO:
+                    print "GO",  dist
+                    robot.set_desired_speed(DESIRED_SPEED)
+                    moving = True                
+
+            if last_laser_update is not None and robot.time - last_laser_update > 0.3:
+                print "!!!WARNING!!! Missing laser updates for last {:.1f}s".format(robot.time - last_laser_update)
+                dist = None  # no longer valid distance measurements
+            
     except EmergencyStopException:
         print "Emergency STOP Exception!"
         robot.extensions = []  # hack
