@@ -15,7 +15,7 @@ from apyros.metalog import MetaLog, disableAsserts
 # meters per single encoder tick
 ENC_SCALE = 2*3.39/float(252 + 257)
 
-TURN_ANGLE_OFFSET = math.radians(5.5)
+TURN_ANGLE_OFFSET = math.radians(3.0)
 TURN_SCALE = 0.0041
 
 GREEN_BUTTON = 0x08

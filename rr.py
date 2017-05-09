@@ -39,17 +39,13 @@ def robot_go_straight(metalog):
         attach_sensor(robot, sensor_name, metalog)
 
     robot.canproxy.stop()
-    robot.canproxy.set_turn_raw(0)
+    robot.set_desired_steering(0.0)  # i.e. go straight (!)
 
     try:
         robot.extensions.append(('emergency_stop', emergency_stop_extension))
         print robot.canproxy.buttons_and_LEDs
         wait_for_start(robot)
         print robot.canproxy.buttons_and_LEDs
-
-        robot.set_desired_steering(0.0)  # i.e. go straight (!)
-        # wait some time?
-        robot.wait(1.0)
 
         prev_laser = None
         last_laser_update = None
@@ -64,7 +60,6 @@ def robot_go_straight(metalog):
                     prev_laser = robot.laser_data
                     last_laser_update = robot.time
                     dist = min_dist(robot.laser_data)
-                    print "dist", dist
             
             if moving:
                 if dist is None or dist < SAFE_DISTANCE_STOP:

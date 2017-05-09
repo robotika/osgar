@@ -15,7 +15,7 @@ from logparser2 import sensor_gen
 
 FRONT_REAR_DIST = 1.3
 LEFT_WHEEL_DIST_OFFSET = 0.4  # from central axis
-TURN_ANGLE_OFFSET = math.radians(5.5)
+TURN_ANGLE_OFFSET = math.radians(3.0)
 TURN_SCALE = 0.0041
 
 # (252, 257) corresponds to 339cm
