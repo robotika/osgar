@@ -37,12 +37,13 @@ def robot_go_straight(metalog):
     robot.canproxy.stop()
     robot.canproxy.set_turn_raw(0)
 
-    print robot.canproxy.buttons_and_LEDs
-    wait_for_start(robot)
-    print robot.canproxy.buttons_and_LEDs
     speed = 0.5
 
     try:
+        print robot.canproxy.buttons_and_LEDs
+        wait_for_start(robot)
+        print robot.canproxy.buttons_and_LEDs
+
         robot.extensions.append(('detect_near', detect_near_extension))
         robot.extensions.append(('emergency_stop', emergency_stop_extension))
         go_straight(robot, distance=400.0, speed=speed, with_stop=False, timeout=3600.0)
