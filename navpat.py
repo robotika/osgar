@@ -27,12 +27,12 @@ class NearObstacle:
     pass
 
 
-def min_dist(data):
+def min_dist(data, infinity=None):
     data = np.array(data)
     mask = (data > 0)
     if np.any(mask):
         return np.min(data[mask]) * 0.001
-    return None 
+    return infinity
 
 prev_cones = []
 def detect_near_extension(robot, id, data):

@@ -12,13 +12,16 @@ from johndeere import (JohnDeere, setup_faster_update, wait_for_start,
                        emergency_stop_extension, EmergencyStopException)
 from driver import go_straight
 from helper import attach_sensor, detach_all_sensors
-from navpat import NearObstacle, detect_near_extension, min_dist
+from navpat import min_dist
 from lib.localization import SimpleOdometry
 
 SAFE_DISTANCE_STOP = 1.0 # meters
 SAFE_DISTANCE_GO = SAFE_DISTANCE_STOP + 0.3
+SAFE_SIDE_DISTANCE_STOP = 0.6 # meters
+SAFE_SIDE_DISTANCE_GO = SAFE_SIDE_DISTANCE_STOP + 0.1
 DESIRED_SPEED = 0.5  # m/s
 
+INFINITY = 100.0  # m
 
 def robot_go_straight(metalog):
     assert metalog is not None
@@ -51,6 +54,7 @@ def robot_go_straight(metalog):
         last_laser_update = None
         moving = False
         dist = None
+        distL, distR = None, None
         
         while True:
             robot.update()
@@ -59,16 +63,20 @@ def robot_go_straight(metalog):
                 if robot.laser_data != prev_laser:
                     prev_laser = robot.laser_data
                     last_laser_update = robot.time
-                    dist = min_dist(robot.laser_data)
-            
+                    distL = min_dist(robot.laser_data[:180], INFINITY)
+                    dist = min_dist(robot.laser_data[180:360], INFINITY)
+                    distR = min_dist(robot.laser_data[360:], INFINITY)
+
+            print "dist", distL, dist, distR
+
             if moving:
-                if dist is None or dist < SAFE_DISTANCE_STOP:
-                    print "!!! STOP !!!",  dist
+                if dist is None or dist < SAFE_DISTANCE_STOP or min(distL, distR) < SAFE_SIDE_DISTANCE_STOP:
+                    print "!!! STOP !!!",  distL, dist, distR
                     robot.canproxy.stop()
                     moving = False
             else:  # not moving
-                if dist is not None and dist > SAFE_DISTANCE_GO:
-                    print "GO",  dist
+                if dist is not None and dist > SAFE_DISTANCE_GO and min(distL, distR) > SAFE_SIDE_DISTANCE_GO:
+                    print "GO",  distL, dist, distR
                     robot.set_desired_speed(DESIRED_SPEED)
                     moving = True                
 
