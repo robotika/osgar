@@ -84,18 +84,18 @@ def robot_go_straight(metalog):
                 print "CAMERA", robot.camera_data
                 prev_camera = robot.camera_data
 
-#                filename = 'm:\\git\\osgar\\logs\\pisek170513\\game2\\' + os.path.basename(prev_camera[0])
+#                filename = 'm:\\git\\osgar\\logs\\pisek170513\\game3\\' + os.path.basename(prev_camera[0])
                 filename = prev_camera[0]
                 img = cv2.imread(filename)
                 if img is not None:
-                    #r, g, b = img
+                    img = img[2*768/3:,:,:]
                     r = img[:,:,0]
                     g = img[:,:,1]
                     b = img[:,:,2]
                     mask = np.logical_and(g > b, g > r)
                     img[mask] = 0
-                    left = mask[2*768/3:, :512].sum()
-                    right = mask[2*768/3:, 512:].sum()
+                    left = mask[:, :512].sum()
+                    right = mask[:, 512:].sum()
 #                    print "LEFT_RIGHT", filename, left, right
                     if left > GREEN_LIMIT or right > GREEN_LIMIT:
                         if left < right:
