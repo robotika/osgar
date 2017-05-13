@@ -5,6 +5,11 @@
        ./rr.py <task> [<metalog> [<F>]]
 """
 import sys
+import os
+import math
+
+import cv2
+import numpy as np
 
 from apyros.metalog import MetaLog, disableAsserts
 from can import CAN, DummyMemoryLog, ReplayLogInputsOnly, ReplayLog
@@ -22,6 +27,9 @@ SAFE_SIDE_DISTANCE_GO = SAFE_SIDE_DISTANCE_STOP + 0.1
 DESIRED_SPEED = 0.5  # m/s
 
 INFINITY = 100.0  # m
+
+GREEN_LIMIT = 25000
+
 
 def robot_go_straight(metalog):
     assert metalog is not None
@@ -55,7 +63,10 @@ def robot_go_straight(metalog):
         moving = False
         dist = None
         distL, distR = None, None
-        
+
+        prev_camera = None
+        global_offset = 0.0
+
         while True:
             robot.update()
             if robot.laser_data is not None:
@@ -68,6 +79,32 @@ def robot_go_straight(metalog):
                     distR = min_dist(robot.laser_data[360:], INFINITY)
 
             print "dist", distL, dist, distR
+
+            if prev_camera != robot.camera_data:
+                print "CAMERA", robot.camera_data
+                prev_camera = robot.camera_data
+
+#                filename = 'm:\\git\\osgar\\logs\\pisek170513\\game2\\' + os.path.basename(prev_camera[0])
+                filename = prev_camera[0]
+                img = cv2.imread(filename)
+                if img is not None:
+                    #r, g, b = img
+                    r = img[:,:,0]
+                    g = img[:,:,1]
+                    b = img[:,:,2]
+                    mask = np.logical_and(g > b, g > r)
+                    img[mask] = 0
+                    left = mask[2*768/3:, :512].sum()
+                    right = mask[2*768/3:, 512:].sum()
+#                    print "LEFT_RIGHT", filename, left, right
+                    if left > GREEN_LIMIT or right > GREEN_LIMIT:
+                        if left < right:
+                            global_offset = math.radians(2.5)
+                        else:
+                            global_offset = math.radians(-2.5)
+                    else:
+                        global_offset = 0.0
+                robot.set_desired_steering(0.0 + global_offset)
 
             if moving:
                 if dist is None or dist < SAFE_DISTANCE_STOP or min(distL, distR) < SAFE_SIDE_DISTANCE_STOP:
