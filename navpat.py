@@ -35,11 +35,15 @@ def min_dist(data, infinity=None):
     return infinity
 
 prev_cones = []
+prev_near = False
 def detect_near_extension(robot, id, data):
+    global prev_near
     if id=='laser':
         if data is not None and data != []:
-            if min_dist(data) < 0.5:
+            if prev_near and min_dist(data) < 0.5:
                 raise NearObstacle()
+            prev_near = min_dist(data) < 1.0
+            prev_near = False # suicide!
 
             finder = ConeLandmarkFinder()
             global prev_cones
@@ -87,10 +91,28 @@ def run_oval(robot, speed):
     turn(robot, math.radians(180), radius=2.0, speed=speed, with_stop=False, timeout=20.0)
 
 
-def run_there_and_back(robot, speed):
+def run_oval(robot, speed):
+    robot.set_desired_speed(speed)
+    follow_line(robot, Line((5, 0), (10, 0)), speed=speed, timeout=60)
+    robot.canproxy.stop()
+    turn(robot, math.radians(180), radius=2.5, speed=speed, with_stop=True, timeout=60.0)       
+    # TODO change second radius once the localization & navigation are repeatable
+    follow_line(robot, Line((10, 5), (5, 5)), speed=speed, timeout=60)
+    robot.canproxy.stop()
+    turn(robot, math.radians(180), radius=2.5, speed=speed, with_stop=True, timeout=60.0)
+
+
+def run_there_and_back_SCHOOL(robot, speed):
     follow_line(robot, Line((0, 2.3), (14.0, 2.3)), speed=speed, timeout=60)
     turn_back(robot, speed)
     follow_line(robot, Line((14.0, 2.3), (0, 2.3)), speed=speed, timeout=60)
+    turn_back(robot, speed)
+
+
+def run_there_and_back(robot, speed):
+    follow_line(robot, Line((0, 2.5), (15.0, 2.5)), speed=speed, timeout=60)
+    turn_back(robot, speed)
+    follow_line(robot, Line((15.0, 2.5), (0, 2.5)), speed=speed, timeout=60)
     turn_back(robot, speed)
 
 
@@ -112,8 +134,11 @@ def navigate_pattern(metalog):
     for sensor_name in ['gps', 'laser', 'camera']:
         attach_sensor(robot, sensor_name, metalog)
 
-    robot.localization.global_map = [(0.0, 0.0), (13.6, 0.0), (13.6, 4.7), (0.0, 4.7)]  # note not correct!
-    robot.localization.set_pose((0.0, 2.3, 0.0))
+#    robot.localization.global_map = [(0.0, 0.0), (13.6, 0.0), (13.6, 4.7), (0.0, 4.7)]  # note not correct!
+#    robot.localization.set_pose((0.0, 2.3, 0.0))
+    robot.localization.global_map = [(0.0, 0.0), (15.0, 0.0), (15.0, 5.0), (0.0, 5.0)]  # note not correct!
+#    robot.localization.set_pose((0.0, 2.5, 0.0))
+    robot.localization.set_pose((2.5, 0.0, 0.0))
 
     robot.canproxy.stop()
     robot.canproxy.set_turn_raw(0)
@@ -124,8 +149,8 @@ def navigate_pattern(metalog):
         robot.extensions.append(('detect_near', detect_near_extension))
 
         for i in xrange(10):
-#            run_oval(robot, speed)
-            run_there_and_back(robot, speed)
+            run_oval(robot, speed)
+#            run_there_and_back(robot, speed)
 
     except NearObstacle:
         print "Near Exception Raised!"
