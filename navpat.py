@@ -13,7 +13,8 @@ from apyros.metalog import MetaLog, disableAsserts
 from apyros.sourcelogger import SourceLogger
 
 from can import CAN, DummyMemoryLog, ReplayLogInputsOnly, ReplayLog
-from johndeere import JohnDeere, setup_faster_update, ENC_SCALE
+from johndeere import (JohnDeere, setup_faster_update, ENC_SCALE,
+                       emergency_stop_extension, EmergencyStopException)
 
 from driver import go_straight, turn, follow_line_gen
 from helper import attach_sensor, detach_all_sensors
@@ -147,6 +148,7 @@ def navigate_pattern(metalog):
 
     try:
         robot.extensions.append(('detect_near', detect_near_extension))
+        robot.extensions.append(('emergency_stop', emergency_stop_extension))
 
         for i in xrange(10):
             run_oval(robot, speed)
@@ -154,6 +156,9 @@ def navigate_pattern(metalog):
 
     except NearObstacle:
         print "Near Exception Raised!"
+        robot.extensions = []  # hack
+    except EmergencyStopException:
+        print "Emergency STOP Exception!"
         robot.extensions = []  # hack
 
     robot.canproxy.stop()
