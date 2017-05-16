@@ -44,7 +44,7 @@ def detect_near_extension(robot, id, data):
             if prev_near and min_dist(data) < 0.5:
                 raise NearObstacle()
             prev_near = min_dist(data) < 1.0
-            prev_near = False # suicide!
+#            prev_near = False # suicide!
 
             finder = ConeLandmarkFinder()
             global prev_cones
@@ -138,8 +138,8 @@ def navigate_pattern(metalog):
 #    robot.localization.global_map = [(0.0, 0.0), (13.6, 0.0), (13.6, 4.7), (0.0, 4.7)]  # note not correct!
 #    robot.localization.set_pose((0.0, 2.3, 0.0))
     robot.localization.global_map = [(0.0, 0.0), (15.0, 0.0), (15.0, 5.0), (0.0, 5.0)]  # note not correct!
-#    robot.localization.set_pose((0.0, 2.5, 0.0))
-    robot.localization.set_pose((2.5, 0.0, 0.0))
+    robot.localization.set_pose((0.0, 2.5, 0.0))
+#    robot.localization.set_pose((2.5, 0.0, 0.0))
 
     robot.canproxy.stop()
     robot.canproxy.set_turn_raw(0)
@@ -151,8 +151,8 @@ def navigate_pattern(metalog):
         robot.extensions.append(('emergency_stop', emergency_stop_extension))
 
         for i in xrange(10):
-            run_oval(robot, speed)
-#            run_there_and_back(robot, speed)
+#            run_oval(robot, speed)
+            run_there_and_back(robot, speed)
 
     except NearObstacle:
         print "Near Exception Raised!"
