@@ -29,6 +29,7 @@ class Laser( Thread ):
     self.lock = Lock()
     self.shouldIRun = Event()
     self.shouldIRun.set()
+    self._timestamp = None  # timestamp of the last scane
     self._scanData = None 
     self._remissionData = None
     self.stopOnExit = True
@@ -55,7 +56,7 @@ class Laser( Thread ):
       print self.configureScanDataOutput()
     self.startLaser()
     while self.shouldIRun.isSet():
-      self._scanData, self._remissionData = self.internalScan()
+      self._timestamp, self._scanData, self._remissionData = self.internalScan()
     if self.stopOnExit:
       self.stopLaser()
 
@@ -109,7 +110,7 @@ class LaserUSB( Laser ):
   def internalScan( self ):
     time.sleep(0.1)
     data = self.sendCmd( 'sRN LMDscandata' ).split()
-    dist, remission = None, None
+    timestamp, dist, remission = time.time(), None, None
     if len(data) == 580:
       # TIM, hacked, probably DIST1, RSSI1
       dist = [int(x,16) for x in data[26:271+26]]
@@ -118,7 +119,7 @@ class LaserUSB( Laser ):
       dist[0] = int(data[9],16) 
     else:
       pass #print "ERROR", data
-    return dist, remission
+    return timestamp, dist, remission
 
   def startLaser( self ):
     pass
@@ -162,6 +163,7 @@ class LaserIP( Laser ):
   def internalScan( self ):
     time.sleep(0.1)
     data = self.sendCmd( 'sRN LMDscandata' ).split()
+    timestamp = time.time()
     remission = None
     if len(data) == 1120:
       dist = [int(x,16) for x in data[26:541+26]]
@@ -171,7 +173,7 @@ class LaserIP( Laser ):
       remission = [int(x,16) for x in data[304:-5]]
     else:
       dist = [int(x,16) for x in data[26:-6]]
-    return dist, remission
+    return timestamp, dist, remission
 
   def internalScanOld( self ):
     self.sendCmd( 'sMN LMCstartmeas' )

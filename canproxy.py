@@ -28,6 +28,7 @@ SCALE_NEW = 0.5  # 0.0 < x < 1.0
 
 # accepted +/- for completed turn
 TURN_TOLERANCE = 10
+TURN_TOLERANCE_INTEGRAL = 100
 
 
 def sint16_diff(a, b):
@@ -57,7 +58,13 @@ class CANProxy:
         self.valid_speed_ref = False  # was speed measured for the whole period
 
         self.wheel_angle_raw = None
+        self.wheel_angle_raw_integral = 0
         self.desired_wheel_angle_raw = None
+        self.desired_wheel_tiny_corrections = None
+
+        self.buttons_and_LEDs = None  # upper nybble contains LED status
+        self.cmd_LEDs = None
+        self.bumpers = None
 
     def go(self):
         self.cmd = 'go'
@@ -89,12 +96,14 @@ class CANProxy:
         self.desired_speed_raw = raw_speed
 
     def set_turn_raw(self, raw_angle):
+        print "set_turn_raw", raw_angle
         self.desired_wheel_angle_raw = raw_angle
 
     def stop_turn(self):
         "immediately stop turning = close valves"
         self.can.sendData(0x202, [0])
         self.desired_wheel_angle_raw = None
+        self.desired_wheel_tiny_corrections = None
 
     def update_gas_status(self, (id, data)):
         if id == 0x181:
@@ -136,29 +145,48 @@ class CANProxy:
             assert len(data) == 1, data
 #            print "CHANGE", data[0] & 0x3, (data[0] >> 2) & 0x3, self.dist_right_raw
 
+    def update_buttons(self, (id, data)):
+        if id == 0x185:
+            self.buttons_and_LEDs = data[0]
+            self.can.sendData(0x205, [(0x0F & data[0])<<4])
+
     def update_wheel_angle_status(self, (id, data)):
         if id == 0x182:
             assert(len(data) == 2) 
             self.wheel_angle_raw = ctypes.c_short(data[1]*256 + data[0]).value
+            if self.desired_wheel_tiny_corrections is not None:
+                self.wheel_angle_raw_integral += self.wheel_angle_raw - self.desired_wheel_tiny_corrections
+            print self.wheel_angle_raw_integral
+
             if self.verbose:
                 print "WHEEL", self.time, self.wheel_angle_raw, self.desired_wheel_angle_raw
+
+    def update_bumpers(self, (id, data)):
+        if id == 0x183:
+            assert len(data) == 1, data
+            # 0x10 - set for computer controlled gas pedal
+            self.bumpers = data[0]
 
     def update(self, packet):
         self.update_gas_status(packet)
         self.update_encoders(packet)
         self.update_wheel_angle_status(packet)
+        self.update_buttons(packet)
+        self.update_bumpers(packet)
 
     def set_time(self, time):
         if (int(self.time * SPEED_UPDATE_CONTROL_FREQ) != 
             int(time * SPEED_UPDATE_CONTROL_FREQ)):
             speed = sum(self.speed_arr)
-            print 'ref speed at', time, speed, self.last_sent_speed_cmd
+            if self.verbose:
+                print 'ref speed at', time, speed, self.last_sent_speed_cmd
             if self.desired_speed_raw is not None and self.valid_speed_ref:
                 if speed + SPEED_TOLERANCE < self.desired_speed_raw:
                     self.cmd = min(self.last_sent_speed_cmd + GAS_STEP, MAX_GAS_LIMIT)
                 elif speed - SPEED_TOLERANCE > self.desired_speed_raw:
                     self.cmd = max(self.last_sent_speed_cmd - GAS_STEP, MIN_GAS_LIMIT)
-                print "-->", self.cmd
+                if self.verbose:
+                    print "-->", self.cmd
             self.valid_speed_ref = True  # ignore first, but accept following measurements
 
         self.time = time
@@ -186,12 +214,32 @@ class CANProxy:
 
         if self.desired_wheel_angle_raw is not None and self.wheel_angle_raw is not None:
             if abs(self.desired_wheel_angle_raw - self.wheel_angle_raw) > TURN_TOLERANCE:
+                self.desired_wheel_tiny_corrections = None
                 if self.desired_wheel_angle_raw > self.wheel_angle_raw:
                     self.can.sendData(0x202, [5])  # left
                 else:
                     self.can.sendData(0x202, [0x6])  # right
             else:
                 self.can.sendData(0x202, [0])
+                self.desired_wheel_tiny_corrections = self.desired_wheel_angle_raw
+                self.wheel_angle_raw_integral = 0
                 self.desired_wheel_angle_raw = None
+
+        elif self.desired_wheel_tiny_corrections is not None:
+            if abs(self.wheel_angle_raw_integral) > TURN_TOLERANCE_INTEGRAL:
+                if self.wheel_angle_raw_integral < 0:
+                    print "PULSE LEFT"
+                    self.can.sendData(0x202, [5])  # left
+                else:
+                    print "PULSE RIGHT"
+                    self.can.sendData(0x202, [0x6])  # right
+                self.wheel_angle_raw_integral = 0  # pulse only
+            else:
+                self.can.sendData(0x202, [0])
+
+    def send_LEDs(self):
+        """Send command to set new LEDs status"""
+        if self.cmd_LEDs is not None:
+            self.can.sendData(0x205, [self.cmd_LEDs])
 
 # vim: expandtab sw=4 ts=4

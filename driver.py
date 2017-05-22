@@ -37,6 +37,9 @@ def go_straight(robot, distance, gas=None, speed=None, timeout=10.0, with_stop=T
 
     start_dist = robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw
     arr = []
+
+    robot.set_desired_steering(0.0)  # i.e. go straight (!)
+
     while robot.time - start_time < timeout:
         robot.update()
         arr.append(robot.canproxy.gas)
@@ -72,7 +75,7 @@ def turn(robot, angle, radius, speed, timeout=10.0, with_stop=True):
     else:
         base = radius + LEFT_WHEEL_DIST_OFFSET
 
-    left_radius = math.sqrt(base)
+    left_radius = math.sqrt(base*base + FRONT_REAR_DIST*FRONT_REAR_DIST)
     steering_angle = math.atan2(FRONT_REAR_DIST, base)
     if angle < 0:
         steering_angle = -steering_angle
@@ -84,10 +87,50 @@ def turn(robot, angle, radius, speed, timeout=10.0, with_stop=True):
         robot.update()
         dist_left = (robot.canproxy.dist_left_raw - start_left) * ENC_SCALE
         if abs(dist_left) > abs(angle * left_radius):
+            print 'turned distance', dist_left
             break
+    if robot.time - start_time >= timeout:
+        print "TURN TIMEOUT!", robot.time - start_time
+
     if with_stop:
         robot.stop()
         robot.wait(1.0)
+
+
+def normalizeAnglePIPI( angle ):
+    while angle < -math.pi:
+        angle += 2*math.pi
+    while angle > math.pi:
+        angle -= 2*math.pi
+    return angle 
+
+
+def follow_line_gen(robot, line, stopDistance=0.0, turnScale=4.0, offsetSpeed=math.radians(20), offsetDistance=0.03):
+    """
+    line           ... A line to follow.
+    stopDistance   ... The robot stops when closer than this to the endpoint. [m]
+    turnScale      ... Magic parameter for the rotational speed. [scaling factor]
+    offsetSpeed    ... This extra rotational speed is added when the robot is too far from the line. [rad/s]
+    offsetDistance ... When the robot is further than this from the line, some extra correction may be needed. [m]
+    """
+    while line.distanceToFinishLine(robot.localization.pose()) > stopDistance:
+        diff = normalizeAnglePIPI(line.angle - robot.localization.pose()[2])
+        x, y, a = robot.localization.pose()
+        d = 1.3  # FRONT_REAR_DIST
+#        print "deg %.1f" %( math.degrees(diff),), 
+        signedDistance = line.signedDistance((x+d*math.cos(a), y+d*math.sin(a))) # + self.centerOffset
+        if math.fabs( signedDistance ) > offsetDistance:
+            step = max(0.0, min(offsetSpeed, offsetSpeed * (abs(signedDistance)-offsetDistance)/offsetDistance ))
+            step = step * 0.5  # hack
+            if signedDistance < 0:
+                diff += step
+            else:
+                diff -= step
+#        turn = restrictedTurn(turnScale * diff)
+#        speed = self.restrictedSpeed(turn)
+#        yield  speed, turn 
+#        print "dist=%0.3f, diff=%.2f" % (signedDistance, math.degrees(diff)), robot.localization.pose()
+        yield diff
 
 
 def driver_self_test(driver, metalog):
