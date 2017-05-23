@@ -81,6 +81,11 @@ def turn(robot, angle, radius, speed, timeout=10.0, with_stop=True):
         steering_angle = -steering_angle
     print "Steering", math.degrees(steering_angle)
     robot.set_desired_steering(steering_angle)
+    while (robot.canproxy.desired_wheel_angle_raw is not None 
+            and abs(robot.canproxy.desired_wheel_angle_raw - robot.canproxy.wheel_angle_raw) > 20):
+        print "wait", robot.canproxy.desired_wheel_angle_raw, robot.canproxy.wheel_angle_raw, abs(robot.canproxy.desired_wheel_angle_raw - robot.canproxy.wheel_angle_raw)
+        robot.update()
+
     robot.set_desired_speed(speed)
     start_left = robot.canproxy.dist_left_raw
     while robot.time - start_time < timeout:
