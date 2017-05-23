@@ -66,7 +66,7 @@ class SimpleOdometry():
                 err = math.hypot(x - cx, y - cy)
                 if err < 2.0:
                     if verbose:
-                        print err
+                        print "eval_map_pose", err
                     ret += err*err
         return ret
 
