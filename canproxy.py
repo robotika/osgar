@@ -96,7 +96,8 @@ class CANProxy:
         self.desired_speed_raw = raw_speed
 
     def set_turn_raw(self, raw_angle):
-        print "set_turn_raw", raw_angle
+        if self.verbose:
+            print "set_turn_raw", raw_angle
         self.desired_wheel_angle_raw = raw_angle
 
     def stop_turn(self):
@@ -156,9 +157,9 @@ class CANProxy:
             self.wheel_angle_raw = ctypes.c_short(data[1]*256 + data[0]).value
             if self.desired_wheel_tiny_corrections is not None:
                 self.wheel_angle_raw_integral += self.wheel_angle_raw - self.desired_wheel_tiny_corrections
-            print self.wheel_angle_raw_integral
 
             if self.verbose:
+                print self.wheel_angle_raw_integral
                 print "WHEEL", self.time, self.wheel_angle_raw, self.desired_wheel_angle_raw
 
     def update_bumpers(self, (id, data)):
@@ -228,10 +229,12 @@ class CANProxy:
         elif self.desired_wheel_tiny_corrections is not None:
             if abs(self.wheel_angle_raw_integral) > TURN_TOLERANCE_INTEGRAL:
                 if self.wheel_angle_raw_integral < 0:
-                    print "PULSE LEFT"
+                    if self.verbose:
+                        print "PULSE LEFT"
                     self.can.sendData(0x202, [5])  # left
                 else:
-                    print "PULSE RIGHT"
+                    if self.verbose:
+                        print "PULSE RIGHT"
                     self.can.sendData(0x202, [0x6])  # right
                 self.wheel_angle_raw_integral = 0  # pulse only
             else:
