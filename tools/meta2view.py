@@ -125,9 +125,9 @@ def main():
                 sensors = can.next()
                 if 'encoders' in sensors:
                     encL, encR = sensors['encoders']
-                    if abs(encL - enc[0]) > 255:
+                    if abs(encL - enc[0]) > 128:
                         enc[0] = encL
-                    if abs(encR - enc[1]) > 255:
+                    if abs(encR - enc[1]) > 128:
                         enc[1] = encR
                     distL = (encL - enc[0]) * ENC_SCALE
                     angle = sensors['steering'] * TURN_SCALE + TURN_ANGLE_OFFSET  # radians
