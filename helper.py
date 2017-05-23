@@ -22,6 +22,11 @@ def laser_data_extension(robot, id, data):
         robot.laser_data = data
 
 
+def remission_data_extension(robot, id, data):
+    if id=='remission':
+        robot.remission_data = data
+
+
 def camera_data_extension(robot, id, data):
     if id=='camera':
         robot.camera_data = data
@@ -47,15 +52,20 @@ def attach_sensor(robot, sensor_name, metalog):
     elif sensor_name == 'laser':
         # Laser
         laser_log_name = metalog.getLog('laser')
-        print laser_log_name
+        remission_log_name = metalog.getLog('remission')
+        print laser_log_name, remission_log_name
         if metalog.replay:
             robot.laser = DummySensor()
             function = SourceLogger(None, laser_log_name).get
+            function2 = SourceLogger(None, remission_log_name).get
         else:
-            robot.laser = LaserIP()
+            robot.laser = LaserIP(remission=True)
             function = SourceLogger(robot.laser.scan, laser_log_name).get
+            function2 = SourceLogger(robot.laser.remission, remission_log_name).get
         robot.laser_data = None
-        robot.register_data_source('laser', function, laser_data_extension)   
+        robot.register_data_source('laser', function, laser_data_extension)
+        robot.remission_data = None
+        robot.register_data_source('remission', function2, remission_data_extension)
         robot.laser.start()
 
     elif sensor_name == 'camera':
