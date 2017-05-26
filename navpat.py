@@ -80,6 +80,12 @@ def viewer_extension(robot, id, data):
         image = None
         camdir = None
         compass = None
+
+        for raw_angle, raw_dist in prev_cones:
+            dist = raw_dist/1000.0
+            angle = math.radians(raw_angle/2 - 135)
+            xx, yy, _ = getCombinedPose(laser_pose, (math.cos(angle)*dist, math.sin(angle)*dist, 0))
+            scans.append( ( (xx, yy, 0), -1.5, (0xFF, 0x80, 0)) ) # color param
         record = (poses, scans, image, camdir, compass)
         viewer_data.append(record)
 
