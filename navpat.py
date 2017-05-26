@@ -2,7 +2,7 @@
 """
   Navigate given pattern in selected area
   usage:
-       ./navpat.py <notes> | [<metalog> [<F>]]
+       ./navpat.py <notes> | [<metalog> [<F>]] [--view]
 """
 
 import sys
@@ -22,6 +22,9 @@ from line import Line
 
 from lib.landmarks import ConeLandmarkFinder
 from lib.localization import SimpleOdometry
+
+
+LASER_OFFSET = (1.78, 0.0, 0.39)  # this should be common part?
 
 
 class NearObstacle:
@@ -58,6 +61,27 @@ def detect_near_extension(robot, id, data):
             #  - "feature tracking"
             #  - localization
             #  - camera verification
+
+viewer_data = []
+def viewer_extension(robot, id, data):
+    if id == 'laser':
+        global viewer_data
+        poses = [robot.localization.pose()]
+        x, y, heading = robot.localization.pose()
+
+        scans = [((x, y, 0.0 ), -3.0)]  # hacked color
+        laser_pose = x + math.cos(heading)*LASER_OFFSET[0], y + math.sin(heading)*LASER_OFFSET[0], heading
+        step = 2
+        for i in xrange(0, 540, step):
+            dist = data[i]/1000.0
+            angle = math.radians(i/2 - 135)
+            scans.append((getCombinedPose(laser_pose, (0, 0, angle)), dist))
+
+        image = None
+        camdir = None
+        compass = None
+        record = (poses, scans, image, camdir, compass)
+        viewer_data.append(record)
 
 
 def follow_line(robot, line, speed=None, timeout=None):
@@ -117,7 +141,7 @@ def run_there_and_back(robot, speed):
     turn_back(robot, speed)
 
 
-def navigate_pattern(metalog):
+def navigate_pattern(metalog, viewer=None):
     assert metalog is not None
     can_log_name = metalog.getLog('can')
     if metalog.replay:
@@ -143,6 +167,9 @@ def navigate_pattern(metalog):
 
     robot.canproxy.stop()
     robot.canproxy.set_turn_raw(0)
+
+    if viewer is not None:
+        robot.extensions.append(('viewer', viewer_extension))
 
     speed = 0.5
 
@@ -173,8 +200,13 @@ if __name__ == "__main__":
         print __doc__
         sys.exit(2)
     metalog=None
+    viewer = None
     if 'meta_' in sys.argv[1]:
         metalog = MetaLog(filename=sys.argv[1])
+        if '--view' in sys.argv:
+            from tools.viewer import main as viewer_main
+            from tools.viewer import getCombinedPose
+            viewer = viewer_main
     elif len(sys.argv) > 2:
         metalog = MetaLog(filename=sys.argv[2])
     if len(sys.argv) > 2 and sys.argv[-1] == 'F':
@@ -183,7 +215,9 @@ if __name__ == "__main__":
     if metalog is None:
         metalog = MetaLog()
 
-    navigate_pattern(metalog)
+    navigate_pattern(metalog, viewer)
+    if viewer is not None:
+        viewer(filename=None, posesScanSet=viewer_data)
 
 # vim: expandtab sw=4 ts=4 
 

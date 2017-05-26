@@ -22,6 +22,8 @@ track_color = (0,255,0)
 track_size = 2
 tile_size = 0.5
 
+scale = 1.0
+
 def deg(degAngle): return math.pi*degAngle/180.0
 
 def draw(surface, samples):
@@ -192,7 +194,7 @@ def drawTiles( background ):
   pygame.draw.line( background, (255,0,0), (20+to_px(1.0),size[1]-10), (20+to_px(1.0),size[1]-30),1)
 
 
-def main( filename, scale = 1.0, startIndex = None ):
+def main( filename, scale = 1.0, startIndex = None, posesScanSet=None ):
   
   # load pygame
   pygame.init()
@@ -223,7 +225,11 @@ def main( filename, scale = 1.0, startIndex = None ):
   shouldDrawBeacons = False
   shouldRefreshNow = False
 
-  posesScanSet, map = loadData( filename )
+  if filename is None:
+    assert posesScanSet is not None
+    map = []
+  else:
+    posesScanSet, map = loadData( filename )
   drawPoses( foreground, posesScanSet[0][0] )
   drawScans( foreground, posesScanSet[0][1], shouldDrawSensors, shouldDrawBeacons )
 
