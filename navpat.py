@@ -85,7 +85,12 @@ def viewer_extension(robot, id, data):
             dist = raw_dist/1000.0
             angle = math.radians(raw_angle/2 - 135)
             xx, yy, _ = getCombinedPose(laser_pose, (math.cos(angle)*dist, math.sin(angle)*dist, 0))
-            scans.append( ( (xx, yy, 0), -1.5, (0xFF, 0x80, 0)) ) # color param
+            color = (0xFF, 0x80, 0)
+            colors = [(0xFF, 0xFF, 0xFF), (0xFF, 0, 0), (0, 0xFF, 0), (0, 0, 0xFF)]
+            for cone_xy, cone_color in zip(robot.localization.global_map, colors):
+                if math.hypot(xx-cone_xy[0], yy-cone_xy[1]) < 2.0:
+                    color = cone_color
+            scans.append( ( (xx, yy, 0), -1.5, color) ) # color param
         record = (poses, scans, image, camdir, compass)
         viewer_data.append(record)
 
