@@ -57,7 +57,7 @@ class SimpleOdometry():
         assert source_id == 'laser', source_id
         laser_pose = combine_poses(ref_pose, self.config[source_id])
         ret = 0.0
-        for tick_angle, tick_dist in data:
+        for tick_angle, tick_dist, tick_width in data:
             angle = math.radians((tick_angle - 270) * 0.5)
             dist = tick_dist/1000.0
             x = laser_pose[0] + dist * math.cos(laser_pose[2] + angle)

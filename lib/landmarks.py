@@ -38,13 +38,15 @@ class ConeLandmarkFinder(object):
                (arr[i-1] is None or arr[i] < arr[i-1] - ZONE_RADIUS) and
                (arr[i+1] is None or arr[i] < arr[i+1] - ZONE_RADIUS)):
                 ii = data[i*step:(i+1)*step].argmin() + i*step
-                ret.append( (ii, data[ii]) )
+                width = sum(data[i*step:(i+1)*step] < data[ii] + 1000)
+                ret.append( (ii, data[ii], width) )
             elif (arr[i] is not None and arr[i+1] is not None and
                  (abs(arr[i] - arr[i+1]) < MAX_CONE_SIZE) and
                  (arr[i-1] is None or arr[i] < arr[i-1] - ZONE_RADIUS) and
                  (arr[i+2] is None or arr[i] < arr[i+2] - ZONE_RADIUS)):
                 ii = data[i*step:(i+2)*step].argmin() + i*step
-                ret.append( (ii, data[ii]) )
+                width = sum(data[i*step:(i+2)*step] < data[ii] + 1000)
+                ret.append( (ii, data[ii], width) )
         return ret
 
     def match_pairs(self, old, new):
