@@ -81,7 +81,7 @@ def viewer_extension(robot, id, data):
         camdir = None
         compass = None
 
-        for raw_angle, raw_dist in prev_cones:
+        for raw_angle, raw_dist, raw_width in prev_cones:
             dist = raw_dist/1000.0
             angle = math.radians(raw_angle/2 - 135)
             xx, yy, _ = getCombinedPose(laser_pose, (math.cos(angle)*dist, math.sin(angle)*dist, 0))

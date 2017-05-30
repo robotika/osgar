@@ -10,11 +10,11 @@ class ConeLandmarkFinderTest(unittest.TestCase):
 
         # single peak
         data[100] = 3000
-        self.assertEqual(cd.find_cones(data), [(100, 3000)])
+        self.assertEqual(cd.find_cones(data), [(100, 3000, 1)])
 
         # 5deg boundary peak
         data[99] = 3000
-        self.assertEqual(cd.find_cones(data), [(99, 3000)])
+        self.assertEqual(cd.find_cones(data), [(99, 3000, 2)])
 
     def test_match_pairs(self):
         finder = ConeLandmarkFinder()
