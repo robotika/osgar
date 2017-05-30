@@ -90,6 +90,10 @@ def viewer_extension(robot, id, data):
             for cone_xy, cone_color in zip(robot.localization.global_map, colors):
                 if math.hypot(xx-cone_xy[0], yy-cone_xy[1]) < 2.0:
                     color = cone_color
+
+            width = raw_width * math.radians(0.5) * raw_dist/1000.0  # in meters
+            if width < 0.1 or width > 0.5:
+                color = (128, 128, 128)  # gray
             scans.append( ( (xx, yy, 0), -1.5, color) ) # color param
         record = (poses, scans, image, camdir, compass)
         viewer_data.append(record)
