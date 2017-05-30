@@ -5,6 +5,7 @@
        ./navpat.py <notes> | [<metalog> [<F>]] [--view]
 """
 
+import os
 import sys
 import math
 import numpy as np
@@ -63,9 +64,10 @@ def detect_near_extension(robot, id, data):
             #  - camera verification
 
 viewer_data = []
+g_img_dir = None
 def viewer_extension(robot, id, data):
     if id == 'laser':
-        global viewer_data
+        global viewer_data, g_img_dir
         poses = [robot.localization.pose()]
         x, y, heading = robot.localization.pose()
 
@@ -78,6 +80,9 @@ def viewer_extension(robot, id, data):
             scans.append((getCombinedPose(laser_pose, (0, 0, angle)), dist))
 
         image = None
+        if robot.camera_data is not None and robot.camera_data[0] is not None:
+            assert g_img_dir is not None
+            image = os.path.join(g_img_dir, robot.camera_data[0][5:])
         camdir = None
         compass = None
 
@@ -92,11 +97,14 @@ def viewer_extension(robot, id, data):
                     color = cone_color
 
             width = raw_width * math.radians(0.5) * raw_dist/1000.0  # in meters
-            if width < 0.1 or width > 0.5:
+            print "width", width
+            if width < 0.05 or width > 0.5:
                 color = (128, 128, 128)  # gray
             scans.append( ( (xx, yy, 0), -1.5, color) ) # color param
         record = (poses, scans, image, camdir, compass)
         viewer_data.append(record)
+    elif id == 'camera':
+        print data
 
 
 def follow_line(robot, line, speed=None, timeout=None):
@@ -222,6 +230,7 @@ if __name__ == "__main__":
             from tools.viewer import main as viewer_main
             from tools.viewer import getCombinedPose
             viewer = viewer_main
+            g_img_dir = os.path.split(sys.argv[1])[0]  # TODO basename??
     elif len(sys.argv) > 2:
         metalog = MetaLog(filename=sys.argv[2])
     if len(sys.argv) > 2 and sys.argv[-1] == 'F':
