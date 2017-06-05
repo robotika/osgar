@@ -25,6 +25,7 @@ from line import Line
 
 from lib.landmarks import ConeLandmarkFinder
 from lib.localization import SimpleOdometry
+from lib.camera_marks import find_cones
 
 
 LASER_OFFSET = (1.78, 0.0, 0.39)  # this should be common part?
@@ -171,16 +172,9 @@ def image_callback(data):
     filename = data[0]
     img = cv2.imread(filename)
     if img is not None:
-       img = img[2*768/3:,:,:]
-       r = img[:,:,0]
-       g = img[:,:,1]
-       b = img[:,:,2]
-       mask = np.logical_and(g > b, g > r)
-       img[mask] = 0
-       left = mask[:, :512].sum()
-       right = mask[:, 512:].sum()
-       return (data, left, right)    
-    return (data, None, None)
+        cones= find_cones(img)
+        return (data, cones)
+    return (data, None)
 
 
 def navigate_pattern(metalog, playground, viewer=None):
