@@ -1,10 +1,16 @@
 """
   Camera landmarks detector
+
+  test usage:
+       ./camera_marks.py <jpg filename>|<image directory>
+
 """
 
 import numpy as np
 import cv2
 import sys
+import os
+
 
 def openingClosing( binaryImg, ker = 4, method = "opening"):
     newBinaryImg = None
@@ -40,15 +46,30 @@ def marksDetektor( im ):
             lMarks.append(cnt)
     
     return lMarks
-    
+
+
+def draw_cones(filename):
+    print filename
+    im  = cv2.imread(filename, 1)
+    lMarks = marksDetektor(im)
+    cv2.drawContours(im, lMarks, -1, (255,0,0), 2)
+    cv2.imshow('cones', im)
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print __doc__
         sys.exit()
-        
-    im  = cv2.imread(sys.argv[1], 1)
-    lMarks = marksDetektor(im)
-    cv2.drawContours(im, lMarks, -1, (255,0,0), 2)
-    cv2.imwrite( "test4.png", im )
 
+    if sys.argv[1].endswith('.jpg'):
+        draw_cones(sys.argv[1])
+        cv2.waitKey()
+    else:
+        for filename in os.listdir(sys.argv[1]):
+            if filename.endswith('jpg'):
+                draw_cones(os.path.join(sys.argv[1], filename))
+                if cv2.waitKey(100) == 27:
+                    break
+
+# vim: expandtab sw=4 ts=4
 
