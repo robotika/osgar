@@ -12,6 +12,7 @@
 import os
 import datetime
 import sys
+import zipfile
 
 from logio import ReplayLog, LoggedSocket
 from sourcelogger import SourceLogger
@@ -24,8 +25,15 @@ def disableAsserts():
     global g_checkAssert
     g_checkAssert = False
 
+
+def isMetaLogName(filename):
+    """Accept also incomplete name to zip file only"""
+    return 'meta_' in filename or filename.endswith('.zip')
+
+
 class MetaLog:
     def __init__( self, filename=None ):
+        self.zf = None  # ZipFile
         if filename is None:
             self.replay = False
             if not os.path.exists("logs"):
@@ -38,7 +46,13 @@ class MetaLog:
         else:
             self.replay = True
             self.filename = filename
-            self.lines = open( self.filename ).readlines()
+            if filename.endswith('.zip'):
+                self.zf = zipfile.ZipFile(filename)
+                tmp_meta = [info.filename for info in self.zf.infolist() if info.filename.startswith('meta_')]
+                assert len(tmp_meta) == 1, tmp_meta
+                self.lines = self.zf.open(tmp_meta[0]).readlines()
+            else:
+                self.lines = open( self.filename ).readlines()
 
     def areAssertsEnabled( self ):
         global g_checkAssert
@@ -54,10 +68,15 @@ class MetaLog:
         for i, line in enumerate(self.lines):
             print "LINE", line.strip()
             if line.startswith( prefix + ':' ):
-                ret = line.split()[1].strip()
+                assert len(line.split(':')) == 2, line.split(':')
+                ret = line.split(':')[1].strip()
                 assert ret.startswith("logs/")
                 del self.lines[:i+1]  # cut already passed lines
-                return os.path.dirname( self.filename ) + os.sep + ret[4:]
+                if self.zf is None:
+                    return os.path.dirname( self.filename ) + os.sep + ret[5:]
+                else:
+                    # zipped file - keep name of the ZIP as prefix
+                    return self.filename + os.sep + ret[5:]
         print "Warning! '%s' not found!" % prefix
         return None # not found
 

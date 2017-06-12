@@ -7,6 +7,9 @@
 import sys
 
 import os, math, pygame
+import zipfile
+import StringIO
+
 from pygame.locals import *
 
 printPosition = True
@@ -167,7 +170,14 @@ def drawMap( foreground, map ):
 def drawImage( foreground, imgFileName, camdir ):
   if imgFileName:
 #  imgFileName = 'D:\\md\\hg\\eduro-logs\\100619-rychnov\\pes1\\cam100619_145404_000.jpg'
-    camera = pygame.image.load( imgFileName ).convert()
+    if '.zip' in imgFileName:
+      zipname, filename = os.path.split(imgFileName)
+      print zipname, filename
+      zf = zipfile.ZipFile(zipname)
+      buf = zf.read(filename)
+      camera = pygame.image.load(StringIO.StringIO(buf), 'JPG').convert()
+    else:
+      camera = pygame.image.load( imgFileName ).convert()
 #    cameraView = pygame.transform.scale( camera, (320, 240) )
     cameraView = pygame.transform.scale( camera, (512, 384) )
 #    cameraView = pygame.transform.flip( cameraView, False, True )

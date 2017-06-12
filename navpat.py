@@ -12,7 +12,7 @@ import numpy as np
 import cv2
 
 
-from apyros.metalog import MetaLog, disableAsserts
+from apyros.metalog import MetaLog, disableAsserts, isMetaLogName
 from apyros.sourcelogger import SourceLogger
 
 from can import CAN, DummyMemoryLog, ReplayLogInputsOnly, ReplayLog
@@ -244,13 +244,16 @@ if __name__ == "__main__":
         sys.exit(2)
     metalog=None
     viewer = None
-    if 'meta_' in sys.argv[1]:
+    if isMetaLogName(sys.argv[1]):
         metalog = MetaLog(filename=sys.argv[1])
         if '--view' in sys.argv:
             from tools.viewer import main as viewer_main
             from tools.viewer import getCombinedPose
             viewer = viewer_main
-            g_img_dir = os.path.split(sys.argv[1])[0]  # TODO basename??
+            if sys.argv[1].endswith('.zip'):
+                g_img_dir = sys.argv[1]
+            else:
+                g_img_dir = os.path.dirname(sys.argv[1])
     elif len(sys.argv) > 2:
         metalog = MetaLog(filename=sys.argv[2])
     if len(sys.argv) > 2 and sys.argv[-1] == 'F':
