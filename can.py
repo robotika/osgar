@@ -14,6 +14,8 @@ import socket
 import subprocess
 import sys
 
+from apyros.metaopen import metaopen
+
 class LogEnd(Exception):
   pass
 
@@ -58,7 +60,7 @@ class ReplayLog():
   "Read & verify log"
   def __init__( self, filename, assertWrite=True ):
     print "ReplyLog", filename
-    self._logFile = open( filename, "rb" )
+    self._logFile = metaopen( filename, "rb" )
     self.assertWrite = assertWrite
 
   def read( self, numChars ):
@@ -91,7 +93,7 @@ class ReplayLogInputsOnly():
   "Read & verify log"
   def __init__( self, filename ):
     print "ReplyLogInputOnly", filename
-    self._logFile = open( filename, "rb" )
+    self._logFile = metaopen( filename, "rb" )
 
   def read( self, numChars ):
     s = []
