@@ -9,7 +9,7 @@
 from threading import Thread,Event,Lock
 import time
 import datetime
-import urllib
+import urllib2
 import subprocess
 import select
 import socket
@@ -139,7 +139,7 @@ class Camera( Thread ):
 
   def getPicture( self, filename ):
     try:
-      url = urllib.urlopen( self.url )
+      url = urllib2.urlopen( self.url )
       img = url.read()
       t = time.time()
       file = open( filename, "wb" )
