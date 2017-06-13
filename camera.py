@@ -17,7 +17,10 @@ import sys
 import os
 
 # Default camera URL
-DEFAULT_URL = "http://192.168.1.6/img.jpg"
+DEFAULT_URL = "http://192.168.1.6/image?res=full&x0=0&y0=0&x1=2048&y1=1536&quality=12&doublescan=0&ver=HTTP/1.1" # full resolution ~240kB
+DEFAULT_URL_MONO = "http://192.168.1.6/image?channel=mono"
+URL_DAY_NIGHT = "http://192.168.1.6/set?daynight=dual" # auto|day|night|dual
+
 
 # move this to some "common utility"
 def timeName( prefix, ext, index = None ):
@@ -137,9 +140,12 @@ class Camera( Thread ):
     self.snapshotOnly = True
     self.lock.release()
 
-  def getPicture( self, filename ):
+  def getPicture( self, filename, color=True ):
     try:
-      url = urllib2.urlopen( self.url )
+      if color:
+        url = urllib2.urlopen( self.url )
+      else:
+        url = urllib2.urlopen( DEFAULT_URL_MONO )
       img = url.read()
       t = time.time()
       file = open( filename, "wb" )
@@ -151,7 +157,14 @@ class Camera( Thread ):
       return None
 
   def run(self):
+    # enable also mono camera view
+    print urllib2.urlopen( URL_DAY_NIGHT ).read()
+
     while self.shouldIRun.isSet():
+      # first read B&W picture (just for reference, not returned to the "system")
+      filename = timeName( "logs/camono", "jpg", index = self._index )
+      result = self.getPicture( filename, color=False )
+      # result is currently ignored
       filename = timeName( "logs/cam", "jpg", index = self._index )
       self._index += 1
       if self.verbose:
