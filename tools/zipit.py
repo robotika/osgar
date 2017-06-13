@@ -8,6 +8,8 @@ import sys
 import os
 from zipfile import ZipFile
 
+PREFIX = 'osgar_'
+
 
 def zipit(metalog_filename, output_filename):
     dir_name = os.path.dirname(metalog_filename)
@@ -46,7 +48,11 @@ if __name__ == "__main__":
         print(__doc__)
         sys.exit(2)
 
-    zipit(sys.argv[1], 'out.zip')
+    for filename in sys.argv[1:]:
+        assert 'meta_' in filename
+        out_name = os.path.basename(filename).replace('meta_', PREFIX)
+        out_name = out_name.replace('.log', '.zip')
+        zipit(filename, out_name)
 
 # vim: expandtab sw=4 ts=4 
 
