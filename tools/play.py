@@ -9,8 +9,10 @@
 
 import sys
 import os
+import zipfile
 import cv2
 import cv2.cv as cv
+import numpy as np
 
 _brightness = 0
 Gbrightness = 0
@@ -28,8 +30,13 @@ def update_brightness( val ):
 def update_brightcont():
     # no global tag required for images ???
     brightness = Gbrightness;
-    dst_image = cv2.imread( files[brightness] );
     print files[brightness]
+    if zf is None:
+      dst_image = cv2.imread( files[brightness] );
+    else:
+      buf = np.fromstring(zf.read(os.path.basename(files[brightness])), dtype=np.uint8)
+      dst_image = cv2.imdecode(buf, cv2.CV_LOAD_IMAGE_COLOR)
+
     cv2.imshow( "image", dst_image );
 
 
@@ -38,14 +45,28 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
       print __doc__
       sys.exit(1)
+
     dir = sys.argv[1]    
-    names = os.listdir( dir )
+    zf = None
+    if zipfile.is_zipfile(sys.argv[1]):
+      names = []
+      zf = zipfile.ZipFile(sys.argv[1])
+      for info in zf.infolist():
+        names.append(info.filename)
+      print names
+    else:
+      names = os.listdir( dir )
     files = []
     for filename in names:
       if ".jpg" in filename:
         files.append( dir + "/" + filename )
 
-    src_image = cv2.imread( files[0] );
+    if zf is None:
+      src_image = cv2.imread( files[0] )
+    else:
+      buf = np.fromstring(zf.read(os.path.basename(files[0])), dtype=np.uint8)
+      print os.path.basename(files[0])
+      src_image = cv2.imdecode(buf, cv2.CV_LOAD_IMAGE_COLOR)
 
     if src_image == None:
         print "Image was not loaded.";
