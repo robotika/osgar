@@ -12,6 +12,7 @@
 import os
 import datetime
 import sys
+import zipfile
 
 from logio import ReplayLog, LoggedSocket
 from sourcelogger import SourceLogger
@@ -24,8 +25,15 @@ def disableAsserts():
     global g_checkAssert
     g_checkAssert = False
 
+
+def isMetaLogName(filename):
+    """Accept also incomplete name to zip file only"""
+    return 'meta_' in filename or filename.endswith('.zip')
+
+
 class MetaLog:
     def __init__( self, filename=None ):
+        self.zf = None  # ZipFile
         if filename is None:
             self.replay = False
             if not os.path.exists("logs"):
@@ -38,7 +46,13 @@ class MetaLog:
         else:
             self.replay = True
             self.filename = filename
-            self.f = open( self.filename )
+            if filename.endswith('.zip'):
+                self.zf = zipfile.ZipFile(filename)
+                tmp_meta = [info.filename for info in self.zf.infolist() if 'meta_' in info.filename]
+                assert len(tmp_meta) == 1, tmp_meta
+                self.f = self.zf.read(tmp_meta[0]).split('\n')  # workaround for iterator
+            else:
+                self.f = open( self.filename )
 
     def areAssertsEnabled( self ):
         global g_checkAssert
@@ -56,7 +70,11 @@ class MetaLog:
             if line.startswith( prefix + ':' ):
                 ret = line.split()[1].strip()
                 assert ret.startswith("logs/")
-                return os.path.dirname( self.filename ) + os.sep + ret[4:]
+                if self.zf is None:
+                    return os.path.dirname( self.filename ) + os.sep + ret[5:]
+                else:
+                    # zipped file - keep name of the ZIP as prefix
+                    return self.filename + os.sep + ret[5:]
         return None # not found
 
 

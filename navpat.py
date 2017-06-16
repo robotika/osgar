@@ -10,7 +10,7 @@ import sys
 import math
 import numpy as np
 
-from apyros.metalog import MetaLog, disableAsserts
+from apyros.metalog import MetaLog, disableAsserts, isMetaLogName
 from apyros.sourcelogger import SourceLogger
 
 from can import CAN, DummyMemoryLog, ReplayLogInputsOnly, ReplayLog
@@ -224,7 +224,7 @@ if __name__ == "__main__":
         sys.exit(2)
     metalog=None
     viewer = None
-    if 'meta_' in sys.argv[1]:
+    if isMetaLogName(sys.argv[1]):
         metalog = MetaLog(filename=sys.argv[1])
         if '--view' in sys.argv:
             from tools.viewer import main as viewer_main

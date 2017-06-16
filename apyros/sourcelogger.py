@@ -4,6 +4,7 @@
 """
 
 import time
+from metaopen import metaopen
 
 
 class SourceLogger:
@@ -14,7 +15,7 @@ class SourceLogger:
     if self.sourceGet != None:
       self.file = open( filename, 'w' )
     else:
-      self.file = open( filename )
+      self.file = metaopen( filename )
       try:
         self.counterLimit = int(self.file.readline().split()[0])
       except ValueError:
