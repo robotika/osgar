@@ -14,6 +14,7 @@ PREFIX = 'osgar_'
 def zipit(metalog_filename, output_filename):
     dir_name = os.path.dirname(metalog_filename)
     with ZipFile(output_filename, 'w') as myzip:
+        myzip.write(metalog_filename, os.path.basename(metalog_filename))
         camera_file = None
         for line in open(metalog_filename):
             if line.startswith('['):
