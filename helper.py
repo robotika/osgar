@@ -6,9 +6,9 @@ from gps import GPS
 from gps import DummyGPS as DummySensor  # TODO move to apyros, as mock
 from laser import LaserIP
 from camera import Camera
+from lib.processor import Processor
 from apyros.metalog import MetaLog, disableAsserts
 from apyros.sourcelogger import SourceLogger
-
 
 def gps_data_extension(robot, id, data):
     if id=='gps':
@@ -30,6 +30,12 @@ def remission_data_extension(robot, id, data):
 def camera_data_extension(robot, id, data):
     if id=='camera':
         robot.camera_data = data
+
+
+def proc_data_extension(robot, id, data):
+    if id=='proc':
+        robot.proc_data = data
+        print "Received", robot.proc_data
 
 
 def attach_sensor(robot, sensor_name, metalog):
@@ -88,12 +94,41 @@ def attach_sensor(robot, sensor_name, metalog):
     else:
         assert False, sensor_name  # unsuported sensor
 
+
+def camera_filler(robot, id, data):
+    if id=='camera':
+        robot.proc.push_back(data)
+
+
+def attach_processor(robot, metalog, callback):
+    # TODO assert called at most once
+    name = 'proc'
+    robot.proc_data = None
+    proc_log_name = metalog.getLog(name)
+    if proc_log_name is None:
+        print "Processor is not logged"
+
+        return False
+    print proc_log_name
+    if metalog.replay:
+        robot.proc = DummySensor()
+        function = SourceLogger(None, proc_log_name).get
+    else:
+        robot.extensions.append(('proc_in', camera_filler)) 
+        robot.proc = Processor(callback)
+        function = SourceLogger(robot.proc.get_result, proc_log_name).get
+    robot.register_data_source('proc', function, proc_data_extension) 
+    robot.proc.start()
+    return True
+
+
 def detach_all_sensors(robot):
     # TODO unregister all modules
     # TODO conditional stopping
     robot.camera.requestStop()
     robot.laser.requestStop()
     robot.gps.requestStop()
+    robot.proc.requestStop()
 
 # vim: expandtab sw=4 ts=4 
 
