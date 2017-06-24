@@ -38,7 +38,7 @@ class MetaLog:
         else:
             self.replay = True
             self.filename = filename
-            self.f = open( self.filename )
+            self.lines = open( self.filename ).readlines()
 
     def areAssertsEnabled( self ):
         global g_checkAssert
@@ -51,12 +51,14 @@ class MetaLog:
             self.f.flush()
             return filename
 
-        for line in self.f:
+        for i, line in enumerate(self.lines):
             print "LINE", line.strip()
             if line.startswith( prefix + ':' ):
                 ret = line.split()[1].strip()
                 assert ret.startswith("logs/")
+                del self.lines[:i+1]  # cut already passed lines
                 return os.path.dirname( self.filename ) + os.sep + ret[4:]
+        print "Warning! '%s' not found!" % prefix
         return None # not found
 
 
@@ -82,10 +84,11 @@ class MetaLog:
         "get logged datetime"
         if self. replay:
             dt = None
-            for line in self.f:
+            for i, line in enumerate(self.lines):
                 print "LINE", line.strip()
                 if line.startswith( "now:" ):
                     dt = eval(line[4:].strip())
+                    del self.lines[:i+1]  # cut already passed lines
                     break
         else:
             dt = datetime.datetime.now() 
