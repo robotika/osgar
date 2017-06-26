@@ -2,7 +2,7 @@
 """
   Navigate given pattern in selected area
   usage:
-       ./navpat.py <notes> | [<metalog> [<F>]] [--view]
+       ./navpat.py <notes> | <metalog> [<F>] [--view]
 """
 
 import os
