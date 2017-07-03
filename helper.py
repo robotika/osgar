@@ -54,6 +54,7 @@ def attach_sensor(robot, sensor_name, metalog):
         robot.gps_data = None
         robot.register_data_source('gps', function, gps_data_extension) 
         robot.gps.start()  # ASAP so we get GPS fix
+        robot.threads.append(robot.gps)
 
     elif sensor_name == 'laser':
         # Laser
@@ -76,6 +77,7 @@ def attach_sensor(robot, sensor_name, metalog):
         if  remission_log_name is not None:
             robot.register_data_source('remission', function2, remission_data_extension)
         robot.laser.start()
+        robot.threads.append(robot.laser)
 
     elif sensor_name == 'camera':
         # Camera
@@ -90,6 +92,7 @@ def attach_sensor(robot, sensor_name, metalog):
         robot.camera_data = None
         robot.register_data_source('camera', function, camera_data_extension)
         robot.camera.start()
+        robot.threads.append(robot.camera)
 
     else:
         assert False, sensor_name  # unsuported sensor
@@ -119,16 +122,14 @@ def attach_processor(robot, metalog, callback):
         function = SourceLogger(robot.proc.get_result, proc_log_name).get
     robot.register_data_source('proc', function, proc_data_extension) 
     robot.proc.start()
+    robot.threads.append(robot.proc)
     return True
 
 
 def detach_all_sensors(robot):
     # TODO unregister all modules
-    # TODO conditional stopping
-    robot.camera.requestStop()
-    robot.laser.requestStop()
-    robot.gps.requestStop()
-    robot.proc.requestStop()
+    for thr in robot.threads:
+        thr.requestStop()
 
 # vim: expandtab sw=4 ts=4 
 
