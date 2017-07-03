@@ -83,6 +83,7 @@ class JohnDeere(object):
         self.drop_ball = False  # TODO move to ro.py only
         self.extensions = []
         self.data_sources = []
+        self.threads = []
         self.modulesForRestart = []
         self.can.sendOperationMode()
   
