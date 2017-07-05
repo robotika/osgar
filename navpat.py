@@ -2,7 +2,7 @@
 """
   Navigate given pattern in selected area
   usage:
-       ./navpat.py <notes> | <metalog> [<F>] [--view]
+       ./navpat.py <notes> | <metalog> [<F>] [--view] [--playground {15x5|12x5}]
 """
 
 import os
@@ -159,10 +159,10 @@ def run_there_and_back_SCHOOL(robot, speed):
     turn_back(robot, speed)
 
 
-def run_there_and_back(robot, speed):
-    follow_line(robot, Line((0, 2.5), (15.0, 2.5)), speed=speed, timeout=60)
+def run_there_and_back(robot, long_side, speed):
+    follow_line(robot, Line((0, 2.5), (long_side, 2.5)), speed=speed, timeout=60)
     turn_back(robot, speed)
-    follow_line(robot, Line((15.0, 2.5), (0, 2.5)), speed=speed, timeout=60)
+    follow_line(robot, Line((long_side, 2.5), (0, 2.5)), speed=speed, timeout=60)
     turn_back(robot, speed)
 
 
@@ -183,7 +183,7 @@ def image_callback(data):
     return (data, None, None)
 
 
-def navigate_pattern(metalog, viewer=None):
+def navigate_pattern(metalog, playground, viewer=None):
     assert metalog is not None
     can_log_name = metalog.getLog('can')
     if metalog.replay:
@@ -204,7 +204,16 @@ def navigate_pattern(metalog, viewer=None):
 
 #    robot.localization.global_map = [(0.0, 0.0), (13.6, 0.0), (13.6, 4.7), (0.0, 4.7)]  # note not correct!
 #    robot.localization.set_pose((0.0, 2.3, 0.0))
-    robot.localization.global_map = [(0.0, 0.0), (15.0, 0.0), (15.0, 5.0), (0.0, 5.0)]  # note not correct!
+    
+    if playground == '15x5':
+        robot.localization.global_map = [(0.0, 0.0), (15.0, 0.0), (15.0, 5.0), (0.0, 5.0)]
+        long_side = 15.0
+    elif playground == '12x5':
+        robot.localization.global_map = [(0.0, 0.0), (12.0, 0.0), (12.0, 5.0), (0.0, 5.0)]
+        long_side = 12.0
+    else:
+        assert False, playground  # not supported
+
     robot.localization.set_pose((0.0, 2.5, 0.0))
 #    robot.localization.set_pose((2.5, 0.0, 0.0))
 
@@ -222,7 +231,7 @@ def navigate_pattern(metalog, viewer=None):
 
         for i in xrange(10):
 #            run_oval(robot, speed)
-            run_there_and_back(robot, speed)
+            run_there_and_back(robot, long_side, speed)
 
     except NearObstacle:
         print "Near Exception Raised!"
@@ -242,6 +251,12 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print __doc__
         sys.exit(2)
+
+    playground = '15x5'
+    if '--playground' in sys.argv:
+        playground = sys.argv[sys.argv.index('--playground') + 1]
+    assert playground in ['15x5', '12x5'], playground
+
     metalog=None
     viewer = None
     if isMetaLogName(sys.argv[1]):
@@ -262,7 +277,7 @@ if __name__ == "__main__":
     if metalog is None:
         metalog = MetaLog()
 
-    navigate_pattern(metalog, viewer)
+    navigate_pattern(metalog, playground, viewer)
     if viewer is not None:
         viewer(filename=None, posesScanSet=viewer_data)
 
