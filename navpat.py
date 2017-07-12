@@ -2,7 +2,7 @@
 """
   Navigate given pattern in selected area
   usage:
-       ./navpat.py <notes> | <metalog> [<F>] [--view] [--playground {15x5|12x5}]
+       ./navpat.py <notes> | <metalog> [<F>] [--view] [--config <json file>]
 """
 
 import os
@@ -26,6 +26,7 @@ from line import Line
 from lib.landmarks import ConeLandmarkFinder
 from lib.localization import SimpleOdometry
 from lib.camera_marks import find_cones
+from lib.config import Config
 
 
 LASER_OFFSET = (1.78, 0.0, 0.39)  # this should be common part?
@@ -177,7 +178,7 @@ def image_callback(data):
     return (data, None)
 
 
-def navigate_pattern(metalog, playground, viewer=None):
+def navigate_pattern(metalog, conf, viewer=None):
     assert metalog is not None
     can_log_name = metalog.getLog('can')
     if metalog.replay:
@@ -189,27 +190,21 @@ def navigate_pattern(metalog, playground, viewer=None):
         can = CAN()
         can.relog(can_log_name, timestamps_log=open(metalog.getLog('timestamps'), 'w'))
     can.resetModules(configFn=setup_faster_update)
-    robot = JohnDeere(can=can, localization=SimpleOdometry())
+
+    if conf is not None and 'localization' in conf.data:
+        loc = SimpleOdometry.from_dict(conf.data['localization'])
+    else:
+        loc = SimpleOdometry(pose = (0.0, 2.5, 0.0))
+        loc.global_map = [(0.0, 0.0), (15.0, 0.0), (15.0, 5.0), (0.0, 5.0)]
+
+    robot = JohnDeere(can=can, localization=loc)
     robot.UPDATE_TIME_FREQUENCY = 20.0  # TODO change internal and integrate setup
 
     for sensor_name in ['gps', 'laser', 'camera']:
         attach_sensor(robot, sensor_name, metalog)
     attach_processor(robot, metalog, image_callback)
 
-#    robot.localization.global_map = [(0.0, 0.0), (13.6, 0.0), (13.6, 4.7), (0.0, 4.7)]  # note not correct!
-#    robot.localization.set_pose((0.0, 2.3, 0.0))
-    
-    if playground == '15x5':
-        robot.localization.global_map = [(0.0, 0.0), (15.0, 0.0), (15.0, 5.0), (0.0, 5.0)]
-        long_side = 15.0
-    elif playground == '12x5':
-        robot.localization.global_map = [(0.0, 0.0), (12.0, 0.0), (12.0, 5.0), (0.0, 5.0)]
-        long_side = 12.0
-    else:
-        assert False, playground  # not supported
-
-    robot.localization.set_pose((0.0, 2.5, 0.0))
-#    robot.localization.set_pose((2.5, 0.0, 0.0))
+    long_side = max([x for x, y in robot.localization.global_map])
 
     robot.canproxy.stop()
     robot.canproxy.set_turn_raw(0)
@@ -246,10 +241,9 @@ if __name__ == "__main__":
         print __doc__
         sys.exit(2)
 
-    playground = '15x5'
-    if '--playground' in sys.argv:
-        playground = sys.argv[sys.argv.index('--playground') + 1]
-    assert playground in ['15x5', '12x5'], playground
+    conf = None
+    if '--config' in sys.argv:
+        conf = Config.load(sys.argv[sys.argv.index('--config') + 1])
 
     metalog=None
     viewer = None
@@ -271,7 +265,7 @@ if __name__ == "__main__":
     if metalog is None:
         metalog = MetaLog()
 
-    navigate_pattern(metalog, playground, viewer)
+    navigate_pattern(metalog, conf, viewer)
     if viewer is not None:
         viewer(filename=None, posesScanSet=viewer_data)
 

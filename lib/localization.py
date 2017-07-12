@@ -35,6 +35,13 @@ class SimpleOdometry():
             }  # TODO external configuration
         self.global_map = [] 
 
+    @classmethod
+    def from_dict(cls, config_dict):
+        ret = cls(pose=config_dict.get('pose', (0, 0, 0)))
+        if 'cones' in config_dict:
+            ret.global_map = config_dict['cones']
+        return ret
+
     def update_odometry(self, angle_left, dist_left, dist_right):
         dh = math.sin(angle_left) * dist_left / FRONT_REAR_DIST
         dist = math.cos(angle_left) * dist_left + LEFT_WHEEL_DIST_OFFSET * dh 
