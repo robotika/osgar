@@ -2,9 +2,18 @@
 """
   Navigate given pattern in selected area
   usage:
-       ./navpat.py <notes> | <metalog> [<F>] [--view] [--config <json file>]
+       ./navpat.py [-h] {run,replay} ...
+
+positional arguments:
+  {run,replay}  sub-command help
+    run         run on real HW
+    replay      replay from logfile
+
+optional arguments:
+  -h, --help       show this help message and exit
 """
 
+import argparse
 import os
 import sys
 import math
@@ -237,33 +246,41 @@ def navigate_pattern(metalog, conf, viewer=None):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print __doc__
-        sys.exit(2)
+    parser = argparse.ArgumentParser(description='Navigate given pattern in selected area')
+    subparsers = parser.add_subparsers(help='sub-command help', dest='command')
+    parser_run = subparsers.add_parser('run', help='run on real HW')
+    parser_run.add_argument('config', help='configuration file')
+    parser_run.add_argument('--note', help='add description')
 
+    parser_replay = subparsers.add_parser('replay', help='replay from logfile')
+    parser_replay.add_argument('logfile', help='recorded log file')
+    parser_replay.add_argument('--view', dest='view', action='store_true', help='view parsed log')
+    parser_replay.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
+    parser_replay.add_argument('--config', dest='config', help='use different configuration file')
+    args = parser.parse_args()
     conf = None
-    if '--config' in sys.argv:
-        conf = Config.load(sys.argv[sys.argv.index('--config') + 1])
+    if args.config is not None:
+        conf = Config.load(args.config)
 
-    metalog=None
     viewer = None
-    if isMetaLogName(sys.argv[1]):
-        metalog = MetaLog(filename=sys.argv[1])
-        if '--view' in sys.argv:
+    if args.command == 'replay':
+        metalog = MetaLog(args.logfile)
+        if args.view:
             from tools.viewer import main as viewer_main
             from tools.viewer import getCombinedPose
             viewer = viewer_main
-            if sys.argv[1].endswith('.zip'):
-                g_img_dir = sys.argv[1]
+            if args.logfile.endswith('.zip'):
+                g_img_dir = args.logfile
             else:
-                g_img_dir = os.path.dirname(sys.argv[1])
-    elif len(sys.argv) > 2:
-        metalog = MetaLog(filename=sys.argv[2])
-    if len(sys.argv) > 2 and sys.argv[-1] == 'F':
-        disableAsserts()
-    
-    if metalog is None:
+                g_img_dir = os.path.dirname(args.logfile)
+        if args.force:
+            disableAsserts()
+
+    elif args.command == 'run':
         metalog = MetaLog()
+
+    else:
+        assert False, args.command   # unsupported command
 
     navigate_pattern(metalog, conf, viewer)
     if viewer is not None:
