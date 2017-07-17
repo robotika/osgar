@@ -206,7 +206,10 @@ def navigate_pattern(metalog, conf, viewer=None):
         loc = SimpleOdometry(pose = (0.0, 2.5, 0.0))
         loc.global_map = [(0.0, 0.0), (15.0, 0.0), (15.0, 5.0), (0.0, 5.0)]
 
-    robot = JohnDeere(can=can, localization=loc)
+    jd_config = None
+    if conf is not None and 'johndeere' in conf.data:
+        jd_config = conf.data['johndeere']
+    robot = JohnDeere(can=can, localization=loc, config=jd_config)
     robot.UPDATE_TIME_FREQUENCY = 20.0  # TODO change internal and integrate setup
 
     for sensor_name in ['gps', 'laser', 'camera']:

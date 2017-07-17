@@ -70,7 +70,7 @@ def setup_faster_update(can):
 class JohnDeere(object):
     UPDATE_TIME_FREQUENCY = 5.0  #20.0  # Hz 
 
-    def __init__(self, can=None, localization=None):
+    def __init__(self, can=None, localization=None, config=None):
         if can is None:
             self.can = CAN()
             self.can.resetModules()
@@ -78,6 +78,9 @@ class JohnDeere(object):
             self.can = can
         self.canproxy = CANProxy(self.can)
         self.localization = localization
+        if config is not None:
+            global TURN_ANGLE_OFFSET
+            TURN_ANGLE_OFFSET = config.get('TURN_ANGLE_OFFSET', TURN_ANGLE_OFFSET)
         self.time = 0.0
         self.buttonGo = None  # TODO currently not available (!)
         self.drop_ball = False  # TODO move to ro.py only
