@@ -189,6 +189,8 @@ def image_callback(data):
 
 def navigate_pattern(metalog, conf, viewer=None):
     assert metalog is not None
+    assert conf is not None  # config is required!
+
     can_log_name = metalog.getLog('can')
     if metalog.replay:
         if metalog.areAssertsEnabled():
@@ -200,16 +202,8 @@ def navigate_pattern(metalog, conf, viewer=None):
         can.relog(can_log_name, timestamps_log=open(metalog.getLog('timestamps'), 'w'))
     can.resetModules(configFn=setup_faster_update)
 
-    if conf is not None and 'localization' in conf.data:
-        loc = SimpleOdometry.from_dict(conf.data['localization'])
-    else:
-        loc = SimpleOdometry(pose = (0.0, 2.5, 0.0))
-        loc.global_map = [(0.0, 0.0), (15.0, 0.0), (15.0, 5.0), (0.0, 5.0)]
-
-    jd_config = None
-    if conf is not None and 'johndeere' in conf.data:
-        jd_config = conf.data['johndeere']
-    robot = JohnDeere(can=can, localization=loc, config=jd_config)
+    loc = SimpleOdometry.from_dict(conf.data.get('localization'))
+    robot = JohnDeere(can=can, localization=loc, config=conf.data.get('johndeere'))
     robot.UPDATE_TIME_FREQUENCY = 20.0  # TODO change internal and integrate setup
 
     for sensor_name in ['gps', 'laser', 'camera']:
