@@ -6,6 +6,7 @@ import argparse
 import os
 import sys
 import math
+import zipfile
 from contextlib import contextmanager
 
 from apyros.metalog import MetaLog, disableAsserts, isMetaLogName
@@ -21,6 +22,7 @@ from lib.config import Config
 
 
 LASER_OFFSET = (1.78, 0.0, 0.39)  # this should be common part?
+DEFAULT_ZIP_CONFIG = 'config.json'  # default name stored in newer zipped log files
 
 
 def getCombinedPose( pose, sensorPose ):
@@ -112,6 +114,9 @@ def parse_and_launch():
     viewer = None
     if args.command == 'replay':
         metalog = MetaLog(args.logfile)
+        if conf is None and args.logfile.endswith('.zip'):
+            if DEFAULT_ZIP_CONFIG in zipfile.ZipFile(args.logfile).namelist():
+                conf = Config.loads(zipfile.ZipFile(args.logfile).read(DEFAULT_ZIP_CONFIG))
         if args.view:
             global g_img_dir
             from tools.viewer import main as viewer_main
