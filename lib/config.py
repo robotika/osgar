@@ -10,7 +10,11 @@ class Config(object):
 
     @classmethod
     def load(cls, filename):
-        cls.data = json.load(open(filename))
+        return cls.loads(open(filename).read())
+
+    @classmethod
+    def loads(cls, text_data):
+        cls.data = json.loads(text_data)
         assert 'version' in cls.data, cls.data
         assert cls.data['version'] == cls.SUPPORTED_VERSION, cls.data['version']
         cls.version = cls.data['version']
