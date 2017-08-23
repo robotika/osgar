@@ -16,19 +16,19 @@ def sensor_gen(path, *selected):
     """
     selected = set(selected)
     with Log(path) as log:
-        data = []
+        streams = []
         for sensor in log.streams:
             if sensor != 'can' and (len(selected) == 0 or sensor in selected):
-                data.extend(_stream(log, sensor))
+                streams.append(_stream(log, sensor))
 
-        data.sort()
-        for a in data:
+        for a in _merge(streams):
             yield a
 
 
 def _stream(log, id):
     if id == 'can': # binary log, not implemented
         return
+
     if id == 'timestamps':
         with log.open(log.streams[id]) as stream:
             for line in stream:
@@ -109,6 +109,36 @@ def _meta(log):
         for line in filter(lambda a: ':' in a, stream):  # skip unknown lines:
             sensor, filepath = line.strip().split(':')
             yield sensor, os.path.basename(filepath)
+
+
+def _merge(streams):
+    vector = []
+    valid = []
+    for s in streams:
+        try:
+            item = s.next()
+            vector.append(item)
+            valid.append(s)
+        except StopIteration:
+            pass
+
+    while valid:
+        i = _min_index(vector)
+        yield vector[i]
+        try:
+            vector[i] = valid[i].next()
+        except StopIteration:
+            del vector[i]
+            del valid[i]
+
+
+def _min_index(vector):
+    index, value = 0, vector[0]
+    for i, item in enumerate(vector[1:], start=1):
+        if item < value:
+            value = item
+            index = i
+    return index
 
 
 if __name__ == "__main__":
