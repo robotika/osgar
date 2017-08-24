@@ -21,8 +21,12 @@ def sensor_gen(path, *selected):
             if sensor != 'can' and (len(selected) == 0 or sensor in selected):
                 streams.append(_stream(log, sensor))
 
-        for a in _merge(streams):
-            yield a
+        for timestamp, sensor, data in _merge(streams):
+            if sensor == 'camera':
+                img = log.read(os.path.basename(data[0]))
+                yield (timestamp, sensor, img)
+            else:
+                yield (timestamp, sensor, data)
 
 
 def _stream(log, id):
