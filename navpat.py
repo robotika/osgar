@@ -31,6 +31,9 @@ from lib.camera_marks import find_cones
 class NearObstacle:
     pass
 
+class NoLaserData:
+    pass
+
 
 def min_dist(data, infinity=None):
     data = np.array(data)
@@ -41,9 +44,18 @@ def min_dist(data, infinity=None):
 
 prev_cones = []
 prev_near = False
+last_laser_update_time = None
+
 def detect_near_extension(robot, id, data):
-    global prev_near
+    global prev_near, last_laser_update_time
+    if last_laser_update_time is None:
+        # well, we do not want to stop the machine immediately - there could be
+        # first update of some other sensor
+        # TODO review no data from the beginning
+        last_laser_update_time = robot.time
+
     if id=='laser':
+        last_laser_update_time = robot.time
         if data is not None and data != []:
             if prev_near and min_dist(data) < 0.5:
                 raise NearObstacle()
@@ -62,6 +74,9 @@ def detect_near_extension(robot, id, data):
             #  - "feature tracking"
             #  - localization
             #  - camera verification
+    
+    elif last_laser_update_time + 1.0 < robot.time:
+        raise NoLaserData()
 
 
 def navpat_viewer_extension(robot, id, data):
@@ -175,6 +190,9 @@ def navigate_pattern(robot, metalog, conf, viewer=None):
 
     except NearObstacle:
         print "Near Exception Raised!"
+        robot.extensions = []  # hack
+    except NoLaserData:
+        print "!!!ERROR!!! Missing laser updates for last {:.1f}s".format(robot.time - last_laser_update_time)
         robot.extensions = []  # hack
 
     robot.canproxy.stop()
