@@ -113,23 +113,23 @@ def _meta(log):
 
 def _merge(streams):
     vector = []
-    valid = []
+    active = []
     for s in streams:
         try:
             item = s.next()
             vector.append(item)
-            valid.append(s)
+            active.append(s)
         except StopIteration:
             pass
 
-    while valid:
+    while active:
         i = _min_index(vector)
         yield vector[i]
         try:
-            vector[i] = valid[i].next()
+            vector[i] = active[i].next()
         except StopIteration:
             del vector[i]
-            del valid[i]
+            del active[i]
 
 
 def _min_index(vector):
