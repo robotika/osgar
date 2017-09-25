@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "johndeere": {
+    "TURN_ANGLE_OFFSET": 0.05585053606381855
+  },
+  "localization": {
+    "pose": [4.0, 0.0, 0.0],
+    "cones": [[0.0, 0.0], [15.0, 0.0], [15.0, 5.0], [0.0, 5.0]]
+  },
+  "navpat": {
+    "pattern": "fill",
+    "step": 1.0
+  }
+}
+
