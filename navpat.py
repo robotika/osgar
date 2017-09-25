@@ -159,6 +159,19 @@ def run_there_and_back(robot, long_side, speed):
     turn_back(robot, speed)
 
 
+def run_fill_pattern(robot, long_side, speed, conf):
+    STEP = conf['step']
+    RAD1 = 2.0
+    RAD2 = RAD1 + STEP/2.0
+    SAFETY = 2.0
+    for i in range(10):
+        Y = i * STEP
+        follow_line(robot, Line((RAD1+SAFETY, Y), (long_side-RAD2-SAFETY, Y)), speed=speed, timeout=60)
+        turn(robot, math.radians(180), radius=RAD2, speed=speed, with_stop=True, timeout=60.0)
+        follow_line(robot, Line((long_side-RAD2-SAFETY, Y+2*RAD2), (RAD1+SAFETY, Y+2*RAD2)), speed=speed, timeout=60)
+        turn(robot, math.radians(180), radius=RAD1, speed=speed, with_stop=True, timeout=60.0)
+
+
 def image_callback(data):
     assert len(data) > 1
     filename = data[0]
@@ -189,7 +202,12 @@ def navigate_pattern(robot, metalog, conf, viewer=None):
 
         for i in range(10):
 #            run_oval(robot, speed)
-            run_there_and_back(robot, long_side, speed)
+            if conf is None:
+                run_there_and_back(robot, long_side, speed)
+            elif conf['pattern'] == 'fill':
+                run_fill_pattern(robot, long_side, speed, conf)
+            else:
+                assert False, conf['pattern']  # unknown pattern
 
     except NearObstacle:
         print("Near Exception Raised!")
@@ -206,6 +224,7 @@ def navigate_pattern(robot, metalog, conf, viewer=None):
 
 if __name__ == "__main__":
     with parse_and_launch() as (robot, metalog, config, viewer):
+        config = config.data.get('navpat')  # TODO move this to launcher
         navigate_pattern(robot, metalog, config, viewer)
 
 # vim: expandtab sw=4 ts=4 
