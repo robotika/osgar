@@ -69,6 +69,7 @@ def attach_sensor(robot, sensor_name, metalog):
                 function2 = SourceLogger(None, remission_log_name).get
         else:
             robot.laser = LaserIP(remission=True)
+            robot.laser.stopOnExit = False  # for faster boot-up
             function = SourceLogger(robot.laser.scan, laser_log_name).get
             function2 = SourceLogger(robot.laser.remission, remission_log_name).get
         robot.laser_data = None
