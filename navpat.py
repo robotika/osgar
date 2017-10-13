@@ -16,6 +16,7 @@ optional arguments:
 import math
 import numpy as np
 import cv2
+import itertools
 
 from johndeere import emergency_stop_extension, EmergencyStopException
 
@@ -85,21 +86,29 @@ class LaserDetector:
             x, y, heading = robot.localization.pose()
             laser_pose = x + math.cos(heading)*LASER_OFFSET[0], y + math.sin(heading)*LASER_OFFSET[0], heading
 
+            selected = []
             for raw_angle, raw_dist, raw_width in self.prev_cones:
                 dist = raw_dist/1000.0
                 angle = math.radians(raw_angle/2 - 135)
                 xx, yy, _ = getCombinedPose(laser_pose, (math.cos(angle)*dist, math.sin(angle)*dist, 0))
                 color = (0xFF, 0x80, 0)
                 colors = [(0xFF, 0xFF, 0xFF), (0xFF, 0, 0), (0, 0xFF, 0), (0, 0, 0xFF)]
-                for cone_xy, cone_color in zip(robot.localization.global_map, colors):
+                for i, cone in enumerate(zip(robot.localization.global_map, colors)):
+                    cone_xy, cone_color = cone
                     if math.hypot(xx-cone_xy[0], yy-cone_xy[1]) < 2.0:
                         color = cone_color
+                        selected.append( (i, (raw_angle, raw_dist)) )
 
                 width = raw_width * math.radians(0.5) * raw_dist/1000.0  # in meters
                 print("width", width)
                 if width < 0.05 or width > 0.5:
                     color = (128, 128, 128)  # gray
                 viewer_scans_append( ( (xx, yy, 0), -1.5, color) ) # color param
+
+            if len(selected) >= 2:
+                finder = ConeLandmarkFinder()
+                for a, b in itertools.combinations(sorted(selected), 2):
+                    print("selected\t%f\t%d\t%d\t%f\n" % (robot.time, a[0], b[0], finder.pair_distance(a[1], b[1])))
 
 
 def follow_line(robot, line, speed=None, timeout=None):
