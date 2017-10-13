@@ -35,7 +35,6 @@ def camera_data_extension(robot, id, data):
 def proc_data_extension(robot, id, data):
     if id=='proc':
         robot.proc_data = data
-        print("Received", robot.proc_data)
 
 
 def attach_sensor(robot, sensor_name, metalog):
