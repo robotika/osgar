@@ -55,12 +55,12 @@ def test_turn( robot ):
 
 
 def test_drop_ball(robot):
-    print "TEST BALLS"
-    for ii in xrange(3):
-        print "DROP BALL"
+    print("TEST BALLS")
+    for ii in range(3):
+        print("DROP BALL")
         robot.drop_ball = True
         robot.wait(1.0)
-        print "CLOSE"
+        print("CLOSE")
         robot.drop_ball = False
         robot.wait(3.0)
 
@@ -89,7 +89,7 @@ def ver0(metalog, waypoints=None):
 
     # mount_sensor(GPS, robot, metalog)
     gps_log_name = metalog.getLog('gps')
-    print gps_log_name
+    print(gps_log_name)
     if metalog.replay:
         robot.gps = DummySensor()
         function = SourceLogger(None, gps_log_name).get
@@ -101,7 +101,7 @@ def ver0(metalog, waypoints=None):
 
     # mount_sensor(VelodyneThread, robot, metalog)
     velodyne_log_name = metalog.getLog('velodyne_dist')
-    print velodyne_log_name
+    print(velodyne_log_name)
     sensor = Velodyne(metalog=metalog)
     if metalog.replay:
         robot.velodyne = DummySensor()
@@ -126,19 +126,19 @@ def ver0(metalog, waypoints=None):
     while robot.time - start_time < 30*60:  # RO timelimit 30 minutes
         robot.update()
         if robot.gps_data != prev_gps:
-            print robot.time, robot.gas, robot.gps_data, robot.velodyne_data
+            print(robot.time, robot.gas, robot.gps_data, robot.velodyne_data)
             prev_gps = robot.gps_data
             if robot.gps_data is not None:
                 dist_arr = [distance( conv.geo2planar((robot.gps_data[1], robot.gps_data[0])), 
                                       conv.geo2planar(destination) ) for destination in waypoints]
                 dist = min(dist_arr)
-                print "DIST-GPS", dist
+                print("DIST-GPS", dist)
                 if prev_destination_dist is not None:
                     if prev_destination_dist < dist and dist < 10.0:
                         robot.drop_ball = True
                         # remove nearest
                         i = dist_arr.index(dist)  # ugly, but ...
-                        print "INDEX", i
+                        print("INDEX", i)
                         del waypoints[i]
                         center(robot)
                         moving = False
@@ -155,7 +155,7 @@ def ver0(metalog, waypoints=None):
                 dist = min(dist)  # currently supported tupple of readings
         if moving:
             if dist is None or dist < SAFE_DISTANCE_STOP:
-                print "!!! STOP !!! -",  robot.velodyne_data
+                print("!!! STOP !!! -",  robot.velodyne_data)
                 center(robot)
                 moving = False
 
@@ -164,7 +164,7 @@ def ver0(metalog, waypoints=None):
                     arr = robot.velodyne_data[1]
                     num = len(arr)
                     left, right = min(arr[:num/2]), min(arr[num/2:])
-                    print "DECIDE", left, right, robot.velodyne_data
+                    print("DECIDE", left, right, robot.velodyne_data)
                     if left <= right:
                         robot.pulse_right(RIGHT_TURN_TIME)
                         robot.steering_angle = math.radians(-30)  # TODO replace by autodetect
@@ -182,11 +182,11 @@ def ver0(metalog, waypoints=None):
 
         else:  # not moving
             if dist is not None and dist > SAFE_DISTANCE_GO:
-                print "GO",  robot.velodyne_data
+                print("GO",  robot.velodyne_data)
                 go(robot)
                 moving = True
         if not robot.buttonGo:
-            print "STOP!"
+            print("STOP!")
             break
     center(robot)
     robot.velodyne.requestStop()
@@ -203,7 +203,7 @@ def load_waypoints(filename):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print __doc__
+        print(__doc__)
         sys.exit(2)
     metalog=None
     if 'meta_' in sys.argv[1]:

@@ -101,10 +101,10 @@ def drive_remotely(metalog):
     robot.canproxy.stop()
     robot.canproxy.set_turn_raw(0)
 
-    print "Waiting for remote commands ..."
+    print("Waiting for remote commands ...")
     while robot.remote_data is None:
         robot.update()
-    print "received", robot.remote_data.strip()
+    print("received", robot.remote_data.strip())
 
     moving = False
     turning = False
@@ -113,43 +113,43 @@ def drive_remotely(metalog):
         if robot.remote_data == 'STOP\n' and (moving or turning):
             if moving:
                 robot.canproxy.stop()
-                print "STOP"
+                print("STOP")
                 moving = False
             if turning:
                 robot.canproxy.stop_turn()
-                print "STOP turn"
+                print("STOP turn")
                 turning = False
         elif robot.remote_data == 'UP\n' and not moving:
             if max_speed is None:
                 robot.canproxy.go()
-                print "GO"
+                print("GO")
             else:
                 robot.set_desired_speed(max_speed)
-                print "GO", max_speed
+                print("GO", max_speed)
             moving = True
         elif robot.remote_data == 'DOWN\n' and not moving:
             if max_speed is None:
                 robot.canproxy.go_back()
-                print "GO back"
+                print("GO back")
             else:
                 robot.set_desired_speed(-max_speed)
-                print "GO back", max_speed
+                print("GO back", max_speed)
             moving = True
         elif robot.remote_data == 'LEFT\n':
             robot.canproxy.set_turn_raw(200)
-            print "Left"
+            print("Left")
             turning = True
         elif robot.remote_data == 'RIGHT\n':
             robot.canproxy.set_turn_raw(-200)
-            print "Right"
+            print("Right")
             turning = True
         elif robot.remote_data == 'SPEED0\n':
             max_speed = None
         elif robot.remote_data.startswith('SPEED'):
             max_speed = int(robot.remote_data[len('SPEED'):])/10.0
-            print "Max Speed", max_speed
+            print("Max Speed", max_speed)
 
-    print "received", robot.remote_data.strip()
+    print("received", robot.remote_data.strip())
 
     robot.canproxy.stop_turn()
     robot.remote.requestStop()
@@ -158,7 +158,7 @@ def drive_remotely(metalog):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print __doc__
+        print(__doc__)
         sys.exit(2)
     metalog=None
     if 'meta_' in sys.argv[1]:

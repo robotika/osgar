@@ -34,9 +34,9 @@ def parse_laserraw(filename):
             assert io in [0, 1]
             data = f.read(size)
             if timestamp is not None:
-                print '%.03f' % (timestamp-start_time), data[:60]
+                print('%.03f' % (timestamp-start_time), data[:60])
             else:
-                print data
+                print(data)
             buf = f.read(block_header_size)
 
 

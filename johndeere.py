@@ -32,7 +32,7 @@ class EmergencyStopException(Exception):
 def emergency_stop_extension(robot, id, data):
     if (robot.canproxy.bumpers is not None and 
         robot.canproxy.bumpers & EMERGENCY_STOP_MASK != 0):
-        print "raising EMERGENCY EXCEPTION!"
+        print("raising EMERGENCY EXCEPTION!")
         raise EmergencyStopException()
 
 
@@ -43,7 +43,7 @@ def setup_faster_update(can):
         if packet != None:
             can.sendData( *packet )
         reader.update( can.readPacket() )
-    print "RESULT DATA (before):", reader.result 
+    print("RESULT DATA (before):", reader.result) 
 
     writer = WriteSDO( 1, 0x1801, 5, [5, 0] )
     for cmd in writer.generator():
@@ -55,7 +55,7 @@ def setup_faster_update(can):
         if packet != None:
             can.sendData( *packet )
         reader.update( can.readPacket() )
-    print "RESULT DATA (after):", reader.result 
+    print("RESULT DATA (after):", reader.result) 
 
     # ball dispenser
 #    writer = WriteSDO( 0x7F, 0x2100, 1, [3] )
@@ -104,17 +104,17 @@ class JohnDeere(object):
                 self.can.printPacket( id, data )
                 if not moduleId in self.modulesForRestart:
                     self.modulesForRestart.append( moduleId )
-                    print "RESET", moduleId
+                    print("RESET", moduleId)
                     self.can.sendData( 0, [129,moduleId] )
 #                if moduleId in [0x01, 0x02]:
 #                    if (0x180 | moduleId) in self.encData:
 #                      # The encoder information is invalid during a reset
 #                      del self.encData[0x180 | moduleId]
             elif data[0] == 127: # restarted and in preoperation
-                print "SWITCH TO OPERATION", moduleId
+                print("SWITCH TO OPERATION", moduleId)
                 self.can.sendData( 0, [1,moduleId] ) 
             elif moduleId in self.modulesForRestart:
-                print "RUNNING", moduleId
+                print("RUNNING", moduleId)
                 self.modulesForRestart.remove(moduleId)
 
     def register_data_source(self, name, function, extension=None):
@@ -185,20 +185,20 @@ class JohnDeere(object):
     def stop(self):
         "send stop command and make sure robot really stops"
         self.canproxy.stop()
-        for i in xrange(10):
+        for i in range(10):
             self.update()
             # TODO verify encoders/motion
 
 
 def wait_for_start(robot):
-    print "WAIT FOR START"
+    print("WAIT FOR START")
 
     robot.canproxy.cmd_LEDs = ALL_LEDS
     while (robot.canproxy.buttons_and_LEDs is None or
            robot.canproxy.buttons_and_LEDs & GREEN_BUTTON == 0):
         robot.update()
     robot.canproxy.cmd_LEDs = GREEN_LED
-    print "STARTED ..."
+    print("STARTED ...")
 
 
 def self_test(metalog):
@@ -230,15 +230,15 @@ def self_test(metalog):
         dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
                           - start_dist)/2.0
         if dist > 1.0:
-            print "Dist OK at {}s".format(robot.time - start_time), sorted(arr)[len(arr)/2]
+            print("Dist OK at {}s".format(robot.time - start_time), sorted(arr)[len(arr)/2])
             break
-    print dist
+    print(dist)
     robot.stop()
     robot.wait(3.0)
     dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
                       - start_dist)/2.0
-    print dist
-    print
+    print(dist)
+    print()
 
     robot.canproxy.go_back()
     start_time = robot.time
@@ -250,9 +250,9 @@ def self_test(metalog):
         dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
                           - start_dist)/2.0
         if dist < -1.0:
-            print "Dist back OK at {}s".format(robot.time - start_time), sorted(arr)[len(arr)/2]
+            print("Dist back OK at {}s".format(robot.time - start_time), sorted(arr)[len(arr)/2])
             break
-    print dist
+    print(dist)
 
 
 #        print robot.time, robot.canproxy.gas
@@ -264,11 +264,11 @@ def self_test(metalog):
     robot.wait(3.0)
     dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
                       - start_dist)/2.0
-    print dist
+    print(dist)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print __doc__
+        print(__doc__)
         sys.exit(2)
     metalog=None
     if 'meta_' in sys.argv[1]:

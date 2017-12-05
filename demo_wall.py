@@ -109,11 +109,11 @@ def demo(metalog):
     for sensor_name in ['gps', 'laser', 'camera']:
         attach_sensor(robot, sensor_name, metalog)
 
-    print "Wait for gas"
+    print("Wait for gas")
     while robot.canproxy.gas is None:
         robot.update()
 
-    print "Wait for center"
+    print("Wait for center")
     robot.canproxy.stop()
     # not available now :( ... wait_for_start(robot)
 
@@ -140,23 +140,23 @@ def demo(metalog):
             turn_angle = follow_wall_angle(robot.laser_data, radius=1.5)
 
         if last_laser_update is not None and robot.time - last_laser_update > 0.3:
-            print "!!!WARNING!!! Missing laser updates for last {:.1f}s".format(robot.time - last_laser_update)
+            print("!!!WARNING!!! Missing laser updates for last {:.1f}s".format(robot.time - last_laser_update))
             dist = None  # no longer valid distance measurements
 
         if robot.gps_data != prev_gps:
             if turn_angle is not None:
-                print robot.time, robot.canproxy.gas, "(%.3f, %.3f)" % (distL, distR), math.degrees(turn_angle)
+                print(robot.time, robot.canproxy.gas, "(%.3f, %.3f)" % (distL, distR), math.degrees(turn_angle))
             else:
-                print robot.time, robot.canproxy.gas, "(%.3f, %.3f)" % (distL, distR), turn_angle
+                print(robot.time, robot.canproxy.gas, "(%.3f, %.3f)" % (distL, distR), turn_angle)
             prev_gps = robot.gps_data
         if moving:
             if dist is None or dist < SAFE_DISTANCE_STOP:
-                print "!!! STOP !!!",  dist, (distL, distR)
+                print("!!! STOP !!!",  dist, (distL, distR))
                 robot.canproxy.stop()
                 moving = False
         else:  # not moving
             if dist is not None and dist > SAFE_DISTANCE_GO:
-                print "GO",  dist
+                print("GO",  dist)
                 robot.set_desired_speed(DESIRED_SPEED)
                 moving = True
         if turn_angle is not None:
@@ -168,14 +168,14 @@ def demo(metalog):
 #            break
     robot.canproxy.stop_turn()
     robot.canproxy.stop()
-    for i in xrange(20):
+    for i in range(20):
         robot.update()
     detach_all_sensors(robot)
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print __doc__
+        print(__doc__)
         sys.exit(2)
     metalog=None
     if 'meta_' in sys.argv[1]:

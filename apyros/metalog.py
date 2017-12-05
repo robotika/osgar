@@ -14,8 +14,8 @@ import datetime
 import sys
 import zipfile
 
-from logio import ReplayLog, LoggedSocket
-from sourcelogger import SourceLogger
+from .logio import ReplayLog, LoggedSocket
+from .sourcelogger import SourceLogger
 
 global g_checkAssert
 g_checkAssert = True # use command 'F' to disable it
@@ -66,7 +66,7 @@ class MetaLog:
             return filename
 
         for i, line in enumerate(self.lines):
-            print "LINE", line.strip()
+            print("LINE", line.strip())
             if line.startswith( prefix + ':' ):
                 assert len(line.split(':')) == 2, line.split(':')
                 ret = line.split(':')[1].strip()
@@ -77,7 +77,7 @@ class MetaLog:
                 else:
                     # zipped file - keep name of the ZIP as prefix
                     return self.filename + os.sep + ret[5:]
-        print "Warning! '%s' not found!" % prefix
+        print("Warning! '%s' not found!" % prefix)
         return None # not found
 
 
@@ -104,7 +104,7 @@ class MetaLog:
         if self. replay:
             dt = None
             for i, line in enumerate(self.lines):
-                print "LINE", line.strip()
+                print("LINE", line.strip())
                 if line.startswith( "now:" ):
                     dt = eval(line[4:].strip())
                     del self.lines[:i+1]  # cut already passed lines

@@ -65,7 +65,7 @@ if __name__ == "__main__":
         sys.exit()
 
     if sys.argv[1].endswith('.jpg'):
-        print(annot_cones(sys.argv[1]))
+        print((annot_cones(sys.argv[1])))
     else:
         if sys.argv[1].endswith('.zip'):
             names = zipfile.ZipFile(sys.argv[1]).namelist()

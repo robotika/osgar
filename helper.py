@@ -35,7 +35,7 @@ def camera_data_extension(robot, id, data):
 def proc_data_extension(robot, id, data):
     if id=='proc':
         robot.proc_data = data
-        print "Received", robot.proc_data
+        print("Received", robot.proc_data)
 
 
 def attach_sensor(robot, sensor_name, metalog):
@@ -44,7 +44,7 @@ def attach_sensor(robot, sensor_name, metalog):
     if sensor_name == 'gps':
         # GPS
         gps_log_name = metalog.getLog('gps')
-        print gps_log_name
+        print(gps_log_name)
         if metalog.replay:
             robot.gps = DummySensor()
             function = SourceLogger(None, gps_log_name).get
@@ -60,7 +60,7 @@ def attach_sensor(robot, sensor_name, metalog):
         # Laser
         laser_log_name = metalog.getLog('laser')
         remission_log_name = metalog.getLog('remission')
-        print laser_log_name, remission_log_name
+        print(laser_log_name, remission_log_name)
         if metalog.replay:
             robot.laser = DummySensor()
             function = SourceLogger(None, laser_log_name).get
@@ -83,7 +83,7 @@ def attach_sensor(robot, sensor_name, metalog):
     elif sensor_name == 'camera':
         # Camera
         camera_log_name = metalog.getLog('camera')
-        print camera_log_name
+        print(camera_log_name)
         if metalog.replay:
             robot.camera = DummySensor()
             function = SourceLogger(None, camera_log_name).get
@@ -110,10 +110,10 @@ def attach_processor(robot, metalog, callback):
     robot.proc_data = None
     proc_log_name = metalog.getLog(name)
     if proc_log_name is None:
-        print "Processor is not logged"
+        print("Processor is not logged")
 
         return False
-    print proc_log_name
+    print(proc_log_name)
     if metalog.replay:
         robot.proc = DummySensor()
         function = SourceLogger(None, proc_log_name).get

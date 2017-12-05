@@ -43,7 +43,7 @@ def launcher_viewer_extension(robot, id, data):
         scans = [((x, y, 0.0 ), -3.0)]  # hacked color
         laser_pose = x + math.cos(heading)*LASER_OFFSET[0], y + math.sin(heading)*LASER_OFFSET[0], heading
         step = 2
-        for i in xrange(0, 540, step):
+        for i in range(0, 540, step):
             dist = data[i]/1000.0
             angle = math.radians(i/2 - 135)
             scans.append((getCombinedPose(laser_pose, (0, 0, angle)), dist))
@@ -57,7 +57,7 @@ def launcher_viewer_extension(robot, id, data):
         record = (poses, scans, image, camdir, compass)
         viewer_data.append(record)
     elif id == 'camera':
-        print data
+        print(data)
 
 
 def viewer_scans_append(beacon_record):
@@ -147,7 +147,7 @@ def parse_and_launch():
         robot.extensions.append(('emergency_stop', emergency_stop_extension))
         yield robot, metalog, conf, viewer
     except EmergencyStopException:
-        print "Emergency STOP Exception!"
+        print("Emergency STOP Exception!")
         robot.extensions = []  # hack
 
     # TODO make this code conditional based on the state of finished application

@@ -6,7 +6,7 @@ class DummyController:
   def __init__( self ):
     self.status = {}
   def send( self, nodeId, cmd ):
-    print "SEND", nodeId, cmd
+    print("SEND", nodeId, cmd)
     self.status[ nodeId ] = cmd
 
   def query( self, nodeId ):
@@ -21,7 +21,7 @@ class Controller( Thread ):
     self.start()
 
   def send( self, nodeId, cmd ):
-    print "SEND", nodeId, cmd
+    print("SEND", nodeId, cmd)
     self.com.write( str( ("SEND", nodeId, cmd) ) + "\r\n" )
     self.status[ nodeId ] = cmd # pre-optimistics, remove if necessary
 
@@ -29,10 +29,10 @@ class Controller( Thread ):
     return self.status.get( nodeId, "unknown" )
 
   def run( self ):
-    print "THREAD"
+    print("THREAD")
     while( 1 ):
       s = self.com.read(1)
-      print s
+      print(s)
       if len(s) > 0:
         ch = s[0]
         if ch >= 'a' and ch <= 'z':

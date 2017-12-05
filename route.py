@@ -172,7 +172,7 @@ class Route:
 if __name__ == "__main__":
   import sys
   if len( sys.argv ) < 3:
-    print __doc__
+    print(__doc__)
     sys.exit(-1)
 
   pts = loadKML( sys.argv[1] )

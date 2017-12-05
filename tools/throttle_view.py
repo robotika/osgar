@@ -1,5 +1,5 @@
 # vim: set fileencoding=utf-8 et sts=4 sw=4:
-from __future__ import absolute_import, division, print_function, unicode_literals
+
 
 import matplotlib.pyplot as plt
 from logparser import MsgInterpreter
@@ -44,7 +44,7 @@ def analyze_throttle(log_fn):
     ax2.set_ylabel('pos', color='b')
     ax.set_ylabel('control', color='r')
     ax.set_ylim(-1.1,1.1)
-    ax2.plot(*zip(*throttle), label='pos', color='b',marker='.')
+    ax2.plot(*list(zip(*throttle)), label='pos', color='b',marker='.')
 
 
 
@@ -56,18 +56,18 @@ def analyze_throttle(log_fn):
     for time, th in throttle:
             th_filter =  SCALE_NEW*th + (1.0 - SCALE_NEW)*th_filter
             fthrottle.append((time,th_filter))
-    ax2.plot(*zip(*fthrottle), label='pos', color='m', marker='.')
+    ax2.plot(*list(zip(*fthrottle)), label='pos', color='m', marker='.')
 
 
     ax2.axhline(y=14500, alpha=0.5)
     ax2.axhline(y=16500, alpha=0.5)
     ax2.axhline(y=19000, alpha=0.5)
-    ax.plot(*zip(*control), label='control', color='r')
+    ax.plot(*list(zip(*control)), label='control', color='r')
 
     ax3 = ax.twinx()
     ax3.spines["right"].set_position(("axes", 1.2))
     ax3.set_ylabel('speed', color='g')
-    ax3.plot(*zip(*avgspeeds), label='speed', color='g')
+    ax3.plot(*list(zip(*avgspeeds)), label='speed', color='g')
 
     plt.show(block=True)
 

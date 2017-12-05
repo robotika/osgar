@@ -39,10 +39,10 @@ else:
 
 if __name__ == "__main__":
     # for testing of myKbhit on various OS
-    print "Press Any Key!"
+    print("Press Any Key!")
     while not myKbhit():
         pass
-    print "Thank you"
+    print("Thank you")
 
 # vim: expandtab sw=4 ts=4 
 

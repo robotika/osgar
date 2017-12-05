@@ -1,5 +1,5 @@
 import unittest
-from metalog import *
+from .metalog import *
 
 
 def test_data(filename):

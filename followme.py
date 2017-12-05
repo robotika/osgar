@@ -57,7 +57,7 @@ def followme(metalog):
 
     # GPS
     gps_log_name = metalog.getLog('gps')
-    print gps_log_name
+    print(gps_log_name)
     if metalog.replay:
         robot.gps = DummySensor()
         function = SourceLogger(None, gps_log_name).get
@@ -69,7 +69,7 @@ def followme(metalog):
 
     # Velodyne
     velodyne_log_name = metalog.getLog('velodyne_dist')
-    print velodyne_log_name
+    print(velodyne_log_name)
     sensor = Velodyne(metalog=metalog)
     if metalog.replay:
         robot.velodyne = DummySensor()
@@ -96,8 +96,8 @@ def followme(metalog):
         robot.update()
         if robot.gps_data != prev_gps:
             if robot.velodyne_data is not None:
-                print (robot.velodyne_data[-1], robot.canproxy.wheel_angle_raw, 
-                       robot.canproxy.desired_wheel_angle_raw)
+                print((robot.velodyne_data[-1], robot.canproxy.wheel_angle_raw, 
+                       robot.canproxy.desired_wheel_angle_raw))
             prev_gps = robot.gps_data
 
         dist, dist_index = None, None
@@ -119,18 +119,18 @@ def followme(metalog):
 
         if moving:
             if dist is None or dist < SAFE_DISTANCE_STOP or not target_detected:
-                print "!!! STOP !!! -",  robot.velodyne_data
+                print("!!! STOP !!! -",  robot.velodyne_data)
                 robot.canproxy.stop()
                 moving = False
 
         else:  # not moving
             if dist is not None and dist > SAFE_DISTANCE_GO:
-                print "GO", target_detected, robot.velodyne_data
+                print("GO", target_detected, robot.velodyne_data)
                 if target_detected:
                     robot.canproxy.go_slowly()
                     moving = True
         if not robot.buttonGo:
-            print "STOP!"
+            print("STOP!")
             break
     robot.canproxy.stop_turn()
     center(robot)
@@ -140,7 +140,7 @@ def followme(metalog):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print __doc__
+        print(__doc__)
         sys.exit(2)
     metalog=None
     if 'meta_' in sys.argv[1]:

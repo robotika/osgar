@@ -26,7 +26,7 @@ host, port = '192.168.2.16', 5555  # APU2 in John Deere
 
 soc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 soc.connect( (host,port) )
-print(soc.send('START\n'), port)
+print((soc.send('START\n'), port))
 
 class Keyboard(object):
     def __init__(self,onevent=lambda:None):
@@ -78,7 +78,7 @@ import time
 start_time=time.clock()
 n_frames=0
 # To speed things up, we prerender the text.
-labeltext=u'Use arrows to move ball'
+labeltext='Use arrows to move ball'
 textrect=img.measure_text(labeltext, font='normal')[0]
 text_img=Image.new((textrect[2]-textrect[0],textrect[3]-textrect[1]))
 text_img.clear(0)
@@ -132,8 +132,8 @@ while running:
         if keyboard.is_down(key):
             soc.send('SPEED' + str(i) + '\n')
     if keyboard.pressed(EScancodeHash):
-        filename=u'e:\\screenshot.png'
-        canvas.text((0,32),u'Saving screenshot to:',fill=0xffff00)
+        filename='e:\\screenshot.png'
+        canvas.text((0,32),'Saving screenshot to:',fill=0xffff00)
         canvas.text((0,48),filename,fill=0xffff00)
         img.save(filename)
 
@@ -142,6 +142,6 @@ soc.send('END\n')
 end_time=time.clock()
 total=end_time-start_time
 
-print "%d frames, %f seconds, %f FPS, %f ms/frame."%(n_frames,total,
+print("%d frames, %f seconds, %f FPS, %f ms/frame."%(n_frames,total,
                                                      n_frames/total,
-                                                     total/n_frames*1000.)
+                                                     total/n_frames*1000.))

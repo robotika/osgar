@@ -76,7 +76,7 @@ def demo(metalog):
 
     # GPS
     gps_log_name = metalog.getLog('gps')
-    print gps_log_name
+    print(gps_log_name)
     if metalog.replay:
         robot.gps = DummySensor()
         function = SourceLogger(None, gps_log_name).get
@@ -88,7 +88,7 @@ def demo(metalog):
 
     # Laser
     laser_log_name = metalog.getLog('laser')
-    print laser_log_name
+    print(laser_log_name)
     if metalog.replay:
         robot.laser = DummySensor()
         function = SourceLogger(None, laser_log_name).get
@@ -122,17 +122,17 @@ def demo(metalog):
             distR = 20.0 if distR is None else distR
             dist = min(distL, distR)
         if robot.gps_data != prev_gps:
-            print robot.time, robot.gas, robot.gps_data, (distL, distR)
+            print(robot.time, robot.gas, robot.gps_data, (distL, distR))
             prev_gps = robot.gps_data
         if moving:
             if dist is None or dist < SAFE_DISTANCE_STOP:
-                print "!!! STOP !!!",  dist, (distL, distR)
+                print("!!! STOP !!!",  dist, (distL, distR))
                 robot.canproxy.stop()
                 moving = False
 
             elif dist < TURN_DISTANCE:
                 if abs(robot.steering_angle) < STRAIGHT_EPS:
-                    print "DECIDE", distL, distR
+                    print("DECIDE", distL, distR)
                     if distL <= distR:
                         robot.canproxy.set_turn_raw(-100)
                         robot.steering_angle = math.radians(-30)
@@ -147,11 +147,11 @@ def demo(metalog):
 
         else:  # not moving
             if dist is not None and dist > SAFE_DISTANCE_GO:
-                print "GO",  dist
+                print("GO",  dist)
                 robot.canproxy.go()
                 moving = True
         if not robot.buttonGo:
-            print "STOP!"
+            print("STOP!")
             break
     robot.canproxy.stop_turn()
     center(robot)
@@ -161,7 +161,7 @@ def demo(metalog):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print __doc__
+        print(__doc__)
         sys.exit(2)
     metalog=None
     if 'meta_' in sys.argv[1]:

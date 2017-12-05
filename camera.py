@@ -9,7 +9,7 @@
 from threading import Thread,Event,Lock
 import time
 import datetime
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import subprocess
 import select
 import socket
@@ -42,7 +42,7 @@ class Camera( Thread ):
     self.shouldIRun = Event()
     self.shouldIRun.set()
     filename = timeName( "logs/cam", "txt" )
-    print filename
+    print(filename)
     self._logFile = open( filename, "wb" )
     self._lastResult = None
     self._lastResultFile = None
@@ -54,22 +54,22 @@ class Camera( Thread ):
   def getPicture( self, filename, color=True ):
     try:
       if color:
-        url = urllib2.urlopen( self.url )
+        url = urllib.request.urlopen( self.url )
       else:
-        url = urllib2.urlopen( DEFAULT_URL_MONO )
+        url = urllib.request.urlopen( DEFAULT_URL_MONO )
       img = url.read()
       t = time.time()
       file = open( filename, "wb" )
       file.write( img )
       file.close()
       return t, img
-    except IOError, e:
-      print e
+    except IOError as e:
+      print(e)
       return None
 
   def run(self):
     # enable also mono camera view
-    print urllib2.urlopen( URL_DAY_NIGHT ).read()
+    print(urllib.request.urlopen( URL_DAY_NIGHT ).read())
 
     while self.shouldIRun.isSet():
       # first read B&W picture (just for reference, not returned to the "system")
@@ -82,7 +82,7 @@ class Camera( Thread ):
         if self.verbose == 1:
           sys.stderr.write('.')
         else:
-          print "Getting picture", filename
+          print("Getting picture", filename)
       result = self.getPicture( filename )
       if result is not None:
         at, __ = result
@@ -96,7 +96,7 @@ class Camera( Thread ):
         self._logFile.write( filename + "\t" + str(self._lastResult) )
         self._logFile.flush()
         if self.verbose>1:
-          print "Camera:", self._lastResult
+          print("Camera:", self._lastResult)
         if self.sleep:
           time.sleep(self.sleep)
       else:
@@ -123,8 +123,8 @@ class Camera( Thread ):
 if __name__ == "__main__": 
   cam = Camera( verbose = 2, sleep=0.2 )
   cam.start()
-  for i in xrange(10):
-    print cam.lastResultEx()
+  for i in range(10):
+    print(cam.lastResultEx())
     time.sleep(1)
   cam.requestStop()
   cam.join()

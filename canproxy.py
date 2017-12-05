@@ -97,7 +97,7 @@ class CANProxy:
 
     def set_turn_raw(self, raw_angle):
         if self.verbose:
-            print "set_turn_raw", raw_angle
+            print("set_turn_raw", raw_angle)
         self.desired_wheel_angle_raw = raw_angle
 
     def stop_turn(self):
@@ -106,28 +106,30 @@ class CANProxy:
         self.desired_wheel_angle_raw = None
         self.desired_wheel_tiny_corrections = None
 
-    def update_gas_status(self, (id, data)):
+    def update_gas_status(self, xxx_todo_changeme):
+        (id, data) = xxx_todo_changeme
         if id == 0x181:
             assert len(data)==2, data
             self.gas = ctypes.c_short(data[1]*256 + data[0]).value
             if self.verbose:
-                print "GAS", self.gas
+                print("GAS", self.gas)
 
-    def update_encoders(self, (id, data)):
+    def update_encoders(self, xxx_todo_changeme1):
+        (id, data) = xxx_todo_changeme1
         if id == 0x284:
             assert len(data) == 4, data
-            arr = [data[2*i+1]*256 + data[2*i] for i in xrange(2)]
+            arr = [data[2*i+1]*256 + data[2*i] for i in range(2)]
             if self.prev_enc_raw is not None:
                 diffL = sint16_diff(arr[0], self.prev_enc_raw[0])
                 diffR = sint16_diff(arr[1], self.prev_enc_raw[1])
 
                 if abs(diffL) > 128:
-                    print "ERR-L\t{}\t{}\t{}".format(self.dist_left_raw, self.prev_enc_raw[0], arr[0])
+                    print("ERR-L\t{}\t{}\t{}".format(self.dist_left_raw, self.prev_enc_raw[0], arr[0]))
                 else:
                     self.dist_left_raw += diffL
 
                 if abs(diffR) > 128:
-                    print "ERR-R\t{}\t{}\t{}".format(self.dist_right_raw, self.prev_enc_raw[1], arr[1])
+                    print("ERR-R\t{}\t{}\t{}".format(self.dist_right_raw, self.prev_enc_raw[1], arr[1]))
                 else:
                     self.dist_right_raw += diffR
 
@@ -138,20 +140,22 @@ class CANProxy:
                 FRAC = 0.2
                 self.speed_average = FRAC*self.speed_raw + (1 - FRAC)*self.speed_average
                 if self.verbose:
-                    print "SPEED", self.time, self.speed_raw, self.speed_average
+                    print("SPEED", self.time, self.speed_raw, self.speed_average)
             self.prev_enc_raw = arr
             if self.verbose:
-                print "ENC\t{}\t{}\t{}".format(self.time, self.dist_left_raw, self.dist_right_raw)
+                print("ENC\t{}\t{}\t{}".format(self.time, self.dist_left_raw, self.dist_right_raw))
         if id == 0x184:  # change report
             assert len(data) == 1, data
 #            print "CHANGE", data[0] & 0x3, (data[0] >> 2) & 0x3, self.dist_right_raw
 
-    def update_buttons(self, (id, data)):
+    def update_buttons(self, xxx_todo_changeme2):
+        (id, data) = xxx_todo_changeme2
         if id == 0x185:
             self.buttons_and_LEDs = data[0]
             self.can.sendData(0x205, [(0x0F & data[0])<<4])
 
-    def update_wheel_angle_status(self, (id, data)):
+    def update_wheel_angle_status(self, xxx_todo_changeme3):
+        (id, data) = xxx_todo_changeme3
         if id == 0x182:
             assert(len(data) == 2) 
             self.wheel_angle_raw = ctypes.c_short(data[1]*256 + data[0]).value
@@ -159,10 +163,11 @@ class CANProxy:
                 self.wheel_angle_raw_integral += self.wheel_angle_raw - self.desired_wheel_tiny_corrections
 
             if self.verbose:
-                print self.wheel_angle_raw_integral
-                print "WHEEL", self.time, self.wheel_angle_raw, self.desired_wheel_angle_raw
+                print(self.wheel_angle_raw_integral)
+                print("WHEEL", self.time, self.wheel_angle_raw, self.desired_wheel_angle_raw)
 
-    def update_bumpers(self, (id, data)):
+    def update_bumpers(self, xxx_todo_changeme4):
+        (id, data) = xxx_todo_changeme4
         if id == 0x183:
             assert len(data) == 1, data
             # 0x10 - set for computer controlled gas pedal
@@ -180,14 +185,14 @@ class CANProxy:
             int(time * SPEED_UPDATE_CONTROL_FREQ)):
             speed = sum(self.speed_arr)
             if self.verbose:
-                print 'ref speed at', time, speed, self.last_sent_speed_cmd
+                print('ref speed at', time, speed, self.last_sent_speed_cmd)
             if self.desired_speed_raw is not None and self.valid_speed_ref:
                 if speed + SPEED_TOLERANCE < self.desired_speed_raw:
                     self.cmd = min(self.last_sent_speed_cmd + GAS_STEP, MAX_GAS_LIMIT)
                 elif speed - SPEED_TOLERANCE > self.desired_speed_raw:
                     self.cmd = max(self.last_sent_speed_cmd - GAS_STEP, MIN_GAS_LIMIT)
                 if self.verbose:
-                    print "-->", self.cmd
+                    print("-->", self.cmd)
             self.valid_speed_ref = True  # ignore first, but accept following measurements
 
         self.time = time
@@ -230,11 +235,11 @@ class CANProxy:
             if abs(self.wheel_angle_raw_integral) > TURN_TOLERANCE_INTEGRAL:
                 if self.wheel_angle_raw_integral < 0:
                     if self.verbose:
-                        print "PULSE LEFT"
+                        print("PULSE LEFT")
                     self.can.sendData(0x202, [5])  # left
                 else:
                     if self.verbose:
-                        print "PULSE RIGHT"
+                        print("PULSE RIGHT")
                     self.can.sendData(0x202, [0x6])  # right
                 self.wheel_angle_raw_integral = 0  # pulse only
             else:

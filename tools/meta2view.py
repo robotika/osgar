@@ -11,7 +11,7 @@ import sys
 
 sys.path.append(os.path.join(os.path.split(__file__)[0], '..'))
 from can import parseFileG
-from logparser2 import sensor_gen
+from .logparser2 import sensor_gen
 
 FRONT_REAR_DIST = 1.3
 LEFT_WHEEL_DIST_OFFSET = 0.4  # from central axis
@@ -70,7 +70,7 @@ def dump_laser(out, pose, data):
     assert len(data) == 541, len(data)
     step = 2
     out.write('Geometry')
-    for angle in xrange(-135, 135, step/2):
+    for angle in range(-135, 135, step/2):
         s = 0, 0, math.radians(angle)
         out.write(' %.2f %.2f %.4f' % s)
     out.write('\n')
@@ -78,7 +78,7 @@ def dump_laser(out, pose, data):
     x, y, heading = pose
     laser_pose = x + math.cos(heading)*LASER_OFFSET[0], y + math.sin(heading)*LASER_OFFSET[0], heading
     out.write('Ranger %.2f %.2f %.4f ' % laser_pose)
-    for i in xrange(0, 540, step):
+    for i in range(0, 540, step):
         dist = data[i]/1000.0
         out.write(' %.3f' % dist)
     out.write('\n')
@@ -96,7 +96,7 @@ def main():
     camera_gen = sensor_gen(meta_filename, ['camera'])
     can = None
     laser = None
-    camera_timestamp, __, camera_data = camera_gen.next()
+    camera_timestamp, __, camera_data = next(camera_gen)
     for line in open(meta_filename):
         print(line)
         if line.startswith('can:'):
@@ -111,18 +111,18 @@ def main():
     pose = [0, 0, 0]
     enc = [0, 0]
     # unknown start
-    for i in xrange(80):
-        can.next()
+    for i in range(80):
+        next(can)
     if laser is not None:
         for num, laser_time, data in laser:
             if camera_timestamp is not None and laser_time > camera_timestamp:
                 dump_camera(out, meta_dir, camera_data)
                 try:
-                    camera_timestamp, __, camera_data = camera_gen.next()
+                    camera_timestamp, __, camera_data = next(camera_gen)
                 except StopIteration:
                     camera_timestamp = None
-            for i in xrange(num):
-                sensors = can.next()
+            for i in range(num):
+                sensors = next(can)
                 if 'encoders' in sensors:
                     encL, encR = sensors['encoders']
                     if abs(encL - enc[0]) > 255:
@@ -150,8 +150,8 @@ if __name__ == "__main__":
         print(__doc__)
         sys.exit(2)
     pose = main()
-    print TURN_SCALE, pose
-    print math.degrees(pose[2])/360.0, int(math.degrees(pose[2])) % 360
+    print(TURN_SCALE, pose)
+    print(math.degrees(pose[2])/360.0, int(math.degrees(pose[2])) % 360)
 
 # vim: expandtab sw=4 ts=4 
 

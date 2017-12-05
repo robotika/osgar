@@ -30,7 +30,7 @@ def readNMEA(com):
     if str[-4] == '*': # used to be assert
       sum = checksum(str[1:-4])
       if str[-3:-1] != sum:
-        print "GPS: bad checksum", str, sum
+        print("GPS: bad checksum", str, sum)
       if str[-3:-1] == sum:
         return str
 
@@ -96,7 +96,7 @@ def parseGSV( nmea ):
   if a[0] == '$GPGSV':
     sat = {}
 #    print nmea
-    for i in xrange(4,len(a)-1, 4):
+    for i in range(4,len(a)-1, 4):
       if a[i+3]:
         sat[ int(a[i]) ] = (int(a[i+1]), int(a[i+2]), int(a[i+3]))
     return sat
@@ -155,7 +155,7 @@ class GPS( Thread ):
     self._coord = None
     self._satelites = -1 # unknown
     filename = timeName( "logs/gps", "nmea" )
-    print filename
+    print(filename)
     self._logFile = open( filename, "wb" )
     if os.name == 'nt': # windows (could be also used sys.platform == 'win32'
       self.com = serial.Serial( 'COM4', 4800 ) # sometimes COM9 on MD laptop
@@ -168,12 +168,12 @@ class GPS( Thread ):
       self._logFile.write( nmea + "\r\n" )
       self._logFile.flush()
       if self.verbose:
-        print nmea
+        print(nmea)
       tmpCoord = parseGGA( nmea )
       if tmpCoord:
         self._coord = tmpCoord
         if self.verbose:
-          print self._coord
+          print(self._coord)
 
   def coord(self):
     self.lock.acquire()
@@ -197,12 +197,12 @@ class DummyGPS():
 
 
 def usage():
-  print __doc__
+  print(__doc__)
 
 if __name__ == "__main__": 
 
   if len(sys.argv) < 2:
-    print __doc__
+    print(__doc__)
     sys.exit(2)
 
   if sys.argv[1] != "--record":
@@ -225,22 +225,22 @@ if __name__ == "__main__":
 #          pos = parseRMC( line )
           pos = parseGGA( line )
           if pos and printPosition:
-            print filename+";"+str(i)+";"+str(pos[0])+";"+str(pos[1])
+            print(filename+";"+str(i)+";"+str(pos[0])+";"+str(pos[1]))
 #            print pos
             i += 1
           sat = parseGSV( line )
           if sat:
             if satIndex and satIndex in sat:
-              print sat[satIndex]
+              print(sat[satIndex])
             elif satIndex == -1:
-              print sat
+              print(sat)
           line = file.readline()
         file.close()
     sys.exit(0)
 
   gps = GPS()
   gps.start()
-  print gps.coord()
+  print(gps.coord())
   time.sleep(2)
   gps.requestStop()
   gps.join()

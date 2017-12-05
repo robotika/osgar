@@ -1,6 +1,6 @@
 import os
 import unittest
-from config import *
+from .config import *
 
 
 def test_data(filename):
