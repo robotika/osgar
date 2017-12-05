@@ -49,7 +49,7 @@ def draw(arr):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print __doc__
+        print(__doc__)
         sys.exit(2)
     filename = sys.argv[1]
     arr = get_arr(filename)

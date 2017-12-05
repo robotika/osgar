@@ -1,5 +1,5 @@
 # vim: set fileencoding=utf-8 et sts=4 sw=4:
-from __future__ import absolute_import, division, print_function, unicode_literals
+
 
 import matplotlib.pyplot as plt
 from logparser import MsgInterpreter
@@ -29,7 +29,7 @@ class filtration:
                     lastinfo=msg
                     rspeed=(diffR+diffL)/2.
                     vars.append((time,rspeed))
-        self.x,self.y=zip(*vars[900:1000])
+        self.x,self.y=list(zip(*vars[900:1000]))
 
         self.fig=plt.figure()
         self.fig.canvas.mpl_connect('key_release_event', self.keyfn)

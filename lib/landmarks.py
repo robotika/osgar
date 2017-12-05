@@ -29,11 +29,11 @@ class ConeLandmarkFinder(object):
         data[mask] = 65535  # workaround to simplify arg_min
 
         arr = []
-        for i in xrange(0, len(data), step):
+        for i in range(0, len(data), step):
             arr.append(min_dist(data[i:i+step]))
 
         ret = []
-        for i in xrange(1, len(arr) - 3):
+        for i in range(1, len(arr) - 3):
             if (arr[i] is not None and
                (arr[i-1] is None or arr[i] < arr[i-1] - ZONE_RADIUS) and
                (arr[i+1] is None or arr[i] < arr[i+1] - ZONE_RADIUS)):

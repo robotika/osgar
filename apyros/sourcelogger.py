@@ -4,7 +4,7 @@
 """
 
 import time
-from metaopen import metaopen
+from .metaopen import metaopen
 
 
 class SourceLogger:
@@ -20,7 +20,7 @@ class SourceLogger:
         self.counterLimit = int(self.file.readline().split()[0])
       except ValueError:
         # case when given device was not started
-        print "EMPTY FILE!!!"
+        print("EMPTY FILE!!!")
         self.counterLimit = 10000 # "infinity"
 
 

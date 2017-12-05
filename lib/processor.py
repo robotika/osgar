@@ -25,11 +25,11 @@ class Processor:
         self.pool.close()
 
     def push_back(self, data):
-        print "Processor", data
+        print("Processor", data)
         if self.processing is None:
             self.processing = self.pool.apply_async(self.process_fn, (data,))
         else:
-            print "Skipped", data
+            print("Skipped", data)
 
 # vim: expandtab sw=4 ts=4 
 

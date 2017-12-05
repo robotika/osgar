@@ -96,7 +96,7 @@ def find_cones(image):
 
 
 def draw_cnt(filename):
-    print filename
+    print(filename)
     if '.zip' in filename:
         zipname, filename = os.path.split(filename)
         buf = np.fromstring(zipfile.ZipFile(zipname).read(filename), dtype=np.uint8)
@@ -106,7 +106,7 @@ def draw_cnt(filename):
 
     lMarks, bRects, areas = get_red_areas_contours(im)
     cones = find_cones(im)
-    print cones
+    print(cones)
 #    cv2.drawContours(im, lMarks, -1, (255,0,0), 2)
     
     for x, y, w, h in cones:
@@ -117,7 +117,7 @@ def draw_cnt(filename):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print __doc__
+        print(__doc__)
         sys.exit()
 
     if sys.argv[1].endswith('.jpg'):

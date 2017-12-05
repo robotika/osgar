@@ -110,7 +110,7 @@ class ZipLog:
 
 def _meta(log):
     with log.open(log.metaname) as stream:
-        for line in filter(lambda a: ':' in a, stream):  # skip unknown lines:
+        for line in [a for a in stream if ':' in a]:  # skip unknown lines:
             sensor, filepath = line.strip().split(':')
             yield sensor, os.path.basename(filepath)
 
@@ -120,7 +120,7 @@ def _merge(streams):
     active = []
     for s in streams:
         try:
-            item = s.next()
+            item = next(s)
             vector.append(item)
             active.append(s)
         except StopIteration:
@@ -130,7 +130,7 @@ def _merge(streams):
         i = _min_index(vector)
         yield vector[i]
         try:
-            vector[i] = active[i].next()
+            vector[i] = next(active[i])
         except StopIteration:
             del vector[i]
             del active[i]
@@ -150,6 +150,6 @@ if __name__ == "__main__":
         print(__doc__)
         sys.exit(2)
     for timestamp, sensor, data in sensor_gen(sys.argv[1]):
-        print(timestamp, sensor, data[:10])
+        print((timestamp, sensor, data[:10]))
 
 # vim: expandtab sw=4 ts=4 

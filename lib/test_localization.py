@@ -1,5 +1,5 @@
 import unittest
-from localization import SimpleOdometry
+from .localization import SimpleOdometry
 
 class LocalizationTest(unittest.TestCase):
 

@@ -36,7 +36,7 @@ class LogIt():
     else:
       filename = prefix + suffix
     self._logFile = open( filename, "wb" )
-    print "LogIt:", filename
+    print("LogIt:", filename)
     return filename
 
   def read( self, numChars ):
@@ -59,7 +59,7 @@ class LogIt():
 class ReplayLog():
   "Read & verify log"
   def __init__( self, filename, assertWrite=True ):
-    print "ReplyLog", filename
+    print("ReplyLog", filename)
     self._logFile = metaopen( filename, "rb" )
     self.assertWrite = assertWrite
 
@@ -92,7 +92,7 @@ class ReplayLog():
 class ReplayLogInputsOnly():
   "Read & verify log"
   def __init__( self, filename ):
-    print "ReplyLogInputOnly", filename
+    print("ReplyLogInputOnly", filename)
     self._logFile = metaopen( filename, "rb" )
 
   def read( self, numChars ):
@@ -164,17 +164,17 @@ class RTSerial():
       self._fd = None
       time.sleep(1.0)
       killCmd = ["kill", "-9", "%d" % pid]
-      print killCmd
+      print(killCmd)
       subprocess.call( killCmd )
       time.sleep(1.0)
-      print "killed"
+      print("killed")
 
   def __del__( self ):
     self.__disconnect(sleep=True)
 
   def read( self, numChars ):
     if self.sub and self.sub.returncode:
-      print self.sub.returncode
+      print(self.sub.returncode)
     s = []
     n = 0
     while n < numChars:
@@ -228,7 +228,7 @@ class CAN():
     if not self.skipInit:
       self.sendControl( 0x30 ) # stop bridge
     del self.com
-    print "CAN terminated"
+    print("CAN terminated")
   
   def syncFF(self):
     "synchronize CANBridge communication"
@@ -241,7 +241,7 @@ class CAN():
       else:
         i = 0
     if self.verbose > 0:
-      print "syncFF OK"
+      print("syncFF OK")
 
   def sendControl(self, command):
     self.com.write(chr(0xfe)+chr(command))
@@ -258,14 +258,14 @@ class CAN():
     if rtr:
       if header[0]==0xfe:
         if header[1] == 0x10:
-          print "BRIDGE: boot-up message"
+          print("BRIDGE: boot-up message")
         elif header[1] == 0x30:
-          print "BRIDGE: connected to CAN, error active"
+          print("BRIDGE: connected to CAN, error active")
         else:
-          print "Error:%x%x"%(header[0],header[1])
+          print("Error:%x%x"%(header[0],header[1]))
         return header[0], [header[1]]
       else:
-        print "RTR:", id, "len=", len
+        print("RTR:", id, "len=", len)
         return id,[len]
     else:
       #print "id ",id,"len",len,"rtr ",rtr
@@ -282,7 +282,7 @@ class CAN():
     self.com.write(packet)
 
   def printPacket( self, id, data ):
-    print hex(id), ":", data
+    print(hex(id), ":", data)
 
   def sendOperationMode( self ):
     self.sendData(0,[1,0])
@@ -295,7 +295,7 @@ class CAN():
     id = 0
     while id != 0x281:  #id!=128:
       id,data=self.readPacket()
-      print id, data
+      print(id, data)
       packets[ id ] = data
     return packets
 
@@ -305,7 +305,7 @@ class CAN():
       return self.com.relog( prefix )
 
   def resetModules( self, configFn=None ):
-    print "Reset all modules"
+    print("Reset all modules")
     self.sendData( 0, [129,0] ) # reset all
 
     ackBootup = [] # Heart Beat 0, bootup, after reset
@@ -317,20 +317,20 @@ class CAN():
       if (id & 0xF80) == 0x700:
         nodeID = id & 0x7F
         if data[0] == 0:
-          print "Started module", nodeID
+          print("Started module", nodeID)
           ackBootup.append( nodeID )
         if data[0] == 127:
           if nodeID in ackBootup:
-            print "Module", nodeID, "in preoperation."
+            print("Module", nodeID, "in preoperation.")
             ackPreop.append( nodeID )
           else:
-            print "WARNING!!! Module", nodeID, "preop BEFORE bootup!!!"
+            print("WARNING!!! Module", nodeID, "preop BEFORE bootup!!!")
 
     if configFn:
-      print "--- Extra Configuration ---"
+      print("--- Extra Configuration ---")
       configFn( self )
 
-    print "------- Switch to Operation mode --------"
+    print("------- Switch to Operation mode --------")
     self.sendOperationMode()
     while len( ackPreop ) > len( ackOp ):
       id, data = self.readPacket()
@@ -338,32 +338,32 @@ class CAN():
         nodeID = id & 0x7F
         if data[0] == 5:
           if nodeID in ackPreop:
-            print "Module", nodeID, "in operation."
+            print("Module", nodeID, "in operation.")
             ackOp.append( nodeID )
           else:
-            print "WARNING!!! Module", nodeID, "op BEFORE preop!!!"
+            print("WARNING!!! Module", nodeID, "op BEFORE preop!!!")
 
-    print "collecting some packets ..."
+    print("collecting some packets ...")
     countHB = 0
     while countHB < len( ackOp) * 3: # ie approx 3s
       id, data = self.readPacket()
       if (id & 0xF80) == 0x700:
         countHB += 1
         if countHB % len( ackOp ) == 0:
-          print countHB/len( ackOp ), '...'
+          print(countHB/len( ackOp ), '...')
         assert( len(data) == 1 )
         if data[0] != 5:
           nodeID = id & 0x7F
-          print 'ERROR - module', nodeID, 'data', data
+          print('ERROR - module', nodeID, 'data', data)
 
     return ackOp
 
 def main():
   can = CAN()
   can.sendOperationMode()
-  print can.collectPeriodPackets()
-  print can.collectPeriodPackets()
-  print can.collectPeriodPackets()
+  print(can.collectPeriodPackets())
+  print(can.collectPeriodPackets())
+  print(can.collectPeriodPackets())
   can.sendPreoperationMode()
 
 
@@ -375,7 +375,7 @@ def parseFileG( filename, watchModules = [] ):
   d = []
   prevIo = 2
   binData = [ord(x) for x in file.read()] + [2,0] # dummy termination
-  pairs = zip( binData[::2], binData[1::2] )
+  pairs = list(zip( binData[::2], binData[1::2] ))
   for io, data in pairs:
     if io == prevIo:
       d.append( data )
@@ -385,7 +385,7 @@ def parseFileG( filename, watchModules = [] ):
         while d:
           assert( len(d) >= 2 )
           if d[0] == 0xFE:
-            print "OutFE:", hex(d[0]), hex(d[1])
+            print("OutFE:", hex(d[0]), hex(d[1]))
             dataSize = 0
           else:
             id = (int(d[0])<<3) | (d[1]>>5)
@@ -413,10 +413,10 @@ def parseFileG( filename, watchModules = [] ):
 def parseFile( filename, watchModules = [] ):
   for io, id, data in parseFileG( filename, watchModules ):
     if io == 0:
-      print "------------"
-      print "Out:", hex(id), data
+      print("------------")
+      print("Out:", hex(id), data)
     elif io == 1:
-      print hex(id), ":", data
+      print(hex(id), ":", data)
 
 
 if __name__ == "__main__":

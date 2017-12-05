@@ -1,5 +1,5 @@
 import unittest
-from landmarks import *
+from .landmarks import *
 
 class ConeLandmarkFinderTest(unittest.TestCase):
 

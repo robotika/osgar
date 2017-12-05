@@ -37,9 +37,9 @@ def printAbort( errClass, errCode, addCode ):
       (6,7,0x13):"Object length too low"
       }
   try:
-    print "Abort:", errTri[  (errClass, errCode, addCode ) ] + " (" + errClassMsg[ errClass ] + ", " + errCodeMsg[ errCode ] + ")"
+    print("Abort:", errTri[  (errClass, errCode, addCode ) ] + " (" + errClassMsg[ errClass ] + ", " + errCodeMsg[ errCode ] + ")")
   except:
-    print "Unknown abort code:", (errClass, errCode, addCode )
+    print("Unknown abort code:", (errClass, errCode, addCode ))
 
 
 class SDOPlg:
@@ -75,7 +75,7 @@ class SDOPlg:
           assert( ((data[2]<<8)|data[1]) == objectIndex )
           assert( data[3] == subIndex )
           totalLength = data[4] + (data[5]<<8) + (data[6]<<16) + (data[7]<<24)
-          print "TotalLength", totalLength
+          print("TotalLength", totalLength)
         else:
           assert( (data[0] & 0xF0) == 0x00 | toggleBit )
           toggleBit = 0x10 - toggleBit
@@ -263,7 +263,7 @@ def testNewSDO_0( filename ):
   sdoplg = SDOPlg( can )
   ( nodeID, dataIndex, subIndex ) = 10, 16*256+10, 0
   data = sdoplg.readSDO( nodeID, dataIndex, subIndex )
-  print "RESUT DATA:", data
+  print("RESUT DATA:", data)
 
 def testNewSDO( filename ):
   from can import ReplyLog
@@ -275,7 +275,7 @@ def testNewSDO( filename ):
     if packet != None:
       can.sendData( *packet )
     reader.update( can.readPacket() )
-  print "RESUT DATA:", reader.result
+  print("RESUT DATA:", reader.result)
 
 #------------------------------------------------------------------------------
 
@@ -289,12 +289,12 @@ def detectI2CModules( com, nodeID ):
   return modules
 
 def processSDO( tripple, operation, dataToSend ):
-  print tripple, operation, len(dataToSend)
+  print(tripple, operation, len(dataToSend))
 
   sdoplg = SDOPlg()
 #  print "I2C Modules:", detectI2CModules( com, 7 )
 
-  print "TestSDO", tripple
+  print("TestSDO", tripple)
   nodeID, dataIndex, subIndex = tripple
 
   if operation == "read":
@@ -305,7 +305,7 @@ def processSDO( tripple, operation, dataToSend ):
   sdoplg.writeSDO( nodeID, dataIndex, subIndex, dataToSend )
 
 def usage():
-  print __doc__
+  print(__doc__)
 
 if __name__ == "__main__": 
   if len(sys.argv) < 2:
@@ -354,9 +354,9 @@ if __name__ == "__main__":
       file.write( "".join([chr(x) for x in data]) )
       file.close()
     if "s" in options:
-      print "".join([chr(x) for x in data])
+      print("".join([chr(x) for x in data]))
     elif "h" in options:
-      print " ".join([hex(x) for x in data])
+      print(" ".join([hex(x) for x in data]))
     else:
-      print data
+      print(data)
 

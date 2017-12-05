@@ -47,15 +47,15 @@ def go_straight(robot, distance, gas=None, speed=None, timeout=10.0, with_stop=T
                           - start_dist)/2.0
         if abs(dist) > distance:
             break
-    print "Dist OK at {}s".format(robot.time - start_time), sorted(arr)[len(arr)/2]
-    print dist
+    print("Dist OK at {}s".format(robot.time - start_time), sorted(arr)[len(arr)/2])
+    print(dist)
     if with_stop:
         robot.stop()
         robot.wait(3.0)
         dist = ENC_SCALE*(robot.canproxy.dist_left_raw + robot.canproxy.dist_right_raw 
                           - start_dist)/2.0
-        print dist
-        print
+        print(dist)
+        print()
 
 
 # inspiration from Eduro
@@ -79,11 +79,11 @@ def turn(robot, angle, radius, speed, timeout=10.0, with_stop=True):
     steering_angle = math.atan2(FRONT_REAR_DIST, base)
     if angle < 0:
         steering_angle = -steering_angle
-    print "Steering", math.degrees(steering_angle)
+    print("Steering", math.degrees(steering_angle))
     robot.set_desired_steering(steering_angle)
     while (robot.canproxy.desired_wheel_angle_raw is not None 
             and abs(robot.canproxy.desired_wheel_angle_raw - robot.canproxy.wheel_angle_raw) > 20):
-        print "wait", robot.canproxy.desired_wheel_angle_raw, robot.canproxy.wheel_angle_raw, abs(robot.canproxy.desired_wheel_angle_raw - robot.canproxy.wheel_angle_raw)
+        print("wait", robot.canproxy.desired_wheel_angle_raw, robot.canproxy.wheel_angle_raw, abs(robot.canproxy.desired_wheel_angle_raw - robot.canproxy.wheel_angle_raw))
         robot.update()
 
     robot.set_desired_speed(speed)
@@ -92,10 +92,10 @@ def turn(robot, angle, radius, speed, timeout=10.0, with_stop=True):
         robot.update()
         dist_left = (robot.canproxy.dist_left_raw - start_left) * ENC_SCALE
         if abs(dist_left) > abs(angle * left_radius):
-            print 'turned distance', dist_left
+            print('turned distance', dist_left)
             break
     if robot.time - start_time >= timeout:
-        print "TURN TIMEOUT!", robot.time - start_time
+        print("TURN TIMEOUT!", robot.time - start_time)
 
     if with_stop:
         robot.stop()
@@ -160,7 +160,7 @@ def driver_self_test(driver, metalog):
 
     go_straight(robot, distance=1.0, speed=0.3, with_stop=True)
 
-    for i in xrange(3):
+    for i in range(3):
         turn(robot, math.radians(-45), radius=2.6, speed=0.5)
         turn(robot, math.radians(-45), radius=2.6, speed=-0.5)
 
@@ -170,7 +170,7 @@ def driver_self_test(driver, metalog):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print __doc__
+        print(__doc__)
         sys.exit(2)
     metalog=None
     if 'meta_' in sys.argv[1]:

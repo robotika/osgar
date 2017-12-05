@@ -24,12 +24,12 @@ def zipit(metalog_filename, output_filename):
             name = line.split(':')[1].strip()
             assert name.startswith('logs/')
             filename = name[5:]
-            print filename
+            print(filename)
             myzip.write(os.path.join(dir_name, filename), filename)
             if filename.startswith('gps_'):
                 filename = filename.replace('.log', '.nmea')
                 filename = filename.replace('gps_', 'gps')
-                print filename
+                print(filename)
                 myzip.write(os.path.join(dir_name, filename), filename)
             elif filename.startswith('camera_'):
                 camera_file = os.path.join(dir_name, filename)
@@ -41,7 +41,7 @@ def zipit(metalog_filename, output_filename):
                 name = eval(line)[0]
                 assert name.startswith('logs/')
                 filename = name[5:]
-                print filename
+                print(filename)
                 myzip.write(os.path.join(dir_name, filename), filename)
 
 

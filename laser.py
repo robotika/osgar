@@ -56,7 +56,7 @@ class Laser( Thread ):
   # THREAD code
   def run(self):
     if self.useRemission:
-      print self.configureScanDataOutput()
+      print(self.configureScanDataOutput())
     self.startLaser()
     while self.shouldIRun.isSet():
       self._timestamp, self._scanData, self._remissionData = self.internalScan()
@@ -83,12 +83,12 @@ class LaserUSB( Laser ):
   def __init__( self, remission=False, errLog = None ):
     self.errLog = errLog
     self.dev = usb.core.find(idVendor=0x19A2, idProduct=0x5001)
-    for i in xrange(10):
+    for i in range(10):
       try:
         self.dev.set_configuration()
         break;
       except:
-        print "LaserUSB - init ERROR", i
+        print("LaserUSB - init ERROR", i)
         if self.errLog:
           self.errLog.write( "LaserUSB - init ERROR %d\n" % i )
           self.errLog.flush()
@@ -99,13 +99,13 @@ class LaserUSB( Laser ):
     del self.dev
 
   def sendCmd( self, cmd ):
-    for i in xrange(10):
+    for i in range(10):
       try:
         self.dev.write(2|usb.ENDPOINT_OUT, "\x02"+cmd+"\x03\0", 0)
         arr = self.dev.read(1|usb.ENDPOINT_IN, 65535, timeout = 100)
         return "".join([chr(x) for x in arr[1:-1]])
       except:
-        print "Laser", i
+        print("Laser", i)
         if self.errLog:
           self.errLog.write( "LaserUSB - sndCmd ERROR %d\n" % i )
           self.errLog.flush()        
@@ -255,7 +255,7 @@ def name2laser( name ):
 def configLaser( name ):
   laser = name2laser( name )
 #  print laser.queryScanConfig()
-  print laser.configureScanDataOutput()
+  print(laser.configureScanDataOutput())
 
 def testLaser( name, num ):
 #  laser = Laser( remission=True )
@@ -269,14 +269,14 @@ def testLaser( name, num ):
       continue
     prevScan = scan
     r = laser.remission()
-    print "data", scan
-    print "remission", r
+    print("data", scan)
+    print("remission", r)
 #    for s in scan:
 #      print "%.2f " % s,
     if scan != None:
-      print "%.2f %.2f %.2f" % (min(scan), max(scan), sum(scan)/float(len(scan)))
+      print("%.2f %.2f %.2f" % (min(scan), max(scan), sum(scan)/float(len(scan))))
       if r:
-        print max(r)
+        print(max(r))
       i += 1
       if i >= num:
         break
@@ -287,7 +287,7 @@ def testLaser( name, num ):
 if __name__ == "__main__":
   import sys
   if len(sys.argv) < 3:
-    print __doc__
+    print(__doc__)
     sys.exit(-1)
   if sys.argv[2] == "--config":
     configLaser( sys.argv[1] )

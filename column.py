@@ -16,11 +16,11 @@ EXPECTED_COLUMN_DISTANCE = 3.0  # meters
 
 def print_pose(pose):
     if pose is not None:
-        print "%.2f, %.2f, %.1f" % (pose[0], pose[1], math.degrees(pose[2]))
+        print("%.2f, %.2f, %.1f" % (pose[0], pose[1], math.degrees(pose[2])))
 
 def print_scan(scan):
     for i, arr in enumerate(scan):
-        print "%d:" % i, arr
+        print("%d:" % i, arr)
 
 
 def polar2coord( polar_coord ):
@@ -74,7 +74,7 @@ def detect_columns(scan):
 
     assert len(data) == 360, len(data)
     ret = []
-    for i in xrange(len(data)):
+    for i in range(len(data)):
         if data[i-1] - MIN_STEP <= data[i]:
             continue
         tmp = []
@@ -87,14 +87,14 @@ def detect_columns(scan):
             if i >= len(data):
                 break
         if len(tmp) > 0:
-            print i, tmp
+            print(i, tmp)
             ret.append( (i + len(tmp)/2, 0.002*sum(tmp)/len(tmp)) )
     return ret
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print __doc__
+        print(__doc__)
         sys.exit(2)
     assert 'meta_' in sys.argv[1], sys.argv[1]
     metalog = MetaLog(filename=sys.argv[1])
@@ -102,18 +102,18 @@ if __name__ == "__main__":
 
 
     prev = None
-    for ii in xrange(20000):
+    for ii in range(20000):
         sensor.update()
         curr = sensor.scan_index, sensor.safe_dist
         if prev != curr:
             if sensor.scan_index % 1 == 0:
-                print '-----', sensor.scan_index, '-----'
+                print('-----', sensor.scan_index, '-----')
                 data = detect_columns(sensor.dist)
                 pose = analyse_pose(None, data)
                 if pose is not None:
                     pose, dist = pose
                     print_pose(pose)
-                    print dist
+                    print(dist)
 
             prev = curr
 

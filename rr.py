@@ -54,9 +54,9 @@ def robot_go_straight(metalog):
 
     try:
         robot.extensions.append(('emergency_stop', emergency_stop_extension))
-        print robot.canproxy.buttons_and_LEDs
+        print(robot.canproxy.buttons_and_LEDs)
         wait_for_start(robot)
-        print robot.canproxy.buttons_and_LEDs
+        print(robot.canproxy.buttons_and_LEDs)
 
         prev_laser = None
         last_laser_update = None
@@ -78,10 +78,10 @@ def robot_go_straight(metalog):
                     dist = min_dist(robot.laser_data[180:360], INFINITY)
                     distR = min_dist(robot.laser_data[360:], INFINITY)
 
-            print "dist", distL, dist, distR
+            print("dist", distL, dist, distR)
 
             if prev_camera != robot.camera_data:
-                print "CAMERA", robot.camera_data
+                print("CAMERA", robot.camera_data)
                 prev_camera = robot.camera_data
 
 #                filename = 'm:\\git\\osgar\\logs\\pisek170513\\game3\\' + os.path.basename(prev_camera[0])
@@ -108,21 +108,21 @@ def robot_go_straight(metalog):
 
             if moving:
                 if dist is None or dist < SAFE_DISTANCE_STOP or min(distL, distR) < SAFE_SIDE_DISTANCE_STOP:
-                    print "!!! STOP !!!",  distL, dist, distR
+                    print("!!! STOP !!!",  distL, dist, distR)
                     robot.canproxy.stop()
                     moving = False
             else:  # not moving
                 if dist is not None and dist > SAFE_DISTANCE_GO and min(distL, distR) > SAFE_SIDE_DISTANCE_GO:
-                    print "GO",  distL, dist, distR
+                    print("GO",  distL, dist, distR)
                     robot.set_desired_speed(DESIRED_SPEED)
                     moving = True                
 
             if last_laser_update is not None and robot.time - last_laser_update > 0.3:
-                print "!!!WARNING!!! Missing laser updates for last {:.1f}s".format(robot.time - last_laser_update)
+                print("!!!WARNING!!! Missing laser updates for last {:.1f}s".format(robot.time - last_laser_update))
                 dist = None  # no longer valid distance measurements
             
     except EmergencyStopException:
-        print "Emergency STOP Exception!"
+        print("Emergency STOP Exception!")
         robot.extensions = []  # hack
 
     robot.canproxy.stop()
@@ -134,7 +134,7 @@ def robot_go_straight(metalog):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print __doc__
+        print(__doc__)
         sys.exit(2)
     metalog=None
     if 'meta_' in sys.argv[1]:

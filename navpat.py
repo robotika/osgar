@@ -96,7 +96,7 @@ class LaserDetector:
                         color = cone_color
 
                 width = raw_width * math.radians(0.5) * raw_dist/1000.0  # in meters
-                print "width", width
+                print("width", width)
                 if width < 0.05 or width > 0.5:
                     color = (128, 128, 128)  # gray
                 viewer_scans_append( ( (xx, yy, 0), -1.5, color) ) # color param
@@ -115,7 +115,7 @@ def follow_line(robot, line, speed=None, timeout=None):
         robot.set_desired_steering(angle)
         robot.update()
         if robot.time - start_time > timeout:
-            print "TIMEOUT!", timeout
+            print("TIMEOUT!", timeout)
             break
 
 
@@ -187,15 +187,15 @@ def navigate_pattern(robot, metalog, conf, viewer=None):
     try:
         robot.extensions.append(('detect_near', laser_detector.near_range_extension))
 
-        for i in xrange(10):
+        for i in range(10):
 #            run_oval(robot, speed)
             run_there_and_back(robot, long_side, speed)
 
     except NearObstacle:
-        print "Near Exception Raised!"
+        print("Near Exception Raised!")
         robot.extensions = []  # hack
     except NoLaserData:
-        print "!!!ERROR!!! Missing laser updates for last {:.1f}s".format(robot.time - laser_detector.last_laser_update_time)
+        print("!!!ERROR!!! Missing laser updates for last {:.1f}s".format(robot.time - laser_detector.last_laser_update_time))
         robot.extensions = []  # hack
 
     robot.canproxy.stop()

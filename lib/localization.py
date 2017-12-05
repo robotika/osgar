@@ -73,13 +73,13 @@ class SimpleOdometry():
                 err = math.hypot(x - cx, y - cy)
                 if err < 2.0:
                     if verbose:
-                        print "eval_map_pose", err
+                        print("eval_map_pose", err)
                     ret += err*err
         return ret
 
     def update_landmarks(self, source_id, data):
         dx, dy, da = 0.1, 0.1, math.radians(1.0)
-        print data
+        print(data)
         best_err = self.eval_map_pose(self.pose(), source_id, data, verbose=True)
         x, y, a = self.pose()
         poses = [(x-dx, y, a), (x+dx, y, a),
@@ -88,7 +88,7 @@ class SimpleOdometry():
         for i, ref in enumerate(poses):
             err = self.eval_map_pose(ref, source_id, data)
             if err < best_err:
-                print i, err, best_err
+                print(i, err, best_err)
                 best_err = err
                 self.x, self.y, self.heading = ref
 

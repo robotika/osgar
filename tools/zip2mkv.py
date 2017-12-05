@@ -1,9 +1,9 @@
-from __future__ import print_function, unicode_literals
+
 
 import shutil
 import sys
 import os.path
-from logparser2 import sensor_gen
+from .logparser2 import sensor_gen
 from zipfile import ZipFile
 import tempfile
 import subprocess

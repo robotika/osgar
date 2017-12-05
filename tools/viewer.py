@@ -8,7 +8,7 @@ import sys
 
 import os, math, pygame
 import zipfile
-import StringIO
+import io
 
 from pygame.locals import *
 
@@ -172,10 +172,10 @@ def drawImage( foreground, imgFileName, camdir ):
 #  imgFileName = 'D:\\md\\hg\\eduro-logs\\100619-rychnov\\pes1\\cam100619_145404_000.jpg'
     if '.zip' in imgFileName:
       zipname, filename = os.path.split(imgFileName)
-      print zipname, filename
+      print(zipname, filename)
       zf = zipfile.ZipFile(zipname)
       buf = zf.read(filename)
-      camera = pygame.image.load(StringIO.StringIO(buf), 'JPG').convert()
+      camera = pygame.image.load(io.StringIO(buf), 'JPG').convert()
     else:
       camera = pygame.image.load( imgFileName ).convert()
 #    cameraView = pygame.transform.scale( camera, (320, 240) )
@@ -266,7 +266,7 @@ def main( filename, scale = 1.0, startIndex = None, posesScanSet=None ):
         break
     if index >= len(posesScanSet):
       index = len(posesScanSet) - 1
-  print index, len(posesScanSet), absOffset
+  print(index, len(posesScanSet), absOffset)
 
   imgFileName = None
   lastImgFileName = None
@@ -314,12 +314,12 @@ def main( filename, scale = 1.0, startIndex = None, posesScanSet=None ):
       if event.key == K_DOWN:
         globals()['offset'] = (offset[0], offset[1]-150)
         shouldRefreshNow = True
-      if event.key == K_PLUS or event.unicode == '+':
+      if event.key == K_PLUS or event.str == '+':
         globals()['scale'] *= 2.0
         globals()['tile_size'] /= 2.0
         shouldDrawTiles = shouldDrawMap = shouldDrawSensors = shouldDrawBeacons = True
         shouldRefreshNow = True
-      if event.key == K_MINUS or event.unicode == '-':
+      if event.key == K_MINUS or event.str == '-':
         globals()['scale'] /= 2.0
         globals()['tile_size'] *= 2.0
         shouldDrawTiles = shouldDrawMap = shouldDrawSensors = shouldDrawBeacons = True
@@ -363,7 +363,7 @@ def main( filename, scale = 1.0, startIndex = None, posesScanSet=None ):
 
 
 def usage():
-  print __doc__
+  print(__doc__)
 
 if __name__ == "__main__": 
   if len(sys.argv) < 2:

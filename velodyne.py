@@ -71,11 +71,11 @@ class Velodyne:
         if lost_packets > 0 and (self.last_blocked is None or self.time > self.last_blocked + EXPECTED_SCAN_DURATION):
             self.last_blocked = self.time + EXPECTED_SCAN_DURATION
             self.scan_index += 1
-            print "DROPPED index", self.scan_index
+            print("DROPPED index", self.scan_index)
         if self.last_blocked is not None and self.time < self.last_blocked:
             return  # to catch up-to-date packets again ...
 
-        for offset in xrange(0, 1200, 200):  # skip every second packet (we need 1deg resolution input 0.4)
+        for offset in range(0, 1200, 200):  # skip every second packet (we need 1deg resolution input 0.4)
             flag, azi = struct.unpack_from("<HH", data, offset)
             assert flag == 0xEEFF, hex(flag)
             azimuth = azi/100.0
@@ -94,7 +94,7 @@ class Velodyne:
             self.prev_azimuth = azimuth
             # H-distance (2mm step), B-reflectivity (0
             arr = struct.unpack_from('<' + "HB"*32, data, offset + 4)
-            for i in xrange(NUM_LASERS):
+            for i in range(NUM_LASERS):
                 self.dist[int(azimuth)][i] = arr[i*2]
 
 
@@ -140,7 +140,7 @@ class VelodyneThread(Thread):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print __doc__
+        print(__doc__)
         sys.exit(2)
     metalog=None
     if 'meta_' in sys.argv[1]:
@@ -159,18 +159,18 @@ if __name__ == "__main__":
         while datetime.now() - start_time < timedelta(seconds=3.0):
             curr = thr.scan_safe_dist()
             if prev != curr:
-                print curr
+                print(curr)
             prev = curr
         thr.requestStop()
         thr.join()
     else:
         prev = None
-        for i in xrange(10000):
+        for i in range(10000):
             sensor.update()
             curr = sensor.scan_index, sensor.dist_index
             if prev != curr:
                 if sensor.scan_index % 10 == 0:
-                    print curr
+                    print(curr)
             prev = curr
 
 # vim: expandtab sw=4 ts=4 

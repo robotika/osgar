@@ -57,7 +57,7 @@ def demo(metalog):
 
     # GPS
     gps_log_name = metalog.getLog('gps')
-    print gps_log_name
+    print(gps_log_name)
     if metalog.replay:
         robot.gps = DummySensor()
         function = SourceLogger(None, gps_log_name).get
@@ -69,7 +69,7 @@ def demo(metalog):
 
     # Velodyne
     velodyne_log_name = metalog.getLog('velodyne_dist')
-    print velodyne_log_name
+    print(velodyne_log_name)
     sensor = Velodyne(metalog=metalog)
     if metalog.replay:
         robot.velodyne = DummySensor()
@@ -94,7 +94,7 @@ def demo(metalog):
     while robot.time - start_time < 30*60:  # limit 30 minutes
         robot.update()
         if robot.gps_data != prev_gps:
-            print robot.time, robot.gas, robot.gps_data, robot.velodyne_data
+            print(robot.time, robot.gas, robot.gps_data, robot.velodyne_data)
             prev_gps = robot.gps_data
         dist = None
         if robot.velodyne_data is not None:
@@ -107,7 +107,7 @@ def demo(metalog):
                 dist = min(dist)  # currently supported tupple of readings
         if moving:
             if dist is None or dist < SAFE_DISTANCE_STOP:
-                print "!!! STOP !!! -",  robot.velodyne_data
+                print("!!! STOP !!! -",  robot.velodyne_data)
                 #center(robot)
                 robot.canproxy.stop()
                 moving = False
@@ -117,7 +117,7 @@ def demo(metalog):
                     arr = robot.velodyne_data[1]
                     num = len(arr)
                     left, right = min(arr[:num/2]), min(arr[num/2:])
-                    print "DECIDE", left, right, robot.velodyne_data
+                    print("DECIDE", left, right, robot.velodyne_data)
                     if left <= right:
                         robot.canproxy.set_turn_raw(-100)
                         robot.steering_angle = math.radians(-30)  # TODO replace by autodetect
@@ -132,12 +132,12 @@ def demo(metalog):
 
         else:  # not moving
             if dist is not None and dist > SAFE_DISTANCE_GO:
-                print "GO",  robot.velodyne_data
+                print("GO",  robot.velodyne_data)
                 #go(robot)
                 robot.canproxy.go()
                 moving = True
         if not robot.buttonGo:
-            print "STOP!"
+            print("STOP!")
             break
     robot.canproxy.stop_turn()
     center(robot)
@@ -147,7 +147,7 @@ def demo(metalog):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print __doc__
+        print(__doc__)
         sys.exit(2)
     metalog=None
     if 'meta_' in sys.argv[1]:

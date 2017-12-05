@@ -11,7 +11,7 @@ from velodyne import Velodyne
 
 def analyse_alley(raw_data):
     s = ''
-    for i in range(270, 360, 5) + range(0, 90, 5):
+    for i in list(range(270, 360, 5)) + list(range(0, 90, 5)):
         dist = raw_data[i:i+5][:,1::2]  # use only part related +/- 7 deg
         mask = dist > 0
         if mask.max():
@@ -30,7 +30,7 @@ def analyse_alley(raw_data):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print __doc__
+        print(__doc__)
         sys.exit(2)
     assert 'meta_' in sys.argv[1], sys.argv[1]
     metalog = MetaLog(filename=sys.argv[1])
@@ -44,7 +44,7 @@ if __name__ == "__main__":
         if prev != curr:
             if sensor.scan_index % 5 == 0 and sensor.scan_index > 0:
 #                print '-----', sensor.scan_index, '-----'
-                print analyse_alley(sensor.dist)
+                print(analyse_alley(sensor.dist))
             prev = curr
 
 # vim: expandtab sw=4 ts=4 

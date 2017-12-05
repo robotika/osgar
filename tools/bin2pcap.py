@@ -26,7 +26,7 @@ def bin2pcap(filename, output_dir):
     new_name = os.path.join(output_dir, os.path.split(filename)[1])
     assert new_name.endswith('.bin'), new_name
     new_name = new_name[:-4] + '.pcap'
-    print new_name
+    print(new_name)
     f = open(filename, 'rb')
     out = open(new_name, 'wb')
     out.write(unhexlify(FILE_HEADER))
@@ -49,7 +49,7 @@ def velodyne_bin_file(filename):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print __doc__
+        print(__doc__)
         sys.exit(2)
 
     output_dir = sys.argv[-1]

@@ -8,7 +8,7 @@
 import string,cgi,time
 import os
 import sys
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from mimetypes import guess_type
 
 from controller import Controller, DummyController
@@ -18,12 +18,12 @@ rootdir = os.path.dirname(os.path.abspath(__file__))
 class MyHandler(BaseHTTPRequestHandler):
   def do_GET(self):
     cmd = None
-    print "MD:", self.path
+    print("MD:", self.path)
     s = self.path.split('/')
     if len(s) > 0 and s[0] == '':
       s = s[1:]
     if len(s) >= 3 and s[0]=='api' and s[1]=='0.1':
-      print s
+      print(s)
       nodeId = int(s[2])
       if nodeId < len(self.server.light):
         if len(s) > 3:
@@ -59,7 +59,7 @@ class MyHandler(BaseHTTPRequestHandler):
       return
 
     ctype, encoding = guess_type(self.path)
-    print ctype, encoding
+    print(ctype, encoding)
     self.send_response(200)
     if ctype:
       self.send_header("Content-Type", ctype)
@@ -80,15 +80,15 @@ def main( comName ):
       server.controller = DummyController()
     else:
       server.controller = Controller( comName )
-    print 'started httpserver...'
+    print('started httpserver...')
     server.serve_forever()
   except KeyboardInterrupt:
-    print 'keyboard interrupt'
+    print('keyboard interrupt')
     server.socket.close()
 
 if __name__ == '__main__':
   if len(sys.argv) < 2:
-    print __doc__
+    print(__doc__)
     sys.exit(1)
   main( sys.argv[1] )
 
