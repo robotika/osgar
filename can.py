@@ -42,17 +42,17 @@ class LogIt():
   def read( self, numChars ):
     s = self._com.read( numChars )
     for ch in s:
-      self._logFile.write( chr(0x01) )
-      self._logFile.write( ch )
+      self._logFile.write( bytes([0x01]) )
+      self._logFile.write( bytes([ch]) )
     self._logFile.flush()
     return s
 
   def write( self, chars ):
     for ch in chars:
-      self._logFile.write( chr(0x00) )
-      self._logFile.write( ch )
+      self._logFile.write( bytes([0x00]) )
+      self._logFile.write( bytes([ord(ch)]) )
     self._logFile.flush()
-    self._com.write( chars )
+    self._com.write( bytes([ord(x) for x in chars]) )
 
 #-------------------------------------------------------------------
 
@@ -64,28 +64,29 @@ class ReplayLog():
     self.assertWrite = assertWrite
 
   def read( self, numChars ):
-    s = []
+    s = bytearray()
     for i in range(numChars):
       marker = self._logFile.read(1)
-      if not marker:
+      if marker == b'':
         raise LogEnd()
-      assert( marker == chr(0x01) )
-      s.append(self._logFile.read(1))
-      if not s[-1]:
+      assert marker == bytes([0x01]), marker
+      tmp = self._logFile.read(1)
+      s.extend(tmp)
+      if tmp == b'':
         raise LogEnd()
-    return ''.join(s)
+    return s
 
   def write( self, chars ):
     for ch in chars:
       marker = self._logFile.read(1)
-      if not marker:
+      if marker == b'':
         raise LogEnd()
-      assert( marker == chr(0x00) )
+      assert marker == bytes([0x00]), marker
       verifyCh = self._logFile.read(1)
       if not verifyCh:
         raise LogEnd()
       if self.assertWrite:
-        assert( verifyCh == ch )
+        assert verifyCh == bytes([ord(ch)]), (verifyCh, ch)
 
 #-------------------------------------------------------------------
 
@@ -96,17 +97,18 @@ class ReplayLogInputsOnly():
     self._logFile = metaopen( filename, "rb" )
 
   def read( self, numChars ):
-    s = []
+    s = bytearray()
     for i in range(numChars):
-      while( self._logFile.read(1) not in [chr(0x01), ''] ):
+      while( self._logFile.read(1) not in [bytes([0x01]), b''] ):
         c = self._logFile.read(1) # skip write output
-        if not c:
+        if c == b'':
           raise LogEnd()
         assert( i == 0 ) # the packets should be complete
-      s.append(self._logFile.read(1))
-      if not s[-1]:
+      tmp = self._logFile.read(1)
+      s.extend(tmp)
+      if tmp == b'':
         raise LogEnd()
-    return ''.join(s)
+    return s
 
   def write( self, chars ):
     pass
@@ -123,7 +125,7 @@ class DummyMemoryLog():
     if self.data:
       s = "".join( [chr(x) for x in self.data[:numChars]] )
       self.data = self.data[numChars:]
-    return s
+    return bytes([ord(x) for x in s])
 
   def write( self, chars ):
     pass
@@ -236,7 +238,7 @@ class CAN():
     i = 0
     while i < 10:
       s = self.com.read(1)
-      if ord(s[0]) == 0xFF:
+      if s[0] == 0xFF:
         i += 1
       else:
         i = 0
@@ -269,7 +271,7 @@ class CAN():
         return id,[len]
     else:
       #print "id ",id,"len",len,"rtr ",rtr
-      data=[ord(x) for x in self.com.read(len)]
+      data=[x for x in self.com.read(len)]
       if self.timestamps_log:
         s = '(%.3f, 0x%X, %s)\n' % (time.time(), id, str(data))
         self.timestamps_log.write(s)
@@ -374,8 +376,8 @@ def parseFileG( filename, watchModules = [] ):
   file = open( filename, "rb" )
   d = []
   prevIo = 2
-  binData = [ord(x) for x in file.read()] + [2,0] # dummy termination
-  pairs = list(zip( binData[::2], binData[1::2] ))
+  binData = [x for x in file.read()] + [2,0] # dummy termination
+  pairs = zip( binData[::2], binData[1::2] )
   for io, data in pairs:
     if io == prevIo:
       d.append( data )
