@@ -211,7 +211,7 @@ class CANProxy:
             self.cmd = None
 
         elif self.cmd == 'stop':
-            self._send_desired_gas((CENTER_GAS_MIN + CENTER_GAS_MAX)/2)
+            self._send_desired_gas((CENTER_GAS_MIN + CENTER_GAS_MAX)//2)
             self.cmd = None
 
         elif self.cmd is not None:
