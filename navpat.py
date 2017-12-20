@@ -28,10 +28,10 @@ from lib.landmarks import ConeLandmarkFinder
 from lib.camera_marks import find_cones
 
 
-class NearObstacle:
+class NearObstacle(Exception):
     pass
 
-class NoLaserData:
+class NoLaserData(Exception):
     pass
 
 
