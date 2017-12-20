@@ -13,6 +13,7 @@ import os
 import datetime
 import sys
 import zipfile
+import io
 
 from .logio import ReplayLog, LoggedSocket
 from .sourcelogger import SourceLogger
@@ -50,7 +51,7 @@ class MetaLog:
                 self.zf = zipfile.ZipFile(filename)
                 tmp_meta = [info.filename for info in self.zf.infolist() if info.filename.startswith('meta_')]
                 assert len(tmp_meta) == 1, tmp_meta
-                self.lines = self.zf.open(tmp_meta[0]).readlines()
+                self.lines = io.TextIOWrapper(io.BytesIO(self.zf.open(tmp_meta[0]).read())).readlines()  # Py3 binarray
             else:
                 self.lines = open( self.filename ).readlines()
 
