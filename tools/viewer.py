@@ -175,7 +175,7 @@ def drawImage( foreground, imgFileName, camdir ):
       print(zipname, filename)
       zf = zipfile.ZipFile(zipname)
       buf = zf.read(filename)
-      camera = pygame.image.load(io.StringIO(buf), 'JPG').convert()
+      camera = pygame.image.load(io.BytesIO(buf), 'JPG').convert()
     else:
       camera = pygame.image.load( imgFileName ).convert()
 #    cameraView = pygame.transform.scale( camera, (320, 240) )
@@ -282,7 +282,7 @@ def main( filename, scale = 1.0, startIndex = None, posesScanSet=None ):
     event = pygame.event.wait()
     if event.type == QUIT: return
     if event.type == KEYDOWN:
-      if event.key in (K_ESCAPE,K_q): return 
+      if event.key in (K_ESCAPE,K_q): return
       if event.key == K_p:
         if index + 1 < len( posesScanSet ):
           index += 1
@@ -314,12 +314,12 @@ def main( filename, scale = 1.0, startIndex = None, posesScanSet=None ):
       if event.key == K_DOWN:
         globals()['offset'] = (offset[0], offset[1]-150)
         shouldRefreshNow = True
-      if event.key == K_PLUS or event.str == '+':
+      if event.key == K_PLUS or event.key == K_KP_PLUS:
         globals()['scale'] *= 2.0
         globals()['tile_size'] /= 2.0
         shouldDrawTiles = shouldDrawMap = shouldDrawSensors = shouldDrawBeacons = True
         shouldRefreshNow = True
-      if event.key == K_MINUS or event.str == '-':
+      if event.key == K_MINUS or event.key == K_KP_MINUS:
         globals()['scale'] /= 2.0
         globals()['tile_size'] *= 2.0
         shouldDrawTiles = shouldDrawMap = shouldDrawSensors = shouldDrawBeacons = True
