@@ -198,9 +198,9 @@ def navigate_pattern(robot, metalog, conf, viewer=None):
         print("!!!ERROR!!! Missing laser updates for last {:.1f}s".format(robot.time - laser_detector.last_laser_update_time))
         robot.extensions = []  # hack
 
-    robot.canproxy.stop()
-    robot.canproxy.stop_turn()
-    robot.wait(3.0)
+#    robot.canproxy.stop()
+#    robot.canproxy.stop_turn()
+#    robot.wait(3.0)
     
 
 
