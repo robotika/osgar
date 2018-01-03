@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 
 def get_arr(filename):
     arr = []
+    prev_wheel = 0
     for line in open(filename):
         if 'xENC' in line:
             prefix_cmd, t, x, y = line.split()
@@ -19,8 +20,9 @@ def get_arr(filename):
             prefix_cmd, t, angle, desired = line.split()
             if desired != 'None':
                 arr.append((t, (int(angle), float(desired))))
+                prev_wheel = float(desired)
             else:
-                arr.append((t, (int(angle), 0)))
+                arr.append((t, (int(angle), prev_wheel)))
         if 'xSPEED' in line:
             prefix_cmd, t, raw, avr = line.split()
             arr.append((t, (raw, avr)))
