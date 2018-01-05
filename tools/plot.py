@@ -27,8 +27,8 @@ def get_arr(filename):
             prefix_cmd, t, raw, avr = line.split()
             arr.append((t, (raw, avr)))
         if 'xGAS' in line:
-            prefix_cmd, gas = line.split()
-            arr.append((len(arr), int(gas)))
+            prefix_cmd, gas, desired = line.split()
+            arr.append((len(arr), (int(gas), int(desired))))
         if 'xSYNC' in line:
             gas = line.split()[-1]
             if gas != '0':

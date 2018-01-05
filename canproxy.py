@@ -112,7 +112,7 @@ class CANProxy:
             assert len(data)==2, data
             self.gas = ctypes.c_short(data[1]*256 + data[0]).value
             if self.verbose:
-                print("GAS", self.gas)
+                print("GAS", self.gas, self.last_sent_speed_cmd)
 
     def update_encoders(self, xxx_todo_changeme1):
         (id, data) = xxx_todo_changeme1
