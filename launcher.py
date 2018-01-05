@@ -3,6 +3,7 @@
 """
 
 import argparse
+import io
 import os
 import sys
 import math
@@ -116,7 +117,8 @@ def parse_and_launch():
         metalog = MetaLog(args.logfile)
         if conf is None and args.logfile.endswith('.zip'):
             if DEFAULT_ZIP_CONFIG in zipfile.ZipFile(args.logfile).namelist():
-                conf = Config.loads(zipfile.ZipFile(args.logfile).read(DEFAULT_ZIP_CONFIG))
+                f = io.TextIOWrapper(io.BytesIO(zipfile.ZipFile(args.logfile).read(DEFAULT_ZIP_CONFIG)))
+                conf = Config.loads(f.read())
         if args.view:
             global g_img_dir
             from tools.viewer import main as viewer_main
