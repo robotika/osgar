@@ -116,7 +116,8 @@ def parse_and_launch():
         metalog = MetaLog(args.logfile)
         if conf is None and args.logfile.endswith('.zip'):
             if DEFAULT_ZIP_CONFIG in zipfile.ZipFile(args.logfile).namelist():
-                conf = Config.loads(zipfile.ZipFile(args.logfile).read(DEFAULT_ZIP_CONFIG))
+                s = str(zipfile.ZipFile(args.logfile).read(DEFAULT_ZIP_CONFIG), 'utf-8')
+                conf = Config.loads(s)
         if args.view:
             global g_img_dir
             from tools.viewer import main as viewer_main
