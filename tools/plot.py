@@ -9,20 +9,40 @@ import math
 import matplotlib.pyplot as plt
 
 
+def scatter(arr1, arr2):
+    "mix two time based arrays based on first axis (time)"
+    i, j = 0, 0
+    arr = []
+    while i < len(arr1) and j < len(arr2):
+        if abs(arr1[i][0] - arr2[j][0]) < 0.001:
+            arr.append( (arr1[i][1], arr2[j][1]) )
+            i += 1
+            j += 1
+        elif arr1[i][0] < arr2[j][0]:
+            i += 1
+        else:
+            j += 1
+    return arr
+
+
 def get_arr(filename):
     arr = []
+    enc_arr = []
+    wheel_arr = []
     prev_wheel = 0
     for line in open(filename):
-        if 'xENC' in line:
+        if 'ENC' in line:
             prefix_cmd, t, x, y = line.split()
-            arr.append((t, (int(x), int(y))))
+            enc_arr.append((float(t), (int(x), int(y))))
         if 'WHEEL' in line:
             prefix_cmd, t, angle, desired = line.split()
             if desired != 'None':
-                arr.append((t, (int(angle), float(desired))))
+#                wheel_arr.append((float(t), (int(angle), float(desired))))
+                wheel_arr.append((float(t), int(angle)))
                 prev_wheel = float(desired)
             else:
-                arr.append((t, (int(angle), prev_wheel)))
+#                wheel_arr.append((float(t), (int(angle), prev_wheel)))
+                wheel_arr.append((float(t), int(angle)))
         if 'xSPEED' in line:
             prefix_cmd, t, raw, avr = line.split()
             arr.append((t, (raw, avr)))
@@ -33,13 +53,23 @@ def get_arr(filename):
             gas = line.split()[-1]
             if gas != '0':
                 arr.append((len(arr), float(gas)))
-    return arr
+
+    for prev, curr in zip(enc_arr, enc_arr[6:]):
+        L, R = curr[1][0]-prev[1][0], curr[1][1]-prev[1][1]
+#        arr.append(( (prev[0]+curr[0])/2, (L, R)))
+        if abs(L + R) > 20:
+            arr.append(( (prev[0]+curr[0])/2, (R-L)/(L+R) ))
+#    return scatter(arr, wheel_arr)
+    return scatter(wheel_arr, arr)
+
 
 def draw(arr):
 #    plt.plot(arr, 'o-', linewidth=2)
     x = [x for (x, _) in arr]
     y = [y for (_, y) in arr]
-    plt.plot(x, y, 'o-', linewidth=2)
+    plt.plot(x, y, 'o', linewidth=2)
+    plt.xlabel('raw steering')
+    plt.ylabel('encoders normalized difference')
 
 #    z = []
 #    for i in xrange(len(y)):
