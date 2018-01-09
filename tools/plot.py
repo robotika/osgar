@@ -25,7 +25,7 @@ def scatter(arr1, arr2):
     return arr
 
 
-def get_arr(filename):
+def get_arr0(filename):
     arr = []
     enc_arr = []
     wheel_arr = []
@@ -63,13 +63,22 @@ def get_arr(filename):
     return scatter(wheel_arr, arr)
 
 
+def get_arr(filename):
+    arr = []
+    for line in open(filename):
+        if 'DRIVER_DIST' in line:
+            prefix_cmd, t, dist = line.split()
+            arr.append((t, dist))
+    return arr
 def draw(arr):
 #    plt.plot(arr, 'o-', linewidth=2)
     x = [x for (x, _) in arr]
     y = [y for (_, y) in arr]
-    plt.plot(x, y, 'o', linewidth=2)
-    plt.xlabel('raw steering')
-    plt.ylabel('encoders normalized difference')
+    plt.plot(x, y, 'o-', linewidth=2)
+#    plt.xlabel('raw steering')
+#    plt.ylabel('encoders normalized difference')
+    plt.xlabel('time (sec)')
+    plt.ylabel('signed distance (meters)')
 
 #    z = []
 #    for i in xrange(len(y)):

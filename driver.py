@@ -124,6 +124,7 @@ def follow_line_gen(robot, line, stopDistance=0.0, turnScale=4.0, offsetSpeed=ma
         d = 1.3  # FRONT_REAR_DIST
 #        print "deg %.1f" %( math.degrees(diff),), 
         signedDistance = line.signedDistance((x+d*math.cos(a), y+d*math.sin(a))) # + self.centerOffset
+        print('DRIVER_DIST', robot.time, signedDistance)
         if math.fabs( signedDistance ) > offsetDistance:
             step = max(0.0, min(offsetSpeed, offsetSpeed * (abs(signedDistance)-offsetDistance)/offsetDistance ))
             step = step * 0.5  # hack
