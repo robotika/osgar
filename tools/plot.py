@@ -63,22 +63,34 @@ def get_arr0(filename):
     return scatter(wheel_arr, arr)
 
 
-def get_arr(filename):
+def get_arr1(filename):
     arr = []
     for line in open(filename):
         if 'DRIVER_DIST' in line:
             prefix_cmd, t, dist = line.split()
             arr.append((t, dist))
     return arr
+
+
+def get_arr(filename):
+    arr = []
+    for line in open(filename):
+        if 'LASER_CONE' in line:
+            prefix_cmd, t, raw_angle, raw_dist, raw_width, R, G, B = line.split()
+            arr.append((t, int(raw_angle)/2 - 135))
+    return arr
+
+
 def draw(arr):
 #    plt.plot(arr, 'o-', linewidth=2)
     x = [x for (x, _) in arr]
     y = [y for (_, y) in arr]
-    plt.plot(x, y, 'o-', linewidth=2)
+    plt.plot(x, y, 'o', linewidth=2)
 #    plt.xlabel('raw steering')
 #    plt.ylabel('encoders normalized difference')
     plt.xlabel('time (sec)')
-    plt.ylabel('signed distance (meters)')
+#    plt.ylabel('signed distance (meters)')
+    plt.ylabel('laser angle (deg)')
 
 #    z = []
 #    for i in xrange(len(y)):
