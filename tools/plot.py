@@ -76,7 +76,7 @@ def get_arr(filename):
     arr = []
     for line in open(filename):
         if 'LASER_CONE' in line:
-            prefix_cmd, t, raw_angle, raw_dist, raw_width, R, G, B = line.split()
+            prefix_cmd, t, raw_angle, raw_dist, raw_width, color = line.split()
             arr.append((t, int(raw_angle)/2 - 135))
     return arr
 

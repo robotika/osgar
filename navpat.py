@@ -100,7 +100,7 @@ class LaserDetector:
                 if width < 0.05 or width > 0.5:
                     color = (128, 128, 128)  # gray
                 #xx, yy = math.cos(angle)*dist, math.sin(angle)*dist # hack - use laser coordinates
-                print('LASER_CONE', robot.time, raw_angle, raw_dist, raw_width, color)
+                print('LASER_CONE', robot.time, raw_angle, raw_dist, raw_width, '%02X%02X%02X' % color)
                 viewer_scans_append( ( (xx, yy, 0), -1.5, color) ) # color param
 
 
