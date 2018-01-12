@@ -77,7 +77,7 @@ def get_arr(filename):
     for line in open(filename):
         if 'LASER_CONE' in line:
             prefix_cmd, t, raw_angle, raw_dist, raw_width, color = line.split()
-            arr.append((t, int(raw_angle)/2 - 135))
+            arr.append((t, int(raw_angle)/2 - 135, color))
     return arr
 
 
@@ -100,13 +100,27 @@ def draw(arr):
     plt.show()
 
 
+
+def draw3(arr):
+    for color in ['FF0000', '00FF00', '0000FF', 'FFFFFF',
+                  'FF8000', '808080']:
+        x = [x for (x, _, c) in arr if c == color]
+        y = [y for (_, y, c) in arr if c == color]
+        if color == 'FFFFFF':
+            color = '000000'
+        plt.plot(x, y, 'o', linewidth=2, color='#'+color)
+    plt.xlabel('time (sec)')
+    plt.ylabel('laser angle (deg)')
+    plt.show()
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print(__doc__)
         sys.exit(2)
     filename = sys.argv[1]
     arr = get_arr(filename)
-    draw(arr)
+    draw3(arr)
 
 
 # vim: expandtab sw=4 ts=4 
