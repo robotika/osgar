@@ -100,7 +100,7 @@ def draw_cnt(filename):
     if '.zip' in filename:
         zipname, filename = os.path.split(filename)
         buf = np.fromstring(zipfile.ZipFile(zipname).read(filename), dtype=np.uint8)
-        im = cv2.imdecode(buf, cv2.CV_LOAD_IMAGE_COLOR)
+        im = cv2.imdecode(buf, -1)  # OpenCV3: cv2.CV_LOAD_IMAGE_COLOR no longer supported??
     else:
         im  = cv2.imread(filename, 1)
 
