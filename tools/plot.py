@@ -81,7 +81,7 @@ def get_arr(filename):
     return arr
 
 
-def draw(arr):
+def draw(arr, ylabel=None):
 #    plt.plot(arr, 'o-', linewidth=2)
     x = [x for (x, _) in arr]
     y = [y for (_, y) in arr]
@@ -90,7 +90,9 @@ def draw(arr):
 #    plt.ylabel('encoders normalized difference')
     plt.xlabel('time (sec)')
 #    plt.ylabel('signed distance (meters)')
-    plt.ylabel('laser angle (deg)')
+#    plt.ylabel('laser angle (deg)')
+    if ylabel is not None:
+        plt.ylabel(ylabel)
 
 #    z = []
 #    for i in xrange(len(y)):
@@ -114,13 +116,37 @@ def draw3(arr):
     plt.show()
 
 
+def draw_camera_cones(filename):
+    # parse old camera logs like
+    # (('logs/cam170808_170348_044.jpg', None), [(690, 410, 16, 39)])
+    scale = 90.0/1024  # Field Of View / image resolution
+    arr = []
+    start_time = None
+    for line in open(filename):
+        if line.startswith('(('):
+            a = eval(line)  # TODO weaker version
+            for x, y, w, h in a[1]:
+                arr.append((t, x * scale))
+        else:
+            s = line.split()
+            if len(s) == 2:
+                t = float(s[1])
+                if start_time is None:
+                    start_time = t
+                t -= start_time
+            else:
+                break
+    draw(arr, ylabel='camera angle (deg)')
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print(__doc__)
         sys.exit(2)
     filename = sys.argv[1]
-    arr = get_arr(filename)
-    draw3(arr)
+#    arr = get_arr(filename)
+#    draw3(arr)
+    draw_camera_cones(filename)
 
 
 # vim: expandtab sw=4 ts=4 
