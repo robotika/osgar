@@ -33,7 +33,7 @@ def get_red_areas_contours(image):
     binaryImg = cv2.morphologyEx(binaryImg, cv2.MORPH_OPEN, KERNEL)
     binaryImg = cv2.morphologyEx(binaryImg, cv2.MORPH_CLOSE, KERNEL)
 
-    contours, hierarchy= cv2.findContours(binaryImg, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_NONE)
+    __, contours, hierarchy= cv2.findContours(binaryImg, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_NONE)
     lMarks = []
     bRects = []
     areas = []
