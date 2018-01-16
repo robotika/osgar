@@ -235,7 +235,7 @@ class CAN():
   
   def syncFF(self):
     "synchronize CANBridge communication"
-    self.com.write(chr(0xff)*10)
+    self.com.write(b'\xFF'*10)
     i = 0
     while i < 10:
       s = self.com.read(1)
@@ -247,7 +247,7 @@ class CAN():
       print("syncFF OK")
 
   def sendControl(self, command):
-    self.com.write(chr(0xfe)+chr(command))
+    self.com.write(bytearray([0xfe, command]))
 
   def readPacket(self):
     b = 0xFF
