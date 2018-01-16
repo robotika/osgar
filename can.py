@@ -195,8 +195,9 @@ class RTSerial():
 #-------------------------------------------------------------------
 
 class CAN():
+  CAN_SPEED_1MB = 0x57
   def __init__(self, com = None, defaultDTR = False, verbose = 1,
-               skipInit = False,  timestamps_log=None):
+               skipInit = False,  timestamps_log=None, speed=None):
     self.verbose = verbose
     self.skipInit = skipInit
     self.timestamps_log = timestamps_log  # optional file descriptor to log timestamps
@@ -222,6 +223,8 @@ class CAN():
 
     if not skipInit:
       self.syncFF()
+      if speed is not None:
+        self.sendControl(speed)
       self.sendControl( 0x31 ) # start bridge
 
   def __del__(self):
