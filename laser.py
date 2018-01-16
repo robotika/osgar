@@ -22,8 +22,8 @@ import struct
 HOST = '192.168.2.23'    # The remote host
 PORT = 2111             # The same port as used by the server
 
-STX = chr(2)
-ETX = chr(3)
+STX = b'\x02'
+ETX = b'\x03'
 
 class Laser( Thread ):
   def __init__( self, remission=False ):
@@ -39,19 +39,19 @@ class Laser( Thread ):
     self.useRemission = remission
 
   def queryStatus( self ):
-    return self.sendCmd( 'sRN STlms' )
+    return self.sendCmd( b'sRN STlms' )
 
   def readContaminationLevel( self ):
-    return self.sendCmd( 'sRN LCMstate' )
+    return self.sendCmd( b'sRN LCMstate' )
 
   def queryScanConfig( self ):
     # default answer: "sRA LMPscancfg 1388 1 1388 FFF92230 225510", i.e. 
-    return self.sendCmd( 'sRN LMPscancfg' )
+    return self.sendCmd( b'sRN LMPscancfg' )
 
   def setScanConfig( self ):
     assert( False ) # not implemented yet
-    data = "" # TODO
-    return self.sendCmd( 'sMN mLMPsetscancfg' + data )
+    data = b"" # TODO
+    return self.sendCmd( b'sMN mLMPsetscancfg' + data )
 
   # THREAD code
   def run(self):
@@ -112,7 +112,7 @@ class LaserUSB( Laser ):
     
   def internalScan( self ):
     time.sleep(0.1)
-    data = self.sendCmd( 'sRN LMDscandata' ).split()
+    data = self.sendCmd( b'sRN LMDscandata' ).split()
     timestamp, dist, remission = time.time(), None, None
     if len(data) == 580:
       # TIM, hacked, probably DIST1, RSSI1
@@ -150,9 +150,9 @@ class LaserIP( Laser ):
     self.raw_log.write(struct.pack('HH', 0xF472, 2))  # magic number + version 2 with timestamps
     write_timestamp(self.raw_log)
     self.raw_log.flush()
-    self._buffer = ""
+    self._buffer = b""
     Laser.__init__( self, **kw )
-    self.sendCmd( 'sMN SetAccessMode 03 F4724744' )
+    self.sendCmd( b'sMN SetAccessMode 03 F4724744' )
 
   def __del__( self ):
     self.socket.close()
@@ -189,7 +189,7 @@ class LaserIP( Laser ):
 
   def internalScan( self ):
     time.sleep(0.1)
-    data = self.sendCmd( 'sRN LMDscandata' ).split()
+    data = self.sendCmd( b'sRN LMDscandata' ).split()
     timestamp = time.time()
     remission = None
     if len(data) == 1120:
@@ -203,13 +203,13 @@ class LaserIP( Laser ):
     return timestamp, dist, remission
 
   def internalScanOld( self ):
-    self.sendCmd( 'sMN LMCstartmeas' )
+    self.sendCmd( b'sMN LMCstartmeas' )
     while 1:
       status = self.queryStatus().split()
       if int(status[2]) >= 7:
         break
 
-    self.sendCmd( 'sEN LMDscandata 1' )
+    self.sendCmd( b'sEN LMDscandata 1' )
     data = self.receive().split()
 #    print data[20:23] # DIST1, scaling, offset
 #    print "angleFrom = ", int(data[23],16)
@@ -221,29 +221,29 @@ class LaserIP( Laser ):
       remission = [int(x,16) for x in data[541+26+7:-5]]
     else:
       dist = [int(x,16) for x in data[26:-6]]
-    self.sendCmd( 'sEN LMDscandata 0' )
+    self.sendCmd( b'sEN LMDscandata 0' )
     return dist, remission
 
   def startLaser( self ):
-    return self.sendCmd( 'sMN LMCstartmeas' )
+    return self.sendCmd( b'sMN LMCstartmeas' )
 
   def stopLaser( self ):
-    self.sendCmd( 'sMN LMCstopmeas' )
+    self.sendCmd( b'sMN LMCstopmeas' )
 
   def configureScanDataOutput( self ):
     "BALMS1xxEN_8012471_T763_20090728.pdf, page 100" 
     # better is LMS1xx_LMS5xx_TiM3xx_JEF300_JEF500_English.pdf, page 16
-    return self.sendCmd( 'sWN LMDscandatacfg' + 
-    " 01 00"+ # output channel
-    " 01"+ # output remission values
-    " 0"+ # 8bit/16bit
-    " 0"+ # unit (default)
-    " 00 00"+ # no encoder data
-    " 00"+ # output position data
-    " 00"+ # output device name
-    " 0"+ # output comment
-    " 0"+ # output time (maybe we should use true??)
-    " +1" # output interval
+    return self.sendCmd( b'sWN LMDscandatacfg' + 
+    b" 01 00"+ # output channel
+    b" 01"+ # output remission values
+    b" 0"+ # 8bit/16bit
+    b" 0"+ # unit (default)
+    b" 00 00"+ # no encoder data
+    b" 00"+ # output position data
+    b" 00"+ # output device name
+    b" 0"+ # output comment
+    b" 0"+ # output time (maybe we should use true??)
+    b" +1" # output interval
     )
 
 def name2laser( name ):
