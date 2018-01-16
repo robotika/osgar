@@ -192,7 +192,7 @@ def self_test(metalog):
         else:
             can = CAN(ReplayLogInputsOnly(can_log_name), skipInit=True)
     else:
-        can = CAN()
+        can = CAN(speed=CAN.CAN_SPEED_1MB)
         can.relog(can_log_name)
     #can.resetModules()
     robot = Spider3(can=can)
