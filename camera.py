@@ -88,12 +88,12 @@ class Camera( Thread ):
         at, __ = result
         tmpResult = filename, None
         self.lock.acquire()
-        self._logFile.write( str(self.queryCount) + '\t' + str(at) + "\n" )
+        self._logFile.write( bytes(str(self.queryCount) + '\t' + str(at) + "\n", 'ascii') )
         self.queryCount = 0
         self._lastResult = tmpResult
         self._lastResultFile = filename
         self.lock.release()
-        self._logFile.write( filename + "\t" + str(self._lastResult) )
+        self._logFile.write( bytes(filename + "\t" + str(self._lastResult), 'ascii') )
         self._logFile.flush()
         if self.verbose>1:
           print("Camera:", self._lastResult)
