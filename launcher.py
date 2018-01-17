@@ -97,6 +97,7 @@ def parse_and_launch():
 
     parser = argparse.ArgumentParser(description='Navigate given pattern in selected area')
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
+    subparsers.required = True
     parser_run = subparsers.add_parser('run', help='run on real HW')
     parser_run.add_argument('config', help='configuration file')
     parser_run.add_argument('--note', help='add description')
