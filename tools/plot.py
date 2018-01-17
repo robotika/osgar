@@ -4,7 +4,7 @@
   usage:
        ./plot.py <text data>
 """
-import sys
+import argparse
 import math
 import matplotlib.pyplot as plt
 
@@ -140,13 +140,16 @@ def draw_camera_cones(filename):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print(__doc__)
-        sys.exit(2)
-    filename = sys.argv[1]
-#    arr = get_arr(filename)
-#    draw3(arr)
-    draw_camera_cones(filename)
+    parser = argparse.ArgumentParser(description='Parse text output data')
+    parser.add_argument('filename', help='input text filename')
+    parser.add_argument('--select', choices=['laser-cones', 'camera-cones'], default='laser-cones')
+    args = parser.parse_args()
+
+    if args.select == 'laser-cones':
+        arr = get_arr(args.filename)
+        draw3(arr)
+    elif args.select == 'camera-cones':
+        draw_camera_cones(args.filename)
 
 
 # vim: expandtab sw=4 ts=4 
