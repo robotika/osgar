@@ -63,7 +63,7 @@ def get_arr0(filename):
     return scatter(wheel_arr, arr)
 
 
-def get_arr1(filename):
+def get_arr_driver_dist(filename):
     arr = []
     for line in open(filename):
         if 'DRIVER_DIST' in line:
@@ -72,7 +72,7 @@ def get_arr1(filename):
     return arr
 
 
-def get_arr(filename):
+def get_arr_laser_cones(filename):
     arr = []
     for line in open(filename):
         if 'LASER_CONE' in line:
@@ -81,11 +81,11 @@ def get_arr(filename):
     return arr
 
 
-def draw(arr, ylabel=None):
+def draw(arr, ylabel=None, marker='o'):
 #    plt.plot(arr, 'o-', linewidth=2)
     x = [x for (x, _) in arr]
     y = [y for (_, y) in arr]
-    plt.plot(x, y, 'o', linewidth=2)
+    plt.plot(x, y, marker, linewidth=2)
 #    plt.xlabel('raw steering')
 #    plt.ylabel('encoders normalized difference')
     plt.xlabel('time (sec)')
@@ -142,12 +142,16 @@ def draw_camera_cones(filename):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Parse text output data')
     parser.add_argument('filename', help='input text filename')
-    parser.add_argument('--select', choices=['laser-cones', 'camera-cones'], default='laser-cones')
+    parser.add_argument('--select', choices=['laser-cones', 'camera-cones', 'driver-dist'],
+                        default='laser-cones')
     args = parser.parse_args()
 
     if args.select == 'laser-cones':
-        arr = get_arr(args.filename)
+        arr = get_arr_laser_cones(args.filename)
         draw3(arr)
+    elif args.select == 'driver-dist':
+        arr = get_arr_driver_dist(args.filename)
+        draw(arr, ylabel='signed distance (meters)', marker='o-')
     elif args.select == 'camera-cones':
         draw_camera_cones(args.filename)
 
