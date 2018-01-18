@@ -113,20 +113,20 @@ def draw3(arr):
         plt.plot(x, y, 'o', linewidth=2, color='#'+color)
     plt.xlabel('time (sec)')
     plt.ylabel('laser angle (deg)')
-    plt.show()
 
 
 def draw_camera_cones(filename):
     # parse old camera logs like
     # (('logs/cam170808_170348_044.jpg', None), [(690, 410, 16, 39)])
-    scale = 90.0/1024  # Field Of View / image resolution
+    scale = -75.6/1024  # Field Of View / image resolution
+    offset = 75.6/2
     arr = []
     start_time = None
     for line in open(filename):
         if line.startswith('(('):
             a = eval(line)  # TODO weaker version
             for x, y, w, h in a[1]:
-                arr.append((t, x * scale))
+                arr.append((t, (x + w/2.) * scale + offset, w * scale))
         else:
             s = line.split()
             if len(s) == 2:
@@ -136,25 +136,36 @@ def draw_camera_cones(filename):
                 t -= start_time
             else:
                 break
-    draw(arr, ylabel='camera angle (deg)')
+    x = [x for (x, _, _) in arr]
+    y = [y for (_, y, _) in arr]
+    yerr = [w for (_, _, w) in arr]
+    plt.errorbar(x, y, linewidth=2, yerr=yerr, fmt='x')
+    plt.xlabel('time (sec)')
+    plt.ylabel('camera angle (deg)')
+    plt.show()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Parse text output data')
     parser.add_argument('filename', help='input text filename')
-    parser.add_argument('--select', choices=['laser-cones', 'camera-cones', 'driver-dist'],
+    parser.add_argument('--select', choices=['laser-cones', 'camera-cones', 'driver-dist', 'cones'],
                         default='laser-cones')
     args = parser.parse_args()
 
     if args.select == 'laser-cones':
         arr = get_arr_laser_cones(args.filename)
         draw3(arr)
+        plt.show()
     elif args.select == 'driver-dist':
         arr = get_arr_driver_dist(args.filename)
         draw(arr, ylabel='signed distance (meters)', marker='o-')
     elif args.select == 'camera-cones':
         draw_camera_cones(args.filename)
-
+    elif args.select == 'cones':
+        # draw both sources
+        arr = get_arr_laser_cones(args.filename)
+        draw3(arr)
+        draw_camera_cones(args.filename)
 
 # vim: expandtab sw=4 ts=4 
 
