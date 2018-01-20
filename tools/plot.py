@@ -63,6 +63,21 @@ def get_arr0(filename):
     return scatter(wheel_arr, arr)
 
 
+def get_arr_steering(filename):
+    arr = []
+    prev_wheel = 0
+    scale = math.degrees(0.0041)
+    for line in open(filename):
+        if 'WHEEL' in line:
+            prefix_cmd, t, angle, desired = line.split()
+            if desired != 'None':
+                arr.append((float(t), (scale*int(angle), scale*float(desired))))
+                prev_wheel = float(desired)
+            else:
+                arr.append((float(t), (scale*int(angle), scale*prev_wheel)))
+    return arr
+
+
 def get_arr_driver_dist(filename):
     arr = []
     for line in open(filename):
@@ -81,7 +96,7 @@ def get_arr_laser_cones(filename):
     return arr
 
 
-def draw(arr, ylabel=None, marker='o'):
+def draw(arr, ylabel=None, marker='o', legend=None):
 #    plt.plot(arr, 'o-', linewidth=2)
     x = [x for (x, _) in arr]
     y = [y for (_, y) in arr]
@@ -99,6 +114,8 @@ def draw(arr, ylabel=None, marker='o'):
 #        z.append(sum(y[i-50:i+50])/100.0)
 #    plt.plot(x, z, 'o-', linewidth=2)
 
+    if legend is not None:
+        plt.legend(legend)
     plt.show()
 
 
@@ -148,7 +165,8 @@ def draw_camera_cones(filename):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Parse text output data')
     parser.add_argument('filename', help='input text filename')
-    parser.add_argument('--select', choices=['laser-cones', 'camera-cones', 'driver-dist', 'cones'],
+    parser.add_argument('--select', choices=['laser-cones', 'camera-cones', 
+                        'driver-dist', 'cones', 'steering'],
                         default='laser-cones')
     args = parser.parse_args()
 
@@ -166,6 +184,9 @@ if __name__ == "__main__":
         arr = get_arr_laser_cones(args.filename)
         draw3(arr)
         draw_camera_cones(args.filename)
+    elif args.select == 'steering':
+        arr = get_arr_steering(args.filename)
+        draw(arr, ylabel='steering angle (deg)', marker='o-', legend=['measured', 'command'])
 
 # vim: expandtab sw=4 ts=4 
 
