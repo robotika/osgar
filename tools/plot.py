@@ -96,6 +96,15 @@ def get_arr_laser_cones(filename):
     return arr
 
 
+def get_arr_ospa(filename):
+    arr = []
+    for line in open(filename):
+        if 'OSPA:' in line:
+            prefix_cmd, t, ospa = line.split()
+            arr.append((t, float(ospa)))
+    return arr
+
+
 def draw(arr, ylabel=None, marker='o', legend=None):
 #    plt.plot(arr, 'o-', linewidth=2)
     x = [x for (x, _) in arr]
@@ -165,8 +174,8 @@ def draw_camera_cones(filename):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Parse text output data')
     parser.add_argument('filename', help='input text filename')
-    parser.add_argument('--select', choices=['laser-cones', 'camera-cones', 
-                        'driver-dist', 'cones', 'steering'],
+    parser.add_argument('--select', choices=['laser-cones', 'camera-cones',
+                        'driver-dist', 'cones', 'steering', 'ospa'],
                         default='laser-cones')
     args = parser.parse_args()
 
@@ -187,6 +196,9 @@ if __name__ == "__main__":
     elif args.select == 'steering':
         arr = get_arr_steering(args.filename)
         draw(arr, ylabel='steering angle (deg)', marker='o-', legend=['measured', 'command'])
+    elif args.select == 'ospa':
+        arr = get_arr_ospa(args.filename)
+        draw(arr, ylabel='OSPA metric (c=2, p=2)', marker='o-')
 
 # vim: expandtab sw=4 ts=4 
 

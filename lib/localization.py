@@ -27,6 +27,7 @@ def combine_poses( robotPose, sensorPose ):
 
 class SimpleOdometry():
     def __init__( self, pose = (0,0,0) ):
+        self.time = 0.0
         self.x = pose[0]
         self.y = pose[1]
         self.heading = pose[2]
@@ -42,7 +43,8 @@ class SimpleOdometry():
             ret.global_map = config_dict['cones']
         return ret
 
-    def update_odometry(self, angle_left, dist_left, dist_right):
+    def update_odometry(self, time, angle_left, dist_left, dist_right):
+        self.time = time
         dh = math.sin(angle_left) * dist_left / FRONT_REAR_DIST
         dist = math.cos(angle_left) * dist_left + LEFT_WHEEL_DIST_OFFSET * dh 
                     
@@ -75,12 +77,17 @@ class SimpleOdometry():
                     if verbose:
                         print("eval_map_pose", err)
                     ret += err*err
+                else:
+                    err += 4.0  # OSPA square of c = 2.0
+        if len(data) > 0:
+            ret = math.sqrt(ret/float(len(data)))
         return ret
 
     def update_landmarks(self, source_id, data):
         dx, dy, da = 0.1, 0.1, math.radians(1.0)
         print(data)
         best_err = self.eval_map_pose(self.pose(), source_id, data, verbose=True)
+        print('OSPA:', self.time, best_err)
         x, y, a = self.pose()
         poses = [(x-dx, y, a), (x+dx, y, a),
                  (x, y-dy, a), (x, y+dy, a),

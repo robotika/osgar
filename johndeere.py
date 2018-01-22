@@ -154,7 +154,7 @@ class JohnDeere(object):
             dist_left = ENC_SCALE * (self.canproxy.dist_left_raw - prev_enc[0])
             dist_right = ENC_SCALE * (self.canproxy.dist_right_raw - prev_enc[1])
             angle_left = self.canproxy.wheel_angle_raw * TURN_SCALE + TURN_ANGLE_OFFSET
-            self.localization.update_odometry(angle_left, dist_left, dist_right)
+            self.localization.update_odometry(self.time, angle_left, dist_left, dist_right)
 
         # send data related to other sources
         for (id,fce) in self.data_sources:
