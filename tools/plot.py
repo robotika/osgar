@@ -112,18 +112,22 @@ def get_arr_ospa(filename):
     return arr
 
 
-def draw(arr, ylabel=None, marker='o', legend=None):
+def draw(arr, ylabel=None, marker='ko', legend=None):
 #    plt.plot(arr, 'o-', linewidth=2)
     x = [x for (x, _) in arr]
     y = [y for (_, y) in arr]
-    plt.plot(x, y, marker, linewidth=2)
-#    plt.xlabel('raw steering')
-#    plt.ylabel('encoders normalized difference')
-    plt.xlabel('time (sec)')
+    fig = plt.figure( figsize = (5,4) )
+    ax = fig.add_subplot(111)
+    fig.subplots_adjust(bottom=0.15, left=0.15)
+    ax.plot(x, y, marker, linewidth=2)
+#    ax.set_xlabel('raw steering', fontsize = 12)
+#    ax.set_ylabel('encoders normalized difference', fontsize = 12)
+    ax.set_xlabel('Time (s)', fontsize = 12)
 #    plt.ylabel('signed distance (meters)')
 #    plt.ylabel('laser angle (deg)')
     if ylabel is not None:
-        plt.ylabel(ylabel)
+        ax.set_ylabel(ylabel, fontsize = 12)
+    ax.tick_params(labelsize=10)
 
 #    z = []
 #    for i in xrange(len(y)):
@@ -131,7 +135,8 @@ def draw(arr, ylabel=None, marker='o', legend=None):
 #    plt.plot(x, z, 'o-', linewidth=2)
 
     if legend is not None:
-        plt.legend(legend)
+        plt.legend(legend, fontsize = 10)
+    plt.savefig("paper_logs/fig_XX", dpi=800)
     plt.show()
 
 
@@ -192,7 +197,7 @@ if __name__ == "__main__":
         plt.show()
     elif args.select == 'driver-dist':
         arr = get_arr_driver_dist(args.filename)
-        draw(arr, ylabel='signed distance (meters)', marker='o-')
+        draw(arr, ylabel='Signed distance (m)', marker='ko-')
     elif args.select == 'camera-cones':
         draw_camera_cones(args.filename)
     elif args.select == 'cones':
