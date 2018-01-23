@@ -65,29 +65,33 @@ class SimpleOdometry():
         assert source_id in self.config, source_id
         assert source_id == 'laser', source_id
         laser_pose = combine_poses(ref_pose, self.config[source_id])
+        cutoff = 2.0  # cut off distance used in OSPA definition
+        min_arr = [cutoff] * len(self.global_map)
         ret = 0.0
         for tick_angle, tick_dist, tick_width in data:
             angle = math.radians((tick_angle - 270) * 0.5)
             dist = tick_dist/1000.0
             x = laser_pose[0] + dist * math.cos(laser_pose[2] + angle)
             y = laser_pose[1] + dist * math.sin(laser_pose[2] + angle)
-            for cx, cy in self.global_map:
+            for i, (cx, cy) in enumerate(self.global_map):
                 err = math.hypot(x - cx, y - cy)
-                if err < 2.0:
+                min_arr[i] = min(min_arr[i], err)
+                if err < cutoff:
                     if verbose:
                         print("eval_map_pose", err)
                     ret += err*err
                 else:
-                    err += 4.0  # OSPA square of c = 2.0
+                    err += cutoff*cutoff  # OSPA square of c = 2.0
         if len(data) > 0:
             ret = math.sqrt(ret/float(len(data)))
+        if verbose:
+            print('OSPA:', self.time, ret, min_arr)
         return ret
 
     def update_landmarks(self, source_id, data):
         dx, dy, da = 0.1, 0.1, math.radians(1.0)
         print(data)
         best_err = self.eval_map_pose(self.pose(), source_id, data, verbose=True)
-        print('OSPA:', self.time, best_err)
         x, y, a = self.pose()
         poses = [(x-dx, y, a), (x+dx, y, a),
                  (x, y-dy, a), (x, y+dy, a),

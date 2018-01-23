@@ -100,8 +100,15 @@ def get_arr_ospa(filename):
     arr = []
     for line in open(filename):
         if 'OSPA:' in line:
-            prefix_cmd, t, ospa = line.split()
-            arr.append((t, float(ospa)))
+            if '[' in line:
+                a, b = line.split('[')
+                prefix_cmd, t, __ = a.split()
+                ospa = eval('[' + b)
+                ospa = [None if x >= 2.0 else x for x in ospa]
+                arr.append((t, ospa))
+            else:
+                prefix_cmd, t, ospa = line.split()
+                arr.append((t, float(ospa)))
     return arr
 
 
