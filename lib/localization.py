@@ -86,6 +86,11 @@ class SimpleOdometry():
             ret = math.sqrt(ret/float(len(data)))
         if verbose:
             print('OSPA:', self.time, ret, min_arr)
+        """
+        return math.sqrt((sum([x*x for x in min_arr]) +
+                         cutoff*cutoff*max(0, len(data)-len(min_arr)))
+                         / max(len(data), len(min_arr)))
+        """  # proper OSPA computation
         return ret
 
     def update_landmarks(self, source_id, data):
