@@ -6,7 +6,11 @@ import json
 
 class Config(object):
 
-    SUPPORTED_VERSION = 1
+    OLD_SUPPORTED_VERSION = 1
+    ROBOT_CONTAINER_VER = 2
+
+    SUPPORTED_VERSIONS = [OLD_SUPPORTED_VERSION, ROBOT_CONTAINER_VER]
+
 
     @classmethod
     def load(cls, filename):
@@ -16,7 +20,7 @@ class Config(object):
     def loads(cls, text_data):
         cls.data = json.loads(text_data)
         assert 'version' in cls.data, cls.data
-        assert cls.data['version'] == cls.SUPPORTED_VERSION, cls.data['version']
+        assert cls.data['version'] in cls.SUPPORTED_VERSIONS, cls.data['version']
         cls.version = cls.data['version']
 
         return cls
