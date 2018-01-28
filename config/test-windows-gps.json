@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "robot": {
+    "drivers": [ "gps" ],
+    "gps": {
+        "port": "COM5", "speed": 4800, "stream_id": 1
+    },
+    "stream_id": 2
+  }
+}
+
