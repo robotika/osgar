@@ -3,6 +3,7 @@
 """
 
 import argparse
+import sys
 from queue import Queue
 
 from lib.logger import LogWriter, LogReader
@@ -34,7 +35,9 @@ class Robot:
 
     def update(self, timeout=5):
         if len(self.drivers) > 0:
-            print(self.queue.get(timeout=timeout))
+            data = self.queue.get(timeout=timeout)
+            if 'gps' in data:
+                print(data)
 
     def finish(self):
         for driver in self.drivers:
@@ -43,7 +46,8 @@ class Robot:
             driver.join()
 
     def input_gate(self, name, data):
-        print(name, data)
+        if name == 'gps':
+            print(name, data)
         dt = self.logger.write(self.stream_id, bytes(str((name, data)),'ascii'))  # TODO single or mutiple streams?
         self.queue.put((dt, name, data))
 
@@ -62,11 +66,12 @@ if __name__ == "__main__":
     if args.command == 'replay':
         pass  # TODO
     elif args.command == 'run':
-        log = LogWriter(prefix='robot-test-')
+        log = LogWriter(prefix='robot-test-', note=str(sys.argv))
         config = Config.load(args.config)
+        log.write(0, bytes(str(config.data), 'ascii'))  # write configuration
         robot = Robot(config=config.data['robot'], logger=log)
         robot.start()
-        for i in range(10):
+        for i in range(1000):
             robot.update()
         robot.finish()
     else:
