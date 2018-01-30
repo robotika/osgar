@@ -8,6 +8,7 @@ from queue import Queue
 from lib.logger import LogWriter, LogReader
 from lib.config import Config
 from drivers.gps import GPS
+from drivers.imu import IMU
 
 
 class Robot:
@@ -19,9 +20,12 @@ class Robot:
             if driver_name == 'gps':
                 driver = GPS(config[driver_name], logger, output=self.input_gate,
                              name=driver_name)
-                self.drivers.append(driver)
+            elif driver_name == 'imu':
+                driver = IMU(config[driver_name], logger, output=self.input_gate,
+                             name=driver_name)
             else:
                 assert False, driver_name  # unsupported driver
+            self.drivers.append(driver)
         self.queue = Queue()
 
     def start(self):
