@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "robot": {
+    "drivers": [ "spider" ],
+    "spider": {
+        "port": "/dev/ttyS0", "speed": 115200, 
+        "stream_id": 1, "stream_id_in": 1, 
+        "stream_id_out": 2
+    },
+    "stream_id": 3
+  }
+}
