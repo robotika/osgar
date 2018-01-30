@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "robot": {
+    "drivers": [ "gps", "imu" ],
+    "gps": {
+        "port": "/dev/ttyACM0", "speed": 115200, "stream_id": 1
+    },
+    "imu": {
+        "port": "/dev/ttyUSB0", "speed": 115200, "stream_id": 2
+    },
+    "stream_id": 3
+  }
+}
+
