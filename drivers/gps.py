@@ -58,7 +58,8 @@ class GPS(Thread):
 
     @staticmethod
     def split_buffer(data):
-        start = data.find(b'$')
+        # in dGPS there is a block of binary data so stronger selection is required
+        start = max(data.find(b'$GNGGA'), data.find(b'$GPGGA'))
         if start < 0:
             return data, b''
         end = data[start:-2].find(b'*')
