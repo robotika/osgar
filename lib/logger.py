@@ -118,14 +118,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Extract data from log')
     parser.add_argument('logfile', help='filename of stored file')
-    parser.add_argument('--stream', help='stream ID', type=int, default=1)
+    parser.add_argument('--stream', help='stream ID', type=int, default=None)
     parser.add_argument('--times', help='display timestamps', action='store_true')
     args = parser.parse_args()
 
     with LogReader(args.logfile) as log:
-         for timestamp, __, data in log.read_gen(args.stream):
+         for timestamp, stream_id, data in log.read_gen(args.stream):
             if args.times:
-                print(timestamp, data)
+                print(timestamp, stream_id, data)
             else:
                 sys.stdout.buffer.write(data)
 
