@@ -26,6 +26,8 @@ def checksum(s):
 
 def str2ms(s):
     'convert DDMM.MMMMMM string to arc milliseconds(int)'
+    if s == b'':  # unknown position
+        return None
     dm, frac = (b'0000' + s).split(b'.')
     return round((int(dm[:-2]) * 60 + float(dm[-2:] + b'.' + frac)) * 60000)
 
