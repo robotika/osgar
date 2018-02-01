@@ -39,4 +39,7 @@ class GPSTest(unittest.TestCase):
         buf, nmea = GPS.split_buffer(buf)
         self.assertEqual(nmea, b'$GNGGA,194535.40,5007.71276,N,01422.49206,E,1,12,0.80,284.6,M,44.3,M,,*42')
 
+    def test_invalid_coordinates(self):
+        self.assertEqual(GPS.parse_line(b'$GPGGA,053446.426,,,,,0,00,,,M,0.0,M,,0000*56'), (None, None))
+
 # vim: expandtab sw=4 ts=4
