@@ -89,6 +89,14 @@ class LogReader:
 
     def read_gen(self, only_stream_id=None):
         "packed generator - yields (time, stream, data)"
+        if only_stream_id is None:
+            multiple_streams = set()
+        else:
+            try:
+                multiple_streams = set(only_stream_id)
+            except TypeError:
+                multiple_streams = set([only_stream_id])
+
         while True:
             header = self.f.read(8)
             if len(header) < 8:
@@ -96,7 +104,7 @@ class LogReader:
             microseconds, stream_id, size = struct.unpack('IHH', header)
             dt = datetime.timedelta(microseconds=microseconds)
             data = self.f.read(size)
-            if only_stream_id is None or only_stream_id == stream_id:
+            if len(multiple_streams) == 0 or stream_id in multiple_streams:
                 yield dt, stream_id, data
 
     def close(self):
