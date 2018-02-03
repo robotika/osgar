@@ -47,4 +47,22 @@ class LoggerTest(unittest.TestCase):
 
         os.remove(log.filename)
 
+    def test_read_two_streams(self):
+        with LogWriter(prefix='tmp2', note='test_read_two_streams') as log:
+            filename = log.filename
+            t1 = log.write(1, b'\x01\x02\x02\x04')
+            time.sleep(0.001)
+            t2 = log.write(3, b'\x05\x06')
+            time.sleep(0.001)
+            t3 = log.write(2, b'\x07\x08')
+
+        with LogReader(filename) as log:
+            arr = []
+            for t, stream_id, data in log.read_gen([1, 2]):
+                self.assertIn(stream_id, [1, 2])
+                arr.append((t, stream_id))
+            self.assertEqual(arr, [(t1, 1), (t3, 2)])
+
+        os.remove(log.filename)
+
 # vim: expandtab sw=4 ts=4
