@@ -1,6 +1,6 @@
 import unittest
 
-from drivers.gps import GPS, checksum, str2ms
+from drivers.gps import GPS, checksum, str2ms, INVALID_COORDINATES
 
 
 class GPSTest(unittest.TestCase):
@@ -13,7 +13,8 @@ class GPSTest(unittest.TestCase):
 
     def test_parse_line(self):
         line = b'$GNGGA,182433.10,5007.71882,N,01422.50467,E,1,05,6.09,305.1,M,44.3,M,,*41'
-        self.assertEqual(GPS.parse_line(line), (51750280, 180463129))  # arc milliseconds (x, y) = (lon, lat)
+        p = GPS.parse_line(line)
+        self.assertEqual((p['lon'], p['lat']), (51750280, 180463129))  # arc milliseconds (x, y) = (lon, lat)
 
     def test_split(self):
         buf = b'blabla$GPGGAsomething*12\r\n'
@@ -23,7 +24,8 @@ class GPSTest(unittest.TestCase):
 
     def test_parsing_old_GPGGA(self):
         line = b'$GPGGA,051852.000,5005.0244,N,01430.3360,E,1,06,3.8,253.1,M,45.4,M,,0000*58'
-        self.assertEqual(GPS.parse_line(line), (52220160, 180301464))  # arc milliseconds (x, y) = (lon, lat)
+        p = GPS.parse_line(line)
+        self.assertEqual((p['lon'], p['lat']), (52220160, 180301464))  # arc milliseconds (x, y) = (lon, lat)
 
     def test_split_with_binary_data(self):
         buf = b'\xb5b\x010\x04\x01\xf8n\x8a\x0e\x15\x04\x00\x00\x05\x02\r\x07&&@\x00S\xff\xff\xff\x02\x04\x10\x07$\xa5' \
@@ -40,6 +42,6 @@ class GPSTest(unittest.TestCase):
         self.assertEqual(nmea, b'$GNGGA,194535.40,5007.71276,N,01422.49206,E,1,12,0.80,284.6,M,44.3,M,,*42')
 
     def test_invalid_coordinates(self):
-        self.assertEqual(GPS.parse_line(b'$GPGGA,053446.426,,,,,0,00,,,M,0.0,M,,0000*56'), (None, None))
+        self.assertEqual(GPS.parse_line(b'$GPGGA,053446.426,,,,,0,00,,,M,0.0,M,,0000*56'), INVALID_COORDINATES)
 
 # vim: expandtab sw=4 ts=4

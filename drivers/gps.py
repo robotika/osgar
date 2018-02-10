@@ -10,11 +10,15 @@ OSGAR_ROOT = os.path.realpath(os.path.abspath(os.path.join(os.path.split(inspect
 if OSGAR_ROOT not in sys.path:
     sys.path.insert(0, OSGAR_ROOT) # access to logger without installation
 
-
-import serial
-from threading import Thread, Event
+from threading import Thread
+import numpy as np
 
 from lib.logger import LogWriter, LogReader
+from drivers.bus import BusShutdownException
+
+
+GPS_MSG_DTYPE = [('lon', 'i4'), ('lat', 'i4')]
+INVALID_COORDINATES = np.array((0x7FFF, 0x7FFF), dtype=GPS_MSG_DTYPE)
 
 
 def checksum(s):
@@ -33,30 +37,24 @@ def str2ms(s):
 
 
 class GPS(Thread):
-    def __init__(self, config, logger, output, name='gps'):
+    def __init__(self, config, bus):
         Thread.__init__(self)
         self.setDaemon(True)
-        self.should_run = Event()
-        self.should_run.set()
 
-        if 'port' in config:
-            self.com = serial.Serial(config['port'], config['speed'])
-            self.com.timeout = 0.01  # expects updates < 100Hz
-        else:
-            self.com = None
-        self.logger = logger
+        self.bus = bus
         self.stream_id = config['stream_id']
 
         self.buf = b''
-        self.output = output
-        self.name = name
 
     @staticmethod
     def parse_line(line):
         assert line.startswith(b'$GNGGA') or line.startswith(b'$GPGGA'), line
         assert checksum(line[1:-3]) == line[-2:], (line, checksum(line[1:-3]))
         s = line.split(b',')
-        return str2ms(s[4]), str2ms(s[2])
+        coord = str2ms(s[4]), str2ms(s[2])
+        if coord == (None, None):
+            return INVALID_COORDINATES
+        return np.array(coord, dtype=GPS_MSG_DTYPE)
 
     @staticmethod
     def split_buffer(data):
@@ -73,40 +71,80 @@ class GPS(Thread):
         self.buf, line = self.split_buffer(self.buf + data)
         if line.startswith(b'$GNGGA') or line.startswith(b'$GPGGA'):
             coords = self.parse_line(line)
-            if self.output:
-                self.output(self.name, coords)
             return coords
+        return None
 
     def run(self):
-        while self.should_run.isSet():
-            data = self.com.read(1024)
-            if len(data) > 0:
-                self.logger.write(self.stream_id, data)
-                self.process(data)
+        try:
+            while True:
+                packet = self.bus.listen()  # there should be some timeout and in case of failure send None
+                dt, __, data = packet
+                out = self.process(data)
+                if out is not None:
+                    self.bus.publish(self.stream_id, out)
+        except BusShutdownException:
+            pass
 
     def request_stop(self):
-        self.should_run.clear()
+        self.bus.shutdown()
+
+
+def print_output(packet):
+    print(packet)
+
+
+# TODO move somewhere else ...
+class LogWriterEx(LogWriter):
+    def write(self, stream_id, data):
+        try:
+            bytes_data = data.tobytes()
+        except AttributeError:
+            bytes_data = data
+        LogWriter.write(self, stream_id, bytes_data)
 
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         import time
-        config = { 'port': 'COM5', 'speed': 4800, 'stream_id': 1 }
-        log = LogWriter(prefix='gps-test')
-        device = GPS(config, log, output=None)
+        from drivers.logserial import LogSerial
+        from drivers.bus import BusHandler
+
+        config_serial = {'port': 'COM5', 'speed': 4800, 'stream_id': 1}
+        config_gps = {'stream_id': 2}
+        log = LogWriterEx(prefix='gps-test')
+        device = GPS(config_gps, bus=BusHandler(log, out={2:[]}))
+        device0 = LogSerial(config_serial, bus=BusHandler(log, out={1:[(device.bus.queue, 1)]}))
         device.start()
+        device0.start()
         time.sleep(2)
         device.request_stop()
+        device0.request_stop()
         device.join()
+        device0.join()
     else:
+        import ast
+
         filename = sys.argv[1]
         log = LogReader(filename)
-        stream_id = 1
-        device = GPS(config={'stream_id': stream_id}, logger=None, output=None)
-        for timestamp, __, data in log.read_gen(only_stream_id=stream_id):
-            print(data)
-            out = device.process(data)
-            if out is not None:
-                print(out)
+        stream_id_in = 1
+        stream_id_out = 2
+        device = GPS(config={'stream_id': stream_id_in}, bus=None)
+        arr = []
+        for timestamp, stream_id, data in log.read_gen(only_stream_id=[stream_id_in, stream_id_out]):
+            if stream_id == stream_id_in:
+                arr.append(data)
+            elif stream_id == stream_id_out:
+                ref = np.frombuffer(data, dtype=GPS_MSG_DTYPE)
+                for i, data in enumerate(arr):
+                    out = device.process(data)
+                    if out is not None:
+                        assert out == ref, (out, ref)
+                        print(out)
+                        arr = arr[i:]
+                        break
+                else:
+                    assert False, ref  # output was note generated
+            else:
+                assert False, stream_id  # unexpected stream
 
 # vim: expandtab sw=4 ts=4
