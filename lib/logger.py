@@ -31,7 +31,7 @@
 
 import datetime
 import struct
-from threading import Lock
+from threading import RLock
 
 
 INFO_STREM_ID = 0
@@ -39,7 +39,7 @@ INFO_STREM_ID = 0
 
 class LogWriter:
     def __init__(self, prefix='naio', note=''):
-        self.lock = Lock()
+        self.lock = RLock()
         self.start_time = datetime.datetime.utcnow()
         self.filename = prefix + self.start_time.strftime("%y%m%d_%H%M%S.log")
         self.f = open(self.filename, 'wb')
