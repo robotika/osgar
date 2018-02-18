@@ -17,20 +17,24 @@ import serial
 from threading import Thread, Event
 
 from lib.logger import LogWriter
+from drivers.bus import BusShutdownException
 
 
 class LogSerial(Thread):
-    def __init__(self, config, bus):
+    def __init__(self, config, bus, com=None):
         Thread.__init__(self)
         self.setDaemon(True)
         self.should_run = Event()
         self.should_run.set()
 
-        if 'port' in config:
-            self.com = serial.Serial(config['port'], config['speed'])
-            self.com.timeout = 0.01  # expects updates < 100Hz
+        if com is None:
+            if 'port' in config:
+                self.com = serial.Serial(config['port'], config['speed'])
+                self.com.timeout = 0.01  # expects updates < 100Hz
+            else:
+                self.com = None
         else:
-            self.com = None
+            self.com = com
         self.bus = bus
         self.stream_id = config['stream_id']
 
@@ -45,6 +49,32 @@ class LogSerial(Thread):
     def request_stop(self):
         self.should_run.clear()
 
+
+class LogSerialOut(Thread):
+    def __init__(self, config, bus, com=None):
+        Thread.__init__(self)
+        self.setDaemon(True)
+
+        if com is None:
+            if 'port' in config:
+                self.com = serial.Serial(config['port'], config['speed'])
+                self.com.timeout = 0.01  # expects updates < 100Hz
+            else:
+                self.com = None
+        else:
+            self.com = com
+        self.bus = bus
+
+    def run(self):
+        try:
+            while True:
+                __, __, data = self.bus.listen()
+                self.com.write(data)
+        except BusShutdownException:
+            pass
+
+    def request_stop(self):
+        self.bus.shutdown()
 
 if __name__ == "__main__":
     import time
