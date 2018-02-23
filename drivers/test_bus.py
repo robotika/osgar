@@ -11,12 +11,12 @@ class BusHandlerTest(unittest.TestCase):
         logger = MagicMock()
         bus = BusHandler(logger)
         with self.assertRaises(KeyError):
-            bus.publish(1, b'some binary data')
-        logger.write.assert_called_once_with(1, b'some binary data')
+            bus.publish('raw', b'some binary data')
 
         logger = MagicMock()
-        bus = BusHandler(logger, out={1:[]})
-        bus.publish(1, b'some binary data 2nd try')
+        logger.register = MagicMock(return_value=1)
+        bus = BusHandler(logger, out={'raw':[]})
+        bus.publish('raw', b'some binary data 2nd try')
         logger.write.assert_called_once_with(1, b'some binary data 2nd try')
 
     def test_listen(self):
@@ -28,10 +28,10 @@ class BusHandlerTest(unittest.TestCase):
     def test_two_modules(self):
         logger = MagicMock()
         handler2 = BusHandler(logger)
-        handler1 = BusHandler(logger, out={1:[(handler2.queue, 42)]})
+        handler1 = BusHandler(logger, out={'raw':[(handler2.queue, 42)]})
 
         logger.write = MagicMock(return_value=123)
-        handler1.publish(1, b"Hello!")
+        handler1.publish('raw', b"Hello!")
 
         self.assertEqual(handler2.listen(), (123, 42, b"Hello!"))
 
@@ -41,5 +41,12 @@ class BusHandlerTest(unittest.TestCase):
         handler.shutdown()
         with self.assertRaises(BusShutdownException):
             handler.listen()
+
+    def test_named_publish(self):
+        logger = MagicMock()
+        logger.register = MagicMock(return_value=1)
+        bus = BusHandler(logger, name='gps_serial', out={'raw':[]})
+        bus.publish('raw', b'bin data')
+        logger.write.assert_called_once_with(1, b'bin data')
 
 # vim: expandtab sw=4 ts=4
