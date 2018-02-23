@@ -36,7 +36,6 @@ class LogSerial(Thread):
         else:
             self.com = com
         self.bus = bus
-        self.stream_id = config['stream_id']
 
         self.buf = b''
 
@@ -44,7 +43,7 @@ class LogSerial(Thread):
         while self.should_run.isSet():
             data = self.com.read(1024)
             if len(data) > 0:
-                self.bus.publish(self.stream_id, data)
+                self.bus.publish('raw', data)
 
     def request_stop(self):
         self.should_run.clear()
@@ -80,9 +79,9 @@ if __name__ == "__main__":
     import time
     from drivers.bus import BusHandler
 
-    config = { 'port': 'COM5', 'speed': 4800, 'stream_id': 1 }
+    config = { 'port': 'COM5', 'speed': 4800 }
     log = LogWriter(prefix='test-')
-    device = LogSerial(config, bus=BusHandler(log, out={1:[]}))
+    device = LogSerial(config, bus=BusHandler(log, out={'raw':[]}))
     device.start()
     time.sleep(2)
     device.request_stop()

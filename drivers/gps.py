@@ -42,8 +42,6 @@ class GPS(Thread):
         self.setDaemon(True)
 
         self.bus = bus
-        self.stream_id = config['stream_id']
-
         self.buf = b''
 
     @staticmethod
@@ -67,21 +65,28 @@ class GPS(Thread):
             return data, b''
         return data[start+end+3:], data[start:start+end+3]
 
-    def process(self, data):
-        self.buf, line = self.split_buffer(self.buf + data)
+    def process_packet(self, line):
         if line.startswith(b'$GNGGA') or line.startswith(b'$GPGGA'):
             coords = self.parse_line(line)
             return coords
         return None
+
+    def process_gen(self, data):
+        self.buf, packet = self.split_buffer(self.buf + data)
+        while len(packet) > 0:
+            ret = self.process_packet(packet)
+            if ret is not None:
+                yield ret
+            self.buf, packet = self.split_buffer(self.buf)  # i.e. process only existing buffer now
 
     def run(self):
         try:
             while True:
                 packet = self.bus.listen()  # there should be some timeout and in case of failure send None
                 dt, __, data = packet
-                out = self.process(data)
-                if out is not None:
-                    self.bus.publish(self.stream_id, out)
+                for out in self.process_gen(data):
+                    assert out is not None
+                    self.bus.publish('position', out)
         except BusShutdownException:
             pass
 
@@ -109,26 +114,26 @@ if __name__ == "__main__":
         from drivers.logserial import LogSerial
         from drivers.bus import BusHandler
 
-        config_serial = {'port': 'COM5', 'speed': 4800, 'stream_id': 1}
-        config_gps = {'stream_id': 2}
+        config_serial = {'port': 'COM5', 'speed': 4800}
+        config_gps = {}
         log = LogWriterEx(prefix='gps-test')
-        device = GPS(config_gps, bus=BusHandler(log, out={2:[]}))
-        device0 = LogSerial(config_serial, bus=BusHandler(log, out={1:[(device.bus.queue, 1)]}))
-        device.start()
-        device0.start()
+        gps = GPS(config_gps, bus=BusHandler(log, name='gps', out={'position':[]}))
+        serial = LogSerial(config_serial, bus=BusHandler(log, name='serial_gps', out={'raw':[(gps.bus.queue, 'raw')]}))
+        gps.start()
+        serial.start()
         time.sleep(2)
-        device.request_stop()
-        device0.request_stop()
-        device.join()
-        device0.join()
+        gps.request_stop()
+        serial.request_stop()
+        gps.join()
+        serial.join()
     else:
         import ast
 
         filename = sys.argv[1]
         log = LogReader(filename)
-        stream_id_in = 1
-        stream_id_out = 2
-        device = GPS(config={'stream_id': stream_id_in}, bus=None)
+        stream_id_in = 2  # TODO read names from log
+        stream_id_out = 1
+        gps = GPS(config={}, bus=None)
         arr = []
         for timestamp, stream_id, data in log.read_gen(only_stream_id=[stream_id_in, stream_id_out]):
             if stream_id == stream_id_in:
@@ -136,12 +141,15 @@ if __name__ == "__main__":
             elif stream_id == stream_id_out:
                 ref = np.frombuffer(data, dtype=GPS_MSG_DTYPE)
                 for i, data in enumerate(arr):
-                    out = device.process(data)
-                    if out is not None:
+                    try:
+                        out = next(gps.process_gen(data))
+                        assert out is not None
                         assert out == ref, (out, ref)
                         print(out)
                         arr = arr[i:]
                         break
+                    except StopIteration:
+                        pass
                 else:
                     assert False, ref  # output was note generated
             else:
