@@ -9,14 +9,19 @@ class BusShutdownException(Exception):
 
 
 class BusHandler:
-    def __init__(self, logger, out={}):
+    def __init__(self, logger, name='', out={}):
         self.logger = logger
         self.queue = Queue()
+        self.name = name
         self.out = out
+        self.stream_id = {}
+        for publish_name in out.keys():
+            idx = self.logger.register('.'.join([self.name, publish_name]))
+            self.stream_id[publish_name] = idx
 
     def publish(self, channel, data):
         with self.logger.lock:
-            stream_id = channel  # TODO local maping of indexes
+            stream_id = self.stream_id[channel]  # local maping of indexes
             timestamp = self.logger.write(stream_id, data)
             for queue, input_channel in self.out[channel]:
                 queue.put((timestamp, input_channel, data))
