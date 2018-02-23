@@ -2,7 +2,7 @@ import unittest
 import os
 import time
 
-from lib.logger import *
+from lib.logger import LogWriter, LogReader, INFO_STREAM_ID
 
 
 class LoggerTest(unittest.TestCase):
@@ -27,7 +27,7 @@ class LoggerTest(unittest.TestCase):
             self.assertEqual(start_time, log.start_time)
 
             __, stream_id, data = next(log.read_gen())
-            self.assertEqual(INFO_STREM_ID, stream_id)
+            self.assertEqual(INFO_STREAM_ID, stream_id)
 
             t, stream_id, data = next(log.read_gen())
             self.assertEqual(stream_id, 10)
@@ -64,5 +64,26 @@ class LoggerTest(unittest.TestCase):
             self.assertEqual(arr, [(t1, 1), (t3, 2)])
 
         os.remove(log.filename)
+
+    def test_register(self):
+        with LogWriter(prefix='tmp2', note='test_register') as log:
+            filename = log.filename
+            self.assertEqual(log.register('raw'), 1)
+
+            with self.assertRaises(AssertionError):
+                log.register('raw')  # duplicity name
+
+            self.assertEqual(log.register('gps.position'), 2)
+
+        with LogReader(filename) as log:
+            arr = []
+            for __, __, data in log.read_gen(INFO_STREAM_ID):
+                if b'names' in data:
+                    arr.append(data)
+            self.assertEqual(len(arr), 2, arr)
+            self.assertEqual(arr[0], b"{'names': ['raw']}")
+            self.assertEqual(arr[1], b"{'names': ['raw', 'gps.position']}")
+
+        os.remove(filename)
 
 # vim: expandtab sw=4 ts=4

@@ -34,7 +34,7 @@ import struct
 from threading import RLock
 
 
-INFO_STREM_ID = 0
+INFO_STREAM_ID = 0
 
 
 class LogWriter:
@@ -50,7 +50,15 @@ class LogWriter:
                 t.hour, t.minute, t.second, t.microsecond))
         self.f.flush()
         if len(note) > 0:
-            self.write(stream_id=INFO_STREM_ID, data=bytes(note, encoding='utf-8'))
+            self.write(stream_id=INFO_STREAM_ID, data=bytes(note, encoding='utf-8'))
+        self.names = []
+
+    def register(self, name):
+        with self.lock:
+            assert name not in self.names, (name, self.names)
+            self.names.append(name)
+            self.write(stream_id=INFO_STREAM_ID, data=bytes(str({'names': self.names}), encoding='ascii'))
+            return len(self.names)
 
     def write(self, stream_id, data):
         with self.lock:
