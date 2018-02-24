@@ -128,6 +128,16 @@ class LogReader:
         self.close()
 
 
+class LogAsserter(LogReader):
+    def __init__(self, filename):
+        LogReader.__init__(self, filename)
+        self.assert_stream_id = None
+
+    def write(self, stream_id, data):
+        if self.assert_stream_id is not None:
+            pass
+
+
 if __name__ == "__main__":
     import argparse
     import sys
