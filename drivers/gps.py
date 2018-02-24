@@ -18,7 +18,7 @@ from drivers.bus import BusShutdownException
 
 
 GPS_MSG_DTYPE = [('lon', 'i4'), ('lat', 'i4')]
-INVALID_COORDINATES = np.array((0x7FFF, 0x7FFF), dtype=GPS_MSG_DTYPE)
+INVALID_COORDINATES = np.array((0x7FFFFFFF, 0x7FFFFFFF), dtype=GPS_MSG_DTYPE)
 
 
 def checksum(s):
