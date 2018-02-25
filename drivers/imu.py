@@ -13,9 +13,10 @@ if OSGAR_ROOT not in sys.path:
 
 
 import serial
-from threading import Thread, Event
+from threading import Thread
 
 from lib.logger import LogWriter, LogReader
+from drivers.bus import BusShutdownException
 from drivers.gps import checksum
 
 
@@ -29,24 +30,12 @@ def parse_line(line):
 
 
 class IMU(Thread):
-    def __init__(self, config, logger, output, name='imu'):
+    def __init__(self, config, bus):
         Thread.__init__(self)
         self.setDaemon(True)
-        self.should_run = Event()
-        self.should_run.set()
 
-        if 'port' in config:
-            self.com = serial.Serial(config['port'], config['speed'])
-            self.com.timeout = 0.01  # expects updates < 100Hz
-        else:
-            self.com = None
-        self.logger = logger
-        self.stream_id = config['stream_id']
-
+        self.bus = bus
         self.buf = b''
-        self.output = output
-        self.name = name
-
 
     # Copy & Paste from gps.py - refactor!
     @staticmethod
@@ -59,23 +48,34 @@ class IMU(Thread):
             return data, b''
         return data[start+end+3:], data[start:start+end+3]
 
-    def process(self, data):
-        self.buf, line = self.split_buffer(self.buf + data)
+    def process_packet(self, line):
         if line.startswith(b'$VNYMR'):
             result = parse_line(line)
-            if self.output:
-                self.output(self.name, result)
             return result
+        return None
+
+    def process_gen(self, data):
+        self.buf, packet = self.split_buffer(self.buf + data)
+        while len(packet) > 0:
+            ret = self.process_packet(packet)
+            if ret is not None:
+                yield ret
+            # now process only existing (remaining) buffer
+            self.buf, packet = self.split_buffer(self.buf)  
 
     def run(self):
-        while self.should_run.isSet():
-            data = self.com.read(1024)
-            if len(data) > 0:
-                self.logger.write(self.stream_id, data)
-                self.process(data)
+        try:
+            while True:
+                packet = self.bus.listen()
+                dt, __, data = packet
+                for out in self.process_gen(data):
+                    assert out is not None
+                    self.bus.publish('orientation', out)
+        except BusShutdownException:
+            pass
 
     def request_stop(self):
-        self.should_run.clear()
+        self.bus.shutdown()
 
 
 if __name__ == "__main__":
