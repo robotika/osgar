@@ -2,6 +2,8 @@ import unittest
 import os
 import time
 
+import numpy as np
+
 from lib.logger import LogWriter, LogReader, LogAsserter, INFO_STREAM_ID
 
 
@@ -106,5 +108,21 @@ class LoggerTest(unittest.TestCase):
             self.assertEqual(arr, [(t1, 1), (t2, 2), (t3, 1)])
 
         os.remove(log.filename)
+
+    def test_serialization(self):
+        with LogWriter(prefix='tmp4', note='test_log_asserter') as log:
+            filename = log.filename
+            t1 = log.write(1, b'\x01\x02')
+            position = np.array([(51749517, 180462688)],
+                                dtype=[('lon', 'i4'), ('lat', 'i4')])
+            t2 = log.write(2, position)
+
+            self.assertEqual(log.serialize((123.4, 'Hi')), b"(123.4, 'Hi')")
+
+        with LogReader(filename) as log:
+            self.assertEqual(next(log.read_gen([1, 2])), (t1, 1, b'\x01\x02'))
+            self.assertEqual(next(log.read_gen([1, 2])), (t2, 2, position.tobytes()))             
+
+        os.remove(filename)
 
 # vim: expandtab sw=4 ts=4
