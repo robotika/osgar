@@ -98,16 +98,6 @@ def print_output(packet):
     print(packet)
 
 
-# TODO move somewhere else ...
-class LogWriterEx(LogWriter):
-    def write(self, stream_id, data):
-        try:
-            bytes_data = data.tobytes()
-        except AttributeError:
-            bytes_data = data
-        LogWriter.write(self, stream_id, bytes_data)
-
-
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         import time
@@ -116,7 +106,7 @@ if __name__ == "__main__":
 
         config_serial = {'port': 'COM5', 'speed': 4800}
         config_gps = {}
-        log = LogWriterEx(prefix='gps-test')
+        log = LogWriter(prefix='gps-test')
         gps = GPS(config_gps, bus=BusHandler(log, name='gps', out={'position':[]}))
         serial = LogSerial(config_serial, bus=BusHandler(log, name='serial_gps', out={'raw':[(gps.bus.queue, 'raw')]}))
         gps.start()
