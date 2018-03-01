@@ -9,42 +9,46 @@ from queue import Queue
 from lib.logger import LogWriter, LogReader
 from lib.config import Config
 from drivers import all_drivers
+from drivers.bus import BusHandler
 
 
 class Robot:
     def __init__(self, config, logger):
-        self.logger = logger
-        self.stream_id = config['stream_id']
-        self.drivers = []
-        for driver_name in config['drivers']:
-            driver = all_drivers[driver_name](config[driver_name], logger,
-                                              output=self.input_gate, name=driver_name)
-            self.drivers.append(driver)
-        self.queue = Queue()
+        self.modules = {}
+
+        que = {}
+        for module_name, module_config in config['modules'].items():
+            out = {}
+            for output_type in module_config['out']:
+                out[output_type] = []
+            bus = BusHandler(logger, out=out, name=module_name)
+            que[module_name] = bus.queue
+
+            module_class = module_config['driver']
+            module = all_drivers[module_class](module_config['init'], bus=bus)
+            self.modules[module_name] = module
+
+        for from_module, to_module in config['links']:
+            (in_driver, in_name), (out_driver, out_name) = from_module.split('.'), to_module.split('.')
+            self.modules[in_driver].bus.out[in_name].append((self.modules[out_driver].bus.queue, out_name))
 
     def start(self):
-        for driver in self.drivers:
-            driver.start()
+        for module in self.modules.values():
+            module.start()
 
-    def update(self, timeout=5):
-        if len(self.drivers) > 0:
-            data = self.queue.get(timeout=timeout)
-            if 'gps' in data:
-                print(data)
+    def update(self):
+        pass
 
     def finish(self):
-        for driver in self.drivers:
-            driver.request_stop()
-        for driver in self.drivers:
-            driver.join()
+        for module in self.modules.values():
+            module.request_stop()
+        for module in self.modules.values():
+            module.join()
 
-    def input_gate(self, name, data):
-        if name == 'gps':
-            print(name, data)
-        dt = self.logger.write(self.stream_id, bytes(str((name, data)),'ascii'))  # TODO single or mutiple streams?
-        self.queue.put((dt, name, data))
 
 if __name__ == "__main__":
+    import time
+
     parser = argparse.ArgumentParser(description='Test robot configuration')
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
     subparsers.required = True
@@ -64,8 +68,7 @@ if __name__ == "__main__":
         log.write(0, bytes(str(config.data), 'ascii'))  # write configuration
         robot = Robot(config=config.data['robot'], logger=log)
         robot.start()
-        for i in range(1000):
-            robot.update()
+        time.sleep(3.0)
         robot.finish()
     else:
         assert False, args.command  # unsupported command
