@@ -1,12 +1,21 @@
 {
   "version": 2,
   "robot": {
-    "drivers": [ "spider" ],
-    "spider": {
-        "port": "/dev/ttyS0", "speed": 115200, 
-        "stream_id": 1, "stream_id_in": 1, 
-        "stream_id_out": 2
+    "modules": {
+      "spider": {
+          "driver": "spider",
+          "in": ["raw"],
+          "out": ["can"],
+          "init": {}
+      },
+      "spider_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyS0", "speed": 115200}
+      }
     },
-    "stream_id": 3
+    "links": [["spider_serial.raw", "spider.raw"], 
+              ["spider.can", "spider_serial.raw"]]
   }
 }

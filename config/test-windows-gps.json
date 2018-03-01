@@ -1,11 +1,20 @@
 {
   "version": 2,
   "robot": {
-    "drivers": [ "gps" ],
-    "gps": {
-        "port": "COM5", "speed": 4800, "stream_id": 1
+    "modules": {
+      "gps": {
+          "driver": "gps",
+          "in": ["raw"],
+          "out": ["position"],
+          "init": {}
+      },
+      "gps_serial": {
+          "driver": "serial",
+          "in": [],
+          "out": ["raw"],
+          "init": {"port": "COM5", "speed": 4800}
+      }
     },
-    "stream_id": 2
+    "links": [["gps_serial.raw", "gps.raw"]]    
   }
 }
-
