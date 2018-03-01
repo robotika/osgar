@@ -36,9 +36,6 @@ class Spider(Thread):
         self.setDaemon(True)
 
         self.bus = bus
-        self.stream_id_in = config['stream_id_in']
-        self.stream_id_out = config['stream_id_out']
-
         self.buf = b''
 
         self.can_bridge_initialized = False
@@ -77,9 +74,9 @@ class Spider(Thread):
 
     def process_packet(self, packet, verbose=False):
         if packet == CAN_BRIDGE_READY:
-            self.bus.publish(self.stream_id_out, CAN_BRIDGE_SYNC)
-            self.bus.publish(self.stream_id_out, CAN_SPEED_1MB)
-            self.bus.publish(self.stream_id_out, CAN_BRIDGE_START)
+            self.bus.publish('can', CAN_BRIDGE_SYNC)
+            self.bus.publish('can', CAN_SPEED_1MB)
+            self.bus.publish('can', CAN_BRIDGE_START)
             self.can_bridge_initialized = True
             return None
 
@@ -167,11 +164,11 @@ class Spider(Thread):
                 packet = CAN_packet(0x401, [0x80 + 80, angle_cmd])
             else:
                 packet = CAN_packet(0x401, [0, 0])  # STOP packet
-            self.bus.publish(self.stream_id_out, packet)
+            self.bus.publish('can', packet)
 
             # alive
             packet = CAN_packet(0x400, [self.status_cmd, self.alive])
-            self.bus.publish(self.stream_id_out, packet)
+            self.bus.publish('can', packet)
             self.alive = 128 - self.alive
         else:
             print('CAN bridge not initialized yet!')
