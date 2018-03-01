@@ -14,57 +14,41 @@ if OSGAR_ROOT not in sys.path:
 
 
 import serial
-from threading import Thread, Event
+from threading import Thread
 
 from lib.logger import LogWriter
 from drivers.bus import BusShutdownException
 
 
-class LogSerial(Thread):
-    def __init__(self, config, bus, com=None):
-        Thread.__init__(self)
-        self.setDaemon(True)
-        self.should_run = Event()
-        self.should_run.set()
+class LogSerial:
+    def __init__(self, config, bus):
+        self.input_thread = Thread(target=self.run_input, daemon=True)
+        self.output_thread = Thread(target=self.run_output, daemon=True)
 
-        if com is None:
-            if 'port' in config:
-                self.com = serial.Serial(config['port'], config['speed'])
-                self.com.timeout = 0.01  # expects updates < 100Hz
-            else:
-                self.com = None
+        if 'port' in config:
+            self.com = serial.Serial(config['port'], config['speed'])
+            self.com.timeout = 0.01  # expects updates < 100Hz
         else:
-            self.com = com
+            self.com = None
         self.bus = bus
 
         self.buf = b''
 
-    def run(self):
-        while self.should_run.isSet():
+    def start(self):
+        self.input_thread.start()
+        self.output_thread.start()
+
+    def join(self, timeout=None):
+        self.input_thread.join(timeout=timeout)
+        self.output_thread.join(timeout=timeout)
+
+    def run_input(self):
+        while self.bus.is_alive():
             data = self.com.read(1024)
             if len(data) > 0:
                 self.bus.publish('raw', data)
 
-    def request_stop(self):
-        self.should_run.clear()
-
-
-class LogSerialOut(Thread):
-    def __init__(self, config, bus, com=None):
-        Thread.__init__(self)
-        self.setDaemon(True)
-
-        if com is None:
-            if 'port' in config:
-                self.com = serial.Serial(config['port'], config['speed'])
-                self.com.timeout = 0.01  # expects updates < 100Hz
-            else:
-                self.com = None
-        else:
-            self.com = com
-        self.bus = bus
-
-    def run(self):
+    def run_output(self):
         try:
             while True:
                 __, __, data = self.bus.listen()
@@ -74,6 +58,7 @@ class LogSerialOut(Thread):
 
     def request_stop(self):
         self.bus.shutdown()
+
 
 if __name__ == "__main__":
     import time
