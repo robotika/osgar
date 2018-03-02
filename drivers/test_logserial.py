@@ -21,5 +21,23 @@ class LogSerialTest(unittest.TestCase):
             device.join()
             instance.write.assert_called_once_with(b'bin data')
 
+    def test_timeout_config(self):
+        with patch('drivers.logserial.serial.Serial', autospec=True) as mock:
+            instance = mock.return_value
+            bus = MagicMock()
+            config = {'port':'COM13:', 'speed':4800, 'timeout':2.0}
+            device = LogSerial(config=config, bus=bus)
+            mock.assert_called_once_with('COM13:', 4800)
+            self.assertAlmostEqual(instance.timeout, 2.0)
+
+    def test_config_reset(self):
+        with patch('drivers.logserial.serial.Serial', autospec=True) as mock:
+            instance = mock.return_value
+            bus = MagicMock()
+            config = {'port':'COM10:', 'speed':9600, 'rtscts':True, 'reset':True}
+            device = LogSerial(config=config, bus=bus)
+            mock.assert_called_once_with('COM10:', 9600, rtscts=True)
+            instance.setRTS.assert_called_once_with()
+            instance.setDTR.assert_called_once_with(0)
 
 # vim: expandtab sw=4 ts=4
