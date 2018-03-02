@@ -26,8 +26,14 @@ class LogSerial:
         self.output_thread = Thread(target=self.run_output, daemon=True)
 
         if 'port' in config:
-            self.com = serial.Serial(config['port'], config['speed'])
-            self.com.timeout = 0.01  # expects updates < 100Hz
+            if config.get('rtscts'):
+                self.com = serial.Serial(config['port'], config['speed'], rtscts=True)
+                self.com.setRTS()
+            else:
+                self.com = serial.Serial(config['port'], config['speed'])
+            self.com.timeout = config.get('timeout', 0.01)  # default expects updates < 100Hz
+            if config.get('reset'):
+                self.com.setDTR(0)
         else:
             self.com = None
         self.bus = bus
