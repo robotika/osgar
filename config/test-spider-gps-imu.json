@@ -36,7 +36,8 @@
           "driver": "serial",
           "in": ["raw"],
           "out": ["raw"],
-          "init": {"port": "/dev/ttyS0", "speed": 115200}
+          "init": {"port": "/dev/ttyS0", "speed": 115200,
+                           "rtscts":true, "reset":true}
       }
     },
     "links": [["gps_serial.raw", "gps.raw"],
