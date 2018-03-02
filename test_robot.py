@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import time
+import json
+import os
 
 from robot import Robot
 
@@ -46,14 +48,24 @@ class RobotTest(unittest.TestCase):
 
     def test_spider_config(self):
         # first example with loop spider <-> serial
-        import json
-        import os
-
         with open(os.path.dirname(__file__) + '/config/test-spider.json') as f:
             config = json.loads(f.read())
 
         with patch('drivers.logserial.serial.Serial') as mock:
             logger = MagicMock()
             robot = Robot(config=config['robot'], logger=logger)
+
+
+    def test_all_supported_config_files(self):
+        supported = ['test-spider.json', 'test-gps-imu.json',
+                'test-spider-gps-imu.json', 'test-windows-gps.json']
+
+        with patch('drivers.logserial.serial.Serial') as mock:
+            logger = MagicMock()
+            for filename in supported:
+                with open(os.path.join(os.path.dirname(__file__), 'config',
+                                   filename)) as f:
+                    config = json.loads(f.read())
+                robot = Robot(config=config['robot'], logger=logger)
 
 # vim: expandtab sw=4 ts=4
