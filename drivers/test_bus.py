@@ -49,4 +49,11 @@ class BusHandlerTest(unittest.TestCase):
         bus.publish('raw', b'bin data')
         logger.write.assert_called_once_with(1, b'bin data')
 
+    def test_alive(self):
+        logger = MagicMock()
+        bus = BusHandler(logger, out={})
+        self.assertTrue(bus.is_alive())
+        bus.shutdown()
+        self.assertFalse(bus.is_alive())
+
 # vim: expandtab sw=4 ts=4

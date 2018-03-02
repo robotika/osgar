@@ -18,6 +18,7 @@ class BusHandler:
         for publish_name in out.keys():
             idx = self.logger.register('.'.join([self.name, publish_name]))
             self.stream_id[publish_name] = idx
+        self._is_alive = True
 
     def publish(self, channel, data):
         with self.logger.lock:
@@ -33,7 +34,11 @@ class BusHandler:
         timestamp, channel, data = packet
         return timestamp, channel, data
 
+    def is_alive(self):
+        return self._is_alive
+
     def shutdown(self):
+        self._is_alive = False
         self.queue.put(None)
 
 
