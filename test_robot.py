@@ -68,4 +68,17 @@ class RobotTest(unittest.TestCase):
                     config = json.loads(f.read())
                 robot = Robot(config=config['robot'], logger=logger)
 
+    def test_application(self):
+        # plug-in external application
+        with open(os.path.dirname(__file__) + '/config/ro2018-spider-gps-imu.json') as f:
+            config = json.loads(f.read())
+
+        class DummyApp:
+            def __init__(self, config, bus):
+                self.bus = bus  # needed for linkage
+
+        with patch('drivers.logserial.serial.Serial') as mock:
+            logger = MagicMock()
+            robot = Robot(config=config['robot'], logger=logger, application=DummyApp)
+
 # vim: expandtab sw=4 ts=4
