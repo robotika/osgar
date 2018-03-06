@@ -1,0 +1,58 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["position", "orientation", "status"],
+          "out": ["move"],
+          "init": {}
+      },
+      "gps": {
+          "driver": "gps",
+          "in": ["raw"],
+          "out": ["position"],
+          "init": {}
+      },
+      "gps_serial": {
+          "driver": "serial",
+          "in": [],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyACM0", "speed": 115200}
+      },
+      "imu": {
+          "driver": "imu",
+          "in": ["raw"],
+          "out": ["orientation"],
+          "init": {}
+      },
+      "imu_serial": {
+          "driver": "serial",
+          "in": [],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyUSB0", "speed": 115200}
+      },
+      "spider": {
+          "driver": "spider",
+          "in": ["raw"],
+          "out": ["can", "status"],
+          "init": {}
+      },
+      "spider_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyS0", "speed": 115200,
+                           "rtscts":true, "reset":true}
+      }
+    },
+    "links": [["gps_serial.raw", "gps.raw"],
+              ["imu_serial.raw", "imu.raw"],
+              ["spider_serial.raw", "spider.raw"], 
+              ["spider.can", "spider_serial.raw"],
+              ["gps.position", "app.position"],
+              ["imu.orientation", "app.orientation"],
+              ["spider.status", "app.status"],
+              ["app.move", "spider.move"]]
+  }
+}
