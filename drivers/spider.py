@@ -46,6 +46,7 @@ class Spider(Thread):
         self.status_cmd = 3
         self.alive = 0  # toggle with 128
         self.desired_angle = None  # in Spider mode desired weels direction
+        self.desired_speed = None
 
     @staticmethod
     def split_buffer(data):
@@ -92,8 +93,8 @@ class Spider(Thread):
                     ret = self.status_word, None
 
                 # handle steering
-                if self.desired_angle is not None:
-                    self.send((10, self.desired_angle))
+                if self.desired_angle is not None and self.desired_speed is not None:
+                    self.send((self.desired_speed, self.desired_angle))
                 else:
                     self.send((0, 0))
                 return ret
@@ -130,9 +131,15 @@ class Spider(Thread):
         try:
             while True:
                 dt, channel, data = self.bus.listen()
-                if len(data) > 0:
-                    for __ in self.process_gen(data):
-                        pass
+                if channel == 'raw':
+                    if len(data) > 0:
+                        for status in self.process_gen(data):
+                            if status is not None:
+                                self.bus.publish('status', status)
+                elif channel == 'move':
+                    self.desired_speed, self.desired_angle = data
+                else:
+                    assert False, channel  # unsupported channel
         except BusShutdownException:
             pass
 
@@ -160,8 +167,10 @@ class Spider(Thread):
                             angle_cmd = 0x80 + 50
                     else:
                         angle_cmd = 0
-#                packet = CAN_packet(0x401, [0x80 + 127, angle_cmd])
-                packet = CAN_packet(0x401, [0x80 + 80, angle_cmd])
+                if speed >= 10:
+                    packet = CAN_packet(0x401, [0x80 + 127, angle_cmd])
+                else:
+                    packet = CAN_packet(0x401, [0x80 + 80, angle_cmd])
             else:
                 packet = CAN_packet(0x401, [0, 0])  # STOP packet
             self.bus.publish('can', packet)
