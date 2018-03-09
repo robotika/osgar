@@ -8,34 +8,15 @@ import math
 from ast import literal_eval
 from datetime import timedelta
 
+import numpy as np
+
 from lib.logger import LogWriter, LogReader
 from lib.config import Config
 from drivers import all_drivers
 from robot import Robot
 
-from drivers.gps import INVALID_COORDINATES
+from drivers.gps import INVALID_COORDINATES, GPS_MSG_DTYPE
 from drivers.bus import BusHandler
-
-
-class LogRobot:
-    def __init__(self, logger, stream_id_in, stream_id_out):
-        self.log_read = logger.read_gen([stream_id_in, stream_id_out])
-        self.stream_id_in = stream_id_in
-        self.stream_id_out = stream_id_out
-
-    def update(self):
-        dt, stream, packet = next(self.log_read)
-        assert stream == self.stream_id_in, (stream, self.stream_id_in)
-        msg_id, data = literal_eval(packet.decode('ascii'))
-        return dt, msg_id, data
-
-    def execute(self, msg_id, data):
-        if self.stream_id_out is None:  # i.e. ignore outputs
-            return
-        dt, stream, packet = next(self.log_read)
-        assert stream == self.stream_id_out, (stream, self.stream_id_out)
-        log_msg_id, log_data = literal_eval(packet.decode('ascii'))
-        assert (msg_id, data) == (log_msg_id, log_data), ((msg_id, data), (log_msg_id, log_data))
 
 
 def geo_length(pos1, pos2):
@@ -132,6 +113,32 @@ class RoboOrienteering2018:
             self.update()
 
 
+# move to drivers/bus??
+class LogBusHandler:
+    def __init__(self, log, inputs, outputs):
+        if outputs is None:
+            self.reader = log.read_gen(inputs.keys())
+        else:
+            self.reader = log.read_gen(list(inputs.keys()) + list(outputs.keys()))
+        self.inputs = inputs
+        self.outputs = outputs
+
+    def listen(self):
+        dt, stream_id, data = next(self.reader)
+        channel = self.inputs[stream_id]
+        try:
+            return dt, channel, literal_eval(data.decode('ascii'))
+        except ValueError:
+            return dt, channel, np.frombuffer(data, dtype=GPS_MSG_DTYPE)
+
+    def publish(self, channel, data):
+        if self.outputs is not None:
+            dt, stream_id, raw_data = next(self.reader)
+            channel = self.outputs[stream_id]
+            ref_data = literal_eval(raw_data.decode('ascii'))
+            assert data == ref_data, (data, ref_data)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='RoboOrienteering 2018')
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
@@ -151,10 +158,13 @@ if __name__ == "__main__":
         config_str = next(log.read_gen(0))[-1]
         config = literal_eval(config_str.decode('ascii'))
         if args.force:
-            robot = LogRobot(log, config['robot']['stream_id'], stream_id_out=None)
+            outputs = None
         else:
-            robot = LogRobot(log, config['robot']['stream_id'], config['robot']['stream_id_out'])
-        game = RoboOrienteering2018(robot)
+            outputs = {1:'move'}
+        bus = LogBusHandler(log,
+                            inputs={2:'position', 4:'orientation', 7:'status'},
+                            outputs=outputs)  # TODO map names
+        game = RoboOrienteering2018(config={}, bus=bus)
         game.play()
 
     elif args.command == 'run':
