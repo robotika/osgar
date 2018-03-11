@@ -10,13 +10,13 @@ from datetime import timedelta
 
 import numpy as np
 
-from lib.logger import LogWriter, LogReader
-from lib.config import Config
-from drivers import all_drivers
-from robot import Robot
+from osgar.lib.logger import LogWriter, LogReader
+from osgar.lib.config import Config
+from osgar.drivers import all_drivers
+from osgar.robot import Robot
 
-from drivers.gps import INVALID_COORDINATES, GPS_MSG_DTYPE
-from drivers.bus import BusHandler
+from osgar.drivers.gps import INVALID_COORDINATES, GPS_MSG_DTYPE
+from osgar.drivers.bus import BusHandler
 
 
 def geo_length(pos1, pos2):

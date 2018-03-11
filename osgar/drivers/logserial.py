@@ -2,22 +2,11 @@
   Wrapper & timestamper of input serial byte stream
 """
 
-### REMOVE THIS WITH PACKAGE OSGAR ###
-import sys
-import os
-import inspect
-
-OSGAR_ROOT = os.path.realpath(os.path.abspath(os.path.join(os.path.split(inspect.getfile( inspect.currentframe() ))[0],"..")))
-if OSGAR_ROOT not in sys.path:
-    sys.path.insert(0, OSGAR_ROOT) # access to logger without installation
-### END OF REMOVAL ###
-
-
 import serial
 from threading import Thread
 
-from lib.logger import LogWriter
-from drivers.bus import BusShutdownException
+from osgar.lib.logger import LogWriter
+from osgar.drivers.bus import BusShutdownException
 
 
 class LogSerial:
@@ -68,7 +57,7 @@ class LogSerial:
 
 if __name__ == "__main__":
     import time
-    from drivers.bus import BusHandler
+    from osgar.drivers.bus import BusHandler
 
     config = { 'port': 'COM5', 'speed': 4800 }
     log = LogWriter(prefix='test-')

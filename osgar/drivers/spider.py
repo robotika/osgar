@@ -2,21 +2,13 @@
   Spider3 Rider Driver
 """
 
-import sys
-import os
-import inspect
-
-OSGAR_ROOT = os.path.realpath(os.path.abspath(os.path.join(os.path.split(inspect.getfile( inspect.currentframe() ))[0],"..")))
-if OSGAR_ROOT not in sys.path:
-    sys.path.insert(0, OSGAR_ROOT) # access to logger without installation
-
 
 import serial
 import struct
 from threading import Thread
 
-from lib.logger import LogWriter, LogReader
-from drivers.bus import BusShutdownException
+from osgar.lib.logger import LogWriter, LogReader
+from osgar.drivers.bus import BusShutdownException
 
 
 CAN_BRIDGE_READY = b'\xfe\x10'  # CAN bridge is ready to accept configuration commands
@@ -189,8 +181,8 @@ if __name__ == "__main__":
     import time
     from lib.config import Config
     from datetime import timedelta
-    from drivers.logserial import LogSerial, LogSerialOut
-    from drivers.bus import BusHandler
+    from osgar.drivers.logserial import LogSerial, LogSerialOut
+    from osgar.drivers.bus import BusHandler
     
     parser = argparse.ArgumentParser(description='Test robot configuration')
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')

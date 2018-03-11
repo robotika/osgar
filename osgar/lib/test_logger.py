@@ -4,7 +4,7 @@ import time
 
 import numpy as np
 
-from lib.logger import LogWriter, LogReader, LogAsserter, INFO_STREAM_ID
+from osgar.lib.logger import LogWriter, LogReader, LogAsserter, INFO_STREAM_ID
 
 
 class LoggerTest(unittest.TestCase):

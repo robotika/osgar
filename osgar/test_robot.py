@@ -4,7 +4,7 @@ import time
 import json
 import os
 
-from robot import Robot
+from osgar.robot import Robot
 
 
 class RobotTest(unittest.TestCase):
@@ -17,7 +17,7 @@ class RobotTest(unittest.TestCase):
         robot.finish()
 
     def test_config(self):
-        with patch('drivers.logserial.serial.Serial') as mock:
+        with patch('osgar.drivers.logserial.serial.Serial') as mock:
             instance = mock.return_value
             instance.read = MagicMock(return_value=b'$GNGGA,182433.10,5007.71882,N,01422.50467,E,1,05,6.09,305.1,M,44.3,M,,*41')
 
@@ -48,10 +48,10 @@ class RobotTest(unittest.TestCase):
 
     def test_spider_config(self):
         # first example with loop spider <-> serial
-        with open(os.path.dirname(__file__) + '/config/test-spider.json') as f:
+        with open(os.path.dirname(__file__) + '/../config/test-spider.json') as f:
             config = json.loads(f.read())
 
-        with patch('drivers.logserial.serial.Serial') as mock:
+        with patch('osgar.drivers.logserial.serial.Serial') as mock:
             logger = MagicMock()
             robot = Robot(config=config['robot'], logger=logger)
 
@@ -60,24 +60,24 @@ class RobotTest(unittest.TestCase):
         supported = ['test-spider.json', 'test-gps-imu.json',
                 'test-spider-gps-imu.json', 'test-windows-gps.json']
 
-        with patch('drivers.logserial.serial.Serial') as mock:
+        with patch('osgar.drivers.logserial.serial.Serial') as mock:
             logger = MagicMock()
             for filename in supported:
-                with open(os.path.join(os.path.dirname(__file__), 'config',
+                with open(os.path.join(os.path.dirname(__file__), '..', 'config',
                                    filename)) as f:
                     config = json.loads(f.read())
                 robot = Robot(config=config['robot'], logger=logger)
 
     def test_application(self):
         # plug-in external application
-        with open(os.path.dirname(__file__) + '/config/ro2018-spider-gps-imu.json') as f:
+        with open(os.path.dirname(__file__) + '/../config/ro2018-spider-gps-imu.json') as f:
             config = json.loads(f.read())
 
         class DummyApp:
             def __init__(self, config, bus):
                 self.bus = bus  # needed for linkage
 
-        with patch('drivers.logserial.serial.Serial') as mock:
+        with patch('osgar.drivers.logserial.serial.Serial') as mock:
             logger = MagicMock()
             robot = Robot(config=config['robot'], logger=logger, application=DummyApp)
 
