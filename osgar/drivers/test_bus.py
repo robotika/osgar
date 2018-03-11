@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 from queue import Queue
 
-from drivers.bus import BusHandler, BusShutdownException
+from osgar.drivers.bus import BusHandler, BusShutdownException
 
 
 class BusHandlerTest(unittest.TestCase):

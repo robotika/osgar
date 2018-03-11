@@ -1,14 +1,14 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from drivers.logserial import LogSerial
-from drivers.bus import BusHandler
+from osgar.drivers.logserial import LogSerial
+from osgar.drivers.bus import BusHandler
 
 
 class LogSerialTest(unittest.TestCase):
 
     def test_twoway_communication(self):
-        with patch('drivers.logserial.serial.Serial') as mock:
+        with patch('osgar.drivers.logserial.serial.Serial') as mock:
             instance = mock.return_value
 
             logger = MagicMock()
@@ -22,7 +22,7 @@ class LogSerialTest(unittest.TestCase):
             instance.write.assert_called_once_with(b'bin data')
 
     def test_timeout_config(self):
-        with patch('drivers.logserial.serial.Serial', autospec=True) as mock:
+        with patch('osgar.drivers.logserial.serial.Serial', autospec=True) as mock:
             instance = mock.return_value
             bus = MagicMock()
             config = {'port':'COM13:', 'speed':4800, 'timeout':2.0}
@@ -31,7 +31,7 @@ class LogSerialTest(unittest.TestCase):
             self.assertAlmostEqual(instance.timeout, 2.0)
 
     def test_config_reset(self):
-        with patch('drivers.logserial.serial.Serial', autospec=True) as mock:
+        with patch('osgar.drivers.logserial.serial.Serial', autospec=True) as mock:
             instance = mock.return_value
             bus = MagicMock()
             config = {'port':'COM10:', 'speed':9600, 'rtscts':True, 'reset':True}

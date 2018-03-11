@@ -2,19 +2,11 @@
   GPS Driver
 """
 
-import sys
-import os
-import inspect
-
-OSGAR_ROOT = os.path.realpath(os.path.abspath(os.path.join(os.path.split(inspect.getfile( inspect.currentframe() ))[0],"..")))
-if OSGAR_ROOT not in sys.path:
-    sys.path.insert(0, OSGAR_ROOT) # access to logger without installation
-
 from threading import Thread
 import numpy as np
 
-from lib.logger import LogWriter, LogReader
-from drivers.bus import BusShutdownException
+from osgar.lib.logger import LogWriter, LogReader
+from osgar.drivers.bus import BusShutdownException
 
 
 GPS_MSG_DTYPE = [('lon', 'i4'), ('lat', 'i4')]
@@ -99,10 +91,12 @@ def print_output(packet):
 
 
 if __name__ == "__main__":
+    import sys
+
     if len(sys.argv) == 1:
         import time
-        from drivers.logserial import LogSerial
-        from drivers.bus import BusHandler
+        from osgar.drivers.logserial import LogSerial
+        from osgar.drivers.bus import BusHandler
 
         config_serial = {'port': 'COM5', 'speed': 4800}
         config_gps = {}

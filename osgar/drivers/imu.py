@@ -2,22 +2,10 @@
   Simple IMU data analysis
 """
 
-
-import sys
-import os
-import inspect
-
-OSGAR_ROOT = os.path.realpath(os.path.abspath(os.path.join(os.path.split(inspect.getfile( inspect.currentframe() ))[0],"..")))
-if OSGAR_ROOT not in sys.path:
-    sys.path.insert(0, OSGAR_ROOT) # access to logger without installation
-
-
-import serial
 from threading import Thread
 
-from lib.logger import LogWriter, LogReader
-from drivers.bus import BusShutdownException
-from drivers.gps import checksum
+from osgar.drivers.bus import BusShutdownException
+from osgar.drivers.gps import checksum
 
 
 def parse_line(line):

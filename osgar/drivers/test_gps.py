@@ -1,6 +1,6 @@
 import unittest
 
-from drivers.gps import GPS, checksum, str2ms, INVALID_COORDINATES
+from osgar.drivers.gps import GPS, checksum, str2ms, INVALID_COORDINATES
 
 
 class GPSTest(unittest.TestCase):

@@ -1,7 +1,7 @@
 import unittest
 import math
 
-from ro2018 import geo_length, geo_angle
+from osgar.ro2018 import geo_length, geo_angle
 
 
 class RO2018Test(unittest.TestCase):

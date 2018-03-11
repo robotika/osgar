@@ -1,9 +1,8 @@
 import unittest
 from unittest.mock import MagicMock
 
-from drivers.spider import Spider, CAN_packet
-from drivers.bus import BusHandler
-from lib.logger import LogWriter
+from osgar.drivers.spider import Spider, CAN_packet
+from osgar.drivers.bus import BusHandler
 
 
 class SpiderTest(unittest.TestCase):
