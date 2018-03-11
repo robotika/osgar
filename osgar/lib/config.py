@@ -1,10 +1,6 @@
 """
   Osgar Config Class
 """
-#
-#  DEPRECATED - current version moved to
-#      osgar.lib.config
-#
 import json
 
 
@@ -13,7 +9,7 @@ class Config(object):
     OLD_SUPPORTED_VERSION = 1
     ROBOT_CONTAINER_VER = 2
 
-    SUPPORTED_VERSIONS = [OLD_SUPPORTED_VERSION]
+    SUPPORTED_VERSIONS = [ROBOT_CONTAINER_VER]
 
 
     @classmethod
