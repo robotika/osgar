@@ -33,10 +33,18 @@ def geo_angle(pos1, pos2):
     return math.atan2(pos2[1] - pos1[1], (pos2[0] - pos1[0])*x_scale)
 
 
+def normalizeAnglePIPI( angle ):
+    while angle < -math.pi:
+        angle += 2*math.pi
+    while angle > math.pi:
+        angle -= 2*math.pi
+    return angle 
+
+
 class RoboOrienteering2018:
     def __init__(self, config, bus):
         self.bus = bus
-        self.goal = (51749517 + 100, 180462688)  # TODO extra configuration
+        self.goal = (51749517, 180462688 - 1000)  # TODO extra configuration
         self.time = None
         self.last_position = None  # (lon, lat) in milliseconds
         self.last_imu_yaw = None  # magnetic north in degrees
@@ -60,7 +68,6 @@ class RoboOrienteering2018:
                 self.bus.publish('move', self.cmd)
 
     def set_speed(self, speed, angular_speed):
-        print('set_speed', speed, angular_speed)
         self.cmd = (speed, angular_speed)
 
     def start(self):
@@ -79,7 +86,7 @@ class RoboOrienteering2018:
         while self.time - start_time < dt:
             self.update()
 
-    def play(self):
+    def play0(self):
         self.wait(timedelta(seconds=1))
         self.set_speed(1, 50)
         self.wait(timedelta(seconds=5))
@@ -88,10 +95,22 @@ class RoboOrienteering2018:
         self.set_speed(0, 0)
         self.wait(timedelta(seconds=1))
 
-    def play1(self):
+    def play(self):
         print("Waiting for valid GPS position...")
         while self.last_position is None or self.last_position == INVALID_COORDINATES:
             self.update()
+        print(self.last_position)
+
+        print("Wait for valid IMU...")
+        while self.last_imu_yaw is None:
+            self.update()
+        print(self.last_imu_yaw)
+
+        print("Wait for steering position...")
+        while self.steering_status is None:
+            self.update()
+        print(self.steering_status)
+
         print("Ready")
         print("Goal at %.2fm" % geo_length(self.last_position, self.goal))
 
@@ -99,7 +118,13 @@ class RoboOrienteering2018:
         
         start_time = self.time
         while geo_length(self.last_position, self.goal) > 1.0 and self.time - start_time < timedelta(seconds=20):
-            self.set_speed(10, 50)
+            desired_heading = normalizeAnglePIPI(geo_angle(self.last_position, self.goal))
+            spider_heading = normalizeAnglePIPI(math.radians(180 + self.last_imu_yaw))
+            wheel_heading = normalizeAnglePIPI(desired_heading-spider_heading)
+
+            desired_steering = int(-512*math.degrees(wheel_heading)/360.0)
+            self.set_speed(1, desired_steering)
+
             prev_time = self.time
             self.update()
             if int(prev_time.total_seconds()) != int(self.time.total_seconds()):
