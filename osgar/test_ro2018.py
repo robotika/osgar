@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import math
 from datetime import timedelta
 
-from osgar.ro2018 import geo_length, geo_angle, LogBusHandler
+from osgar.ro2018 import geo_length, geo_angle, LogBusHandler, LogBusHandlerInputsOnly
 
 
 class RO2018Test(unittest.TestCase):
@@ -62,5 +62,19 @@ class RO2018Test(unittest.TestCase):
         with self.assertRaises(AssertionError) as e:
             bus.publish('can3', [1, 2])
         self.assertEqual(str(e.exception), "('can3', dict_values(['can', 'can2']))")
+
+    def test_log_bus_handler_inputs_onlye(self):
+        log = MagicMock()
+        log_data = [
+            (timedelta(microseconds=10), 1, b'(1,2)'),
+            (timedelta(microseconds=11), 1, b'(3,4,5)'),
+            (timedelta(microseconds=30), 2, b'[8,9]'),
+        ]
+        log.read_gen = MagicMock(return_value=iter(log_data))
+        inputs = {1:'raw'}
+        bus = LogBusHandlerInputsOnly(log, inputs)
+        self.assertEqual(bus.listen(), (timedelta(microseconds=10), 'raw', (1, 2)))
+        bus.publish('new_channel', b'some data')
+        self.assertEqual(bus.listen(), (timedelta(microseconds=11), 'raw', (3, 4, 5)))
 
 # vim: expandtab sw=4 ts=4
