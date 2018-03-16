@@ -142,10 +142,7 @@ class RoboOrienteering2018:
 # move to drivers/bus??
 class LogBusHandler:
     def __init__(self, log, inputs, outputs):
-        if outputs is None:
-            self.reader = log.read_gen(inputs.keys())
-        else:
-            self.reader = log.read_gen(list(inputs.keys()) + list(outputs.keys()))
+        self.reader = log.read_gen(list(inputs.keys()) + list(outputs.keys()))
         self.inputs = inputs
         self.outputs = outputs
         self.buffer_queue = Queue()
@@ -162,16 +159,32 @@ class LogBusHandler:
             return dt, channel, np.frombuffer(data, dtype=GPS_MSG_DTYPE)
 
     def publish(self, channel, data):
-        if self.outputs is not None:
-            assert channel in self.outputs.values(), (channel, self.outputs.values())
+        assert channel in self.outputs.values(), (channel, self.outputs.values())
+        dt, stream_id, raw_data = next(self.reader)
+        while stream_id not in self.outputs:
+            assert stream_id in self.inputs, stream_id
+            self.buffer_queue.put((dt, stream_id, raw_data))
             dt, stream_id, raw_data = next(self.reader)
-            while stream_id not in self.outputs:
-                assert stream_id in self.inputs, stream_id
-                self.buffer_queue.put((dt, stream_id, raw_data))
-                dt, stream_id, raw_data = next(self.reader)
-            assert channel == self.outputs[stream_id], (channel, self.outputs[stream_id])  # wrong channel
-            ref_data = literal_eval(raw_data.decode('ascii'))
-            assert data == ref_data, (data, ref_data)
+        assert channel == self.outputs[stream_id], (channel, self.outputs[stream_id])  # wrong channel
+        ref_data = literal_eval(raw_data.decode('ascii'))
+        assert data == ref_data, (data, ref_data)
+
+
+class LogBusHandlerInputsOnly:
+    def __init__(self, log, inputs):
+        self.reader = log.read_gen(inputs.keys())
+        self.inputs = inputs
+
+    def listen(self):
+        dt, stream_id, data = next(self.reader)
+        channel = self.inputs[stream_id]
+        try:
+            return dt, channel, literal_eval(data.decode('ascii'))
+        except ValueError:
+            return dt, channel, np.frombuffer(data, dtype=GPS_MSG_DTYPE)
+
+    def publish(self, channel, data):
+        pass
 
 
 if __name__ == "__main__":
@@ -192,13 +205,14 @@ if __name__ == "__main__":
         print(next(log.read_gen(0))[-1])  # old arguments
         config_str = next(log.read_gen(0))[-1]
         config = literal_eval(config_str.decode('ascii'))
+
+        inputs={2:'position', 4:'orientation', 7:'status'}  # TODO map names
         if args.force:
-            outputs = None
+            bus = LogBusHandlerInputsOnly(log, inputs=inputs)
         else:
-            outputs = {1:'move'}
-        bus = LogBusHandler(log,
-                            inputs={2:'position', 4:'orientation', 7:'status'},
-                            outputs=outputs)  # TODO map names
+            bus = LogBusHandler(log,
+                                inputs=inputs,
+                                outputs={1:'move'})  # TODO map names
         game = RoboOrienteering2018(config={}, bus=bus)
         game.play()
 
