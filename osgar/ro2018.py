@@ -12,7 +12,7 @@ from queue import Queue
 import numpy as np
 
 from osgar.lib.logger import LogWriter, LogReader
-from osgar.lib.config import Config
+from osgar.lib.config import load
 from osgar.drivers import all_drivers
 from osgar.robot import Robot
 
@@ -45,6 +45,7 @@ def normalizeAnglePIPI( angle ):
 class RoboOrienteering2018:
     def __init__(self, config, bus):
         self.bus = bus
+        self.maxspeed = config['maxspeed']
         self.goal = (51749517, 180462688 - 1000)  # TODO extra configuration
         self.time = None
         self.last_position = None  # (lon, lat) in milliseconds
@@ -124,7 +125,7 @@ class RoboOrienteering2018:
             wheel_heading = normalizeAnglePIPI(desired_heading-spider_heading)
 
             desired_steering = int(-512*math.degrees(wheel_heading)/360.0)
-            self.set_speed(1, desired_steering)
+            self.set_speed(self.maxspeed, desired_steering)
 
             prev_time = self.time
             self.update()
@@ -192,12 +193,13 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
     subparsers.required = True
     parser_run = subparsers.add_parser('run', help='run on real HW')
-    parser_run.add_argument('config', help='configuration file')
+    parser_run.add_argument('config', nargs='+', help='configuration file')
     parser_run.add_argument('--note', help='add description')
 
     parser_replay = subparsers.add_parser('replay', help='replay from logfile')
     parser_replay.add_argument('logfile', help='recorded log file')
     parser_replay.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
+    parser_replay.add_argument('--config', nargs='+', help='force alternative configuration file')
     args = parser.parse_args()
 
     if args.command == 'replay':
@@ -205,6 +207,8 @@ if __name__ == "__main__":
         print(next(log.read_gen(0))[-1])  # old arguments
         config_str = next(log.read_gen(0))[-1]
         config = literal_eval(config_str.decode('ascii'))
+        if args.config is not None:
+            config = load(*args.config)
 
         inputs={2:'position', 4:'orientation', 7:'status'}  # TODO map names
         if args.force:
@@ -213,14 +217,14 @@ if __name__ == "__main__":
             bus = LogBusHandler(log,
                                 inputs=inputs,
                                 outputs={1:'move'})  # TODO map names
-        game = RoboOrienteering2018(config={}, bus=bus)
+        game = RoboOrienteering2018(config['robot']['modules']['app']['init'], bus=bus)
         game.play()
 
     elif args.command == 'run':
         log = LogWriter(prefix='ro2018-', note=str(sys.argv))
-        config = Config.load(args.config)
-        log.write(0, bytes(str(config.data), 'ascii'))  # write configuration
-        robot = Robot(config=config.data['robot'], logger=log, application=RoboOrienteering2018)
+        config = load(*args.config)
+        log.write(0, bytes(str(config), 'ascii'))  # write configuration
+        robot = Robot(config=config['robot'], logger=log, application=RoboOrienteering2018)
         game = robot.modules['app']  # TODO nicer reference
         robot.start()
         game.play()
