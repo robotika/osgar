@@ -4,28 +4,35 @@
 import json
 
 
-class Config(object):
-
-    OLD_SUPPORTED_VERSION = 1
-    ROBOT_CONTAINER_VER = 2
-
-    SUPPORTED_VERSIONS = [ROBOT_CONTAINER_VER]
+ROBOT_CONTAINER_VER = 2
+SUPPORTED_VERSIONS = [ROBOT_CONTAINER_VER]
 
 
-    @classmethod
-    def load(cls, filename):
-        return cls.loads(open(filename).read())
+class MergeConflictError(Exception):
+    pass
 
-    @classmethod
-    def loads(cls, text_data):
-        cls.data = json.loads(text_data)
-        assert 'version' in cls.data, cls.data
-        assert cls.data['version'] in cls.SUPPORTED_VERSIONS, cls.data['version']
-        cls.version = cls.data['version']
 
-        return cls
+def load(*filenames):
+    ret = {}
+    for filename in filenames:
+        with open(filename) as f:
+            data = json.load(f)
+            assert 'version' in data, data
+            assert data['version'] in SUPPORTED_VERSIONS, data['version']
+            ret = merge_dict(ret, data)
+    return ret
 
-    def __init__(self):
-        self.data = {}
+
+def merge_dict(dict1, dict2):
+    if not isinstance(dict1, dict) or not isinstance(dict2, dict):
+        raise MergeConflictError(str((dict1, dict2)))
+    ret = dict1.copy()
+    for key in dict2.keys():
+        if key in dict1:
+            if dict1[key] != dict2[key]:
+                ret[key] = merge_dict(dict1[key], dict2[key])
+        else:
+            ret[key] = dict2[key]
+    return ret
 
 # vim: expandtab sw=4 ts=4
