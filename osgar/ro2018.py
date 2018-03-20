@@ -42,17 +42,43 @@ def normalizeAnglePIPI( angle ):
     return angle 
 
 
+def latlon2xy(lat, lon):
+    return int(round(lon*3600000)), int(round(lat*3600000))
+
+class EmergencyStopException(Exception):
+    pass
+
+class EmergencyStopMonitor:
+    def __init__(self, robot):
+        self.robot = robot
+
+    def update(self, robot):
+        if (robot.status & RoboOrienteering2018.EMERGENCY_STOP) == 0:
+            raise EmergencyStopException()
+
+    # context manager functions
+    def __enter__(self):
+        self.callback = self.robot.register(self.update)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.robot.unregister(self.callback)
+
+
 class RoboOrienteering2018:
+    EMERGENCY_STOP = 0x0001
+
     def __init__(self, config, bus):
         self.bus = bus
         self.maxspeed = config['maxspeed']
-        self.goal = (51749517, 180462688 - 1000)  # TODO extra configuration
+        self.goals = [latlon2xy(lat, lon) for lat, lon in config['waypoints']]
         self.time = None
         self.last_position = None  # (lon, lat) in milliseconds
         self.last_imu_yaw = None  # magnetic north in degrees
         self.status = None
         self.steering_status = None
         self.cmd = (0, 0)
+        self.monitors = []
 
     def update(self):
         packet = self.bus.listen()
@@ -68,6 +94,8 @@ class RoboOrienteering2018:
             elif channel == 'status':  # i.e. I can drive only spider??
                 self.status, self.steering_status = data
                 self.bus.publish('move', self.cmd)
+            for monitor_update in self.monitors:
+                monitor_update(self)
 
     def set_speed(self, speed, angular_speed):
         self.cmd = (speed, angular_speed)
@@ -80,6 +108,14 @@ class RoboOrienteering2018:
 
     def join(self):
         pass
+
+    def register(self, callback):
+        self.monitors.append(callback)
+        return callback
+
+    def unregister(self, callback):
+        assert callback in self.monitors
+        self.monitors.remove(callback)
 
     def wait(self, dt):
         if self.time is None:
@@ -113,24 +149,49 @@ class RoboOrienteering2018:
             self.update()
         print(self.steering_status)
 
-        print("Ready")
-        print("Goal at %.2fm" % geo_length(self.last_position, self.goal))
+        print("Ready", self.goals)
+        try:
+            with EmergencyStopMonitor(self):
+                for goal in self.goals:
+                    print("Goal at %.2fm" % geo_length(self.last_position, goal))
+                    print("Heading %.1fdeg, imu" % math.degrees(geo_angle(self.last_position, goal)), self.last_imu_yaw)
+                    self.navigate_to_goal(goal, timedelta(seconds=20))
+        except EmergencyStopException:
+            print("EMERGENCY STOP (wait 3s)")
+            self.set_speed(0, 0)
+            start_time = self.time
+            while self.time - start_time < timedelta(seconds=3):
+                self.set_speed(0, 0)
+                self.update()
 
-        print("Heading %.1fdeg, imu" % math.degrees(geo_angle(self.last_position, self.goal)), self.last_imu_yaw)
-        
+    def navigate_to_goal(self, goal, timeout):
         start_time = self.time
-        while geo_length(self.last_position, self.goal) > 1.0 and self.time - start_time < timedelta(seconds=20):
-            desired_heading = normalizeAnglePIPI(geo_angle(self.last_position, self.goal))
-            spider_heading = normalizeAnglePIPI(math.radians(180 + self.last_imu_yaw))
+        while geo_length(self.last_position, goal) > 1.0 and self.time - start_time < timeout:
+            desired_heading = normalizeAnglePIPI(geo_angle(self.last_position, goal))
+            spider_heading = normalizeAnglePIPI(math.radians(180 - self.last_imu_yaw - 35.5))
             wheel_heading = normalizeAnglePIPI(desired_heading-spider_heading)
 
             desired_steering = int(-512*math.degrees(wheel_heading)/360.0)
-            self.set_speed(self.maxspeed, desired_steering)
+
+            speed = self.maxspeed
+            if self.steering_status[0] is None:
+                speed = 1  # in in place
+            else:
+                 d = desired_steering - self.steering_status[0]
+                 if d > 256:
+                     d -= 512
+                 elif d < -256:
+                     d += 512
+                 if abs(d) > 30:
+                     speed = 1  # turn in place (II.)
+
+            self.set_speed(speed, desired_steering)
 
             prev_time = self.time
             self.update()
+
             if int(prev_time.total_seconds()) != int(self.time.total_seconds()):
-                print(self.time, geo_length(self.last_position, self.goal), self.last_imu_yaw, self.steering_status)
+                print(self.time, geo_length(self.last_position, goal), self.last_imu_yaw, self.steering_status)
 
         print("STOP (3s)")
         self.set_speed(0, 0)
