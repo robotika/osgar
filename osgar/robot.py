@@ -7,7 +7,7 @@ import sys
 from queue import Queue
 
 from osgar.lib.logger import LogWriter, LogReader
-from osgar.lib.config import Config
+from osgar.lib.config import load
 from osgar.drivers import all_drivers
 from osgar.drivers.bus import BusHandler
 
@@ -68,9 +68,9 @@ if __name__ == "__main__":
         pass  # TODO
     elif args.command == 'run':
         log = LogWriter(prefix='robot-test-', note=str(sys.argv))
-        config = Config.load(args.config)
-        log.write(0, bytes(str(config.data), 'ascii'))  # write configuration
-        robot = Robot(config=config.data['robot'], logger=log)
+        config = load(args.config)
+        log.write(0, bytes(str(config), 'ascii'))  # write configuration
+        robot = Robot(config=config['robot'], logger=log)
         robot.start()
         time.sleep(3.0)
         robot.finish()
