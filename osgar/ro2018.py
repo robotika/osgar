@@ -12,7 +12,7 @@ from queue import Queue
 import numpy as np
 
 from osgar.lib.logger import LogWriter, LogReader
-from osgar.lib.config import load
+from osgar.lib.config import load as config_load
 from osgar.drivers import all_drivers
 from osgar.robot import Robot
 
@@ -208,7 +208,7 @@ if __name__ == "__main__":
         config_str = next(log.read_gen(0))[-1]
         config = literal_eval(config_str.decode('ascii'))
         if args.config is not None:
-            config = load(*args.config)
+            config = config_load(*args.config)
 
         inputs={2:'position', 4:'orientation', 7:'status'}  # TODO map names
         if args.force:
@@ -222,7 +222,7 @@ if __name__ == "__main__":
 
     elif args.command == 'run':
         log = LogWriter(prefix='ro2018-', note=str(sys.argv))
-        config = load(*args.config)
+        config = config_load(*args.config)
         log.write(0, bytes(str(config), 'ascii'))  # write configuration
         robot = Robot(config=config['robot'], logger=log, application=RoboOrienteering2018)
         game = robot.modules['app']  # TODO nicer reference
