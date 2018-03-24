@@ -203,10 +203,11 @@ class RoboOrienteering2018:
 
 # move to drivers/bus??
 class LogBusHandler:
-    def __init__(self, log, inputs, outputs):
+    def __init__(self, log, inputs, outputs, raw_channels=[]):
         self.reader = log.read_gen(list(inputs.keys()) + list(outputs.keys()))
         self.inputs = inputs
         self.outputs = outputs
+        self.raw_channels = raw_channels
         self.buffer_queue = Queue()
 
     def listen(self):
@@ -215,6 +216,8 @@ class LogBusHandler:
         else:
             dt, stream_id, data = self.buffer_queue.get()
         channel = self.inputs[stream_id]
+        if channel in self.raw_channels:
+            return dt, channel, data
         try:
             return dt, channel, literal_eval(data.decode('ascii'))
         except ValueError:
@@ -228,18 +231,24 @@ class LogBusHandler:
             self.buffer_queue.put((dt, stream_id, raw_data))
             dt, stream_id, raw_data = next(self.reader)
         assert channel == self.outputs[stream_id], (channel, self.outputs[stream_id])  # wrong channel
-        ref_data = literal_eval(raw_data.decode('ascii'))
+        if channel in self.raw_channels:
+            ref_data = raw_data
+        else:
+            ref_data = literal_eval(raw_data.decode('ascii'))
         assert data == ref_data, (data, ref_data)
 
 
 class LogBusHandlerInputsOnly:
-    def __init__(self, log, inputs):
+    def __init__(self, log, inputs, raw_channels=[]):
         self.reader = log.read_gen(inputs.keys())
         self.inputs = inputs
+        self.raw_channels = raw_channels
 
     def listen(self):
         dt, stream_id, data = next(self.reader)
         channel = self.inputs[stream_id]
+        if channel in self.raw_channels:
+            return dt, channel, data
         try:
             return dt, channel, literal_eval(data.decode('ascii'))
         except ValueError:
