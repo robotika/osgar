@@ -4,8 +4,10 @@ from .spider import Spider
 from .logserial import LogSerial
 from .canserial import CANSerial
 from .simulator import SpiderSimulator
+from .logsocket import LogTCP
 
 # dictionary of all available drivers
 all_drivers = dict(gps=GPS, imu=IMU, spider=Spider, serial=LogSerial,
-                   can=CANSerial, simulator=SpiderSimulator)
+                   can=CANSerial, simulator=SpiderSimulator,
+                   tcp=LogTCP)
 
