@@ -135,7 +135,7 @@ class RoboOrienteering2018:
 
     def play(self):
         print("Waiting for valid GPS position...")
-        while self.last_position is None or self.last_position == INVALID_COORDINATES:
+        while self.last_position is None or np.array_equal(self.last_position, INVALID_COORDINATES):
             self.update()
         print(self.last_position)
 
