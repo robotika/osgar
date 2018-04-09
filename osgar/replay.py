@@ -15,15 +15,7 @@ from osgar.lib.logger import LogReader
 from ro2018 import LogBusHandler, LogBusHandlerInputsOnly
 from osgar.drivers import all_drivers
 
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Replay module from log')
-    parser.add_argument('logfile', help='recorded log file')
-    parser.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
-    parser.add_argument('--config', nargs='+', help='force alternative configuration file')
-    parser.add_argument('--module', help='module name for analysis', required=True)  # TODO default "all"
-    args = parser.parse_args()
-
+def replay(args, application=None):
     log = LogReader(args.logfile)
     print(next(log.read_gen(0))[-1])  # old arguments
     config_str = next(log.read_gen(0))[-1]
@@ -64,7 +56,23 @@ if __name__ == "__main__":
         bus = LogBusHandler(log, inputs=inputs, outputs=outputs, raw_channels=raw_channels)
 
     driver_name = module_config['driver']
-    module_class = all_drivers[driver_name](module_config['init'], bus=bus)
+    if driver_name == 'application':
+        assert application is not None
+        module_class = application(module_config['init'], bus=bus)
+    else:
+        module_class = all_drivers[driver_name](module_config['init'], bus=bus)
+    return module_class
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Replay module from log')
+    parser.add_argument('logfile', help='recorded log file')
+    parser.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
+    parser.add_argument('--config', nargs='+', help='force alternative configuration file')
+    parser.add_argument('--module', help='module name for analysis', required=True)  # TODO default "all"
+    args = parser.parse_args()
+    
+    module_class = replay(args)
 
     module_class.start()
     # now wait until the module is alive
