@@ -9,8 +9,7 @@ from osgar.lib.logger import LogWriter, LogReader
 from osgar.drivers.bus import BusShutdownException
 
 
-GPS_MSG_DTYPE = [('lon', 'i4'), ('lat', 'i4')]
-INVALID_COORDINATES = np.array((0x7FFFFFFF, 0x7FFFFFFF), dtype=GPS_MSG_DTYPE)
+INVALID_COORDINATES = (None, None)
 
 
 def checksum(s):
@@ -42,9 +41,7 @@ class GPS(Thread):
         assert checksum(line[1:-3]) == line[-2:], (line, checksum(line[1:-3]))
         s = line.split(b',')
         coord = str2ms(s[4]), str2ms(s[2])
-        if coord == (None, None):
-            return INVALID_COORDINATES
-        return np.array(coord, dtype=GPS_MSG_DTYPE)
+        return coord
 
     @staticmethod
     def split_buffer(data):

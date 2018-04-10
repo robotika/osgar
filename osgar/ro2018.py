@@ -8,14 +8,12 @@ import math
 from datetime import timedelta
 from queue import Queue
 
-import numpy as np
-
 from osgar.lib.logger import LogWriter, LogReader
 from osgar.lib.config import load as config_load
 from osgar.drivers import all_drivers
 from osgar.robot import Robot
 
-from osgar.drivers.gps import INVALID_COORDINATES, GPS_MSG_DTYPE
+from osgar.drivers.gps import INVALID_COORDINATES
 from osgar.drivers.bus import BusHandler
 
 
@@ -86,7 +84,7 @@ class RoboOrienteering2018:
             timestamp, channel, data = packet
             self.time = timestamp
             if channel == 'position':
-                self.last_position = (data['lon'], data['lat'])
+                self.last_position = data
             elif channel == 'orientation':
                 (yaw, pitch, roll), (magx, y, z), (accx, y, z), (gyrox, y, z) = data
                 self.last_imu_yaw = yaw
