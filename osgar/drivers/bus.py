@@ -8,6 +8,16 @@ from ast import literal_eval
 class BusShutdownException(Exception):
     pass
 
+def serialize(data):
+    try:
+        bytes_data = data.tobytes()
+    except AttributeError:
+        if isinstance(data, bytes):
+            bytes_data = data
+        else:
+            bytes_data = bytes(str(data), encoding='ascii')
+    return bytes_data
+
 
 class BusHandler:
     def __init__(self, logger, name='', out={}):
@@ -24,7 +34,7 @@ class BusHandler:
     def publish(self, channel, data):
         with self.logger.lock:
             stream_id = self.stream_id[channel]  # local maping of indexes
-            timestamp = self.logger.write(stream_id, data)
+            timestamp = self.logger.write(stream_id, serialize(data))
             for queue, input_channel in self.out[channel]:
                 queue.put((timestamp, input_channel, data))
 

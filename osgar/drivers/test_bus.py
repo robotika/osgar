@@ -4,7 +4,8 @@ from queue import Queue
 from datetime import timedelta
 
 from osgar.drivers.bus import (BusHandler, BusShutdownException,
-                               LogBusHandler, LogBusHandlerInputsOnly)
+                               LogBusHandler, LogBusHandlerInputsOnly,
+                               serialize)
 
 
 class BusHandlerTest(unittest.TestCase):
@@ -20,6 +21,13 @@ class BusHandlerTest(unittest.TestCase):
         bus = BusHandler(logger, out={'raw':[]})
         bus.publish('raw', b'some binary data 2nd try')
         logger.write.assert_called_once_with(1, b'some binary data 2nd try')
+
+    def test_publish_serialization(self):
+        logger = MagicMock()
+        logger.register = MagicMock(return_value=1)
+        bus = BusHandler(logger, out={'position':[]})
+        bus.publish('position', (-123, 456))
+        logger.write.assert_called_once_with(1, b'(-123, 456)')
 
     def test_listen(self):
         logger = MagicMock()
@@ -122,5 +130,10 @@ class BusHandlerTest(unittest.TestCase):
         bus.publish('new_channel', b'some data')
         self.assertEqual(bus.listen(), (timedelta(microseconds=11), 'raw', b'(3,4,5)'))
 
+    def test_serialization(self):
+            self.assertEqual(serialize(b'\x01\x02'), b'\x01\x02')
+            position = (51749517, 180462688)
+            self.assertEqual(serialize(position), b'(51749517, 180462688)')
+            self.assertEqual(serialize((123.4, 'Hi')), b"(123.4, 'Hi')")
 
 # vim: expandtab sw=4 ts=4
