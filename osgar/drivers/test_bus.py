@@ -1,8 +1,10 @@
 import unittest
 from unittest.mock import MagicMock
 from queue import Queue
+from datetime import timedelta
 
-from osgar.drivers.bus import BusHandler, BusShutdownException
+from osgar.drivers.bus import (BusHandler, BusShutdownException,
+                               LogBusHandler, LogBusHandlerInputsOnly)
 
 
 class BusHandlerTest(unittest.TestCase):
@@ -55,5 +57,70 @@ class BusHandlerTest(unittest.TestCase):
         self.assertTrue(bus.is_alive())
         bus.shutdown()
         self.assertFalse(bus.is_alive())
+
+    def test_log_bus_handler(self):
+        log = MagicMock()
+        log_data = [
+            (timedelta(microseconds=10), 1, b'(1,2)'),
+            (timedelta(microseconds=11), 1, b'(3,4,5)'),
+            (timedelta(microseconds=30), 2, b'[8,9]'),
+        ]
+        log.read_gen = MagicMock(return_value=iter(log_data))
+        inputs = {1:'raw'}
+        outputs = {2:'can'}
+        bus = LogBusHandler(log, inputs, outputs)
+        bus.listen()
+        with self.assertRaises(AssertionError) as e:
+            bus.publish('can', b'parsed data')
+        self.assertEqual(str(e.exception), "(b'parsed data', [8, 9])")
+
+    def test_wrong_publish_channel(self):
+        log = MagicMock()
+        log_data = [
+            (timedelta(microseconds=10), 1, b'(1,2)'),
+            (timedelta(microseconds=30), 2, b'[8,9]'),
+            (timedelta(microseconds=35), 3, b'[8,9]'),
+        ]
+        log.read_gen = MagicMock(return_value=iter(log_data))
+        inputs = {1:'raw'}
+        outputs = {2:'can', 3:'can2'}
+        bus = LogBusHandler(log, inputs, outputs)
+        bus.listen()
+        with self.assertRaises(AssertionError) as e:
+            bus.publish('can2', [8, 9])
+        self.assertEqual(str(e.exception), "('can2', 'can')")
+
+        with self.assertRaises(AssertionError) as e:
+            bus.publish('can3', [1, 2])
+        self.assertEqual(str(e.exception), "('can3', dict_values(['can', 'can2']))")
+
+    def test_log_bus_handler_inputs_onlye(self):
+        log = MagicMock()
+        log_data = [
+            (timedelta(microseconds=10), 1, b'(1,2)'),
+            (timedelta(microseconds=11), 1, b'(3,4,5)'),
+            (timedelta(microseconds=30), 2, b'[8,9]'),
+        ]
+        log.read_gen = MagicMock(return_value=iter(log_data))
+        inputs = {1:'raw'}
+        bus = LogBusHandlerInputsOnly(log, inputs)
+        self.assertEqual(bus.listen(), (timedelta(microseconds=10), 'raw', (1, 2)))
+        bus.publish('new_channel', b'some data')
+        self.assertEqual(bus.listen(), (timedelta(microseconds=11), 'raw', (3, 4, 5)))
+
+    def test_log_bus_handler_raw_channels(self):
+        log = MagicMock()
+        log_data = [
+            (timedelta(microseconds=10), 1, b'(1,2)'),
+            (timedelta(microseconds=11), 1, b'(3,4,5)'),
+            (timedelta(microseconds=30), 2, b'[8,9]'),
+        ]
+        log.read_gen = MagicMock(return_value=iter(log_data))
+        inputs = {1:'raw'}
+        bus = LogBusHandlerInputsOnly(log, inputs, raw_channels=['raw'])
+        self.assertEqual(bus.listen(), (timedelta(microseconds=10), 'raw', b'(1,2)'))
+        bus.publish('new_channel', b'some data')
+        self.assertEqual(bus.listen(), (timedelta(microseconds=11), 'raw', b'(3,4,5)'))
+
 
 # vim: expandtab sw=4 ts=4

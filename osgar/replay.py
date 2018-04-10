@@ -12,7 +12,7 @@ from queue import Queue
 import numpy as np
 
 from osgar.lib.logger import LogReader
-from ro2018 import LogBusHandler, LogBusHandlerInputsOnly
+from osgar.drivers.bus import LogBusHandler, LogBusHandlerInputsOnly
 from osgar.drivers import all_drivers
 
 def replay(args, application=None):
