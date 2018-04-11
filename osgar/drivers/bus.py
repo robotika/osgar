@@ -4,19 +4,19 @@
 from queue import Queue
 from ast import literal_eval
 
+import msgpack
+
 
 class BusShutdownException(Exception):
     pass
 
+
 def serialize(data):
-    try:
-        bytes_data = data.tobytes()
-    except AttributeError:
-        if isinstance(data, bytes):
-            bytes_data = data
-        else:
-            bytes_data = bytes(str(data), encoding='ascii')
-    return bytes_data
+    return msgpack.packb(data, use_bin_type=True)
+
+
+def deserialize(bytes_data):
+    return msgpack.unpackb(bytes_data, raw=False)
 
 
 class BusHandler:
