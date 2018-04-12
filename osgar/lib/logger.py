@@ -63,7 +63,7 @@ class LogWriter:
     def write(self, stream_id, data):
         with self.lock:
             dt = datetime.datetime.utcnow() - self.start_time
-            bytes_data = self.serialize(data)
+            bytes_data = data
             assert dt.days == 0, dt
             assert dt.seconds < 3600, dt  # overflow not supported yet
             assert len(bytes_data) < 0x10000, len(bytes_data)  # large data blocks are not supported yet
@@ -72,16 +72,6 @@ class LogWriter:
             self.f.write(bytes_data)
             self.f.flush()
         return dt
-
-    def serialize(self, data):
-        try:
-            bytes_data = data.tobytes()
-        except AttributeError:
-            if isinstance(data, bytes):
-                bytes_data = data
-            else:
-                bytes_data = bytes(str(data), encoding='ascii')
-        return bytes_data
 
     def close(self):
         self.f.close()

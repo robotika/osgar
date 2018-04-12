@@ -5,18 +5,15 @@
 import argparse
 import sys
 import math
-from ast import literal_eval
 from datetime import timedelta
 from queue import Queue
-
-import numpy as np
 
 from osgar.lib.logger import LogWriter, LogReader
 from osgar.lib.config import load as config_load
 from osgar.drivers import all_drivers
 from osgar.robot import Robot
 
-from osgar.drivers.gps import INVALID_COORDINATES, GPS_MSG_DTYPE
+from osgar.drivers.gps import INVALID_COORDINATES
 from osgar.drivers.bus import BusHandler
 
 
@@ -87,7 +84,7 @@ class RoboOrienteering2018:
             timestamp, channel, data = packet
             self.time = timestamp
             if channel == 'position':
-                self.last_position = (data['lon'], data['lat'])
+                self.last_position = data
             elif channel == 'orientation':
                 (yaw, pitch, roll), (magx, y, z), (accx, y, z), (gyrox, y, z) = data
                 self.last_imu_yaw = yaw
@@ -201,54 +198,6 @@ class RoboOrienteering2018:
             self.update()
 
 
-# move to drivers/bus??
-class LogBusHandler:
-    def __init__(self, log, inputs, outputs):
-        self.reader = log.read_gen(list(inputs.keys()) + list(outputs.keys()))
-        self.inputs = inputs
-        self.outputs = outputs
-        self.buffer_queue = Queue()
-
-    def listen(self):
-        if self.buffer_queue.empty():
-            dt, stream_id, data = next(self.reader)
-        else:
-            dt, stream_id, data = self.buffer_queue.get()
-        channel = self.inputs[stream_id]
-        try:
-            return dt, channel, literal_eval(data.decode('ascii'))
-        except ValueError:
-            return dt, channel, np.frombuffer(data, dtype=GPS_MSG_DTYPE)
-
-    def publish(self, channel, data):
-        assert channel in self.outputs.values(), (channel, self.outputs.values())
-        dt, stream_id, raw_data = next(self.reader)
-        while stream_id not in self.outputs:
-            assert stream_id in self.inputs, stream_id
-            self.buffer_queue.put((dt, stream_id, raw_data))
-            dt, stream_id, raw_data = next(self.reader)
-        assert channel == self.outputs[stream_id], (channel, self.outputs[stream_id])  # wrong channel
-        ref_data = literal_eval(raw_data.decode('ascii'))
-        assert data == ref_data, (data, ref_data)
-
-
-class LogBusHandlerInputsOnly:
-    def __init__(self, log, inputs):
-        self.reader = log.read_gen(inputs.keys())
-        self.inputs = inputs
-
-    def listen(self):
-        dt, stream_id, data = next(self.reader)
-        channel = self.inputs[stream_id]
-        try:
-            return dt, channel, literal_eval(data.decode('ascii'))
-        except ValueError:
-            return dt, channel, np.frombuffer(data, dtype=GPS_MSG_DTYPE)
-
-    def publish(self, channel, data):
-        pass
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='RoboOrienteering 2018')
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
@@ -264,21 +213,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.command == 'replay':
-        log = LogReader(args.logfile)
-        print(next(log.read_gen(0))[-1])  # old arguments
-        config_str = next(log.read_gen(0))[-1]
-        config = literal_eval(config_str.decode('ascii'))
-        if args.config is not None:
-            config = config_load(*args.config)
-
-        inputs={2:'position', 4:'orientation', 7:'status'}  # TODO map names
-        if args.force:
-            bus = LogBusHandlerInputsOnly(log, inputs=inputs)
-        else:
-            bus = LogBusHandler(log,
-                                inputs=inputs,
-                                outputs={1:'move'})  # TODO map names
-        game = RoboOrienteering2018(config['robot']['modules']['app']['init'], bus=bus)
+        from replay import replay
+        args.module = 'app'
+        game = replay(args, application=RoboOrienteering2018)
         game.play()
 
     elif args.command == 'run':
