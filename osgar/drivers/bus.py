@@ -4,19 +4,11 @@
 from queue import Queue
 from ast import literal_eval
 
-import msgpack
+from osgar.lib.serialize import serialize, deserialize
 
 
 class BusShutdownException(Exception):
     pass
-
-
-def serialize(data):
-    return msgpack.packb(data, use_bin_type=True)
-
-
-def deserialize(bytes_data):
-    return msgpack.unpackb(bytes_data, raw=False)
 
 
 class BusHandler:
