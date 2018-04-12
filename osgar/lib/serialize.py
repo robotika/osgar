@@ -1,20 +1,13 @@
 """
   serialization of messages
 """
-from ast import literal_eval
+import msgpack
 
 
 def serialize(data):
-    try:
-        bytes_data = data.tobytes()
-    except AttributeError:
-        if isinstance(data, bytes):
-            bytes_data = data
-        else:
-            bytes_data = bytes(str(data), encoding='ascii')
-    return bytes_data
+    return msgpack.packb(data, use_bin_type=True)
 
 
 def deserialize(bytes_data):
-    return literal_eval(bytes_data.decode('ascii'))
+    return msgpack.unpackb(bytes_data, raw=False)
 

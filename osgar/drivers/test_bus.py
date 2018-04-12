@@ -7,6 +7,8 @@ from osgar.drivers.bus import (BusHandler, BusShutdownException,
                                LogBusHandler, LogBusHandlerInputsOnly,
                                serialize)
 
+from osgar.lib.serialize import serialize, deserialize
+
 
 class BusHandlerTest(unittest.TestCase):
 
@@ -20,14 +22,14 @@ class BusHandlerTest(unittest.TestCase):
         logger.register = MagicMock(return_value=1)
         bus = BusHandler(logger, out={'raw':[]})
         bus.publish('raw', b'some binary data 2nd try')
-        logger.write.assert_called_once_with(1, b'some binary data 2nd try')
+        logger.write.assert_called_once_with(1, b'\xc4\x18some binary data 2nd try')
 
     def test_publish_serialization(self):
         logger = MagicMock()
         logger.register = MagicMock(return_value=1)
         bus = BusHandler(logger, out={'position':[]})
         bus.publish('position', (-123, 456))
-        logger.write.assert_called_once_with(1, b'(-123, 456)')
+        logger.write.assert_called_once_with(1, b'\x92\xd0\x85\xcd\x01\xc8')
 
     def test_listen(self):
         logger = MagicMock()
@@ -57,7 +59,7 @@ class BusHandlerTest(unittest.TestCase):
         logger.register = MagicMock(return_value=1)
         bus = BusHandler(logger, name='gps_serial', out={'raw':[]})
         bus.publish('raw', b'bin data')
-        logger.write.assert_called_once_with(1, b'bin data')
+        logger.write.assert_called_once_with(1, b'\xc4\x08bin data')
 
     def test_alive(self):
         logger = MagicMock()
@@ -69,9 +71,9 @@ class BusHandlerTest(unittest.TestCase):
     def test_log_bus_handler(self):
         log = MagicMock()
         log_data = [
-            (timedelta(microseconds=10), 1, b'(1,2)'),
-            (timedelta(microseconds=11), 1, b'(3,4,5)'),
-            (timedelta(microseconds=30), 2, b'[8,9]'),
+            (timedelta(microseconds=10), 1, serialize(b'(1,2)')),
+            (timedelta(microseconds=11), 1, serialize(b'(3,4,5)')),
+            (timedelta(microseconds=30), 2, serialize([8, 9])),
         ]
         log.read_gen = MagicMock(return_value=iter(log_data))
         inputs = {1:'raw'}
@@ -85,9 +87,9 @@ class BusHandlerTest(unittest.TestCase):
     def test_wrong_publish_channel(self):
         log = MagicMock()
         log_data = [
-            (timedelta(microseconds=10), 1, b'(1,2)'),
-            (timedelta(microseconds=30), 2, b'[8,9]'),
-            (timedelta(microseconds=35), 3, b'[8,9]'),
+            (timedelta(microseconds=10), 1, serialize(b'(1,2)')),
+            (timedelta(microseconds=30), 2, serialize(b'[8,9]')),
+            (timedelta(microseconds=35), 3, serialize(b'[8,9]')),
         ]
         log.read_gen = MagicMock(return_value=iter(log_data))
         inputs = {1:'raw'}
@@ -105,15 +107,15 @@ class BusHandlerTest(unittest.TestCase):
     def test_log_bus_handler_inputs_onlye(self):
         log = MagicMock()
         log_data = [
-            (timedelta(microseconds=10), 1, b'(1,2)'),
-            (timedelta(microseconds=11), 1, b'(3,4,5)'),
-            (timedelta(microseconds=30), 2, b'[8,9]'),
+            (timedelta(microseconds=10), 1, serialize([1, 2])),
+            (timedelta(microseconds=11), 1, serialize([3, 4, 5])),
+            (timedelta(microseconds=30), 2, serialize([8, 9])),
         ]
         log.read_gen = MagicMock(return_value=iter(log_data))
         inputs = {1:'raw'}
         bus = LogBusHandlerInputsOnly(log, inputs)
-        self.assertEqual(bus.listen(), (timedelta(microseconds=10), 'raw', (1, 2)))
+        self.assertEqual(bus.listen(), (timedelta(microseconds=10), 'raw', [1, 2]))
         bus.publish('new_channel', b'some data')
-        self.assertEqual(bus.listen(), (timedelta(microseconds=11), 'raw', (3, 4, 5)))
+        self.assertEqual(bus.listen(), (timedelta(microseconds=11), 'raw', [3, 4, 5]))
 
 # vim: expandtab sw=4 ts=4
