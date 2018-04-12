@@ -2,22 +2,12 @@
   Internal bus for communication among modules
 """
 from queue import Queue
-from ast import literal_eval
+
+from osgar.lib.serialize import serialize, deserialize
 
 
 class BusShutdownException(Exception):
     pass
-
-
-def serialize(data):
-    try:
-        bytes_data = data.tobytes()
-    except AttributeError:
-        if isinstance(data, bytes):
-            bytes_data = data
-        else:
-            bytes_data = bytes(str(data), encoding='ascii')
-    return bytes_data
 
 
 class BusHandler:
@@ -63,21 +53,22 @@ class LogBusHandler:
 
     def listen(self):
         if self.buffer_queue.empty():
-            dt, stream_id, data = next(self.reader)
+            dt, stream_id, bytes_data = next(self.reader)
         else:
-            dt, stream_id, data = self.buffer_queue.get()
+            dt, stream_id, bytes_data = self.buffer_queue.get()
         channel = self.inputs[stream_id]
-        return dt, channel, literal_eval(data.decode('ascii'))
+        data = deserialize(bytes_data)
+        return dt, channel, data
 
     def publish(self, channel, data):
         assert channel in self.outputs.values(), (channel, self.outputs.values())
-        dt, stream_id, raw_data = next(self.reader)
+        dt, stream_id, bytes_data = next(self.reader)
         while stream_id not in self.outputs:
             assert stream_id in self.inputs, stream_id
-            self.buffer_queue.put((dt, stream_id, raw_data))
-            dt, stream_id, raw_data = next(self.reader)
+            self.buffer_queue.put((dt, stream_id, bytes_data))
+            dt, stream_id, bytes_data = next(self.reader)
         assert channel == self.outputs[stream_id], (channel, self.outputs[stream_id])  # wrong channel
-        ref_data = literal_eval(raw_data.decode('ascii'))
+        ref_data = deserialize(bytes_data)
         assert data == ref_data, (data, ref_data)
 
 
@@ -87,9 +78,10 @@ class LogBusHandlerInputsOnly:
         self.inputs = inputs
 
     def listen(self):
-        dt, stream_id, data = next(self.reader)
+        dt, stream_id, bytes_data = next(self.reader)
         channel = self.inputs[stream_id]
-        return dt, channel, literal_eval(data.decode('ascii'))
+        data = deserialize(bytes_data)
+        return dt, channel, data
 
     def publish(self, channel, data):
         pass
