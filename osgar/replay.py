@@ -47,13 +47,11 @@ def replay(args, application=None):
     outputs = dict([(1 + names.index('.'.join([module, name])), name) for name in output_names])
     print(outputs)
 
-    raw_channels = ['raw', 'can']
-
     log = LogReader(args.logfile)  # start reading log from the beginning again
     if args.force:
-        bus = LogBusHandlerInputsOnly(log, inputs=inputs, raw_channels=raw_channels)
+        bus = LogBusHandlerInputsOnly(log, inputs=inputs)
     else:
-        bus = LogBusHandler(log, inputs=inputs, outputs=outputs, raw_channels=raw_channels)
+        bus = LogBusHandler(log, inputs=inputs, outputs=outputs)
 
     driver_name = module_config['driver']
     if driver_name == 'application':

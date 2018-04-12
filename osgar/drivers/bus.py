@@ -54,56 +54,43 @@ class BusHandler:
 
 
 class LogBusHandler:
-    def __init__(self, log, inputs, outputs, raw_channels=[]):
+    def __init__(self, log, inputs, outputs):
         self.reader = log.read_gen(list(inputs.keys()) + list(outputs.keys()))
         self.inputs = inputs
         self.outputs = outputs
-        self.raw_channels = raw_channels
         self.buffer_queue = Queue()
 
     def listen(self):
         if self.buffer_queue.empty():
-            dt, stream_id, data = next(self.reader)
+            dt, stream_id, bytes_data = next(self.reader)
         else:
-            dt, stream_id, data = self.buffer_queue.get()
+            dt, stream_id, bytes_data = self.buffer_queue.get()
         channel = self.inputs[stream_id]
-        if channel in self.raw_channels:
-            return dt, channel, data
-        try:
-            return dt, channel, literal_eval(data.decode('ascii'))
-        except ValueError:
-            assert False  # return dt, channel, np.frombuffer(data, dtype=GPS_MSG_DTYPE)
+        data = deserialize(bytes_data)
+        return dt, channel, data
 
     def publish(self, channel, data):
         assert channel in self.outputs.values(), (channel, self.outputs.values())
-        dt, stream_id, raw_data = next(self.reader)
+        dt, stream_id, bytes_data = next(self.reader)
         while stream_id not in self.outputs:
             assert stream_id in self.inputs, stream_id
-            self.buffer_queue.put((dt, stream_id, raw_data))
-            dt, stream_id, raw_data = next(self.reader)
+            self.buffer_queue.put((dt, stream_id, bytes_data))
+            dt, stream_id, bytes_data = next(self.reader)
         assert channel == self.outputs[stream_id], (channel, self.outputs[stream_id])  # wrong channel
-        if channel in self.raw_channels:
-            ref_data = raw_data
-        else:
-            ref_data = literal_eval(raw_data.decode('ascii'))
+        ref_data = deserialize(bytes_data)
         assert data == ref_data, (data, ref_data)
 
 
 class LogBusHandlerInputsOnly:
-    def __init__(self, log, inputs, raw_channels=[]):
+    def __init__(self, log, inputs):
         self.reader = log.read_gen(inputs.keys())
         self.inputs = inputs
-        self.raw_channels = raw_channels
 
     def listen(self):
-        dt, stream_id, data = next(self.reader)
+        dt, stream_id, bytes_data = next(self.reader)
         channel = self.inputs[stream_id]
-        if channel in self.raw_channels:
-            return dt, channel, data
-        try:
-            return dt, channel, literal_eval(data.decode('ascii'))
-        except ValueError:
-            assert False  # return dt, channel, np.frombuffer(data, dtype=GPS_MSG_DTYPE)
+        data = deserialize(bytes_data)
+        return dt, channel, data
 
     def publish(self, channel, data):
         pass
