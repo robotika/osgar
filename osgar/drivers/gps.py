@@ -9,7 +9,7 @@ from osgar.lib.logger import LogWriter, LogReader
 from osgar.drivers.bus import BusShutdownException
 
 
-INVALID_COORDINATES = (None, None)
+INVALID_COORDINATES = [None, None]
 
 
 def checksum(s):
@@ -40,7 +40,7 @@ class GPS(Thread):
         assert line.startswith(b'$GNGGA') or line.startswith(b'$GPGGA'), line
         assert checksum(line[1:-3]) == line[-2:], (line, checksum(line[1:-3]))
         s = line.split(b',')
-        coord = str2ms(s[4]), str2ms(s[2])
+        coord = [str2ms(s[4]), str2ms(s[2])]
         return coord
 
     @staticmethod
