@@ -9,14 +9,12 @@ from ast import literal_eval
 from datetime import timedelta
 from queue import Queue
 
-import numpy as np
-
 from osgar.lib.logger import LogWriter, LogReader
 from osgar.lib.config import load as config_load
 from osgar.drivers import all_drivers
 from osgar.robot import Robot
 
-from osgar.drivers.gps import INVALID_COORDINATES, GPS_MSG_DTYPE
+from osgar.drivers.gps import INVALID_COORDINATES
 from osgar.drivers.bus import BusHandler
 
 
@@ -87,7 +85,7 @@ class RoboOrienteering2018:
             timestamp, channel, data = packet
             self.time = timestamp
             if channel == 'position':
-                self.last_position = (data['lon'], data['lat'])
+                self.last_position = data
             elif channel == 'orientation':
                 (yaw, pitch, roll), (magx, y, z), (accx, y, z), (gyrox, y, z) = data
                 self.last_imu_yaw = yaw
@@ -215,10 +213,7 @@ class LogBusHandler:
         else:
             dt, stream_id, data = self.buffer_queue.get()
         channel = self.inputs[stream_id]
-        try:
-            return dt, channel, literal_eval(data.decode('ascii'))
-        except ValueError:
-            return dt, channel, np.frombuffer(data, dtype=GPS_MSG_DTYPE)
+        return dt, channel, literal_eval(data.decode('ascii'))
 
     def publish(self, channel, data):
         assert channel in self.outputs.values(), (channel, self.outputs.values())
@@ -240,10 +235,7 @@ class LogBusHandlerInputsOnly:
     def listen(self):
         dt, stream_id, data = next(self.reader)
         channel = self.inputs[stream_id]
-        try:
-            return dt, channel, literal_eval(data.decode('ascii'))
-        except ValueError:
-            return dt, channel, np.frombuffer(data, dtype=GPS_MSG_DTYPE)
+        return dt, channel, literal_eval(data.decode('ascii'))
 
     def publish(self, channel, data):
         pass
