@@ -5,7 +5,6 @@
 import argparse
 import sys
 import math
-from ast import literal_eval
 from datetime import timedelta
 from queue import Queue
 
@@ -15,7 +14,7 @@ from osgar.drivers import all_drivers
 from osgar.robot import Robot
 
 from osgar.drivers.gps import INVALID_COORDINATES
-from osgar.drivers.bus import BusHandler, LogBusHandler, LogBusHandlerInputsOnly
+from osgar.drivers.bus import BusHandler
 
 
 def geo_length(pos1, pos2):
@@ -214,21 +213,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.command == 'replay':
-        log = LogReader(args.logfile)
-        print(next(log.read_gen(0))[-1])  # old arguments
-        config_str = next(log.read_gen(0))[-1]
-        config = literal_eval(config_str.decode('ascii'))
-        if args.config is not None:
-            config = config_load(*args.config)
-
-        inputs={2:'position', 4:'orientation', 7:'status'}  # TODO map names
-        if args.force:
-            bus = LogBusHandlerInputsOnly(log, inputs=inputs)
-        else:
-            bus = LogBusHandler(log,
-                                inputs=inputs,
-                                outputs={1:'move'})  # TODO map names
-        game = RoboOrienteering2018(config['robot']['modules']['app']['init'], bus=bus)
+        from replay import replay
+        args.module = 'app'
+        game = replay(args, application=RoboOrienteering2018)
         game.play()
 
     elif args.command == 'run':
