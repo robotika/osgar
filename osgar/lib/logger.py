@@ -142,15 +142,20 @@ class LogAsserter(LogReader):
 if __name__ == "__main__":
     import argparse
     import sys
+    from osgar.lib.serialize import deserialize
 
     parser = argparse.ArgumentParser(description='Extract data from log')
     parser.add_argument('logfile', help='filename of stored file')
     parser.add_argument('--stream', help='stream ID', type=int, default=None)
     parser.add_argument('--times', help='display timestamps', action='store_true')
+    parser.add_argument('--raw', help='skip data deserialization',
+                        action='store_true')
     args = parser.parse_args()
 
     with LogReader(args.logfile) as log:
-         for timestamp, stream_id, data in log.read_gen(args.stream):
+        for timestamp, stream_id, data in log.read_gen(args.stream):
+            if not args.raw and stream_id != 0:
+                data = deserialize(data)
             if args.times:
                 print(timestamp, stream_id, data)
             else:
