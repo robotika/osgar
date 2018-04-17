@@ -152,7 +152,7 @@ class RoboOrienteering2018:
                 for goal in self.goals:
                     print("Goal at %.2fm" % geo_length(self.last_position, goal))
                     print("Heading %.1fdeg, imu" % math.degrees(geo_angle(self.last_position, goal)), self.last_imu_yaw)
-                    self.navigate_to_goal(goal, timedelta(seconds=20))
+                    self.navigate_to_goal(goal, timedelta(seconds=200))
         except EmergencyStopException:
             print("EMERGENCY STOP (wait 3s)")
             self.set_speed(0, 0)
