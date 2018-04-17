@@ -80,9 +80,9 @@ class Spider(Thread):
             if msg_id == 0x200:
                 self.status_word = struct.unpack('H', packet[2:])[0]
                 if self.wheel_angles is not None and self.zero_steering is not None:
-                    ret = self.status_word, tuple([Spider.fix_range(a - b) for a, b in zip(self.wheel_angles, self.zero_steering)])
+                    ret = [self.status_word, [Spider.fix_range(a - b) for a, b in zip(self.wheel_angles, self.zero_steering)]]
                 else:
-                    ret = self.status_word, None
+                    ret = [self.status_word, None]
 
                 # handle steering
                 if self.desired_angle is not None and self.desired_speed is not None:

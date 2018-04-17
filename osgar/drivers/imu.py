@@ -14,7 +14,7 @@ def parse_line(line):
     s = line.split(b'*')[0].split(b',')
     assert len(s) == 13, s
     arr = [float(x) for x in s[1:]]
-    return arr[:3], arr[3:6], arr[6:9], arr[9:]
+    return [arr[:3], arr[3:6], arr[6:9], arr[9:]]
 
 
 class IMU(Thread):

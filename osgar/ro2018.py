@@ -74,7 +74,7 @@ class RoboOrienteering2018:
         self.last_imu_yaw = None  # magnetic north in degrees
         self.status = None
         self.steering_status = None
-        self.cmd = (0, 0)
+        self.cmd = [0, 0]
         self.monitors = []
 
     def update(self):
@@ -95,7 +95,7 @@ class RoboOrienteering2018:
                 monitor_update(self)
 
     def set_speed(self, speed, angular_speed):
-        self.cmd = (speed, angular_speed)
+        self.cmd = [speed, angular_speed]
 
     def start(self):
         pass
