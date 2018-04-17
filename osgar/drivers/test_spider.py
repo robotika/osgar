@@ -36,6 +36,6 @@ class SpiderTest(unittest.TestCase):
         bus.queue.put((123, 'raw', b'@\x02\x00\x80'))
         bus.shutdown()
         spider.run()
-        q.put.assert_called_once_with((135, 'status', ((0x8000, None))))
+        q.put.assert_called_once_with((135, 'status', ([0x8000, None])))
 
 # vim: expandtab sw=4 ts=4
