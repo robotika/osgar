@@ -11,7 +11,7 @@
       "gps": {
           "driver": "gps",
           "in": ["raw"],
-          "out": ["position"],
+          "out": ["position", "rel_position"],
           "init": {}
       },
       "gps_serial": {
