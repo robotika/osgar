@@ -73,7 +73,7 @@ class RoboOrienteering2018:
         self.last_position = None  # (lon, lat) in milliseconds
         self.last_imu_yaw = None  # magnetic north in degrees
         self.status = None
-        self.steering_status = None
+        self.wheel_heading = None
         self.cmd = [0, 0]
         self.monitors = []
         self.last_position_angle = None  # for angle computation from dGPS
@@ -90,13 +90,29 @@ class RoboOrienteering2018:
                 (yaw, pitch, roll), (magx, y, z), (accx, y, z), (gyrox, y, z) = data
                 self.last_imu_yaw = yaw
             elif channel == 'status':  # i.e. I can drive only spider??
-                self.status, self.steering_status = data
+                self.status, steering_status = data
+                if steering_status is None:
+                    self.wheel_heading = None
+                else:
+                    self.wheel_heading = math.radians(-360 * steering_status[0] / 512)
                 self.bus.publish('move', self.cmd)
             for monitor_update in self.monitors:
                 monitor_update(self)
 
-    def set_speed(self, speed, angular_speed):
-        self.cmd = [speed, angular_speed]
+    def set_speed(self, desired_speed, desired_wheel_heading):
+        # TODO split this for Car and Spider mode
+        speed = int(round(desired_speed))
+        desired_steering = int(-512 * math.degrees(desired_wheel_heading) / 360.0)
+
+        if speed != 0:
+            if self.wheel_heading is None:
+                speed = 1  # in in place
+            else:
+                 d = math.degrees(normalizeAnglePIPI(self.wheel_heading - desired_wheel_heading))
+                 if abs(d) > 20.0:
+                     speed = 1  # turn in place (II.)
+
+        self.cmd = [speed, desired_steering]
 
     def start(self):
         pass
@@ -124,7 +140,7 @@ class RoboOrienteering2018:
 
     def play0(self):
         self.wait(timedelta(seconds=1))
-        self.set_speed(1, 50)
+        self.set_speed(1, math.radians(50))
         self.wait(timedelta(seconds=5))
         self.set_speed(10, 0)
         self.wait(timedelta(seconds=5))
@@ -142,10 +158,10 @@ class RoboOrienteering2018:
             self.update()
         print(self.last_imu_yaw)
 
-        print("Wait for steering position...")
-        while self.steering_status is None:
+        print("Wait for steering info...")
+        while self.wheel_heading is None:
             self.update()
-        print(self.steering_status)
+        print(math.degrees(self.wheel_heading))
 
         print("Ready", self.goals)
         try:
@@ -174,34 +190,19 @@ class RoboOrienteering2018:
                 self.last_position_angle = self.last_position
 
             desired_heading = normalizeAnglePIPI(geo_angle(self.last_position, goal))
-            if gps_angle is None or self.steering_status[0] is None:
+            if gps_angle is None or self.wheel_heading is None:
                 spider_heading = normalizeAnglePIPI(math.radians(180 - self.last_imu_yaw - 35.5))
-                wheel_heading = normalizeAnglePIPI(desired_heading-spider_heading)
+                desired_wheel_heading = normalizeAnglePIPI(desired_heading-spider_heading)
             else:
-                wheel_heading = math.radians(-360*self.steering_status[0]/512)
-                wheel_heading = normalizeAnglePIPI(desired_heading - gps_angle + wheel_heading)
+                desired_wheel_heading = normalizeAnglePIPI(desired_heading - gps_angle + self.wheel_heading)
 
-            desired_steering = int(-512*math.degrees(wheel_heading)/360.0)
-
-            speed = self.maxspeed
-            if self.steering_status[0] is None:
-                speed = 1  # in in place
-            else:
-                 d = desired_steering - self.steering_status[0]
-                 if d > 256:
-                     d -= 512
-                 elif d < -256:
-                     d += 512
-                 if abs(d) > 30:
-                     speed = 1  # turn in place (II.)
-
-            self.set_speed(speed, desired_steering)
+            self.set_speed(self.maxspeed, desired_wheel_heading)
 
             prev_time = self.time
             self.update()
 
             if int(prev_time.total_seconds()) != int(self.time.total_seconds()):
-                print(self.time, geo_length(self.last_position, goal), self.last_imu_yaw, self.steering_status)
+                print(self.time, geo_length(self.last_position, goal), self.last_imu_yaw, self.wheel_heading)
 
         print("STOP (3s)")
         self.set_speed(0, 0)
