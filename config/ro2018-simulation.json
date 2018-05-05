@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["position", "orientation", "status"],
+          "out": ["move"],
+          "init": {}
+      },
+      "spider": {
+          "driver": "simulator",
+          "in": ["move"],
+          "out": ["position", "orientation", "status"],
+          "init": {
+            "position":[51748232, 180462052],
+            "duration": 200.0
+        }
+      }
+    },
+    "links": [["spider.position", "app.position"],
+              ["spider.orientation", "app.orientation"],
+              ["spider.status", "app.status"],
+              ["app.move", "spider.move"]]
+  }
+}
