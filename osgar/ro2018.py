@@ -10,6 +10,7 @@ from queue import Queue
 
 from osgar.lib.logger import LogWriter, LogReader
 from osgar.lib.config import load as config_load
+from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.drivers import all_drivers
 from osgar.robot import Robot
 
@@ -29,14 +30,6 @@ def geo_angle(pos1, pos2):
         return None
     x_scale = math.cos(math.radians(pos1[0]/3600000))
     return math.atan2(pos2[1] - pos1[1], (pos2[0] - pos1[0])*x_scale)
-
-
-def normalizeAnglePIPI( angle ):
-    while angle < -math.pi:
-        angle += 2*math.pi
-    while angle > math.pi:
-        angle -= 2*math.pi
-    return angle 
 
 
 def latlon2xy(lat, lon):
