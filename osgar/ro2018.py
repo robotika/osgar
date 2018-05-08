@@ -176,18 +176,17 @@ class RoboOrienteering2018:
         self.last_position_angle = self.last_position
         gps_angle = None
         while geo_length(self.last_position, goal) > 1.0 and self.time - start_time < timeout:
+            desired_heading = normalizeAnglePIPI(geo_angle(self.last_position, goal))
             step = geo_length(self.last_position, self.last_position_angle)
             if step > 1.0:
                 gps_angle = normalizeAnglePIPI(geo_angle(self.last_position_angle, self.last_position))
                 print('step', step, math.degrees(gps_angle))
                 self.last_position_angle = self.last_position
+                desired_wheel_heading = normalizeAnglePIPI(desired_heading - gps_angle + self.wheel_heading)
 
-            desired_heading = normalizeAnglePIPI(geo_angle(self.last_position, goal))
             if gps_angle is None or self.wheel_heading is None:
                 spider_heading = normalizeAnglePIPI(math.radians(180 - self.last_imu_yaw - 35.5))
                 desired_wheel_heading = normalizeAnglePIPI(desired_heading-spider_heading)
-            else:
-                desired_wheel_heading = normalizeAnglePIPI(desired_heading - gps_angle + self.wheel_heading)
 
             self.set_speed(self.maxspeed, desired_wheel_heading)
 
