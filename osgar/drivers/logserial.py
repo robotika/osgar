@@ -5,8 +5,8 @@
 import serial
 from threading import Thread
 
-from osgar.lib.logger import LogWriter
-from osgar.drivers.bus import BusShutdownException
+from osgar.logger import LogWriter
+from osgar.bus import BusShutdownException
 
 
 class LogSerial:
@@ -57,7 +57,7 @@ class LogSerial:
 
 if __name__ == "__main__":
     import time
-    from osgar.drivers.bus import BusHandler
+    from osgar.bus import BusHandler
 
     config = { 'port': 'COM5', 'speed': 4800 }
     log = LogWriter(prefix='test-')

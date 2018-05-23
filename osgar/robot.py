@@ -6,10 +6,10 @@ import argparse
 import sys
 from queue import Queue
 
-from osgar.lib.logger import LogWriter, LogReader
+from osgar.logger import LogWriter, LogReader
 from osgar.lib.config import load
 from osgar.drivers import all_drivers
-from osgar.drivers.bus import BusHandler
+from osgar.bus import BusHandler
 
 
 class Robot:

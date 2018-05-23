@@ -4,7 +4,7 @@
 
 from threading import Thread
 
-from osgar.drivers.bus import BusShutdownException
+from osgar.bus import BusShutdownException
 from osgar.drivers.gps import checksum
 
 

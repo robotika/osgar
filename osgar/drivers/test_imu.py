@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 
 from osgar.drivers.imu import parse_line, IMU
-from osgar.drivers.bus import BusHandler
+from osgar.bus import BusHandler
 
 
 class IMUTest(unittest.TestCase):

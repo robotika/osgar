@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 from osgar.drivers.logserial import LogSerial
-from osgar.drivers.bus import BusHandler
+from osgar.bus import BusHandler
 
 
 class LogSerialTest(unittest.TestCase):

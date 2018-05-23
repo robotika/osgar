@@ -5,8 +5,8 @@
 from threading import Thread
 import numpy as np
 
-from osgar.lib.logger import LogWriter, LogReader
-from osgar.drivers.bus import BusShutdownException
+from osgar.logger import LogWriter, LogReader
+from osgar.bus import BusShutdownException
 
 
 INVALID_COORDINATES = [None, None]
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         import time
         from osgar.drivers.logserial import LogSerial
-        from osgar.drivers.bus import BusHandler
+        from osgar.bus import BusHandler
 
         config_serial = {'port': 'COM5', 'speed': 4800}
         config_gps = {}

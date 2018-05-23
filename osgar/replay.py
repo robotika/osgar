@@ -11,9 +11,9 @@ from queue import Queue
 
 import numpy as np
 
-from osgar.lib.logger import LogReader
+from osgar.logger import LogReader
 from osgar.lib.config import load as config_load
-from osgar.drivers.bus import LogBusHandler, LogBusHandlerInputsOnly
+from osgar.bus import LogBusHandler, LogBusHandlerInputsOnly
 from osgar.drivers import all_drivers
 
 

@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 
 from osgar.drivers.spider import Spider, CAN_packet
-from osgar.drivers.bus import BusHandler
+from osgar.bus import BusHandler
 
 
 class SpiderTest(unittest.TestCase):

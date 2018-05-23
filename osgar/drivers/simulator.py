@@ -7,7 +7,7 @@ from time import sleep
 from datetime import timedelta
 
 from osgar.lib.mathex import normalizeAnglePIPI
-from osgar.drivers.bus import BusShutdownException
+from osgar.bus import BusShutdownException
 
 
 class SpiderSimulator(Thread):

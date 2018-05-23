@@ -3,9 +3,8 @@ from unittest.mock import MagicMock
 from queue import Queue
 from datetime import timedelta
 
-from osgar.drivers.bus import (BusHandler, BusShutdownException,
-                               LogBusHandler, LogBusHandlerInputsOnly,
-                               serialize)
+from osgar.bus import (BusHandler, BusShutdownException,
+                       LogBusHandler, LogBusHandlerInputsOnly)
 
 from osgar.lib.serialize import serialize, deserialize
 
