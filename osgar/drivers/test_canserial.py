@@ -2,7 +2,6 @@ import unittest
 from unittest.mock import MagicMock
 
 from osgar.drivers.canserial import CANSerial, CAN_packet
-from osgar.lib.logger import LogWriter
 
 
 class CANSerialTest(unittest.TestCase):

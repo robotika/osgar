@@ -1,5 +1,5 @@
 """
-  RoboOrienteering 2018 - experiments with lib.logger and robot container
+  RoboOrienteering 2018 - experiments with osgar.logger and robot container
 """
 
 import argparse
@@ -8,14 +8,14 @@ import math
 from datetime import timedelta
 from queue import Queue
 
-from osgar.lib.logger import LogWriter, LogReader
+from osgar.logger import LogWriter, LogReader
 from osgar.lib.config import load as config_load
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.drivers import all_drivers
 from osgar.robot import Robot
 
 from osgar.drivers.gps import INVALID_COORDINATES
-from osgar.drivers.bus import BusHandler
+from osgar.bus import BusHandler
 
 
 def geo_length(pos1, pos2):

@@ -5,8 +5,8 @@
 import socket
 from threading import Thread
 
-from osgar.lib.logger import LogWriter
-from osgar.drivers.bus import BusShutdownException
+from osgar.logger import LogWriter
+from osgar.bus import BusShutdownException
 
 
 class LogTCP:
@@ -55,7 +55,7 @@ class LogTCP:
 
 if __name__ == "__main__":
     import time
-    from osgar.drivers.bus import BusHandler
+    from osgar.bus import BusHandler
 
     config = {'host':'localhost', 'port': 8001, 'timeout': 1.0}
     log = LogWriter(prefix='test-tcp-')

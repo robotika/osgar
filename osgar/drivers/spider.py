@@ -7,8 +7,8 @@ import serial
 import struct
 from threading import Thread
 
-from osgar.lib.logger import LogWriter, LogReader
-from osgar.drivers.bus import BusShutdownException
+from osgar.logger import LogWriter, LogReader
+from osgar.bus import BusShutdownException
 
 
 CAN_BRIDGE_READY = b'\xfe\x10'  # CAN bridge is ready to accept configuration commands
