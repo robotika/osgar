@@ -161,7 +161,11 @@ class RoboOrienteering2018:
             with EmergencyStopMonitor(self):
                 for goal in self.goals:
                     print("Goal at %.2fm" % geo_length(self.last_position, goal))
-                    print("Heading %.1fdeg, imu" % math.degrees(geo_angle(self.last_position, goal)), self.last_imu_yaw)
+                    angle = geo_angle(self.last_position, goal)
+                    if angle is not None:
+                        print("Heading %.1fdeg, imu" % math.degrees(angle), self.last_imu_yaw)
+                    else:
+                        print("Heading None, imu", self.last_imu_yaw)
                     self.navigate_to_goal(goal, timedelta(seconds=200))
         except EmergencyStopException:
             print("EMERGENCY STOP (wait 3s)")
