@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "jd": {
+          "driver": "johndeere",
+          "in": ["can"],
+          "out": ["can"],
+          "init": {}
+      },
+      "can": {
+          "driver": "can",
+          "in": ["raw", "can"],
+          "out": ["can", "raw"],
+          "init": {"speed": 250000, "canopen":true}
+      },
+      "serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyS0", "speed": 115200,
+                   "rtscts":true, "reset":true}
+      }
+    },
+    "links": [["serial.raw", "can.raw"], 
+              ["can.raw", "serial.raw"],
+              ["jd.can", "can.can"],
+              ["can.can", "jd.can"]]
+  }
+}
