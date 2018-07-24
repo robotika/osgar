@@ -6,9 +6,11 @@ from .canserial import CANSerial
 from .simulator import SpiderSimulator
 from .logsocket import LogTCP
 from .sicklidar import SICKLidar
+from .johndeere import JohnDeere
 
 # dictionary of all available drivers
 all_drivers = dict(gps=GPS, imu=IMU, spider=Spider, serial=LogSerial,
                    can=CANSerial, simulator=SpiderSimulator,
-                   tcp=LogTCP, lidar=SICKLidar)
+                   tcp=LogTCP, lidar=SICKLidar,
+                   johndeere=JohnDeere)
 
