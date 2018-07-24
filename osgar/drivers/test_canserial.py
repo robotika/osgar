@@ -29,4 +29,12 @@ class CANSerialTest(unittest.TestCase):
 
         bus.publish.assert_called_with('raw', b'\xfe1')
 
+    def test_invalid_config(self):
+        bus = MagicMock()
+        config =  {"speed": 123, "canopen":True}
+        with self.assertRaises(ValueError) as err:
+            can = CANSerial(config=config, bus=bus)
+        self.assertEqual(str(err.exception), "unsupported speed: 123\n" +
+            "Use:['10k', '20k', '50k', '125k', '250k', '500k', '800k', '1M']")
+
 # vim: expandtab sw=4 ts=4

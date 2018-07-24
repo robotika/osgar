@@ -5,6 +5,7 @@
 import serial
 import struct
 from threading import Thread
+from collections import OrderedDict
 
 from osgar.logger import LogWriter, LogReader
 from osgar.bus import BusShutdownException
@@ -12,9 +13,18 @@ from osgar.bus import BusShutdownException
 
 CAN_BRIDGE_READY = b'\xfe\x10'  # CAN bridge is ready to accept configuration commands
 CAN_BRIDGE_SYNC = b'\xFF'*10    # CAN bridge synchronization bytes
-CAN_SPEED_1MB = b'\xfe\x57'     # configure CAN bridge to communicate on 1Mb CAN network
 CAN_BRIDGE_START = b'\xfe\x31'  # start bridge
 
+CAN_SPEED = OrderedDict([
+                ('10k', b'\xfe\x50'),
+                ('20k', b'\xfe\x51'),
+                ('50k', b'\xfe\x52'),
+                ('125k', b'\xfe\x53'),
+                ('250k', b'\xfe\x54'),
+                ('500k', b'\xfe\x55'),
+                ('800k', b'\xfe\x56'),
+                ('1M', b'\xfe\x57')
+            ])
 
 def CAN_packet(msg_id, data):
     header = [(msg_id>>3) & 0xff, (msg_id<<5) & 0xe0 | (len(data) & 0xf)]
@@ -46,6 +56,11 @@ class CANSerial(Thread):
         self.bus = bus
         self.buf = b''
 
+        speed = config.get('speed', '1M')  # default 1Mbit
+        if speed not in CAN_SPEED:
+            raise ValueError('unsupported speed: {}\nUse:{}'.format(speed, list(CAN_SPEED.keys())))
+        self.can_speed_cmd = CAN_SPEED[speed]
+        self.is_canopen = config.get('canopen', False)
         self.can_bridge_initialized = False
 
     @staticmethod
@@ -67,9 +82,11 @@ class CANSerial(Thread):
     def process_packet(self, packet):
         if packet == CAN_BRIDGE_READY:
             self.bus.publish('raw', CAN_BRIDGE_SYNC)
-            self.bus.publish('raw', CAN_SPEED_1MB)
+            self.bus.publish('raw', self.can_speed_cmd)
             self.bus.publish('raw', CAN_BRIDGE_START)
             self.can_bridge_initialized = True
+            if self.is_canopen:
+                self.bus.publish('raw', CAN_packet(0, [1, 0]))  # operational
             return None
         return packet
 
@@ -101,6 +118,8 @@ class CANSerial(Thread):
             pass
 
     def request_stop(self):
+        if self.is_canopen:
+            self.bus.publish('raw', CAN_packet(0, [128, 0]))  # pre-operational
         self.bus.shutdown()
 
 
