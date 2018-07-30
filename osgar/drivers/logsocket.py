@@ -20,6 +20,7 @@ class LogTCP:
         self.socket.connect((host, port))
         if 'timeout' in config:
             self.socket.settimeout(config['timeout'])
+        self.bufsize = config.get('bufsize', 1024)
 
         self.bus = bus
         self.buf = b''
@@ -35,7 +36,7 @@ class LogTCP:
     def run_input(self):
         while self.bus.is_alive():
             try:
-                data = self.socket.recv(1024)
+                data = self.socket.recv(self.bufsize)
                 if len(data) > 0:
                     self.bus.publish('raw', data)
             except socket.timeout:
