@@ -23,7 +23,6 @@ class LogTCP:
         self.bufsize = config.get('bufsize', 1024)
 
         self.bus = bus
-        self.buf = b''
 
     def start(self):
         self.input_thread.start()
