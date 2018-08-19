@@ -9,20 +9,24 @@ from osgar.logger import LogWriter
 from osgar.bus import BusShutdownException
 
 
-class LogTCP:
-    def __init__(self, config, bus):
+class LogSocket:
+    def __init__(self, socket, config, bus):
+        self.socket = socket
+
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.output_thread = Thread(target=self.run_output, daemon=True)
 
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         host = config['host']
         port = config['port']
-        self.socket.connect((host, port))
+        self.pair = (host, port)
         if 'timeout' in config:
             self.socket.settimeout(config['timeout'])
         self.bufsize = config.get('bufsize', 1024)
 
         self.bus = bus
+
+    def _send(self, data):
+        raise NotImplementedError()
 
     def start(self):
         self.input_thread.start()
@@ -45,12 +49,32 @@ class LogTCP:
         try:
             while True:
                 __, __, data = self.bus.listen()
-                self.socket.send(data)
+                self._send(data)
         except BusShutdownException:
             pass
 
     def request_stop(self):
         self.bus.shutdown()
+
+
+class LogTCP(LogSocket):
+    def __init__(self, config, bus):
+        soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        LogSocket.__init__(self, soc, config, bus)
+        self.socket.connect(self.pair)
+
+    def _send(self, data):
+        self.socket.send(data)
+
+
+class LogUDP(LogSocket):
+    def __init__(self, config, bus):
+        soc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        LogSocket.__init__(self, soc, config, bus)
+        self.socket.bind(('', self.pair[1]))
+
+    def _send(self, data):
+        self.socket.sendto(data, self.pair)
 
 
 if __name__ == "__main__":
