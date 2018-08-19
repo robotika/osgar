@@ -53,6 +53,10 @@ class LogTCP:
         self.bus.shutdown()
 
 
+class LogUDP(LogTCP):
+    pass
+
+
 if __name__ == "__main__":
     import time
     from osgar.bus import BusHandler
