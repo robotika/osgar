@@ -54,7 +54,29 @@ class LogTCP:
 
 
 class LogUDP(LogTCP):
-    pass
+    # TODO refactor into single common parent class
+    def __init__(self, config, bus):
+        self.input_thread = Thread(target=self.run_input, daemon=True)
+        self.output_thread = Thread(target=self.run_output, daemon=True)
+
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        host = config['host']
+        port = config['port']
+        self.pair = (host, port)
+        self.socket.bind(self.pair)
+        if 'timeout' in config:  # TODO check - UDP timeout works
+            self.socket.settimeout(config['timeout'])
+        self.bufsize = config.get('bufsize', 1024)
+
+        self.bus = bus
+
+    def run_output(self):
+        try:
+            while True:
+                __, __, data = self.bus.listen()
+                self.socket.sendto(data, self.pair)
+        except BusShutdownException:
+            pass
 
 
 if __name__ == "__main__":
