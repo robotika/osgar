@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {}
+      },
+      "marina": {
+          "driver": "udp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {
+            "host": "169.254.88.144",
+            "port": 9999,
+            "bufsize": 10000,
+            "timeout": 2.0
+          }
+      }
+    },
+    "links": [["marina.raw", "app.raw"], ["app.raw", "marina.raw"]]
+  }
+}
