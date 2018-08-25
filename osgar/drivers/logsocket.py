@@ -63,7 +63,7 @@ class LogUDP(LogTCP):
         host = config['host']
         port = config['port']
         self.pair = (host, port)
-        self.socket.bind(self.pair)
+        self.socket.bind(('', port))
         if 'timeout' in config:  # TODO check - UDP timeout works
             self.socket.settimeout(config['timeout'])
         self.bufsize = config.get('bufsize', 1024)
