@@ -9,7 +9,8 @@
           "init": {
             "host": "169.254.88.144",
             "port": 9999,
-            "bufsize": 10000
+            "bufsize": 10000,
+            "timeout": 2.0
           }
       }
     },
