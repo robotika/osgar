@@ -3,7 +3,6 @@
 """
 
 from threading import Thread
-import numpy as np
 import struct
 
 from osgar.logger import LogWriter, LogReader
@@ -153,55 +152,5 @@ class GPS(Thread):
 
 def print_output(packet):
     print(packet)
-
-
-if __name__ == "__main__":
-    import sys
-
-    if len(sys.argv) == 1:
-        import time
-        from osgar.drivers.logserial import LogSerial
-        from osgar.bus import BusHandler
-
-        config_serial = {'port': 'COM5', 'speed': 4800}
-        config_gps = {}
-        log = LogWriter(prefix='gps-test')
-        gps = GPS(config_gps, bus=BusHandler(log, name='gps', out={'position':[]}))
-        serial = LogSerial(config_serial, bus=BusHandler(log, name='serial_gps', out={'raw':[(gps.bus.queue, 'raw')]}))
-        gps.start()
-        serial.start()
-        time.sleep(2)
-        gps.request_stop()
-        serial.request_stop()
-        gps.join()
-        serial.join()
-    else:
-        import ast
-
-        filename = sys.argv[1]
-        log = LogReader(filename)
-        stream_id_in = 2  # TODO read names from log
-        stream_id_out = 1
-        gps = GPS(config={}, bus=None)
-        arr = []
-        for timestamp, stream_id, data in log.read_gen(only_stream_id=[stream_id_in, stream_id_out]):
-            if stream_id == stream_id_in:
-                arr.append(data)
-            elif stream_id == stream_id_out:
-                ref = np.frombuffer(data, dtype=GPS_MSG_DTYPE)
-                for i, data in enumerate(arr):
-                    try:
-                        out = next(gps.process_gen(data))
-                        assert out is not None
-                        assert out == ref, (out, ref)
-                        print(out)
-                        arr = arr[i:]
-                        break
-                    except StopIteration:
-                        pass
-                else:
-                    assert False, ref  # output was note generated
-            else:
-                assert False, stream_id  # unexpected stream
 
 # vim: expandtab sw=4 ts=4
