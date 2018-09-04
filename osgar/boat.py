@@ -30,10 +30,12 @@ class BoatMarina2:
         pass
 
     def play(self):
-        self.bus.publish('raw', b'$ARRST\r\n')
+        #self.bus.publish('raw', b'$ARRST\r\n')
+        self.bus.publish('raw', [0x1E, 'R', 0x10, 1])
         for i in range(10):
             time.sleep(1)  # TODO use self.time/wait()
-            self.bus.publish('raw', b'$CHV,1000,1001,1000,1000*5C\r\n')
+            #self.bus.publish('raw', b'$CHV,1000,1001,1000,1000*5C\r\n')
+            self.bus.publish('raw', [0x1E, 'R', 0x03, 6])
 
     def request_stop(self):
         self.bus.shutdown()
