@@ -3,7 +3,6 @@
 """
 
 from threading import Thread
-import numpy as np
 import struct
 
 from osgar.logger import LogWriter, LogReader
@@ -177,6 +176,7 @@ if __name__ == "__main__":
         serial.join()
     else:
         import ast
+        import numpy as np
 
         filename = sys.argv[1]
         log = LogReader(filename)
