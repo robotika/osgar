@@ -16,6 +16,13 @@ class Marina(Thread):
                 [0x1E, 'R', 0x03, 6],  # compass HMC5883L
                 [0x68, 'R', 0x1B, 8],  # gyro ITG-3205
                 [0x53, 'R', 0x32, 6],  # acc ADXL345
+                [0x08, 'R', 0x00, 2],  # Arduino - channel 0
+                [0x08, 'R', 0x01, 2],
+                [0x08, 'R', 0x02, 2],
+                [0x08, 'R', 0x03, 2],
+                [0x08, 'R', 0x04, 2],
+                [0x08, 'R', 0x05, 2],
+                [0x08, 'R', 0x80, 1],  # Arduino A/M state
             ]
 
     def run(self):
