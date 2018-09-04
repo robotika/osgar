@@ -19,4 +19,5 @@ all_drivers = dict(gps="osgar.drivers.gps:GPS"
     , pcan="osgar.drivers.pcan:PeakCAN"
     , kloubak="osgar.drivers.kloubak:RobotKloubak"
     , i2c="osgar.drivers.logi2c:LogI2C"
+    , marina="osgar.drivers.marina:Marina"
 )
