@@ -8,7 +8,13 @@
           "out": ["raw"],
           "init": {}
       },
-      "marina": {
+      "boat": {
+          "driver": "marina",
+          "in": ["i2c"],
+          "out": ["cmd"],
+          "init": {}
+      },
+      "i2c": {
           "driver": "i2c",
           "in": ["cmd"],
           "out": ["i2c"],
@@ -17,6 +23,6 @@
           }
       }
     },
-    "links": [["marina.i2c", "app.raw"], ["app.raw", "marina.cmd"]]
+    "links": [["i2c.i2c", "boat.i2c"], ["boat.cmd", "i2c.cmd"]]
   }
 }
