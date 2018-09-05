@@ -31,11 +31,14 @@ class BoatMarina2:
 
     def play(self):
         #self.bus.publish('raw', b'$ARRST\r\n')
-        self.bus.publish('raw', [0x1E, 'R', 0x10, 1])
+#        self.bus.publish('raw', [0x1E, 'R', 0x10, 1])
+        self.bus.publish('move', [999, 998])  # uniq values for test
         for i in range(10):
             time.sleep(1)  # TODO use self.time/wait()
             #self.bus.publish('raw', b'$CHV,1000,1001,1000,1000*5C\r\n')
-            self.bus.publish('raw', [0x1E, 'R', 0x03, 6])
+            #self.bus.publish('raw', [0x1E, 'R', 0x03, 6])
+            self.bus.publish('move', [600, 1000])
+        self.bus.publish('move', [1000, 1000])
 
     def request_stop(self):
         self.bus.shutdown()

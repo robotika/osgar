@@ -5,12 +5,12 @@
       "app": {
           "driver": "application",
           "in": ["raw"],
-          "out": ["raw"],
+          "out": ["move"],
           "init": {}
       },
       "boat": {
           "driver": "marina",
-          "in": ["i2c"],
+          "in": ["i2c", "move"],
           "out": ["cmd"],
           "init": {}
       },
@@ -21,8 +21,21 @@
           "init": {
             "port": 1
           }
+      },
+      "gps": {
+          "driver": "gps",
+          "in": ["raw"],
+          "out": ["position", "rel_position"],
+          "init": {}
+      },
+      "gps_serial": {
+          "driver": "serial",
+          "in": [],
+          "out": ["raw"],
+          "init": {"port": "/dev/serial0", "speed": 9600}
       }
     },
-    "links": [["i2c.i2c", "boat.i2c"], ["boat.cmd", "i2c.cmd"]]
+    "links": [["i2c.i2c", "boat.i2c"], ["boat.cmd", "i2c.cmd"],
+              ["gps_serial.raw", "gps.raw"], ["app.move", "boat.move"]]
   }
 }
