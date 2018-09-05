@@ -39,6 +39,7 @@ class BoatMarina2:
             #self.bus.publish('raw', [0x1E, 'R', 0x03, 6])
             self.bus.publish('move', [600, 1000])
         self.bus.publish('move', [1000, 1000])
+        time.sleep(1)  # TODO use self.time/wait() ... it has to pass through
 
     def request_stop(self):
         self.bus.shutdown()
