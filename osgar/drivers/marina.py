@@ -6,6 +6,11 @@ from threading import Thread
 from osgar.bus import BusShutdownException
 
 
+def word_arr(val):
+    """return two elements list with LSB, MSB"""
+    return [val & 0xFF, (val >> 8) & 0xFF]
+
+
 class Marina(Thread):
     def __init__(self, config, bus):
         Thread.__init__(self)
@@ -34,6 +39,13 @@ class Marina(Thread):
                 for __ in self.i2c_loop:
                     dt, src, data = self.bus.listen()
                     # TODO recovery in case of i2c failure
+                    # TODO wait for last element in loop? how long?
+                    if src == 'move':
+                        speed, angular_speed = data  # raw RC channels
+                        self.bus.publish('cmd',  # CHANNEL_MOVE = 2
+                                         [0x08, 'W', 0x02, word_arr(speed)])
+                        self.bus.publish('cmd',  # CHANNEL_TURN = 0 
+                                         [0x08, 'W', 0x00, word_arr(angular_speed)])
         except BusShutdownException:
             pass
 
