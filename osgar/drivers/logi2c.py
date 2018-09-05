@@ -36,7 +36,13 @@ class LogI2C(Thread):
                 addr, rw, reg, len_or_data = data
                 assert rw in ['R', 'W'], rw
                 if rw == 'R':
-                    received = self.com.read_i2c_block_data(addr, reg, len_or_data)
+                    try:
+                        received = self.com.read_i2c_block_data(addr, reg, len_or_data)
+                    except OSError as e:
+                        print(e)
+                        with self.bus.logger.lock:
+                            self.bus.logger.write(0, bytes(str(e), encoding='ascii'))
+                        received = self.com.read_i2c_block_data(addr, reg, len_or_data)
                     self.bus.publish('i2c', [addr, reg, received])  # TODO prefix
                 else:  # 'W'
                     self.com.write_i2c_block_data(addr, reg, len_or_data)
