@@ -14,6 +14,106 @@ from osgar.robot import Robot
 from osgar.bus import BusHandler
 
 
+################ COPY & PASTE ###################
+from route import Convertor, Route
+from line import distance
+
+
+def ver1(boat, waypoints):
+    "code taken from Magelan/RoboOrienteering"
+    boat.update()
+    conv = Convertor(refPoint = waypoints[0])
+
+    # make sure GPS is captured
+    while boat.gps is None or boat.gps.lat is None:
+        print "NO GPS!"
+        boat.update()
+
+    # find next waypoint for interrupted journeyes
+    route = Route(waypoints, conv=conv)
+    indexEx = route.findNearestEx((boat.gps.lon, boat.gps.lat))
+    print "NEAREST", indexEx
+    index = indexEx[2]
+    index = 1
+    if index < 0:
+        index = -index
+
+    prev_pos = None
+    sumX, sumY = 0, 0
+    gpsCompassAngle = None
+    for goal in waypoints[index:]:        
+        while True:
+            if boat.gps is not None and boat.gps.has_fix():
+                dist = distance(conv.geo2planar((boat.gps.lon, boat.gps.lat)), conv.geo2planar(goal))
+                if dist < DESTINATION_RADIUS:
+                    print "DESTINATION REACHED"
+                    boat.set_desired_speed(0.0, 0.0)
+                    boat.wait(5.0)
+                    break            
+                gpsAngle = angleTo(conv.geo2planar((boat.gps.lon, boat.gps.lat)), conv.geo2planar(goal))
+                if prev_pos is None:
+                    prev_pos = conv.geo2planar((boat.gps.lon, boat.gps.lat))
+                x, y = conv.geo2planar((boat.gps.lon, boat.gps.lat))
+                dx, dy = x - prev_pos[0], y - prev_pos[1]
+                if math.hypot(dx, dy) > MIN_GPS_REF_STEP:
+                    sumX = ANGLE_FRAC * dx + (1.0 - ANGLE_FRAC) * sumX
+                    sumY = ANGLE_FRAC * dy + (1.0 - ANGLE_FRAC) * sumY
+                    print "DX\t{}\t{}\t{}".format(boat.gps.timestamp, dx, dy)
+                    if math.hypot(sumX, sumY) > 0.001:
+                        gpsCompassAngle = math.atan2(sumY, sumX)
+                        print "GPS angle = ", math.degrees(gpsCompassAngle)
+                    else:
+                        gpsCompassAngle = None
+                    prev_pos = (x,y)
+                    
+            else:
+                gpsAngle = None
+
+            if boat.heading() is None or gpsAngle is None:
+                if boat.heading() is None:
+                    print "NO COMPASS!", boat.time
+                else:
+                    print "NO COMPASS! (gps fix)", boat.time
+                boat.set_desired_speed(0, 0)
+            else:
+                compassAngle = boat.heading()
+#                compassAngle = gpsCompassAngle
+                if compassAngle is not None:
+                    angular_speed = boat.angular_speed()
+                    if angular_speed is None:
+                        angular_speed = 0.0  # rad/sec
+                    print "angular_speed (deg)", math.degrees(angular_speed)
+#                    angular_speed = 0.0 # hack for now
+#                    angular_speed = -angular_speed
+#                    angular_speed = -angular_speed*0.5
+                    angular_speed = -angular_speed*2
+
+                    diff = math.degrees(normalizeAnglePIPI(gpsAngle-compassAngle-angular_speed))
+                    print "ANGLES DIFF =", diff, dist  #, (gpsAngle, compassAngle)
+                    if abs(diff) < 20:
+#                        boat.set_desired_speed(DESIRED_SPEED, 0.0)
+                        boat.set_desired_speed_raw(600, 1000)
+                    elif diff > 0:
+                        print "TURN LEFT"
+#                        boat.set_desired_speed(DESIRED_SPEED, math.radians(90))
+#                        boat.set_desired_speed_raw(1000, 900)
+#                        boat.set_desired_speed_raw(760, 931)
+                        boat.set_desired_speed_raw(891, 792)
+                    else:
+                        print "TURN RIGHT"
+                        assert diff < 0, diff
+#                        boat.set_desired_speed(DESIRED_SPEED, math.radians(-90))
+#                        boat.set_desired_speed_raw(1000, 1100)
+                        boat.set_desired_speed_raw(760, 1200)
+                else:
+                    print "MISSING COMPASS ANGLE!"
+                    boat.set_desired_speed(DESIRED_SPEED, 0)  # hack - move to get GPS estimage (!)
+            boat.update()
+        print "DESTINATION WITHIN %0.2f" % distance(conv.geo2planar((boat.gps.lon, boat.gps.lat)), conv.geo2planar(goal))
+
+#################################################
+
+
 class BoatMarina2:
 
     def __init__(self, config, bus):
