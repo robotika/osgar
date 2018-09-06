@@ -217,8 +217,7 @@ class BoatMarina2:
         # TODO move to config        
         navigate(self, waypoints)
         self.bus.publish('move', [1000, 1000])
-        time.sleep(1)  # TODO use self.time/wait() ... it has to pass through
-               # TODO it should be confirmed from boat that it if already off
+        self.wait(timedelta(seconds=1))
 
     def request_stop(self):
         self.bus.shutdown()
