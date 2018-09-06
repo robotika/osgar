@@ -216,7 +216,7 @@ class BoatMarina2:
         waypoints = [(14.164983, 48.6585656667), (14.164965, 48.6586993), (14.1646324, 48.6583097), (14.164983, 48.6585656667)]
         # TODO move to config        
         navigate(self, waypoints)
-        self.bus.publish('move', [1000, 1000])
+        self.set_desired_speed_raw(1000, 1000)
         self.wait(timedelta(seconds=1))
 
     def request_stop(self):
