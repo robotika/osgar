@@ -19,6 +19,10 @@ class Marina(Thread):
         self.setDaemon(True)
         self.bus = bus
 
+        self.i2c_setup = [
+                [0x1E, 'W', 0x1, [0x40]],  # compass, gain 820
+            ]
+
         self.i2c_loop = [
                 [0x1E, 'R', 0x03, 6],  # compass HMC5883L
                 [0x68, 'R', 0x1B, 8],  # gyro ITG-3205
@@ -34,7 +38,10 @@ class Marina(Thread):
 
     def run(self):
         try:
-            # TODO init i2c modules
+            # init i2c modules
+            for cmd in self.i2c_setup:
+                self.bus.publish('cmd', cmd)
+
             while True:
                 for cmd in self.i2c_loop:
                     self.bus.publish('cmd', cmd)
