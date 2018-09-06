@@ -47,8 +47,8 @@ class Marina(Thread):
                             assert reg == 3, reg
                             assert len(arr) == 6, arr
                             x, z, y = struct.unpack('>hhh', bytes(arr))  # axis Y and Z swapped in orig
-#                            print(x, y, z, arr)
-                            cx, cy = 0, 0  # TODO calibration
+#                            print('%d\t%d\t%d'% (x, y, z))
+                            cx, cy = 525, -1500  # TODO calibration
                             heading = math.atan2(x - cx, cy - y)
                             self.bus.publish('heading', heading)
 
