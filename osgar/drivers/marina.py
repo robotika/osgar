@@ -2,6 +2,8 @@
   Driver for robo-boat Marina 2.0
 """
 from threading import Thread
+import struct
+import math
 
 from osgar.bus import BusShutdownException
 
@@ -38,6 +40,18 @@ class Marina(Thread):
                     self.bus.publish('cmd', cmd)
                 for __ in self.i2c_loop:
                     dt, src, data = self.bus.listen()
+                    if src == 'i2c':
+                        assert len(data) == 3, data
+                        addr, reg, arr = data
+                        if addr == 0x1E:  # compass
+                            assert reg == 3, reg
+                            assert len(arr) == 6, arr
+                            x, z, y = struct.unpack('>hhh', bytes(arr))  # axis Y and Z swapped in orig
+#                            print(x, y, z, arr)
+                            cx, cy = 0, 0  # TODO calibration
+                            heading = math.atan2(x - cx, cy - y)
+                            self.bus.publish('heading', heading)
+
                     # TODO recovery in case of i2c failure
                     # TODO wait for last element in loop? how long?
                     if src == 'move':
