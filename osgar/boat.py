@@ -5,6 +5,7 @@
 import argparse
 import sys
 import time
+import math
 from datetime import timedelta
 
 from osgar.logger import LogWriter, LogReader
@@ -14,12 +15,53 @@ from osgar.robot import Robot
 from osgar.bus import BusHandler
 
 
+TIMEOUT = timedelta(seconds=10)
+
+
 ################ COPY & PASTE ###################
 from osgar.lib.route import Convertor, Route
 from osgar.lib.line import distance
 
 
-def ver1(boat, waypoints):
+DESTINATION_RADIUS = 2.0
+ANGLE_FRAC = 0.7  #0.5  #0.1  # average fraction for new measurement
+MIN_GPS_REF_STEP = 1.0
+
+
+def angleTo( f, t ):
+    if math.fabs(f[0]-t[0]) < 0.0001 and math.fabs(f[1]-t[1]) < 0.0001:
+        return 0
+    return math.atan2( t[1]-f[1], t[0]-f[0] ) 
+
+
+def normalizeAnglePIPI( angle ):
+    while angle < -math.pi:
+        angle += 2*math.pi
+    while angle > math.pi:
+        angle -= 2*math.pi
+    return angle 
+
+
+class GPSData:
+    def __init__(self):
+        self.lat = None
+        self.lon = None
+        self.timestamp = 0
+
+    def set_milisec(self, data):
+        if data is None or data[0] is None:
+            self.lat = None
+            self.lon = None
+        else:
+            self.lat = data[1]/3600000
+            self.lon = data[0]/3600000
+
+
+    def has_fix(self):
+        return self.lat is not None
+
+
+def navigate(boat, waypoints):
     "code taken from Magelan/RoboOrienteering"
     boat.update()
     conv = Convertor(refPoint = waypoints[0])
@@ -109,7 +151,11 @@ def ver1(boat, waypoints):
                     print("MISSING COMPASS ANGLE!")
                     boat.set_desired_speed(DESIRED_SPEED, 0)  # hack - move to get GPS estimage (!)
             boat.update()
+            if boat.time > TIMEOUT:  # TODO raise timeout??
+                break
         print("DESTINATION WITHIN %0.2f" % distance(conv.geo2planar((boat.gps.lon, boat.gps.lat)), conv.geo2planar(goal)))
+        if boat.time > TIMEOUT:
+            break
 
 #################################################
 
@@ -120,20 +166,56 @@ class BoatMarina2:
         self.bus = bus
         self.time = None
 
+        self.gps = GPSData()
+        self._heading = None
+        self.channel_move = 1000
+        self.channel_turn = 1000
+
+    def heading(self):
+        return self._heading  # TODO refactor
+
+    def angular_speed(self):
+        return None
+
+    def set_desired_speed(self, speed, angular_speed):
+        # legacy function
+        assert speed == 0, speed
+        assert angular_speed == 0, angular_speed
+        self.set_desired_speed_raw(1000, 1000)
+
+    def set_desired_speed_raw(self, speed, angular_speed):
+        self.channel_move = speed
+        self.channel_turn = angular_speed
+
     def update(self):
         packet = self.bus.listen()
         if packet is not None:
             timestamp, channel, data = packet
             self.time = timestamp
+            if channel == 'position':
+                assert len(data) == 2, data
+                self.gps.set_milisec(data)
+            elif channel == 'heading':
+                self._heading = data
+                self.bus.publish('move', [self.channel_move, self.channel_turn])
 
     def start(self):
         pass
 
-    def play(self):
+    def play0(self):
         self.bus.publish('move', [999, 998])  # uniq values for test
         for i in range(10):
             time.sleep(1)  # TODO use self.time/wait()
             self.bus.publish('move', [600, 1000])
+        self.bus.publish('move', [1000, 1000])
+        time.sleep(1)  # TODO use self.time/wait() ... it has to pass through
+               # TODO it should be confirmed from boat that it if already off
+
+    def play(self):
+        # Frymbruk - short
+        waypoints = [(14.164983, 48.6585656667), (14.164965, 48.6586993), (14.1646324, 48.6583097), (14.164983, 48.6585656667)]
+        # TODO move to config        
+        navigate(self, waypoints)
         self.bus.publish('move', [1000, 1000])
         time.sleep(1)  # TODO use self.time/wait() ... it has to pass through
                # TODO it should be confirmed from boat that it if already off
