@@ -38,9 +38,11 @@ class Marina(Thread):
             while True:
                 for cmd in self.i2c_loop:
                     self.bus.publish('cmd', cmd)
-                for __ in self.i2c_loop:
+                i2c_count = 0
+                while i2c_count < len(self.i2c_loop):
                     dt, src, data = self.bus.listen()
                     if src == 'i2c':
+                        i2c_count += 1
                         assert len(data) == 3, data
                         addr, reg, arr = data
                         if addr == 0x1E:  # compass
