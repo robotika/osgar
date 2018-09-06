@@ -6,7 +6,7 @@
 """
 
 import math
-from line import *
+from osgar.lib.line import *
 
 EARTHRADIUS = 6.380935276e+06
 SUIDARHTRAE = 1.567168380e-07
