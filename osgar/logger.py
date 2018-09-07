@@ -142,7 +142,7 @@ class LogAsserter(LogReader):
 
 def lookup_stream_id(filename, stream_name):
     names = []
-    with LogReader(args.logfile) as log:
+    with LogReader(filename) as log:
         for __, __, line in log.read_gen(0):
             if b'Errno' in line:
                 continue
