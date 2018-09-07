@@ -15,7 +15,7 @@ from osgar.robot import Robot
 from osgar.bus import BusHandler
 
 
-TIMEOUT = timedelta(seconds=10)
+TIMEOUT = timedelta(seconds=10)  # configurable via --duration parameter
 
 
 ################ COPY & PASTE ###################
@@ -251,12 +251,17 @@ if __name__ == "__main__":
     parser_run = subparsers.add_parser('run', help='run on real HW')
     parser_run.add_argument('config', nargs='+', help='configuration file')
     parser_run.add_argument('--note', help='add description')
+    parser_run.add_argument('--duration', help='run navigation for given number of seconds', type=int)
 
     parser_replay = subparsers.add_parser('replay', help='replay from logfile')
     parser_replay.add_argument('logfile', help='recorded log file')
     parser_replay.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
     parser_replay.add_argument('--config', nargs='+', help='force alternative configuration file')
+    parser_replay.add_argument('--duration', help='run navigation for given number of seconds', type=int)  # TODO parse from cmd line
     args = parser.parse_args()
+
+    if args.duration is not None:
+        TIMEOUT = timedelta(seconds=args.duration)
 
     if args.command == 'replay':
         from replay import replay
