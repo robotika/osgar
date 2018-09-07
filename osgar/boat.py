@@ -196,7 +196,10 @@ class BoatMarina2:
                 assert len(data) == 2, data
                 self.gps.set_milisec(data)
             elif channel == 'heading':
-                self._heading = data
+                if data is None:
+                    self._heading = data
+                else:
+                    self._heading = math.radians(data/100)
                 self.bus.publish('move', [self.channel_move, self.channel_turn])
 
     def start(self):
