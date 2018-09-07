@@ -32,6 +32,7 @@
 import datetime
 import struct
 from threading import RLock
+from ast import literal_eval
 
 
 INFO_STREAM_ID = 0
@@ -139,6 +140,29 @@ class LogAsserter(LogReader):
             pass
 
 
+def lookup_stream_names(filename):
+    names = []
+    with LogReader(filename) as log:
+        for __, __, line in log.read_gen(0):
+            if b'Errno' in line:
+                continue
+            d = literal_eval(line.decode('ascii'))
+            if 'names' in d:
+                names = d['names']
+    return names
+
+
+def lookup_stream_id(filename, stream_name):
+    if stream_name is None:
+        return None
+    try:
+        return int(stream_name)
+    except ValueError:
+        pass
+    names = lookup_stream_names(filename)
+    return names.index(stream_name) + 1
+
+
 if __name__ == "__main__":
     import argparse
     import sys
@@ -146,14 +170,21 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Extract data from log')
     parser.add_argument('logfile', help='filename of stored file')
-    parser.add_argument('--stream', help='stream ID', type=int, default=None)
+    parser.add_argument('--stream', help='stream ID or name', default=None)
+    parser.add_argument('--list-names', '-l', help='list stream names', action='store_true')
     parser.add_argument('--times', help='display timestamps', action='store_true')
     parser.add_argument('--raw', help='skip data deserialization',
                         action='store_true')
     args = parser.parse_args()
 
+    only_stream = lookup_stream_id(args.logfile, args.stream)
+
+    if args.list_names:
+        print(lookup_stream_names(args.logfile))
+        sys.exit()
+
     with LogReader(args.logfile) as log:
-        for timestamp, stream_id, data in log.read_gen(args.stream):
+        for timestamp, stream_id, data in log.read_gen(only_stream):
             if not args.raw and stream_id != 0:
                 data = deserialize(data)
             if args.times:
