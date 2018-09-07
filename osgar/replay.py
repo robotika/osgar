@@ -27,6 +27,8 @@ def replay(args, application=None):
 
     names = []
     for __, __, line in log.read_gen(0):
+        if b'Errno' in line:
+            continue
         d = literal_eval(line.decode('ascii'))
         if 'names' in d:
             names = d['names']
