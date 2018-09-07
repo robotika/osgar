@@ -61,7 +61,7 @@ class Marina(Thread):
                             if x == -4096 or y == -4096:
                                 heading = None
                             else:
-                                heading = math.atan2(x - cx, cy - y)
+                                heading = round(math.degrees(math.atan2(x - cx, cy - y)) * 100)
                             self.bus.publish('heading', heading)
 
                     # TODO recovery in case of i2c failure
