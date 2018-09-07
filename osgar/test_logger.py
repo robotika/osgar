@@ -4,7 +4,8 @@ import time
 
 import numpy as np
 
-from osgar.logger import LogWriter, LogReader, LogAsserter, INFO_STREAM_ID
+from osgar.logger import (LogWriter, LogReader, LogAsserter, INFO_STREAM_ID,
+                          lookup_stream_id)
 
 
 class LoggerTest(unittest.TestCase):
@@ -108,5 +109,10 @@ class LoggerTest(unittest.TestCase):
             self.assertEqual(arr, [(t1, 1), (t2, 2), (t3, 1)])
 
         os.remove(log.filename)
+
+    def test_lookup_stream_id(self):
+        self.assertEqual(lookup_stream_id('dummy.log', None), None)
+        self.assertEqual(lookup_stream_id('dummy.log', '3'), 3)
+        # TODO name lookup
 
 # vim: expandtab sw=4 ts=4
