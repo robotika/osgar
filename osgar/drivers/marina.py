@@ -58,7 +58,10 @@ class Marina(Thread):
                             x, z, y = struct.unpack('>hhh', bytes(arr))  # axis Y and Z swapped in orig
 #                            print('%d\t%d\t%d'% (x, y, z))
                             cx, cy = 525, -1500  # TODO calibration
-                            heading = math.atan2(x - cx, cy - y)
+                            if x == -4096 or y == -4096:
+                                heading = None
+                            else:
+                                heading = math.atan2(x - cx, cy - y)
                             self.bus.publish('heading', heading)
 
                     # TODO recovery in case of i2c failure
