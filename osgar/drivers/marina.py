@@ -19,6 +19,9 @@ class Marina(Thread):
         self.setDaemon(True)
         self.bus = bus
 
+        # read calibration from config
+        self.cx, self.cy = config['compass']['cx'], config['compass']['cy']
+
         self.i2c_setup = [
                 [0x1E, 'W', 0x1, [0x40]],  # compass, gain 820
             ]
@@ -57,11 +60,10 @@ class Marina(Thread):
                             assert len(arr) == 6, arr
                             x, z, y = struct.unpack('>hhh', bytes(arr))  # axis Y and Z swapped in orig
 #                            print('%d\t%d\t%d'% (x, y, z))
-                            cx, cy = 900, -1300  # TODO calibration
                             if x == -4096 or y == -4096:
                                 heading = None
                             else:
-                                heading = round(math.degrees(math.atan2(-(cy - y), x - cx)) * 100)
+                                heading = round(math.degrees(math.atan2(-(self.cy - y), x - self.cx)) * 100)
                             self.bus.publish('heading', heading)
                         if addr == 0x68:  # gyro
                             assert reg == 0x1B, reg

@@ -12,7 +12,12 @@
           "driver": "marina",
           "in": ["i2c", "move"],
           "out": ["cmd", "heading", "angular_speed"],
-          "init": {}
+          "init": {
+            "compass": {
+              "cx": 900,
+              "cy": -1300
+            }
+          }
       },
       "i2c": {
           "driver": "i2c",
