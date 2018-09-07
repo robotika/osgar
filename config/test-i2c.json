@@ -4,14 +4,14 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["position", "heading"],
+          "in": ["position", "heading", "angular_speed"],
           "out": ["move"],
           "init": {}
       },
       "boat": {
           "driver": "marina",
           "in": ["i2c", "move"],
-          "out": ["cmd", "heading"],
+          "out": ["cmd", "heading", "angular_speed"],
           "init": {}
       },
       "i2c": {
@@ -37,6 +37,7 @@
     },
     "links": [["i2c.i2c", "boat.i2c"], ["boat.cmd", "i2c.cmd"],
               ["gps_serial.raw", "gps.raw"], ["app.move", "boat.move"],
-              ["gps.position", "app.position"], ["boat.heading", "app.heading"]]
+              ["gps.position", "app.position"], ["boat.heading", "app.heading"],
+              ["boat.angular_speed", "app.angular_speed"]]
   }
 }

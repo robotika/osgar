@@ -63,6 +63,13 @@ class Marina(Thread):
                             else:
                                 heading = round(math.degrees(math.atan2(x - cx, cy - y)) * 100)
                             self.bus.publish('heading', heading)
+                        if addr == 0x68:  # gyro
+                            assert reg == 0x1B, reg
+                            assert len(arr) == 8, arr
+                            tmp, x, y, z = struct.unpack('>hhhh', bytes(arr))
+                            deg_c = 35 + (tmp + 13200) / 280  # TODO double check signed/unsigned, signs ...
+                            cz = 0  # TODO gyro calibration
+                            self.bus.publish('angular_speed', z - cz)
 
                     # TODO recovery in case of i2c failure
                     # TODO wait for last element in loop? how long?
