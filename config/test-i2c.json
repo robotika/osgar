@@ -14,8 +14,8 @@
           "out": ["cmd", "heading", "angular_speed"],
           "init": {
             "compass": {
-              "cx": 900,
-              "cy": -1300
+              "cx": 659,
+              "cy": -1571
             },
             "gyro": {
               "cz": 0
