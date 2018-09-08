@@ -21,6 +21,7 @@ class Marina(Thread):
 
         # read calibration from config
         self.cx, self.cy = config['compass']['cx'], config['compass']['cy']
+        self.gyro_cz = config['gyro']['cz']
 
         self.i2c_setup = [
                 [0x1E, 'W', 0x1, [0x40]],  # compass, gain 820
@@ -70,8 +71,7 @@ class Marina(Thread):
                             assert len(arr) == 8, arr
                             tmp, x, y, z = struct.unpack('>hhhh', bytes(arr))
                             deg_c = 35 + (tmp + 13200) / 280  # TODO double check signed/unsigned, signs ...
-                            cz = 0  # TODO gyro calibration
-                            self.bus.publish('angular_speed', -(z - cz))  # mathematical coordinates
+                            self.bus.publish('angular_speed', -(z - self.gyro_cz))  # mathematical coordinates
 
                     # TODO recovery in case of i2c failure
                     # TODO wait for last element in loop? how long?
