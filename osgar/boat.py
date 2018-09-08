@@ -128,7 +128,8 @@ def navigate(boat, waypoints):
 #                    angular_speed = 0.0 # hack for now
 #                    angular_speed = -angular_speed
 #                    angular_speed = -angular_speed*0.5
-                    angular_speed = -angular_speed*2
+#                    angular_speed = -angular_speed*2
+                    angular_speed *= 2  # former version did not correct gyro direction
 
                     diff = math.degrees(normalizeAnglePIPI(gpsAngle-compassAngle-angular_speed))
                     print("ANGLES DIFF =", diff, dist)  #, (gpsAngle, compassAngle)
@@ -168,6 +169,7 @@ class BoatMarina2:
 
         self.gps = GPSData()
         self._heading = None
+        self._angular_speed = None
         self.channel_move = 1000
         self.channel_turn = 1000
 
@@ -175,7 +177,7 @@ class BoatMarina2:
         return self._heading  # TODO refactor
 
     def angular_speed(self):
-        return None
+        return self._angular_speed
 
     def set_desired_speed(self, speed, angular_speed):
         # legacy function
@@ -201,6 +203,8 @@ class BoatMarina2:
                 else:
                     self._heading = math.radians(data/100)
                 self.bus.publish('move', [self.channel_move, self.channel_turn])
+            elif channel == 'angular_speed':
+                self._angular_speed = math.radians(data/14.375)  # copy & paste from I2CLibraries
 
     def start(self):
         pass
