@@ -90,7 +90,7 @@ def navigate(boat, waypoints):
                 if dist < DESTINATION_RADIUS:
                     print("DESTINATION REACHED")
                     boat.set_desired_speed(0.0, 0.0)
-                    boat.wait(5.0)
+                    boat.wait(timedelta(seconds=5))
                     break            
                 gpsAngle = angleTo(conv.geo2planar((boat.gps.lon, boat.gps.lat)), conv.geo2planar(goal))
                 if prev_pos is None:
