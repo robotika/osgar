@@ -2,11 +2,15 @@
   Follow Me (primary target Eduro robot)
 """
 import sys
+import math
 from datetime import timedelta
 
 from osgar.lib.config import load as config_load
 from osgar.robot import Robot
 
+
+wd = 427.0 / 445.0 * 0.26/4.0 # with gear  1:4
+ENC_SCALE = math.pi * wd / 0x10000
 
 class FollowMe:
     def __init__(self, config, bus):
@@ -33,10 +37,10 @@ class FollowMe:
 
     def play(self):
         print("FollowMe!")
-        self.bus.publish('desired_speed', 0.2)
+        self.bus.publish('desired_speed', [0.2, 0.0])
         while self.traveled_dist < 1.0:
             self.update()
-        self.bus.publish('desired_speed', 0.0)
+        self.bus.publish('desired_speed', [0.0, 0.0])
         self.wait(timedelta(seconds=3))
 
     def start(self):
@@ -73,10 +77,10 @@ if __name__ == "__main__":
         game.play()
 
     elif args.command == 'run':
-        log = LogWriter(prefix='go1m-', note=str(sys.argv))
+        log = LogWriter(prefix='eduro-', note=str(sys.argv))
         config = config_load(*args.config)
         log.write(0, bytes(str(config), 'ascii'))  # write configuration
-        robot = Robot(config=config['robot'], logger=log, application=GoOneMeter)
+        robot = Robot(config=config['robot'], logger=log, application=FollowMe)
         game = robot.modules['app']  # TODO nicer reference
         robot.start()
         game.play()

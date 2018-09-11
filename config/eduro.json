@@ -33,6 +33,6 @@
               ["eduro.can", "can.can"],
               ["can.can", "eduro.can"],
               ["eduro.encoders", "app.encoders"],
-              ["app.desired_speed", "jd.desired_speed"]]
+              ["app.desired_speed", "eduro.desired_speed"]]
   }
 }
