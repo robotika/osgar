@@ -120,6 +120,7 @@ class CANSerial(Thread):
 
     def run(self):
         try:
+            self.process_packet(CAN_BRIDGE_READY)  # hack
             while True:
                 dt, channel, data = self.bus.listen()
                 if channel == 'raw':
