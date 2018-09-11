@@ -12,7 +12,9 @@ from osgar.logger import LogWriter, LogReader
 from osgar.bus import BusShutdownException
 
 
-CAN_ID_ENCODERS = 0x284
+CAN_ID_SYNC = 0x80
+CAN_ID_ENCODERS_LEFT = 0x181
+CAN_ID_ENCODERS_RIGHT = 0x182
 
 
 def sint16_diff(a, b):
@@ -31,20 +33,20 @@ class Eduro(Thread):
 
         self.desired_speed = 0.0  # m/s
 
-        self.prev_enc_raw = None
+        self.prev_enc_raw = {}
         self.dist_left_raw = 0
         self.dist_right_raw = 0
 
-    def update_encoders(self, data):
-        print('ENC', data)
+    def update_encoders(self, msg_id, data):
+        print('ENC', hex(msg_id), data)
         assert len(data) == 4, data
-        arr = [data[2*i+1]*256 + data[2*i] for i in range(2)]
-        if self.prev_enc_raw is not None:
-            diffL = sint16_diff(arr[0], self.prev_enc_raw[0])
-            diffR = sint16_diff(arr[1], self.prev_enc_raw[1])
+        #arr = [data[2*i+1]*256 + data[2*i] for i in range(2)]
+        arr = struct.unpack('<i', data)
+        if msg_id in self.prev_enc_raw:
+            diff = sint16_diff(arr[0], self.prev_enc_raw[msg_id])
 
-            if abs(diffL) > 128:
-                print("ERR-L\t{}\t{}\t{}".format(self.dist_left_raw, self.prev_enc_raw[0], arr[0]))
+            if abs(diff) > 128:
+                print("ERR-L\t{}\t{}\t{}".format(self.dist_left_raw, self.prev_enc_raw[msg_id], arr[0]))
             else:
                 self.dist_left_raw += diffL
 
@@ -58,8 +60,9 @@ class Eduro(Thread):
         if len(packet) >= 2:
             msg_id = ((packet[0]) << 3) | (((packet[1]) >> 5) & 0x1f)
             print(hex(msg_id), packet[2:])
-            if msg_id == CAN_ID_ENCODERS:
-                self.update_encoders(packet[2:])
+            if msg_id in [CAN_ID_ENCODERS_LEFT, CAN_ID_ENCODERS_RIGHT]:
+                self.update_encoders(msg_id, packet[2:])
+            elif msg_id == CAN_ID_SYNC:
                 self.bus.publish('encoders', [self.dist_left_raw,  self.dist_right_raw])
 
     def process_gen(self, data, verbose=False):
