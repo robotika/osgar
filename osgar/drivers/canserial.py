@@ -130,14 +130,27 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Parse CAN stream messages')
     parser.add_argument('logfile', help='filename of stored file')
     parser.add_argument('--stream', help='stream ID or name', default='can.can')
+    parser.add_argument('--dbc', help='interpretation of raw data',
+                        choices=['spider', 'eduro'])
     args = parser.parse_args()
 
-    dbc = {
+    dbc = {}
+    if args.dbc == 'spider':
+        dbc = {
             0x200: 'H',     # status
             0x201: 'HHHH',  # wheels
             0x202: 'HHHH',  # drive status
             0x203: 'HHHH',  # zero steering
             0x204: 'HHBBH'  # user input
+        }
+    elif args.dbc == 'eduro':
+        dbc = {
+#            0x80:  # SYNC, no data
+            0x181: '<i',    # encoders L
+            0x182: '<i',    # encoders R
+            #0x187, 0x387, 0x487  # compass, acc
+            0x28A: '<H',    # buttons
+            0x18B: '<H',    # battery(V)/100.0
         }
 
     stream_id = lookup_stream_id(args.logfile, args.stream)
