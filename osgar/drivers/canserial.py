@@ -7,7 +7,6 @@ import struct
 from threading import Thread
 from collections import OrderedDict
 
-from osgar.logger import LogWriter, LogReader
 from osgar.bus import BusShutdownException
 
 
@@ -125,11 +124,12 @@ class CANSerial(Thread):
 
 if __name__ == "__main__":
     import argparse
+    from osgar.logger import LogReader, lookup_stream_id
+    from osgar.lib.serialize import deserialize
 
     parser = argparse.ArgumentParser(description='Parse CAN stream messages')
     parser.add_argument('logfile', help='filename of stored file')
-    parser.add_argument('--stream', help='stream ID', type=int, required=True)
-    parser.add_argument('--times', help='display timestamps', action='store_true')
+    parser.add_argument('--stream', help='stream ID or name', default='can.can')
     args = parser.parse_args()
 
     dbc = {
@@ -140,16 +140,9 @@ if __name__ == "__main__":
             0x204: 'HHBBH'  # user input
         }
 
+    stream_id = lookup_stream_id(args.logfile, args.stream)
     with LogReader(args.logfile) as log:
-        buf = b''
-        for timestamp, stream_id, data in log.read_gen(args.stream):
-            if args.times:
-                buf, packet = CANSerial.split_buffer(buf + data)
-                while len(packet) > 0:
-                    print(timestamp, stream_id, print_packet(packet, dbc))
-                    buf, packet = CANSerial.split_buffer(buf)
-            else:
-                sys.stdout.buffer.write(data)
-
+        for timestamp, stream_id, data in log.read_gen(stream_id):
+            print(timestamp, print_packet(deserialize(data), dbc))
 
 # vim: expandtab sw=4 ts=4
