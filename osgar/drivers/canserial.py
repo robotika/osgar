@@ -87,6 +87,12 @@ class CANSerial(Thread):
             if self.is_canopen:
                 self.bus.publish('raw', CAN_packet(0, [1, 0]))  # operational
             return None
+
+        data = packet
+        msg_id = ((data[0]) << 3) | (((data[1]) >> 5) & 0x1f)
+        if msg_id & 0xFF0 == 0x700:  # heart beat message
+            assert len(packet) == 3, len(packet)
+            print(hex(msg_id), data[2])
         return packet
 
     def process_gen(self, data):
