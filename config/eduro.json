@@ -18,7 +18,7 @@
           "driver": "can",
           "in": ["raw", "can"],
           "out": ["can", "raw"],
-          "init": {"speed": 250000, "canopen":true}
+          "init": {"speed": "250k", "canopen":true}
       },
       "serial": {
           "driver": "serial",
