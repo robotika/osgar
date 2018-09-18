@@ -125,12 +125,12 @@ class CANSerial(Thread):
             id, data = self.readPacket()
             if (id & 0xF80) == 0x700:
                 nodeID = id & 0x7F
-            if data[0] == 5:
-                if nodeID in ackPreop:
-                    print("Module", nodeID, "in operation.")
-                    ackOp.append( nodeID )
-                else:
-                    print("WARNING!!! Module", nodeID, "op BEFORE preop!!!")
+                if data[0] == 5:
+                    if nodeID in ackPreop:
+                        print("Module", nodeID, "in operation.")
+                        ackOp.append( nodeID )
+                    else:
+                        print("WARNING!!! Module", nodeID, "op BEFORE preop!!!")
 
         print("collecting some packets ...")
         countHB = 0
