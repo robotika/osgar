@@ -79,6 +79,74 @@ class CANSerial(Thread):
                 return data[2+size:], data[:2+size]
         return data, b''  # no complete packet available yet
 
+    #################### TODO refactor ###################
+    def sendData(self, module_id, data):
+        self.bus.publish('raw', CAN_packet(module_id, data))
+
+    def readPacket(self):
+        while True:
+            dt, channel, data = self.bus.listen()
+            if channel == 'raw':
+                if len(data) > 0:
+                    self.buf, packet = self.split_buffer(self.buf + data)
+                    while len(packet) > 0:
+                        msg_id = ((packet[0]) << 3) | (((packet[1]) >> 5) & 0x1f)
+                        return msg_id, data[2:]
+                        self.buf, packet = self.split_buffer(self.buf)
+
+    def sendOperationMode(self):
+        self.bus.publish('raw', CAN_packet(0, [1, 0]))
+
+    def reset_modules(self):
+        """Reset all modules"""
+        self.sendData( 0, [129,0] ) # reset all
+
+        ackBootup = [] # Heart Beat 0, bootup, after reset
+        ackPreop = [] # HB 127
+        ackOp = [] # HB 5
+
+        while len( ackBootup ) == 0 or len( ackBootup ) > len( ackPreop ):
+            id, data = self.readPacket()
+            if (id & 0xF80) == 0x700:
+                nodeID = id & 0x7F
+                if data[0] == 0:
+                    print("Started module", nodeID)
+                    ackBootup.append( nodeID )
+                if data[0] == 127:
+                    if nodeID in ackBootup:
+                        print("Module", nodeID, "in preoperation.")
+                        ackPreop.append( nodeID )
+                    else:
+                        print("WARNING!!! Module", nodeID, "preop BEFORE bootup!!!")
+
+        print("------- Switch to Operation mode --------")
+        self.sendOperationMode()
+        while len(ackPreop) > len(ackOp):
+            id, data = self.readPacket()
+            if (id & 0xF80) == 0x700:
+                nodeID = id & 0x7F
+            if data[0] == 5:
+                if nodeID in ackPreop:
+                    print("Module", nodeID, "in operation.")
+                    ackOp.append( nodeID )
+                else:
+                    print("WARNING!!! Module", nodeID, "op BEFORE preop!!!")
+
+        print("collecting some packets ...")
+        countHB = 0
+        while countHB < len(ackOp) * 3: # ie approx 3s
+            id, data = self.readPacket()
+            if (id & 0xF80) == 0x700:
+                countHB += 1
+                if countHB % len( ackOp ) == 0:
+                    print(countHB/len( ackOp ), '...')
+                assert( len(data) == 1 )
+                if data[0] != 5:
+                    nodeID = id & 0x7F
+                    print('ERROR - module', nodeID, 'data', data)
+        return ackOp
+    ############################# END ##############################
+
     def check_and_restart_modules(self, module_id, status):
         print(module_id, status)
         if status != 5:  # operational?
@@ -100,6 +168,7 @@ class CANSerial(Thread):
             self.bus.publish('raw', CAN_BRIDGE_START)
             self.can_bridge_initialized = True
             if self.is_canopen:
+                self.reset_modules()  # TODO config
                 self.bus.publish('raw', CAN_packet(0, [1, 0]))  # operational
             return None
 
@@ -120,7 +189,6 @@ class CANSerial(Thread):
 
     def run(self):
         try:
-            self.process_packet(CAN_BRIDGE_READY)  # hack
             while True:
                 dt, channel, data = self.bus.listen()
                 if channel == 'raw':
