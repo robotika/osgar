@@ -91,7 +91,7 @@ class CANSerial(Thread):
                     self.buf, packet = self.split_buffer(self.buf + data)
                     while len(packet) > 0:
                         msg_id = ((packet[0]) << 3) | (((packet[1]) >> 5) & 0x1f)
-                        return msg_id, data[2:]
+                        return msg_id, packet[2:]
                         self.buf, packet = self.split_buffer(self.buf)
 
     def sendOperationMode(self):
@@ -105,7 +105,7 @@ class CANSerial(Thread):
         ackPreop = [] # HB 127
         ackOp = [] # HB 5
 
-        while len( ackBootup ) == 0 or len( ackBootup ) > len( ackPreop ):
+        while len(ackBootup) == 0 or len(ackBootup) > len(ackPreop):
             id, data = self.readPacket()
             if (id & 0xF80) == 0x700:
                 nodeID = id & 0x7F
