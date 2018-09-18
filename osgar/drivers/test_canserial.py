@@ -37,4 +37,19 @@ class CANSerialTest(unittest.TestCase):
         self.assertEqual(str(err.exception), "unsupported speed: 123\n" +
             "Use:['10k', '20k', '50k', '125k', '250k', '500k', '800k', '1M']")
 
+    def test_reset_modules(self):
+        bus = MagicMock()
+        can = CANSerial(config={}, bus=bus)
+
+        self.assertEqual(can.modules_for_restart, set())
+        can.check_and_restart_modules(2, 127)
+        bus.publish.assert_called_with('raw', b'\x00\x02\x81\x02')
+        self.assertEqual(can.modules_for_restart, set([2]))
+
+        can.check_and_restart_modules(2, 127)
+        bus.publish.assert_called_with('raw', b'\x00\x02\x01\x02')
+
+        can.check_and_restart_modules(2, 5)
+        self.assertEqual(can.modules_for_restart, set())
+
 # vim: expandtab sw=4 ts=4
