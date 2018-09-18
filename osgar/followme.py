@@ -38,7 +38,7 @@ class FollowMe:
     def play(self):
         print("FollowMe!")
         self.bus.publish('desired_speed', [0.2, 0.0])
-        while self.traveled_dist < 1.0:
+        while self.traveled_dist < 10.0:  # hacked
             self.update()
         self.bus.publish('desired_speed', [0.0, 0.0])
         self.wait(timedelta(seconds=3))
