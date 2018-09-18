@@ -157,7 +157,7 @@ class CANSerial(Thread):
             elif status == 127:  # restarted and in preoperation
                 print("SWITCH TO OPERATION", module_id)
                 self.bus.publish('raw', CAN_packet(0, [1, module_id]))
-        else:
+        elif module_id in self.modules_for_restart:
             print("RUNNING", module_id)
             self.modules_for_restart.remove(module_id)
 
