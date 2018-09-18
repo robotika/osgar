@@ -22,7 +22,7 @@ class SICKLidar(Thread):
     @staticmethod
     def parse_raw_data(raw_data):
         data = raw_data.split()
-        assert len(data) == 854, len(data)
+        assert len(data) in [854, 846], len(data)
         assert data[1] == b'LMDscandata', data[:2]
         timestamp = int(data[9], 16)  # TODO verify
         assert data[20] == b'DIST1', data[20]
