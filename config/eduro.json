@@ -4,7 +4,7 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["encoders"],
+          "in": ["encoders", "scan"],
           "out": ["desired_speed"],
           "init": {}
       },
@@ -47,6 +47,7 @@
               ["eduro.encoders", "app.encoders"],
               ["app.desired_speed", "eduro.desired_speed"],
               ["lidar_tcp.raw", "lidar.raw"], 
-              ["lidar.raw", "lidar_tcp.raw"]]
+              ["lidar.raw", "lidar_tcp.raw"],
+              ["lidar.scan", "eduro.scan"]]
   }
 }
