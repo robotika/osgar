@@ -3,6 +3,7 @@
 """
 
 import socket
+import urllib.request
 from threading import Thread
 
 from osgar.logger import LogWriter
@@ -75,6 +76,33 @@ class LogUDP(LogSocket):
 
     def _send(self, data):
         self.socket.sendto(data, self.pair)
+
+
+class LogHTTP:
+    def __init__(self, config, bus):
+        self.input_thread = Thread(target=self.run_input, daemon=True)
+
+        self.url = config['url']
+        self.bus = bus
+
+    def start(self):
+        self.input_thread.start()
+
+    def join(self, timeout=None):
+        self.input_thread.join(timeout=timeout)
+
+    def run_input(self):
+        while self.bus.is_alive():
+            try:
+                with urllib.request.urlopen(self.url) as f:
+                    data = f.read()
+                if len(data) > 0:
+                    self.bus.publish('raw', data)
+            except socket.timeout:
+                pass
+
+    def request_stop(self):
+        self.bus.shutdown()
 
 
 if __name__ == "__main__":
