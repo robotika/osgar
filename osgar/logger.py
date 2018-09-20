@@ -180,7 +180,7 @@ if __name__ == "__main__":
     only_stream = lookup_stream_id(args.logfile, args.stream)
 
     if args.list_names:
-        print(lookup_stream_names(args.logfile))
+        print([x for x in enumerate(lookup_stream_names(args.logfile), start=1)])
         sys.exit()
 
     with LogReader(args.logfile) as log:
