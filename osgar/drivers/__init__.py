@@ -4,13 +4,14 @@ from .spider import Spider
 from .logserial import LogSerial
 from .canserial import CANSerial
 from .simulator import SpiderSimulator
-from .logsocket import LogTCP, LogUDP
+from .logsocket import LogTCP, LogUDP, LogHTTP
 from .sicklidar import SICKLidar
 from .eduro import Eduro
 
 # dictionary of all available drivers
 all_drivers = dict(gps=GPS, imu=IMU, spider=Spider, serial=LogSerial,
                    can=CANSerial, simulator=SpiderSimulator,
-                   tcp=LogTCP, udp=LogUDP, lidar=SICKLidar,
+                   tcp=LogTCP, udp=LogUDP, http=LogHTTP,
+                   lidar=SICKLidar,
                    eduro=Eduro)
 
