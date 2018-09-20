@@ -31,7 +31,7 @@
           "driver": "lidar",
           "in": ["raw"],
           "out": ["raw", "scan"],
-          "init": {}
+          "init": {"sleep": 0.1}
       },
       "lidar_tcp": {
           "driver": "tcp",
