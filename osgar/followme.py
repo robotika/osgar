@@ -26,7 +26,7 @@ class FollowMe:
             timestamp, channel, data = packet
             self.time = timestamp
             if channel == 'encoders':
-                self.traveled_dist += ENC_SCALE*(data[0] + data[1])/2
+                self.traveled_dist = ENC_SCALE*(data[0] + data[1])/2
 
     def wait(self, dt):  # TODO refactor to some common class
         if self.time is None:
@@ -38,7 +38,7 @@ class FollowMe:
     def play(self):
         print("FollowMe!")
         self.bus.publish('desired_speed', [0.2, 0.0])
-        while self.traveled_dist < 10.0:  # hacked
+        while self.traveled_dist < 1.0:
             self.update()
         self.bus.publish('desired_speed', [0.0, 0.0])
         self.wait(timedelta(seconds=3))
