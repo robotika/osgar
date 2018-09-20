@@ -85,14 +85,16 @@ class CANSerial(Thread):
 
     def readPacket(self):
         while True:
-            dt, channel, data = self.bus.listen()
-            if channel == 'raw':
-                if len(data) > 0:
-                    self.buf, packet = self.split_buffer(self.buf + data)
-                    while len(packet) > 0:
-                        msg_id = ((packet[0]) << 3) | (((packet[1]) >> 5) & 0x1f)
-                        return msg_id, packet[2:]
-                        self.buf, packet = self.split_buffer(self.buf)
+            self.buf, packet = self.split_buffer(self.buf)
+            if len(packet) > 0:
+                msg_id = ((packet[0]) << 3) | (((packet[1]) >> 5) & 0x1f)
+                return msg_id, packet[2:]
+            else:
+                dt, channel, data = self.bus.listen()
+                if channel == 'raw':
+                    self.buf += data
+                else:
+                    print('Ignoring', channel)
 
     def sendOperationMode(self):
         self.bus.publish('raw', CAN_packet(0, [1, 0]))
