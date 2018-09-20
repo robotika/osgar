@@ -59,4 +59,15 @@ A 130 135 134 13D 138 134 131 131 12C 12A 128 128 126 11B 11C 113 11B 10E 2 2 2
         data = SICKLidar.parse_raw_data(raw_data)
         self.assertIsNotNone(data)
 
+    def test_sleep(self):
+        config = {}
+        logger = MagicMock()
+        bus = BusHandler(logger, out={'raw':[], 'scan':[]}, name='lidar')
+        lidar = SICKLidar(config, bus=bus)
+        self.assertIsNone(lidar.sleep)
+
+        config = {"sleep": 0.1}
+        lidar = SICKLidar(config, bus=bus)
+        self.assertAlmostEqual(lidar.sleep, 0.1)
+
 # vim: expandtab sw=4 ts=4
