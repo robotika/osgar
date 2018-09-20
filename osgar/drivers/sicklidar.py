@@ -2,6 +2,7 @@
   SICK Tim571 LIDAR Driver
 """
 
+import time
 from threading import Thread
 
 from osgar.bus import BusShutdownException
@@ -18,6 +19,7 @@ class SICKLidar(Thread):
 
         self.bus = bus
         self.buf = b''
+        self.sleep = config.get('sleep')
 
     @staticmethod
     def parse_raw_data(raw_data):
@@ -61,6 +63,8 @@ class SICKLidar(Thread):
                 for out in self.process_gen(data):
                     assert out is not None
                     self.bus.publish('scan', out)
+                    if self.sleep is not None:
+                        time.sleep(self.sleep)  # TODO skip in replay
                     self.bus.publish('raw', STX + b'sRN LMDscandata' + ETX)
         except BusShutdownException:
             pass
