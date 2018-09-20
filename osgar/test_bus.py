@@ -81,7 +81,7 @@ class BusHandlerTest(unittest.TestCase):
         bus.listen()
         with self.assertRaises(AssertionError) as e:
             bus.publish('can', b'parsed data')
-        self.assertEqual(str(e.exception), "(b'parsed data', [8, 9])")
+        self.assertEqual(str(e.exception), "(b'parsed data', [8, 9], datetime.timedelta(0, 0, 30))")
 
     def test_wrong_publish_channel(self):
         log = MagicMock()
@@ -97,7 +97,7 @@ class BusHandlerTest(unittest.TestCase):
         bus.listen()
         with self.assertRaises(AssertionError) as e:
             bus.publish('can2', [8, 9])
-        self.assertEqual(str(e.exception), "('can2', 'can')")
+        self.assertEqual(str(e.exception), "('can2', 'can', datetime.timedelta(0, 0, 30))")
 
         with self.assertRaises(AssertionError) as e:
             bus.publish('can3', [1, 2])
