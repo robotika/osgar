@@ -97,7 +97,7 @@ class BusHandlerTest(unittest.TestCase):
         bus.listen()
         with self.assertRaises(AssertionError) as e:
             bus.publish('can2', [8, 9])
-        self.assertEqual(str(e.exception), "('can2', 'can')")
+        self.assertEqual(str(e.exception), "('can2', 'can', datetime.timedelta(0, 0, 30))")
 
         with self.assertRaises(AssertionError) as e:
             bus.publish('can3', [1, 2])
