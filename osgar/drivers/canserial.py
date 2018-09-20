@@ -204,11 +204,10 @@ class CANSerial(Thread):
                 else:
                     assert False, channel  # unsupported input channel
         except BusShutdownException:
-            pass
+            if self.is_canopen:
+                self.bus.publish('raw', CAN_packet(0, [128, 0]))  # pre-operational
 
     def request_stop(self):
-        if self.is_canopen:
-            self.bus.publish('raw', CAN_packet(0, [128, 0]))  # pre-operational
         self.bus.shutdown()
 
 
