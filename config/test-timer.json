@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "timer": {
+          "driver": "timer",
+          "in": [],
+          "out": ["tick"],
+          "init": {"sleep": 0.1}
+      }
+    },
+    "links": []
+  }
+}

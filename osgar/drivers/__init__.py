@@ -6,10 +6,12 @@ from .canserial import CANSerial
 from .simulator import SpiderSimulator
 from .logsocket import LogTCP, LogUDP, LogHTTP
 from .sicklidar import SICKLidar
+from .timer import Timer
 
 # dictionary of all available drivers
 all_drivers = dict(gps=GPS, imu=IMU, spider=Spider, serial=LogSerial,
                    can=CANSerial, simulator=SpiderSimulator,
                    tcp=LogTCP, udp=LogUDP, http=LogHTTP,
+                   timer=Timer,
                    lidar=SICKLidar)
 
