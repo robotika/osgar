@@ -48,6 +48,6 @@
               ["app.desired_speed", "eduro.desired_speed"],
               ["lidar_tcp.raw", "lidar.raw"], 
               ["lidar.raw", "lidar_tcp.raw"],
-              ["lidar.scan", "eduro.scan"]]
+              ["lidar.scan", "app.scan"]]
   }
 }
