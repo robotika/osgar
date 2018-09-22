@@ -6,10 +6,14 @@
 """
 import sys
 import math
+import struct
 import matplotlib.pyplot as plt
 
+from osgar.logger import LogReader, lookup_stream_id
+from osgar.lib.serialize import deserialize
 
-def get_arr(filename):
+
+def get_arr0(filename):
     arr = []
     for line in open(filename):
         if 'xENC' in line:
@@ -44,7 +48,23 @@ def draw(arr):
 #        z.append(sum(y[i-50:i+50])/100.0)
 #    plt.plot(x, z, 'o-', linewidth=2)
 
+    plt.xlabel('time (sec)', fontsize = 12)
+    plt.ylabel('power (Volts)', fontsize = 12)
     plt.show()
+
+
+def get_arr(filename):
+    only_stream = lookup_stream_id(filename, 'can.can')
+    
+    arr = []
+    with LogReader(filename) as log:
+        for timestamp, stream_id, data in log.read_gen(only_stream):
+            packet = deserialize(data)
+            msg_id = ((packet[0]) << 3) | (((packet[1]) >> 5) & 0x1f)
+            if msg_id == 0x18B:
+                arr.append((timestamp.total_seconds(),
+                            struct.unpack('<H', packet[2:])[0]/100.0))
+    return arr
 
 
 if __name__ == "__main__":
