@@ -7,6 +7,8 @@
 import sys
 import math
 import struct
+import os.path
+
 import matplotlib.pyplot as plt
 
 from osgar.logger import LogReader, lookup_stream_id
@@ -37,11 +39,13 @@ def get_arr0(filename):
                 arr.append((len(arr), float(gas)))
     return arr
 
-def draw(arr):
+def draw(arr, title=None):
 #    plt.plot(arr, 'o-', linewidth=2)
     x = [x for (x, _) in arr]
     y = [y for (_, y) in arr]
     plt.plot(x, y, 'o-', linewidth=2)
+    if title is not None:
+        plt.title(title)
 
 #    z = []
 #    for i in xrange(len(y)):
@@ -73,7 +77,7 @@ if __name__ == "__main__":
         sys.exit(2)
     filename = sys.argv[1]
     arr = get_arr(filename)
-    draw(arr)
+    draw(arr, title=os.path.basename(filename))
 
 
 # vim: expandtab sw=4 ts=4 
