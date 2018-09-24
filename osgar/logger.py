@@ -67,10 +67,15 @@ class LogWriter:
             bytes_data = data
             assert dt.days == 0, dt
             assert dt.seconds < 3600, dt  # overflow not supported yet
-            assert len(bytes_data) < 0x10000, len(bytes_data)  # large data blocks are not supported yet
+            index = 0
+            while index + 0xFFFF <= len(bytes_data):
+                self.f.write(struct.pack('IHH', dt.seconds * 1000000 + dt.microseconds,
+                             stream_id, 0xFFFF))
+                self.f.write(bytes_data[index:index + 0xFFFF])
+                index += 0xFFFF
             self.f.write(struct.pack('IHH', dt.seconds * 1000000 + dt.microseconds,
-                    stream_id, len(bytes_data)))
-            self.f.write(bytes_data)
+                         stream_id, len(bytes_data) - index))
+            self.f.write(bytes_data[index:])
             self.f.flush()
         return dt
 
@@ -114,6 +119,15 @@ class LogReader:
             microseconds, stream_id, size = struct.unpack('IHH', header)
             dt = datetime.timedelta(microseconds=microseconds)
             data = self.f.read(size)
+            while size == 0xFFFF:
+                header = self.f.read(8)
+                if len(header) < 8:
+                    break
+                ref_microseconds, ref_stream_id, size = struct.unpack('IHH', header)
+                assert microseconds == ref_microseconds, (microseconds, ref_microseconds)
+                assert stream_id == ref_stream_id, (stream_id, ref_stream_id)
+                data += self.f.read(size)
+
             if len(multiple_streams) == 0 or stream_id in multiple_streams:
                 yield dt, stream_id, data
 
