@@ -2,8 +2,13 @@
   Internal bus for communication among modules
 """
 from queue import Queue
+from datetime import timedelta
 
 from osgar.lib.serialize import serialize, deserialize
+
+
+# restrict replay time from given input
+ASSERT_QUEUE_DELAY = timedelta(seconds=.1)
 
 
 class BusShutdownException(Exception):
@@ -63,10 +68,12 @@ class LogBusHandler:
     def publish(self, channel, data):
         assert channel in self.outputs.values(), (channel, self.outputs.values())
         dt, stream_id, bytes_data = next(self.reader)
+        start = dt
         while stream_id not in self.outputs:
             assert stream_id in self.inputs, stream_id
             self.buffer_queue.put((dt, stream_id, bytes_data))
             dt, stream_id, bytes_data = next(self.reader)
+        assert dt - start < ASSERT_QUEUE_DELAY, (dt - start, self.buffer_queue.qsize())
         assert channel == self.outputs[stream_id], (channel, self.outputs[stream_id], dt)  # wrong channel
         ref_data = deserialize(bytes_data)
         assert data == ref_data, (data, ref_data)
