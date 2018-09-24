@@ -4,14 +4,14 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["encoders", "scan"],
+          "in": ["encoders", "scan", "emergency_stop"],
           "out": ["desired_speed"],
           "init": {}
       },
       "eduro": {
           "driver": "eduro",
           "in": ["can", "desired_speed"],
-          "out": ["can", "encoders"],
+          "out": ["can", "encoders", "emergency_stop"],
           "init": {}
       },
       "can": {
@@ -48,6 +48,7 @@
               ["app.desired_speed", "eduro.desired_speed"],
               ["lidar_tcp.raw", "lidar.raw"], 
               ["lidar.raw", "lidar_tcp.raw"],
-              ["lidar.scan", "app.scan"]]
+              ["lidar.scan", "app.scan"],
+              ["eduro.emergency_stop", "app.emergency_stop"]]
   }
 }

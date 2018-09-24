@@ -13,6 +13,11 @@ wd = 427.0 / 445.0 * 0.26/4.0 # with gear  1:4
 ENC_SCALE = math.pi * wd / 0x10000
 
 
+# TODO shared place for multiple applications
+class EmergencyStopException(Exception):
+    pass
+
+
 def min_dist(laser_data):
     if len(laser_data) > 0:
         # remove ultra near reflections and unlimited values == 0
@@ -27,6 +32,7 @@ class FollowMe:
         self.last_position = None
         self.traveled_dist = 0.0  # in meters
         self.time = None
+        self.raise_exception_on_stop = False
 
     def update(self):
         packet = self.bus.listen()
@@ -38,6 +44,9 @@ class FollowMe:
                 print('Dist: %.2f' % self.traveled_dist)
             elif channel == 'scan':
                 print(min_dist(data)/1000.0)
+            elif channel == 'emergency_stop':
+                if self.raise_exception_on_stop and data:
+                    raise EmergencyStopException()
 
     def wait(self, dt):  # TODO refactor to some common class
         if self.time is None:
@@ -46,13 +55,23 @@ class FollowMe:
         while self.time - start_time < dt:
             self.update()
 
-    def play(self):
+    def go_dist(self, how_far):
         print("FollowMe!")
         self.bus.publish('desired_speed', [0.2, 0.0])
-        while self.traveled_dist < 1.0:
+        while self.traveled_dist < how_far:
             self.update()
         self.bus.publish('desired_speed', [0.0, 0.0])
         self.wait(timedelta(seconds=3))
+
+    def play(self):
+        try:
+            self.raise_exception_on_stop = True
+            self.go_dist(1.0)
+        except EmergencyStopException:
+            print('!!!Emergency STOP!!!')
+            self.raise_exception_on_stop = False
+            self.bus.publish('desired_speed', [0.0, 0.0])
+            self.wait(timedelta(seconds=1))
 
     def start(self):
         pass

@@ -15,6 +15,7 @@ from .canserial import CAN_packet
 CAN_ID_SYNC = 0x80
 CAN_ID_ENCODERS_LEFT = 0x181
 CAN_ID_ENCODERS_RIGHT = 0x182
+CAM_SYSTEM_STATUS = 0x8A  # including emergency STOP button
 
 
 def sint16_diff(a, b):
@@ -38,6 +39,8 @@ class Eduro(Thread):
         self.dist_left_raw = 0
         self.dist_right_raw = 0
 
+        self.emergency_stop = None  # uknown state
+
     def update_encoders(self, msg_id, data):
 #        print('ENC', hex(msg_id), data)
         assert len(data) == 4, data
@@ -52,12 +55,19 @@ class Eduro(Thread):
                 self.dist_right_raw += diff
         self.prev_enc_raw[msg_id] = arr[0]
 
+    def update_emergency_stop(self, msg_id, data):
+        assert len(data) == 8, len(data)
+        self.emergency_stop = (data[:2] == bytes([0,0x10])) and (data [3:] == bytes([0,0,0,0,0]))
+
     def process_packet(self, packet, verbose=False):
         if len(packet) >= 2:
             msg_id = ((packet[0]) << 3) | (((packet[1]) >> 5) & 0x1f)
 #            print(hex(msg_id), packet[2:])
             if msg_id in [CAN_ID_ENCODERS_LEFT, CAN_ID_ENCODERS_RIGHT]:
                 self.update_encoders(msg_id, packet[2:])
+            elif msg_id == CAM_SYSTEM_STATUS:
+                self.update_emergency_stop(msg_id, packet[2:])
+                self.bus.publish('emergency_stop', self.emergency_stop)
             elif msg_id == CAN_ID_SYNC:
                 self.bus.publish('encoders', [self.dist_left_raw,  self.dist_right_raw])
                 if self.desired_speed > 0:
