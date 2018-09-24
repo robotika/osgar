@@ -12,6 +12,15 @@ from osgar.robot import Robot
 wd = 427.0 / 445.0 * 0.26/4.0 # with gear  1:4
 ENC_SCALE = math.pi * wd / 0x10000
 
+
+def min_dist(laser_data):
+    if len(laser_data) > 0:
+        # remove ultra near reflections and unlimited values == 0
+        laser_data = [x if x > 10 else 10000 for x in laser_data]
+        return min(laser_data)
+    return 0
+
+
 class FollowMe:
     def __init__(self, config, bus):
         self.bus = bus
@@ -22,11 +31,13 @@ class FollowMe:
     def update(self):
         packet = self.bus.listen()
         if packet is not None:
-            print('FollowMe', packet)
             timestamp, channel, data = packet
             self.time = timestamp
             if channel == 'encoders':
                 self.traveled_dist = ENC_SCALE*(data[0] + data[1])/2
+                print('Dist: %.2f' % self.traveled_dist)
+            elif channel == 'scan':
+                print(min_dist(data)/1000.0)
 
     def wait(self, dt):  # TODO refactor to some common class
         if self.time is None:
