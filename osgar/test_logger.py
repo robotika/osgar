@@ -115,4 +115,24 @@ class LoggerTest(unittest.TestCase):
         self.assertEqual(lookup_stream_id('dummy.log', '3'), 3)
         # TODO name lookup
 
+    def test_large_block(self):
+        data = bytes([x for x in range(100)]*1000)
+        self.assertEqual(len(data), 100000)
+        with LogWriter(prefix='tmp4', note='test_large_block') as log:
+            filename = log.filename
+            t1 = log.write(1, data)
+            t2 = log.write(1, data[:0xFFFF])
+            t3 = log.write(1, b'')
+            t4 = log.write(1, b'ABC')
+            t5 = log.write(1, data+data)  # multiple split
+
+        with LogReader(filename) as log:
+            arr = []
+            for __, __, data in log.read_gen(1):
+                arr.append(data)
+            self.assertEqual([len(x) for x in arr],
+                             [100000, 65535, 0, 3, 200000])
+
+        os.remove(log.filename)
+
 # vim: expandtab sw=4 ts=4
