@@ -59,6 +59,15 @@ class Eduro(Thread):
         assert len(data) == 8, len(data)
         self.emergency_stop = (data[:2] == bytes([0,0x10])) and (data [3:] == bytes([0,0,0,0,0]))
 
+    def send_speed(self):
+        if self.desired_speed > 0:
+            left, right = 1000, 1000
+        else:
+            left, right = 0, 0
+        self.bus.publish('can', CAN_packet(0x201, [
+            left&0xff, (left>>8)&0xff,
+            right&0xff, (right>>8)&0xff]))
+
     def process_packet(self, packet, verbose=False):
         if len(packet) >= 2:
             msg_id = ((packet[0]) << 3) | (((packet[1]) >> 5) & 0x1f)
@@ -70,13 +79,7 @@ class Eduro(Thread):
                 self.bus.publish('emergency_stop', self.emergency_stop)
             elif msg_id == CAN_ID_SYNC:
                 self.bus.publish('encoders', [self.dist_left_raw,  self.dist_right_raw])
-                if self.desired_speed > 0:
-                    left, right = 1000, 1000
-                else:
-                    left, right = 0, 0
-                self.bus.publish('can', CAN_packet(0x201, [
-                    left&0xff, (left>>8)&0xff,
-                    right&0xff, (right>>8)&0xff]))
+                self.send_speed()
 
     def process_gen(self, data, verbose=False):
         self.process_packet(data)
