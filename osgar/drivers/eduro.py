@@ -6,6 +6,7 @@
 import ctypes
 import serial
 import struct
+import math
 from threading import Thread
 
 from osgar.logger import LogWriter, LogReader
@@ -16,6 +17,10 @@ CAN_ID_SYNC = 0x80
 CAN_ID_ENCODERS_LEFT = 0x181
 CAN_ID_ENCODERS_RIGHT = 0x182
 CAM_SYSTEM_STATUS = 0x8A  # including emergency STOP button
+
+UPDATE_TIME_FREQUENCY = 20.0  # Hz
+WHEEL_DIAMETER_LEFT = 427.0 / 445.0 * 0.26/4.0 + 0.00015
+WHEEL_DIAMETER_RIGHT = 427.0 / 445.0 * 0.26/4.0 - 0.00015
 
 
 def sint16_diff(a, b):
@@ -34,6 +39,9 @@ class Eduro(Thread):
 
         self.desired_speed = 0.0  # m/s
         self.desired_angular_speed = 0.0
+        self.maxAcc = config.get('max_acc', 0.5)
+        self._rampLastLeft, self._rampLastRight = 0.0, 0.0
+        self.WHEEL_DISTANCE = 0.315        
 
         self.prev_enc_raw = {}
         self.dist_left_raw = 0
@@ -60,6 +68,51 @@ class Eduro(Thread):
         self.emergency_stop = (data[:2] == bytes([0,0x10])) and (data [3:] == bytes([0,0,0,0,0]))
 
     def send_speed(self):
+        self.SpeedL = self.desired_speed - self.desired_angular_speed * self.WHEEL_DISTANCE / 2.0
+        self.SpeedR = self.desired_speed + self.desired_angular_speed * self.WHEEL_DISTANCE / 2.0 
+
+        if False: #any(motorId in self.modulesForRestart for motorId in [0x01, 0x02]):
+            # There is a motor in reset => we must stop (even aggressively)
+            left, right = 0, 0
+        else:
+            scaleR = 1000.0 / ( math.pi * WHEEL_DIAMETER_RIGHT)
+            scaleL = 1000.0 / ( math.pi * WHEEL_DIAMETER_LEFT )
+            tmpSpeedL = self.SpeedL
+            tmpSpeedR = self.SpeedR
+
+        if self.maxAcc:
+            # use ramps
+            maxSpeedStep = self.maxAcc / UPDATE_TIME_FREQUENCY;
+            if math.fabs( tmpSpeedL - self._rampLastLeft ) > maxSpeedStep or \
+                math.fabs( tmpSpeedR - self._rampLastRight ) > maxSpeedStep:
+                frac = maxSpeedStep / max( math.fabs( tmpSpeedL - self._rampLastLeft ), math.fabs( tmpSpeedR - self._rampLastRight ) )
+                tmpSpeedL = self._rampLastLeft + frac * ( tmpSpeedL - self._rampLastLeft )
+                tmpSpeedR = self._rampLastRight + frac * ( tmpSpeedR - self._rampLastRight )
+                self._rampLastLeft = tmpSpeedL
+                self._rampLastRight = tmpSpeedR
+
+        left = int(scaleL * tmpSpeedL)
+        right = int(scaleR * tmpSpeedR)
+
+        maxLim = 4000
+        if left > maxLim:
+            right = right*maxLim/left
+            left = maxLim
+        if left < -maxLim:
+            right = -right*maxLim/left
+            left = -maxLim
+        if right > maxLim:
+            left = left*maxLim/right
+            right = maxLim
+        if right < -maxLim:
+            left = -left*maxLim/right
+            right = -maxLim
+
+        self.bus.publish('can', CAN_packet(0x201, [
+            left&0xff, (left>>8)&0xff,
+            right&0xff, (right>>8)&0xff]))
+
+    def send_speed_ref(self):
         if self.desired_speed > 0:
             left, right = 1000, 1000
         else:
