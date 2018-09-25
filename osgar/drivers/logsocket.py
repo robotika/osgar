@@ -4,6 +4,7 @@
 
 import socket
 import urllib.request
+import time
 from threading import Thread
 
 from osgar.logger import LogWriter
@@ -83,6 +84,7 @@ class LogHTTP:
         self.input_thread = Thread(target=self.run_input, daemon=True)
 
         self.url = config['url']
+        self.sleep = config.get('sleep')
         self.bus = bus
 
     def start(self):
@@ -98,6 +100,8 @@ class LogHTTP:
                     data = f.read()
                 if len(data) > 0:
                     self.bus.publish('raw', data)
+                    if self.sleep is not None:
+                        time.sleep(self.sleep)  # TODO skip in replay
             except socket.timeout:
                 pass
 
