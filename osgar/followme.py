@@ -33,6 +33,7 @@ class FollowMe:
         self.traveled_dist = 0.0  # in meters
         self.time = None
         self.raise_exception_on_stop = False
+        self.verbose = False
 
     def update(self):
         packet = self.bus.listen()
@@ -41,9 +42,11 @@ class FollowMe:
             self.time = timestamp
             if channel == 'encoders':
                 self.traveled_dist = ENC_SCALE*(data[0] + data[1])/2
-                print('Dist: %.2f' % self.traveled_dist)
+                if self.verbose:
+                    print('Dist: %.2f' % self.traveled_dist)
             elif channel == 'scan':
-                print(min_dist(data)/1000.0)
+                if self.verbose:
+                    print(min_dist(data)/1000.0)
             elif channel == 'emergency_stop':
                 if self.raise_exception_on_stop and data:
                     raise EmergencyStopException()
