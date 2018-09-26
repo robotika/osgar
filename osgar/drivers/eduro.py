@@ -130,6 +130,9 @@ class Eduro(Thread):
             elif msg_id == CAM_SYSTEM_STATUS:
                 self.update_emergency_stop(msg_id, packet[2:])
                 self.bus.publish('emergency_stop', self.emergency_stop)
+                if self.emergency_stop:
+                    print("Eduro - emergency stop")
+                    self.bus.publish('can', CAN_packet(0, [0x80, 0]))  # sendPreOperationMode
             elif msg_id == CAN_ID_SYNC:
                 self.bus.publish('encoders', [self.dist_left_raw,  self.dist_right_raw])
                 self.send_speed()
