@@ -101,12 +101,14 @@ if __name__ == "__main__":
     parser_replay.add_argument('logfile', help='recorded log file')
     parser_replay.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
     parser_replay.add_argument('--config', nargs='+', help='force alternative configuration file')
+    parser_replay.add_argument('--verbose', '-v', help="verbose mode", action='store_true')
     args = parser.parse_args()
 
     if args.command == 'replay':
         from replay import replay
         args.module = 'app'
         game = replay(args, application=FollowMe)
+        game.verbose = args.verbose
         game.play()
 
     elif args.command == 'run':
