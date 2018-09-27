@@ -73,10 +73,12 @@ class FollowMe:
 
     def follow(self):
         print("Follow target!")
-  
+
+        SCAN_SIZE = 811
+
         thresholds = []
-        for i in range(541):
-            deg = -135 + i * 0.5
+        for i in range(SCAN_SIZE):
+            deg = -135 + 270 * i / SCAN_SIZE
             rad = math.radians(deg)
             thresh = 1000 * (0.17 + 0.17 * max(0, math.cos(rad)))  # [mm]
             thresholds.append(thresh)
@@ -85,13 +87,14 @@ class FollowMe:
         index = None
         while True:
             if self.last_scan is not None:
+                assert len(self.last_scan) == SCAN_SIZE, len(self.last_scan)
                 near = 10.0
                 if index is None:
                     low = 0
-                    high = 541
+                    high = SCAN_SIZE
                 else:
                     low = max(0, index - 20)
-                    high = min(541, index + 20)
+                    high = min(SCAN_SIZE, index + 20)
                 for i in range(low,high):
                     x = self.last_scan[i]
                     if x != 0 and x < near*1000:
@@ -103,7 +106,7 @@ class FollowMe:
                 if near > 1.3 or any(x < thresh for (x, thresh) in zip(self.last_scan, thresholds) if x > 0):
                     self.send_speed_cmd(0.0, 0.0)
                 else:
-                    angle = math.radians( (index-270)/2.0 ) + masterAngleOffset
+                    angle = math.radians(270 * index/SCAN_SIZE - 135 ) + masterAngleOffset
                     desiredAngle = 0
                     desiredDistance = 0.4
                     speed = 0.2 + 2*(near - desiredDistance)
