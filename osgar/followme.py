@@ -59,17 +59,59 @@ class FollowMe:
             self.update()
 
     def go_dist(self, how_far):
-        print("FollowMe!")
+        print("FollowMe! (go_dist)")
         self.bus.publish('desired_speed', [0.2, 0.0])
         while self.traveled_dist < how_far:
             self.update()
         self.bus.publish('desired_speed', [0.0, 0.0])
         self.wait(timedelta(seconds=3))
 
+    def follow(self):
+        print("Follow target!")
+  
+        thresholds = []
+        for i in range(541):
+            deg = -135 + i * 0.5
+            rad = math.radians(deg)
+            thresh = 1000 * (0.17 + 0.17 * max(0, math.cos(rad))) # [mm]
+            thresholds.append(thresh)
+
+        index = None
+        while True:
+            if robot.laserData:
+                near = 10.0
+                if index is None:
+                    low = 0
+                    high = 541
+                else:
+                    low = max(0, index - 20)
+                    high = min(541, index + 20)
+                for i in range(low,high):
+                    x = robot.laserData[i]
+                    if x != 0 and x < near*1000:
+                        near = x/1000.0
+                        index = i
+                maxnear = min( (x for x in robot.laserData if x > 0) ) / 1000.0
+                if verbose:
+                    print(near, maxnear,index)
+                if near > 1.3 or any(x < thresh for (x, thresh) in izip(robot.laserData, thresholds) if x > 0):
+                    robot.setSpeedPxPa( 0.0, 0.0 )
+                else:
+                    angle = math.radians( (index-270)/2.0 ) + masterAngleOffset
+                    desiredAngle = 0
+                    desiredDistance = 0.4
+                    speed = 0.2 + 2*(near - desiredDistance)
+                    rot = 1.5 * (angle - desiredAngle)
+                    if speed < 0:
+                        speed = 0
+                    robot.setSpeedPxPa( speed, rot )
+            robot.update()
+
     def play(self):
         try:
             self.raise_exception_on_stop = True
             self.go_dist(1.0)
+#            self.follow()
         except EmergencyStopException:
             print('!!!Emergency STOP!!!')
             self.raise_exception_on_stop = False
