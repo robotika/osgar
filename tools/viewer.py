@@ -73,7 +73,7 @@ def loadData(filename):
                 angle_scale = 270/(len(scan)-1)
                 scans = []
                 for i, s in enumerate(scan):
-                    angle = math.radians(270) * i/(len(scan)-1) - math.radians(135)
+                    angle = math.radians(135) - math.radians(270) * i/(len(scan)-1)
                     dist = s/1000.0
                     scans.append(((0, 0, angle), dist))
                 poses_set.append((poses, scans, image, camdir, compass))
