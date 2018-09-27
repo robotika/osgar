@@ -90,8 +90,8 @@ class FollowMe:
                 assert len(self.last_scan) == SCAN_SIZE, len(self.last_scan)
                 near = 10.0
                 if index is None:
-                    low = 0
-                    high = SCAN_SIZE
+                    low = SCAN_SIZE//6  # 0
+                    high = 5*SCAN_SIZE//6  # SCAN_SIZE
                 else:
                     low = max(0, index - 20)
                     high = min(SCAN_SIZE, index + 20)
@@ -102,7 +102,7 @@ class FollowMe:
                         index = i
                 maxnear = min( (x for x in self.last_scan if x > 0) ) / 1000.0
                 if self.verbose:
-                    print(near, maxnear,index)
+                    print(near, maxnear, index)
                 if near > 1.3 or any(x < thresh for (x, thresh) in zip(self.last_scan, thresholds) if x > 0):
                     self.send_speed_cmd(0.0, 0.0)
                 else:
