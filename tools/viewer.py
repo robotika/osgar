@@ -12,6 +12,10 @@ import io
 
 from pygame.locals import *
 
+from osgar.logger import LogReader, lookup_stream_id
+from osgar.lib.serialize import deserialize
+
+
 printPosition = True
 printEncoders = True
 
@@ -48,7 +52,37 @@ def getCombinedPose( pose, sensorPose ):
   heading = sensorPose[2] + pose[2]
   return (x, y, heading)
 
-def loadData( filename ):
+
+def loadData(filename):
+    m = []
+    poses_set = []
+
+    poses = [(0, 0, 0),]
+    scans = []
+    image = None
+    camdir = None
+    compass = None
+
+    laser_id = lookup_stream_id(filename, 'lidar.scan')
+    camera_id = lookup_stream_id(filename, 'camera.raw')  # TODO refactor
+    
+    with LogReader(filename) as log:
+        for timestamp, stream_id, data in log.read_gen():
+            if stream_id == laser_id:
+                scan = deserialize(data)
+                angle_scale = 270/(len(scan)-1)
+                scans = []
+                for i, s in enumerate(scan):
+                    angle = math.radians(270) * i/(len(scan)-1) - math.radians(135)
+                    dist = s/1000.0
+                    scans.append(((0, 0, angle), dist))
+                poses_set.append((poses, scans, image, camdir, compass))
+            elif stream_id == camera_id:
+                image = deserialize(data)
+    return poses_set, m
+
+
+def loadData_legacy( filename ):
 #  geometry = ( ( -0.02, 0.04, deg(90) ), ( -0.02, -0.04, deg(-90) ) )
 #  geometry = ( ( -0.09, 0.14, deg(90) ), ( -0.09, -0.14, deg(-90) ) )
 #  geometry = ( ( -0.09, 0.14, deg(90) ), ( -0.09, -0.14, deg(-90) ), 
@@ -168,6 +202,9 @@ def drawMap( foreground, map ):
     pygame.draw.line( foreground, (0,255,255), scr1(m[0]), scr1(m[1]),5)
 
 def drawImage( foreground, imgFileName, camdir ):
+  if imgFileName.startswith(b'\xff\xd8'):
+        # direct image
+        return
   if imgFileName:
 #  imgFileName = 'D:\\md\\hg\\eduro-logs\\100619-rychnov\\pes1\\cam100619_145404_000.jpg'
     if '.zip' in imgFileName:
@@ -382,4 +419,6 @@ if __name__ == "__main__":
     if len(args) > 3:
       tile_size = float( args[3] )
   main(args[1], scale=scale, startIndex=startIndex)
+
+# vim: expandtab sw=4 ts=4 
 
