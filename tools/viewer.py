@@ -202,9 +202,13 @@ def drawMap( foreground, map ):
     pygame.draw.line( foreground, (0,255,255), scr1(m[0]), scr1(m[1]),5)
 
 def drawImage( foreground, imgFileName, camdir ):
-  if imgFileName.startswith(b'\xff\xd8'):
-        # direct image
-        return
+  if imgFileName is not None and imgFileName.startswith(b'\xff\xd8'):
+      buf = imgFileName # direct image
+      camera = pygame.image.load(io.BytesIO(buf), 'JPG').convert()
+      cameraView = pygame.transform.scale( camera, (512, 384) )
+      foreground.blit( cameraView, (size[0]-512,0) )
+      return
+
   if imgFileName:
 #  imgFileName = 'D:\\md\\hg\\eduro-logs\\100619-rychnov\\pes1\\cam100619_145404_000.jpg'
     if '.zip' in imgFileName:
