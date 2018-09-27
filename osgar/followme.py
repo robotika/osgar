@@ -34,6 +34,7 @@ class FollowMe:
         self.time = None
         self.raise_exception_on_stop = False
         self.verbose = False
+        self.last_scan = None
 
     def update(self):
         packet = self.bus.listen()
@@ -47,6 +48,7 @@ class FollowMe:
             elif channel == 'scan':
                 if self.verbose:
                     print(min_dist(data)/1000.0)
+                self.last_scan = data
             elif channel == 'emergency_stop':
                 if self.raise_exception_on_stop and data:
                     raise EmergencyStopException()
@@ -66,6 +68,9 @@ class FollowMe:
         self.bus.publish('desired_speed', [0.0, 0.0])
         self.wait(timedelta(seconds=3))
 
+    def send_speed_cmd(self, speed, angular_speed):
+        self.bus.publish('desired_speed', [speed, angular_speed])
+
     def follow(self):
         print("Follow target!")
   
@@ -73,12 +78,13 @@ class FollowMe:
         for i in range(541):
             deg = -135 + i * 0.5
             rad = math.radians(deg)
-            thresh = 1000 * (0.17 + 0.17 * max(0, math.cos(rad))) # [mm]
+            thresh = 1000 * (0.17 + 0.17 * max(0, math.cos(rad)))  # [mm]
             thresholds.append(thresh)
 
+        masterAngleOffset = 0  # TODO
         index = None
         while True:
-            if robot.laserData:
+            if self.last_scan is not None:
                 near = 10.0
                 if index is None:
                     low = 0
@@ -87,15 +93,15 @@ class FollowMe:
                     low = max(0, index - 20)
                     high = min(541, index + 20)
                 for i in range(low,high):
-                    x = robot.laserData[i]
+                    x = self.last_scan[i]
                     if x != 0 and x < near*1000:
                         near = x/1000.0
                         index = i
-                maxnear = min( (x for x in robot.laserData if x > 0) ) / 1000.0
-                if verbose:
+                maxnear = min( (x for x in self.last_scan if x > 0) ) / 1000.0
+                if self.verbose:
                     print(near, maxnear,index)
-                if near > 1.3 or any(x < thresh for (x, thresh) in izip(robot.laserData, thresholds) if x > 0):
-                    robot.setSpeedPxPa( 0.0, 0.0 )
+                if near > 1.3 or any(x < thresh for (x, thresh) in zip(self.last_scan, thresholds) if x > 0):
+                    self.send_speed_cmd(0.0, 0.0)
                 else:
                     angle = math.radians( (index-270)/2.0 ) + masterAngleOffset
                     desiredAngle = 0
@@ -104,14 +110,15 @@ class FollowMe:
                     rot = 1.5 * (angle - desiredAngle)
                     if speed < 0:
                         speed = 0
-                    robot.setSpeedPxPa( speed, rot )
-            robot.update()
+                    self.send_speed_cmd( speed, rot )
+                self.last_scan = None
+            self.update()
 
     def play(self):
         try:
             self.raise_exception_on_stop = True
-            self.go_dist(1.0)
-#            self.follow()
+#            self.go_dist(1.0)
+            self.follow()
         except EmergencyStopException:
             print('!!!Emergency STOP!!!')
             self.raise_exception_on_stop = False
