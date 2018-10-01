@@ -57,7 +57,8 @@ def loadData(filename):
     m = []
     poses_set = []
 
-    poses = [(0, 0, 0),]
+    pose = (0, 0, 0)
+    poses = [pose,]
     scans = []
     image = None
     camdir = None
@@ -65,6 +66,7 @@ def loadData(filename):
 
     laser_id = lookup_stream_id(filename, 'lidar.scan')
     camera_id = lookup_stream_id(filename, 'camera.raw')  # TODO refactor
+    pose_id = lookup_stream_id(filename, 'eduro.pose2d')  # TODO what other source than Eduro?
     
     with LogReader(filename) as log:
         for timestamp, stream_id, data in log.read_gen():
@@ -75,10 +77,13 @@ def loadData(filename):
                 for i, s in enumerate(scan):
                     angle = math.radians(135) - math.radians(270) * i/(len(scan)-1)
                     dist = s/1000.0
-                    scans.append(((0, 0, angle), dist))
+                    scans.append((getCombinedPose(pose, (0, 0, angle)), dist))
                 poses_set.append((poses, scans, image, camdir, compass))
             elif stream_id == camera_id:
                 image = deserialize(data)
+            elif stream_id == pose_id:
+                pose = deserialize(data)
+                poses = [pose,]
     return poses_set, m
 
 
