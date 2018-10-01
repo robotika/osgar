@@ -166,7 +166,10 @@ class Eduro(Thread):
                     print("Eduro - emergency stop")
                     self.bus.publish('can', CAN_packet(0, [0x80, 0]))  # sendPreOperationMode
             elif msg_id == CAN_ID_SYNC:
-                self.bus.publish('encoders', [self.dist_left_raw,  self.dist_right_raw])
+                # make sure diff is reported _before_ update_pose() which reset counters!
+                diff_left = self.dist_left_raw - self.dist_pose[0]
+                diff_right = self.dist_right_raw  - self.dist_pose[1]
+                self.bus.publish('encoders', [diff_left, diff_right])
                 self.update_pose()
                 self.bus.publish('pose2d', self.pose)
                 self.send_speed()

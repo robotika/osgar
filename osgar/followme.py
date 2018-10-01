@@ -42,7 +42,7 @@ class FollowMe:
             timestamp, channel, data = packet
             self.time = timestamp
             if channel == 'encoders':
-                self.traveled_dist = ENC_SCALE*(data[0] + data[1])/2
+                self.traveled_dist += ENC_SCALE*(data[0] + data[1])/2
                 if self.verbose:
                     print('Dist: %.2f' % self.traveled_dist)
             elif channel == 'scan':
@@ -120,8 +120,8 @@ class FollowMe:
     def play(self):
         try:
             self.raise_exception_on_stop = True
-#            self.go_dist(1.0)
-            self.follow()
+            self.go_dist(1.0)
+#            self.follow()
         except EmergencyStopException:
             print('!!!Emergency STOP!!!')
             self.raise_exception_on_stop = False
