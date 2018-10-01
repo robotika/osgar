@@ -48,6 +48,11 @@ class BusHandler:
         self._is_alive = False
         self.queue.put(None)
 
+    def report_error(self, err):
+        with self.logger.lock:
+            self.logger.write(0, bytes(str({'error': str(err)}),
+                                       encoding='ascii'))
+
 
 class LogBusHandler:
     def __init__(self, log, inputs, outputs):

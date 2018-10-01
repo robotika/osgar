@@ -117,4 +117,10 @@ class BusHandlerTest(unittest.TestCase):
         bus.publish('new_channel', b'some data')
         self.assertEqual(bus.listen(), (timedelta(microseconds=11), 'raw', [3, 4, 5]))
 
+    def test_report_error(self):
+        log = MagicMock()
+        bus = BusHandler(log)
+        bus.report_error(KeyError(123))
+        log.write.assert_called_once_with(0, b"{'error': '123'}")
+
 # vim: expandtab sw=4 ts=4
