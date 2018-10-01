@@ -26,22 +26,30 @@ def min_dist(laser_data):
     return 0
 
 
+def distance(pose1, pose2):
+    return math.hypot(pose1[0] - pose2[0], pose1[1] - pose2[1])
+
+
 class FollowMe:
     def __init__(self, config, bus):
         self.bus = bus
-        self.last_position = None
+        self.last_position = [0, 0, 0]  # proper should be None, but we really start from zero
         self.traveled_dist = 0.0  # in meters
         self.time = None
         self.raise_exception_on_stop = False
         self.verbose = False
         self.last_scan = None
 
+        self.max_speed = 0.2  # TODO load from config
+
     def update(self):
         packet = self.bus.listen()
         if packet is not None:
             timestamp, channel, data = packet
             self.time = timestamp
-            if channel == 'encoders':
+            if channel == 'pose2d':
+                self.last_position = data
+            elif channel == 'encoders':
                 self.traveled_dist += ENC_SCALE*(data[0] + data[1])/2
                 if self.verbose:
                     print('Dist: %.2f' % self.traveled_dist)
@@ -60,13 +68,13 @@ class FollowMe:
         while self.time - start_time < dt:
             self.update()
 
-    def go_dist(self, how_far):
-        print("FollowMe! (go_dist)")
-        self.bus.publish('desired_speed', [0.2, 0.0])
-        while self.traveled_dist < how_far:
+    def go_straight(self, how_far):
+        print("go_straight %.1f" % how_far, self.last_position)
+        start_pose = self.last_position
+        self.bus.publish('desired_speed', [self.max_speed, 0.0])
+        while distance(start_pose, self.last_position) < how_far:
             self.update()
         self.bus.publish('desired_speed', [0.0, 0.0])
-        self.wait(timedelta(seconds=3))
 
     def send_speed_cmd(self, speed, angular_speed):
         self.bus.publish('desired_speed', [speed, angular_speed])
@@ -117,11 +125,14 @@ class FollowMe:
                 self.last_scan = None
             self.update()
 
+    def ver0(self):
+        self.go_straight(1.0)
+        self.wait(timedelta(seconds=3))
+
     def play(self):
         try:
             self.raise_exception_on_stop = True
-            self.go_dist(1.0)
-#            self.follow()
+            self.ver0()
         except EmergencyStopException:
             print('!!!Emergency STOP!!!')
             self.raise_exception_on_stop = False
