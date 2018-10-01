@@ -140,12 +140,21 @@ class FollowMe:
                 self.last_scan = None
             self.update()
 
+    def drop_balls(self):
+        self.bus.publish('hand', '50/100/1/0\n')
+        self.wait(timedelta(seconds=2))
+        self.bus.publish('hand', '50/100/0/1\n')
+        self.wait(timedelta(seconds=2))
+        self.bus.publish('hand', '50/100/0/0\n')
+
     def ver0(self):
+        self.drop_balls()
         self.go_straight(2.0)
         self.wait(timedelta(seconds=3))
         self.go_straight(-1.0)
         self.turn(math.radians(180))
         self.go_straight(1.0)
+        self.drop_balls()
         self.wait(timedelta(seconds=3))
 
     def play(self):
