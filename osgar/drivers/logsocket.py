@@ -85,6 +85,8 @@ class LogHTTP:
 
         self.url = config['url']
         self.sleep = config.get('sleep')
+        if 'timeout' in config:
+            socket.setdefaulttimeout(config['timeout'])
         self.bus = bus
 
     def start(self):
@@ -102,8 +104,8 @@ class LogHTTP:
                     self.bus.publish('raw', data)
                     if self.sleep is not None:
                         time.sleep(self.sleep)  # TODO skip in replay
-            except socket.timeout:
-                pass
+            except urllib.error.URLError as e:
+                self.bus.report_error(e)
 
     def request_stop(self):
         self.bus.shutdown()
