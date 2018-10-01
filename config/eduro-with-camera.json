@@ -45,7 +45,8 @@
           "out": ["raw"],
           "init": {
               "url": "http://192.168.0.99/img.jpg",
-              "sleep": 0.1
+              "sleep": 0.1,
+              "timeout": 1.0
           }
       }
     },
