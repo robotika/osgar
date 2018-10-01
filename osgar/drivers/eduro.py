@@ -46,8 +46,10 @@ class Eduro(Thread):
         self.prev_enc_raw = {}
         self.dist_left_raw = 0
         self.dist_right_raw = 0
+        self.dist_pose = 0, 0
 
         self.emergency_stop = None  # uknown state
+        self.pose = [0.0, 0.0, 0.0]  # x, y in meters, heading in radians (not corrected to 2PI)
 
     def update_encoders(self, msg_id, data):
 #        print('ENC', hex(msg_id), data)
@@ -66,6 +68,36 @@ class Eduro(Thread):
     def update_emergency_stop(self, msg_id, data):
         assert len(data) == 8, len(data)
         self.emergency_stop = (data[:2] == bytes([0,0x10])) and (data [3:] == bytes([0,0,0,0,0]))
+
+    def update_pose(self):
+        x, y, heading = self.pose
+
+        diff_left = self.dist_left_raw - self.dist_pose[0]
+        diff_right = self.dist_right_raw  - self.dist_pose[1]
+        self.dist_pose = self.dist_left_raw, self.dist_right_raw
+
+        scaleR = WHEEL_DIAMETER_RIGHT * math.pi/0x10000
+        scaleL = WHEEL_DIAMETER_LEFT * math.pi/0x10000
+
+        metricL = scaleL * diff_left
+        metricR = scaleR * diff_right
+
+        dist = (metricL + metricR)/2.0
+        angle = (metricR - metricL)/self.WHEEL_DISTANCE
+
+        # advance robot by given distance and angle
+        if abs(angle) < 0.0000001:  # EPS
+            # Straight movement - a special case
+            x += dist * math.cos(heading)
+            y += dist * math.sin(heading)
+            #Not needed: heading += angle
+        else:
+            # Arc
+            r = dist / angle
+            x += -r * math.sin(heading) + r * math.sin(heading + angle)
+            y += +r * math.cos(heading) - r * math.cos(heading + angle)
+            heading += angle # not normalized
+        self.pose = [x, y, heading]
 
     def send_speed(self):
         self.SpeedL = self.desired_speed - self.desired_angular_speed * self.WHEEL_DISTANCE / 2.0
@@ -135,6 +167,8 @@ class Eduro(Thread):
                     self.bus.publish('can', CAN_packet(0, [0x80, 0]))  # sendPreOperationMode
             elif msg_id == CAN_ID_SYNC:
                 self.bus.publish('encoders', [self.dist_left_raw,  self.dist_right_raw])
+                self.update_pose()
+                self.bus.publish('pose2d', self.pose)
                 self.send_speed()
 
     def process_gen(self, data, verbose=False):
