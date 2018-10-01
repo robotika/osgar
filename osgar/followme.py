@@ -41,6 +41,7 @@ class FollowMe:
         self.last_scan = None
 
         self.max_speed = 0.2  # TODO load from config
+        self.max_angular_speed = math.radians(90)
 
     def update(self):
         packet = self.bus.listen()
@@ -76,6 +77,17 @@ class FollowMe:
         else:
             self.bus.publish('desired_speed', [-self.max_speed, 0.0])
         while distance(start_pose, self.last_position) < abs(how_far):
+            self.update()
+        self.bus.publish('desired_speed', [0.0, 0.0])
+
+    def turn(self, angle):
+        print("turn %.1f" % math.degrees(angle))
+        start_pose = self.last_position
+        if angle >= 0:
+            self.bus.publish('desired_speed', [0.0, self.max_angular_speed])
+        else:
+            self.bus.publish('desired_speed', [0.0, -self.max_angular_speed])
+        while abs(start_pose[2] - self.last_position[2]) < abs(angle):
             self.update()
         self.bus.publish('desired_speed', [0.0, 0.0])
 
@@ -129,7 +141,11 @@ class FollowMe:
             self.update()
 
     def ver0(self):
+        self.go_straight(2.0)
+        self.wait(timedelta(seconds=3))
         self.go_straight(-1.0)
+        self.turn(math.radians(180))
+        self.go_straight(1.0)
         self.wait(timedelta(seconds=3))
 
     def play(self):
