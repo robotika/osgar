@@ -71,8 +71,11 @@ class FollowMe:
     def go_straight(self, how_far):
         print("go_straight %.1f" % how_far, self.last_position)
         start_pose = self.last_position
-        self.bus.publish('desired_speed', [self.max_speed, 0.0])
-        while distance(start_pose, self.last_position) < how_far:
+        if how_far >= 0:
+            self.bus.publish('desired_speed', [self.max_speed, 0.0])
+        else:
+            self.bus.publish('desired_speed', [-self.max_speed, 0.0])
+        while distance(start_pose, self.last_position) < abs(how_far):
             self.update()
         self.bus.publish('desired_speed', [0.0, 0.0])
 
@@ -126,7 +129,7 @@ class FollowMe:
             self.update()
 
     def ver0(self):
-        self.go_straight(1.0)
+        self.go_straight(-1.0)
         self.wait(timedelta(seconds=3))
 
     def play(self):
