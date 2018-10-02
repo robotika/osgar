@@ -156,7 +156,7 @@ class FollowMe:
         self.go_straight(-1.0)
         self.bus.publish('hand', b'40/50/0/0\n')  # traveling position
         self.turn(math.radians(180))
-        self.go_straight(1.0)
+        self.go_straight(1.25)
         self.drop_balls()
         self.wait(timedelta(seconds=3))
 
