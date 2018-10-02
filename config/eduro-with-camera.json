@@ -39,6 +39,12 @@
           "out": ["raw"],
           "init": {"host": "192.168.2.71", "port": 2111, "timeout": 3.0}
       },
+      "hand": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyACM0", "speed": 9600}
+      },
       "camera": {
           "driver": "http",
           "in": [],
@@ -60,6 +66,8 @@
               ["lidar.raw", "lidar_tcp.raw"],
               ["lidar.scan", "app.scan"],
               ["eduro.emergency_stop", "app.emergency_stop"],
-              ["eduro.pose2d", "app.pose2d"]]
+              ["eduro.pose2d", "app.pose2d"],
+              ["app.hand", "hand.raw"],
+              ["hand.raw", "app.hand"]]
   }
 }
