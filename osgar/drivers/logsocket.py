@@ -104,6 +104,8 @@ class LogHTTP:
                     self.bus.publish('raw', data)
                     if self.sleep is not None:
                         time.sleep(self.sleep)  # TODO skip in replay
+            except socket.timeout as e:
+                self.bus.report_error(e)
             except urllib.error.URLError as e:
                 self.bus.report_error(e)
 
