@@ -363,7 +363,7 @@ def main( filename, scale = 1.0, startIndex = None, posesScanSet=None ):
       if event.key == K_DOWN:
         globals()['offset'] = (offset[0], offset[1]-150)
         shouldRefreshNow = True
-      if event.key == K_PLUS or event.key == K_KP_PLUS:
+      if event.key == K_PLUS or event.key == K_KP_PLUS or event.key == 61:
         globals()['scale'] *= 2.0
         globals()['tile_size'] /= 2.0
         shouldDrawTiles = shouldDrawMap = shouldDrawSensors = shouldDrawBeacons = True
