@@ -141,11 +141,14 @@ class FollowMe:
             self.update()
 
     def drop_balls(self):
-        self.bus.publish('hand', '50/100/1/0\n')
+        print("drop ball 1")
+        self.bus.publish('hand', b'50/100/1/0\n')
         self.wait(timedelta(seconds=2))
-        self.bus.publish('hand', '50/100/0/1\n')
+        print("drop ball 2")
+        self.bus.publish('hand', b'50/100/0/1\n')
         self.wait(timedelta(seconds=2))
-        self.bus.publish('hand', '50/100/0/0\n')
+        self.bus.publish('hand', b'50/100/0/0\n')
+        print("drop ball END")
 
     def ver0(self):
         self.drop_balls()
