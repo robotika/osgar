@@ -150,7 +150,7 @@ class CANSerial(Thread):
     ############################# END ##############################
 
     def check_and_restart_modules(self, module_id, status):
-        print(module_id, status)
+        #print(module_id, status)
         if status != 5:  # operational?
             if module_id not in self.modules_for_restart:
                 print("RESET", module_id)
