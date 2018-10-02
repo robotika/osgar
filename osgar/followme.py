@@ -148,7 +148,6 @@ class FollowMe:
         self.bus.publish('hand', '50/100/0/0\n')
 
     def ver0(self):
-        self.drop_balls()
         self.go_straight(2.0)
         self.wait(timedelta(seconds=3))
         self.go_straight(-1.0)
