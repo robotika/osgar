@@ -66,7 +66,10 @@ def loadData(filename):
 
     laser_id = lookup_stream_id(filename, 'lidar.scan')
     camera_id = lookup_stream_id(filename, 'camera.raw')  # TODO refactor
-    pose_id = lookup_stream_id(filename, 'eduro.pose2d')  # TODO what other source than Eduro?
+    try:
+        pose_id = lookup_stream_id(filename, 'eduro.pose2d')  # TODO what other source than Eduro?
+    except ValueError:
+        pose_id = None
     
     with LogReader(filename) as log:
         for timestamp, stream_id, data in log.read_gen():
