@@ -148,8 +148,9 @@ class FollowMe:
         print("drop ball END")
 
     def ver0(self):
-        self.go_straight(2.0)
+        self.go_straight(1.0)
         self.bus.publish('hand', b'40/50/0/0\n')  # ready for pickup
+        self.go_straight(1.0)
         self.wait(timedelta(seconds=3))
         self.bus.publish('hand', b'20/80/0/0\n')  # move up
         self.go_straight(-1.0)
