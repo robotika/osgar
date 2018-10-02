@@ -41,7 +41,7 @@ class FollowMe:
         self.last_scan = None
 
         self.max_speed = 0.2  # TODO load from config
-        self.max_angular_speed = math.radians(90)
+        self.max_angular_speed = math.radians(45)
 
     def update(self):
         packet = self.bus.listen()
@@ -148,6 +148,7 @@ class FollowMe:
         self.bus.publish('hand', '50/100/0/0\n')
 
     def ver0(self):
+        self.drop_balls()
         self.go_straight(2.0)
         self.wait(timedelta(seconds=3))
         self.go_straight(-1.0)
