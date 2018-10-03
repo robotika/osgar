@@ -2,25 +2,29 @@
 """
   Convert directory of images into AVI video
     usage:
-         ./log2video.py <log directory> <output AVI file>
+         ./log2video.py <logfile> <output AVI file>
 """
 
 import sys
 import os
+
 import cv2
+import numpy as np
+
+from osgar.logger import LogReader, lookup_stream_id
+from osgar.lib.serialize import deserialize
 
 
-def video(path, outFilename):
-    "create demo video"
+def create_video(logfile, outFilename):
     assert outFilename.endswith(".avi"), outFilename
-#    writer = cv2.VideoWriter( outFilename, cv2.cv.CV_FOURCC('F', 'M', 'P', '4'), 4, (640,512) ) 
-    writer = cv2.VideoWriter( outFilename, cv2.cv.CV_FOURCC('F', 'M', 'P', '4'), 5, (1024,768) ) 
-    for (dirpath, dirnames, filenames) in os.walk(path):
-        for name in filenames:
-            if name.endswith(".jpg"):
-                print(name)
-                img = cv2.imread(dirpath + os.sep + name )
-                writer.write( img ) 
+    only_stream = lookup_stream_id(logfile, 'camera.raw')
+    writer = cv2.VideoWriter( outFilename, cv2.VideoWriter_fourcc('F', 'M', 'P', '4'), 5, (640,512) ) 
+#    writer = cv2.VideoWriter( outFilename, cv2.VideoWriter_fourcc('F', 'M', 'P', '4'), 5, (1024,768) ) 
+    with LogReader(logfile) as log:
+        for timestamp, stream_id, data in log.read_gen(only_stream):
+            buf = deserialize(data)
+            img = cv2.imdecode(np.fromstring(buf, dtype=np.uint8), 1)
+            writer.write(img)
     writer.release()
 
 
@@ -30,8 +34,7 @@ if __name__ == "__main__":
         sys.exit(-1)
     path = sys.argv[1]
     output_file = sys.argv[2]
-    video(path, output_file)
+    create_video(path, output_file)
 
-#-------------------------------------------------------------------
 # vim: expandtab sw=4 ts=4 
 
