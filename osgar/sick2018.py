@@ -1,5 +1,5 @@
 """
-  Follow Me (primary target Eduro robot)
+  SICK Robot Day 2018
 """
 import sys
 import math
@@ -30,7 +30,7 @@ def distance(pose1, pose2):
     return math.hypot(pose1[0] - pose2[0], pose1[1] - pose2[1])
 
 
-class FollowMe:
+class SICKRobot2018:
     def __init__(self, config, bus):
         self.bus = bus
         self.last_position = [0, 0, 0]  # proper should be None, but we really start from zero
@@ -69,59 +69,56 @@ class FollowMe:
         while self.time - start_time < dt:
             self.update()
 
+    def go_straight(self, how_far):
+        print("go_straight %.1f" % how_far, self.last_position)
+        start_pose = self.last_position
+        if how_far >= 0:
+            self.bus.publish('desired_speed', [self.max_speed, 0.0])
+        else:
+            self.bus.publish('desired_speed', [-self.max_speed, 0.0])
+        while distance(start_pose, self.last_position) < abs(how_far):
+            self.update()
+        self.bus.publish('desired_speed', [0.0, 0.0])
+
+    def turn(self, angle):
+        print("turn %.1f" % math.degrees(angle))
+        start_pose = self.last_position
+        if angle >= 0:
+            self.bus.publish('desired_speed', [0.0, self.max_angular_speed])
+        else:
+            self.bus.publish('desired_speed', [0.0, -self.max_angular_speed])
+        while abs(start_pose[2] - self.last_position[2]) < abs(angle):
+            self.update()
+        self.bus.publish('desired_speed', [0.0, 0.0])
+
     def send_speed_cmd(self, speed, angular_speed):
         self.bus.publish('desired_speed', [speed, angular_speed])
 
-    def follow(self):
-        print("Follow target!")
+    def drop_balls(self):
+        print("drop ball 1 + 2")
+        self.bus.publish('hand', b'40/50/1/1\n')
+        self.wait(timedelta(seconds=3))
+        self.bus.publish('hand', b'40/50/0/0\n')
+        print("drop ball END")
 
-        SCAN_SIZE = 811
-
-        thresholds = []
-        for i in range(SCAN_SIZE):
-            deg = -135 + 270 * i / SCAN_SIZE
-            rad = math.radians(deg)
-            thresh = 1000 * (0.17 + 0.17 * max(0, math.cos(rad)))  # [mm]
-            thresholds.append(thresh)
-
-        masterAngleOffset = 0  # TODO
-        index = None
-        while True:
-            if self.last_scan is not None:
-                assert len(self.last_scan) == SCAN_SIZE, len(self.last_scan)
-                near = 10.0
-                if index is None:
-                    low = SCAN_SIZE//6  # 0
-                    high = 5*SCAN_SIZE//6  # SCAN_SIZE
-                else:
-                    low = max(0, index - 20)
-                    high = min(SCAN_SIZE, index + 20)
-                for i in range(low,high):
-                    x = self.last_scan[i]
-                    if x != 0 and x < near*1000:
-                        near = x/1000.0
-                        index = i
-                maxnear = min( (x for x in self.last_scan if x > 0) ) / 1000.0
-                if self.verbose:
-                    print(near, maxnear, index)
-                if near > 1.3 or any(x < thresh for (x, thresh) in zip(self.last_scan, thresholds) if x > 0):
-                    self.send_speed_cmd(0.0, 0.0)
-                else:
-                    angle = math.radians(270 * index/SCAN_SIZE - 135 ) + masterAngleOffset
-                    desiredAngle = 0
-                    desiredDistance = 0.4
-                    speed = 0.2 + 2*(near - desiredDistance)
-                    rot = 1.5 * (angle - desiredAngle)
-                    if speed < 0:
-                        speed = 0
-                    self.send_speed_cmd( speed, rot )
-                self.last_scan = None
-            self.update()
+    def ver0(self):
+        self.go_straight(1.0)
+        self.bus.publish('hand', b'40/50/0/0\n')  # ready for pickup
+        self.go_straight(1.0)
+        self.bus.publish('hand', b'30/40/0/0\n')  # hit balls
+        self.wait(timedelta(seconds=3))
+        self.bus.publish('hand', b'20/80/0/0\n')  # move up
+        self.go_straight(-1.0)
+        self.bus.publish('hand', b'40/50/0/0\n')  # traveling position
+        self.turn(math.radians(180))
+        self.go_straight(1.25)
+        self.drop_balls()
+        self.wait(timedelta(seconds=3))
 
     def play(self):
         try:
             self.raise_exception_on_stop = True
-            self.follow()
+            self.ver0()
         except EmergencyStopException:
             print('!!!Emergency STOP!!!')
             self.raise_exception_on_stop = False
@@ -159,7 +156,7 @@ if __name__ == "__main__":
     if args.command == 'replay':
         from replay import replay
         args.module = 'app'
-        game = replay(args, application=FollowMe)
+        game = replay(args, application=SICKRobot2018)
         game.verbose = args.verbose
         game.play()
 
@@ -167,7 +164,7 @@ if __name__ == "__main__":
         log = LogWriter(prefix='eduro-', note=str(sys.argv))
         config = config_load(*args.config)
         log.write(0, bytes(str(config), 'ascii'))  # write configuration
-        robot = Robot(config=config['robot'], logger=log, application=FollowMe)
+        robot = Robot(config=config['robot'], logger=log, application=SICKRobot2018)
         game = robot.modules['app']  # TODO nicer reference
         robot.start()
         game.play()
