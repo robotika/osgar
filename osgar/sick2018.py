@@ -18,7 +18,7 @@ def min_dist(laser_data):
     if len(laser_data) > 0:
         # remove ultra near reflections and unlimited values == 0
         laser_data = [x if x > 10 else 10000 for x in laser_data]
-        return min(laser_data)
+        return min(laser_data)/1000.0
     return 0
 
 
@@ -48,8 +48,8 @@ class SICKRobot2018:
             elif channel == 'scan':
                 if self.verbose:
                     print('%.3f\t%.3f\t%.3f\t%.3f' % (
-                        min_dist(data[135:270])/1000.0, min_dist(data[270:811//2])/1000.0,
-                        min_dist(data[811//2:-270])/1000.0, min_dist(data[-270:])/1000.0))
+                        min_dist(data[135:270]), min_dist(data[270:811//2]),
+                        min_dist(data[811//2:-270]), min_dist(data[-270:])))
                 self.last_scan = data
             elif channel == 'emergency_stop':
                 if self.raise_exception_on_stop and data:
