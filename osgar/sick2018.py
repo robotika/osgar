@@ -9,10 +9,6 @@ from osgar.lib.config import load as config_load
 from osgar.robot import Robot
 
 
-wd = 427.0 / 445.0 * 0.26/4.0 # with gear  1:4
-ENC_SCALE = math.pi * wd / 0x10000
-
-
 # TODO shared place for multiple applications
 class EmergencyStopException(Exception):
     pass
@@ -34,7 +30,6 @@ class SICKRobot2018:
     def __init__(self, config, bus):
         self.bus = bus
         self.last_position = [0, 0, 0]  # proper should be None, but we really start from zero
-        self.traveled_dist = 0.0  # in meters
         self.time = None
         self.raise_exception_on_stop = False
         self.verbose = False
@@ -50,13 +45,11 @@ class SICKRobot2018:
             self.time = timestamp
             if channel == 'pose2d':
                 self.last_position = data
-            elif channel == 'encoders':
-                self.traveled_dist += ENC_SCALE*(data[0] + data[1])/2
-                if self.verbose:
-                    print('Dist: %.2f' % self.traveled_dist)
             elif channel == 'scan':
                 if self.verbose:
-                    print(min_dist(data)/1000.0)
+                    print('%.3f\t%.3f\t%.3f\t%.3f' % (
+                        min_dist(data[135:270])/1000.0, min_dist(data[270:811//2])/1000.0,
+                        min_dist(data[811//2:-270])/1000.0, min_dist(data[-270:])/1000.0))
                 self.last_scan = data
             elif channel == 'emergency_stop':
                 if self.raise_exception_on_stop and data:
