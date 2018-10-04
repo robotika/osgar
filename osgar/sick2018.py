@@ -108,10 +108,25 @@ class SICKRobot2018:
         self.drop_balls()
         self.wait(timedelta(seconds=3))
 
+    def approach_box(self, at_dist):
+        while self.last_scan is None:
+            self.update()
+        if min_dist(self.last_scan[270:-270]) > at_dist:
+            self.send_speed_cmd(0.2, 0.0)
+            while min_dist(self.last_scan[270:-270]) > at_dist:
+                self.update()
+            self.send_speed_cmd(0.0, 0.0)  # or it should stop always??
+
+    def ver1(self):
+        self.approach_box(at_dist=0.2)
+        self.drop_balls()
+        self.wait(timedelta(seconds=3))
+
     def play(self):
         try:
             self.raise_exception_on_stop = True
-            self.ver0()
+#            self.ver0()
+            self.ver1()
         except EmergencyStopException:
             print('!!!Emergency STOP!!!')
             self.raise_exception_on_stop = False
