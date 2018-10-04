@@ -70,14 +70,33 @@ def get_arr(filename):
                             struct.unpack('<H', packet[2:])[0]/100.0))
     return arr
 
+def get_laser_arr(filename, index):
+    only_stream = lookup_stream_id(filename, 'lidar.scan')
+    arr = []
+    with LogReader(filename) as log:
+        for ind, row in enumerate(log.read_gen(only_stream)):
+            if ind < index:
+                continue
+            timestamp, stream_id, data = row
+            data = deserialize(data)
+            for i, dist in enumerate(data):
+                arr.append((i, dist))
+            break
+    return arr
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print(__doc__)
-        sys.exit(2)
-    filename = sys.argv[1]
-    arr = get_arr(filename)
-    draw(arr, title=os.path.basename(filename))
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Plot log data')
+    parser.add_argument('filename', help='input log file')
+    parser.add_argument('--laser', type=int, help='display laser data')
+    args = parser.parse_args()
+
+    if args.laser is None:
+        arr = get_arr(args.filename)
+    else:
+        arr = get_laser_arr(args.filename, args.laser)
+    draw(arr, title=os.path.basename(args.filename))
 
 
 # vim: expandtab sw=4 ts=4 
