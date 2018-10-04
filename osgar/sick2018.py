@@ -34,6 +34,7 @@ class SICKRobot2018:
         self.raise_exception_on_stop = False
         self.verbose = False
         self.last_scan = None
+        self.buttons = None
 
         self.max_speed = 0.2  # TODO load from config
         self.max_angular_speed = math.radians(45)
@@ -51,6 +52,8 @@ class SICKRobot2018:
                         min_dist(data[135:270]), min_dist(data[270:811//2]),
                         min_dist(data[811//2:-270]), min_dist(data[-270:])))
                 self.last_scan = data
+            elif channel == 'buttons':
+                self.buttons = data
             elif channel == 'emergency_stop':
                 if self.raise_exception_on_stop and data:
                     raise EmergencyStopException()
@@ -117,7 +120,16 @@ class SICKRobot2018:
                 self.update()
             self.send_speed_cmd(0.0, 0.0)  # or it should stop always??
 
+    def wait_for_start(self):
+        while self.buttons is None or not self.buttons['cable_in']:
+            self.update()
+        assert self.buttons is not None
+
+        while self.buttons['cable_in']:
+            self.update()
+
     def ver1(self):
+        self.wait_for_start()
         self.approach_box(at_dist=0.2)
         self.drop_balls()
         self.wait(timedelta(seconds=3))

@@ -17,6 +17,7 @@ CAN_ID_SYNC = 0x80
 CAN_ID_ENCODERS_LEFT = 0x181
 CAN_ID_ENCODERS_RIGHT = 0x182
 CAM_SYSTEM_STATUS = 0x8A  # including emergency STOP button
+CAN_ID_BUTTONS = 0x28A
 
 UPDATE_TIME_FREQUENCY = 20.0  # Hz
 WHEEL_DIAMETER_LEFT = 427.0 / 445.0 * 0.26/4.0 + 0.00015
@@ -50,6 +51,7 @@ class Eduro(Thread):
 
         self.emergency_stop = None  # uknown state
         self.pose = [0.0, 0.0, 0.0]  # x, y in meters, heading in radians (not corrected to 2PI)
+        self.buttons = None  # unknown
 
     def update_encoders(self, msg_id, data):
 #        print('ENC', hex(msg_id), data)
@@ -98,6 +100,22 @@ class Eduro(Thread):
             y += +r * math.cos(heading) - r * math.cos(heading + angle)
             heading += angle # not normalized
         self.pose = [x, y, heading]
+
+    def send_leds(self, blue, red):
+        self.bus.publish('can', CAN_packet(0x30A, [0xFF, 0xFF, blue, red]))
+
+    def update_buttons(self, data):
+        assert len(data) == 2, len(data)
+        val = struct.unpack('<H', data)[0] & 0x300
+        if self.buttons is None or val != self.buttons:
+            self.buttons = val
+            msg = { 'blue_selected': ((val & 0x0100) != 0),
+                    'cable_in': ((val & 0x0200) == 0) }
+            if msg['blue_selected']:
+                self.send_leds(blue=1, red=0)
+            else:
+                self.send_leds(blue=0, red=1)
+            self.bus.publish('buttons', msg)
 
     def send_speed(self):
         self.SpeedL = self.desired_speed - self.desired_angular_speed * self.WHEEL_DISTANCE / 2.0
@@ -165,6 +183,8 @@ class Eduro(Thread):
                 if self.emergency_stop:
                     print("Eduro - emergency stop")
                     self.bus.publish('can', CAN_packet(0, [0x80, 0]))  # sendPreOperationMode
+            elif msg_id == CAN_ID_BUTTONS:
+                self.update_buttons(packet[2:])
             elif msg_id == CAN_ID_SYNC:
                 # make sure diff is reported _before_ update_pose() which reset counters!
                 diff_left = self.dist_left_raw - self.dist_pose[0]
