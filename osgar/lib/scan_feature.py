@@ -18,7 +18,7 @@ def scan_split(scan, max_diff, min_len=10):
     return arr
 
 
-def extract_features(scan):
+def get_scan_diff(scan):
     prev = None
     arr = []
     for i in range(len(scan)):
@@ -28,6 +28,17 @@ def extract_features(scan):
             arr.append(diff)
         prev = dist
     return arr
+
+
+def extract_features(scan):
+    pairs = scan_split(scan[135:-135], max_diff=20)
+    pairs = [(f+135, t+135) for f, t in pairs]
+
+    seek = len(scan)//2
+    for f, t in pairs:
+        if f <= seek <= t:
+            return [(f, t)]
+    return []
 
 
 def draw_xy(scan, pairs):
@@ -57,11 +68,12 @@ if __name__ == "__main__":
     parser.add_argument('filename', help='input log file')
     parser.add_argument('--verbose', '-v', help="verbose mode", action='store_true')
     parser.add_argument('--draw', '-d', help="draw result", action='store_true')
+    parser.add_argument('--index', '-i', help="scan index", type=int, default=0)
     args = parser.parse_args()
 
     filename = args.filename
     only_stream = lookup_stream_id(filename, 'lidar.scan')
-    index = 0
+    index = args.index
     with LogReader(filename) as log:
         for ind, row in enumerate(log.read_gen(only_stream)):
             if ind < index:
@@ -74,6 +86,7 @@ if __name__ == "__main__":
                     print(f, t)
                     print(scan[135+f:135+t])
             pairs = [(f+135, t+135) for f, t in pairs]
+#            pairs = extract_features(scan)
             if args.draw:
                 draw_xy(scan, pairs)
             break
