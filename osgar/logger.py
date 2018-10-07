@@ -189,6 +189,7 @@ if __name__ == "__main__":
     parser.add_argument('--times', help='display timestamps', action='store_true')
     parser.add_argument('--raw', help='skip data deserialization',
                         action='store_true')
+    parser.add_argument('--index', '-i', help='select only i-th message', type=int)
     args = parser.parse_args()
 
     only_stream = lookup_stream_id(args.logfile, args.stream)
@@ -197,6 +198,7 @@ if __name__ == "__main__":
         print([x for x in enumerate(lookup_stream_names(args.logfile), start=1)])
         sys.exit()
 
+    count = 0
     with LogReader(args.logfile) as log:
         for timestamp, stream_id, data in log.read_gen(only_stream):
             if not args.raw and stream_id != 0:
@@ -204,6 +206,8 @@ if __name__ == "__main__":
             if args.times:
                 print(timestamp, stream_id, data)
             else:
-                sys.stdout.buffer.write(data)
+                if args.index is None or count == args.index:
+                    sys.stdout.buffer.write(data)
+                count += 1
 
 # vim: expandtab sw=4 ts=4
