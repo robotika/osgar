@@ -45,6 +45,8 @@ def extract_features(scan):
 
 
 def coord_xy(i, scan):
+    if i < 0 or i >= len(scan):
+        return 0, 0
     angle = (len(scan)//2 - i) * ANGULAR_RESOLUTION
     # TODO check overflow
     dist = scan[i]
