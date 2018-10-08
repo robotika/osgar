@@ -6,6 +6,8 @@ import math
 from datetime import timedelta
 
 from osgar.lib.config import load as config_load
+from osgar.lib.scan_feature import detect_box
+from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.robot import Robot
 
 
@@ -34,6 +36,7 @@ class SICKRobot2018:
         self.raise_exception_on_stop = False
         self.verbose = False
         self.last_scan = None
+        self.scan_count = 0
         self.buttons = None
 
         self.max_speed = 0.2  # TODO load from config
@@ -52,6 +55,7 @@ class SICKRobot2018:
                         min_dist(data[135:270]), min_dist(data[270:811//2]),
                         min_dist(data[811//2:-270]), min_dist(data[-270:])))
                 self.last_scan = data
+                self.scan_count += 1
             elif channel == 'buttons':
                 self.buttons = data
             elif channel == 'emergency_stop':
@@ -112,12 +116,34 @@ class SICKRobot2018:
         self.wait(timedelta(seconds=3))
 
     def approach_box(self, at_dist):
+        speed = 0.2
+        box_pos = None
         while self.last_scan is None:
             self.update()
         if min_dist(self.last_scan[270:-270]) > at_dist:
-            self.send_speed_cmd(0.2, 0.0)
+            self.send_speed_cmd(speed, 0.0)
+            prev_count = self.scan_count
             while min_dist(self.last_scan[270:-270]) > at_dist:
                 self.update()
+                if prev_count != self.scan_count:
+                    box_i = detect_box(self.last_scan)
+                    if box_i is not None:
+                        angle = math.radians((len(self.last_scan)//2 - box_i)/3)
+                        dist = self.last_scan[box_i]/1000.0
+                        pose = self.last_position
+                        box_pos = (pose[0] + dist * math.cos(pose[2] + angle),
+                                   pose[1] + dist * math.sin(pose[2] + angle))
+                        # TODO laser position offset??
+                        # print('%.3f\t %.3f' % box_pos)
+                    prev_count = self.scan_count
+                    angular_speed = 0.0
+                    if box_pos is not None:
+                        x, y, heading = self.last_position
+                        diff = normalizeAnglePIPI(math.atan2(box_pos[1] - y, box_pos[0] - x) - heading)
+                        if math.hypot(x - box_pos[0], y - box_pos[1]) > 0.5:
+                            angular_speed = diff  # turn to goal in 1s
+                    self.send_speed_cmd(speed, angular_speed)
+
             self.send_speed_cmd(0.0, 0.0)  # or it should stop always??
 
     def wait_for_start(self):
