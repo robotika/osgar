@@ -45,7 +45,7 @@ def draw_xy(scan, pairs):
     step_angle = math.radians(1/3)
     arr_x, arr_y = [], []
     for i, dist in enumerate(scan):
-        angle = (i - len(scan)//2) * step_angle
+        angle = (len(scan)//2 - i) * step_angle
         x, y = math.cos(angle) * dist, math.sin(angle) * dist
         arr_x.append(x)
         arr_y.append(y)
