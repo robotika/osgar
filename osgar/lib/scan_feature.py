@@ -77,7 +77,8 @@ def is_box_center(i, scan, verbose=False):
     a /= d
     b /= d
     c = - a * x1 - b * y1
-#    print(a, b, c)
+    if verbose:
+        print('abc =', a, b, c)
 
     # TODO verify intermediate points
     x, y = coord_xy(i, scan)
@@ -95,7 +96,17 @@ def is_box_center(i, scan, verbose=False):
     if verbose:
         print(d1, d2)
 
-    return 200 < d1 < 400 and 200 < d2 < 400
+    x, y = coord_xy(i - 4 * angle_step, scan)
+    d3 = a*x + b*y + c
+
+    x, y = coord_xy(i + 4 * angle_step, scan)
+    d4 = a*x + b*y + c
+    if verbose:
+        print(d3, d4)
+
+    count = int(200 < d1 < 400) + int(200 < d2 < 400)
+    count += int(200 < d3 < 400) + int(200 < d4 < 400)
+    return count >= 2
 
 
 def draw_xy(scan, pairs):
@@ -149,6 +160,7 @@ if __name__ == "__main__":
                     print(scan[135+f:135+t])
             pairs = [(f+135, t+135) for f, t in pairs]
 #            pairs = extract_features(scan)
+#            is_box_center(441, scan, verbose=True)
             if args.draw:
                 draw_xy(scan, pairs)
             break
