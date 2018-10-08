@@ -67,6 +67,10 @@ def is_box_center(i, scan, verbose=False):
     angle = math.asin(200/dist)
 #    print(math.degrees(angle))
     angle_step = int((angle/ANGULAR_RESOLUTION)/2)
+    if i < 4 * angle_step or i + 4 * angle_step >= len(scan):
+        return False
+    if scan[i - angle_step] == 0 or scan[i + angle_step] == 0:
+        return False
     if verbose:
         print('angle_step =', angle_step)
     x1, y1 = coord_xy(i - angle_step, scan)
@@ -176,6 +180,7 @@ if __name__ == "__main__":
             print(ind, detect_box(scan))
             if args.draw:
                 draw_xy(scan, pairs)
+                break
             if index is not None:
                 break
 
