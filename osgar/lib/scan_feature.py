@@ -111,6 +111,16 @@ def is_box_center(i, scan, verbose=False):
     return count >= 2
 
 
+def detect_box(scan):
+    box = []
+    for i, dist in enumerate(scan):
+        if is_box_center(i, scan):
+            box.append(i)
+    if len(box) < 1:
+        return None
+    return box[len(box)//2]
+
+
 def draw_xy(scan, pairs):
     step_angle = ANGULAR_RESOLUTION
     arr_x, arr_y = [], []
@@ -143,7 +153,7 @@ if __name__ == "__main__":
     parser.add_argument('filename', help='input log file')
     parser.add_argument('--verbose', '-v', help="verbose mode", action='store_true')
     parser.add_argument('--draw', '-d', help="draw result", action='store_true')
-    parser.add_argument('--index', '-i', help="scan index", type=int, default=0)
+    parser.add_argument('--index', '-i', help="scan index", type=int)
     args = parser.parse_args()
 
     filename = args.filename
@@ -151,7 +161,7 @@ if __name__ == "__main__":
     index = args.index
     with LogReader(filename) as log:
         for ind, row in enumerate(log.read_gen(only_stream)):
-            if ind < index:
+            if index is not None and ind < index:
                 continue
             timestamp, stream_id, data = row
             scan = deserialize(data)
@@ -163,9 +173,11 @@ if __name__ == "__main__":
             pairs = [(f+135, t+135) for f, t in pairs]
 #            pairs = extract_features(scan)
 #            is_box_center(441, scan, verbose=True)
+            print(ind, detect_box(scan))
             if args.draw:
                 draw_xy(scan, pairs)
-            break
+            if index is not None:
+                break
 
 
 # vim: expandtab sw=4 ts=4
