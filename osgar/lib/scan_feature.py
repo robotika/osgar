@@ -51,7 +51,7 @@ def coord_xy(i, scan):
     return math.cos(angle) * dist, math.sin(angle) * dist
 
 
-def is_box_center(i, scan):
+def is_box_center(i, scan, verbose=False):
     """
     We expect to to see box in angles -45deg to 45deg. Distance at given
     point gives us angles. Scan is expected raw, i.e. in mm (removed 0).
@@ -65,7 +65,8 @@ def is_box_center(i, scan):
     angle = math.asin(200/dist)
 #    print(math.degrees(angle))
     angle_step = int((angle/ANGULAR_RESOLUTION)/2)
-#    print(angle_step)
+    if verbose:
+        print('angle_step =', angle_step)
     x1, y1 = coord_xy(i - angle_step, scan)
     x2, y2 = coord_xy(i + angle_step, scan)
 
@@ -81,20 +82,20 @@ def is_box_center(i, scan):
     # TODO verify intermediate points
     x, y = coord_xy(i, scan)
     d = abs(a*x + b*y + c)
-#    print(d)
+    if verbose:
+        print(d)
     if d > near_line:
         return False
 
     x, y = coord_xy(i - 3 * angle_step, scan)
-    d = a*x + b*y + c
-#    print(d)
-    if 200 < d < 400:
-        x, y = coord_xy(i + 3 * angle_step, scan)
-        d = a*x + b*y + c
-#        print(d)
-        return 200 < d < 400
+    d1 = a*x + b*y + c
 
-    return False
+    x, y = coord_xy(i + 3 * angle_step, scan)
+    d2 = a*x + b*y + c
+    if verbose:
+        print(d1, d2)
+
+    return 200 < d1 < 400 and 200 < d2 < 400
 
 
 def draw_xy(scan, pairs):
@@ -150,9 +151,6 @@ if __name__ == "__main__":
 #            pairs = extract_features(scan)
             if args.draw:
                 draw_xy(scan, pairs)
-
-            for i in range(280, 320):
-                is_box_center(i, scan)
             break
 
 
