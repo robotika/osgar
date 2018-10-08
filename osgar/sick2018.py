@@ -146,6 +146,32 @@ class SICKRobot2018:
 
             self.send_speed_cmd(0.0, 0.0)  # or it should stop always??
 
+    def catch_transporter(self):
+        at_dist = 0.2  # TODO maybe we need to be closer??
+        speed = 0.2
+        angular_speed = math.radians(45)
+        self.wait(timedelta(seconds=3))
+        self.go_straight(1.0)  # wait closer to expected trajectory
+
+        while min_dist(self.last_scan[270:-270]) > at_dist:
+            center_width = 100
+            left = min_dist(self.last_scan[811//2+center_width//2:-270])
+            right = min_dist(self.last_scan[270:811//2-center_width//2])
+            center = min_dist(self.last_scan[811//2-center_width//2:811//2+center_width//2])
+            print('%.2f\t%.2f\t%.2f' % (left, center, right))
+            if center <= left and center <= right:
+                self.send_speed_cmd(speed, 0.0)
+            elif left < right:
+                self.send_speed_cmd(speed, angular_speed)
+            else:
+                self.send_speed_cmd(speed, -angular_speed)
+
+            prev_count = self.scan_count
+            while prev_count == self.scan_count:
+                self.update()
+
+        self.send_speed_cmd(0.0, 0.0)
+
     def wait_for_start(self):
         while self.buttons is None or not self.buttons['cable_in']:
             self.update()
@@ -156,9 +182,13 @@ class SICKRobot2018:
 
     def ver1(self):
         self.wait_for_start()
-        self.approach_box(at_dist=0.2)
-        self.drop_balls()
-        self.wait(timedelta(seconds=3))
+        for run in range(3):  # TODO 10min limit
+            self.catch_transporter()
+            self.approach_box(at_dist=0.2)
+            self.drop_balls()
+            self.wait(timedelta(seconds=3))
+            self.go_straight(-0.5)
+            self.turn(math.radians(180))
 
     def play(self):
         try:
