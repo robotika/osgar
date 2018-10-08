@@ -1,6 +1,6 @@
 import unittest
 
-from osgar.lib.scan_feature import extract_features, scan_split
+from osgar.lib.scan_feature import extract_features, scan_split, is_box_center
 
 
 class ScanFeatureTest(unittest.TestCase):
@@ -15,5 +15,12 @@ class ScanFeatureTest(unittest.TestCase):
         box = [700]*30
         self.assertEqual(scan_split(scan+box+scan, max_diff=15), 
                 [(0, 179), (180, 209), (210, 389)])
+
+    def test_is_box_center(self):
+        scan = [1000]*100
+        self.assertFalse(is_box_center(50, scan))
+        box = [700]*17*4
+        self.assertTrue(is_box_center(100+2*17, scan+box+scan))
+
 
 # vim: expandtab sw=4 ts=4

@@ -3,6 +3,9 @@
 """
 import math
 
+ANGULAR_RESOLUTION = math.radians(1/3)
+
+
 def scan_split(scan, max_diff, min_len=10):
     arr = []
     prev = scan[0]
@@ -41,15 +44,73 @@ def extract_features(scan):
     return []
 
 
+def coord_xy(i, scan):
+    angle = (len(scan)//2 - i) * ANGULAR_RESOLUTION
+    # TODO check overflow
+    dist = scan[i]
+    return math.cos(angle) * dist, math.sin(angle) * dist
+
+
+def is_box_center(i, scan):
+    """
+    We expect to to see box in angles -45deg to 45deg. Distance at given
+    point gives us angles. Scan is expected raw, i.e. in mm (removed 0).
+    """
+    near_line = 10
+
+    dist = scan[i]
+    if dist <= 300:  # arc sin domain for limit
+        return False  # should be None??
+    # max angle is for right-angled triangle 20cm
+    angle = math.asin(200/dist)
+#    print(math.degrees(angle))
+    angle_step = int((angle/ANGULAR_RESOLUTION)/2)
+#    print(angle_step)
+    x1, y1 = coord_xy(i - angle_step, scan)
+    x2, y2 = coord_xy(i + angle_step, scan)
+
+    # ax + by + c = 0
+    a = -(y2 - y1)
+    b = -(x1 - x2)
+    d = math.hypot(a, b)
+    a /= d
+    b /= d
+    c = - a * x1 - b * y1
+#    print(a, b, c)
+
+    # TODO verify intermediate points
+    x, y = coord_xy(i, scan)
+    d = abs(a*x + b*y + c)
+#    print(d)
+    if d > near_line:
+        return False
+
+    x, y = coord_xy(i - 3 * angle_step, scan)
+    d = a*x + b*y + c
+#    print(d)
+    if 200 < d < 400:
+        x, y = coord_xy(i + 3 * angle_step, scan)
+        d = a*x + b*y + c
+#        print(d)
+        return 200 < d < 400
+
+    return False
+
+
 def draw_xy(scan, pairs):
-    step_angle = math.radians(1/3)
+    step_angle = ANGULAR_RESOLUTION
     arr_x, arr_y = [], []
+    box_x, box_y = [], []
     for i, dist in enumerate(scan):
         angle = (len(scan)//2 - i) * step_angle
         x, y = math.cos(angle) * dist, math.sin(angle) * dist
         arr_x.append(x)
         arr_y.append(y)
+        if is_box_center(i, scan):
+            box_x.append(x)
+            box_y.append(y)
     plt.plot(arr_x, arr_y, '.', linewidth=2)
+    plt.plot(box_x, box_y, 'ro', linewidth=2)
 
     for f, t in pairs:
         plt.plot([arr_x[f], arr_x[t]], [arr_y[f], arr_y[t]], 'o-', linewidth=2)
@@ -89,6 +150,9 @@ if __name__ == "__main__":
 #            pairs = extract_features(scan)
             if args.draw:
                 draw_xy(scan, pairs)
+
+            for i in range(280, 320):
+                is_box_center(i, scan)
             break
 
 
