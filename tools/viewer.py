@@ -85,7 +85,8 @@ def loadData(filename):
             elif stream_id == camera_id:
                 image = deserialize(data)
             elif stream_id == pose_id:
-                pose = deserialize(data)
+                x, y, heading = deserialize(data)
+                pose = (x/1000.0, y/1000.0, math.radians(heading/100.0))
                 poses = [pose,]
     return poses_set, m
 
