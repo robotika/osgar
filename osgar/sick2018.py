@@ -54,7 +54,8 @@ class SICKRobot2018:
             timestamp, channel, data = packet
             self.time = timestamp
             if channel == 'pose2d':
-                self.last_position = data
+                x, y, heading = data
+                self.last_position = [x/1000.0, y/1000.0, math.radians(heading/100.0)]
             elif channel == 'encoders':
                 self.is_moving = abs(data[0]) + abs(data[1]) > 128
             elif channel == 'scan':

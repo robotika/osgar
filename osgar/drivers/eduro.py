@@ -191,7 +191,8 @@ class Eduro(Thread):
                 diff_right = self.dist_right_raw  - self.dist_pose[1]
                 self.bus.publish('encoders', [diff_left, diff_right])
                 self.update_pose()
-                self.bus.publish('pose2d', self.pose)
+                x, y, heading = self.pose
+                self.bus.publish('pose2d', [round(x*1000), round(y*1000), round(math.degrees(heading)*100)])
                 self.send_speed()
 
     def process_gen(self, data, verbose=False):
