@@ -81,7 +81,7 @@ class LogBusHandler:
         assert dt - start < ASSERT_QUEUE_DELAY, (dt - start, self.buffer_queue.qsize())
         assert channel == self.outputs[stream_id], (channel, self.outputs[stream_id], dt)  # wrong channel
         ref_data = deserialize(bytes_data)
-        assert data == ref_data, (data, ref_data)
+        assert data == ref_data, (data, ref_data, dt)
 
 
 class LogBusHandlerInputsOnly:
