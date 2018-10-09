@@ -28,6 +28,11 @@ def distance(pose1, pose2):
     return math.hypot(pose1[0] - pose2[0], pose1[1] - pose2[1])
 
 
+HAND_TRAVEL = b'40/50/0/0\n'  # ready for pickup & traveling position
+HAND_DOWN   = b'30/40/0/0\n'  # hit balls
+HAND_UP     = b'20/80/0/0\n'  # move up
+
+
 class SICKRobot2018:
     def __init__(self, config, bus):
         self.bus = bus
@@ -94,6 +99,9 @@ class SICKRobot2018:
     def send_speed_cmd(self, speed, angular_speed):
         self.bus.publish('desired_speed', [speed, angular_speed])
 
+    def send_hand_cmd(self, cmd):
+        self.bus.publish('hand', cmd)
+
     def drop_balls(self):
         print("drop ball 1 + 2")
         self.bus.publish('hand', b'40/50/1/1\n')
@@ -150,6 +158,7 @@ class SICKRobot2018:
         at_dist = 0.2  # TODO maybe we need to be closer??
         speed = 0.2
         angular_speed = math.radians(45)
+        self.send_hand_cmd(HAND_TRAVEL)
         self.wait(timedelta(seconds=3))
         self.go_straight(1.0)  # wait closer to expected trajectory
 
@@ -158,7 +167,8 @@ class SICKRobot2018:
             left = min_dist(self.last_scan[811//2+center_width//2:-270])
             right = min_dist(self.last_scan[270:811//2-center_width//2])
             center = min_dist(self.last_scan[811//2-center_width//2:811//2+center_width//2])
-            print('%.2f\t%.2f\t%.2f' % (left, center, right))
+            if self.verbose:
+                print('%.2f\t%.2f\t%.2f' % (left, center, right))
             if center <= left and center <= right:
                 self.send_speed_cmd(speed, 0.0)
             elif left < right:
@@ -170,6 +180,11 @@ class SICKRobot2018:
             while prev_count == self.scan_count:
                 self.update()
 
+        self.send_hand_cmd(HAND_DOWN)
+        self.wait(timedelta(seconds=3))
+        self.send_hand_cmd(HAND_UP)
+        self.go_straight(-1.0)
+        self.send_hand_cmd(HAND_TRAVEL)
         self.send_speed_cmd(0.0, 0.0)
 
     def wait_for_start(self):
