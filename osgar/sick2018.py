@@ -174,8 +174,8 @@ class SICKRobot2018:
 
         while min_dist(self.last_scan[270:-270]) > at_dist:
             center_width = 100
-            left = min_dist(self.last_scan[811//2+center_width//2:-270])
-            right = min_dist(self.last_scan[270:811//2-center_width//2])
+            left = min_dist(self.last_scan[270:811//2-center_width//2])
+            right = min_dist(self.last_scan[811//2+center_width//2:-270])
             center = min_dist(self.last_scan[811//2-center_width//2:811//2+center_width//2])
             if self.verbose:
                 print('%.2f\t%.2f\t%.2f' % (left, center, right))
