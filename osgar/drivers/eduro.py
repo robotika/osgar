@@ -171,6 +171,15 @@ class Eduro(Thread):
             left&0xff, (left>>8)&0xff,
             right&0xff, (right>>8)&0xff]))
 
+    def check_restarted_modules(self, module_id, status):
+        if module_id in [1, 2]:  # motors
+            if status != 5:
+                print(module_id, status)
+                self.prev_enc_raw = {}
+                self.dist_left_raw = 0
+                self.dist_right_raw = 0
+                self.dist_pose = 0, 0
+
     def process_packet(self, packet, verbose=False):
         if len(packet) >= 2:
             msg_id = ((packet[0]) << 3) | (((packet[1]) >> 5) & 0x1f)
@@ -194,6 +203,9 @@ class Eduro(Thread):
                 x, y, heading = self.pose
                 self.bus.publish('pose2d', [round(x*1000), round(y*1000), round(math.degrees(heading)*100)])
                 self.send_speed()
+            elif msg_id & 0xFF0 == 0x700:  # heart beat message
+                assert len(packet) == 3, len(packet)
+                self.check_restarted_modules(msg_id & 0xF, packet[2])
 
     def process_gen(self, data, verbose=False):
         self.process_packet(data)
