@@ -43,6 +43,7 @@ class SICKRobot2018:
         self.last_scan = None
         self.scan_count = 0
         self.buttons = None
+        self.is_moving = None  # unknown
 
         self.max_speed = 0.2  # TODO load from config
         self.max_angular_speed = math.radians(45)
@@ -54,6 +55,8 @@ class SICKRobot2018:
             self.time = timestamp
             if channel == 'pose2d':
                 self.last_position = data
+            elif channel == 'encoders':
+                self.is_moving = abs(data[0]) + abs(data[1]) > 128
             elif channel == 'scan':
                 if self.verbose:
                     print('%.3f\t%.3f\t%.3f\t%.3f' % (
@@ -75,7 +78,7 @@ class SICKRobot2018:
             self.update()
 
     def go_straight(self, how_far):
-        print("go_straight %.1f" % how_far, self.last_position)
+        print(self.time, "go_straight %.1f" % how_far, self.last_position)
         start_pose = self.last_position
         if how_far >= 0:
             self.bus.publish('desired_speed', [self.max_speed, 0.0])
@@ -85,8 +88,8 @@ class SICKRobot2018:
             self.update()
         self.bus.publish('desired_speed', [0.0, 0.0])
 
-    def turn(self, angle):
-        print("turn %.1f" % math.degrees(angle))
+    def turn(self, angle, with_stop=True):
+        print(self.time, "turn %.1f" % math.degrees(angle))
         start_pose = self.last_position
         if angle >= 0:
             self.bus.publish('desired_speed', [0.0, self.max_angular_speed])
@@ -94,7 +97,14 @@ class SICKRobot2018:
             self.bus.publish('desired_speed', [0.0, -self.max_angular_speed])
         while abs(start_pose[2] - self.last_position[2]) < abs(angle):
             self.update()
-        self.bus.publish('desired_speed', [0.0, 0.0])
+        if with_stop:
+            self.bus.publish('desired_speed', [0.0, 0.0])
+            start_time = self.time
+            while self.time - start_time < timedelta(seconds=2):
+                self.update()
+                if not self.is_moving:
+                    break
+            print(self.time, 'stop at', self.time - start_time)
 
     def send_speed_cmd(self, speed, angular_speed):
         self.bus.publish('desired_speed', [speed, angular_speed])
@@ -103,11 +113,11 @@ class SICKRobot2018:
         self.bus.publish('hand', cmd)
 
     def drop_balls(self):
-        print("drop ball 1 + 2")
+        print(self.time, "drop ball 1 + 2")
         self.bus.publish('hand', b'40/50/1/1\n')
         self.wait(timedelta(seconds=3))
         self.bus.publish('hand', b'40/50/0/0\n')
-        print("drop ball END")
+        print(self.time, "drop ball END")
 
     def ver0(self):
         self.go_straight(1.0)
