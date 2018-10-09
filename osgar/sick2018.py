@@ -216,6 +216,18 @@ class SICKRobot2018:
             self.go_straight(-0.5)
             self.turn(math.radians(180))
 
+    def figure8(self):
+        self.wait_for_start()
+        for run in range(3):
+            self.go_straight(1.0)
+            self.turn(math.radians(90))
+            for i in range(4):
+                self.go_straight(1.0)
+                self.turn(math.radians(-90))
+            for i in range(3):
+                self.go_straight(1.0)
+                self.turn(math.radians(90))
+
     def play(self):
         try:
             self.raise_exception_on_stop = True
