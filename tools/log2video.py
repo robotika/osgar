@@ -18,12 +18,14 @@ from osgar.lib.serialize import deserialize
 def create_video(logfile, outFilename):
     assert outFilename.endswith(".avi"), outFilename
     only_stream = lookup_stream_id(logfile, 'camera.raw')
-    writer = cv2.VideoWriter( outFilename, cv2.VideoWriter_fourcc('F', 'M', 'P', '4'), 5, (640,512) ) 
-#    writer = cv2.VideoWriter( outFilename, cv2.VideoWriter_fourcc('F', 'M', 'P', '4'), 5, (1024,768) ) 
+    writer = None
     with LogReader(logfile) as log:
         for timestamp, stream_id, data in log.read_gen(only_stream):
             buf = deserialize(data)
             img = cv2.imdecode(np.fromstring(buf, dtype=np.uint8), 1)
+            if writer is None:
+                height, width = img.shape[:2]
+                writer = cv2.VideoWriter( outFilename, cv2.VideoWriter_fourcc('F', 'M', 'P', '4'), 5, (width, height))
             writer.write(img)
     writer.release()
 
