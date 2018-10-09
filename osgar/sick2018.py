@@ -179,13 +179,14 @@ class SICKRobot2018:
             prev_count = self.scan_count
             while prev_count == self.scan_count:
                 self.update()
+        self.send_speed_cmd(0.0, 0.0)
 
         self.send_hand_cmd(HAND_DOWN)
         self.wait(timedelta(seconds=3))
         self.send_hand_cmd(HAND_UP)
         self.go_straight(-1.0)
         self.send_hand_cmd(HAND_TRAVEL)
-        self.send_speed_cmd(0.0, 0.0)
+        self.turn(math.radians(180))
 
     def wait_for_start(self):
         while self.buttons is None or not self.buttons['cable_in']:
