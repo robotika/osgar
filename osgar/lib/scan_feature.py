@@ -71,6 +71,8 @@ def is_box_center(i, scan, verbose=False):
         return False
     if scan[i - angle_step] == 0 or scan[i + angle_step] == 0:
         return False
+    if angle_step < 1:
+        return False
     if verbose:
         print('angle_step =', angle_step)
     x1, y1 = coord_xy(i - angle_step, scan)
