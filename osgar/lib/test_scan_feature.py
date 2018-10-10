@@ -22,5 +22,9 @@ class ScanFeatureTest(unittest.TestCase):
         box = [700]*17*4
         self.assertTrue(is_box_center(100+2*17, scan+box+scan))
 
+    def test_bug_division_by_zero(self):
+        # corresponds to 0.32688 degree, which clips to 0 for 1/3 resolution
+        scan = [17528]*811
+        self.assertFalse(is_box_center(400, scan))
 
 # vim: expandtab sw=4 ts=4
