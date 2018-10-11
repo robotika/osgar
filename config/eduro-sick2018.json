@@ -6,7 +6,10 @@
           "driver": "application",
           "in": ["encoders", "scan", "emergency_stop", "pose2d", "buttons"],
           "out": ["desired_speed", "hand"],
-          "init": {}
+          "init": {
+            "laser_pose2d": [0.13, 0.055, 0],
+            "hand_pose2d": [0.36, 0.175, 0]
+          }
       },
       "eduro": {
           "driver": "eduro",

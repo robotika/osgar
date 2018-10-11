@@ -47,6 +47,8 @@ class SICKRobot2018:
 
         self.max_speed = 0.2  # TODO load from config
         self.max_angular_speed = math.radians(45)
+        self.laser_pose = config['laser_pose2d']
+        self.hand_pose = config['hand_pose2d']
 
     def update(self):
         packet = self.bus.listen()
