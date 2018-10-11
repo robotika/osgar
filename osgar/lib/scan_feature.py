@@ -2,8 +2,38 @@
    Laser Feature Extractor
 """
 import math
+import numpy as np
 
 ANGULAR_RESOLUTION = math.radians(1/3)
+
+
+def scan2xy(scan):
+    a = ( len(scan)//2 - np.arange(len(scan)) ) * ANGULAR_RESOLUTION
+    x = np.cos(a) * scan
+    y = np.sin(a) * scan
+    return x, y
+
+
+def filter_scan(scan):
+    scan = np.array(scan)
+    scan_diff = np.absolute(np.diff(scan))
+    binary = scan_diff > 150 #diff limint
+    edges_arg = np.argwhere(binary)
+    edges_num = len(edges_arg)
+    for ii in range(edges_num + 1):
+        if ii == 0:
+            id_0 = 0
+        else:
+            id_0 = edges_arg[ii-1, 0] + 1
+            
+        if ii != edges_num:
+            id_1 = edges_arg[ii, 0] + 1
+        else:
+            id_1 = edges_num
+        
+        if id_1 - id_0 < 3: # series smaller to 2 are removed
+            scan[id_0:id_1] = 4000 # or other favourite number
+    return scan
 
 
 def scan_split(scan, max_diff, min_len=10):
@@ -127,7 +157,7 @@ def detect_box(scan):
     return box[len(box)//2]
 
 
-def draw_xy(scan, pairs):
+def draw_xy(scan, pairs, scan2 = None):
     step_angle = ANGULAR_RESOLUTION
     arr_x, arr_y = [], []
     box_x, box_y = [], []
@@ -144,6 +174,10 @@ def draw_xy(scan, pairs):
 
     for f, t in pairs:
         plt.plot([arr_x[f], arr_x[t]], [arr_y[f], arr_y[t]], 'o-', linewidth=2)
+
+    if scan2 is not None:
+        x, y, = scan2xy(scan2)
+        plt.plot(x, y, '+k')
 
     plt.axis('equal')
     plt.show()
@@ -181,7 +215,9 @@ if __name__ == "__main__":
 #            is_box_center(441, scan, verbose=True)
             print(ind, detect_box(scan))
             if args.draw:
-                draw_xy(scan, pairs)
+#                draw_xy(scan, pairs)
+                scan2 = filter_scan(scan)
+                draw_xy(scan, pairs, scan2)
                 break
             if index is not None:
                 break
