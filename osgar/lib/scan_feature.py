@@ -131,7 +131,7 @@ def draw_xy(scan, pairs):
     step_angle = ANGULAR_RESOLUTION
     arr_x, arr_y = [], []
     box_x, box_y = [], []
-    for i, dist in enumerate(135, scan[135:-135]):
+    for i, dist in enumerate(scan):
         angle = (len(scan)//2 - i) * step_angle
         x, y = math.cos(angle) * dist, math.sin(angle) * dist
         arr_x.append(x)
