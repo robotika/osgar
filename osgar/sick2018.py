@@ -71,6 +71,12 @@ class SICKRobot2018:
                 if self.raise_exception_on_stop and data:
                     raise EmergencyStopException()
 
+    def send_speed_cmd(self, speed, angular_speed):
+        self.bus.publish('desired_speed', [speed, angular_speed])
+
+    def send_hand_cmd(self, cmd):
+        self.bus.publish('hand', cmd)
+
     def wait(self, dt):  # TODO refactor to some common class
         if self.time is None:
             self.update()
@@ -82,36 +88,30 @@ class SICKRobot2018:
         print(self.time, "go_straight %.1f" % how_far, self.last_position)
         start_pose = self.last_position
         if how_far >= 0:
-            self.bus.publish('desired_speed', [self.max_speed, 0.0])
+            self.send_speed_cmd(self.max_speed, 0.0)
         else:
-            self.bus.publish('desired_speed', [-self.max_speed, 0.0])
+            self.send_speed_cmd(-self.max_speed, 0.0)
         while distance(start_pose, self.last_position) < abs(how_far):
             self.update()
-        self.bus.publish('desired_speed', [0.0, 0.0])
+        self.send_speed_cmd(0.0, 0.0)
 
     def turn(self, angle, with_stop=True):
         print(self.time, "turn %.1f" % math.degrees(angle))
         start_pose = self.last_position
         if angle >= 0:
-            self.bus.publish('desired_speed', [0.0, self.max_angular_speed])
+            self.send_speed_cmd(0.0, self.max_angular_speed)
         else:
-            self.bus.publish('desired_speed', [0.0, -self.max_angular_speed])
+            self.send_speed_cmd(0.0, -self.max_angular_speed)
         while abs(start_pose[2] - self.last_position[2]) < abs(angle):
             self.update()
         if with_stop:
-            self.bus.publish('desired_speed', [0.0, 0.0])
+            self.send_speed_cmd(0.0, 0.0)
             start_time = self.time
             while self.time - start_time < timedelta(seconds=2):
                 self.update()
                 if not self.is_moving:
                     break
             print(self.time, 'stop at', self.time - start_time)
-
-    def send_speed_cmd(self, speed, angular_speed):
-        self.bus.publish('desired_speed', [speed, angular_speed])
-
-    def send_hand_cmd(self, cmd):
-        self.bus.publish('hand', cmd)
 
     def drop_balls(self):
         print(self.time, "drop ball 1 + 2")
@@ -237,7 +237,7 @@ class SICKRobot2018:
         except EmergencyStopException:
             print('!!!Emergency STOP!!!')
             self.raise_exception_on_stop = False
-            self.bus.publish('desired_speed', [0.0, 0.0])
+            self.send_speed_cmd(0.0, 0.0)
             self.wait(timedelta(seconds=1))
 
     def start(self):
