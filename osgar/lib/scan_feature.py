@@ -157,17 +157,10 @@ def detect_box(scan):
     return box[len(box)//2]
 
 
-def detect_transporter(scan):
-    # expected raw scan in mm, with 0 as timeout
-    DEG_STEP = 5
+def find_transporter(small_scan):
     DIST_GAP = 1000
-    assert len(scan) == 811, len(scan)
-    scan = np.array(scan[135:-136])  # 180 deg only
-    assert len(scan) == 540, len(scan)
-    mask = scan < 10
-    scan[mask] = 20000
-    small = scan.reshape((180//DEG_STEP, DEG_STEP*3))
-    tmp = np.min(small, axis=1)
+
+    tmp = small_scan
     i = np.argmin(tmp)
 #    print(i, tmp[i])
     center_i = i
@@ -179,6 +172,21 @@ def detect_transporter(scan):
     while i < len(tmp) and tmp[i] <= tmp[center_i] + DIST_GAP:
         i += 1
     right_i = i
+    return left_i, right_i
+
+
+def detect_transporter(scan):
+    # expected raw scan in mm, with 0 as timeout
+    DEG_STEP = 5
+    assert len(scan) == 811, len(scan)
+    scan = np.array(scan[135:-136])  # 180 deg only
+    assert len(scan) == 540, len(scan)
+    mask = scan < 10
+    scan[mask] = 20000
+    small = scan.reshape((180//DEG_STEP, DEG_STEP*3))
+    tmp = np.min(small, axis=1)
+
+    left_i, right_i = find_transporter(tmp)
 
     angle = math.radians(90 - DEG_STEP*(left_i + right_i)/2)
 #    print(angle)   
