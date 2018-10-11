@@ -8,7 +8,7 @@ from osgar.lib.serialize import serialize, deserialize
 
 
 # restrict replay time from given input
-ASSERT_QUEUE_DELAY = timedelta(seconds=.1)
+ASSERT_QUEUE_DELAY = timedelta(seconds=.2)
 
 
 class BusShutdownException(Exception):
