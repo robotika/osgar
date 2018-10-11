@@ -72,7 +72,7 @@ class SICKRobot2018:
                     raise EmergencyStopException()
 
     def send_speed_cmd(self, speed, angular_speed):
-        self.bus.publish('desired_speed', [speed, angular_speed])
+        self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
 
     def send_hand_cmd(self, cmd):
         self.bus.publish('hand', cmd)

@@ -221,7 +221,7 @@ class Eduro(Thread):
                             if status is not None:
                                 self.bus.publish('can', status)  # TODO
                 elif channel == 'desired_speed':
-                    self.desired_speed, self.desired_angular_speed = data
+                    self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
                 else:
                     assert False, channel  # unsupported channel
         except BusShutdownException:
