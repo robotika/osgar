@@ -119,7 +119,7 @@ def is_box_center(i, scan, verbose=False):
 
 def detect_box(scan):
     box = []
-    for i, dist in enumerate(scan):
+    for i, __ in enumerate(scan[135:-135], start=135):
         if is_box_center(i, scan):
             box.append(i)
     if len(box) < 1:
