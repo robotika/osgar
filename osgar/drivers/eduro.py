@@ -110,7 +110,7 @@ class Eduro(Thread):
         if self.buttons is None or val != self.buttons:
             self.buttons = val
             msg = { 'blue_selected': ((val & 0x0200) == 0),
-                    'cable_in': ((val & 0x0100) == 0) }
+                    'cable_in': ((val & 0x0100) != 0) }
             if msg['blue_selected']:
                 self.send_leds(blue=1, red=0)
             else:
