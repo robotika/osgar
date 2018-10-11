@@ -321,7 +321,9 @@ def main( filename, scale = 1.0, startIndex = None, posesScanSet=None ):
   imgFileName = None
   lastImgFileName = None
   while 1:
-    if imgFileName:
+    if isinstance(imgFileName, bytes):
+      t = 'raw JPEG data'
+    elif imgFileName:
       t = str(imgFileName)+' ***'
       lastImgFileName = imgFileName
     else:
