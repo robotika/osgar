@@ -235,6 +235,7 @@ class SICKRobot2018:
             prev_count = self.scan_count
             while prev_count == self.scan_count:
                 self.update()
+            angle, dist = detect_transporter(self.last_scan)
         self.send_speed_cmd(0.0, 0.0)
         self.grab_balls()
 
