@@ -212,6 +212,11 @@ class SICKRobot2018:
         self.send_speed_cmd(0.0, 0.0)
         self.grab_balls()
 
+    def wait_for_new_scan(self):
+        prev_count = self.scan_count
+        while prev_count == self.scan_count:
+            self.update()
+
     def catch_transporter(self):
         print(self.time, 'catch_transporter - ver1')
         at_dist = 0.2  # TODO maybe we need to be closer??
@@ -221,7 +226,12 @@ class SICKRobot2018:
         self.wait(timedelta(seconds=3))
         self.go_straight(1.0)  # wait closer to expected trajectory
 
-        angle, dist = detect_transporter(self.last_scan)
+        trans = detect_transporter(self.last_scan)
+        while trans is None:
+            self.wait_for_new_scan()
+            trans = detect_transporter(self.last_scan)
+
+        angle, dist = trans
         while dist > at_dist:
             if self.verbose:
                 print('%.2f\t%.2f' % (math.degrees(angle), dist))
@@ -235,7 +245,11 @@ class SICKRobot2018:
             prev_count = self.scan_count
             while prev_count == self.scan_count:
                 self.update()
-            angle, dist = detect_transporter(self.last_scan)
+            trans = detect_transporter(self.last_scan)
+            if trans is None:
+                print(self.time, 'catch_transporter - LOST!!!')
+                break
+            angle, dist = trans
         self.send_speed_cmd(0.0, 0.0)
         self.grab_balls()
 

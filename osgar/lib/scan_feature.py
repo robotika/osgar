@@ -6,6 +6,8 @@ import numpy as np
 
 ANGULAR_RESOLUTION = math.radians(1/3)
 
+DEG_STEP = 5
+
 
 def scan2xy(scan):
     a = ( len(scan)//2 - np.arange(len(scan)) ) * ANGULAR_RESOLUTION
@@ -158,26 +160,32 @@ def detect_box(scan):
 
 
 def find_transporter(small_scan):
-    DIST_GAP = 1000
+    DIST_GAP = 500
+#    print(list(small_scan))
 
     tmp = small_scan
     i = np.argmin(tmp)
-#    print(i, tmp[i])
     center_i = i
     while i > 0 and tmp[i] <= tmp[center_i] + DIST_GAP:
         i -= 1
-    left_i = i
+    left_i = i + 1
     
     i = center_i
     while i < len(tmp) and tmp[i] <= tmp[center_i] + DIST_GAP:
         i += 1
-    right_i = i
+    right_i = i - 1
+
+    dist = tmp[center_i]/1000.0
+    size = dist * math.radians((right_i - left_i + 1)*DEG_STEP)
+    print(size)
+#    print(list(small_scan[left_i:right_i+1]))
+    if size > 1.0:
+        return None
     return left_i, right_i
 
 
 def detect_transporter(scan):
     # expected raw scan in mm, with 0 as timeout
-    DEG_STEP = 5
     assert len(scan) == 811, len(scan)
     scan = np.array(scan[135:-136])  # 180 deg only
     assert len(scan) == 540, len(scan)
@@ -186,7 +194,10 @@ def detect_transporter(scan):
     small = scan.reshape((180//DEG_STEP, DEG_STEP*3))
     tmp = np.min(small, axis=1)
 
-    left_i, right_i = find_transporter(tmp)
+    ret = find_transporter(tmp)
+    if ret is None:
+        return None
+    left_i, right_i = ret
 
     angle = math.radians(90 - DEG_STEP*(left_i + right_i)/2)
 #    print(angle)   

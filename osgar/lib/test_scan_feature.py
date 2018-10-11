@@ -1,6 +1,7 @@
 import unittest
 
-from osgar.lib.scan_feature import extract_features, scan_split, is_box_center
+from osgar.lib.scan_feature import (extract_features, scan_split,
+                                    is_box_center, find_transporter)
 
 
 class ScanFeatureTest(unittest.TestCase):
@@ -26,5 +27,16 @@ class ScanFeatureTest(unittest.TestCase):
         # corresponds to 0.32688 degree, which clips to 0 for 1/3 resolution
         scan = [17528]*811
         self.assertFalse(is_box_center(400, scan))
+
+    def test_find_transporter(self):
+        wall = [2245, 2262, 2291, 2348, 2424, 2493, 2198, 1975, 1790, 1668, 1552, 1480, 1417,
+                1370, 1339, 1310, 1295, 1226, 1288, 1306, 1323, 1111, 1131, 1205, 1533, 1615, 1742,
+                1801, 1798, 2833, 2204, 2172, 2123, 2820, 3439, 2460]
+        self.assertEqual(find_transporter(wall), None)
+
+        trans = [3031, 3032, 3071, 3124, 3206, 3314, 3137, 3126, 2985, 3216, 2094, 2122, 3392, 3571, 3724,
+                3651, 3587, 3158, 3153, 3179, 3102, 3014, 2960, 2898, 2899, 2925, 2936, 2967, 3006, 3047, 3084,
+                3164, 3299, 3427, 3573, 3643]
+        self.assertEqual(find_transporter(trans), (10, 11))
 
 # vim: expandtab sw=4 ts=4
