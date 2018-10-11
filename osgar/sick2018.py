@@ -135,6 +135,7 @@ class SICKRobot2018:
         self.wait(timedelta(seconds=3))
 
     def approach_box(self, at_dist):
+        print(self.time, 'approach_box')
         speed = 0.2
         box_pos = None
         while self.last_scan is None:
@@ -166,6 +167,7 @@ class SICKRobot2018:
             self.send_speed_cmd(0.0, 0.0)  # or it should stop always??
 
     def catch_transporter(self):
+        print(self.time, 'catch_transporter')
         at_dist = 0.2  # TODO maybe we need to be closer??
         speed = 0.2
         angular_speed = math.radians(45)
@@ -200,16 +202,20 @@ class SICKRobot2018:
         self.turn(math.radians(180))
 
     def wait_for_start(self):
+        print(self.time, 'wait_for_start')
         while self.buttons is None or not self.buttons['cable_in']:
             self.update()
         assert self.buttons is not None
 
         while self.buttons['cable_in']:
             self.update()
+        print(self.time, '--- START ---')
 
     def ver1(self):
+        print(self.time, '=== ver1 ===')
         self.wait_for_start()
         for run in range(3):  # TODO 10min limit
+            print(self.time, '--- LOOP %d ---' % run)
             self.catch_transporter()
             self.approach_box(at_dist=0.2)
             self.drop_balls()
