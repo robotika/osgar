@@ -157,6 +157,35 @@ def detect_box(scan):
     return box[len(box)//2]
 
 
+def detect_transporter(scan):
+    # expected raw scan in mm, with 0 as timeout
+    DEG_STEP = 5
+    DIST_GAP = 1000
+    assert len(scan) == 811, len(scan)
+    scan = np.array(scan[135:-136])  # 180 deg only
+    assert len(scan) == 540, len(scan)
+    mask = scan < 10
+    scan[mask] = 20000
+    small = scan.reshape((180//DEG_STEP, DEG_STEP*3))
+    tmp = np.min(small, axis=1)
+    i = np.argmin(tmp)
+#    print(i, tmp[i])
+    center_i = i
+    while i > 0 and tmp[i] <= tmp[center_i] + DIST_GAP:
+        i -= 1
+    left_i = i
+    
+    i = center_i
+    while i < len(tmp) and tmp[i] <= tmp[center_i] + DIST_GAP:
+        i += 1
+    right_i = i
+
+    angle = math.radians(90 - DEG_STEP*(left_i + right_i)/2)
+#    print(angle)   
+    dist = tmp[(left_i + right_i)//2]/1000.0
+    return angle, dist
+    
+
 def draw_xy(scan, pairs, scan2 = None):
     step_angle = ANGULAR_RESOLUTION
     arr_x, arr_y = [], []
@@ -205,6 +234,10 @@ if __name__ == "__main__":
                 continue
             timestamp, stream_id, data = row
             scan = deserialize(data)
+
+            print(detect_transporter(scan))
+#            break
+
             pairs = scan_split(scan[135:-135], max_diff=20)
             if args.verbose:
                 for f, t in pairs:
@@ -213,7 +246,7 @@ if __name__ == "__main__":
             pairs = [(f+135, t+135) for f, t in pairs]
 #            pairs = extract_features(scan)
 #            is_box_center(441, scan, verbose=True)
-            print(ind, detect_box(scan))
+#            print(ind, detect_box(scan))
             if args.draw:
 #                draw_xy(scan, pairs)
                 scan2 = filter_scan(scan)

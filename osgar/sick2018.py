@@ -6,7 +6,7 @@ import math
 from datetime import timedelta
 
 from osgar.lib.config import load as config_load
-from osgar.lib.scan_feature import detect_box
+from osgar.lib.scan_feature import detect_box, detect_transporter
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.robot import Robot
 
@@ -175,7 +175,15 @@ class SICKRobot2018:
 
             self.send_speed_cmd(0.0, 0.0)  # or it should stop always??
 
-    def catch_transporter(self):
+    def grab_balls(self):
+        self.send_hand_cmd(HAND_DOWN)
+        self.wait(timedelta(seconds=3))
+        self.send_hand_cmd(HAND_UP)
+        self.go_straight(-1.0)
+        self.send_hand_cmd(HAND_TRAVEL)
+        self.turn(math.radians(180))
+
+    def catch_transporter_ver0(self):
         print(self.time, 'catch_transporter')
         at_dist = 0.2  # TODO maybe we need to be closer??
         speed = 0.2
@@ -202,13 +210,33 @@ class SICKRobot2018:
             while prev_count == self.scan_count:
                 self.update()
         self.send_speed_cmd(0.0, 0.0)
+        self.grab_balls()
 
-        self.send_hand_cmd(HAND_DOWN)
-        self.wait(timedelta(seconds=3))
-        self.send_hand_cmd(HAND_UP)
-        self.go_straight(-1.0)
+    def catch_transporter(self):
+        print(self.time, 'catch_transporter - ver1')
+        at_dist = 0.2  # TODO maybe we need to be closer??
+        speed = 0.2
+        angular_speed = math.radians(45)
         self.send_hand_cmd(HAND_TRAVEL)
-        self.turn(math.radians(180))
+        self.wait(timedelta(seconds=3))
+        self.go_straight(1.0)  # wait closer to expected trajectory
+
+        angle, dist = detect_transporter(self.last_scan)
+        while dist > at_dist:
+            if self.verbose:
+                print('%.2f\t%.2f' % (math.degrees(angle), dist))
+            if abs(math.degrees(angle)) < 10:
+                self.send_speed_cmd(speed, 0.0)
+            elif angle > 0:
+                self.send_speed_cmd(speed, angular_speed)
+            else:
+                self.send_speed_cmd(speed, -angular_speed)
+
+            prev_count = self.scan_count
+            while prev_count == self.scan_count:
+                self.update()
+        self.send_speed_cmd(0.0, 0.0)
+        self.grab_balls()
 
     def wait_for_start(self):
         print(self.time, 'wait_for_start')
