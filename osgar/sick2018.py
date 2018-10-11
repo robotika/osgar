@@ -28,6 +28,13 @@ def distance(pose1, pose2):
     return math.hypot(pose1[0] - pose2[0], pose1[1] - pose2[1])
 
 
+def combine(pose, sensorPose):
+  x = pose[0] + sensorPose[0] * math.cos( pose[2] ) - sensorPose[1] * math.sin( pose[2] )
+  y = pose[1] + sensorPose[0] * math.sin( pose[2] ) + sensorPose[1] * math.cos( pose[2] )
+  heading = sensorPose[2] + pose[2]
+  return (x, y, heading)
+
+
 HAND_TRAVEL = b'40/50/0/0\n'  # ready for pickup & traveling position
 HAND_DOWN   = b'30/40/0/0\n'  # hit balls
 HAND_UP     = b'20/80/0/0\n'  # move up
@@ -152,7 +159,7 @@ class SICKRobot2018:
                     if box_i is not None:
                         angle = math.radians((len(self.last_scan)//2 - box_i)/3)
                         dist = self.last_scan[box_i]/1000.0
-                        pose = self.last_position
+                        pose = combine(self.last_position, self.laser_pose)
                         box_pos = (pose[0] + dist * math.cos(pose[2] + angle),
                                    pose[1] + dist * math.sin(pose[2] + angle))
                         # TODO laser position offset??
