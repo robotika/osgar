@@ -246,8 +246,8 @@ def drawTiles( background ):
   tile_size_px = to_px(tile_size)
   for x in range(0, size[0] + tile_size_px, tile_size_px):
     for y in range(0, size[1] + tile_size_px, tile_size_px):
-      if (x / tile_size_px) % 2 == (y / tile_size_px) % 2:
-        background.fill((235, 235, 235), Rect(x, size[1] - y, tile_size_px, tile_size_px))
+      if (x // tile_size_px) % 2 == (y // tile_size_px) % 2:
+        background.fill((235, 235, 235), Rect(x, max(0, size[1] - y), tile_size_px, tile_size_px + min(0, size[1] - y)))
   # draw scale
   pygame.draw.line( background, (255,0,0), (20,size[1]-20), (20+to_px(1.0),size[1]-20),3)
   pygame.draw.line( background, (255,0,0), (20,size[1]-10), (20,size[1]-30),1)
