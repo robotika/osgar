@@ -176,9 +176,10 @@ class SICKRobot2018:
                     t0 = self.time
                     t1 = self.send_speed_cmd(speed, angular_speed)
                     dt = t1 - t0
-                    if dt > timedelta(microseconds=50000):
+                    if dt > timedelta(microseconds=100000):
                         print('Queue delay:', dt)
                         self.wait_for_new_scan()  # skip old one
+                    self.wait_for_new_scan()  # take every 2nd + sometimes even 3rd
 
             self.send_speed_cmd(0.0, 0.0)  # or it should stop always??
 
@@ -295,8 +296,8 @@ class SICKRobot2018:
     def play(self):
         try:
             self.raise_exception_on_stop = True
-            self.ver0()
-#            self.ver1()
+#            self.ver0()
+            self.ver1()
         except EmergencyStopException:
             print('!!!Emergency STOP!!!')
             self.raise_exception_on_stop = False
