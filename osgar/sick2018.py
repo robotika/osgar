@@ -247,9 +247,7 @@ class SICKRobot2018:
             else:
                 self.send_speed_cmd(speed, -angular_speed)
 
-            prev_count = self.scan_count
-            while prev_count == self.scan_count:
-                self.update()
+            self.wait_for_new_scan()
             trans = detect_transporter(self.last_scan)
             if trans is None:
                 print(self.time, 'catch_transporter - LOST!!!')
