@@ -177,6 +177,7 @@ class SICKRobot2018:
                     dt = t1 - t0
                     if dt > timedelta(microseconds=100000):
                         print('Queue delay:', dt)
+                        self.wait_for_new_scan()  # skip old one
 
             self.send_speed_cmd(0.0, 0.0)  # or it should stop always??
 
