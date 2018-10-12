@@ -177,7 +177,7 @@ def find_transporter(small_scan):
 
     dist = tmp[center_i]/1000.0
     size = dist * math.radians((right_i - left_i + 1)*DEG_STEP)
-    print(size)
+#    print(size)
 #    print(list(small_scan[left_i:right_i+1]))
     if size > 1.0:
         return None
