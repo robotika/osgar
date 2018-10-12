@@ -329,7 +329,7 @@ def main( filename, scale = 1.0, startIndex = None, posesScanSet=None ):
   lastImgFileName = None
   while 1:
     if isinstance(imgFileName, bytes):
-      t = 'raw JPEG data'
+      t = filename  # 'raw JPEG data'
     elif imgFileName:
       t = str(imgFileName)+' ***'
       lastImgFileName = imgFileName
@@ -337,7 +337,7 @@ def main( filename, scale = 1.0, startIndex = None, posesScanSet=None ):
       t = str(lastImgFileName)
 
     timestamp = g_timestamps[index]
-    pygame.display.set_caption(str(timestamp) + " Index: %d, sensors %s, img %s" % (index, shouldDrawSensors and "on" or "off", t) )
+    pygame.display.set_caption(str(timestamp) + " Index: %d, sensors %s, %s" % (index, shouldDrawSensors and "on" or "off", t) )
     shouldRefreshNow = False
     event = pygame.event.wait()
     if event.type == QUIT: return
