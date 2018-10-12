@@ -248,11 +248,14 @@ if __name__ == "__main__":
     parser.add_argument('--verbose', '-v', help="verbose mode", action='store_true')
     parser.add_argument('--draw', '-d', help="draw result", action='store_true')
     parser.add_argument('--index', '-i', help="scan index", type=int)
+    parser.add_argument('--transporter', help="detect_transporter", action='store_true')
     args = parser.parse_args()
 
     filename = args.filename
     only_stream = lookup_stream_id(filename, 'lidar.scan')
     index = args.index
+    offset_y = 0
+
     with LogReader(filename) as log:
         for ind, row in enumerate(log.read_gen(only_stream)):
             if index is not None and ind < index:
@@ -260,15 +263,20 @@ if __name__ == "__main__":
             timestamp, stream_id, data = row
             scan = deserialize(data)
 
-            print(detect_transporter(scan))
-#            break
-
-            pairs = scan_split(scan[135:-135], max_diff=20)
-            if args.verbose:
-                for f, t in pairs:
-                    print(f, t)
-                    print(scan[135+f:135+t])
-            pairs = [(f+135, t+135) for f, t in pairs]
+            if args.transporter:
+                trans = detect_transporter(scan, offset_y)
+                if trans is None:
+                    print('%d\tNone' % ind)
+                else:
+                    print('%d\t%.1f\t%.3f' % 
+                          (ind, math.degrees(trans[0]), trans[1]))
+            else:
+                pairs = scan_split(scan[135:-135], max_diff=20)
+                if args.verbose:
+                    for f, t in pairs:
+                        print(f, t)
+                        print(scan[135+f:135+t])
+                pairs = [(f+135, t+135) for f, t in pairs]
 #            pairs = extract_features(scan)
 #            is_box_center(441, scan, verbose=True)
 #            print(ind, detect_box(scan))
