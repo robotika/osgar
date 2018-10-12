@@ -184,7 +184,14 @@ def find_transporter(small_scan):
     return left_i, right_i
 
 
-def detect_transporter(scan):
+def shift_polar(angle, dist, offset_y):
+    x, y = math.cos(angle) * dist, math.sin(angle) * dist
+    ret_angle = math.atan2(y - offset_y, x)
+    ret_dist = math.hypot(x, y - offset_y)
+    return ret_angle, ret_dist
+
+
+def detect_transporter(scan, offset_y):
     # expected raw scan in mm, with 0 as timeout
     assert len(scan) == 811, len(scan)
     scan = np.array(scan[135:-136])  # 180 deg only
@@ -202,7 +209,7 @@ def detect_transporter(scan):
     angle = math.radians(90 - DEG_STEP*(left_i + right_i)/2)
 #    print(angle)   
     dist = tmp[(left_i + right_i)//2]/1000.0
-    return angle, dist
+    return shift_polar(angle, dist, offset_y=offset_y)
     
 
 def draw_xy(scan, pairs, scan2 = None):

@@ -1,7 +1,9 @@
 import unittest
+import math
 
 from osgar.lib.scan_feature import (extract_features, scan_split,
-                                    is_box_center, find_transporter)
+                                    is_box_center, find_transporter,
+                                    shift_polar)
 
 
 class ScanFeatureTest(unittest.TestCase):
@@ -39,4 +41,9 @@ class ScanFeatureTest(unittest.TestCase):
                 3164, 3299, 3427, 3573, 3643]
         self.assertEqual(find_transporter(trans), (10, 11))
 
+
+    def test_offset(self):
+        self.assertEqual(shift_polar(0, 100, offset_y=-100), (math.radians(45), math.hypot(100, 100)))
+
 # vim: expandtab sw=4 ts=4
+
