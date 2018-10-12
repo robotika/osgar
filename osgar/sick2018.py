@@ -238,7 +238,7 @@ class SICKRobot2018:
         trans = detect_transporter(self.last_scan, offset_y=offset_y_mm)
         while trans is None:
             self.wait_for_new_scan()
-            trans = detect_transporter(self.last_scan)
+            trans = detect_transporter(self.last_scan, offset_y=offset_y_mm)
 
         angle, dist = trans
         while dist > at_dist:
