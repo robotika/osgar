@@ -133,7 +133,7 @@ class SICKRobot2018:
         print(self.time, '=== ver0 ===')
         self.wait_for_start()
         self.bus.publish('hand', b'40/50/0/0\n')  # ready for pickup
-        self.go_straight(2.14)
+        self.go_straight(3.15)
         self.bus.publish('hand', b'30/40/0/0\n')  # hit balls
         self.wait(timedelta(seconds=10))
         self.bus.publish('hand', b'20/80/0/0\n')  # move up
@@ -294,8 +294,8 @@ class SICKRobot2018:
     def play(self):
         try:
             self.raise_exception_on_stop = True
-#            self.ver0()
-            self.ver1()
+            self.ver0()
+#            self.ver1()
         except EmergencyStopException:
             print('!!!Emergency STOP!!!')
             self.raise_exception_on_stop = False
