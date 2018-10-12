@@ -201,9 +201,6 @@ class SICKRobot2018:
         at_dist = 0.2  # TODO maybe we need to be closer??
         speed = 0.2
         angular_speed = math.radians(45)
-        self.send_hand_cmd(HAND_TRAVEL)
-        self.wait(timedelta(seconds=3))
-        self.go_straight(1.0)  # wait closer to expected trajectory
 
         offset_y = self.hand_pose[1] - self.laser_pose[1]
         trans = detect_transporter(self.last_scan, offset_y=offset_y)
@@ -241,11 +238,22 @@ class SICKRobot2018:
             self.update()
         print(self.time, '--- START ---')
 
+    def wait_for_transporter(self):
+        pass  # TODO
+
     def ver1(self):
         print(self.time, '=== ver1 ===')
         self.wait_for_start()
         for run in range(3):  # TODO 10min limit
             print(self.time, '--- LOOP %d ---' % run)
+            self.send_hand_cmd(HAND_TRAVEL)
+            self.wait(timedelta(seconds=3))
+            self.go_straight(1.0)
+            self.turn(math.radians(-45))
+            self.go_straight(2.0)
+            self.turn(math.radians(135))
+            self.wait_for_transporter()
+
             self.catch_transporter()
             self.approach_box(at_dist=0.2)
             self.drop_balls()
