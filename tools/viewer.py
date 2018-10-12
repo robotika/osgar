@@ -80,7 +80,8 @@ def loadData(filename):
                 for i, s in enumerate(scan):
                     angle = math.radians(135) - math.radians(270) * i/(len(scan)-1)
                     dist = s/1000.0
-                    scans.append((getCombinedPose(pose, (0, 0, angle)), dist))
+                    if math.radians(-90) <= angle <= math.radians(+90):
+                        scans.append((getCombinedPose(pose, (0, 0, angle)), dist))
                 poses_set.append((poses, scans, image, camdir, compass))
             elif stream_id == camera_id:
                 image = deserialize(data)
