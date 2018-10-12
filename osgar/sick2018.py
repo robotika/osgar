@@ -81,7 +81,7 @@ class SICKRobot2018:
                     raise EmergencyStopException()
 
     def send_speed_cmd(self, speed, angular_speed):
-        self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
+        return self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
 
     def send_hand_cmd(self, cmd):
         self.bus.publish('hand', cmd)
@@ -172,7 +172,11 @@ class SICKRobot2018:
                         diff = normalizeAnglePIPI(math.atan2(box_pos[1] - y, box_pos[0] - x) - heading)
                         if math.hypot(x - box_pos[0], y - box_pos[1]) > 0.5:
                             angular_speed = diff  # turn to goal in 1s
-                    self.send_speed_cmd(speed, angular_speed)
+                    t0 = self.time
+                    t1 = self.send_speed_cmd(speed, angular_speed)
+                    dt = t1 - t0
+                    if dt > timedelta(microseconds=100000):
+                        print('Queue delay:', dt)
 
             self.send_speed_cmd(0.0, 0.0)  # or it should stop always??
 
@@ -291,8 +295,8 @@ class SICKRobot2018:
     def play(self):
         try:
             self.raise_exception_on_stop = True
-            self.ver0()
-#            self.ver1()
+#            self.ver0()
+            self.ver1()
         except EmergencyStopException:
             print('!!!Emergency STOP!!!')
             self.raise_exception_on_stop = False
