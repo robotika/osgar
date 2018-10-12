@@ -189,7 +189,6 @@ class SICKRobot2018:
         self.send_hand_cmd(HAND_UP)
         self.go_straight(-1.0)
         self.send_hand_cmd(HAND_TRAVEL)
-        self.turn(math.radians(180))
 
     def wait_for_new_scan(self):
         prev_count = self.scan_count
@@ -255,6 +254,8 @@ class SICKRobot2018:
             self.wait_for_transporter()
 
             self.catch_transporter()
+            self.turn(math.radians(90))  # TODO review pose
+
             self.approach_box(at_dist=0.2)
             self.drop_balls()
             self.wait(timedelta(seconds=3))
