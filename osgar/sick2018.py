@@ -175,7 +175,7 @@ class SICKRobot2018:
                     t0 = self.time
                     t1 = self.send_speed_cmd(speed, angular_speed)
                     dt = t1 - t0
-                    if dt > timedelta(microseconds=100000):
+                    if dt > timedelta(microseconds=50000):
                         print('Queue delay:', dt)
                         self.wait_for_new_scan()  # skip old one
 
