@@ -191,35 +191,6 @@ class SICKRobot2018:
         self.send_hand_cmd(HAND_TRAVEL)
         self.turn(math.radians(180))
 
-    def catch_transporter_ver0(self):
-        print(self.time, 'catch_transporter')
-        at_dist = 0.2  # TODO maybe we need to be closer??
-        speed = 0.2
-        angular_speed = math.radians(45)
-        self.send_hand_cmd(HAND_TRAVEL)
-        self.wait(timedelta(seconds=3))
-        self.go_straight(1.0)  # wait closer to expected trajectory
-
-        while min_dist(self.last_scan[270:-270]) > at_dist:
-            center_width = 100
-            left = min_dist(self.last_scan[270:811//2-center_width//2])
-            right = min_dist(self.last_scan[811//2+center_width//2:-270])
-            center = min_dist(self.last_scan[811//2-center_width//2:811//2+center_width//2])
-            if self.verbose:
-                print('%.2f\t%.2f\t%.2f' % (left, center, right))
-            if center <= left and center <= right:
-                self.send_speed_cmd(speed, 0.0)
-            elif left < right:
-                self.send_speed_cmd(speed, angular_speed)
-            else:
-                self.send_speed_cmd(speed, -angular_speed)
-
-            prev_count = self.scan_count
-            while prev_count == self.scan_count:
-                self.update()
-        self.send_speed_cmd(0.0, 0.0)
-        self.grab_balls()
-
     def wait_for_new_scan(self):
         prev_count = self.scan_count
         while prev_count == self.scan_count:
