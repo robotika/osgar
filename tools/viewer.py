@@ -82,6 +82,7 @@ def loadData(filename):
                     dist = s/1000.0
                     if math.radians(-90) <= angle <= math.radians(+90):
                         scans.append((getCombinedPose(pose, (0, 0, angle)), dist))
+                scans.append((pose, -3))  # "MCL pose" (for draw all without sensors)
                 poses_set.append((poses, scans, image, camdir, compass))
             elif stream_id == camera_id:
                 image = deserialize(data)
