@@ -130,17 +130,18 @@ class SICKRobot2018:
         print(self.time, "drop ball END")
 
     def ver0(self):
+        DIST_MAG = 3.15  # distance from magnets to the center of transporter when closest
         print(self.time, '=== ver0 ===')
         self.wait_for_start()
         self.bus.publish('hand', b'40/50/0/0\n')  # ready for pickup
-        self.go_straight(3.15)
+        self.go_straight(DIST_MAG)
         self.bus.publish('hand', b'30/40/0/0\n')  # hit balls
         self.wait(timedelta(seconds=10))
         self.bus.publish('hand', b'20/80/0/0\n')  # move up
         self.go_straight(-1.0)
         self.bus.publish('hand', b'40/50/0/0\n')  # traveling position
         self.turn(math.radians(180))
-        self.go_straight(1.25+0.14)
+        self.go_straight(DIST_MAG - 1.0 + 0.25)
         self.drop_balls()
         self.wait(timedelta(seconds=3))
 
