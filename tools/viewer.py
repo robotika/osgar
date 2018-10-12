@@ -31,6 +31,10 @@ tile_size = 0.5
 
 scale = 1.0
 
+# global timestamps - workaround
+g_timestamps = []
+
+
 def deg(degAngle): return math.pi*degAngle/180.0
 
 def draw(surface, samples):
@@ -84,6 +88,7 @@ def loadData(filename):
                         scans.append((getCombinedPose(pose, (0, 0, angle)), dist))
                 scans.append((pose, -3))  # "MCL pose" (for draw all without sensors)
                 poses_set.append((poses, scans, image, camdir, compass))
+                g_timestamps.append(timestamp)
             elif stream_id == camera_id:
                 image = deserialize(data)
             elif stream_id == pose_id:
@@ -331,7 +336,8 @@ def main( filename, scale = 1.0, startIndex = None, posesScanSet=None ):
     else:
       t = str(lastImgFileName)
 
-    pygame.display.set_caption("Index: %d, sensors %s, img %s" % (index, shouldDrawSensors and "on" or "off", t) )
+    timestamp = g_timestamps[index]
+    pygame.display.set_caption(str(timestamp) + " Index: %d, sensors %s, img %s" % (index, shouldDrawSensors and "on" or "off", t) )
     shouldRefreshNow = False
     event = pygame.event.wait()
     if event.type == QUIT: return
