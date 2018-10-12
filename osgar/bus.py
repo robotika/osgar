@@ -33,6 +33,7 @@ class BusHandler:
             timestamp = self.logger.write(stream_id, serialize(data))
             for queue, input_channel in self.out[channel]:
                 queue.put((timestamp, input_channel, data))
+        return timestamp
 
     def listen(self):
         packet = self.queue.get()
@@ -82,21 +83,24 @@ class LogBusHandler:
         assert channel == self.outputs[stream_id], (channel, self.outputs[stream_id], dt)  # wrong channel
         ref_data = deserialize(bytes_data)
         assert data == ref_data, (data, ref_data, dt)
+        return dt
 
 
 class LogBusHandlerInputsOnly:
     def __init__(self, log, inputs):
         self.reader = log.read_gen(inputs.keys())
         self.inputs = inputs
+        self.time = timedelta(0)
 
     def listen(self):
         dt, stream_id, bytes_data = next(self.reader)
+        self.time = dt
         channel = self.inputs[stream_id]
         data = deserialize(bytes_data)
         return dt, channel, data
 
     def publish(self, channel, data):
-        pass
+        return self.time
 
 
 if __name__ == "__main__":

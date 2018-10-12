@@ -123,4 +123,11 @@ class BusHandlerTest(unittest.TestCase):
         bus.report_error(KeyError(123))
         log.write.assert_called_once_with(0, b"{'error': '123'}")
 
+    def test_publish_time(self):
+        logger = MagicMock()
+        logger.register = MagicMock(return_value=1)
+        logger.write = MagicMock(return_value=timedelta(123))
+        bus = BusHandler(logger, out={'stdout':[]})
+        self.assertEqual(bus.publish('stdout', 'hello world!'), timedelta(123))
+
 # vim: expandtab sw=4 ts=4
