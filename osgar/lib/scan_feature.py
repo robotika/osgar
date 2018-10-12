@@ -207,7 +207,6 @@ def detect_transporter(scan, offset_y):
     left_i, right_i = ret
 
     angle = math.radians(90 - DEG_STEP*(left_i + right_i)/2)
-#    print(angle)   
     dist = tmp[(left_i + right_i)//2]/1000.0
     return shift_polar(angle, dist, offset_y=offset_y)
     

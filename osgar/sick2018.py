@@ -234,11 +234,11 @@ class SICKRobot2018:
         self.wait(timedelta(seconds=3))
         self.go_straight(1.0)  # wait closer to expected trajectory
 
-        offset_y_mm = (self.hand_pose[1] - self.laser_pose[1]) * 1000
-        trans = detect_transporter(self.last_scan, offset_y=offset_y_mm)
+        offset_y = self.hand_pose[1] - self.laser_pose[1]
+        trans = detect_transporter(self.last_scan, offset_y=offset_y)
         while trans is None:
             self.wait_for_new_scan()
-            trans = detect_transporter(self.last_scan, offset_y=offset_y_mm)
+            trans = detect_transporter(self.last_scan, offset_y=offset_y)
 
         angle, dist = trans
         while dist > at_dist:
@@ -252,7 +252,7 @@ class SICKRobot2018:
                 self.send_speed_cmd(speed, -angular_speed)
 
             self.wait_for_new_scan()
-            trans = detect_transporter(self.last_scan, offset_y=offset_y_mm)
+            trans = detect_transporter(self.last_scan, offset_y=offset_y)
             if trans is None:
                 print(self.time, 'catch_transporter - LOST!!!')
                 break
