@@ -4,16 +4,16 @@
 """
 
 import math
-from robot import angleDeg  # TODO move to some utils.py (?)
-from line import *
-from pose import normalizeAnglePIPI
+#from robot import angleDeg  # TODO move to some utils.py (?)
+from .line import *
+from .mathex import normalizeAnglePIPI
 
 def angleTo( f, t ):
   if math.fabs(f[0]-t[0]) < 0.0001 and math.fabs(f[1]-t[1]) < 0.0001:
     return 0
   return math.atan2( t[1]-f[1], t[0]-f[0] )
 
-class Driver:
+class Executor:  # former Eduro Driver
   def __init__( self, robot, maxSpeed = 1.0, maxAngularSpeed = 2*math.pi ):
     # note, that default max limits should be defined by min(Robot,Driver)
     self.robot = robot
@@ -47,7 +47,7 @@ class Driver:
 
   def stopG( self, verbose=False ):
     if verbose:
-      print "---- Driver.stop ----"
+      print("---- Driver.stop ----")
     for i in range(40): # TODO better avoidance of infinite loop
       yield ( 0.0, 0.0 )
       if math.fabs(self.robot.currentSpeed) < 0.01 and math.fabs(self.robot.currentAngularSpeed) < angleDeg(5):
@@ -69,7 +69,7 @@ class Driver:
 
   def goStraightG( self, dist, speed = None, withStop=True, verbose=False ):
     if verbose:
-      print "---- Driver.goStraight(%.2f) ----" % dist
+      print("---- Driver.goStraight(%.2f) ----" % dist)
     if speed is None:
       speed = self.maxSpeed
     if dist >= 0:
@@ -101,9 +101,9 @@ class Driver:
       - radius is positive for forward turn"""
     if verbose:
       if radius != 0:
-        print "---- Driver.turn(%d, rad=%.2f) ----" % (int(math.degrees(angle)), radius)
+        print("---- Driver.turn(%d, rad=%.2f) ----" % (int(math.degrees(angle)), radius))
       else:
-        print "---- Driver.turn(%d) ----" % int(math.degrees(angle))
+        print("---- Driver.turn(%d) ----" % int(math.degrees(angle)))
     if angularSpeed is None:
       angularSpeed = self.maxAngularSpeed
     else:
@@ -123,7 +123,7 @@ class Driver:
         yield cmd
         angle -= self.robot.lastAngleStep
     if verbose:
-      print "---- Driver.turn result(%d) ----" % int(math.degrees(angle))
+      print("---- Driver.turn result(%d) ----" % int(math.degrees(angle)))
 
   def turn( self, angle, angularSpeed = None, radius = 0.0, timeout = None, withStop=True, verbose=False ):
     startTime = self.robot.time
@@ -168,7 +168,7 @@ class Driver:
 
   def followPolyLineG( self, pts, stopDistance = 0.1, angleThreshold = math.radians(20), turnScale = 4.0, offsetSpeed = math.radians(20), offsetDistance = 0.03, withStops=False ):
     for a,b in zip(pts[:-1],pts[1:]):
-      print "--- follow (%0.2f,%0.2f) -> (%0.2f,%0.2f) ---" % ( a[0], a[1], b[0], b[1] )
+      print("--- follow (%0.2f,%0.2f) -> (%0.2f,%0.2f) ---" % ( a[0], a[1], b[0], b[1] ))
       pose = self.robot.localisation.pose()
       angleDiff = normalizeAnglePIPI( angleTo(pose, b) - pose[2])
       if math.fabs( angleDiff ) > angleThreshold:
