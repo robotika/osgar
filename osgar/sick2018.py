@@ -10,6 +10,9 @@ from osgar.lib.scan_feature import detect_box, detect_transporter
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.robot import Robot
 
+# pure hacking
+from osgar.lib.executor import Executor
+
 
 # TODO shared place for multiple applications
 class EmergencyStopException(Exception):
@@ -33,6 +36,39 @@ def combine(pose, sensorPose):
   y = pose[1] + sensorPose[0] * math.sin( pose[2] ) + sensorPose[1] * math.cos( pose[2] )
   heading = sensorPose[2] + pose[2]
   return (x, y, heading)
+
+
+class DummyLoc:
+    def __init__(self, app):
+        self.app = app
+    def pose(self):
+        return self.app.last_position
+
+class RobotProxy:
+    def __init__(self, app, maxAcc=1.0):
+        self.app = app
+        self.localisation = DummyLoc(app)
+        self.currentAngularSpeed = 0.0
+        self.WHEEL_DISTANCE = 0.315
+        self.maxAngularAcc = 2.0*maxAcc/self.WHEEL_DISTANCE
+        self.lastAngleStep = 0
+        self.currentSpeed = 0
+
+    def setSpeedPxPa(self, speed, angular_speed):
+#        print('send', speed, angular_speed)
+        self.app.send_speed_cmd(speed, angular_speed)
+
+    def update(self):
+        prev_pose = self.app.last_position
+        ch = self.app.update()
+        while ch != 'pose2d':
+            ch = self.app.update()
+        self.lastAngleStep = self.app.last_position[2] - prev_pose[2]
+        self.currentAngularSpeed = self.lastAngleStep * 20
+        dx = self.app.last_position[0] - prev_pose[0]
+        dy = self.app.last_position[1] - prev_pose[1]
+        self.currentSpeed = math.hypot(dx, dy)  # FIX sign!!
+#        print(self.app.time, dx, dy)
 
 
 HAND_TRAVEL = b'40/50/0/0\n'  # ready for pickup & traveling position
@@ -79,6 +115,7 @@ class SICKRobot2018:
             elif channel == 'emergency_stop':
                 if self.raise_exception_on_stop and data:
                     raise EmergencyStopException()
+        return channel
 
     def send_speed_cmd(self, speed, angular_speed):
         return self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
@@ -274,11 +311,17 @@ class SICKRobot2018:
                 self.go_straight(1.0)
                 self.turn(math.radians(90))
 
+    def ver2(self):
+        driver = Executor(RobotProxy(self), maxSpeed=0.5, maxAngularSpeed=math.radians(180))
+        path = [(0.0, 0.0), (1.5, 1.5), (1.5, 0.0), (0.5, 0.0)]
+        driver.followPolyLine(path)
+
     def play(self):
         try:
             self.raise_exception_on_stop = True
-            self.ver0()
+#            self.ver0()
 #            self.ver1()
+            self.ver2()
         except EmergencyStopException:
             print('!!!Emergency STOP!!!')
             self.raise_exception_on_stop = False
