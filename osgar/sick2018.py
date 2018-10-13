@@ -167,7 +167,7 @@ class SICKRobot2018:
         print(self.time, "drop ball END")
 
     def ver0(self):
-        DIST_MAG = 2.23  # distance from magnets to the center of transporter when closest
+        DIST_MAG = 1.5  # distance from magnets to the center of transporter when closest
         print(self.time, '=== ver0 ===')
         self.wait_for_start()
         self.bus.publish('hand', b'40/50/0/0\n')  # ready for pickup
@@ -319,9 +319,9 @@ class SICKRobot2018:
     def play(self):
         try:
             self.raise_exception_on_stop = True
-#            self.ver0()
+            self.ver0()
 #            self.ver1()
-            self.ver2()
+#            self.ver2()
         except EmergencyStopException:
             print('!!!Emergency STOP!!!')
             self.raise_exception_on_stop = False
