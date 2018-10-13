@@ -4,7 +4,7 @@
 """
 
 import math
-#from robot import angleDeg  # TODO move to some utils.py (?)
+
 from .line import *
 from .mathex import normalizeAnglePIPI
 
@@ -12,6 +12,9 @@ def angleTo( f, t ):
   if math.fabs(f[0]-t[0]) < 0.0001 and math.fabs(f[1]-t[1]) < 0.0001:
     return 0
   return math.atan2( t[1]-f[1], t[0]-f[0] )
+
+def angleDeg( degrees ):
+  return math.pi * degrees / 180.0 
 
 class Executor:  # former Eduro Driver
   def __init__( self, robot, maxSpeed = 1.0, maxAngularSpeed = 2*math.pi ):
