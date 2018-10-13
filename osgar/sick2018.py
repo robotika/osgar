@@ -180,10 +180,25 @@ class SICKRobot2018:
                 trans = detect_transporter(self.last_scan, offset_y=0)
                 if trans is not None:
                     if trans[1] < 0.5 and trans[0] < 0:
-                        print(math.degrees(trans[0]), trans[1])
+                        print(self.time, math.degrees(trans[0]), trans[1])
+                        print()
                         break
                 self.wait_for_new_scan()
-            self.wait(timedelta(seconds=15))
+
+            self.wait(timedelta(seconds=1, microseconds=500000))
+            self.bus.publish('hand', b'30/40/0/0\n')  # hit balls
+            self.wait(timedelta(seconds=1))
+            self.bus.publish('hand', b'20/80/0/0\n')  # move up
+
+            start_time = self.time
+            who = None
+            while self.time - start_time < timedelta(seconds=15):
+                if who == 'scan':
+                    trans = detect_transporter(self.last_scan, offset_y=0)
+                    if trans is not None:
+                        pass
+                        # print(math.degrees(trans[0]), trans[1])
+                who = self.update()
 
             self.go_straight(-1.0)
             self.turn(math.radians(180))
