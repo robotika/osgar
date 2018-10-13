@@ -173,6 +173,7 @@ class SICKRobot2018:
         game_start = self.time
         self.bus.publish('hand', b'40/50/0/0\n')  # ready for pickup
         self.go_straight(DIST_MAG)
+        loop = 0
 
         while self.time - game_start < timedelta(seconds=600):
             start_time = self.time
@@ -202,9 +203,14 @@ class SICKRobot2018:
 
             self.go_straight(-1.0)
             self.turn(math.radians(180))
-            self.go_straight(DIST_MAG - 1.0 + 0.25)
+            if loop < 2:
+                self.go_straight(DIST_MAG - 1.0 + 0.25)
+            else:
+                self.approach_box(at_dist=0.1)
+                #DIST_MAG = 1.32 - 0.045
             self.drop_balls()
             self.wait(timedelta(seconds=3))
+            loop += 1
 
             self.go_straight(-(DIST_MAG - 1.0 + 0.25))
             self.turn(math.radians(-180))
