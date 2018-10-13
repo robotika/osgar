@@ -167,7 +167,7 @@ class SICKRobot2018:
         print(self.time, "drop ball END")
 
     def ver0(self):
-        DIST_MAG = 1.32  # distance from magnets to the center of transporter when closest
+        DIST_MAG = 1.32 - 0.045  # distance from magnets to the center of transporter when closest
         print(self.time, '=== ver0 ===')
         self.wait_for_start()
         game_start = self.time
