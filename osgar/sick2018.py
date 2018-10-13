@@ -233,6 +233,7 @@ class SICKRobot2018:
                         angle = math.radians((len(self.last_scan)//2 - box_i)/3)
                         dist = self.last_scan[box_i]/1000.0
                         pose = combine(self.last_position, self.laser_pose)
+                        pose = combine(pose, (0, 0.1, 0))  # correct for hand balls
                         box_pos = (pose[0] + dist * math.cos(pose[2] + angle),
                                    pose[1] + dist * math.sin(pose[2] + angle))
                         # TODO laser position offset??
