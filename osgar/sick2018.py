@@ -167,20 +167,33 @@ class SICKRobot2018:
         print(self.time, "drop ball END")
 
     def ver0(self):
-        DIST_MAG = 1.42  # distance from magnets to the center of transporter when closest
+        DIST_MAG = 1.32  # distance from magnets to the center of transporter when closest
         print(self.time, '=== ver0 ===')
         self.wait_for_start()
+        game_start = self.time
         self.bus.publish('hand', b'40/50/0/0\n')  # ready for pickup
         self.go_straight(DIST_MAG)
-        self.bus.publish('hand', b'30/40/0/0\n')  # hit balls
-        self.wait(timedelta(seconds=10))
-        self.bus.publish('hand', b'20/80/0/0\n')  # move up
-        self.go_straight(-1.0)
-        self.bus.publish('hand', b'40/50/0/0\n')  # traveling position
-        self.turn(math.radians(180))
-        self.go_straight(DIST_MAG - 1.0 + 0.25)
-        self.drop_balls()
-        self.wait(timedelta(seconds=3))
+
+        while self.time - game_start < timedelta(seconds=600):
+            start_time = self.time
+            while self.time - start_time < timedelta(seconds=300):
+                trans = detect_transporter(self.last_scan, offset_y=0)
+                if trans is not None:
+                    if trans[1] < 0.5 and trans[0] < 0:
+                        print(math.degrees(trans[0]), trans[1])
+                        break
+                self.wait_for_new_scan()
+            self.wait(timedelta(seconds=15))
+
+            self.go_straight(-1.0)
+            self.turn(math.radians(180))
+            self.go_straight(DIST_MAG - 1.0 + 0.25)
+            self.drop_balls()
+            self.wait(timedelta(seconds=3))
+
+            self.go_straight(-(DIST_MAG - 1.0 + 0.25))
+            self.turn(math.radians(-180))
+            self.go_straight(1.0)
 
     def approach_box(self, at_dist):
         print(self.time, 'approach_box')
