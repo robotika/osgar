@@ -1,6 +1,7 @@
 """
   Internal bus for communication among modules
 """
+import time
 from queue import Queue
 from datetime import timedelta
 
@@ -41,6 +42,9 @@ class BusHandler:
             raise BusShutdownException()
         timestamp, channel, data = packet
         return timestamp, channel, data
+
+    def sleep(self, secs):
+        time.sleep(secs)
 
     def is_alive(self):
         return self._is_alive
@@ -85,6 +89,9 @@ class LogBusHandler:
         assert data == ref_data, (data, ref_data, dt)
         return dt
 
+    def sleep(self, secs):
+        pass
+
 
 class LogBusHandlerInputsOnly:
     def __init__(self, log, inputs):
@@ -101,6 +108,9 @@ class LogBusHandlerInputsOnly:
 
     def publish(self, channel, data):
         return self.time
+
+    def sleep(self, secs):
+        pass
 
 
 if __name__ == "__main__":

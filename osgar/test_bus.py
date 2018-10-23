@@ -130,4 +130,15 @@ class BusHandlerTest(unittest.TestCase):
         bus = BusHandler(logger, out={'stdout':[]})
         self.assertEqual(bus.publish('stdout', 'hello world!'), timedelta(123))
 
+    def test_bus_sleep(self):
+        logger = MagicMock()
+        bus = BusHandler(logger, out={})
+        bus.sleep(0.1)
+
+        bus = LogBusHandler(logger, inputs={}, outputs={})
+        bus.sleep(0.1)
+
+        bus = LogBusHandlerInputsOnly(logger, inputs={})
+        bus.sleep(0.1)
+
 # vim: expandtab sw=4 ts=4
