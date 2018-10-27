@@ -33,8 +33,8 @@ class JohnDeere(Thread):
         self.desired_steering = None  # not specified, no need to change
 
         self.prev_enc_raw = None
-        self.dist_left_raw = 0
-        self.dist_right_raw = 0
+        self.dist_left_diff = 0
+        self.dist_right_diff = 0
 
     def update_encoders(self, data):
         print('ENC', data)
@@ -45,23 +45,23 @@ class JohnDeere(Thread):
             diffR = sint16_diff(arr[1], self.prev_enc_raw[1])
 
             if abs(diffL) > 128:
-                print("ERR-L\t{}\t{}\t{}".format(self.dist_left_raw, self.prev_enc_raw[0], arr[0]))
+                print("ERR-L\t{}\t{}\t{}".format(self.dist_left_diff, self.prev_enc_raw[0], arr[0]))
             else:
-                self.dist_left_raw += diffL
+                self.dist_left_diff = diffL
 
             if abs(diffR) > 128:
-                print("ERR-R\t{}\t{}\t{}".format(self.dist_right_raw, self.prev_enc_raw[1], arr[1]))
+                print("ERR-R\t{}\t{}\t{}".format(self.dist_right_diff, self.prev_enc_raw[1], arr[1]))
             else:
-                self.dist_right_raw += diffR
+                self.dist_right_diff = diffR
         self.prev_enc_raw = arr
 
     def process_packet(self, packet, verbose=False):
         if len(packet) >= 2:
-            msg_id = ((packet[0]) << 3) | (((packet[1]) >> 5) & 0x1f)
+            msg_id = (packet[0] << 3) | (packet[1] >> 5)
             print(hex(msg_id), packet[2:])
             if msg_id == CAN_ID_ENCODERS:
                 self.update_encoders(packet[2:])
-                self.bus.publish('encoders', [self.dist_left_raw,  self.dist_right_raw])
+                self.bus.publish('encoders', [self.dist_left_diff,  self.dist_right_diff])
 
     def process_gen(self, data, verbose=False):
         self.process_packet(data)
