@@ -37,7 +37,6 @@ class JohnDeere(Thread):
         self.dist_right_diff = 0
 
     def update_encoders(self, data):
-        print('ENC', data)
         assert len(data) == 4, data
         arr = [data[2*i+1]*256 + data[2*i] for i in range(2)]
         if self.prev_enc_raw is not None:
@@ -58,7 +57,6 @@ class JohnDeere(Thread):
     def process_packet(self, packet, verbose=False):
         if len(packet) >= 2:
             msg_id = (packet[0] << 3) | (packet[1] >> 5)
-            print(hex(msg_id), packet[2:])
             if msg_id == CAN_ID_ENCODERS:
                 self.update_encoders(packet[2:])
                 self.bus.publish('encoders', [self.dist_left_diff,  self.dist_right_diff])
