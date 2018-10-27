@@ -1,0 +1,74 @@
+<html>
+<head>
+  <script type="text/javascript" src="jquery.js"></script>
+  <!--  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script> -->
+
+<script type="text/javascript">
+
+  // check given room and set proper class
+  function initRoom( href, id ) {
+    $.get( href, function(data){
+        if ( data == "on" ) {
+          $(id).removeClass('off').removeClass('unknown').addClass('on');
+          }
+        if ( data == "off" ) {
+          $(id).removeClass('on').removeClass('unknown').addClass('off');
+          }
+        if ( data == "unknown" ) {
+          $(id).removeClass('on').removeClass('off').addClass('unknown');
+          }
+      })
+  }
+
+	// po nacteni dokumentu pridame akci k <a> u kazdeho pokoje (prvku s class="room")
+	$(document).ready(function(){
+		$('.room a').click(function(e){
+			e.preventDefault();
+			toggleLight(this);
+      })
+	});
+
+
+function initRooms(){
+  initRoom( "/api/0.1/1", "#1" );
+  initRoom( "/api/0.1/2", "#2" );
+  initRoom( "/api/0.1/3", "#3" );
+  initRoom( "/api/0.1/4", "#4" );
+  t=setTimeout('initRooms()',1000);
+};
+
+	// provede vzdaleny dotaz a pri uspechu .success() zmeni css tridu rodice <a> a odkazujici url
+	// ten zakomentovanej kod je treba odkomentovat, pokud prvky budou mit spravnou url misto #
+  function toggleLight(el){
+		var href = $(el).attr('href');
+
+		if ($(el).parent().hasClass('off')){
+			 $.get(href+"/on").success(function(){
+			 	$(el).parent().removeClass('off').removeClass('unknown').addClass('on');
+			 });
+		} else {
+			 $.get(href+"/off").success(function(){
+			 	$(el).parent().removeClass('on').removeClass('unknown').addClass('off');
+			 });
+		}
+	}
+</script>
+<style type="text/css">
+	.room { float: left; width: 48%; margin: 1%; }
+	.room a { display: block; height: 30%;}
+	.room.off { background-color: #000;}
+	.room.off a { color: #fff;}
+	.room.on { background-color: yellow;}
+	.room.on a { color: #000;}
+	.room.unknown { background-color: gray;}
+	.room.unknown a { color: #000;}
+</style>
+</head>
+<body onload="initRooms()">
+<div id="1" class="room unknown"><a href="/api/0.1/1">Pokoj 1</a></div>
+<div id="2" class="room unknown"><a href="/api/0.1/2">Pokoj 2</a></div>
+<div id="3" class="room unknown"><a href="/api/0.1/3">Pokoj 3</a></div>
+<div id="4" class="room unknown"><a href="/api/0.1/4">Pokoj 4</a></div>
+</body>
+</html>
+

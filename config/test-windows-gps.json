@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "gps": {
+          "driver": "gps",
+          "in": ["raw"],
+          "out": ["position"],
+          "init": {}
+      },
+      "gps_serial": {
+          "driver": "serial",
+          "in": [],
+          "out": ["raw"],
+          "init": {"port": "COM5", "speed": 4800}
+      }
+    },
+    "links": [["gps_serial.raw", "gps.raw"]]    
+  }
+}

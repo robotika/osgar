@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "spider": {
+          "driver": "spider",
+          "in": ["raw"],
+          "out": ["can"],
+          "init": {}
+      },
+      "spider_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyS0", "speed": 115200,
+                   "rtscts":true, "reset":true}
+      }
+    },
+    "links": [["spider_serial.raw", "spider.raw"], 
+              ["spider.can", "spider_serial.raw"]]
+  }
+}
