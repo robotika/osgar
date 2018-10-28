@@ -1,2 +1,0 @@
-pyserial==3.4
-msgpack==0.5.6

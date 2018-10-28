@@ -1,6 +1,0 @@
-['./navpat.py', 'nesrandauz']
-can: logs/can_170516_192926.log
-timestamps: logs/timestamps_170516_192926.log
-gps: logs/gps_170516_192931.log
-laser: logs/laser_170516_192931.log
-camera: logs/camera_170516_192931.log

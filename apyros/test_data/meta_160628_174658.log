@@ -1,5 +1,0 @@
-['M:\\git\\ARDroneSDK3\\katarina\\demo.py', 'demo-takeoff-409600buf']
-navdata: logs/navdata_160628_174658.bin
-cmd: logs/cmd_160628_174658.bin
-console: logs/console_160628_174658.txt
-now: datetime.datetime(2016, 6, 28, 17, 46, 58, 603000)
