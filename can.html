@@ -5,7 +5,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Welcome to osgar’s documentation! &#8212; osgar 0.0.1 documentation</title>
+    <title>CAN Bus Bridge &#8212; osgar 0.0.1 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
@@ -23,7 +23,6 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Logging" href="logging.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -39,34 +38,22 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="welcome-to-osgar-s-documentation">
-<h1>Welcome to osgar’s documentation!<a class="headerlink" href="#welcome-to-osgar-s-documentation" title="Permalink to this headline">¶</a></h1>
-<div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">Contents:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="logging.html">Logging</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="logging.html#motivation">Motivation</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="drivers.html">Drivers</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="drivers.html#logging">Logging</a></li>
-<li class="toctree-l2"><a class="reference internal" href="drivers.html#use-cases">Use cases</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="can.html">CAN Bus Bridge</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="can.html#communication-protocol">Communication Protocol</a></li>
-</ul>
-</li>
-</ul>
+  <div class="section" id="can-bus-bridge">
+<h1>CAN Bus Bridge<a class="headerlink" href="#can-bus-bridge" title="Permalink to this headline">¶</a></h1>
+<p>“CAN Bus Bridge” is used for communication between PC serial port and CAN
+bus network. The module was developed and manufactured by RobSys.cz</p>
+<div class="section" id="communication-protocol">
+<h2>Communication Protocol<a class="headerlink" href="#communication-protocol" title="Permalink to this headline">¶</a></h2>
+<p>The bridge is in configuration mode after power up (or application of “RESET”
+via Serial.setDTR(0)). This is reported once via set of 0xFF bytes followed
+by 0xFE 0x10 packets. After that is bridge waiting for “sync” via ten 0xFF
+bytes.</p>
+<p>You can configure CAN bridge parameters after “sync” with bridge. For example
+to set CAN communication speed to 1Mb use 0xFE 0x57.</p>
+<p>Once you are finished with configuration you can switch mode to operational
+via 0xFE 0x31. The bridge starts to listen on CAN bus and forward all available
+(or selected, if configured) messages to PC via serial port.</p>
 </div>
-</div>
-<div class="section" id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
-<ul class="simple">
-<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
-<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
-<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
-</ul>
 </div>
 
 
@@ -75,7 +62,7 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="#">osgar</a></h1>
+<h1 class="logo"><a href="index.html">osgar</a></h1>
 
 
 
@@ -85,18 +72,11 @@
 
 
 <h3>Navigation</h3>
-<p class="caption"><span class="caption-text">Contents:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="logging.html">Logging</a></li>
-<li class="toctree-l1"><a class="reference internal" href="drivers.html">Drivers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="can.html">CAN Bus Bridge</a></li>
-</ul>
 
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
-  <li><a href="#">Documentation overview</a><ul>
-      <li>Next: <a href="logging.html" title="next chapter">Logging</a></li>
+  <li><a href="index.html">Documentation overview</a><ul>
   </ul></li>
 </ul>
 </div>
@@ -122,7 +102,7 @@
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |
-      <a href="_sources/index.rst.txt"
+      <a href="_sources/can.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 
