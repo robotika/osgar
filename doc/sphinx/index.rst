@@ -10,7 +10,9 @@ Welcome to osgar's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-
+   logging
+   drivers
+   can
 
 Indices and tables
 ==================
