@@ -1,0 +1,143 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Robot Eduro &#8212; osgar 0.0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Drivers" href="drivers.html" />
+    <link rel="prev" title="Logging" href="logging.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="robot-eduro">
+<h1>Robot Eduro<a class="headerlink" href="#robot-eduro" title="Permalink to this headline">¶</a></h1>
+<p>Eduro was designed and created by Jan Roubicek back in 2007 as EDUcational
+RObot for the university. The electronics was manufactured by Tomas Roubicek,
+and it includes CAN network modules using CANopen protocol, custom made stepper
+motor drivers with encoders SMAC (Stepper Motor - Adaptive Control) and power management.</p>
+<img alt="http://robotika.cz/competitions/fieldrobot/2010/eduro-prices2.jpg" src="http://robotika.cz/competitions/fieldrobot/2010/eduro-prices2.jpg" />
+<p>The original “small” Eduro was rebuilt into outdoor version “Eduro Maxi” in
+2010. Since then it participated in many outdoor competitions and gained
+several prices including 1st place in
+<a class="reference external" href="https://robotika.cz/competitions/fieldrobot/">Field Robot Event</a> and
+<a class="reference external" href="http://robotour.cz">Robotour</a> contests.</p>
+<p>The robot is differentially driven with two stepper motors. It is tricycle with very
+high maneuverability. The maximal speed is limited to 1 meter per second.</p>
+<p>The communication uses SYNC signal, after which all CANopen modules transmit
+their status. The default is 20Hz cycle, but can be modified. The encoder
+status is sent independently for left and right wheel. Once the motor driver is
+in operational mode it requires update every 200ms otherwise internal
+watchdog will, due to safety reasons (original Eduro was capable of speed
+4m/s), motor disable and switch to pre-operation.</p>
+<p>The motor controller tries to achieve desired speed immediately within cycle
+period, so it is recommended to use “ramping” and split commands into several
+steps. The acceleration (ramp slope) depends on robot payload and surface. If
+you set it high you probably loose traction with the ground, which also means
+that you loose otherwise very precise odometry information.</p>
+<p>The robot uses <a class="reference external" href="https://www.pcengines.ch/apu2.htm">APU2 board</a> with serial COM
+for CAN bridge, 2x USB ports and 3x Ethernet. There is also Wi-Fi module
+available. This system enables extension to various sensors: lidars, GPS,
+IP-cameras, etc.</p>
+<p>For more info see: <a class="reference external" href="http://eduro.cz/">http://eduro.cz/</a> or <a class="reference external" href="https://robotika.cz/robots/eduro/">https://robotika.cz/robots/eduro/</a></p>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">osgar</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="logging.html">Logging</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Robot Eduro</a></li>
+<li class="toctree-l1"><a class="reference internal" href="drivers.html">Drivers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="can.html">CAN Bus Bridge</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="logging.html" title="previous chapter">Logging</a></li>
+      <li>Next: <a href="drivers.html" title="next chapter">Drivers</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, robotika.cz.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/eduro.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
