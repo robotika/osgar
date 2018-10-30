@@ -6,13 +6,13 @@ RObot for the university. The electronics was manufactured by Tomas Roubicek,
 and it includes CAN network modules using CANopen protocol, custom made stepper
 motor drivers with encoders SMAC (Stepper Motor - Adaptive Control) and power management.
 
-.. image:: http://robotika.cz/competitions/fieldrobot/2010/eduro-prices2.jpg
+.. image:: https://robotika.cz/competitions/fieldrobot/2010/eduro-prices2.jpg
 
 The original "small" Eduro was rebuilt into outdoor version "Eduro Maxi" in
 2010. Since then it participated in many outdoor competitions and gained
 several prices including 1st place in 
 `Field Robot Event <https://robotika.cz/competitions/fieldrobot/>`_ and 
-`Robotour <http://robotour.cz>`_ contests.
+`Robotour <https://robotour.cz>`_ contests.
 
 The robot is differentially driven with two stepper motors. It is tricycle with very
 high maneuverability. The maximal speed is limited to 1 meter per second.
