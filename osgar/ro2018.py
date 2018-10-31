@@ -12,7 +12,7 @@ from osgar.logger import LogWriter, LogReader
 from osgar.lib.config import load as config_load
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.drivers import all_drivers
-from osgar.robot import Robot
+from osgar.record import Recorder
 
 from osgar.drivers.gps import INVALID_COORDINATES
 from osgar.bus import BusHandler
@@ -232,11 +232,11 @@ if __name__ == "__main__":
         log = LogWriter(prefix='ro2018-', note=str(sys.argv))
         config = config_load(*args.config)
         log.write(0, bytes(str(config), 'ascii'))  # write configuration
-        robot = Robot(config=config['robot'], logger=log, application=RoboOrienteering2018)
+        recorder = Recorder(config=config['robot'], logger=log, application=RoboOrienteering2018)
         game = robot.modules['app']  # TODO nicer reference
         robot.start()
         game.play()
-        robot.finish()
+        recorder.finish()
     else:
         assert False, args.command  # unsupported command
 
