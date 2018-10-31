@@ -4,17 +4,17 @@ import time
 import json
 import os
 
-from osgar.robot import Robot
+from osgar.record import Recorder
 
 
-class RobotTest(unittest.TestCase):
+class RecorderTest(unittest.TestCase):
 
     def test_dummy_usage(self):
         empty_config = {'modules': {}, 'links':[]}
-        robot = Robot(config=empty_config, logger=None)
-        robot.start()
-        robot.update()
-        robot.finish()
+        recorder = Recorder(config=empty_config, logger=None)
+        recorder.start()
+        recorder.update()
+        recorder.finish()
 
     def test_config(self):
         with patch('osgar.drivers.logserial.serial.Serial') as mock:
@@ -37,14 +37,14 @@ class RobotTest(unittest.TestCase):
                     'links': [('serial_gps.raw', 'gps.raw')]
             }
             logger = MagicMock()
-            robot = Robot(config=config, logger=logger)
-            self.assertEqual(len(robot.modules), 2)
+            recorder = Recorder(config=config, logger=logger)
+            self.assertEqual(len(recorder.modules), 2)
             self.assertEqual(sum([sum([len(q) for q in module.bus.out.values()])
-                                  for module in robot.modules.values()]), 1)
-            robot.start()
+                                  for module in recorder.modules.values()]), 1)
+            recorder.start()
             time.sleep(0.1)
-            robot.update()
-            robot.finish()
+            recorder.update()
+            recorder.finish()
 
     def test_spider_config(self):
         # first example with loop spider <-> serial
@@ -53,7 +53,7 @@ class RobotTest(unittest.TestCase):
 
         with patch('osgar.drivers.logserial.serial.Serial') as mock:
             logger = MagicMock()
-            robot = Robot(config=config['robot'], logger=logger)
+            recorder = Recorder(config=config['robot'], logger=logger)
 
 
     def test_all_supported_config_files(self):
@@ -66,7 +66,7 @@ class RobotTest(unittest.TestCase):
                 with open(os.path.join(os.path.dirname(__file__), '..', 'config',
                                    filename)) as f:
                     config = json.loads(f.read())
-                robot = Robot(config=config['robot'], logger=logger)
+                recorder = Recorder(config=config['robot'], logger=logger)
 
     def test_application(self):
         # plug-in external application
@@ -79,6 +79,6 @@ class RobotTest(unittest.TestCase):
 
         with patch('osgar.drivers.logserial.serial.Serial') as mock:
             logger = MagicMock()
-            robot = Robot(config=config['robot'], logger=logger, application=DummyApp)
+            recorder = Recorder(config=config['robot'], logger=logger, application=DummyApp)
 
 # vim: expandtab sw=4 ts=4

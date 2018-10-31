@@ -1,18 +1,20 @@
 """
-  Robot - container for drivers
+  Recorder for given nodes configuration
 """
 
 import argparse
 import sys
+import os
+import time
 from queue import Queue
 
-from osgar.logger import LogWriter, LogReader
+from osgar.logger import LogWriter
 from osgar.lib.config import load
 from osgar.drivers import all_drivers
 from osgar.bus import BusHandler
 
 
-class Robot:
+class Recorder:
     def __init__(self, config, logger, application=None):
         self.modules = {}
 
@@ -50,31 +52,26 @@ class Robot:
             module.join()
 
 
+def record(config_filename, duration_sec, log_prefix, note=''):
+    log = LogWriter(prefix=log_prefix, note=str(sys.argv))
+    config = load(config_filename)
+    log.write(0, bytes(str(config), 'ascii'))  # write configuration
+    recorder = Recorder(config=config['robot'], logger=log)
+    recorder.start()
+    time.sleep(duration_sec)
+    recorder.finish()
+
+
 if __name__ == "__main__":
-    import time
 
-    parser = argparse.ArgumentParser(description='Test robot configuration')
-    subparsers = parser.add_subparsers(help='sub-command help', dest='command')
-    subparsers.required = True
-    parser_run = subparsers.add_parser('run', help='run on real HW')
-    parser_run.add_argument('config', help='configuration file')
-    parser_run.add_argument('--note', help='add description')
-
-    parser_replay = subparsers.add_parser('replay', help='replay from logfile')
-    parser_replay.add_argument('logfile', help='recorded log file')
+    parser = argparse.ArgumentParser(description='Record run on real HW with given configuration')
+    parser.add_argument('config', help='configuration file')
+    parser.add_argument('--note', help='add description')
+    parser.add_argument('--duration', help='recording duration (sec)',
+                        type=float, default=3.0)
     args = parser.parse_args()
 
-    if args.command == 'replay':
-        pass  # TODO
-    elif args.command == 'run':
-        log = LogWriter(prefix='robot-test-', note=str(sys.argv))
-        config = load(args.config)
-        log.write(0, bytes(str(config), 'ascii'))  # write configuration
-        robot = Robot(config=config['robot'], logger=log)
-        robot.start()
-        time.sleep(3.0)
-        robot.finish()
-    else:
-        assert False, args.command  # unsupported command
+    prefix = os.path.basename(args.config).split('.')[0] + '-'
+    record(args.config, args.duration, log_prefix=prefix, note=str(sys.argv))
 
 # vim: expandtab sw=4 ts=4
