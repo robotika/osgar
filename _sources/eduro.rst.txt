@@ -17,7 +17,7 @@ several prices including 1st place in
 The robot is differentially driven with two stepper motors. It is tricycle with very
 high maneuverability. The maximal speed is limited to 1 meter per second.
 
-The communication uses SYNC signal, after which all CANopen modules transmit
+The communication uses SYNC [#f1]_ signal, after which all CANopen modules transmit
 their status. The default is 20Hz cycle, but can be modified. The encoder
 status is sent independently for left and right wheel. Once the motor driver is
 in operational mode it requires update every 200ms otherwise internal
@@ -36,4 +36,7 @@ available. This system enables extension to various sensors: lidars, GPS,
 IP-cameras, etc.
 
 For more info see: http://eduro.cz/ or https://robotika.cz/robots/eduro/
+
+.. [#f1] There is only SYS module compiled with CANopen SYNC_producer stack. In
+  theory any module including PC can be configured to generate SYNC.
 

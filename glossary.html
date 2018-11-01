@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Drivers &#8212; osgar 0.0.1 documentation</title>
+    <title>Glossary &#8212; osgar 0.0.1 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -16,8 +16,6 @@
     <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="CAN Bus Bridge" href="can.html" />
-    <link rel="prev" title="Robot Eduro" href="eduro.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -34,29 +32,12 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="drivers">
-<h1>Drivers<a class="headerlink" href="#drivers" title="Permalink to this headline">¶</a></h1>
-<p>The “drivers” directory contains implementation of all drivers for various
-devices. Sensors, effectors as well as the mobile platforms are included.
-The driver takes care of a single device, or better to say a single
-communication stream (serial.Serial for example). The data are collected,
-logged and parsed for further processing.</p>
-<div class="section" id="logging">
-<h2>Logging<a class="headerlink" href="#logging" title="Permalink to this headline">¶</a></h2>
-<p>There is at least one stream logged per driver - the input for sensors and
-the output for effectors. If bidirectional communication is required then
-both streams are logged. The “stream ID” is part of the driver configuration.</p>
-</div>
-<div class="section" id="use-cases">
-<h2>Use cases<a class="headerlink" href="#use-cases" title="Permalink to this headline">¶</a></h2>
-<p>There are two basic use cases: real run and replay. In real run real port
-is opened and dedicated Thread::run() takes care of reading data with timeout
-and the processing.</p>
-<p>In the “replay” mode the run is single-threaded and the processing is
-simulated from logged data. This mode is mainly designed for debugging,
-development of parsers and also verification of identical outputs on
-different platforms (robot PC vs. notebook for example).</p>
-</div>
+  <div class="section" id="glossary">
+<h1>Glossary<a class="headerlink" href="#glossary" title="Permalink to this headline">¶</a></h1>
+<p>bus</p>
+<p>node</p>
+<p>stream (source)</p>
+<p>link (from, to)</p>
 </div>
 
 
@@ -77,14 +58,10 @@ different platforms (robot PC vs. notebook for example).</p>
 
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Contents:</span></p>
-<ul class="current">
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="logging.html">Logging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="eduro.html">Robot Eduro</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Drivers</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#logging">Logging</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#use-cases">Use cases</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="drivers.html">Drivers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="can.html">CAN Bus Bridge</a></li>
 </ul>
 
@@ -92,8 +69,6 @@ different platforms (robot PC vs. notebook for example).</p>
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="eduro.html" title="previous chapter">Robot Eduro</a></li>
-      <li>Next: <a href="can.html" title="next chapter">CAN Bus Bridge</a></li>
   </ul></li>
 </ul>
 </div>
@@ -129,7 +104,7 @@ different platforms (robot PC vs. notebook for example).</p>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
-      <a href="_sources/drivers.rst.txt"
+      <a href="_sources/glossary.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 
