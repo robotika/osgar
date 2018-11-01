@@ -11,6 +11,7 @@ Welcome to osgar's documentation!
    :caption: Contents:
 
    logging
+   howto
    eduro
    drivers
    can
