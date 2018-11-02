@@ -5,7 +5,7 @@ import sys
 from datetime import timedelta
 
 from osgar.lib.config import load as config_load
-from osgar.robot import Robot
+from osgar.record import Recorder
 
 
 # meters per single encoder tick
@@ -71,7 +71,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.command == 'replay':
-        from replay import replay
+        from osgar.replay import replay
         args.module = 'app'
         game = replay(args, application=GoOneMeter)
         game.play()
@@ -80,7 +80,7 @@ if __name__ == "__main__":
         log = LogWriter(prefix='go1m-', note=str(sys.argv))
         config = config_load(*args.config)
         log.write(0, bytes(str(config), 'ascii'))  # write configuration
-        robot = Robot(config=config['robot'], logger=log, application=GoOneMeter)
+        robot = Recorder(config=config['robot'], logger=log, application=GoOneMeter)
         game = robot.modules['app']  # TODO nicer reference
         robot.start()
         game.play()
