@@ -251,5 +251,55 @@ any GPS destination, and this algorithm is "generic" in the sense that other
 types of robots may reuse it. The price you have to pay is to write a "driver"
 with expected interfaces and then plug it in bigger setup.
 
-TODO continue
+Let's begin with control of your robot. As mentioned at the beginning there are
+many types of robots: differentially driven like tanks (Eduro), car-like robots
+(John Deere) or some special kinds (Spider3). The recommended interface
+varies for the types, i.e. for our differential robot it is pair desired_speed
+and desired_angular_speed while for car-like robots it is desired_speed and
+desired_steering_angle. The values are in standard metric units, i.e. meters
+per second and radians per second where positive speed is forward and positive
+angular speed is mathematically anticlockwise.
+
+The commands are internally scaled and sent as integers. Currently speed is
+scaled 1000x (i.e. millimeters per second) and angle is in 1/100th of degree.
+These details should be transparent in later version of OSGAR.
+
+The robot driver should report its motion status, typically measured by
+encoders. Again there could be many times, with different resolution. While for
+HW is typical to send absolute counters as `uint8`, `uint16` or even `uint32`
+in the application we do not want to worry about motor reinitialization
+(typically reset absolute count to 0) or undefined initial value. The
+recommendation is to send all encoders as a list of signed integers in fixed
+time period. After scaling these values corresponds to robot speed and angular
+speed.
+
+The second common output is `pose2d`, which is integrated position based on
+odometry only. It takes into account robot dimensions (size of wheels, length
+of wheel base etc.) and publishes updates synchronously with encoders. Again
+position (x, y) is in meters and heading is in radians (starting from (0, 0, 0)
+position on init). The other modules/nodes then can easily see distance
+traveled without need of integration and knowledge of the robot motion model.
+
+The (x, y, heading) values are again scaled by 1000x (millimeters) and 1/100th
+of degree. Note, that heading is not corrected for 2PI and thus contains
+information how many times robot turned since program start.
+
+OK, so now we extended our robot interface, but how to make it available to
+others? At the moment there is only one option, which is to add your code into
+"osgar/drivers" directory and extend `__init__.py` with your new name. We
+recommend to create pull-request on `github
+<https://github.com/robotika/osgar>`_ so other could use it too.
+
+
+System integration
+------------------
+
+Now it is time to put it all together and gain from reused components. See
+configuration `ro2018-spider-gps-imu.json
+<https://github.com/robotika/osgar/blob/master/config/ro2018-spider-gps-imu.json>`_
+as base and replace configuration of GPS with your and `spider` by your motor
+driver. The next step is to modify waypoints file `ro2018-czu-waypoints.json`
+and you can let your robot to automatically navigate to given GPS coordinates!
+We hoped you enjoyed your first mission :-)
+
 

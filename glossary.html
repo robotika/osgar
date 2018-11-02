@@ -16,6 +16,7 @@
     <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="CAN Bus Bridge" href="can.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -34,10 +35,31 @@
             
   <div class="section" id="glossary">
 <h1>Glossary<a class="headerlink" href="#glossary" title="Permalink to this headline">¶</a></h1>
-<p>bus</p>
-<p>node</p>
-<p>stream (source)</p>
-<p>link (from, to)</p>
+<dl class="glossary docutils">
+<dt id="term-bus">bus</dt>
+<dd>The communication backbone, providing <cite>publish</cite> and <cite>listen</cite> operations.
+The bus takes care of sequencing all messages within the sysem and
+serialization via logging facility.</dd>
+<dt id="term-driver">driver</dt>
+<dd>Implementation of common nodes like TCP communication with outer world.</dd>
+<dt id="term-link">link</dt>
+<dd>Directed connection of two nodes. The source node generates messages by
+<cite>publish</cite> call and the destinaion node accepts them via <cite>listen</cite> call.</dd>
+<dt id="term-logfile">logfile</dt>
+<dd>Binary file containing message data with their source and timestamp.</dd>
+<dt id="term-node">node</dt>
+<dd>The basic unit attached to <cite>bus</cite>. It has fixed set of inputs and outputs.</dd>
+<dt id="term-osgar">OSGAR</dt>
+<dd>Open Source Garden/Generic Autonomous Robot (Python library)</dd>
+<dt id="term-robot">robot</dt>
+<dd>The collection of interacting <cite>nodes</cite> via <cite>bus</cite>. This typically corresponds
+to a machine with set of sensors and efectors in the real world.</dd>
+<dt id="term-stream">stream</dt>
+<dd>Output from node without specified destination like for <cite>link</cite>.</dd>
+<dt id="term-timestamp">timestamp</dt>
+<dd>Python <cite>datetime.timedelta</cite> with microsecond precision starting from zero
+with the beginning of the program.</dd>
+</dl>
 </div>
 
 
@@ -58,17 +80,20 @@
 
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Contents:</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="logging.html">Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="howto.html">How to control my robot with OSGAR?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="eduro.html">Robot Eduro</a></li>
 <li class="toctree-l1"><a class="reference internal" href="drivers.html">Drivers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="can.html">CAN Bus Bridge</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Glossary</a></li>
 </ul>
 
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="can.html" title="previous chapter">CAN Bus Bridge</a></li>
   </ul></li>
 </ul>
 </div>
