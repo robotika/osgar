@@ -14,6 +14,8 @@ Welcome to osgar's documentation!
    eduro
    drivers
    can
+   msgtypes
+   glossary
 
 Indices and tables
 ==================
