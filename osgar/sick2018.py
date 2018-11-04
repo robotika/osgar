@@ -1,5 +1,21 @@
 """
   SICK Robot Day 2018
+
+  The task for "SICK Robot Day 2018" was to pickup red feromagnetic balls
+  carried by moving transporter. There was a pentalty for blocking transporter
+  for more than 30s.
+
+  Eduro Team used at the end "version 0":
+    - move to position close to transporter trajectory
+    - once you spot it on the right swing hand down and up with a short delay
+    - move back, turn 180, locate storage box and drop balls
+    - repeat
+
+  Note, that here is only stripped code to ver0(). There were also some changes
+  due to OSGAR API evolution. If you want the original use SICK_ROBOT_DAY_2018
+  tag. The best Eduro match log is available at:
+      http://osgar.robotika.cz/eduro-181013_164907.log
+  Eduro scored 3 points and reached 3rd place.
 """
 import sys
 import math
