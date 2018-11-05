@@ -1,0 +1,31 @@
+Message Types
+=============
+
+.. glossary::
+
+   emergency_stop
+      Boolean if Emergency STOP was pressed. Should be reported on system start
+      and on change.
+
+   encoders
+      List of differences of all available encoders since the last update. For two
+      wheeled robot they shell be ordered [left, right]. Positive difference
+      corresponds to forward motion. The scaling factor is specific to robot
+      and can change over time (preasure in tires, payload). The main purpose
+      of this message type is an advanced position estimation.
+
+   gps_position
+      [longitude_ms, latitude_ms] - GPS coordinates in WGS84 system. Scaled
+      3600000 (i.e. in milliseconds)
+
+   pose2d
+      [x, y, heading] - position in meters with heading in radians
+      (anticlockwise). Scale 1000x (i.e. x, y are send in millimeters)
+      and angle in 1/100th of degree.
+
+   desired_speed
+      [speed, angular_speed] - command used for differentially driven robots.
+      Speed is in meters per second scalled 1000x (i.e. millimeters per second)
+      and angular_speed in radians per second, scaled to 1/100th degree per
+      second.
+

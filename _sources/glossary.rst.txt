@@ -1,6 +1,8 @@
 Glossary
 ========
 
+Ref :py:class::`osgar.bus.BusHandler`
+
 .. glossary::
 
    bus

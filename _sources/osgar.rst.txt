@@ -1,0 +1,94 @@
+osgar package
+=============
+
+Subpackages
+-----------
+
+.. toctree::
+
+    osgar.drivers
+    osgar.lib
+
+Submodules
+----------
+
+osgar.bus module
+----------------
+
+.. automodule:: osgar.bus
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+osgar.logger module
+-------------------
+
+.. automodule:: osgar.logger
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+osgar.replay module
+-------------------
+
+.. automodule:: osgar.replay
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+osgar.ro2018 module
+-------------------
+
+.. automodule:: osgar.ro2018
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+osgar.robot module
+------------------
+
+.. automodule:: osgar.robot
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+osgar.test\_bus module
+----------------------
+
+.. automodule:: osgar.test_bus
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+osgar.test\_logger module
+-------------------------
+
+.. automodule:: osgar.test_logger
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+osgar.test\_ro2018 module
+-------------------------
+
+.. automodule:: osgar.test_ro2018
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+osgar.test\_robot module
+------------------------
+
+.. automodule:: osgar.test_robot
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: osgar
+    :members:
+    :undoc-members:
+    :show-inheritance:

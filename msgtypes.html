@@ -6,30 +6,23 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Search &#8212; osgar 0.0.1 documentation</title>
+    <title>Message Types &#8212; osgar 0.0.1 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <script type="text/javascript" src="_static/searchtools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="#" />
-  <script type="text/javascript">
-    jQuery(function() { Search.loadIndex("searchindex.js"); });
-  </script>
-  
-  <script type="text/javascript" id="searchindexloader"></script>
-  
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Glossary" href="glossary.html" />
+    <link rel="prev" title="CAN Bus Bridge" href="can.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
-
 
   </head><body>
   
@@ -41,29 +34,33 @@
 
           <div class="body" role="main">
             
-  <h1 id="search-documentation">Search</h1>
-  <div id="fallback" class="admonition warning">
-  <script type="text/javascript">$('#fallback').hide();</script>
-  <p>
-    Please activate JavaScript to enable the search
-    functionality.
-  </p>
-  </div>
-  <p>
-    From here you can search these documents. Enter your search
-    words into the box below and click "search". Note that the search
-    function will automatically search for all of the words. Pages
-    containing fewer words won't appear in the result list.
-  </p>
-  <form action="" method="get">
-    <input type="text" name="q" value="" />
-    <input type="submit" value="search" />
-    <span id="search-progress" style="padding-left: 10px"></span>
-  </form>
-  
-  <div id="search-results">
-  
-  </div>
+  <div class="section" id="message-types">
+<h1>Message Types<a class="headerlink" href="#message-types" title="Permalink to this headline">¶</a></h1>
+<dl class="glossary docutils">
+<dt id="term-emergency-stop">emergency_stop</dt>
+<dd>Boolean if Emergency STOP was pressed. Should be reported on system start
+and on change.</dd>
+<dt id="term-encoders">encoders</dt>
+<dd>List of differences of all available encoders since the last update. For two
+wheeled robot they shell be ordered [left, right]. Positive difference
+corresponds to forward motion. The scaling factor is specific to robot
+and can change over time (preasure in tires, payload). The main purpose
+of this message type is an advanced position estimation.</dd>
+<dt id="term-gps-position">gps_position</dt>
+<dd>[longitude_ms, latitude_ms] - GPS coordinates in WGS84 system. Scaled
+3600000 (i.e. in milliseconds)</dd>
+<dt id="term-pose2d">pose2d</dt>
+<dd>[x, y, heading] - position in meters with heading in radians
+(anticlockwise). Scale 1000x (i.e. x, y are send in millimeters)
+and angle in 1/100th of degree.</dd>
+<dt id="term-desired-speed">desired_speed</dt>
+<dd>[speed, angular_speed] - command used for differentially driven robots.
+Speed is in meters per second scalled 1000x (i.e. millimeters per second)
+and angular_speed in radians per second, scaled to 1/100th degree per
+second.</dd>
+</dl>
+</div>
+
 
           </div>
           
@@ -82,13 +79,13 @@
 
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Contents:</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="logging.html">Logging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="howto.html">How to control my robot with OSGAR?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="eduro.html">Robot Eduro</a></li>
 <li class="toctree-l1"><a class="reference internal" href="drivers.html">Drivers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="can.html">CAN Bus Bridge</a></li>
-<li class="toctree-l1"><a class="reference internal" href="msgtypes.html">Message Types</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Message Types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
 </ul>
 
@@ -96,9 +93,23 @@
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="can.html" title="previous chapter">CAN Bus Bridge</a></li>
+      <li>Next: <a href="glossary.html" title="next chapter">Glossary</a></li>
   </ul></li>
 </ul>
 </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
 
 
 
@@ -118,6 +129,9 @@
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.1</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
+      |
+      <a href="_sources/msgtypes.rst.txt"
+          rel="nofollow">Page source</a>
     </div>
 
     

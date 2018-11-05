@@ -1,0 +1,922 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>osgar.drivers package &#8212; osgar 0.0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="osgar-drivers-package">
+<h1>osgar.drivers package<a class="headerlink" href="#osgar-drivers-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-osgar.drivers.canserial">
+<span id="osgar-drivers-canserial-module"></span><h2>osgar.drivers.canserial module<a class="headerlink" href="#module-osgar.drivers.canserial" title="Permalink to this headline">¶</a></h2>
+<p>Wrapper for CAN-serial communication and control of CAN bridge</p>
+<dl class="class">
+<dt id="osgar.drivers.canserial.CANSerial">
+<em class="property">class </em><code class="descclassname">osgar.drivers.canserial.</code><code class="descname">CANSerial</code><span class="sig-paren">(</span><em>config</em>, <em>bus</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.canserial.CANSerial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">threading.Thread</span></code></p>
+<dl class="method">
+<dt id="osgar.drivers.canserial.CANSerial.check_and_restart_module">
+<code class="descname">check_and_restart_module</code><span class="sig-paren">(</span><em>module_id</em>, <em>status</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.canserial.CANSerial.check_and_restart_module" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.canserial.CANSerial.process_gen">
+<code class="descname">process_gen</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.canserial.CANSerial.process_gen" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.canserial.CANSerial.process_packet">
+<code class="descname">process_packet</code><span class="sig-paren">(</span><em>packet</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.canserial.CANSerial.process_packet" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.canserial.CANSerial.read_packet">
+<code class="descname">read_packet</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.canserial.CANSerial.read_packet" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.canserial.CANSerial.request_stop">
+<code class="descname">request_stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.canserial.CANSerial.request_stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.canserial.CANSerial.reset_all_modules">
+<code class="descname">reset_all_modules</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.canserial.CANSerial.reset_all_modules" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reset all modules:
+- broadcast “reset node”
+- make sure every node reaches pre-operational state
+- switch all nodes to operational state</p>
+<p>return: list of operational modules</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.canserial.CANSerial.run">
+<code class="descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.canserial.CANSerial.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method representing the thread’s activity.</p>
+<p>You may override this method in a subclass. The standard run() method
+invokes the callable object passed to the object’s constructor as the
+target argument, if any, with sequential and keyword arguments taken
+from the args and kwargs arguments, respectively.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.canserial.CANSerial.send_data">
+<code class="descname">send_data</code><span class="sig-paren">(</span><em>module_id</em>, <em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.canserial.CANSerial.send_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="osgar.drivers.canserial.CANSerial.split_buffer">
+<em class="property">static </em><code class="descname">split_buffer</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.canserial.CANSerial.split_buffer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="osgar.drivers.canserial.CAN_packet">
+<code class="descclassname">osgar.drivers.canserial.</code><code class="descname">CAN_packet</code><span class="sig-paren">(</span><em>msg_id</em>, <em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.canserial.CAN_packet" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="osgar.drivers.canserial.get_node_id">
+<code class="descclassname">osgar.drivers.canserial.</code><code class="descname">get_node_id</code><span class="sig-paren">(</span><em>msg_id</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.canserial.get_node_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="osgar.drivers.canserial.is_nmt_message">
+<code class="descclassname">osgar.drivers.canserial.</code><code class="descname">is_nmt_message</code><span class="sig-paren">(</span><em>msg_id</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.canserial.is_nmt_message" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="osgar.drivers.canserial.parse_header">
+<code class="descclassname">osgar.drivers.canserial.</code><code class="descname">parse_header</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.canserial.parse_header" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="osgar.drivers.canserial.print_packet">
+<code class="descclassname">osgar.drivers.canserial.</code><code class="descname">print_packet</code><span class="sig-paren">(</span><em>data</em>, <em>dbc={}</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.canserial.print_packet" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-osgar.drivers.eduro">
+<span id="osgar-drivers-eduro-module"></span><h2>osgar.drivers.eduro module<a class="headerlink" href="#module-osgar.drivers.eduro" title="Permalink to this headline">¶</a></h2>
+<p>Driver for robot Eduro</p>
+<dl class="class">
+<dt id="osgar.drivers.eduro.Eduro">
+<em class="property">class </em><code class="descclassname">osgar.drivers.eduro.</code><code class="descname">Eduro</code><span class="sig-paren">(</span><em>config</em>, <em>bus</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.eduro.Eduro" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">threading.Thread</span></code></p>
+<dl class="method">
+<dt id="osgar.drivers.eduro.Eduro.check_restarted_modules">
+<code class="descname">check_restarted_modules</code><span class="sig-paren">(</span><em>module_id</em>, <em>status</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.eduro.Eduro.check_restarted_modules" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.eduro.Eduro.process_gen">
+<code class="descname">process_gen</code><span class="sig-paren">(</span><em>data</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.eduro.Eduro.process_gen" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.eduro.Eduro.process_packet">
+<code class="descname">process_packet</code><span class="sig-paren">(</span><em>packet</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.eduro.Eduro.process_packet" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.eduro.Eduro.request_stop">
+<code class="descname">request_stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.eduro.Eduro.request_stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.eduro.Eduro.run">
+<code class="descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.eduro.Eduro.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method representing the thread’s activity.</p>
+<p>You may override this method in a subclass. The standard run() method
+invokes the callable object passed to the object’s constructor as the
+target argument, if any, with sequential and keyword arguments taken
+from the args and kwargs arguments, respectively.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.eduro.Eduro.send_leds">
+<code class="descname">send_leds</code><span class="sig-paren">(</span><em>blue</em>, <em>red</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.eduro.Eduro.send_leds" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.eduro.Eduro.send_speed">
+<code class="descname">send_speed</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.eduro.Eduro.send_speed" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.eduro.Eduro.send_speed_ref">
+<code class="descname">send_speed_ref</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.eduro.Eduro.send_speed_ref" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.eduro.Eduro.update_buttons">
+<code class="descname">update_buttons</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.eduro.Eduro.update_buttons" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.eduro.Eduro.update_emergency_stop">
+<code class="descname">update_emergency_stop</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.eduro.Eduro.update_emergency_stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.eduro.Eduro.update_encoders">
+<code class="descname">update_encoders</code><span class="sig-paren">(</span><em>msg_id</em>, <em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.eduro.Eduro.update_encoders" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.eduro.Eduro.update_pose">
+<code class="descname">update_pose</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.eduro.Eduro.update_pose" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="osgar.drivers.eduro.sint32_diff">
+<code class="descclassname">osgar.drivers.eduro.</code><code class="descname">sint32_diff</code><span class="sig-paren">(</span><em>a</em>, <em>b</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.eduro.sint32_diff" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-osgar.drivers.gps">
+<span id="osgar-drivers-gps-module"></span><h2>osgar.drivers.gps module<a class="headerlink" href="#module-osgar.drivers.gps" title="Permalink to this headline">¶</a></h2>
+<p>GPS Driver</p>
+<dl class="class">
+<dt id="osgar.drivers.gps.GPS">
+<em class="property">class </em><code class="descclassname">osgar.drivers.gps.</code><code class="descname">GPS</code><span class="sig-paren">(</span><em>config</em>, <em>bus</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.gps.GPS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">threading.Thread</span></code></p>
+<dl class="method">
+<dt id="osgar.drivers.gps.GPS.process_gen">
+<code class="descname">process_gen</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.gps.GPS.process_gen" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.gps.GPS.process_packet">
+<code class="descname">process_packet</code><span class="sig-paren">(</span><em>line</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.gps.GPS.process_packet" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.gps.GPS.request_stop">
+<code class="descname">request_stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.gps.GPS.request_stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.gps.GPS.run">
+<code class="descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.gps.GPS.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method representing the thread’s activity.</p>
+<p>You may override this method in a subclass. The standard run() method
+invokes the callable object passed to the object’s constructor as the
+target argument, if any, with sequential and keyword arguments taken
+from the args and kwargs arguments, respectively.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="osgar.drivers.gps.checksum">
+<code class="descclassname">osgar.drivers.gps.</code><code class="descname">checksum</code><span class="sig-paren">(</span><em>s</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.gps.checksum" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="osgar.drivers.gps.parse_bin">
+<code class="descclassname">osgar.drivers.gps.</code><code class="descname">parse_bin</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.gps.parse_bin" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="osgar.drivers.gps.parse_line">
+<code class="descclassname">osgar.drivers.gps.</code><code class="descname">parse_line</code><span class="sig-paren">(</span><em>line</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.gps.parse_line" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="osgar.drivers.gps.print_output">
+<code class="descclassname">osgar.drivers.gps.</code><code class="descname">print_output</code><span class="sig-paren">(</span><em>packet</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.gps.print_output" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="osgar.drivers.gps.split_buffer">
+<code class="descclassname">osgar.drivers.gps.</code><code class="descname">split_buffer</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.gps.split_buffer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="osgar.drivers.gps.str2ms">
+<code class="descclassname">osgar.drivers.gps.</code><code class="descname">str2ms</code><span class="sig-paren">(</span><em>s</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.gps.str2ms" title="Permalink to this definition">¶</a></dt>
+<dd><p>convert DDMM.MMMMMM string to arc milliseconds(int)</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-osgar.drivers.imu">
+<span id="osgar-drivers-imu-module"></span><h2>osgar.drivers.imu module<a class="headerlink" href="#module-osgar.drivers.imu" title="Permalink to this headline">¶</a></h2>
+<p>Simple IMU data analysis</p>
+<dl class="class">
+<dt id="osgar.drivers.imu.IMU">
+<em class="property">class </em><code class="descclassname">osgar.drivers.imu.</code><code class="descname">IMU</code><span class="sig-paren">(</span><em>config</em>, <em>bus</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.imu.IMU" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">threading.Thread</span></code></p>
+<dl class="method">
+<dt id="osgar.drivers.imu.IMU.process_gen">
+<code class="descname">process_gen</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.imu.IMU.process_gen" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.imu.IMU.process_packet">
+<code class="descname">process_packet</code><span class="sig-paren">(</span><em>line</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.imu.IMU.process_packet" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.imu.IMU.request_stop">
+<code class="descname">request_stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.imu.IMU.request_stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.imu.IMU.run">
+<code class="descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.imu.IMU.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method representing the thread’s activity.</p>
+<p>You may override this method in a subclass. The standard run() method
+invokes the callable object passed to the object’s constructor as the
+target argument, if any, with sequential and keyword arguments taken
+from the args and kwargs arguments, respectively.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="osgar.drivers.imu.IMU.split_buffer">
+<em class="property">static </em><code class="descname">split_buffer</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.imu.IMU.split_buffer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="osgar.drivers.imu.parse_line">
+<code class="descclassname">osgar.drivers.imu.</code><code class="descname">parse_line</code><span class="sig-paren">(</span><em>line</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.imu.parse_line" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-osgar.drivers.logserial">
+<span id="osgar-drivers-logserial-module"></span><h2>osgar.drivers.logserial module<a class="headerlink" href="#module-osgar.drivers.logserial" title="Permalink to this headline">¶</a></h2>
+<p>Wrapper &amp; timestamper of input serial byte stream</p>
+<dl class="class">
+<dt id="osgar.drivers.logserial.LogSerial">
+<em class="property">class </em><code class="descclassname">osgar.drivers.logserial.</code><code class="descname">LogSerial</code><span class="sig-paren">(</span><em>config</em>, <em>bus</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logserial.LogSerial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="osgar.drivers.logserial.LogSerial.join">
+<code class="descname">join</code><span class="sig-paren">(</span><em>timeout=None</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logserial.LogSerial.join" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.logserial.LogSerial.request_stop">
+<code class="descname">request_stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logserial.LogSerial.request_stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.logserial.LogSerial.run_input">
+<code class="descname">run_input</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logserial.LogSerial.run_input" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.logserial.LogSerial.run_output">
+<code class="descname">run_output</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logserial.LogSerial.run_output" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.logserial.LogSerial.start">
+<code class="descname">start</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logserial.LogSerial.start" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-osgar.drivers.logsocket">
+<span id="osgar-drivers-logsocket-module"></span><h2>osgar.drivers.logsocket module<a class="headerlink" href="#module-osgar.drivers.logsocket" title="Permalink to this headline">¶</a></h2>
+<p>Wrapper &amp; timestamper of input/out over socket</p>
+<dl class="class">
+<dt id="osgar.drivers.logsocket.LogHTTP">
+<em class="property">class </em><code class="descclassname">osgar.drivers.logsocket.</code><code class="descname">LogHTTP</code><span class="sig-paren">(</span><em>config</em>, <em>bus</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logsocket.LogHTTP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="osgar.drivers.logsocket.LogHTTP.join">
+<code class="descname">join</code><span class="sig-paren">(</span><em>timeout=None</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logsocket.LogHTTP.join" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.logsocket.LogHTTP.request_stop">
+<code class="descname">request_stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logsocket.LogHTTP.request_stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.logsocket.LogHTTP.run_input">
+<code class="descname">run_input</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logsocket.LogHTTP.run_input" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.logsocket.LogHTTP.start">
+<code class="descname">start</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logsocket.LogHTTP.start" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="osgar.drivers.logsocket.LogSocket">
+<em class="property">class </em><code class="descclassname">osgar.drivers.logsocket.</code><code class="descname">LogSocket</code><span class="sig-paren">(</span><em>socket</em>, <em>config</em>, <em>bus</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logsocket.LogSocket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="osgar.drivers.logsocket.LogSocket.join">
+<code class="descname">join</code><span class="sig-paren">(</span><em>timeout=None</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logsocket.LogSocket.join" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.logsocket.LogSocket.request_stop">
+<code class="descname">request_stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logsocket.LogSocket.request_stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.logsocket.LogSocket.run_input">
+<code class="descname">run_input</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logsocket.LogSocket.run_input" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.logsocket.LogSocket.run_output">
+<code class="descname">run_output</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logsocket.LogSocket.run_output" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.logsocket.LogSocket.start">
+<code class="descname">start</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logsocket.LogSocket.start" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="osgar.drivers.logsocket.LogTCP">
+<em class="property">class </em><code class="descclassname">osgar.drivers.logsocket.</code><code class="descname">LogTCP</code><span class="sig-paren">(</span><em>config</em>, <em>bus</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logsocket.LogTCP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#osgar.drivers.logsocket.LogSocket" title="osgar.drivers.logsocket.LogSocket"><code class="xref py py-class docutils literal notranslate"><span class="pre">osgar.drivers.logsocket.LogSocket</span></code></a></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="osgar.drivers.logsocket.LogUDP">
+<em class="property">class </em><code class="descclassname">osgar.drivers.logsocket.</code><code class="descname">LogUDP</code><span class="sig-paren">(</span><em>config</em>, <em>bus</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.logsocket.LogUDP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#osgar.drivers.logsocket.LogSocket" title="osgar.drivers.logsocket.LogSocket"><code class="xref py py-class docutils literal notranslate"><span class="pre">osgar.drivers.logsocket.LogSocket</span></code></a></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-osgar.drivers.sicklidar">
+<span id="osgar-drivers-sicklidar-module"></span><h2>osgar.drivers.sicklidar module<a class="headerlink" href="#module-osgar.drivers.sicklidar" title="Permalink to this headline">¶</a></h2>
+<p>SICK Tim571 LIDAR Driver</p>
+<dl class="class">
+<dt id="osgar.drivers.sicklidar.SICKLidar">
+<em class="property">class </em><code class="descclassname">osgar.drivers.sicklidar.</code><code class="descname">SICKLidar</code><span class="sig-paren">(</span><em>config</em>, <em>bus</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.sicklidar.SICKLidar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">threading.Thread</span></code></p>
+<dl class="staticmethod">
+<dt id="osgar.drivers.sicklidar.SICKLidar.parse_raw_data">
+<em class="property">static </em><code class="descname">parse_raw_data</code><span class="sig-paren">(</span><em>raw_data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.sicklidar.SICKLidar.parse_raw_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.sicklidar.SICKLidar.process_gen">
+<code class="descname">process_gen</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.sicklidar.SICKLidar.process_gen" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.sicklidar.SICKLidar.process_packet">
+<code class="descname">process_packet</code><span class="sig-paren">(</span><em>packet</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.sicklidar.SICKLidar.process_packet" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.sicklidar.SICKLidar.request_stop">
+<code class="descname">request_stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.sicklidar.SICKLidar.request_stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.sicklidar.SICKLidar.run">
+<code class="descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.sicklidar.SICKLidar.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method representing the thread’s activity.</p>
+<p>You may override this method in a subclass. The standard run() method
+invokes the callable object passed to the object’s constructor as the
+target argument, if any, with sequential and keyword arguments taken
+from the args and kwargs arguments, respectively.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.sicklidar.SICKLidar.split_buffer">
+<code class="descname">split_buffer</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.sicklidar.SICKLidar.split_buffer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-osgar.drivers.simulator">
+<span id="osgar-drivers-simulator-module"></span><h2>osgar.drivers.simulator module<a class="headerlink" href="#module-osgar.drivers.simulator" title="Permalink to this headline">¶</a></h2>
+<p>Simple Spider Simulator</p>
+<dl class="class">
+<dt id="osgar.drivers.simulator.SpiderSimulator">
+<em class="property">class </em><code class="descclassname">osgar.drivers.simulator.</code><code class="descname">SpiderSimulator</code><span class="sig-paren">(</span><em>config</em>, <em>bus</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.simulator.SpiderSimulator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">threading.Thread</span></code></p>
+<dl class="method">
+<dt id="osgar.drivers.simulator.SpiderSimulator.get_position">
+<code class="descname">get_position</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.simulator.SpiderSimulator.get_position" title="Permalink to this definition">¶</a></dt>
+<dd><p>combine pose with ref GPS position</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.simulator.SpiderSimulator.get_wheels_angles_raw">
+<code class="descname">get_wheels_angles_raw</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.simulator.SpiderSimulator.get_wheels_angles_raw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.simulator.SpiderSimulator.request_stop">
+<code class="descname">request_stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.simulator.SpiderSimulator.request_stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.simulator.SpiderSimulator.run">
+<code class="descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.simulator.SpiderSimulator.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method representing the thread’s activity.</p>
+<p>You may override this method in a subclass. The standard run() method
+invokes the callable object passed to the object’s constructor as the
+target argument, if any, with sequential and keyword arguments taken
+from the args and kwargs arguments, respectively.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.simulator.SpiderSimulator.step">
+<code class="descname">step</code><span class="sig-paren">(</span><em>dt</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.simulator.SpiderSimulator.step" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-osgar.drivers.spider">
+<span id="osgar-drivers-spider-module"></span><h2>osgar.drivers.spider module<a class="headerlink" href="#module-osgar.drivers.spider" title="Permalink to this headline">¶</a></h2>
+<p>Spider3 Rider Driver</p>
+<dl class="function">
+<dt id="osgar.drivers.spider.CAN_packet">
+<code class="descclassname">osgar.drivers.spider.</code><code class="descname">CAN_packet</code><span class="sig-paren">(</span><em>msg_id</em>, <em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.spider.CAN_packet" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="osgar.drivers.spider.Spider">
+<em class="property">class </em><code class="descclassname">osgar.drivers.spider.</code><code class="descname">Spider</code><span class="sig-paren">(</span><em>config</em>, <em>bus</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.spider.Spider" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">threading.Thread</span></code></p>
+<dl class="staticmethod">
+<dt id="osgar.drivers.spider.Spider.fix_range">
+<em class="property">static </em><code class="descname">fix_range</code><span class="sig-paren">(</span><em>value</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.spider.Spider.fix_range" title="Permalink to this definition">¶</a></dt>
+<dd><p>into &lt;-256, +256) interval</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.spider.Spider.process_gen">
+<code class="descname">process_gen</code><span class="sig-paren">(</span><em>data</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.spider.Spider.process_gen" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.spider.Spider.process_packet">
+<code class="descname">process_packet</code><span class="sig-paren">(</span><em>packet</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.spider.Spider.process_packet" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.spider.Spider.request_stop">
+<code class="descname">request_stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.spider.Spider.request_stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.spider.Spider.run">
+<code class="descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.spider.Spider.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method representing the thread’s activity.</p>
+<p>You may override this method in a subclass. The standard run() method
+invokes the callable object passed to the object’s constructor as the
+target argument, if any, with sequential and keyword arguments taken
+from the args and kwargs arguments, respectively.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.spider.Spider.send">
+<code class="descname">send</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.spider.Spider.send" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="osgar.drivers.spider.Spider.split_buffer">
+<em class="property">static </em><code class="descname">split_buffer</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.spider.Spider.split_buffer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-osgar.drivers.test_canserial">
+<span id="osgar-drivers-test-canserial-module"></span><h2>osgar.drivers.test_canserial module<a class="headerlink" href="#module-osgar.drivers.test_canserial" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="osgar.drivers.test_canserial.CANSerialTest">
+<em class="property">class </em><code class="descclassname">osgar.drivers.test_canserial.</code><code class="descname">CANSerialTest</code><span class="sig-paren">(</span><em>methodName='runTest'</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_canserial.CANSerialTest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">unittest.case.TestCase</span></code></p>
+<dl class="method">
+<dt id="osgar.drivers.test_canserial.CANSerialTest.test_can_bridge_initialization">
+<code class="descname">test_can_bridge_initialization</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_canserial.CANSerialTest.test_can_bridge_initialization" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_canserial.CANSerialTest.test_can_packet">
+<code class="descname">test_can_packet</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_canserial.CANSerialTest.test_can_packet" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_canserial.CANSerialTest.test_invalid_config">
+<code class="descname">test_invalid_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_canserial.CANSerialTest.test_invalid_config" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_canserial.CANSerialTest.test_reset_module">
+<code class="descname">test_reset_module</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_canserial.CANSerialTest.test_reset_module" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_canserial.CANSerialTest.test_split_buffer">
+<code class="descname">test_split_buffer</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_canserial.CANSerialTest.test_split_buffer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-osgar.drivers.test_eduro">
+<span id="osgar-drivers-test-eduro-module"></span><h2>osgar.drivers.test_eduro module<a class="headerlink" href="#module-osgar.drivers.test_eduro" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="osgar.drivers.test_eduro.EduroTest">
+<em class="property">class </em><code class="descclassname">osgar.drivers.test_eduro.</code><code class="descname">EduroTest</code><span class="sig-paren">(</span><em>methodName='runTest'</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_eduro.EduroTest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">unittest.case.TestCase</span></code></p>
+<dl class="method">
+<dt id="osgar.drivers.test_eduro.EduroTest.test_buttons">
+<code class="descname">test_buttons</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_eduro.EduroTest.test_buttons" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_eduro.EduroTest.test_encoders_overflow">
+<code class="descname">test_encoders_overflow</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_eduro.EduroTest.test_encoders_overflow" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_eduro.EduroTest.test_sint32_diff">
+<code class="descname">test_sint32_diff</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_eduro.EduroTest.test_sint32_diff" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_eduro.EduroTest.test_sync">
+<code class="descname">test_sync</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_eduro.EduroTest.test_sync" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-osgar.drivers.test_gps">
+<span id="osgar-drivers-test-gps-module"></span><h2>osgar.drivers.test_gps module<a class="headerlink" href="#module-osgar.drivers.test_gps" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="osgar.drivers.test_gps.GPSTest">
+<em class="property">class </em><code class="descclassname">osgar.drivers.test_gps.</code><code class="descname">GPSTest</code><span class="sig-paren">(</span><em>methodName='runTest'</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_gps.GPSTest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">unittest.case.TestCase</span></code></p>
+<dl class="method">
+<dt id="osgar.drivers.test_gps.GPSTest.test_checksum">
+<code class="descname">test_checksum</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_gps.GPSTest.test_checksum" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_gps.GPSTest.test_invalid_coordinates">
+<code class="descname">test_invalid_coordinates</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_gps.GPSTest.test_invalid_coordinates" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_gps.GPSTest.test_parse_line">
+<code class="descname">test_parse_line</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_gps.GPSTest.test_parse_line" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_gps.GPSTest.test_parse_position_velocity_time_solution">
+<code class="descname">test_parse_position_velocity_time_solution</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_gps.GPSTest.test_parse_position_velocity_time_solution" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_gps.GPSTest.test_parse_rel_position">
+<code class="descname">test_parse_rel_position</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_gps.GPSTest.test_parse_rel_position" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_gps.GPSTest.test_parse_velocity_and_heading">
+<code class="descname">test_parse_velocity_and_heading</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_gps.GPSTest.test_parse_velocity_and_heading" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_gps.GPSTest.test_parsing_old_GPGGA">
+<code class="descname">test_parsing_old_GPGGA</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_gps.GPSTest.test_parsing_old_GPGGA" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_gps.GPSTest.test_split">
+<code class="descname">test_split</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_gps.GPSTest.test_split" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_gps.GPSTest.test_split_with_binary_data">
+<code class="descname">test_split_with_binary_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_gps.GPSTest.test_split_with_binary_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_gps.GPSTest.test_str2ms">
+<code class="descname">test_str2ms</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_gps.GPSTest.test_str2ms" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-osgar.drivers.test_imu">
+<span id="osgar-drivers-test-imu-module"></span><h2>osgar.drivers.test_imu module<a class="headerlink" href="#module-osgar.drivers.test_imu" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="osgar.drivers.test_imu.IMUTest">
+<em class="property">class </em><code class="descclassname">osgar.drivers.test_imu.</code><code class="descname">IMUTest</code><span class="sig-paren">(</span><em>methodName='runTest'</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_imu.IMUTest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">unittest.case.TestCase</span></code></p>
+<dl class="attribute">
+<dt id="osgar.drivers.test_imu.IMUTest.nmea_line">
+<code class="descname">nmea_line</code><em class="property"> = b'$VNYMR,-095.878,+008.933,-009.419,+00.1785,+00.1474,+00.5479,+00.252,-03.706,-03.874,-01.012502,-00.234810,+00.247165*66'</em><a class="headerlink" href="#osgar.drivers.test_imu.IMUTest.nmea_line" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_imu.IMUTest.test_parse_line">
+<code class="descname">test_parse_line</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_imu.IMUTest.test_parse_line" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_imu.IMUTest.test_processing">
+<code class="descname">test_processing</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_imu.IMUTest.test_processing" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_imu.IMUTest.test_start_stop">
+<code class="descname">test_start_stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_imu.IMUTest.test_start_stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-osgar.drivers.test_logserial">
+<span id="osgar-drivers-test-logserial-module"></span><h2>osgar.drivers.test_logserial module<a class="headerlink" href="#module-osgar.drivers.test_logserial" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="osgar.drivers.test_logserial.LogSerialTest">
+<em class="property">class </em><code class="descclassname">osgar.drivers.test_logserial.</code><code class="descname">LogSerialTest</code><span class="sig-paren">(</span><em>methodName='runTest'</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_logserial.LogSerialTest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">unittest.case.TestCase</span></code></p>
+<dl class="method">
+<dt id="osgar.drivers.test_logserial.LogSerialTest.test_config_reset">
+<code class="descname">test_config_reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_logserial.LogSerialTest.test_config_reset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_logserial.LogSerialTest.test_timeout_config">
+<code class="descname">test_timeout_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_logserial.LogSerialTest.test_timeout_config" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_logserial.LogSerialTest.test_twoway_communication">
+<code class="descname">test_twoway_communication</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_logserial.LogSerialTest.test_twoway_communication" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-osgar.drivers.test_logsocket">
+<span id="osgar-drivers-test-logsocket-module"></span><h2>osgar.drivers.test_logsocket module<a class="headerlink" href="#module-osgar.drivers.test_logsocket" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="osgar.drivers.test_logsocket.LogSocketTest">
+<em class="property">class </em><code class="descclassname">osgar.drivers.test_logsocket.</code><code class="descname">LogSocketTest</code><span class="sig-paren">(</span><em>methodName='runTest'</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_logsocket.LogSocketTest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">unittest.case.TestCase</span></code></p>
+<dl class="method">
+<dt id="osgar.drivers.test_logsocket.LogSocketTest.test_tcp_send">
+<code class="descname">test_tcp_send</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_logsocket.LogSocketTest.test_tcp_send" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_logsocket.LogSocketTest.test_udp_send">
+<code class="descname">test_udp_send</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_logsocket.LogSocketTest.test_udp_send" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-osgar.drivers.test_sicklidar">
+<span id="osgar-drivers-test-sicklidar-module"></span><h2>osgar.drivers.test_sicklidar module<a class="headerlink" href="#module-osgar.drivers.test_sicklidar" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="osgar.drivers.test_sicklidar.SICKLidarTest">
+<em class="property">class </em><code class="descclassname">osgar.drivers.test_sicklidar.</code><code class="descname">SICKLidarTest</code><span class="sig-paren">(</span><em>methodName='runTest'</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_sicklidar.SICKLidarTest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">unittest.case.TestCase</span></code></p>
+<dl class="method">
+<dt id="osgar.drivers.test_sicklidar.SICKLidarTest.test_parse_raw_data">
+<code class="descname">test_parse_raw_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_sicklidar.SICKLidarTest.test_parse_raw_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_sicklidar.SICKLidarTest.test_sleep">
+<code class="descname">test_sleep</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_sicklidar.SICKLidarTest.test_sleep" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_sicklidar.SICKLidarTest.test_start_stop">
+<code class="descname">test_start_stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_sicklidar.SICKLidarTest.test_start_stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-osgar.drivers.test_simulator">
+<span id="osgar-drivers-test-simulator-module"></span><h2>osgar.drivers.test_simulator module<a class="headerlink" href="#module-osgar.drivers.test_simulator" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="osgar.drivers.test_simulator.SpiderSimulatorTest">
+<em class="property">class </em><code class="descclassname">osgar.drivers.test_simulator.</code><code class="descname">SpiderSimulatorTest</code><span class="sig-paren">(</span><em>methodName='runTest'</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_simulator.SpiderSimulatorTest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">unittest.case.TestCase</span></code></p>
+<dl class="method">
+<dt id="osgar.drivers.test_simulator.SpiderSimulatorTest.test_get_position">
+<code class="descname">test_get_position</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_simulator.SpiderSimulatorTest.test_get_position" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_simulator.SpiderSimulatorTest.test_get_wheels_angles_raw">
+<code class="descname">test_get_wheels_angles_raw</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_simulator.SpiderSimulatorTest.test_get_wheels_angles_raw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_simulator.SpiderSimulatorTest.test_usage">
+<code class="descname">test_usage</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_simulator.SpiderSimulatorTest.test_usage" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-osgar.drivers.test_spider">
+<span id="osgar-drivers-test-spider-module"></span><h2>osgar.drivers.test_spider module<a class="headerlink" href="#module-osgar.drivers.test_spider" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="osgar.drivers.test_spider.SpiderTest">
+<em class="property">class </em><code class="descclassname">osgar.drivers.test_spider.</code><code class="descname">SpiderTest</code><span class="sig-paren">(</span><em>methodName='runTest'</em><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_spider.SpiderTest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">unittest.case.TestCase</span></code></p>
+<dl class="method">
+<dt id="osgar.drivers.test_spider.SpiderTest.test_can_packet">
+<code class="descname">test_can_packet</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_spider.SpiderTest.test_can_packet" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_spider.SpiderTest.test_publish_status">
+<code class="descname">test_publish_status</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_spider.SpiderTest.test_publish_status" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_spider.SpiderTest.test_split_buffer">
+<code class="descname">test_split_buffer</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_spider.SpiderTest.test_split_buffer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="osgar.drivers.test_spider.SpiderTest.test_uninitialized_can_bridge">
+<code class="descname">test_uninitialized_can_bridge</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#osgar.drivers.test_spider.SpiderTest.test_uninitialized_can_bridge" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-osgar.drivers">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-osgar.drivers" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">osgar</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="logging.html">Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="howto.html">How to control my robot with OSGAR?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="eduro.html">Robot Eduro</a></li>
+<li class="toctree-l1"><a class="reference internal" href="drivers.html">Drivers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="can.html">CAN Bus Bridge</a></li>
+<li class="toctree-l1"><a class="reference internal" href="msgtypes.html">Message Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, robotika.cz.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/osgar.drivers.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

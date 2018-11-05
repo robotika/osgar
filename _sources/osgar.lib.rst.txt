@@ -1,0 +1,54 @@
+osgar.lib package
+=================
+
+Submodules
+----------
+
+osgar.lib.config module
+-----------------------
+
+.. automodule:: osgar.lib.config
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+osgar.lib.mathex module
+-----------------------
+
+.. automodule:: osgar.lib.mathex
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+osgar.lib.serialize module
+--------------------------
+
+.. automodule:: osgar.lib.serialize
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+osgar.lib.test\_config module
+-----------------------------
+
+.. automodule:: osgar.lib.test_config
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+osgar.lib.test\_serialize module
+--------------------------------
+
+.. automodule:: osgar.lib.test_serialize
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: osgar.lib
+    :members:
+    :undoc-members:
+    :show-inheritance:
