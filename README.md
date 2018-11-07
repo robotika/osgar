@@ -36,7 +36,7 @@ used.
 
 ### Collect data from sensor(s)
 
-There is a [osgar/robot.py](https://github.com/robotika/osgar/blob/master/osgar/robot.py)
+There is a [osgar/record.py](https://github.com/robotika/osgar/blob/master/osgar/record.py)
 to run data collection based on given configuration file.
 If you would like to collect GPS data available on serial port use modified version
 of [test-windows-gps.json](https://github.com/robotika/osgar/blob/master/config/test-windows-gps.json)
@@ -45,11 +45,11 @@ for Windows or
 
 
 ```
-python ./osgar/robot.py run config/test-windows-gps.json
+python -m osgar.record config/test-windows-gps.json
 ```
 
 To replay existing log use:
 ```
-python ./osgar/replay.py --module <module name> <log file name>
+python -m osgar.replay --module <module name> <log file name>
 ```
 
