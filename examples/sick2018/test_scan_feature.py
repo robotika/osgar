@@ -1,7 +1,7 @@
 import unittest
 import math
 
-from osgar.lib.scan_feature import (extract_features, scan_split,
+from scan_feature import (extract_features, scan_split,
                                     is_box_center, find_transporter,
                                     shift_polar)
 

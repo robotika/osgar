@@ -22,9 +22,10 @@ import math
 from datetime import timedelta
 
 from osgar.lib.config import load as config_load
-from osgar.lib.scan_feature import detect_box, detect_transporter
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.record import Recorder
+
+from scan_feature import detect_box, detect_transporter
 
 
 # TODO shared place for multiple applications
