@@ -1,12 +1,15 @@
 #!/usr/bin/python
 """
-  Conversion utility from socket bin files to pcap format
+  Conversion utility from log files to pcap format
   usage:
-       ./bin2pcap.py <input file(s)> <output directory>
+       ./log2pcap.py <input file(s)> <output directory>
 """
 import sys
 import os
 from binascii import unhexlify
+
+from osgar.logger import LogReader, lookup_stream_id
+from osgar.lib.serialize import deserialize
 
 # Notes:
 #   Source https://github.com/kisom/pypcapfile was used for parsing original
@@ -22,30 +25,27 @@ PACKET_HEADER = '715fb15517bb0a00e0040000e0040000'
 IP_HEADER = 'ffffffffffff6076880000000800450004d200004000ff11b4aac0a801c8ffffffff0940094004be0000'
 
 
-def bin2pcap(filename, output_dir):
-    new_name = os.path.join(output_dir, os.path.split(filename)[1])
-    assert new_name.endswith('.bin'), new_name
-    new_name = new_name[:-4] + '.pcap'
-    print(new_name)
-    f = open(filename, 'rb')
-    out = open(new_name, 'wb')
-    out.write(unhexlify(FILE_HEADER))
-    while True:
-        packet = f.read(1206)
-        if len(packet) == 0:
-            break  # EOF
-        assert len(packet) == 1206, len(packet)
-        out.write(unhexlify(PACKET_HEADER))  # TODO revise timestamps
-        out.write(unhexlify(IP_HEADER))
-        out.write(packet)
+def log2pcap(input_filepath, output_dir):
+    """
+       Extract from logfile Velodyne UPD packets and save them in 'pcap' format
+       undestandable by Wireshark and VeloView.
+    """
+    output_filepath = os.path.join(output_dir, os.path.basename(input_filepath))
+    assert output_filepath.endswith('.log'), output_filepath
+    output_filepath = output_filepath[:-4] + '.pcap'
+    print(output_filepath)
 
+    only_stream = lookup_stream_id(input_filepath, 'velodyne.raw')
+    with LogReader(input_filepath) as log, open(output_filepath, 'wb') as out:
+        out.write(unhexlify(FILE_HEADER))
+        for timestamp, stream_id, data in log.read_gen(only_stream):
+            packet = deserialize(data)
+            assert len(packet) == 1206, len(packet)
 
-def velodyne_bin_file(filename):
-    for line in open(filename):
-        if line.startswith('velodyne:'):
-            return os.path.join(os.path.split(filename)[0], 
-                                line.split('/')[-1].strip())
-    return None
+            out.write(unhexlify(PACKET_HEADER))  # TODO revise timestamps
+            out.write(unhexlify(IP_HEADER))
+            out.write(packet)
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
@@ -54,10 +54,7 @@ if __name__ == "__main__":
 
     output_dir = sys.argv[-1]
     for filename in sys.argv[1:-1]:
-        if 'meta_' in filename:
-            filename = velodyne_bin_file(filename)
-        if filename:
-            bin2pcap(filename, output_dir)
+        log2pcap(filename, output_dir)
 
 # vim: expandtab sw=4 ts=4 
 
