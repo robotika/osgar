@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["emergency_stop", "pose2d"],
+          "out": ["desired_speed"],
+          "init": {
+            "max_speed": 0.5
+          }
+      },
+      "cortexpilot": {
+          "driver": "osgar.drivers.cortexpilot:Cortexpilot",
+          "in": ["raw", "desired_speed"],
+          "out": ["raw", "encoders", "emergency_stop", "pose2d", "scan"],
+          "init": {}
+      },
+      "serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyACM0", "speed": 115200}
+      }
+    },
+    "links": [["app.desired_speed", "cortexpilot.desired_speed"],
+              ["cortexpilot.pose2d", "app.pose2d"],
+              ["cortexpilot.emergency_stop", "app.emergency_stop"],
+              ["serial.raw", "cortexpilot.raw"], 
+              ["cortexpilot.raw", "serial.raw"]]
+  }
+}
