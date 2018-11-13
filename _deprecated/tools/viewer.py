@@ -83,8 +83,9 @@ def loadData(filename):
                 scans = []
                 for i, s in enumerate(scan):
                     angle = math.radians(135) - math.radians(270) * i/(len(scan)-1)
+                    angle = -angle  # now it is up
                     dist = s/1000.0
-                    if math.radians(-90) <= angle <= math.radians(+90):
+                    if True:  # math.radians(-90) <= angle <= math.radians(+90):
                         scans.append((getCombinedPose(pose, (0, 0, angle)), dist))
                 scans.append((pose, -3))  # "MCL pose" (for draw all without sensors)
                 poses_set.append((poses, scans, image, camdir, compass))
