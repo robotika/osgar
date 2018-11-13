@@ -12,6 +12,10 @@ import io
 
 from pygame.locals import *
 
+from osgar.logger import LogReader, lookup_stream_id
+from osgar.lib.serialize import deserialize
+
+
 printPosition = True
 printEncoders = True
 
@@ -26,6 +30,10 @@ track_size = 2
 tile_size = 0.5
 
 scale = 1.0
+
+# global timestamps - workaround
+g_timestamps = []
+
 
 def deg(degAngle): return math.pi*degAngle/180.0
 
@@ -48,7 +56,49 @@ def getCombinedPose( pose, sensorPose ):
   heading = sensorPose[2] + pose[2]
   return (x, y, heading)
 
-def loadData( filename ):
+
+def loadData(filename):
+    m = []
+    poses_set = []
+
+    pose = (0, 0, 0)
+    poses = [pose,]
+    scans = []
+    image = None
+    camdir = None
+    compass = None
+
+    laser_id = lookup_stream_id(filename, 'lidar.scan')
+    camera_id = lookup_stream_id(filename, 'camera.raw')  # TODO refactor
+    try:
+        pose_id = lookup_stream_id(filename, 'eduro.pose2d')  # TODO what other source than Eduro?
+    except ValueError:
+        pose_id = None
+    
+    with LogReader(filename) as log:
+        for timestamp, stream_id, data in log.read_gen():
+            if stream_id == laser_id:
+                scan = deserialize(data)
+                angle_scale = 270/(len(scan)-1)
+                scans = []
+                for i, s in enumerate(scan):
+                    angle = math.radians(135) - math.radians(270) * i/(len(scan)-1)
+                    dist = s/1000.0
+                    if math.radians(-90) <= angle <= math.radians(+90):
+                        scans.append((getCombinedPose(pose, (0, 0, angle)), dist))
+                scans.append((pose, -3))  # "MCL pose" (for draw all without sensors)
+                poses_set.append((poses, scans, image, camdir, compass))
+                g_timestamps.append(timestamp)
+            elif stream_id == camera_id:
+                image = deserialize(data)
+            elif stream_id == pose_id:
+                x, y, heading = deserialize(data)
+                pose = (x/1000.0, y/1000.0, math.radians(heading/100.0))
+                poses = [pose,]
+    return poses_set, m
+
+
+def loadData_legacy( filename ):
 #  geometry = ( ( -0.02, 0.04, deg(90) ), ( -0.02, -0.04, deg(-90) ) )
 #  geometry = ( ( -0.09, 0.14, deg(90) ), ( -0.09, -0.14, deg(-90) ) )
 #  geometry = ( ( -0.09, 0.14, deg(90) ), ( -0.09, -0.14, deg(-90) ), 
@@ -168,6 +218,13 @@ def drawMap( foreground, map ):
     pygame.draw.line( foreground, (0,255,255), scr1(m[0]), scr1(m[1]),5)
 
 def drawImage( foreground, imgFileName, camdir ):
+  if imgFileName is not None and imgFileName.startswith(b'\xff\xd8'):
+      buf = imgFileName # direct image
+      camera = pygame.image.load(io.BytesIO(buf), 'JPG').convert()
+      cameraView = pygame.transform.scale( camera, (512, 384) )
+      foreground.blit( cameraView, (size[0]-512,0) )
+      return
+
   if imgFileName:
 #  imgFileName = 'D:\\md\\hg\\eduro-logs\\100619-rychnov\\pes1\\cam100619_145404_000.jpg'
     if '.zip' in imgFileName:
@@ -196,8 +253,8 @@ def drawTiles( background ):
   tile_size_px = to_px(tile_size)
   for x in range(0, size[0] + tile_size_px, tile_size_px):
     for y in range(0, size[1] + tile_size_px, tile_size_px):
-      if (x / tile_size_px) % 2 == (y / tile_size_px) % 2:
-        background.fill((235, 235, 235), Rect(x, size[1] - y, tile_size_px, tile_size_px))
+      if (x // tile_size_px) % 2 == (y // tile_size_px) % 2:
+        background.fill((235, 235, 235), Rect(x, max(0, size[1] - y), tile_size_px, tile_size_px + min(0, size[1] - y)))
   # draw scale
   pygame.draw.line( background, (255,0,0), (20,size[1]-20), (20+to_px(1.0),size[1]-20),3)
   pygame.draw.line( background, (255,0,0), (20,size[1]-10), (20,size[1]-30),1)
@@ -271,13 +328,16 @@ def main( filename, scale = 1.0, startIndex = None, posesScanSet=None ):
   imgFileName = None
   lastImgFileName = None
   while 1:
-    if imgFileName:
+    if isinstance(imgFileName, bytes):
+      t = filename  # 'raw JPEG data'
+    elif imgFileName:
       t = str(imgFileName)+' ***'
       lastImgFileName = imgFileName
     else:
       t = str(lastImgFileName)
 
-    pygame.display.set_caption("Index: %d, sensors %s, img %s" % (index, shouldDrawSensors and "on" or "off", t) )
+    timestamp = g_timestamps[index]
+    pygame.display.set_caption(str(timestamp) + " Index: %d, sensors %s, %s" % (index, shouldDrawSensors and "on" or "off", t) )
     shouldRefreshNow = False
     event = pygame.event.wait()
     if event.type == QUIT: return
@@ -314,7 +374,7 @@ def main( filename, scale = 1.0, startIndex = None, posesScanSet=None ):
       if event.key == K_DOWN:
         globals()['offset'] = (offset[0], offset[1]-150)
         shouldRefreshNow = True
-      if event.key == K_PLUS or event.key == K_KP_PLUS:
+      if event.key == K_PLUS or event.key == K_KP_PLUS or event.key == 61:
         globals()['scale'] *= 2.0
         globals()['tile_size'] /= 2.0
         shouldDrawTiles = shouldDrawMap = shouldDrawSensors = shouldDrawBeacons = True
@@ -382,4 +442,6 @@ if __name__ == "__main__":
     if len(args) > 3:
       tile_size = float( args[3] )
   main(args[1], scale=scale, startIndex=startIndex)
+
+# vim: expandtab sw=4 ts=4 
 
