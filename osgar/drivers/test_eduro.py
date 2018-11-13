@@ -66,5 +66,15 @@ class EduroTest(unittest.TestCase):
         self.assertEqual(sint32_diff(-0x7FFFFFFF, 0x7FFFFFFF), 2)
         self.assertEqual(sint32_diff(0x7FFFFFFF, -0x7FFFFFFF), -2)
 
+    def test_float_speed_bug(self):
+        bus = MagicMock()
+        eduro = Eduro(config={}, bus=bus)
+        # set internal values before crash
+        eduro.desired_speed = 0.71
+        eduro.desired_angular_speed = 1.6952383024620923
+        eduro._rampLastLeft = 1417
+        eduro._rampLastRight = 3891
+        eduro.send_speed()
+        bus.publish.assert_called_once_with('can', b'@$\xa9\x05\xa0\x0f')
 
 # vim: expandtab sw=4 ts=4

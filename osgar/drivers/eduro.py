@@ -137,16 +137,16 @@ class Eduro(Thread):
 
         maxLim = 4000
         if left > maxLim:
-            right = right*maxLim/left
+            right = right*maxLim//left
             left = maxLim
         if left < -maxLim:
-            right = -right*maxLim/left
+            right = -right*maxLim//left
             left = -maxLim
         if right > maxLim:
-            left = left*maxLim/right
+            left = left*maxLim//right
             right = maxLim
         if right < -maxLim:
-            left = -left*maxLim/right
+            left = -left*maxLim//right
             right = -maxLim
 
         self.bus.publish('can', CAN_packet(0x201, [
