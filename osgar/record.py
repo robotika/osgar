@@ -9,8 +9,7 @@ import time
 from queue import Queue
 
 from osgar.logger import LogWriter
-from osgar.lib.config import load
-from osgar.drivers import all_drivers
+from osgar.lib.config import load, get_class_by_name
 from osgar.bus import BusHandler
 
 
@@ -31,7 +30,8 @@ class Recorder:
                 assert application is not None  # external application required
                 module = application(module_config['init'], bus=bus)
             else:
-                module = all_drivers[module_class](module_config['init'], bus=bus)
+                module = get_class_by_name(module_class)(module_config['init'], bus=bus)
+
             self.modules[module_name] = module
 
         for from_module, to_module in config['links']:

@@ -2,10 +2,24 @@
   Osgar Config Class
 """
 import json
+from importlib import import_module
+
+from osgar.drivers import all_drivers
 
 
 ROBOT_CONTAINER_VER = 2
 SUPPORTED_VERSIONS = [ROBOT_CONTAINER_VER]
+
+
+def get_class_by_name(name):
+    if name in all_drivers:
+        return all_drivers[name]
+    assert ':' in name, name  # import path and class name expected
+    s = name.split(':')
+    assert len(s) == 2  # package and class name
+    module_name, class_name = s
+    m = import_module(module_name)
+    return getattr(m, class_name)
 
 
 class MergeConflictError(Exception):
