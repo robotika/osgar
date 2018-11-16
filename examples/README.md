@@ -3,9 +3,16 @@ Examples of OSGAR usage
 
 This is place for some examples of robot and scenarios where OSGAR was used.
 
+Create your own robot driver (myrobot)
+--------------------------------------
 
-SICK Robot Day 2018
--------------------
+This example demonstrates how to extend existing OSGAR to support also your
+specific robot. Here only simple simulation is used so it should run without
+need to have any extra hardware.
+
+
+SICK Robot Day 2018 (sick2018)
+------------------------------
 
 The German manufacture of LIDARs (laser scanner SICK) organizes every two years
 competition in Waldkirch/Germany. The company provides testing samples of
