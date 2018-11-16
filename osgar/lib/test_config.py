@@ -1,10 +1,15 @@
 import os
 import unittest
-from osgar.lib.config import load, merge_dict, MergeConflictError
-
+from osgar.lib.config import load, merge_dict, MergeConflictError, get_class_by_name
+from osgar.drivers.logsocket import LogTCP
 
 def test_data(filename, test_dir='test_data'):
     return os.path.join(os.path.dirname(__file__), test_dir, filename)
+
+
+class MyTestRobot:
+    def get_name(self):
+        return 'Karel'
 
 
 class ConfigTest(unittest.TestCase):
@@ -38,6 +43,16 @@ class ConfigTest(unittest.TestCase):
 
         with self.assertRaises(MergeConflictError) as e:
             merge_dict({'A':{'B':1}}, {'A':2})
+
+    def test_get_class_by_name(self):
+        robot = get_class_by_name('osgar.lib.test_config:MyTestRobot')()
+        self.assertEqual(robot.get_name(), 'Karel')
+
+        node = get_class_by_name('tcp')
+        self.assertEqual(node, LogTCP)
+
+        node = get_class_by_name('udp')
+        self.assertNotEqual(node, LogTCP)
 
 # vim: expandtab sw=4 ts=4
 

@@ -12,9 +12,8 @@ from queue import Queue
 import numpy as np
 
 from osgar.logger import LogReader
-from osgar.lib.config import load as config_load
+from osgar.lib.config import load as config_load, get_class_by_name
 from osgar.bus import LogBusHandler, LogBusHandlerInputsOnly
-from osgar.drivers import all_drivers
 
 
 def replay(args, application=None):
@@ -58,10 +57,10 @@ def replay(args, application=None):
     driver_name = module_config['driver']
     if driver_name == 'application':
         assert application is not None
-        module_class = application(module_config['init'], bus=bus)
+        module_class = application
     else:
-        module_class = all_drivers[driver_name](module_config['init'], bus=bus)
-    return module_class
+        module_class = get_class_by_name(driver_name)
+    return module_class(module_config['init'], bus=bus)
 
 
 if __name__ == "__main__":
