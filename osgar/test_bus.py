@@ -141,4 +141,11 @@ class BusHandlerTest(unittest.TestCase):
         bus = LogBusHandlerInputsOnly(logger, inputs={})
         bus.sleep(0.1)
 
+    def test_publish_exception(self):
+        logger = MagicMock()
+        bus = BusHandler(logger=logger, out={'stdout':[]})
+        bus.shutdown()
+        with self.assertRaises(BusShutdownException):
+            bus.publish('stdout', 'world is dead!')
+
 # vim: expandtab sw=4 ts=4

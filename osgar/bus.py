@@ -29,6 +29,8 @@ class BusHandler:
         self._is_alive = True
 
     def publish(self, channel, data):
+        if not self._is_alive:
+            raise BusShutdownException()
         with self.logger.lock:
             stream_id = self.stream_id[channel]  # local maping of indexes
             timestamp = self.logger.write(stream_id, serialize(data))
