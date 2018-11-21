@@ -8,9 +8,6 @@ Glossary
       The bus takes care of sequencing all messages within the sysem and
       serialization via logging facility.
 
-   driver
-      Implementation of common nodes like TCP communication with outer world.
-
    link
       Directed connection of two nodes. The source node generates messages by
       `publish` call and the destinaion node accepts them via `listen` call.
@@ -19,7 +16,8 @@ Glossary
       Binary file containing message data with their source and timestamp.
 
    node
-      The basic unit attached to `bus`. It has fixed set of inputs and outputs.
+      The basic processing unit attached to `bus`. It has fixed set of inputs
+      and outputs. Some nodes implement communication with outer world like TCP.
 
    OSGAR
       Open Source Garden/Generic Autonomous Robot (Python library)
