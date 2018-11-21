@@ -3,7 +3,7 @@
 [Full Changelog](https://github.com/robotika/osgar/compare/v0.1.0...master)
 
 
-## [v0.1.0](https://github.com/robotika/osgar/tree/v0.1.0) (2018-11-DD)
+## [v0.1.0](https://github.com/robotika/osgar/tree/v0.1.0) (2018-11-21)
 [Full Changelog](https://github.com/robotika/osgar/compare/v0.0.1...v0.1.0)
 
 **osgar:**
