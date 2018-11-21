@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="osgar",
-    version="0.0.1",
+    version="0.1.0",
     install_requires=[
           'pyserial',
           'msgpack>=0.5.0',
