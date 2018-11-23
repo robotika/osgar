@@ -8,6 +8,7 @@ from .logsocket import (LogTCPStaticIP, LogTCPDynamicIP, LogTCPServer,
                         LogUDP, LogHTTP)
 from .sicklidar import SICKLidar
 from .eduro import Eduro
+from .rosproxy import ROSProxy
 
 # dictionary of all available drivers
 all_drivers = dict(gps=GPS, imu=IMU, spider=Spider, serial=LogSerial,
@@ -15,5 +16,7 @@ all_drivers = dict(gps=GPS, imu=IMU, spider=Spider, serial=LogSerial,
                    tcp=LogTCPStaticIP, tcpdynamic=LogTCPDynamicIP,
                    tcpserver=LogTCPServer, udp=LogUDP, http=LogHTTP,
                    lidar=SICKLidar,
-                   eduro=Eduro)
+                   eduro=Eduro,
+                   rosproxy=ROSProxy,
+                   )
 
