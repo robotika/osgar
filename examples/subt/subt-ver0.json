@@ -1,0 +1,135 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["emergency_stop", "pose2d", "scan"],
+          "out": ["desired_speed"],
+          "init": {
+            "max_speed": 0.5
+          }
+      },
+      "ros": {
+          "driver": "rosproxy",
+          "in": ["desired_speed", "cmd_vel", "imu_data"],
+          "out": ["emergency_stop", "pose2d", "cmd_vel", "imu_data",
+	          "laser_data", "image_data", "odom_data"],
+          "init": {
+            "ros_master_uri": "http://127.0.0.1:11311",
+            "ros_client_uri": "http://127.0.0.1:8000",
+            "topic": "/X1/cmd_vel",
+            "topic_type": "geometry_msgs/Twist",
+            "subscribe": [
+                        ["/X1/imu/data", "std_msgs/Imu", "imu_data"],
+                        ["/X1/front_scan", "sensor_msgs/LaserScan", "laser_data"],
+                        ["/X1/front/image_raw/compressed", "sensor_msgs/CompressedImage", "image_data"],
+                        ["/X1/x1_velocity_controller/odom", "nav_msgs/Odometry", "odom_data"]
+                    ]
+
+          }
+      },
+      "timer": {
+          "driver": "mytimer:MyTimer",
+          "in": [],
+          "out": ["tick"],
+          "init": {
+            "sleep": 0.1
+          }
+      },
+      "tcp_cmd_vel": {
+          "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {
+            "server": true,
+            "host": "127.0.0.1",
+            "port": 8123
+          }
+      },
+      "tcp_imu_data": {
+          "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {
+            "host": "127.0.0.1",
+            "port": 0
+          }
+      },
+      "tcp_laser_data": {
+          "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {
+            "host": "127.0.0.1",
+            "port": 0
+          }
+      },
+      "tcp_image_data": {
+          "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {
+            "host": "127.0.0.1",
+            "port": 0
+          }
+      },
+      "tcp_odom_data": {
+          "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {
+            "host": "127.0.0.1",
+            "port": 0
+          }
+      },
+      "rosmsg_imu": {
+          "driver": "rosmsg",
+          "in": ["raw"],
+          "out": ["imu_data"],
+          "init": {}
+      },
+      "rosmsg_laser": {
+          "driver": "rosmsg",
+          "in": ["raw"],
+          "out": ["scan"],
+          "init": {"topic_type": "sensor_msgs/LaserScan"}
+      },
+      "rosmsg_image": {
+          "driver": "rosmsg",
+          "in": ["raw"],
+          "out": ["image"],
+          "init": {"topic_type": "sensor_msgs/CompressedImage"}
+      },
+      "rosmsg_odom": {
+          "driver": "rosmsg",
+          "in": ["raw"],
+          "out": ["pose2d"],
+          "init": {"topic_type": "nav_msgs/Odometry"}
+      }
+    },
+    "links": [["app.desired_speed", "ros.desired_speed"],
+              ["ros.cmd_vel", "tcp_cmd_vel.raw"],
+              ["tcp_cmd_vel.raw", "ros.cmd_vel"],
+
+              ["ros.imu_data", "tcp_imu_data.raw"],
+              ["tcp_imu_data.raw", "ros.imu_data"],
+              ["tcp_imu_data.raw", "rosmsg_imu.raw"],
+
+              ["ros.laser_data", "tcp_laser_data.raw"],
+              ["tcp_laser_data.raw", "ros.laser_data"],
+              ["tcp_laser_data.raw", "rosmsg_laser.raw"],
+              ["rosmsg_laser.scan", "app.scan"],
+
+              ["ros.image_data", "tcp_image_data.raw"],
+              ["tcp_image_data.raw", "ros.image_data"],
+              ["tcp_image_data.raw", "rosmsg_image.raw"],
+
+              ["ros.odom_data", "tcp_odom_data.raw"],
+              ["tcp_odom_data.raw", "ros.odom_data"],
+              ["tcp_odom_data.raw", "rosmsg_odom.raw"],
+              ["rosmsg_odom.pose2d", "app.pose2d"],
+
+              ["timer.tick", "ros.tick"]]
+  }
+}
