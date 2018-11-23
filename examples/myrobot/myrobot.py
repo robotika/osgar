@@ -3,36 +3,29 @@
     - simulation of differential robot
 """
 import math
-from threading import Thread
 
+from osgar.node import Node
 from osgar.bus import BusShutdownException
 
 
-class MyTimer(Thread):
+class MyTimer(Node):
     def __init__(self, config, bus):
-        Thread.__init__(self)
-        self.setDaemon(True)
-        self.bus = bus
+        super().__init__(config, bus)
         self.sleep_time = config['sleep']
 
     def run(self):
         try:
-            while self.bus.is_alive():
-                self.bus.publish('tick', None)
-                self.bus.sleep(self.sleep_time)
+            while self.is_alive():
+                self.publish('tick', None)
+                self.sleep(self.sleep_time)
 
         except BusShutdownException:
             pass
 
-    def request_stop(self):
-        self.bus.shutdown()
 
-
-class MyRobot(Thread):
+class MyRobot(Node):
     def __init__(self, config, bus):
-        Thread.__init__(self)
-        self.setDaemon(True)
-        self.bus = bus
+        super().__init__(config, bus)
         self.pose = (0, 0, 0)
         self.speed, self.angular_speed = 0, 0
         self.desired_speed, self.desired_angular_speed = 0, 0
@@ -40,8 +33,8 @@ class MyRobot(Thread):
 
     def send_pose(self):
         x, y, heading = self.pose        
-        self.bus.publish('pose2d', [round(x*1000), round(y*1000),
-                                    round(math.degrees(heading)*100)])
+        self.publish('pose2d', [round(x*1000), round(y*1000),
+                                round(math.degrees(heading)*100)])
 
     def update_pose(self, diff_time):
         self.speed = self.desired_speed  # TODO motion model
@@ -54,25 +47,17 @@ class MyRobot(Thread):
         heading += self.angular_speed * t
         self.pose = (x, y, heading)
 
-    def run(self):
-        try:
-            while True:
-                dt, channel, data = self.bus.listen()
-                if self.last_update is not None:
-                    t = (dt - self.last_update).total_seconds()
-                    self.update_pose(t)
-                self.last_update = dt
+    def update(self):
+        dt, channel, data = self.listen()
+        if self.last_update is not None:
+            t = (dt - self.last_update).total_seconds()
+            self.update_pose(t)
+        self.last_update = dt
 
-                if channel == 'desired_speed':
-                    self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
+        if channel == 'desired_speed':
+            self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
 
-                self.send_pose()
-
-        except BusShutdownException:
-            pass
-
-    def request_stop(self):
-        self.bus.shutdown()
+        self.send_pose()
 
 # vim: expandtab sw=4 ts=4
 
