@@ -20,5 +20,6 @@ all_drivers = dict(
     pcan="osgar.drivers.pcan:PeakCAN",
     kloubak="osgar.drivers.kloubak:RobotKloubak",
     usbcam="osgar.drivers.usbcam:UsbCam",
+    rosproxy="osgar.drivers.rosproxy:ROSProxy",
 )
 
