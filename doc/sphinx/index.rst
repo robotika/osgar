@@ -13,6 +13,7 @@ Welcome to osgar's documentation!
    logging
    eduro
    drivers
+   rosproxy
    can
    msgtypes
    glossary
