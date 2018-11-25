@@ -17,9 +17,9 @@ class LogSocket:
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.output_thread = Thread(target=self.run_output, daemon=True)
 
-        host = config['host']
-        port = config['port']
-        self.pair = (host, port)
+        host = config.get('host')
+        port = config.get('port')
+        self.pair = (host, port)  # (None, None) for unknown address
         if 'timeout' in config:
             self.socket.settimeout(config['timeout'])
         self.bufsize = config.get('bufsize', 1024)
@@ -49,8 +49,12 @@ class LogSocket:
     def run_output(self):
         try:
             while True:
-                __, __, data = self.bus.listen()
-                self._send(data)
+                __, channel, data = self.bus.listen()
+                if channel == 'raw':
+                    self._send(data)
+                else:
+                    assert False, channel  # unsupported channel
+ 
         except BusShutdownException:
             pass
 
@@ -58,14 +62,79 @@ class LogSocket:
         self.bus.shutdown()
 
 
-class LogTCP(LogSocket):
+class LogTCPBase(LogSocket):
+    """
+      TCP base class for different use cases
+    """
     def __init__(self, config, bus):
         soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        LogSocket.__init__(self, soc, config, bus)
-        self.socket.connect(self.pair)
+        super().__init__(soc, config, bus)
 
     def _send(self, data):
         self.socket.send(data)
+
+
+class LogTCPStaticIP(LogTCPBase):
+    """
+      TCP driver for existing static IP (i.e. SICK LIDAR)
+    """
+    def __init__(self, config, bus):
+        super().__init__(config, bus)
+        self.socket.connect(self.pair)
+
+
+class LogTCPDynamicIP(LogTCPBase):
+    """
+      TCP driver for dynamic previously unknown address
+         (ROS proxy for subscribers)
+    """
+    def start(self):
+        # on start the address is unknown - it will be received by "output_thread"
+        self.output_thread.start()
+
+    def join(self, timeout=None):
+        # the "input_thread" is triggered by "output_thread" so make sure
+        # that "output_thread" is finished and cannot cause race condition
+        self.output_thread.join(timeout=timeout)
+        if self.input_thread.is_alive():
+            self.input_thread.join(timeout=timeout)
+
+    def run_output(self):
+        try:
+            while True:
+                __, channel, data = self.bus.listen()
+                if channel == 'raw':
+                    self._send(data)
+                elif channel == 'addr':
+                    self.pair = tuple(data)
+                    self.socket.connect(self.pair)
+                    if not self.input_thread.is_alive():
+                        self.input_thread.start()
+                else:
+                    assert False, channel  # unsupported channel
+ 
+        except BusShutdownException:
+            pass
+
+
+class LogTCPServer(LogTCPBase):
+    """
+      TCP driver for server side - prepare connection and wait
+      for others to connect (ROS proxy for publishers)
+    """
+
+    def __init__(self, config, bus):
+        super().__init__(config, bus)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.socket.bind(self.pair)
+
+    def run_input(self):
+        print("Waiting ...")
+        self.socket.listen(1)
+        print("end of listen")
+        self.socket, addr = self.socket.accept()
+        print('Connected by', addr)
+        super().run_input()
 
 
 class LogUDP(LogSocket):

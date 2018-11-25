@@ -1,7 +1,7 @@
 import os
 import unittest
 from osgar.lib.config import load, merge_dict, MergeConflictError, get_class_by_name
-from osgar.drivers.logsocket import LogTCP
+from osgar.drivers.logsocket import LogTCPStaticIP as LogTCP
 
 def test_data(filename, test_dir='test_data'):
     return os.path.join(os.path.dirname(__file__), test_dir, filename)
