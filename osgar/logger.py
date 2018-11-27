@@ -31,11 +31,13 @@
 
 import datetime
 import struct
+import os
 from threading import RLock
 from ast import literal_eval
 
 
 INFO_STREAM_ID = 0
+ENV_OSGAR_LOGS = 'OSGAR_LOGS'
 
 
 class LogWriter:
@@ -43,9 +45,12 @@ class LogWriter:
         self.lock = RLock()
         self.start_time = datetime.datetime.utcnow()
         self.filename = prefix + self.start_time.strftime("%y%m%d_%H%M%S.log")
+        if ENV_OSGAR_LOGS in os.environ:
+            os.makedirs(os.environ[ENV_OSGAR_LOGS], exist_ok=True)
+            self.filename = os.path.join(os.environ[ENV_OSGAR_LOGS], self.filename)
         self.f = open(self.filename, 'wb')
         self.f.write(b'Pyr\x00')
-        
+
         t = self.start_time
         self.f.write(struct.pack('HBBBBBI', t.year, t.month, t.day,
                 t.hour, t.minute, t.second, t.microsecond))

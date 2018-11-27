@@ -9,7 +9,12 @@ from osgar.logger import (LogWriter, LogReader, LogAsserter, INFO_STREAM_ID,
 
 
 class LoggerTest(unittest.TestCase):
-    
+
+    def setUp(self):
+        ref = os.environ.get('OSGAR_LOGS')
+        if ref is not None:
+            del os.environ['OSGAR_LOGS']
+
     def test_writer_prefix(self):
         log = LogWriter(prefix='tmp')
         self.assertTrue(log.filename.startswith('tmp'))
@@ -133,6 +138,21 @@ class LoggerTest(unittest.TestCase):
             self.assertEqual([len(x) for x in arr],
                              [100000, 65535, 0, 3, 200000])
 
+        os.remove(log.filename)
+
+    def test_environ(self):
+        with LogWriter(prefix='tmp5', note='test_filename_before') as log:
+            self.assertTrue(log.filename.startswith('tmp5'))
+        os.remove(log.filename)
+
+        os.environ['OSGAR_LOGS'] = 'tmp_dir'
+        with LogWriter(prefix='tmp6', note='test_filename_after') as log:
+            self.assertTrue(log.filename.startswith('tmp_dir'))
+        os.remove(log.filename)
+
+        del os.environ['OSGAR_LOGS']
+        with LogWriter(prefix='tmp7', note='test_filename_after2') as log:
+            self.assertTrue(log.filename.startswith('tmp7'))
         os.remove(log.filename)
 
 # vim: expandtab sw=4 ts=4
