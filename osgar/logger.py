@@ -32,6 +32,7 @@
 import datetime
 import struct
 import os
+import logging
 from threading import RLock
 from ast import literal_eval
 
@@ -48,6 +49,8 @@ class LogWriter:
         if ENV_OSGAR_LOGS in os.environ:
             os.makedirs(os.environ[ENV_OSGAR_LOGS], exist_ok=True)
             self.filename = os.path.join(os.environ[ENV_OSGAR_LOGS], self.filename)
+        else:
+            logging.warning('Environment variable %s is not set - using working directory' % ENV_OSGAR_LOGS)
         self.f = open(self.filename, 'wb')
         self.f.write(b'Pyr\x00')
 
