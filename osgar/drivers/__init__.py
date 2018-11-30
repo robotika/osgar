@@ -9,6 +9,7 @@ from .logsocket import (LogTCPStaticIP, LogTCPDynamicIP, LogTCPServer,
 from .sicklidar import SICKLidar
 from .eduro import Eduro
 from .rosproxy import ROSProxy
+from .rosmsg import ROSMsgParser
 
 # dictionary of all available drivers
 all_drivers = dict(gps=GPS, imu=IMU, spider=Spider, serial=LogSerial,
@@ -18,5 +19,6 @@ all_drivers = dict(gps=GPS, imu=IMU, spider=Spider, serial=LogSerial,
                    lidar=SICKLidar,
                    eduro=Eduro,
                    rosproxy=ROSProxy,
+                   rosmsg=ROSMsgParser,
                    )
 
