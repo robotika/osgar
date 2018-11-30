@@ -21,5 +21,6 @@ all_drivers = dict(
     kloubak="osgar.drivers.kloubak:RobotKloubak",
     usbcam="osgar.drivers.usbcam:UsbCam",
     rosproxy="osgar.drivers.rosproxy:ROSProxy",
+    rosmsg="osgar.drivers.rosmsg:ROSMsgParser",
 )
 
