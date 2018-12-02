@@ -42,6 +42,7 @@ class GoOneMeter:
         self.send_speed_cmd(0.5, 0.0)
         while self.traveled_dist < 1.0:
             self.update()
+        print("STOP")
         self.send_speed_cmd(0.0, 0.0)
         self.wait(timedelta(seconds=1))
 
