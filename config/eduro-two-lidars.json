@@ -1,0 +1,83 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["encoders", "scan", "emergency_stop", "pose2d", "buttons"],
+          "out": ["desired_speed"],
+          "init": {
+            "laser_pose2d": [0.13, 0.055, 0],
+            "hand_pose2d": [0.36, -0.175, 0]
+          }
+      },
+      "eduro": {
+          "driver": "eduro",
+          "in": ["can", "desired_speed"],
+          "out": ["can", "encoders", "emergency_stop", "pose2d", "buttons"],
+          "init": {}
+      },
+      "can": {
+          "driver": "can",
+          "in": ["raw", "can"],
+          "out": ["can", "raw"],
+          "init": {"speed": "250k", "canopen":true}
+      },
+      "serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyS0", "speed": 115200,
+                   "rtscts":true, "reset":true}
+      },
+      "lidar": {
+          "driver": "lidar",
+          "in": ["raw"],
+          "out": ["raw", "scan"],
+          "init": {"sleep": 0.1}
+      },
+      "lidar_tcp": {
+          "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"host": "192.168.2.71", "port": 2111, "timeout": 3.0}
+      },
+      "slope_lidar": {
+          "driver": "lidar",
+          "in": ["raw"],
+          "out": ["raw", "scan"],
+          "init": {"sleep": 0.1}
+      },
+      "slope_lidar_tcp": {
+          "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"host": "192.168.1.51", "port": 2111, "timeout": 3.0}
+      },
+      "camera": {
+          "driver": "http",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+              "url": "http://192.168.0.99/img.jpg",
+              "sleep": 0.1,
+              "timeout": 1.0
+          }
+      }
+    },
+    "links": [["serial.raw", "can.raw"], 
+              ["can.raw", "serial.raw"],
+              ["eduro.can", "can.can"],
+              ["can.can", "eduro.can"],
+              ["eduro.encoders", "app.encoders"],
+              ["app.desired_speed", "eduro.desired_speed"],
+              ["lidar_tcp.raw", "lidar.raw"], 
+              ["lidar.raw", "lidar_tcp.raw"],
+              ["slope_lidar_tcp.raw", "slope_lidar.raw"], 
+              ["slope_lidar.raw", "slope_lidar_tcp.raw"],
+              ["lidar.scan", "app.scan"],
+              ["eduro.emergency_stop", "app.emergency_stop"],
+              ["eduro.pose2d", "app.pose2d"],
+              ["eduro.buttons", "app.buttons"]]
+  }
+}
