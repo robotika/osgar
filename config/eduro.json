@@ -5,7 +5,7 @@
       "app": {
           "driver": "application",
           "in": ["encoders", "scan", "emergency_stop", "pose2d", "buttons"],
-          "out": ["desired_speed", "hand"],
+          "out": ["desired_speed"],
           "init": {
             "laser_pose2d": [0.13, 0.055, 0],
             "hand_pose2d": [0.36, -0.175, 0]
@@ -42,12 +42,6 @@
           "out": ["raw"],
           "init": {"host": "192.168.2.71", "port": 2111, "timeout": 3.0}
       },
-      "hand": {
-          "driver": "serial",
-          "in": ["raw"],
-          "out": ["raw"],
-          "init": {"port": "/dev/ttyACM0", "speed": 9600}
-      },
       "camera": {
           "driver": "http",
           "in": [],
@@ -70,8 +64,6 @@
               ["lidar.scan", "app.scan"],
               ["eduro.emergency_stop", "app.emergency_stop"],
               ["eduro.pose2d", "app.pose2d"],
-              ["eduro.buttons", "app.buttons"],
-              ["app.hand", "hand.raw"],
-              ["hand.raw", "app.hand"]]
+              ["eduro.buttons", "app.buttons"]]
   }
 }
