@@ -32,6 +32,7 @@ class Node(Thread):
         timestamp, channel, data = self.bus.listen()
         self.time = timestamp
         setattr(self, channel, data)
+        return channel
 
     def run(self):
         try:
