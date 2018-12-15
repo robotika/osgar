@@ -44,7 +44,8 @@
           "out": ["raw"],
           "init": {
             "host": "127.0.0.1",
-            "port": 8123
+            "port": 8123,
+            "timeout": 1.0
           }
       },
       "tcp_imu_data": {
