@@ -13,8 +13,9 @@
       "ros": {
           "driver": "rosproxy",
           "in": ["desired_speed", "cmd_vel", "imu_data"],
-          "out": ["emergency_stop", "pose2d", "cmd_vel", "imu_data",
-	          "laser_data", "image_data", "odom_data"],
+          "out": ["emergency_stop", "pose2d", "cmd_vel", "imu_data", "imu_data_addr"
+	          "laser_data", "laser_data_addr", "image_data", "image_data_addr",
+            "odom_data", "odom_data_addr"],
           "init": {
             "ros_master_uri": "http://127.0.0.1:11311",
             "ros_client_uri": "http://127.0.0.1:8000",
@@ -38,54 +39,41 @@
           }
       },
       "tcp_cmd_vel": {
-          "driver": "tcp",
+          "driver": "tcpserver",
           "in": ["raw"],
           "out": ["raw"],
           "init": {
-            "server": true,
             "host": "127.0.0.1",
             "port": 8123
           }
       },
       "tcp_imu_data": {
-          "driver": "tcp",
-          "in": ["raw"],
+          "driver": "tcpdynamic",
+          "in": ["addr", "raw"],
           "out": ["raw"],
-          "init": {
-            "host": "127.0.0.1",
-            "port": 0
-          }
+          "init": {}
       },
       "tcp_laser_data": {
-          "driver": "tcp",
-          "in": ["raw"],
+          "driver": "tcpdynamic",
+          "in": ["addr", "raw"],
           "out": ["raw"],
-          "init": {
-            "host": "127.0.0.1",
-            "port": 0
-          }
+          "init": {}
       },
       "tcp_image_data": {
-          "driver": "tcp",
-          "in": ["raw"],
+          "driver": "tcpdynamic",
+          "in": ["addr", "raw"],
           "out": ["raw"],
-          "init": {
-            "host": "127.0.0.1",
-            "port": 0
-          }
+          "init": {}
       },
       "tcp_odom_data": {
-          "driver": "tcp",
-          "in": ["raw"],
+          "driver": "tcpdynamic",
+          "in": ["addr", "raw"],
           "out": ["raw"],
-          "init": {
-            "host": "127.0.0.1",
-            "port": 0
-          }
+          "init": {}
       },
       "rosmsg_imu": {
           "driver": "rosmsg",
-          "in": ["raw"],
+          "in": ["addr", "raw"],
           "out": ["imu_data"],
           "init": {}
       },
@@ -112,19 +100,23 @@
               ["ros.cmd_vel", "tcp_cmd_vel.raw"],
               ["tcp_cmd_vel.raw", "ros.cmd_vel"],
 
+              ["ros.imu_data_addr", "tcp_imu_data.addr"],
               ["ros.imu_data", "tcp_imu_data.raw"],
               ["tcp_imu_data.raw", "ros.imu_data"],
               ["tcp_imu_data.raw", "rosmsg_imu.raw"],
 
+              ["ros.laser_data_addr", "tcp_laser_data.addr"],
               ["ros.laser_data", "tcp_laser_data.raw"],
               ["tcp_laser_data.raw", "ros.laser_data"],
               ["tcp_laser_data.raw", "rosmsg_laser.raw"],
               ["rosmsg_laser.scan", "app.scan"],
 
+              ["ros.image_data_addr", "tcp_image_data.addr"],
               ["ros.image_data", "tcp_image_data.raw"],
               ["tcp_image_data.raw", "ros.image_data"],
               ["tcp_image_data.raw", "rosmsg_image.raw"],
 
+              ["ros.odom_data_addr", "tcp_odom_data.addr"],
               ["ros.odom_data", "tcp_odom_data.raw"],
               ["tcp_odom_data.raw", "ros.odom_data"],
               ["tcp_odom_data.raw", "rosmsg_odom.raw"],
