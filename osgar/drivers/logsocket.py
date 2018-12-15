@@ -127,14 +127,22 @@ class LogTCPServer(LogTCPBase):
         super().__init__(config, bus)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind(self.pair)
+        self.timeout = config.get('timeout')
 
     def run_input(self):
         print("Waiting ...")
         self.socket.listen(1)
         print("end of listen")
-        self.socket, addr = self.socket.accept()
-        print('Connected by', addr)
-        super().run_input()
+        while self.bus.is_alive():
+            try:
+                self.socket, addr = self.socket.accept()
+                print('Connected by', addr)
+                if self.timeout is not None:
+                    self.socket.settimeout(self.timeout)
+                super().run_input()
+                break
+            except socket.timeout:
+                pass
 
 
 class LogUDP(LogSocket):
