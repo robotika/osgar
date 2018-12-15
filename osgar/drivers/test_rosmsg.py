@@ -56,7 +56,7 @@ class ROSMsgParserTest(unittest.TestCase):
                 if index > 10:
                     break
 
-    def test_parse_odom(self):
+    def Xtest_parse_odom(self):
         r = ROSMsgParser(config={}, bus=None)
         with open('odom_data.bin', 'rb') as f:
             r._buf += f.read()
