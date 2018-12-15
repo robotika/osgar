@@ -37,29 +37,30 @@ def prefix4BytesLen(s):
 
 
 def packCmdVel(speed, angularSpeed):
-    return struct.pack("dddddd", speed,0,0, 0,0,angularSpeed)
+    return struct.pack("dddddd", speed, 0, 0, 0, 0, angularSpeed)
 
 
 def publisherUpdate(caller_id, topic, publishers):
     print("called 'publisherUpdate' with", (caller_id, topic, publishers))
     return (1, "Hi, I am fine", 42) # (code, statusMessage, ignore) 
 
+
 def requestTopic(caller_id, topic, publishers):
     print("REQ", (caller_id, topic, publishers))
     return 1, "ready on martind-blabla", ['TCPROS', NODE_HOST, PUBLISH_PORT]
 
 
-class MyXMLRPCServer( Thread ):
-    def __init__( self, nodeAddrHostPort ):
-        Thread.__init__( self )
-        self.setDaemon( True )
+class MyXMLRPCServer(Thread):
+    def __init__(self, nodeAddrHostPort):
+        Thread.__init__(self)
+        self.setDaemon(True)
         self.server = SimpleXMLRPCServer( nodeAddrHostPort )
         print("Listening on port %d ..." % nodeAddrHostPort[1])
         self.server.register_function(publisherUpdate, "publisherUpdate")
         self.server.register_function(requestTopic, "requestTopic")
         self.start()
 
-    def run( self ):
+    def run(self):
         self.server.serve_forever()
 
 
@@ -94,8 +95,9 @@ class ROSProxy(Thread):
         print(code, status_message, protocol_params)
         
         # define TCP connection
-        #self.bus.publish('imu_data', [protocol_params[1], protocol_params[2]])
-        self.bus.publish(publish_name, ['127.0.0.1', protocol_params[2]])        
+        # note, that ROS returns name (protocol_params[1]) instead of IP, which is problem to lookup
+        #     -> using local IP for now
+        self.bus.publish(publish_name + '_addr', ['127.0.0.1', protocol_params[2]])        
 
         # initialize connection
         header = prefix4BytesLen(
@@ -125,24 +127,6 @@ class ROSProxy(Thread):
         print("Subscribers:")
         print(subscribers)
 
-#        NODE_HOST = '192.168.23.12'
-#        PUBLISH_PORT = 8123
-
-#        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#        serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-#        serverSocket.bind((NODE_HOST, PUBLISH_PORT))
-#        print("Waiting ...")
-#        serverSocket.listen(1)
-#        soc, addr = serverSocket.accept() 
-#        print('Connected by', addr)
-#        data = soc.recv(1024) # TODO properly load and parse/check
-#        print(data)
-#        print("LEN", len(data))
-
-#        code, status_message, num_unreg = master.unregisterPublisher(
-#                caller_id, self.topic, self.ros_client_uri)
-#        print("Unregistered", code, status_message, num_unreg)
-
         header = prefix4BytesLen(
             prefix4BytesLen('callerid=' + self.caller_id) +
             prefix4BytesLen('topic=' + self.topic) +
@@ -152,7 +136,6 @@ class ROSProxy(Thread):
 
         try:
             ready = False
-#            self.bus.publish('cmd_vel', header)  # TODO topic dependent!
             while True:
                 timestamp, channel, data = self.bus.listen()
                 if channel != 'tick':

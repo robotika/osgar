@@ -78,7 +78,8 @@ class ROSProxyTest(unittest.TestCase):
 
     def test_usage(self):
         logger = MagicMock()
-        bus = BusHandler(logger, out={'cmd_vel':[], 'imu_data':[]})
+        bus = BusHandler(logger, out={'cmd_vel':[], 'imu_data':[],
+                                      'imu_data_addr':[]})
         config = {
                 'ros_master_uri': 'http://127.0.0.1:11311',
                 'ros_client_uri': 'http://127.0.0.1:8000',
