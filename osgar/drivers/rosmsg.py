@@ -148,7 +148,7 @@ def parse_odom(data):
     # http://docs.ros.org/melodic/api/geometry_msgs/html/msg/Quaternion.html
     x, y, z = struct.unpack_from('<ddd', data, pos)
     pos += 3 * 8
-    quat = struct.unpack_from('<dddd', data, pos)
+    ori = struct.unpack_from('<dddd', data, pos)
     pos += 4 * 8
     # float64[36] covariance
     pos += 36 * 8
@@ -162,7 +162,12 @@ def parse_odom(data):
     # float64[36] covariance
     pos += 36 * 8
     assert pos == len(data), (pos, len(data))
-    return (x, y, 0.0)  # TODO heading from quaternion
+
+    q0, q1, q2, q3 = ori  # quaternion
+    ax =  math.atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2))
+    ay =  math.asin(2*(q0*q2-q3*q1))
+    az =  math.atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3))
+    return (x, y, ax)
 
 
 class ROSMsgParser(Thread):
