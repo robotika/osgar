@@ -42,11 +42,12 @@ def tangent_circle(dist, radius):
 def follow_wall_angle(laser_data, radius):
     data = np.array(laser_data)
     size = len(laser_data)
+    deg_resolution = 270 / (size - 1)  # SICK uses extra the first and the last, i.e. 271 rays for 1 degree resolution
     mask = (data <= 10)  # ignore internal reflections
     data[mask] = 20000
     index = np.argmin(data[:size//2])  # only right side
     dist = data[index]/1000.0
-    laser_angle = math.radians((-270+index)/3.0)  # TODO angular resolution
+    laser_angle = math.radians((-270 + index) * deg_resolution)
     angle = tangent_circle(dist, radius)
     if angle is not None:
         # print '(%d, %.3f) %.1f' % (index, dist, math.degrees(laser_angle + angle))
