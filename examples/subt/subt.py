@@ -143,7 +143,7 @@ if __name__ == "__main__":
         game.play()
 
     elif args.command == 'run':
-        log = LogWriter(prefix='go1m-', note=str(sys.argv))
+        log = LogWriter(prefix='subt-', note=str(sys.argv))
         config = config_load(*args.config)
         log.write(0, bytes(str(config), 'ascii'))  # write configuration
         robot = Recorder(config=config['robot'], logger=log, application=SubTChallenge)
