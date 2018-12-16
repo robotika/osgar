@@ -5,8 +5,7 @@ import sys
 import math
 from datetime import timedelta
 
-from osgar.lib.config import load as config_load
-from osgar.record import Recorder
+from osgar.explore import follow_wall_angle
 
 
 def min_dist(laser_data):
@@ -32,6 +31,7 @@ class SubTChallenge:
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
         self.is_moving = None  # unknown
+        self.scan = None  # I should use class Node instead
 
     def send_speed_cmd(self, speed, angular_speed):
         return self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
@@ -65,6 +65,15 @@ class SubTChallenge:
                     break
             print(self.time, 'stop at', self.time - start_time)
 
+    def follow_wall(self, radius, timeout=timedelta(minutes=10)):
+        start_time = self.time
+        desired_speed = 1.0
+        while self.time - start_time < timeout:
+            if self.update() == 'scan':
+                desired_angular_speed = follow_wall_angle(self.scan, radius=radius)
+                print('desired_angular_speed', math.degrees(desired_angular_speed))
+                self.send_speed_cmd(desired_speed, desired_angular_speed)
+
     def update(self):
         packet = self.bus.listen()
         if packet is not None:
@@ -82,7 +91,9 @@ class SubTChallenge:
                 self.traveled_dist = math.hypot(pose[0] - self.start_pose[0], pose[1] - self.start_pose[1])
             elif channel == 'scan':
                 print(self.time, 'min_dist', min_dist(data))
-                        
+                self.scan = data
+            return channel
+
     def wait(self, dt):  # TODO refactor to some common class
         if self.time is None:
             self.update()
@@ -92,11 +103,8 @@ class SubTChallenge:
 
     def play(self):
         print("SubT Challenge Ver1!")
-        self.go_straight(1.0)
-        self.turn(math.radians(-90))
-        self.go_straight(1.0)
-        self.turn(math.radians(90))
-        self.go_straight(10.0)  # go to the tunnel entrance
+        self.go_straight(9.0)  # go to the tunnel entrance
+        self.follow_wall(radius = 1.5)
         self.wait(timedelta(seconds=1))
 
     def start(self):
@@ -110,8 +118,10 @@ class SubTChallenge:
 
 
 if __name__ == "__main__":
-    from osgar.logger import LogWriter, LogReader
     import argparse
+    from osgar.lib.config import load as config_load
+    from osgar.record import Recorder
+    from osgar.logger import LogWriter, LogReader
 
     parser = argparse.ArgumentParser(description='SubT Challenge')
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
