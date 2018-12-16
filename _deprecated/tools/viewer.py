@@ -68,10 +68,10 @@ def loadData(filename):
     camdir = None
     compass = None
 
-    laser_id = lookup_stream_id(filename, 'lidar.scan')
-    camera_id = lookup_stream_id(filename, 'camera.raw')  # TODO refactor
+    laser_id = lookup_stream_id(filename, 'rosmsg_laser.scan') #'lidar.scan')
+    camera_id = lookup_stream_id(filename, 'rosmsg_image.image') #'camera.raw')  # TODO refactor
     try:
-        pose_id = lookup_stream_id(filename, 'eduro.pose2d')  # TODO what other source than Eduro?
+        pose_id = lookup_stream_id(filename, 'rosmsg_odom.pose2d') #'eduro.pose2d')  # TODO what other source than Eduro?
     except ValueError:
         pose_id = None
     
