@@ -31,6 +31,7 @@ class SubTChallenge:
         self.max_angular_speed = math.radians(45)
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
+        self.is_moving = None  # unknown
 
     def send_speed_cmd(self, speed, angular_speed):
         return self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
@@ -73,6 +74,8 @@ class SubTChallenge:
             if channel == 'pose2d':
                 x, y, heading = data
                 pose = (x/1000.0, y/1000.0, math.radians(heading/100.0))
+                if self.last_position is not None:
+                    self.is_moving = (self.last_position != pose)
                 self.last_position = pose
                 if self.start_pose is None:
                     self.start_pose = pose
