@@ -70,6 +70,7 @@ class ROSProxy(Thread):
         self.setDaemon(True)
 
         self.bus = bus
+        self.verbose = False
         self.desired_speed = 0.0
         self.desired_angular_speed = 0.0
 
@@ -138,7 +139,7 @@ class ROSProxy(Thread):
             ready = False
             while True:
                 timestamp, channel, data = self.bus.listen()
-                if channel != 'tick':
+                if channel != 'tick' and self.verbose:
                     print(timestamp, channel)
                 if channel == 'cmd_vel':
                     self.bus.publish('cmd_vel', header)
