@@ -89,6 +89,10 @@ class SubTChallenge:
 
     def play(self):
         print("SubT Challenge Ver1!")
+        self.go_straight(1.0)
+        self.turn(math.radians(-90))
+        self.go_straight(1.0)
+        self.turn(math.radians(90))
         self.go_straight(10.0)  # go to the tunnel entrance
         self.wait(timedelta(seconds=1))
 
