@@ -78,7 +78,7 @@ class SubTChallenge:
                     self.start_pose = pose
                 self.traveled_dist = math.hypot(pose[0] - self.start_pose[0], pose[1] - self.start_pose[1])
             elif channel == 'scan':
-                print('min_dist', min_dist(data))
+                print(self.time, 'min_dist', min_dist(data))
                         
     def wait(self, dt):  # TODO refactor to some common class
         if self.time is None:
@@ -89,7 +89,7 @@ class SubTChallenge:
 
     def play(self):
         print("SubT Challenge Ver1!")
-        self.go_straight(5.0)  # go to the tunnel entrance
+        self.go_straight(10.0)  # go to the tunnel entrance
         self.wait(timedelta(seconds=1))
 
     def start(self):
