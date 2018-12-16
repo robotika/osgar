@@ -44,13 +44,16 @@ class ROSMsgParserTest(unittest.TestCase):
 
     def Xtest_parse_laser(self):
         r = ROSMsgParser(config={}, bus=None)
-        with open('laser_data.bin', 'rb') as f:
+        with open('laser_data2.bin', 'rb') as f:
             r._buf += f.read()
             index = 0
             packet = r.get_packet()  # first packet is structure file
             while packet is not None:
                 if index > 0:
-                    parse_laser(packet)
+                    scan = parse_laser(packet)
+                    print(scan)
+                    self.assertEqual(len(scan), 720)
+                    self.assertEqual(type(scan[0]), int)
                 packet = r.get_packet()
                 index += 1
                 if index > 10:

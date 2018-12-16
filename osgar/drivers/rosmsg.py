@@ -122,7 +122,10 @@ def parse_laser(data):
     intensities_size = struct.unpack_from('<I', data, pos)[0]
     assert intensities_size == 720, intensities_size
     intensities = struct.unpack_from('<' + 'f' * intensities_size, data, pos)
-    return scan  # TODO conversion to integers??
+
+    # conversion to int and millimeters
+    scan = [int(x*1000) if x < 65.0 else 0 for x in scan]
+    return scan
 
 
 def parse_odom(data):
