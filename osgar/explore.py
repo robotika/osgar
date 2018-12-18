@@ -43,7 +43,7 @@ def follow_wall_angle(laser_data, radius):
     data = np.array(laser_data)
     size = len(laser_data)
     deg_resolution = 270 / (size - 1)  # SICK uses extra the first and the last, i.e. 271 rays for 1 degree resolution
-    mask = (data <= 10)  # ignore internal reflections
+    mask = (data <= 300)  # ignore internal reflections
     data[mask] = 20000
     index = np.argmin(data[:size//2])  # only right side
     dist = data[index]/1000.0
