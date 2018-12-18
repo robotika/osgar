@@ -70,8 +70,14 @@ class SubTChallenge:
         desired_speed = 1.0
         while self.time - start_time < timeout:
             if self.update() == 'scan':
+                size = len(self.scan)
+                dist = min_dist(self.scan[size//3:2*size//3])
+                if dist < 2.0:
+                    desired_speed = 0.5
+                else:
+                    desired_speed = 1.0
                 desired_angular_speed = follow_wall_angle(self.scan, radius=radius)
-                print('desired_angular_speed', math.degrees(desired_angular_speed))
+                print(self.time, 'desired_angular_speed\t%.1f\t%.3f' % (math.degrees(desired_angular_speed), dist))
                 self.send_speed_cmd(desired_speed, desired_angular_speed)
 
     def update(self):
@@ -90,7 +96,6 @@ class SubTChallenge:
                     self.start_pose = pose
                 self.traveled_dist = math.hypot(pose[0] - self.start_pose[0], pose[1] - self.start_pose[1])
             elif channel == 'scan':
-                print(self.time, 'min_dist', min_dist(data))
                 self.scan = data
             return channel
 
