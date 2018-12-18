@@ -49,17 +49,16 @@ def follow_wall_angle(laser_data, radius, right_wall=False):
     if right_wall:
         index = np.argmin(data[:size//2])  # only right side
     else:
-        index = np.argmin(data[size//2:])  # only left side
-        index += size//2
+        index = size//2 - np.argmin(data[size//2:])  # only left side
     dist = data[index]/1000.0
     laser_angle = math.radians((-270 + index) * deg_resolution)
-    if right_wall:
-        angle = tangent_circle(dist, radius)
-    else:
-        angle = -tangent_circle(dist, radius)
+    angle = tangent_circle(dist, radius)
     if angle is not None:
         # print '(%d, %.3f) %.1f' % (index, dist, math.degrees(laser_angle + angle))
-        return laser_angle + angle
+        if right_wall:
+            return laser_angle + angle
+        else:
+            return - laser_angle - angle
     return None
 
 
