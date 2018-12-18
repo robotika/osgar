@@ -12,8 +12,8 @@ from osgar.node import Node
 
 SAFE_DISTANCE_STOP = 0.5
 SAFE_DISTANCE_GO = SAFE_DISTANCE_STOP + 0.3
-WALL_DISTANCE = 1.0 # m
-DESIRED_SPEED = 0.5  # m/s
+WALL_DISTANCE = 0.7 # m
+DESIRED_SPEED = 0.25  # m/s
 
 
 def min_dist(data):
