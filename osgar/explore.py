@@ -18,7 +18,7 @@ DESIRED_SPEED = 0.25  # m/s
 
 def min_dist(data):
     data = np.array(data)
-    mask = (data > 0)
+    mask = (data > 100)
     if np.any(mask):
         return np.min(data[mask]) * 0.001
     return None 
