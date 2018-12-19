@@ -40,7 +40,7 @@ def tangent_circle(dist, radius):
     return None
 
 
-def follow_wall_angle(laser_data, radius, right_wall=False):
+def follow_wall_angle(laser_data, radius, right_wall=True):
     data = np.array(laser_data)
     size = len(laser_data)
     deg_resolution = 270 / (size - 1)  # SICK uses extra the first and the last, i.e. 271 rays for 1 degree resolution
