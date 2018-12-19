@@ -74,7 +74,7 @@ class LogWriter:
             dt = datetime.datetime.utcnow() - self.start_time
             bytes_data = data
             assert dt.days == 0, dt  # multiple days not supported yet
-            time_frac = (dt.seconds * 1000000 + dt.microseconds) & 0xFFFF
+            time_frac = (dt.seconds * 1000000 + dt.microseconds) & 0xFFFFFFFF
             index = 0
             while index + 0xFFFF <= len(bytes_data):
                 self.f.write(struct.pack('IHH', time_frac,

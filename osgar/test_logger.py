@@ -160,6 +160,11 @@ class LoggerTest(unittest.TestCase):
         with LogWriter(prefix='tmp8', note='test_time_overflow') as log:
             log.start_time = datetime.datetime.utcnow() - datetime.timedelta(hours=1, minutes=30)
             t1 = log.write(1, b'\x01\x02')
-        os.remove(log.filename)
+            self.assertGreater(t1, datetime.timedelta(hours=1))
+            filename = log.filename
+        with LogReader(filename) as log:
+            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            self.assertGreater(dt, datetime.timedelta(minutes=10))
+        os.remove(filename)
 
 # vim: expandtab sw=4 ts=4
