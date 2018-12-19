@@ -1,6 +1,7 @@
 import unittest
 import os
 import time
+import datetime
 
 import numpy as np
 
@@ -153,6 +154,14 @@ class LoggerTest(unittest.TestCase):
         del os.environ['OSGAR_LOGS']
         with LogWriter(prefix='tmp7', note='test_filename_after2') as log:
             self.assertTrue(log.filename.startswith('tmp7'))
+        os.remove(log.filename)
+
+    def test_time_overflow(self):
+        with LogWriter(prefix='tmp8', note='test_time_overflow') as log:
+            log.start_time = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
+            with self.assertRaises(AssertionError) as e:
+                t1 = log.write(1, b'\x01\x02')
+            self.assertEqual(str(e.exception), "1:00:00")
         os.remove(log.filename)
 
 # vim: expandtab sw=4 ts=4
