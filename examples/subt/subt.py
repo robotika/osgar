@@ -65,7 +65,7 @@ class SubTChallenge:
                     break
             print(self.time, 'stop at', self.time - start_time)
 
-    def follow_wall(self, radius, timeout=timedelta(minutes=50)):
+    def follow_wall(self, radius, timeout=timedelta(hours=3)):
         start_time = self.time
         desired_speed = 1.0
         while self.time - start_time < timeout:
