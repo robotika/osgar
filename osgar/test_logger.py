@@ -158,10 +158,8 @@ class LoggerTest(unittest.TestCase):
 
     def test_time_overflow(self):
         with LogWriter(prefix='tmp8', note='test_time_overflow') as log:
-            log.start_time = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
-            with self.assertRaises(AssertionError) as e:
-                t1 = log.write(1, b'\x01\x02')
-            self.assertEqual(str(e.exception), "1:00:00")
+            log.start_time = datetime.datetime.utcnow() - datetime.timedelta(hours=1, minutes=30)
+            t1 = log.write(1, b'\x01\x02')
         os.remove(log.filename)
 
 # vim: expandtab sw=4 ts=4

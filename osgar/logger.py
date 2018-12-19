@@ -73,15 +73,15 @@ class LogWriter:
         with self.lock:
             dt = datetime.datetime.utcnow() - self.start_time
             bytes_data = data
-            assert dt.days == 0, dt
-            assert dt.seconds < 3600, dt  # overflow not supported yet
+            assert dt.days == 0, dt  # multiple days not supported yet
+            time_frac = (dt.seconds * 1000000 + dt.microseconds) & 0xFFFF
             index = 0
             while index + 0xFFFF <= len(bytes_data):
-                self.f.write(struct.pack('IHH', dt.seconds * 1000000 + dt.microseconds,
+                self.f.write(struct.pack('IHH', time_frac,
                              stream_id, 0xFFFF))
                 self.f.write(bytes_data[index:index + 0xFFFF])
                 index += 0xFFFF
-            self.f.write(struct.pack('IHH', dt.seconds * 1000000 + dt.microseconds,
+            self.f.write(struct.pack('IHH', time_frac,
                          stream_id, len(bytes_data) - index))
             self.f.write(bytes_data[index:])
             self.f.flush()
