@@ -1,12 +1,24 @@
 import unittest
 import os
 import time
-import datetime
+from datetime import datetime, timedelta
+from unittest.mock import patch, MagicMock
 
 import numpy as np
 
+import osgar.logger  # needed for patching the osgar.logger.datetime.datetime
 from osgar.logger import (LogWriter, LogReader, LogAsserter, INFO_STREAM_ID,
                           lookup_stream_id)
+
+
+class TimeStandsStill:
+    # inspired by
+    # https://marcusahnve.org/blog/2017/mocking-datetime-in-python/
+    def __init__(self, datetime):
+        self.datetime = datetime
+
+    def utcnow(self):
+        return self.datetime
 
 
 class LoggerTest(unittest.TestCase):
@@ -158,10 +170,65 @@ class LoggerTest(unittest.TestCase):
 
     def test_time_overflow(self):
         with LogWriter(prefix='tmp8', note='test_time_overflow') as log:
-            log.start_time = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
-            with self.assertRaises(AssertionError) as e:
-                t1 = log.write(1, b'\x01\x02')
-            self.assertEqual(str(e.exception), "1:00:00")
-        os.remove(log.filename)
+            log.start_time = datetime.utcnow() - timedelta(hours=1, minutes=30)
+            t1 = log.write(1, b'\x01\x02')
+            self.assertGreater(t1, timedelta(hours=1))
+            filename = log.filename
+        with LogReader(filename) as log:
+            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            self.assertGreater(dt, timedelta(minutes=10))
+        os.remove(filename)
+
+
+    def test_time_overflow2(self):
+        with patch('osgar.logger.datetime.datetime'):
+            osgar.logger.datetime.datetime = TimeStandsStill(datetime(2020, 1, 21))
+            with osgar.logger.LogWriter(prefix='tmp9', note='test_time_overflow') as log:
+                filename = log.filename
+                t1 = log.write(1, b'\x01')
+                self.assertEqual(t1, timedelta(0))
+                osgar.logger.datetime.datetime = TimeStandsStill(datetime(2020, 1, 21, 1))
+                t2 = log.write(1, b'\x02')
+                self.assertEqual(t2, timedelta(hours=1))
+                osgar.logger.datetime.datetime = TimeStandsStill(datetime(2020, 1, 21, 2))
+                t3 = log.write(1, b'\x03')
+                self.assertEqual(t3, timedelta(hours=2))
+                osgar.logger.datetime.datetime = TimeStandsStill(datetime(2020, 1, 21, 4))
+                # TODO this write should rise exception as the time gap is too big to track!
+                t4 = log.write(1, b'\x04')
+                self.assertEqual(t4, timedelta(hours=4))
+        with LogReader(filename) as log:
+            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            self.assertEqual(dt, timedelta(hours=0))
+            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            self.assertEqual(dt, timedelta(hours=1))
+            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            self.assertEqual(dt, timedelta(hours=2))
+#            dt, channel, data = next(log.read_gen(only_stream_id=1))
+#            self.assertEqual(dt, timedelta(hours=4))
+        os.remove(filename)
+
+    def test_large_blocks_with_time_overflow(self):
+        with patch('osgar.logger.datetime.datetime'):
+            osgar.logger.datetime.datetime = TimeStandsStill(datetime(2019, 1, 1))
+            with osgar.logger.LogWriter(prefix='tmpA', note='test_time_overflow with large blocks') as log:
+                filename = log.filename
+                t1 = log.write(1, b'\x01'*100000)
+                self.assertEqual(t1, timedelta(0))
+                osgar.logger.datetime.datetime = TimeStandsStill(datetime(2019, 1, 1, 1))
+                t2 = log.write(1, b'\x02'*100000)
+                self.assertEqual(t2, timedelta(hours=1))
+                osgar.logger.datetime.datetime = TimeStandsStill(datetime(2019, 1, 1, 2))
+                t3 = log.write(1, b'\x03'*100000)
+                self.assertEqual(t3, timedelta(hours=2))
+        with LogReader(filename) as log:
+            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            self.assertEqual(dt, timedelta(hours=0))
+            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            self.assertEqual(dt, timedelta(hours=1))
+            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            self.assertEqual(dt, timedelta(hours=2))
+        os.remove(filename)
+
 
 # vim: expandtab sw=4 ts=4

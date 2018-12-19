@@ -40,6 +40,8 @@ from ast import literal_eval
 INFO_STREAM_ID = 0
 ENV_OSGAR_LOGS = 'OSGAR_LOGS'
 
+TIMESTAMP_OVERFLOW_STEP = (1 << 32)  # in microseconds resolution
+TIMESTAMP_MASK = TIMESTAMP_OVERFLOW_STEP - 1
 
 class LogWriter:
     def __init__(self, prefix='naio', note=''):
@@ -73,15 +75,15 @@ class LogWriter:
         with self.lock:
             dt = datetime.datetime.utcnow() - self.start_time
             bytes_data = data
-            assert dt.days == 0, dt
-            assert dt.seconds < 3600, dt  # overflow not supported yet
+            assert dt.days == 0, dt  # multiple days not supported yet
+            time_frac = (dt.seconds * 1000000 + dt.microseconds) & TIMESTAMP_MASK
             index = 0
             while index + 0xFFFF <= len(bytes_data):
-                self.f.write(struct.pack('IHH', dt.seconds * 1000000 + dt.microseconds,
+                self.f.write(struct.pack('IHH', time_frac,
                              stream_id, 0xFFFF))
                 self.f.write(bytes_data[index:index + 0xFFFF])
                 index += 0xFFFF
-            self.f.write(struct.pack('IHH', dt.seconds * 1000000 + dt.microseconds,
+            self.f.write(struct.pack('IHH', time_frac,
                          stream_id, len(bytes_data) - index))
             self.f.write(bytes_data[index:])
             self.f.flush()
@@ -109,6 +111,8 @@ class LogReader:
         
         data = self.f.read(12)
         self.start_time = datetime.datetime(*struct.unpack('HBBBBBI', data))
+        self.us_offset = 0  # increase after overflow
+        self.prev_microseconds = 0
 
     def read_gen(self, only_stream_id=None):
         "packed generator - yields (time, stream, data)"
@@ -125,6 +129,10 @@ class LogReader:
             if len(header) < 8:
                 break
             microseconds, stream_id, size = struct.unpack('IHH', header)
+            if self.prev_microseconds > microseconds:
+                self.us_offset += TIMESTAMP_OVERFLOW_STEP
+            self.prev_microseconds = microseconds
+            microseconds += self.us_offset
             dt = datetime.timedelta(microseconds=microseconds)
             data = self.f.read(size)
             while size == 0xFFFF:
@@ -132,7 +140,7 @@ class LogReader:
                 if len(header) < 8:
                     break
                 ref_microseconds, ref_stream_id, size = struct.unpack('IHH', header)
-                assert microseconds == ref_microseconds, (microseconds, ref_microseconds)
+                assert microseconds & TIMESTAMP_MASK == ref_microseconds, (microseconds & TIMESTAMP_MASK, ref_microseconds)
                 assert stream_id == ref_stream_id, (stream_id, ref_stream_id)
                 data += self.f.read(size)
 
