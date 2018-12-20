@@ -109,6 +109,8 @@ class LogReader:
         
         data = self.f.read(12)
         self.start_time = datetime.datetime(*struct.unpack('HBBBBBI', data))
+        self.us_offset = 0  # increase after overflow
+        self.prev_microseconds = 0
 
     def read_gen(self, only_stream_id=None):
         "packed generator - yields (time, stream, data)"
@@ -125,6 +127,10 @@ class LogReader:
             if len(header) < 8:
                 break
             microseconds, stream_id, size = struct.unpack('IHH', header)
+            if self.prev_microseconds > microseconds:
+                self.us_offset += 0x100000000
+            self.prev_microseconds = microseconds
+            microseconds += self.us_offset
             dt = datetime.timedelta(microseconds=microseconds)
             data = self.f.read(size)
             while size == 0xFFFF:
