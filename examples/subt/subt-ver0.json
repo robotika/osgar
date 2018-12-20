@@ -4,11 +4,17 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["emergency_stop", "pose2d", "scan", "rot"],
+          "in": ["emergency_stop", "pose2d", "scan", "rot", "artf"],
           "out": ["desired_speed"],
           "init": {
             "max_speed": 0.5
           }
+      },
+      "detector": {
+          "driver": "artifact:ArtifactDetector",
+          "in": ["image"],
+          "out": ["artf"],
+          "init": {}
       },
       "ros": {
           "driver": "rosproxy",
@@ -117,12 +123,15 @@
               ["ros.image_data", "tcp_image_data.raw"],
               ["tcp_image_data.raw", "ros.image_data"],
               ["tcp_image_data.raw", "rosmsg_image.raw"],
+              ["rosmsg_image.image", "detector.image"],
 
               ["ros.odom_data_addr", "tcp_odom_data.addr"],
               ["ros.odom_data", "tcp_odom_data.raw"],
               ["tcp_odom_data.raw", "ros.odom_data"],
               ["tcp_odom_data.raw", "rosmsg_odom.raw"],
               ["rosmsg_odom.pose2d", "app.pose2d"],
+
+              ["detector.artf", "app.artf"],
 
               ["timer.tick", "ros.tick"]]
   }
