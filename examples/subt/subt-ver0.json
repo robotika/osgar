@@ -5,7 +5,7 @@
       "app": {
           "driver": "application",
           "in": ["emergency_stop", "pose2d", "scan", "rot", "artf"],
-          "out": ["desired_speed"],
+          "out": ["desired_speed", "pose2d"],
           "init": {
             "max_speed": 0.5
           }
