@@ -15,7 +15,7 @@ class ArtifactDetector(Node):
     def update(self):  # hack, this method should be called run instead!       
         channel = super().update()  # define self.time
         assert channel == "image", channel
-        img = cv2.imdecode(np.fromstring(buf, dtype=np.uint8), 1)
+        img = cv2.imdecode(np.fromstring(self.image, dtype=np.uint8), 1)
         print(self.time, img.shape)
 
 # vim: expandtab sw=4 ts=4
