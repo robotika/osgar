@@ -4,6 +4,7 @@
 import sys
 import math
 from datetime import timedelta
+from collections import defaultdict
 
 from osgar.explore import follow_wall_angle
 
@@ -34,6 +35,7 @@ class SubTChallenge:
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.is_moving = None  # unknown
         self.scan = None  # I should use class Node instead
+        self.stat = defaultdict(int)
 
     def send_speed_cmd(self, speed, angular_speed):
         return self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
@@ -87,7 +89,12 @@ class SubTChallenge:
         if packet is not None:
 #            print('SubT', packet)
             timestamp, channel, data = packet
+            if self.time is None or int(self.time.seconds)//60 != int(timestamp.seconds)//60:
+                print(timestamp, '(%.1f %.1f %.1f)' % self.xyz, sorted(self.stat.items()))
+                self.stat.clear()
+
             self.time = timestamp
+            self.stat[channel] += 1
             if channel == 'pose2d':
                 x, y, heading = data
                 pose = (x/1000.0, y/1000.0, math.radians(heading/100.0))
