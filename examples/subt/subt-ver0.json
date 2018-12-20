@@ -11,7 +11,7 @@
           }
       },
       "detector": {
-          "driver": "artifact:ArtifactDetector",
+          "driver": "artifacts:ArtifactDetector",
           "in": ["image"],
           "out": ["artf"],
           "init": {}
