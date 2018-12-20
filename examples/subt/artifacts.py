@@ -29,15 +29,33 @@ def count_red(img):
 class ArtifactDetector(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        self.best = None
+        self.best_count = 0
+        self.active = True
 
     def update(self):  # hack, this method should be called run instead!
         channel = super().update()  # define self.time
         assert channel == "image", channel
+        if not self.active:
+            return channel
+
         img = cv2.imdecode(np.fromstring(self.image, dtype=np.uint8), 1)
         count = count_red(img)
         print(self.time, img.shape, count)
-        if count > 100:
-            self.publish('artf', count)
+        if self.best_count > 0:
+            self.best_count -= 1
+        if self.best is None:
+            if count > 100:
+                self.best = count
+                self.best_count = 10
+        elif count > self.best:
+            self.best = count
+            self.best_count = 10
+
+        if self.best is not None and self.best_count == 0:
+            print('Published', self.best)
+            self.publish('artf', self.best)
+            self.active = False
 
 
 class ArtifactReporter(Node):
