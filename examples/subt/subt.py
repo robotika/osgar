@@ -95,6 +95,7 @@ class SubTChallenge:
                 if self.start_pose is None:
                     self.start_pose = pose
                 self.traveled_dist = math.hypot(pose[0] - self.start_pose[0], pose[1] - self.start_pose[1])
+                self.bus.publish('pose2d', data)  # TODO integrate 'rot' from IMU
             elif channel == 'scan':
                 self.scan = data
             return channel
