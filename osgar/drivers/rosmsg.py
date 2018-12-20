@@ -28,7 +28,7 @@ def parse_imu( data ):
     assert size == 324, size  # expected IMU packet size
     data = data[4:]
     seq, stamp, stampNsec, frameIdLen = struct.unpack("IIII", data[:16])
-    print(seq, stamp, stampNsec, frameIdLen)
+#    print(seq, stamp, stampNsec, frameIdLen)
     data = data[16+frameIdLen:]
     orientation = struct.unpack("dddd", data[:4*8])
     data = data[4*8+9*8:] # skip covariance matrix
@@ -50,7 +50,7 @@ def parse_imu( data ):
 
 def Xparse_image( data ):
     seq, stamp, stampNsec, frameIdLen = struct.unpack("IIII", data[:16])
-    print(seq, stamp, stampNsec, frameIdLen)
+#    print(seq, stamp, stampNsec, frameIdLen)
     data = data[16+frameIdLen:]
 
 # from rosbag.py
@@ -63,13 +63,13 @@ def parse_raw_image(data, dump_filename=None):
     seq, timestamp_sec, timestamp_nsec, frame_id_size = struct.unpack_from('<IIII', data, pos)
     pos += 4 + 4 + 4 + 4
     frame_id = data[pos:pos+frame_id_size]
-    print(frame_id, timestamp_sec, timestamp_nsec)
+#    print(frame_id, timestamp_sec, timestamp_nsec)
     pos += frame_id_size
     height, width, encoding_size = struct.unpack_from('<III', data, pos)
     pos += 4 + 4 + 4
     encoding = data[pos:pos+encoding_size]
     pos += encoding_size
-    print(height, width, encoding)
+#    print(height, width, encoding)
     is_bigendian, step, image_arr_size = struct.unpack_from('<BII', data, pos)
     pos += 1 + 4 + 4
     if dump_filename is not None:
@@ -87,13 +87,13 @@ def parse_jpeg_image(data, dump_filename=None):
     seq, timestamp_sec, timestamp_nsec, frame_id_size = struct.unpack_from('<IIII', data, pos)
     pos += 4 + 4 + 4 + 4
     frame_id = data[pos:pos+frame_id_size]
-    print(frame_id, timestamp_sec, timestamp_nsec)
+#    print(frame_id, timestamp_sec, timestamp_nsec)
     pos += frame_id_size
     encoding_size = struct.unpack_from('<I', data, pos)[0]
     pos += 4
     encoding = data[pos:pos+encoding_size]
     pos += encoding_size
-    print(encoding, size)
+#    print(encoding, size)
     img_size = struct.unpack_from('<I', data, pos)[0]
     pos += 4
     if dump_filename is not None:
@@ -110,12 +110,12 @@ def parse_laser(data):
     seq, timestamp_sec, timestamp_nsec, frame_id_size = struct.unpack_from('<IIII', data, pos)
     pos += 4 + 4 + 4 + 4
     frame_id = data[pos:pos+frame_id_size]
-    print(frame_id, timestamp_sec, timestamp_nsec)
+#    print(frame_id, timestamp_sec, timestamp_nsec)
     pos += frame_id_size
     params = struct.unpack_from('<fffffff', data, pos)
     # angle_min, angle_max, angle_increment, time_increment, scan_time
     # range_min, range_max
-    print(params)
+#    print(params)
     pos += 7*4
     ranges_size = struct.unpack_from('<I', data, pos)[0]
     assert ranges_size == 720, ranges_size
@@ -139,7 +139,7 @@ def parse_odom(data):
     seq, timestamp_sec, timestamp_nsec, frame_id_size = struct.unpack_from('<IIII', data, pos)
     pos += 4 + 4 + 4 + 4
     frame_id = data[pos:pos+frame_id_size]
-    print(frame_id, timestamp_sec, timestamp_nsec)
+#    print(frame_id, timestamp_sec, timestamp_nsec)
     pos += frame_id_size
     child_frame_id = struct.unpack_from('<I', data, pos)[0]
     pos += 4
