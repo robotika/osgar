@@ -171,7 +171,10 @@ class LogAsserter(LogReader):
 def lookup_stream_names(filename):
     names = []
     with LogReader(filename) as log:
-        for __, __, line in log.read_gen(0):
+        for __, channel, line in log.read_gen():
+            # optimization - all names are defined BEFORE other data on other channels
+            if channel != 0:
+                break
             if b'Errno' in line:
                 continue
             d = literal_eval(line.decode('ascii'))
