@@ -24,8 +24,11 @@ def prefix4BytesLen(s):
 
 
 def parse_imu( data ):
+    size = struct.unpack_from('<I', data)[0]
+    assert size == 324, size  # expected IMU packet size
+    data = data[4:]
     seq, stamp, stampNsec, frameIdLen = struct.unpack("IIII", data[:16])
-#    print(seq, stamp, stampNsec, frameIdLen)
+    print(seq, stamp, stampNsec, frameIdLen)
     data = data[16+frameIdLen:]
     orientation = struct.unpack("dddd", data[:4*8])
     data = data[4*8+9*8:] # skip covariance matrix
@@ -40,9 +43,9 @@ def parse_imu( data ):
     x =  math.atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2))
     y =  math.asin(2*(q0*q2-q3*q1))
     z =  math.atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3))
-    print('%d\t%f' % (stamp, math.degrees(y)))
+#    print('%d\t%f' % (stamp, math.degrees(y)))
 
-    return orientation
+    return x, y, z  # maybe later use orientation
 
 
 def Xparse_image( data ):
@@ -213,6 +216,9 @@ class ROSMsgParser(Thread):
                         self.bus.publish('pose2d', [round(x*1000),
                                     round(y*1000),
                                     round(math.degrees(heading)*100)])
+                    elif self.topic_type == 'std_msgs/Imu':
+                        self.bus.publish('rot', [round(math.degrees(angle)*100) 
+                                                 for angle in parse_imu(packet)])
         except BusShutdownException:
             pass
 
