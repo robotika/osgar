@@ -30,6 +30,8 @@ class SubTChallenge:
         self.max_angular_speed = math.radians(45)
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
+        self.xyz = (0, 0, 0)  # 3D position for mapping artifacts
+        self.yaw, self.pitch, self.roll = 0, 0, 0
         self.is_moving = None  # unknown
         self.scan = None  # I should use class Node instead
 
@@ -77,7 +79,7 @@ class SubTChallenge:
                 else:
                     desired_speed = 1.0
                 desired_angular_speed = follow_wall_angle(self.scan, radius=radius)
-                print(self.time, 'desired_angular_speed\t%.1f\t%.3f' % (math.degrees(desired_angular_speed), dist))
+#                print(self.time, 'desired_angular_speed\t%.1f\t%.3f' % (math.degrees(desired_angular_speed), dist))
                 self.send_speed_cmd(desired_speed, desired_angular_speed)
 
     def update(self):
@@ -91,13 +93,24 @@ class SubTChallenge:
                 pose = (x/1000.0, y/1000.0, math.radians(heading/100.0))
                 if self.last_position is not None:
                     self.is_moving = (self.last_position != pose)
+                    dist = math.hypot(pose[0] - self.last_position[0], pose[1] - self.last_position[1])
+                else:
+                    dist = 0.0
                 self.last_position = pose
                 if self.start_pose is None:
                     self.start_pose = pose
                 self.traveled_dist = math.hypot(pose[0] - self.start_pose[0], pose[1] - self.start_pose[1])
-                self.bus.publish('pose2d', data)  # TODO integrate 'rot' from IMU
+                x, y, z = self.xyz
+                x += math.cos(self.pitch) * math.cos(self.yaw) * dist
+                y += math.cos(self.pitch) * math.sin(self.yaw) * dist
+                z += math.sin(self.pitch) * dist
+                self.bus.publish('pose2d', [round(x*1000), round(y*1000),
+                                            round(math.degrees(self.yaw)*100)])
+                self.xyz = x, y, z
             elif channel == 'scan':
                 self.scan = data
+            elif channel == 'rot':
+                self.yaw, self.pitch, self.roll = [math.radians(x/100) for x in data]
             return channel
 
     def wait(self, dt):  # TODO refactor to some common class
