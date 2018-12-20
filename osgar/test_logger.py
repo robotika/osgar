@@ -2,9 +2,11 @@ import unittest
 import os
 import time
 import datetime
+from unittest.mock import patch, MagicMock
 
 import numpy as np
 
+import osgar.logger
 from osgar.logger import (LogWriter, LogReader, LogAsserter, INFO_STREAM_ID,
                           lookup_stream_id)
 
@@ -166,5 +168,17 @@ class LoggerTest(unittest.TestCase):
             dt, channel, data = next(log.read_gen(only_stream_id=1))
             self.assertGreater(dt, datetime.timedelta(minutes=10))
         os.remove(filename)
+
+
+#    @patch('osgar.logger.datetime')
+    def Xtest_time_overflow2(self): #, mock_dt):
+#        mock_dt.utcnow = MagicMock(return_value=datetime.datetime(2020, 1, 21))
+        with patch('osgar.logger.datetime.datetime') as mock:
+            instance = mock.return_value
+            instance.datetime.utcnow = MagicMock(return_value=(1, 2, 3,)) #datetime.datetime(2020, 1, 21))
+        
+#        self.assertEqual(datetime.datetime.utcnow().year, 2020)
+            with LogWriter(prefix='tmp9', note='test_time_overflow') as log:
+                pass
 
 # vim: expandtab sw=4 ts=4
