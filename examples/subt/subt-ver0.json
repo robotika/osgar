@@ -4,7 +4,7 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["emergency_stop", "pose2d", "scan"],
+          "in": ["emergency_stop", "pose2d", "scan", "rot"],
           "out": ["desired_speed"],
           "init": {
             "max_speed": 0.5
@@ -75,8 +75,8 @@
       "rosmsg_imu": {
           "driver": "rosmsg",
           "in": ["addr", "raw"],
-          "out": ["imu_data"],
-          "init": {}
+          "out": ["rot"],
+          "init": {"topic_type": "std_msgs/Imu"}
       },
       "rosmsg_laser": {
           "driver": "rosmsg",
@@ -105,6 +105,7 @@
               ["ros.imu_data", "tcp_imu_data.raw"],
               ["tcp_imu_data.raw", "ros.imu_data"],
               ["tcp_imu_data.raw", "rosmsg_imu.raw"],
+              ["rosmsg_imu.rot", "app.rot"],
 
               ["ros.laser_data_addr", "tcp_laser_data.addr"],
               ["ros.laser_data", "tcp_laser_data.raw"],
