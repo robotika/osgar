@@ -30,5 +30,17 @@ class ArtifactDetector(Node):
         if count > 100:
             self.publish('artf', count)
 
+
+class ArtifactReporter(Node):
+    def __init__(self, config, bus):
+        super().__init__(config, bus)
+
+    def update(self):  # hack, this method should be called run instead!
+        channel = super().update()  # define self.time
+        assert channel == "artf_xyz", channel
+
+        print("DETECTED", self.artf_xyz)
+        # TODO call SubT API
+
 # vim: expandtab sw=4 ts=4
 
