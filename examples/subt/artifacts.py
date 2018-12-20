@@ -41,7 +41,7 @@ class ArtifactDetector(Node):
 
         img = cv2.imdecode(np.fromstring(self.image, dtype=np.uint8), 1)
         count = count_red(img)
-        print(self.time, img.shape, count)
+#        print(self.time, img.shape, count)
         if self.best_count > 0:
             self.best_count -= 1
         if self.best is None:
