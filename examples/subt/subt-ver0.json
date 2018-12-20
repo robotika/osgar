@@ -5,7 +5,7 @@
       "app": {
           "driver": "application",
           "in": ["emergency_stop", "pose2d", "scan", "rot", "artf"],
-          "out": ["desired_speed", "pose2d"],
+          "out": ["desired_speed", "pose2d", "artf_xyz"],
           "init": {
             "max_speed": 0.5
           }
@@ -14,6 +14,12 @@
           "driver": "artifacts:ArtifactDetector",
           "in": ["image"],
           "out": ["artf"],
+          "init": {}
+      },
+      "reporter": {
+          "driver": "artifacts:ArtifactReporter",
+          "in": ["artf_xyz"],
+          "out": [],
           "init": {}
       },
       "ros": {
@@ -132,6 +138,7 @@
               ["rosmsg_odom.pose2d", "app.pose2d"],
 
               ["detector.artf", "app.artf"],
+              ["app.artf_xyz", "reporter.artf_xyz"],
 
               ["timer.tick", "ros.tick"]]
   }
