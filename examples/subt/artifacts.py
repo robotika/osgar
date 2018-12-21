@@ -1,11 +1,15 @@
 """
   Detect SubT Artifact in Camera Image
 """
+from datetime import timedelta
 
 import cv2
 import numpy as np
 
 from osgar.node import Node
+
+EXTINGUISHER = 'TYPE_EXTINGUISHER'
+
 
 def old_count_red(img):
     count = 0
@@ -39,6 +43,14 @@ class ArtifactDetector(Node):
         if not self.active:
             return channel
 
+        # hack - test communication to BaseStation
+        if self.time > timedelta(minutes=4):
+            print('Published', self.best)
+            self.publish('artf', EXTINGUISHER)
+            self.active = False
+        return channel
+        # END OF HACK ....
+
         img = cv2.imdecode(np.fromstring(self.image, dtype=np.uint8), 1)
         count = count_red(img)
 #        print(self.time, img.shape, count)
@@ -54,7 +66,7 @@ class ArtifactDetector(Node):
 
         if self.best is not None and self.best_count == 0:
             print('Published', self.best)
-            self.publish('artf', self.best)
+            self.publish('artf', EXTINGUISHER)
             self.active = False
         return channel
 
