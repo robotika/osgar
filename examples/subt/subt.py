@@ -129,7 +129,7 @@ class SubTChallenge:
                 self.yaw, self.pitch, self.roll = [math.radians(x/100) for x in data]
             elif channel == 'artf':
                 x, y, z = self.xyz
-                self.bus.publish('artf_xyz', [round(x*1000), round(y*1000), round(z*1000)])
+                self.bus.publish('artf_xyz', [data, round(x*1000), round(y*1000), round(z*1000)])
             return channel
 
     def wait(self, dt):  # TODO refactor to some common class
