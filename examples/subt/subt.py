@@ -7,6 +7,7 @@ from datetime import timedelta
 from collections import defaultdict
 
 from osgar.explore import follow_wall_angle
+from osgar.lib.mathex import normalizeAnglePIPI
 
 
 def min_dist(laser_data):
@@ -58,7 +59,7 @@ class SubTChallenge:
             self.send_speed_cmd(0.0, self.max_angular_speed)
         else:
             self.send_speed_cmd(0.0, -self.max_angular_speed)
-        while abs(start_pose[2] - self.last_position[2]) < abs(angle):
+        while abs(normalizeAnglePIPI(start_pose[2] - self.last_position[2])) < abs(angle):
             self.update()
         if with_stop:
             self.send_speed_cmd(0.0, 0.0)
@@ -143,7 +144,8 @@ class SubTChallenge:
         self.go_straight(9.0)  # go to the tunnel entrance
         dist = self.follow_wall(radius = 1.5, right_wall=False, timeout=timedelta(hours=3), dist_limit=3)
         print("Going HOME")
-        self.turn(math.radians(-180))
+        self.turn(math.radians(-90))  # workaround for -180 deg pose issue
+        self.turn(math.radians(-90))
         self.follow_wall(radius = 1.5, right_wall=True, timeout=timedelta(hours=3), dist_limit=dist+5)
         self.wait(timedelta(seconds=1))
 
