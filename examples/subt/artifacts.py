@@ -80,7 +80,13 @@ class ArtifactReporter(Node):
         assert channel == "artf_xyz", channel
 
         print("DETECTED", self.artf_xyz)
+
+        artf_type, ix, iy, iz = self.artf_xyz
         # TODO call SubT API
+
+        with open('call_base.txt', 'w') as f:
+            f.write('%s %.2f %.2f %.2f\n' % (artf_type, ix/1000.0, iy/1000.0, iz/1000.0))
+        print('report completed')
 
 # vim: expandtab sw=4 ts=4
 
