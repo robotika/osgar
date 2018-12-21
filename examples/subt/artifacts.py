@@ -23,7 +23,7 @@ def count_red(img):
     r = img[:,:,2]
     mask = np.logical_and(r > 100, np.logical_and(r/2 > g, r/2 > b))
     img[mask] = 0, 255, 0
-    return mask.sum()
+    return int(mask.sum())
 
 
 class ArtifactDetector(Node):
@@ -56,6 +56,7 @@ class ArtifactDetector(Node):
             print('Published', self.best)
             self.publish('artf', self.best)
             self.active = False
+        return channel
 
 
 class ArtifactReporter(Node):
