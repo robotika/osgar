@@ -83,6 +83,8 @@ class SubTChallenge:
                     desired_speed = 1.0
                 desired_angular_speed = follow_wall_angle(self.scan, radius=radius, right_wall=right_wall)
 #                print(self.time, 'desired_angular_speed\t%.1f\t%.3f' % (math.degrees(desired_angular_speed), dist))
+                if desired_angular_speed is None:
+                    desired_angular_speed = 0.0
                 self.send_speed_cmd(desired_speed, desired_angular_speed)
             if dist_limit is not None:
                 if dist_limit < self.traveled_dist - start_dist:
@@ -112,7 +114,7 @@ class SubTChallenge:
                 self.last_position = pose
                 if self.start_pose is None:
                     self.start_pose = pose
-                self.traveled_dist = math.hypot(pose[0] - self.start_pose[0], pose[1] - self.start_pose[1])
+                self.traveled_dist += dist
                 x, y, z = self.xyz
                 x += math.cos(self.pitch) * math.cos(self.yaw) * dist
                 y += math.cos(self.pitch) * math.sin(self.yaw) * dist
