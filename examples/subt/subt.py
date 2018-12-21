@@ -144,8 +144,7 @@ class SubTChallenge:
         self.go_straight(9.0)  # go to the tunnel entrance
         dist = self.follow_wall(radius = 1.5, right_wall=False, timeout=timedelta(hours=3), dist_limit=3)
         print("Going HOME")
-        self.turn(math.radians(-90))  # workaround for -180 deg pose issue
-        self.turn(math.radians(-90))
+        self.turn(math.radians(120))  # it is safer to turn and see the wall
         self.follow_wall(radius = 1.5, right_wall=True, timeout=timedelta(hours=3), dist_limit=dist+5)
         self.wait(timedelta(seconds=1))
 
