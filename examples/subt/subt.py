@@ -149,7 +149,8 @@ class SubTChallenge:
         dist = self.follow_wall(radius = 1.5, right_wall=False, stop_on_artf=True,
                                 timeout=timedelta(hours=3))
         print("Going HOME")
-        self.turn(math.radians(120), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
+        self.turn(math.radians(90), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
+        self.turn(math.radians(90), speed=-0.1)
         self.follow_wall(radius = 1.5, right_wall=True, timeout=timedelta(hours=3), dist_limit=dist+5)
         self.wait(timedelta(seconds=1))
 
