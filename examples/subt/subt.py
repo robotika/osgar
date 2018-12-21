@@ -52,13 +52,13 @@ class SubTChallenge:
             self.update()
         self.send_speed_cmd(0.0, 0.0)
 
-    def turn(self, angle, with_stop=True):
+    def turn(self, angle, with_stop=True, speed=0.0):
         print(self.time, "turn %.1f" % math.degrees(angle))
         start_pose = self.last_position
         if angle >= 0:
-            self.send_speed_cmd(0.0, self.max_angular_speed)
+            self.send_speed_cmd(speed, self.max_angular_speed)
         else:
-            self.send_speed_cmd(0.0, -self.max_angular_speed)
+            self.send_speed_cmd(speed, -self.max_angular_speed)
         while abs(normalizeAnglePIPI(start_pose[2] - self.last_position[2])) < abs(angle):
             self.update()
         if with_stop:
@@ -144,7 +144,7 @@ class SubTChallenge:
         self.go_straight(9.0)  # go to the tunnel entrance
         dist = self.follow_wall(radius = 1.5, right_wall=False, timeout=timedelta(hours=3), dist_limit=3)
         print("Going HOME")
-        self.turn(math.radians(120))  # it is safer to turn and see the wall
+        self.turn(math.radians(120), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
         self.follow_wall(radius = 1.5, right_wall=True, timeout=timedelta(hours=3), dist_limit=dist+5)
         self.wait(timedelta(seconds=1))
 
