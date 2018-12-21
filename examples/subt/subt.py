@@ -69,7 +69,8 @@ class SubTChallenge:
                     break
             print(self.time, 'stop at', self.time - start_time)
 
-    def follow_wall(self, radius, timeout=timedelta(hours=3)):
+    def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None):
+        start_dist = self.traveled_dist
         start_time = self.time
         desired_speed = 1.0
         while self.time - start_time < timeout:
@@ -80,9 +81,14 @@ class SubTChallenge:
                     desired_speed = 0.5
                 else:
                     desired_speed = 1.0
-                desired_angular_speed = follow_wall_angle(self.scan, radius=radius)
+                desired_angular_speed = follow_wall_angle(self.scan, radius=radius, right_wall=right_wall)
 #                print(self.time, 'desired_angular_speed\t%.1f\t%.3f' % (math.degrees(desired_angular_speed), dist))
                 self.send_speed_cmd(desired_speed, desired_angular_speed)
+            if dist_limit is not None:
+                if dist_limit < self.traveled_dist - start_dist:
+                    print('Distance limit reached! At', self.traveled_dist, self.traveled_dist - start_dist)
+                    break
+        return self.traveled_dist - start_dist
 
     def update(self):
         packet = self.bus.listen()
@@ -133,7 +139,10 @@ class SubTChallenge:
     def play(self):
         print("SubT Challenge Ver1!")
         self.go_straight(9.0)  # go to the tunnel entrance
-        self.follow_wall(radius = 1.5)
+        dist = self.follow_wall(radius = 1.5, right_wall=False, timeout=timedelta(hours=3), dist_limit=3)
+        print("Going HOME")
+        self.turn(math.radians(-180))
+        self.follow_wall(radius = 1.5, right_wall=True, timeout=timedelta(hours=3), dist_limit=dist+5)
         self.wait(timedelta(seconds=1))
 
     def start(self):
