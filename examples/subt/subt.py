@@ -37,6 +37,7 @@ class SubTChallenge:
         self.is_moving = None  # unknown
         self.scan = None  # I should use class Node instead
         self.stat = defaultdict(int)
+        self.artifact_detected = False
 
     def send_speed_cmd(self, speed, angular_speed):
         return self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
@@ -70,7 +71,7 @@ class SubTChallenge:
                     break
             print(self.time, 'stop at', self.time - start_time)
 
-    def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None):
+    def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None, stop_on_artf=False):
         start_dist = self.traveled_dist
         start_time = self.time
         desired_speed = 1.0
@@ -91,6 +92,8 @@ class SubTChallenge:
                 if dist_limit < self.traveled_dist - start_dist:
                     print('Distance limit reached! At', self.traveled_dist, self.traveled_dist - start_dist)
                     break
+            if stop_on_artf and self.artifact_detected:
+                break
         return self.traveled_dist - start_dist
 
     def update(self):
@@ -130,6 +133,7 @@ class SubTChallenge:
             elif channel == 'artf':
                 x, y, z = self.xyz
                 self.bus.publish('artf_xyz', [data, round(x*1000), round(y*1000), round(z*1000)])
+                self.artifact_detected = True
             return channel
 
     def wait(self, dt):  # TODO refactor to some common class
@@ -142,7 +146,8 @@ class SubTChallenge:
     def play(self):
         print("SubT Challenge Ver1!")
         self.go_straight(9.0)  # go to the tunnel entrance
-        dist = self.follow_wall(radius = 1.5, right_wall=False, timeout=timedelta(hours=3), dist_limit=3)
+        dist = self.follow_wall(radius = 1.5, right_wall=False, stop_on_artf=True,
+                                timeout=timedelta(hours=3))
         print("Going HOME")
         self.turn(math.radians(120), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
         self.follow_wall(radius = 1.5, right_wall=True, timeout=timedelta(hours=3), dist_limit=dist+5)
