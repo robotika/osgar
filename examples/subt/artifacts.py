@@ -44,11 +44,11 @@ class ArtifactDetector(Node):
             return channel
 
         # hack - test communication to BaseStation
-        if self.time > timedelta(minutes=4):
-            print('Published', self.best)
-            self.publish('artf', EXTINGUISHER)
-            self.active = False
-        return channel
+#        if self.time > timedelta(minutes=4):
+#            print('Published', self.best)
+#            self.publish('artf', EXTINGUISHER)
+#            self.active = False
+#        return channel
         # END OF HACK ....
 
         img = cv2.imdecode(np.fromstring(self.image, dtype=np.uint8), 1)
