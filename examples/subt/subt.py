@@ -37,6 +37,8 @@ class SubTChallenge:
         self.is_moving = None  # unknown
         self.scan = None  # I should use class Node instead
         self.stat = defaultdict(int)
+        self.artifact_xyz = None
+        self.artifact_data = None
         self.artifact_detected = False
 
     def send_speed_cmd(self, speed, angular_speed):
@@ -80,10 +82,10 @@ class SubTChallenge:
                 size = len(self.scan)
                 dist = min_dist(self.scan[size//3:2*size//3])
                 if dist < 2.0:
-                    desired_speed = 0.5
+                    desired_speed = 0.1
                 else:
                     desired_speed = 1.0
-                desired_angular_speed = follow_wall_angle(self.scan, radius=radius, right_wall=right_wall)
+                desired_angular_speed = 0.3 * follow_wall_angle(self.scan, radius=radius, right_wall=right_wall)
 #                print(self.time, 'desired_angular_speed\t%.1f\t%.3f' % (math.degrees(desired_angular_speed), dist))
                 if desired_angular_speed is None:
                     desired_angular_speed = 0.0
@@ -131,8 +133,8 @@ class SubTChallenge:
             elif channel == 'rot':
                 self.yaw, self.pitch, self.roll = [math.radians(x/100) for x in data]
             elif channel == 'artf':
-                x, y, z = self.xyz
-                self.bus.publish('artf_xyz', [data, round(x*1000), round(y*1000), round(z*1000)])
+                self.artifact_xyz = self.xyz
+                self.artifact_data = data
                 self.artifact_detected = True
             return channel
 
@@ -152,7 +154,10 @@ class SubTChallenge:
         self.turn(math.radians(90), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
         self.turn(math.radians(90), speed=-0.1)
         self.follow_wall(radius = 1.5, right_wall=True, timeout=timedelta(hours=3), dist_limit=dist+5)
-        self.wait(timedelta(seconds=1))
+        if self.artifact_xyz is not None:
+            x, y, z = self.artifact_xyz
+            self.bus.publish('artf_xyz', [self.artifact_data, round(x*1000), round(y*1000), round(z*1000)])
+        self.wait(timedelta(seconds=8))
 
     def start(self):
         pass
