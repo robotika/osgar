@@ -1,0 +1,145 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["emergency_stop", "pose2d", "points", "rot", "artf"],
+          "out": ["desired_speed", "pose2d", "artf_xyz"],
+          "init": {
+            "max_speed": 2.0
+          }
+      },
+      "detector": {
+          "driver": "artifacts:ArtifactDetector",
+          "in": ["image"],
+          "out": ["artf"],
+          "init": {}
+      },
+      "reporter": {
+          "driver": "artifacts:ArtifactReporter",
+          "in": ["artf_xyz"],
+          "out": [],
+          "init": {}
+      },
+      "ros": {
+          "driver": "rosproxy",
+          "in": ["desired_speed", "cmd_vel", "imu_data"],
+          "out": ["emergency_stop", "pose2d", "cmd_vel", "imu_data", "imu_data_addr",
+	          "laser_data", "laser_data_addr", "image_data", "image_data_addr",
+            "odom_data", "odom_data_addr", "point_data", "point_data_addr"],
+          "init": {
+            "ros_master_uri": "http://127.0.0.1:11311",
+            "ros_client_uri": "http://127.0.0.1:8000",
+            "topic": "/X3/cmd_vel",
+            "topic_type": "geometry_msgs/Twist",
+            "subscribe": [
+                        ["/X3/imu", "std_msgs/Imu", "imu_data"],
+                        ["/X3/rgbd_camera/rgb/image_raw/compressed", "sensor_msgs/CompressedImage", "image_data"],
+                        ["/X3/rgbd_camera/depth/points", "sensor_msgs/PointCloud2", "point_data"],
+                        ["/X3/odometry_sensor1/odometry", "nav_msgs/Odometry", "odom_data"]
+                    ]
+
+          }
+      },
+      "timer": {
+          "driver": "mytimer:MyTimer",
+          "in": [],
+          "out": ["tick"],
+          "init": {
+            "sleep": 0.1
+          }
+      },
+      "tcp_cmd_vel": {
+          "driver": "tcpserver",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {
+            "host": "127.0.0.1",
+            "port": 8123,
+            "timeout": 1.0
+          }
+      },
+      "tcp_imu_data": {
+          "driver": "tcpdynamic",
+          "in": ["addr", "raw"],
+          "out": ["raw"],
+          "init": {}
+      },
+      "tcp_point_data": {
+          "driver": "tcpdynamic",
+          "in": ["addr", "raw"],
+          "out": ["raw"],
+          "init": {}
+      },
+      "tcp_image_data": {
+          "driver": "tcpdynamic",
+          "in": ["addr", "raw"],
+          "out": ["raw"],
+          "init": {}
+      },
+      "tcp_odom_data": {
+          "driver": "tcpdynamic",
+          "in": ["addr", "raw"],
+          "out": ["raw"],
+          "init": {}
+      },
+      "rosmsg_imu": {
+          "driver": "rosmsg",
+          "in": ["addr", "raw"],
+          "out": ["rot"],
+          "init": {"topic_type": "std_msgs/Imu"}
+      },
+      "rosmsg_point": {
+          "driver": "rosmsg",
+          "in": ["raw"],
+          "out": ["points"],
+          "init": {"topic_type": "sensor_msgs/PointCloud2"}
+      },
+      "rosmsg_image": {
+          "driver": "rosmsg",
+          "in": ["raw"],
+          "out": ["image"],
+          "init": {"topic_type": "sensor_msgs/CompressedImage"}
+      },
+      "rosmsg_odom": {
+          "driver": "rosmsg",
+          "in": ["raw"],
+          "out": ["pose2d"],
+          "init": {"topic_type": "nav_msgs/Odometry"}
+      }
+    },
+    "links": [["app.desired_speed", "ros.desired_speed"],
+              ["ros.cmd_vel", "tcp_cmd_vel.raw"],
+              ["tcp_cmd_vel.raw", "ros.cmd_vel"],
+
+              ["ros.imu_data_addr", "tcp_imu_data.addr"],
+              ["ros.imu_data", "tcp_imu_data.raw"],
+              ["tcp_imu_data.raw", "ros.imu_data"],
+              ["tcp_imu_data.raw", "rosmsg_imu.raw"],
+              ["rosmsg_imu.rot", "app.rot"],
+
+              ["ros.point_data_addr", "tcp_point_data.addr"],
+              ["ros.point_data", "tcp_point_data.raw"],
+              ["tcp_point_data.raw", "ros.point_data"],
+              ["tcp_point_data.raw", "rosmsg_point.raw"],
+              ["rosmsg_point.points", "app.points"],
+
+              ["ros.image_data_addr", "tcp_image_data.addr"],
+              ["ros.image_data", "tcp_image_data.raw"],
+              ["tcp_image_data.raw", "ros.image_data"],
+              ["tcp_image_data.raw", "rosmsg_image.raw"],
+              ["rosmsg_image.image", "detector.image"],
+
+              ["ros.odom_data_addr", "tcp_odom_data.addr"],
+              ["ros.odom_data", "tcp_odom_data.raw"],
+              ["tcp_odom_data.raw", "ros.odom_data"],
+              ["tcp_odom_data.raw", "rosmsg_odom.raw"],
+              ["rosmsg_odom.pose2d", "app.pose2d"],
+
+              ["detector.artf", "app.artf"],
+              ["app.artf_xyz", "reporter.artf_xyz"],
+
+              ["timer.tick", "ros.tick"]]
+  }
+}
