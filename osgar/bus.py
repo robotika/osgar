@@ -2,6 +2,7 @@
   Internal bus for communication among modules
 """
 import time
+import zlib
 from queue import Queue
 from datetime import timedelta
 from collections import deque
@@ -42,11 +43,17 @@ class BusHandler:
             idx = self.logger.register('.'.join([self.name, publish_name]))
             self.stream_id[publish_name] = idx
         self._is_alive = True
+        self.compressed_output = (name == 'tcp_point_data')  # hack
 
     def publish(self, channel, data):
         with self.logger.lock:
             stream_id = self.stream_id[channel]  # local maping of indexes
-            timestamp = self.logger.write(stream_id, serialize(data))
+            if self.compressed_output:
+                to_write = zlib.compress(serialize(data))
+            else:
+                to_write = serialize(data)
+            timestamp = self.logger.write(stream_id, to_write)
+
             for queue, input_channel in self.out[channel]:
                 queue.put((timestamp, input_channel, data))
             for slot in self.slots.get(channel, []):
