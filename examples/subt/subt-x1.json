@@ -1,0 +1,39 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["emergency_stop", "pose2d", "scan"],
+          "out": ["desired_speed"],
+          "init": {
+            "max_speed": 0.5
+          }
+      },
+      "ros": {
+          "driver": "rosproxy",
+          "in": ["/X1/cmd_vel"],
+          "out": ["/X1/imu/data", 
+                  "/X1/front_scan",
+                  "/X1/front/image_raw/compressed",
+                  "/X1/x1_velocity_controller/odom"],
+          "init": {
+            "ros_master_uri": "http://127.0.0.1:11311"
+          }
+      },
+      "timer": {
+          "driver": "mytimer:MyTimer",
+          "in": [],
+          "out": ["tick"],
+          "init": {
+            "sleep": 0.1
+          }
+      }
+    },
+    "links": [["app.desired_speed", "ros./X1/cmd_vel"],
+              ["ros./X1/front_scan", "app.scan"],
+              ["ros./X1/x1_velocity_controller/odom", "app.pose2d"],
+
+              ["timer.tick", "ros.tick"]]
+  }
+}
