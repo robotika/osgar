@@ -135,6 +135,7 @@ class LogReader:
             microseconds += self.us_offset
             dt = datetime.timedelta(microseconds=microseconds)
             data = self.f.read(size)
+            assert len(data) == size, (len(data), size)
             while size == 0xFFFF:
                 header = self.f.read(8)
                 if len(header) < 8:
@@ -142,7 +143,9 @@ class LogReader:
                 ref_microseconds, ref_stream_id, size = struct.unpack('IHH', header)
                 assert microseconds & TIMESTAMP_MASK == ref_microseconds, (microseconds & TIMESTAMP_MASK, ref_microseconds)
                 assert stream_id == ref_stream_id, (stream_id, ref_stream_id)
-                data += self.f.read(size)
+                part = self.f.read(size)
+                assert len(part) == size, (len(part), size)
+                data += part
 
             if len(multiple_streams) == 0 or stream_id in multiple_streams:
                 yield dt, stream_id, data
