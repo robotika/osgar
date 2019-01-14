@@ -230,5 +230,44 @@ class LoggerTest(unittest.TestCase):
             self.assertEqual(dt, timedelta(hours=2))
         os.remove(filename)
 
+    def test_no_eof(self):
+        # similar to tail -f (--follow)
+        with LogWriter(prefix='tmpB', note='test_EOF') as log:
+            filename = log.filename
+            t1 = log.write(1, b'\x01'*100)
+            time.sleep(0.001)
+            t2 = log.write(1, b'\x02'*100)
+            time.sleep(0.001)
+            t3 = log.write(1, b'\x03'*100000)
+
+        with LogReader(filename) as log:
+            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            self.assertEqual(data, b'\x01'*100)
+            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            self.assertEqual(data, b'\x02'*100)
+
+        partial = filename + '.part'
+        with open(filename, 'rb') as f_in:
+            with open(partial, 'wb') as f_out:
+                f_out.write(f_in.read(100))
+        
+        with LogReader(partial) as log:
+            with self.assertRaises(AssertionError):
+                dt, channel, data = next(log.read_gen(only_stream_id=1))
+
+        partial = filename + '.part'
+        with open(filename, 'rb') as f_in:
+            with open(partial, 'wb') as f_out:
+                f_out.write(f_in.read(100000))
+
+        with LogReader(partial) as log:
+            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            self.assertEqual(data, b'\x01'*100)
+            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            self.assertEqual(data, b'\x02'*100)
+            with self.assertRaises(AssertionError):
+                dt, channel, data = next(log.read_gen(only_stream_id=1))
+
+        os.remove(filename)
 
 # vim: expandtab sw=4 ts=4
