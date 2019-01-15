@@ -1,6 +1,7 @@
 import unittest
 import os
 import time
+from threading import Timer
 from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
 
@@ -19,6 +20,16 @@ class TimeStandsStill:
 
     def utcnow(self):
         return self.datetime
+
+
+def delayed_copy(src, dst, skip_size):
+    with open(src, 'rb') as f:
+        buf = f.read(skip_size)
+        assert len(buf) == skip_size, (len(buf), skip_size)
+        with open(dst, 'ab+') as f2:
+            buf = f.read()
+            f2.write(buf)
+            f2.flush()
 
 
 class LoggerTest(unittest.TestCase):
@@ -241,9 +252,10 @@ class LoggerTest(unittest.TestCase):
             t3 = log.write(1, b'\x03'*100000)
 
         with LogReader(filename) as log:
-            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            gen = log.read_gen(only_stream_id=1)
+            dt, channel, data = next(gen)
             self.assertEqual(data, b'\x01'*100)
-            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            dt, channel, data = next(gen)
             self.assertEqual(data, b'\x02'*100)
 
         partial = filename + '.part'
@@ -255,19 +267,28 @@ class LoggerTest(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 dt, channel, data = next(log.read_gen(only_stream_id=1))
 
+        proc = Timer(0.1, delayed_copy, [filename, partial, 100])
+        proc.start()
+        with LogReader(partial, follow=True) as log:
+            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            self.assertEqual(data, b'\x01'*100)
+        proc.join()
+
         partial = filename + '.part'
         with open(filename, 'rb') as f_in:
             with open(partial, 'wb') as f_out:
                 f_out.write(f_in.read(100000))
 
         with LogReader(partial) as log:
-            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            gen = log.read_gen(only_stream_id=1)
+            dt, channel, data = next(gen)
             self.assertEqual(data, b'\x01'*100)
-            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            dt, channel, data = next(gen)
             self.assertEqual(data, b'\x02'*100)
             with self.assertRaises(AssertionError):
-                dt, channel, data = next(log.read_gen(only_stream_id=1))
+                dt, channel, data = next(gen)
 
+        os.remove(partial)
         os.remove(filename)
 
 # vim: expandtab sw=4 ts=4

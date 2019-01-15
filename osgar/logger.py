@@ -33,6 +33,7 @@ import datetime
 import struct
 import os
 import logging
+import time
 from threading import RLock
 from ast import literal_eval
 
@@ -103,16 +104,25 @@ class LogWriter:
 
 
 class LogReader:
-    def __init__(self, filename):
+    def __init__(self, filename, follow=False):
         self.filename = filename
+        self.follow = follow
         self.f = open(self.filename, 'rb')
-        data = self.f.read(4)
+        data = self._read(4)
         assert data == b'Pyr\x00', data
-        
-        data = self.f.read(12)
+
+        data = self._read(12)
         self.start_time = datetime.datetime(*struct.unpack('HBBBBBI', data))
         self.us_offset = 0  # increase after overflow
         self.prev_microseconds = 0
+
+    def _read(self, size):
+        buf = self.f.read(size)
+        if self.follow:
+            while len(buf) < size:
+                time.sleep(0.1)
+                buf += self.f.read(size - len(buf))
+        return buf
 
     def read_gen(self, only_stream_id=None):
         "packed generator - yields (time, stream, data)"
@@ -125,7 +135,7 @@ class LogReader:
                 multiple_streams = set([only_stream_id])
 
         while True:
-            header = self.f.read(8)
+            header = self._read(8)
             if len(header) < 8:
                 break
             microseconds, stream_id, size = struct.unpack('IHH', header)
@@ -134,16 +144,16 @@ class LogReader:
             self.prev_microseconds = microseconds
             microseconds += self.us_offset
             dt = datetime.timedelta(microseconds=microseconds)
-            data = self.f.read(size)
+            data = self._read(size)
             assert len(data) == size, (len(data), size)
             while size == 0xFFFF:
-                header = self.f.read(8)
+                header = self._read(8)
                 if len(header) < 8:
                     break
                 ref_microseconds, ref_stream_id, size = struct.unpack('IHH', header)
                 assert microseconds & TIMESTAMP_MASK == ref_microseconds, (microseconds & TIMESTAMP_MASK, ref_microseconds)
                 assert stream_id == ref_stream_id, (stream_id, ref_stream_id)
-                part = self.f.read(size)
+                part = self._read(size)
                 assert len(part) == size, (len(part), size)
                 data += part
 
