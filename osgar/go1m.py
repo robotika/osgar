@@ -1,12 +1,8 @@
 """
   Test basic robot/John Deere driving functionality
 """
-import sys
 import math
 from datetime import timedelta
-
-from osgar.lib.config import load as config_load
-from osgar.record import Recorder
 
 
 class GoOneMeter:
@@ -15,6 +11,7 @@ class GoOneMeter:
         self.start_pose = None
         self.traveled_dist = 0.0
         self.time = None
+        self.verbose = False
 
     def send_speed_cmd(self, speed, angular_speed):
         return self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
@@ -22,7 +19,8 @@ class GoOneMeter:
     def update(self):
         packet = self.bus.listen()
         if packet is not None:
-            print('Go1m', packet)
+            if self.verbose:
+                print('Go1m', packet)
             timestamp, channel, data = packet
             self.time = timestamp
             if channel == 'pose2d':
@@ -39,7 +37,7 @@ class GoOneMeter:
         while self.time - start_time < dt:
             self.update()
 
-    def play(self):
+    def run(self):
         print("Go One Meter!")
         self.send_speed_cmd(0.5, 0.0)
         while self.traveled_dist < 1.0:
@@ -58,36 +56,8 @@ class GoOneMeter:
 
 
 if __name__ == "__main__":
-    from osgar.logger import LogWriter, LogReader
-    import argparse
+    from osgar.launcher import launch
 
-    parser = argparse.ArgumentParser(description='Go One Meter')
-    subparsers = parser.add_subparsers(help='sub-command help', dest='command')
-    subparsers.required = True
-    parser_run = subparsers.add_parser('run', help='run on real HW')
-    parser_run.add_argument('config', nargs='+', help='configuration file')
-    parser_run.add_argument('--note', help='add description')
-
-    parser_replay = subparsers.add_parser('replay', help='replay from logfile')
-    parser_replay.add_argument('logfile', help='recorded log file')
-    parser_replay.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
-    parser_replay.add_argument('--config', nargs='+', help='force alternative configuration file')
-    args = parser.parse_args()
-
-    if args.command == 'replay':
-        from osgar.replay import replay
-        args.module = 'app'
-        game = replay(args, application=GoOneMeter)
-        game.play()
-
-    elif args.command == 'run':
-        log = LogWriter(prefix='go1m-', note=str(sys.argv))
-        config = config_load(*args.config)
-        log.write(0, bytes(str(config), 'ascii'))  # write configuration
-        robot = Recorder(config=config['robot'], logger=log, application=GoOneMeter)
-        game = robot.modules['app']  # TODO nicer reference
-        robot.start()
-        game.play()
-        robot.finish()
+    launch(app=GoOneMeter, description='Go One Meter', prefix='go1m-')
 
 # vim: expandtab sw=4 ts=4
