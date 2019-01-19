@@ -104,7 +104,7 @@ class LogWriter:
 
 
 class LogReader:
-    def __init__(self, filename, follow=False):
+    def __init__(self, filename, follow=False, only_stream_id=None):
         self.filename = filename
         self.follow = follow
         self.f = open(self.filename, 'rb')
@@ -115,6 +115,7 @@ class LogReader:
         self.start_time = datetime.datetime(*struct.unpack('HBBBBBI', data))
         self.us_offset = 0  # increase after overflow
         self.prev_microseconds = 0
+        self.gen = self._read_gen(only_stream_id=only_stream_id)
 
     def _read(self, size):
         buf = self.f.read(size)
@@ -124,7 +125,7 @@ class LogReader:
                 buf += self.f.read(size - len(buf))
         return buf
 
-    def read_gen(self, only_stream_id=None):
+    def _read_gen(self, only_stream_id=None):
         "packed generator - yields (time, stream, data)"
         if only_stream_id is None:
             multiple_streams = set()
@@ -172,10 +173,16 @@ class LogReader:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
+    def __next__(self):
+        return next(self.gen)
+
+    def __iter__(self):
+        return self
+
 
 class LogAsserter(LogReader):
-    def __init__(self, filename):
-        LogReader.__init__(self, filename)
+    def __init__(self, filename, only_stream_id=None):
+        LogReader.__init__(self, filename, only_stream_id=only_stream_id)
         self.assert_stream_id = None
 
     def write(self, stream_id, data):
