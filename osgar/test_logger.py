@@ -58,21 +58,21 @@ class LoggerTest(unittest.TestCase):
         with LogReader(filename) as log:
             self.assertEqual(start_time, log.start_time)
 
-            __, stream_id, data = next(log.read_gen())
+            __, stream_id, data = next(log)
             self.assertEqual(INFO_STREAM_ID, stream_id)
 
-            t, stream_id, data = next(log.read_gen())
+            t, stream_id, data = next(log)
             self.assertEqual(stream_id, 10)
             self.assertEqual(data, b'\x01\x02\x02\x04')
 
-            t, stream_id, data = next(log.read_gen())
+            t, stream_id, data = next(log)
             self.assertTrue(t.microseconds > 100)
             
             with self.assertRaises(StopIteration):
-                __ = next(log.read_gen())
+                __ = next(log)
 
-        with LogReader(filename) as log:
-            for t, stream_id, data in log.read_gen(only_stream_id=10):
+        with LogReader(filename, only_stream_id=10) as log:
+            for t, stream_id, data in log:
                 self.assertEqual(stream_id, 10)
                 self.assertEqual(data, b'\x01\x02\x02\x04')
                 break
@@ -88,9 +88,9 @@ class LoggerTest(unittest.TestCase):
             time.sleep(0.001)
             t3 = log.write(2, b'\x07\x08')
 
-        with LogReader(filename) as log:
+        with LogReader(filename, only_stream_id=[1, 2]) as log:
             arr = []
-            for t, stream_id, data in log.read_gen([1, 2]):
+            for t, stream_id, data in log:
                 self.assertIn(stream_id, [1, 2])
                 arr.append((t, stream_id))
             self.assertEqual(arr, [(t1, 1), (t3, 2)])
@@ -107,9 +107,9 @@ class LoggerTest(unittest.TestCase):
 
             self.assertEqual(log.register('gps.position'), 2)
 
-        with LogReader(filename) as log:
+        with LogReader(filename, only_stream_id=INFO_STREAM_ID) as log:
             arr = []
-            for __, __, data in log.read_gen(INFO_STREAM_ID):
+            for __, __, data in log:
                 if b'names' in data:
                     arr.append(data)
             self.assertEqual(len(arr), 2, arr)
@@ -127,10 +127,10 @@ class LoggerTest(unittest.TestCase):
             time.sleep(0.001)
             t3 = log.write(1, b'\x07\x08')
 
-        with LogAsserter(filename) as log:
+        with LogAsserter(filename, only_stream_id=[1, 2]) as log:
             log.assert_stream_id = 2
             arr = []
-            for t, stream_id, data in log.read_gen([1, 2]):
+            for t, stream_id, data in log:
                 self.assertIn(stream_id, [1,2])
                 if stream_id == 2:
                     log.write(2, b'\x05')
@@ -155,9 +155,9 @@ class LoggerTest(unittest.TestCase):
             t4 = log.write(1, b'ABC')
             t5 = log.write(1, data+data)  # multiple split
 
-        with LogReader(filename) as log:
+        with LogReader(filename, only_stream_id=1) as log:
             arr = []
-            for __, __, data in log.read_gen(1):
+            for __, __, data in log:
                 arr.append(data)
             self.assertEqual([len(x) for x in arr],
                              [100000, 65535, 0, 3, 200000])
@@ -185,8 +185,8 @@ class LoggerTest(unittest.TestCase):
             t1 = log.write(1, b'\x01\x02')
             self.assertGreater(t1, timedelta(hours=1))
             filename = log.filename
-        with LogReader(filename) as log:
-            dt, channel, data = next(log.read_gen(only_stream_id=1))
+        with LogReader(filename, only_stream_id=1) as log:
+            dt, channel, data = next(log)
             self.assertGreater(dt, timedelta(minutes=10))
         os.remove(filename)
 
@@ -208,14 +208,14 @@ class LoggerTest(unittest.TestCase):
                 # TODO this write should rise exception as the time gap is too big to track!
                 t4 = log.write(1, b'\x04')
                 self.assertEqual(t4, timedelta(hours=4))
-        with LogReader(filename) as log:
-            dt, channel, data = next(log.read_gen(only_stream_id=1))
+        with LogReader(filename, only_stream_id=1) as log:
+            dt, channel, data = next(log)
             self.assertEqual(dt, timedelta(hours=0))
-            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            dt, channel, data = next(log)
             self.assertEqual(dt, timedelta(hours=1))
-            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            dt, channel, data = next(log)
             self.assertEqual(dt, timedelta(hours=2))
-#            dt, channel, data = next(log.read_gen(only_stream_id=1))
+#            dt, channel, data = next(log)
 #            self.assertEqual(dt, timedelta(hours=4))
         os.remove(filename)
 
@@ -232,12 +232,12 @@ class LoggerTest(unittest.TestCase):
                 osgar.logger.datetime.datetime = TimeStandsStill(datetime(2019, 1, 1, 2))
                 t3 = log.write(1, b'\x03'*100000)
                 self.assertEqual(t3, timedelta(hours=2))
-        with LogReader(filename) as log:
-            dt, channel, data = next(log.read_gen(only_stream_id=1))
+        with LogReader(filename, only_stream_id=1) as log:
+            dt, channel, data = next(log)
             self.assertEqual(dt, timedelta(hours=0))
-            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            dt, channel, data = next(log)
             self.assertEqual(dt, timedelta(hours=1))
-            dt, channel, data = next(log.read_gen(only_stream_id=1))
+            dt, channel, data = next(log)
             self.assertEqual(dt, timedelta(hours=2))
         os.remove(filename)
 
@@ -251,11 +251,10 @@ class LoggerTest(unittest.TestCase):
             time.sleep(0.001)
             t3 = log.write(1, b'\x03'*100000)
 
-        with LogReader(filename) as log:
-            gen = log.read_gen(only_stream_id=1)
-            dt, channel, data = next(gen)
+        with LogReader(filename, only_stream_id=1) as log:
+            dt, channel, data = next(log)
             self.assertEqual(data, b'\x01'*100)
-            dt, channel, data = next(gen)
+            dt, channel, data = next(log)
             self.assertEqual(data, b'\x02'*100)
 
         partial = filename + '.part'
@@ -263,14 +262,14 @@ class LoggerTest(unittest.TestCase):
             with open(partial, 'wb') as f_out:
                 f_out.write(f_in.read(100))
         
-        with LogReader(partial) as log:
+        with LogReader(partial, only_stream_id=1) as log:
             with self.assertRaises(AssertionError):
-                dt, channel, data = next(log.read_gen(only_stream_id=1))
+                dt, channel, data = next(log)
 
         proc = Timer(0.1, delayed_copy, [filename, partial, 100])
         proc.start()
-        with LogReader(partial, follow=True) as log:
-            dt, channel, data = next(log.read_gen(only_stream_id=1))
+        with LogReader(partial, follow=True, only_stream_id=1) as log:
+            dt, channel, data = next(log)
             self.assertEqual(data, b'\x01'*100)
         proc.join()
 
@@ -279,16 +278,31 @@ class LoggerTest(unittest.TestCase):
             with open(partial, 'wb') as f_out:
                 f_out.write(f_in.read(100000))
 
-        with LogReader(partial) as log:
-            gen = log.read_gen(only_stream_id=1)
-            dt, channel, data = next(gen)
+        with LogReader(partial, only_stream_id=1) as log:
+            dt, channel, data = next(log)
             self.assertEqual(data, b'\x01'*100)
-            dt, channel, data = next(gen)
+            dt, channel, data = next(log)
             self.assertEqual(data, b'\x02'*100)
             with self.assertRaises(AssertionError):
-                dt, channel, data = next(gen)
+                dt, channel, data = next(log)
 
         os.remove(partial)
+        os.remove(filename)
+
+    def test_read_gen_seek(self):
+        with LogWriter(prefix='tmpC', note='test_read_gen_seek') as log:
+            filename = log.filename
+            t1 = log.write(1, b'\x01')
+            time.sleep(0.001)
+            t2 = log.write(1, b'\x02')
+            time.sleep(0.001)
+            t3 = log.write(1, b'\x03')
+
+        with LogReader(filename, only_stream_id=1) as log:
+            dt, channel, data = next(log)
+            self.assertEqual(data, b'\x01')
+            dt, channel, data = next(log)
+            self.assertEqual(data, b'\x02')
         os.remove(filename)
 
 # vim: expandtab sw=4 ts=4
