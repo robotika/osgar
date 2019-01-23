@@ -9,7 +9,6 @@ import struct
 import math
 from threading import Thread
 
-from osgar.logger import LogWriter, LogReader
 from osgar.bus import BusShutdownException
 from .canserial import CAN_packet
 

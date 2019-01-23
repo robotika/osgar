@@ -5,7 +5,6 @@
 from threading import Thread
 import struct
 
-from osgar.logger import LogWriter, LogReader
 from osgar.bus import BusShutdownException
 
 
