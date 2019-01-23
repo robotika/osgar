@@ -61,7 +61,7 @@ class BusHandler:
 
 class LogBusHandler:
     def __init__(self, log, inputs, outputs):
-        self.reader = log.read_gen(list(inputs.keys()) + list(outputs.keys()))
+        self.reader = log
         self.inputs = inputs
         self.outputs = outputs
         self.buffer_queue = Queue()
@@ -95,7 +95,7 @@ class LogBusHandler:
 
 class LogBusHandlerInputsOnly:
     def __init__(self, log, inputs):
-        self.reader = log.read_gen(inputs.keys())
+        self.reader = log
         self.inputs = inputs
         self.time = timedelta(0)
 

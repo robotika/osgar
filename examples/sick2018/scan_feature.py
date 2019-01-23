@@ -256,8 +256,8 @@ if __name__ == "__main__":
     index = args.index
     offset_y = 0
 
-    with LogReader(filename) as log:
-        for ind, row in enumerate(log.read_gen(only_stream)):
+    with LogReader(filename, only_stream_id=only_stream) as log:
+        for ind, row in enumerate(log):
             if index is not None and ind < index:
                 continue
             timestamp, stream_id, data = row

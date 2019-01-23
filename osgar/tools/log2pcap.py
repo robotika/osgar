@@ -36,9 +36,9 @@ def log2pcap(input_filepath, output_dir):
     print(output_filepath)
 
     only_stream = lookup_stream_id(input_filepath, 'velodyne.raw')
-    with LogReader(input_filepath) as log, open(output_filepath, 'wb') as out:
+    with LogReader(input_filepath, only_stream_id=only_stream) as log, open(output_filepath, 'wb') as out:
         out.write(unhexlify(FILE_HEADER))
-        for timestamp, stream_id, data in log.read_gen(only_stream):
+        for timestamp, stream_id, data in log:
             packet = deserialize(data)
             assert len(packet) == 1206, len(packet)
 
