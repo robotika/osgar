@@ -7,7 +7,6 @@ import serial
 import struct
 from threading import Thread
 
-from osgar.logger import LogWriter, LogReader
 from osgar.bus import BusShutdownException
 
 

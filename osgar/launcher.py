@@ -9,7 +9,7 @@ from osgar.lib.config import load as config_load
 from osgar.record import Recorder
 from osgar.replay import replay
 
-from osgar.logger import LogWriter, LogReader
+from osgar.logger import LogWriter
 import argparse
 
 
