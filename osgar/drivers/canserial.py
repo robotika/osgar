@@ -296,8 +296,8 @@ if __name__ == "__main__":
         }
 
     stream_id = lookup_stream_id(args.logfile, args.stream)
-    with LogReader(args.logfile) as log:
-        for timestamp, stream_id, data in log.read_gen(stream_id):
+    with LogReader(args.logfile, only_stream_id=stream_id) as log:
+        for timestamp, stream_id, data in log:
             print(timestamp, print_packet(deserialize(data), dbc))
 
 # vim: expandtab sw=4 ts=4

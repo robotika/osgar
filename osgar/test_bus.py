@@ -68,13 +68,12 @@ class BusHandlerTest(unittest.TestCase):
         self.assertFalse(bus.is_alive())
 
     def test_log_bus_handler(self):
-        log = MagicMock()
         log_data = [
             (timedelta(microseconds=10), 1, serialize(b'(1,2)')),
             (timedelta(microseconds=11), 1, serialize(b'(3,4,5)')),
             (timedelta(microseconds=30), 2, serialize([8, 9])),
         ]
-        log.read_gen = MagicMock(return_value=iter(log_data))
+        log = iter(log_data)
         inputs = {1:'raw'}
         outputs = {2:'can'}
         bus = LogBusHandler(log, inputs, outputs)
@@ -84,13 +83,12 @@ class BusHandlerTest(unittest.TestCase):
         self.assertEqual(str(e.exception), "(b'parsed data', [8, 9], datetime.timedelta(0, 0, 30))")
 
     def test_wrong_publish_channel(self):
-        log = MagicMock()
         log_data = [
             (timedelta(microseconds=10), 1, serialize(b'(1,2)')),
             (timedelta(microseconds=30), 2, serialize(b'[8,9]')),
             (timedelta(microseconds=35), 3, serialize(b'[8,9]')),
         ]
-        log.read_gen = MagicMock(return_value=iter(log_data))
+        log = iter(log_data)
         inputs = {1:'raw'}
         outputs = {2:'can', 3:'can2'}
         bus = LogBusHandler(log, inputs, outputs)
@@ -104,13 +102,12 @@ class BusHandlerTest(unittest.TestCase):
         self.assertEqual(str(e.exception), "('can3', dict_values(['can', 'can2']))")
 
     def test_log_bus_handler_inputs_onlye(self):
-        log = MagicMock()
         log_data = [
             (timedelta(microseconds=10), 1, serialize([1, 2])),
             (timedelta(microseconds=11), 1, serialize([3, 4, 5])),
             (timedelta(microseconds=30), 2, serialize([8, 9])),
         ]
-        log.read_gen = MagicMock(return_value=iter(log_data))
+        log = iter(log_data)
         inputs = {1:'raw'}
         bus = LogBusHandlerInputsOnly(log, inputs)
         self.assertEqual(bus.listen(), (timedelta(microseconds=10), 'raw', [1, 2]))

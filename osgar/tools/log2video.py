@@ -21,9 +21,9 @@ from osgar.lib.serialize import deserialize
 def create_video(logfile, stream, outfile, add_time=False, start_time_sec=0, fps=25):
     assert outfile.endswith(".avi"), outFilename
     only_stream = lookup_stream_id(logfile, stream)
-    with LogReader(logfile) as log:
+    with LogReader(logfile, only_stream_id=only_stream) as log:
         writer = None
-        for timestamp, stream_id, data in log.read_gen(only_stream):
+        for timestamp, stream_id, data in log:
             buf = deserialize(data)
             img = cv2.imdecode(np.fromstring(buf, dtype=np.uint8), 1)
             if writer is None:

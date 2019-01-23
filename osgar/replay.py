@@ -9,23 +9,21 @@ from ast import literal_eval
 from datetime import timedelta
 from queue import Queue
 
-import numpy as np
-
 from osgar.logger import LogReader
 from osgar.lib.config import load as config_load, get_class_by_name
 from osgar.bus import LogBusHandler, LogBusHandlerInputsOnly
 
 
 def replay(args, application=None):
-    log = LogReader(args.logfile)
-    print(next(log.read_gen(0))[-1])  # old arguments
-    config_str = next(log.read_gen(0))[-1]
+    log = LogReader(args.logfile, only_stream_id=0)
+    print(next(log)[-1])  # old arguments
+    config_str = next(log)[-1]
     config = literal_eval(config_str.decode('ascii'))
     if args.config is not None:
         config = config_load(*args.config)
 
     names = []
-    for __, __, line in log.read_gen(0):
+    for __, __, line in log:
         d = literal_eval(line.decode('ascii'))
         if 'names' in d:
             names = d['names']
@@ -48,10 +46,13 @@ def replay(args, application=None):
     outputs = dict([(1 + names.index('.'.join([module, name])), name) for name in output_names])
     print(outputs)
 
-    log = LogReader(args.logfile)  # start reading log from the beginning again
+    # start reading log from the beginning again
     if args.force:
+        log = LogReader(args.logfile, only_stream_id=inputs.keys())
         bus = LogBusHandlerInputsOnly(log, inputs=inputs)
     else:
+        streams = list(inputs.keys()) + list(outputs.keys())
+        log = LogReader(args.logfile, only_stream_id=streams)
         bus = LogBusHandler(log, inputs=inputs, outputs=outputs)
 
     driver_name = module_config['driver']

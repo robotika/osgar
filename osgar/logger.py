@@ -193,7 +193,7 @@ class LogAsserter(LogReader):
 def lookup_stream_names(filename):
     names = []
     with LogReader(filename) as log:
-        for __, channel, line in log.read_gen():
+        for __, channel, line in log:
             # optimization - all names are defined BEFORE other data on other channels
             if channel != 0:
                 break
@@ -236,8 +236,8 @@ if __name__ == "__main__":
         print(lookup_stream_names(args.logfile))
         sys.exit()
 
-    with LogReader(args.logfile) as log:
-        for timestamp, stream_id, data in log.read_gen(only_stream):
+    with LogReader(args.logfile, only_stream_id=only_stream) as log:
+        for timestamp, stream_id, data in log:
             if not args.raw and stream_id != 0:
                 data = deserialize(data)
             if args.times:

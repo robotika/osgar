@@ -17,8 +17,8 @@ WINDOW_SIZE = 1200, 660
 
 def scans_gen(logfile, stream_id):
     only_stream = lookup_stream_id(logfile, stream_id)
-    with LogReader(logfile) as log:
-        for timestamp, stream_id, data in log.read_gen(only_stream):
+    with LogReader(logfile, only_stream_id=only_stream) as log:
+        for timestamp, stream_id, data in log:
             scan = deserialize(data)
             yield timestamp, scan
 
