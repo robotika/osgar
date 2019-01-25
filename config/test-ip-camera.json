@@ -7,7 +7,9 @@
           "in": [],
           "out": ["raw"],
           "init": {
-              "url": "http://192.168.0.99/image?res=half&quality=12&doublescan=0"
+              "url": "http://192.168.0.99/img.jpg",
+              "sleep": 0.5,
+              "timeout": 1.0
           }
       }
     },
