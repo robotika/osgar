@@ -4,13 +4,10 @@
 example:
     launch(app=GoOneMeter, description='Go One Meter', prefix='go1m-')
 """
-
-from osgar.lib.config import load as config_load
-from osgar.record import Recorder
-from osgar.replay import replay
-
-from osgar.logger import LogWriter
 import argparse
+
+from osgar.record import record
+from osgar.replay import replay
 
 
 def launch(app, description, prefix):
@@ -35,13 +32,6 @@ def launch(app, description, prefix):
         game.run()
 
     elif args.command == 'run':
-        log = LogWriter(prefix=prefix, note=str(sys.argv))
-        config = config_load(*args.config)
-        log.write(0, bytes(str(config), 'ascii'))  # write configuration
-        robot = Recorder(config=config['robot'], logger=log, application=app)
-        game = robot.modules['app']  # TODO nicer reference
-        robot.start()
-        game.run()
-        robot.finish()
+        record(args.config, log_prefix=prefix, application=app)
 
 # vim: expandtab sw=4 ts=4

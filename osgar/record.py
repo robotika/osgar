@@ -52,13 +52,25 @@ class Recorder:
             module.join()
 
 
-def record(config_filename, duration_sec, log_prefix, note=''):
+def record(config_filename, log_prefix, duration_sec=None, application=None):
     log = LogWriter(prefix=log_prefix, note=str(sys.argv))
-    config = load(config_filename)
+    if type(config_filename) == str:
+        config = load(config_filename)
+    else:
+        config = load(*config_filename)
     log.write(0, bytes(str(config), 'ascii'))  # write configuration
-    recorder = Recorder(config=config['robot'], logger=log)
+    recorder = Recorder(config=config['robot'], logger=log, application=application)
     recorder.start()
-    time.sleep(duration_sec)
+    if application is not None:
+        game = recorder.modules['app']  # TODO nicer reference
+        game.run()  # if application would be Node then it would be already running TODO
+    else:
+        if duration_sec is None:
+            while True:
+                time.sleep(1.0)
+        else:
+            time.sleep(duration_sec)
+
     recorder.finish()
 
 
@@ -67,11 +79,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Record run on real HW with given configuration')
     parser.add_argument('config', help='configuration file')
     parser.add_argument('--note', help='add description')
-    parser.add_argument('--duration', help='recording duration (sec)',
-                        type=float, default=3.0)
+    parser.add_argument('--duration', help='recording duration (sec), default infinite', type=float)
     args = parser.parse_args()
 
     prefix = os.path.basename(args.config).split('.')[0] + '-'
-    record(args.config, args.duration, log_prefix=prefix, note=str(sys.argv))
+    record(args.config, log_prefix=prefix, duration_sec=args.duration)
 
 # vim: expandtab sw=4 ts=4
