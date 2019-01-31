@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "camera": {
+          "driver": "osgar.drivers.opencv:LogOpenCVCamera",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+              "port": 0
+          }
+      }
+    },
+    "links": []
+  }
+}
