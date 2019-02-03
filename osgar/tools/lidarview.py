@@ -11,6 +11,7 @@ from pygame.locals import *
 
 from osgar.logger import LogReader, lookup_stream_id, lookup_stream_names
 from osgar.lib.serialize import deserialize
+from osgar.lib.config import get_class_by_name
 
 
 WINDOW_SIZE = 1200, 660
@@ -81,7 +82,7 @@ def scr(x, y):
     return WINDOW_SIZE[0]//2 + round(g_scale*x), WINDOW_SIZE[1]//2 - round(g_scale*y)
 
 
-def draw(foreground, pose, scan, poses=[], image=None):
+def draw(foreground, pose, scan, poses=[], image=None, callback=None):
     color = (0, 255, 0)
     X, Y, heading = pose
     for i, i_dist in enumerate(scan):
@@ -111,7 +112,17 @@ def draw(foreground, pose, scan, poses=[], image=None):
         cameraView = pygame.transform.scale(image, (512, 384))
         foreground.blit( cameraView, (0, 0))
 
-def lidarview(gen):
+    if callback is not None:
+        debug_poly = []
+        callback(scan, debug_poly)
+        for poly in debug_poly:
+            prev = None
+            pts = [scr(x, y) for x, y in poly]
+            for a, b in zip(pts[:-1], pts[1:]):
+                pygame.draw.line(foreground, (200, 200, 0), a, b, 1)
+
+
+def lidarview(gen, callback=False):
     global g_scale
 
     pygame.init()    
@@ -150,9 +161,9 @@ def lidarview(gen):
 
             foreground.fill((0, 0, 0))
             if camera_on:
-                draw(foreground, pose, scan, poses=poses, image=image)
+                draw(foreground, pose, scan, poses=poses, image=image, callback=callback)
             else:
-                draw(foreground, pose, scan, poses=poses)
+                draw(foreground, pose, scan, poses=poses, callback=callback)
             screen.blit(background, (0, 0))
             screen.blit(foreground, (0, 0))
             pygame.display.flip() 
@@ -186,13 +197,21 @@ if __name__ == "__main__":
     parser.add_argument('--lidar', help='stream ID')
     parser.add_argument('--poses', help='stream ID for pose2d messages')
     parser.add_argument('--camera', help='stream ID for JPEG images')
+
+    parser.add_argument('--callback', help='callback function for lidar scans')
+
     args = parser.parse_args()
 
+    callback = None
+    if args.callback is not None:
+        callback = get_class_by_name(args.callback)
+
     if args.legacy:
-        lidarview(scans_gen_legacy(args.logfile))
+        lidarview(scans_gen_legacy(args.logfile), callback=callback)
     else:
         lidarview(scans_gen(args.logfile, lidar_name=args.lidar,
-                            poses_name=args.poses, camera_name=args.camera))
+                            poses_name=args.poses, camera_name=args.camera),
+                  callback=callback)
 
 # vim: expandtab sw=4 ts=4 
 
