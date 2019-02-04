@@ -5,6 +5,8 @@ import sys
 import math
 from datetime import timedelta
 
+from osgar.node import Node
+
 # Notes:
 # Expects SICK laser scan with 270 degrees field of view mounted in front.
 
@@ -22,29 +24,25 @@ def min_dist(laser_data):
     return 0
 
 
-class FollowMe:
+class FollowMe(Node):
     def __init__(self, config, bus):
-        self.bus = bus
+        super().__init__(config, bus)
         self.last_position = [0, 0, 0]  # proper should be None, but we really start from zero
-        self.time = None
         self.raise_exception_on_stop = False
         self.verbose = False
         self.last_scan = None
 
     def update(self):
-        packet = self.bus.listen()
-        if packet is not None:
-            timestamp, channel, data = packet
-            self.time = timestamp
-            if channel == 'pose2d':
-                self.last_position = data
-            elif channel == 'scan':
-                if self.verbose:
-                    print(min_dist(data)/1000.0)
-                self.last_scan = data
-            elif channel == 'emergency_stop':
-                if self.raise_exception_on_stop and data:
-                    raise EmergencyStopException()
+        channel = super().update()  # define self.time
+        if channel == 'pose2d':
+            self.last_position = self.pose2d
+        elif channel == 'scan':
+            if self.verbose:
+                print(min_dist(self.scan)/1000.0)
+            self.last_scan = self.scan
+        elif channel == 'emergency_stop':
+            if self.raise_exception_on_stop and self.emergency_stop:
+                raise EmergencyStopException()
 
     def wait(self, dt):  # TODO refactor to some common class
         if self.time is None:
@@ -126,15 +124,6 @@ class FollowMe:
             self.raise_exception_on_stop = False
             self.send_speed_cmd(0.0, 0.0)
             self.wait(timedelta(seconds=1))
-
-    def start(self):
-        pass
-
-    def request_stop(self):
-        self.bus.shutdown()
-
-    def join(self):
-        pass
 
 
 if __name__ == "__main__":
