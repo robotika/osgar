@@ -63,7 +63,7 @@ def record(config_filename, log_prefix, duration_sec=None, application=None):
     recorder.start()
     if application is not None:
         game = recorder.modules['app']  # TODO nicer reference
-        game.run()  # if application would be Node then it would be already running TODO
+        game.join()  # wait for application termination
     else:
         if duration_sec is None:
             while True:
