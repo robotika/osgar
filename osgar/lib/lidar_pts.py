@@ -6,6 +6,8 @@ import math
 import cv2
 import numpy as np
 
+from osgar.lib.line import distance
+
 
 def rect(scan, debug_poly=None):
     """
@@ -30,9 +32,17 @@ def convex_hull(scan, debug_poly=None):
         pts.append((x,y))
 
     hull = cv2.convexHull(np.array(pts, dtype=np.float32))
+    hull_pts = [p[0] for p in hull] + [hull[0][0],]
+    dist_arr = [distance(a, b) for a, b in zip(hull_pts[:-1], hull_pts[1:])]
+    #print('%.2f %.2f %.2f %.2f' % tuple(sorted(dist_arr, reverse=True)[:4]))
+    first, second = sorted(dist_arr, reverse=True)[:2]
+    i, j = dist_arr.index(first), dist_arr.index(second)  # TODO argmax
+    A = ((hull_pts[i][0] + hull_pts[i+1][0])/2, (hull_pts[i][1] + hull_pts[i+1][1])/2)
+    B = ((hull_pts[j][0] + hull_pts[j+1][0])/2, (hull_pts[j][1] + hull_pts[j+1][1])/2)
     if debug_poly is not None:
-        debug_poly.append([p[0] for p in hull])
-        debug_poly[-1].append(hull[0][0])  # close polygon
+        #debug_poly.append(hull_pts)
+        debug_poly.append([A, B])
+    return (A, B)
 
 
 def dual_convex_hull(scan, debug_poly=None):
