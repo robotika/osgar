@@ -5,6 +5,7 @@ import math
 import io
 from datetime import timedelta
 from ast import literal_eval
+from collections import defaultdict
 
 import pygame
 from pygame.locals import *
@@ -82,7 +83,32 @@ def scr(x, y):
     return WINDOW_SIZE[0]//2 + round(g_scale*x), WINDOW_SIZE[1]//2 - round(g_scale*y)
 
 
-def draw(foreground, pose, scan, poses=[], image=None, callback=None):
+def scan2xy(pose, scan):
+    X, Y, heading = pose
+    pts = []
+    for i, i_dist in enumerate(scan):
+        if i_dist == 0 or i_dist >= 10000:
+            continue
+        angle = math.radians(270 * (i / len(scan)) - 135) + heading
+        dist = i_dist/1000.0
+        x, y = dist * math.cos(angle), dist * math.sin(angle)
+        pts.append((X + x, Y + y))
+    return pts
+
+
+def filter_pts(pts):
+    # filter out duplicity points - keep older
+    grid = defaultdict(int)
+    ret = []
+    for x, y in pts:
+        k = int(2*x), int(2*y)
+        grid[k] += 1
+        if grid[k] < 10:
+            ret.append((x, y))
+    return ret
+
+
+def draw(foreground, pose, scan, poses=[], image=None, callback=None, acc_pts=None):
     color = (0, 255, 0)
     X, Y, heading = pose
     for i, i_dist in enumerate(scan):
@@ -108,9 +134,15 @@ def draw(foreground, pose, scan, poses=[], image=None, callback=None):
     for x, y, __ in poses:
         pygame.draw.circle(foreground, (255, 128, 0), scr(x - X, y - Y), 2)
 
+    # draw accumulated points
+    if acc_pts is not None:
+        for x, y in acc_pts:
+            pygame.draw.circle(foreground, (0, 127, 0), scr(x - X, y - Y), 2)
+
     if image is not None:
         cameraView = pygame.transform.scale(image, (512, 384))
-        foreground.blit( cameraView, (0, 0))
+        foreground.blit(cameraView, (0, 0))
+
 
     if callback is not None:
         debug_poly = []
@@ -148,10 +180,14 @@ def lidarview(gen, callback=False):
     paused = False
     camera_on = True
     poses = []
+    acc_pts = []
     for timestamp, pose, scan, image in gen:
         # remove potential duplicity of poses (i.e. when not moving)
         if len(poses) == 0 or math.hypot(poses[-1][0] - pose[0], poses[-1][1] - pose[1]) >= TAIL_MIN_STEP:
             poses.append(pose)
+
+        acc_pts.extend(scan2xy(pose, scan))
+        acc_pts = filter_pts(acc_pts)
 
         while True:
             caption = "Time %s" % timestamp
@@ -163,7 +199,7 @@ def lidarview(gen, callback=False):
             if camera_on:
                 draw(foreground, pose, scan, poses=poses, image=image, callback=callback)
             else:
-                draw(foreground, pose, scan, poses=poses, callback=callback)
+                draw(foreground, pose, scan, poses=poses, callback=callback, acc_pts=acc_pts)
             screen.blit(background, (0, 0))
             screen.blit(foreground, (0, 0))
             pygame.display.flip() 
