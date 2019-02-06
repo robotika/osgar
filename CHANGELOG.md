@@ -1,6 +1,29 @@
 # Changelog
 
-[Full Changelog](https://github.com/robotika/osgar/compare/v0.1.0...master)
+[Full Changelog](https://github.com/robotika/osgar/compare/v0.2.0...master)
+
+## [v0.2.0](https://github.com/robotika/osgar/tree/v0.2.0) (2019-02-07)
+[Full Changelog](https://github.com/robotika/osgar/compare/v0.1.0...v0.2.0)
+
+**osgar:**
+- Use environment variable OSGAR_LOGS to define log output
+- Provide base class `Node`
+- Introduce application launcher
+- Use LogReader directly as iterator
+- Add explore node with follow wall function
+- logger.py
+  - optimization for lookup_stream_names
+  - handle timestamp overflow
+- Add OpenCV driver for camera logging
+- Add driver for Cortexpilot (robot Robik)
+- Extend TCP driver for "server" and "dynamic" option
+- Support SICK LIDAR TiM551
+
+**osgar-tools:**
+- Add simple LIDAR viewer
+  - draw accumulated points
+  - add callback option for scan debugging
+- log2video.py - add stream ID as optional parameter
 
 
 ## [v0.1.0](https://github.com/robotika/osgar/tree/v0.1.0) (2018-11-21)
