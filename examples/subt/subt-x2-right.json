@@ -1,0 +1,154 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["emergency_stop", "pose2d", "scan", "rot", "artf",
+                 "sim_time_sec", "acc"],
+          "out": ["desired_speed", "pose2d", "artf_xyz"],
+          "init": {
+            "max_speed": 0.5,
+            "right_wall": true
+          }
+      },
+      "detector": {
+          "driver": "artifacts:ArtifactDetector",
+          "in": ["image", "scan"],
+          "out": ["artf"],
+          "init": {}
+      },
+      "reporter": {
+          "driver": "artifacts:ArtifactReporter",
+          "in": ["artf_xyz"],
+          "out": [],
+          "init": {
+            "path": "call_base_x2r.txt"
+          }
+      },
+      "ros": {
+          "driver": "rosproxy",
+          "in": ["desired_speed", "cmd_vel", "imu_data"],
+          "out": ["emergency_stop", "pose2d", "cmd_vel", "imu_data", "imu_data_addr",
+	          "laser_data", "laser_data_addr", "image_data", "image_data_addr",
+            "odom_data", "odom_data_addr"],
+          "init": {
+            "ros_master_uri": "http://127.0.0.1:11311",
+            "ros_client_uri": "http://127.0.0.1:8000",
+            "node_port": 8000,
+            "publish_port": 8123,
+            "topic": "/X2R/cmd_vel",
+            "topic_type": "geometry_msgs/Twist",
+            "subscribe": [
+                        ["/X2R/imu/data", "std_msgs/Imu", "imu_data"],
+                        ["/X2R/front_scan", "sensor_msgs/LaserScan", "laser_data"],
+                        ["/X2R/camera_front/image_raw/compressed", "sensor_msgs/CompressedImage", "image_data"],
+                        ["/X2R/x2_velocity_controller/odom", "nav_msgs/Odometry", "odom_data"]
+                    ]
+
+          }
+      },
+      "timer": {
+          "driver": "mytimer:MyTimer",
+          "in": [],
+          "out": ["tick"],
+          "init": {
+            "sleep": 0.1
+          }
+      },
+      "tcp_cmd_vel": {
+          "driver": "tcpserver",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {
+            "host": "127.0.0.1",
+            "port": 8123,
+            "timeout": 1.0
+          }
+      },
+      "tcp_imu_data": {
+          "driver": "tcpdynamic",
+          "in": ["addr", "raw"],
+          "out": ["raw"],
+          "init": {}
+      },
+      "tcp_laser_data": {
+          "driver": "tcpdynamic",
+          "in": ["addr", "raw"],
+          "out": ["raw"],
+          "init": {}
+      },
+      "tcp_image_data": {
+          "driver": "tcpdynamic",
+          "in": ["addr", "raw"],
+          "out": ["raw"],
+          "init": {}
+      },
+      "tcp_odom_data": {
+          "driver": "tcpdynamic",
+          "in": ["addr", "raw"],
+          "out": ["raw"],
+          "init": {}
+      },
+      "rosmsg_imu": {
+          "driver": "rosmsg",
+          "in": ["addr", "raw"],
+          "out": ["rot", "acc"],
+          "init": {"topic_type": "std_msgs/Imu"}
+      },
+      "rosmsg_laser": {
+          "driver": "rosmsg",
+          "in": ["raw"],
+          "out": ["scan"],
+          "init": {"topic_type": "sensor_msgs/LaserScan"}
+      },
+      "rosmsg_image": {
+          "driver": "rosmsg",
+          "in": ["raw"],
+          "out": ["image"],
+          "init": {"topic_type": "sensor_msgs/CompressedImage"}
+      },
+      "rosmsg_odom": {
+          "driver": "rosmsg",
+          "in": ["raw"],
+          "out": ["pose2d", "sim_time_sec"],
+          "init": {"topic_type": "nav_msgs/Odometry"}
+      }
+    },
+    "links": [["app.desired_speed", "ros.desired_speed"],
+              ["ros.cmd_vel", "tcp_cmd_vel.raw"],
+              ["tcp_cmd_vel.raw", "ros.cmd_vel"],
+
+              ["ros.imu_data_addr", "tcp_imu_data.addr"],
+              ["ros.imu_data", "tcp_imu_data.raw"],
+              ["tcp_imu_data.raw", "ros.imu_data"],
+              ["tcp_imu_data.raw", "rosmsg_imu.raw"],
+              ["rosmsg_imu.rot", "app.rot"],
+              ["rosmsg_imu.acc", "app.acc"],
+
+              ["ros.laser_data_addr", "tcp_laser_data.addr"],
+              ["ros.laser_data", "tcp_laser_data.raw"],
+              ["tcp_laser_data.raw", "ros.laser_data"],
+              ["tcp_laser_data.raw", "rosmsg_laser.raw"],
+              ["rosmsg_laser.scan", "app.scan"],
+              ["rosmsg_laser.scan", "detector.scan"],
+
+              ["ros.image_data_addr", "tcp_image_data.addr"],
+              ["ros.image_data", "tcp_image_data.raw"],
+              ["tcp_image_data.raw", "ros.image_data"],
+              ["tcp_image_data.raw", "rosmsg_image.raw"],
+              ["rosmsg_image.image", "detector.image"],
+
+              ["ros.odom_data_addr", "tcp_odom_data.addr"],
+              ["ros.odom_data", "tcp_odom_data.raw"],
+              ["tcp_odom_data.raw", "ros.odom_data"],
+              ["tcp_odom_data.raw", "rosmsg_odom.raw"],
+              ["rosmsg_odom.pose2d", "app.pose2d"],
+              ["rosmsg_odom.sim_time_sec", "app.sim_time_sec"],
+
+              ["detector.artf", "app.artf"],
+              ["app.artf_xyz", "reporter.artf_xyz"],
+
+              ["timer.tick", "ros.tick"]]
+  }
+}
