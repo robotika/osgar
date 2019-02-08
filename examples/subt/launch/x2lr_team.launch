@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<launch>
+
+  <!-- Spawn your team here. -->
+  <arg name="x1_name" default="X2L" />
+  <arg name="x2_name" default="X2R" />
+
+  <!-- Spawn X2L -->
+  <group ns="$(arg x1_name)">
+    <include file="$(find x2_description)/launch/description.launch">
+      <arg name="robot_namespace" value="$(arg x1_name)" />
+    </include>
+    <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model"
+          args="-urdf -model $(arg x1_name) -param robot_description -x 2 -y 1 -z 0.2" />
+    <include file="$(find x2_control)/launch/control.launch">
+      <arg name="robot_namespace" value="$(arg x1_name)" />
+    </include>
+  </group>
+
+
+  <!-- Spawn X2R -->
+  <group ns="$(arg x2_name)">
+    <include file="$(find x2_description)/launch/description.launch">
+      <arg name="robot_namespace" value="$(arg x2_name)" />
+    </include>
+    <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model"
+          args="-urdf -model $(arg x2_name) -param robot_description -x 2 -y -1 -z 0.2" />
+    <include file="$(find x2_control)/launch/control.launch">
+      <arg name="robot_namespace" value="$(arg x2_name)" />
+    </include>
+  </group>
+
+  <!-- Competitor's control nodes -->
+  <node name="$(arg x1_name)_control" pkg="subt_example" type="subt_example_node" args="$(arg x1_name) $(arg x1_name)" />
+  <node name="$(arg x2_name)_control" pkg="subt_example" type="subt_example_node" args="$(arg x2_name) $(arg x2_name)" />
+
+  <!-- Teleop node -->
+  <arg name="joy_dev" default="/dev/input/js0" />
+  <include file="$(find subt_example)/launch/teleop.launch">
+    <arg name="joy_dev" default="$(arg joy_dev)" />
+    <arg name="robot_config" value="$(find subt_example)/config/robot_config.yaml"/>
+  </include>
+
+</launch>
