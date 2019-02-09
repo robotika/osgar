@@ -21,14 +21,6 @@
           "in": ["raw"],
           "out": ["raw"],
           "init": {"port": "/dev/ttyACM0", "speed": 115200}
-      },
-      "camera": {
-          "driver": "osgar.drivers.opencv:LogOpenCVCamera",
-          "in": [],
-          "out": ["raw"],
-          "init": {
-              "port": 0
-          }
       }
     },
     "links": [["app.desired_speed", "cortexpilot.desired_speed"],
@@ -36,7 +28,6 @@
               ["cortexpilot.emergency_stop", "app.emergency_stop"],
               ["serial.raw", "cortexpilot.raw"], 
               ["cortexpilot.raw", "serial.raw"],
-              ["cortexpilot.scan", "app.scan"]
-    ]
+              ["cortexpilot.scan", "app.scan"]]
   }
 }
