@@ -40,23 +40,28 @@ def scans_gen(logfile, lidar_name=None, poses_name=None, camera_name=None):
     pose = (0, 0, 0)
     image = None
     scan = []
+    eof = False
     streams = [s for s in [lidar_id, poses_id, camera_id] if s is not None]
     with LogReader(logfile, only_stream_id=streams) as log:
         for timestamp, stream_id, data in log:
             if stream_id == lidar_id:
                 scan = deserialize(data)
-                yield timestamp, pose, scan, image
+                yield timestamp, pose, scan, image, eof
             elif stream_id == camera_id:
                 jpeg = deserialize(data)
                 image = pygame.image.load(io.BytesIO(jpeg), 'JPG').convert()
                 if lidar_id is None:
-                    yield timestamp, pose, scan, image
+                    yield timestamp, pose, scan, image, eof
             elif stream_id == poses_id:
                 arr = deserialize(data)
                 assert len(arr) == 3
                 pose = (arr[0]/1000.0, arr[1]/1000.0, math.radians(arr[2]/100.0))
                 if lidar_id is None and camera_id is None:
-                    yield timestamp, pose, scan, image
+                    yield timestamp, pose, scan, image, eof
+
+    # generate last message with EOF ...
+    eof = True
+    yield timestamp, pose, scan, image, eof
 
 
 def scans_gen_legacy(logfile):
@@ -68,7 +73,7 @@ def scans_gen_legacy(logfile):
     for line in open(logfile):
         if line.startswith('['):
             arr = literal_eval(line)
-            yield timestamp, pose, arr, image
+            yield timestamp, pose, arr, image, False
         else:
             s = line.split()
             if len(s) == 2:
@@ -76,6 +81,8 @@ def scans_gen_legacy(logfile):
                 if start_time_sec is None:
                     start_time_sec = time_sec
                 timestamp = timedelta(seconds = time_sec - start_time_sec)
+
+    yield timestamp, pose, arr, image, True  # EOF
 
 
 def scr(x, y):
@@ -174,14 +181,15 @@ def lidarview(gen, callback=False):
     pygame.display.flip()
 
     pygame.key.set_repeat(200, 20)
-    timer_event = pygame.USEREVENT + 1
-    pygame.time.set_timer(timer_event, 100)
+    sleep_time = 100
 
     paused = False
     camera_on = True
     poses = []
     acc_pts = []
-    for timestamp, pose, scan, image in gen:
+    skip_frames = 0
+    frames_step = 0
+    for timestamp, pose, scan, image, eof in gen:
         # remove potential duplicity of poses (i.e. when not moving)
         if len(poses) == 0 or math.hypot(poses[-1][0] - pose[0], poses[-1][1] - pose[1]) >= TAIL_MIN_STEP:
             poses.append(pose)
@@ -189,10 +197,19 @@ def lidarview(gen, callback=False):
         acc_pts.extend(scan2xy(pose, scan))
         acc_pts = filter_pts(acc_pts)
 
+        if skip_frames > 0 and not eof:
+            skip_frames -= 1
+            continue
+        skip_frames = frames_step
+
         while True:
             caption = "Time %s" % timestamp
             if paused:
                 caption += ' (PAUSED)'
+            if frames_step > 0:
+                caption += ' step=' + str(frames_step)
+            if eof:
+                caption += ' [END]'
             pygame.display.set_caption(caption)
 
             foreground.fill((0, 0, 0))
@@ -204,7 +221,12 @@ def lidarview(gen, callback=False):
             screen.blit(foreground, (0, 0))
             pygame.display.flip() 
 
-            event = pygame.event.wait()
+            if paused or eof:
+                event = pygame.event.wait()
+            else:
+                event = pygame.event.poll()
+            if event.type == pygame.NOEVENT:
+                pygame.time.wait(sleep_time)
             if event.type == QUIT:
                 return
             if event.type == KEYDOWN:
@@ -219,7 +241,17 @@ def lidarview(gen, callback=False):
                     g_scale /= 2.0
                 if event.key == K_c:
                     camera_on = not camera_on
-            if event.type == timer_event and not paused:
+                if event.key == K_0:
+                    frames_step = 0
+                    sleep_time = 100
+                if event.key == K_1:
+                    frames_step = 10
+                    sleep_time = 10
+                if event.key == K_2:
+                    frames_step = 20
+                    sleep_time = 10
+
+            if event.type == pygame.NOEVENT and not paused and not eof:
                 break
 
 
