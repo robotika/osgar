@@ -67,7 +67,7 @@ class CortextpilotTest(unittest.TestCase):
 
         self.assertEqual(q.put.call_args_list, [
             call((135, 'raw', b'\x00\x00\x03\x01\x01\xfb')),  # request version
-            call((135, 'raw', b'\x00\x00\x0f\x01\x0c\x00\x00\x00\x00\x00\x00\x00\x00A\x00\x00\x00\xa3')) # cmd
+            call((135, 'raw', b'\x00\x00\x0f\x01\x0c\x00\x00\x00\x00\x00\x00\x00\x80@\x00\x00\x00$')) # cmd
             ])
 
     def test_create_packet(self):
@@ -75,13 +75,14 @@ class CortextpilotTest(unittest.TestCase):
         packet = robot.create_packet()
         self.assertEqual(len(packet), 3 + 15)
         self.assertEqual(sum(packet) % 256, 0)
-        self.assertEqual(packet[-1], 0xa3)
+        self.assertEqual(packet[-1], 0x24)
 
         robot.desired_speed = 0.5
+        robot.lidar_valid = True  # otherwise the speed will be reset to zero
         packet = robot.create_packet()
         self.assertEqual(len(packet), 3 + 15)
         self.assertEqual(sum(packet) % 256, 0)
-        self.assertEqual(packet[-1], 0x64)
+        self.assertEqual(packet[-1], 0x82)
 
         # test packet checksum
         robot.desired_speed = -0.12314114151

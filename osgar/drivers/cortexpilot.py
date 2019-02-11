@@ -13,7 +13,8 @@ from osgar.bus import BusShutdownException
 # wheel diameter D = 395 mm
 # 1 Rev = 1241 mm
 ENC_SCALE = 1.241/9958
-WHEEL_DISTANCE = 0.5  # meters TODO confirm
+WHEEL_DISTANCE = 0.88  # meters TODO confirm
+RAMP_STEP = 0.1  # fractional number for speed in -1.0 .. 1.0
 
 
 class Cortexpilot(Node):
@@ -25,7 +26,7 @@ class Cortexpilot(Node):
         # commands
         self.desired_speed = 0.0  # m/s
         self.desired_angular_speed = 0.0
-        self.cmd_flags = 0x41 #0x40  # 0 = remote steering, PWM OFF, laser ON, TODO
+        self.cmd_flags = 0x40 #0x41  # 0 = remote steering, PWM OFF, laser ON, TODO
 
         # status
         self.emergency_stop = None  # uknown state
@@ -34,6 +35,8 @@ class Cortexpilot(Node):
         self.voltage = None
         self.last_encoders = None
         self.yaw = None
+        self.lidar_valid = False
+        self.last_speed_cmd = 0.0
 
     def send_pose(self):
         x, y, heading = self.pose
@@ -43,19 +46,29 @@ class Cortexpilot(Node):
     def query_version(self):
         ret = bytes([0, 0, 3, 0x1, 0x01])
         checksum = sum(ret) & 0xFF
-        return ret + bytes([256-checksum])
+        return ret + bytes([(256-checksum) & 0xFF])
 
     def create_packet(self):
         if self.yaw is None:
             self.yaw = 0.0  # hack!
-        packet = struct.pack('<ffI', self.desired_speed,
-#                             self.desired_angular_speed, self.cmd_flags)
-                             self.yaw, self.cmd_flags)
+
+        speed_frac = self.desired_speed
+        if not self.lidar_valid:
+            speed_frac = 0.0
+        if speed_frac > self.last_speed_cmd + RAMP_STEP:
+            speed_frac = self.last_speed_cmd + RAMP_STEP
+        elif speed_frac < self.last_speed_cmd - RAMP_STEP:
+            speed_frac = self.last_speed_cmd - RAMP_STEP
+        self.last_speed_cmd = speed_frac
+
+        packet = struct.pack('<ffI', speed_frac,
+                             -self.desired_angular_speed, self.cmd_flags)  # Robik has positive to the right
+#                             self.yaw, self.cmd_flags)
         assert len(packet) < 256, len(packet)  # just to use LSB only
         ret = bytes([0, 0, len(packet) + 2 + 1, 0x1, 0x0C]) + packet
         # addr=0x1, cmd=0xC, length is given by payload, addr, cmd and checksum
         checksum = sum(ret) & 0xFF
-        return ret + bytes([256-checksum])
+        return ret + bytes([(256-checksum) & 0xFF])
 
     def get_packet(self):
         """extract packet from internal buffer (if available otherwise return None"""
@@ -96,6 +109,7 @@ class Cortexpilot(Node):
         #   bit 5 -> 1 = Manual override
         # 4 byte SystemVoltage (float)  4 - battery level for control electronics [V]
         self.flags, self.voltage = struct.unpack_from('<If', data, offset)
+        self.lidar_valid = (self.flags & 0x10) == 0x10
 
         # skipped parsing of:
         # 4 byte PowerVoltage (float)   8 - battery level for motors [V]
@@ -150,12 +164,20 @@ class Cortexpilot(Node):
             self.send_pose()
         self.last_encoders = encoders
 
-        # laser
-        # 2 byte Lidar_LastIdx (ushort)74 - DEPRECATED
-        # 480 byte Lidar_Scan (ushort) 76 - 239 two-bytes distances from Lidar <0 .. 65535> in [cm]
-        # Scan is whole 360 deg with resolution 1.5 deg
-        scan = struct.unpack_from('<' + 'H'*239, data, offset + 76)  # TODO should be 240
-        self.publish('scan', [10 * d for d in scan])
+        if self.lidar_valid:
+            # laser
+            # 2 byte Lidar_LastIdx (ushort)74 - DEPRECATED
+            # 480 byte Lidar_Scan (ushort) 76 - 239 two-bytes distances from Lidar <0 .. 65535> in [cm]
+            # Scan is whole 360 deg with resolution 1.5 deg
+            scan = struct.unpack_from('<' + 'H'*239, data, offset + 76)  # TODO should be 240
+
+            # restrict scan only to 270 degrees - cut 1/8th on both sides
+            scan = scan[30:-30]
+            zero_sides = 20
+            scan = [10 * d for d in reversed(scan)]
+            scan[:zero_sides] = [0]*zero_sides
+            scan[-zero_sides:] = [0]*zero_sides
+            self.publish('scan', scan)  # scale to millimeters
 
     def run(self):
         try:
@@ -170,14 +192,17 @@ class Cortexpilot(Node):
                         if len(packet) < 256:  # TODO cmd value
                             print(packet)
                         else:
+                            prev = self.flags
                             self.parse_packet(packet)
+                            if prev != self.flags:
+                                print(self.time, 'Flags:', hex(self.flags))
                         self.publish('raw', self.create_packet())
                 if channel == 'desired_speed':
                     self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)                    
                     self.cmd_flags |= 0x02  # PWM ON
-                    if data == [0, 0]:
-                        print("TURN OFF")
-                        self.cmd_flags = 0x00  # turn everything OFF (hack for now)
+#                    if data == [0, 0]:
+#                        print("TURN OFF")
+#                        self.cmd_flags = 0x00  # turn everything OFF (hack for now)
 
         except BusShutdownException:
             pass
