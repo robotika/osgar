@@ -47,7 +47,7 @@ def log2pcap(input_filepath, output_dir):
             out.write(packet)
 
 
-if __name__ == "__main__":
+def main():
     if len(sys.argv) < 3:
         print(__doc__)
         sys.exit(2)
@@ -55,6 +55,10 @@ if __name__ == "__main__":
     output_dir = sys.argv[-1]
     for filename in sys.argv[1:-1]:
         log2pcap(filename, output_dir)
+
+
+if __name__ == "__main__":
+    main()
 
 # vim: expandtab sw=4 ts=4 
 

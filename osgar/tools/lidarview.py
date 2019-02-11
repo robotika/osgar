@@ -255,7 +255,7 @@ def lidarview(gen, callback=False):
                 break
 
 
-if __name__ == "__main__":
+def main():
     import argparse
 
     parser = argparse.ArgumentParser(description='View lidar scans')
@@ -280,6 +280,9 @@ if __name__ == "__main__":
         lidarview(scans_gen(args.logfile, lidar_name=args.lidar,
                             poses_name=args.poses, camera_name=args.camera),
                   callback=callback)
+
+if __name__ == "__main__":
+    main()
 
 # vim: expandtab sw=4 ts=4 
 

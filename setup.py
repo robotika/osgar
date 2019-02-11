@@ -10,22 +10,32 @@ setuptools.setup(
           'pyserial',
           'msgpack>=0.5.0',
       ],
+    extras_require={
+        'tools': ['opencv-python>=3,<4', 'Pygame'],
+    },
     author="Robotika.cz",
     author_email="osgar@robotika.cz",
     description="Open Source Garden/Generic Autonomous Robot / Python library",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/robotika/osgar",
-#    packages=setuptools.find_packages(),
-    packages=['osgar', 'osgar.drivers', 'osgar.lib'],  # TODO use line above after cleanup
+    python_requires=">=3.5",
+    packages=['osgar', 'osgar.drivers', 'osgar.lib', 'osgar.tools'],
     package_data={
         '': ['config/*.json'],
     },
-    classifiers=(
+    entry_points={
+        'console_scripts': [
+            'lidarview = osgar.tools.lidarview:main [tools]',
+            'log2video = osgar.tools.log2video:main [tools]',
+            'log2pcap = osgar.tools.log2pcap:main [tools]',
+        ],
+    },
+    classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
-    ),
+    ],
 )
 
 # vim: expandtab sw=4 ts=4
