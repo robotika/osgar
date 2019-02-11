@@ -219,6 +219,8 @@ def lookup_stream_id(filename, stream_name):
 if __name__ == "__main__":
     import argparse
     import sys
+    from collections import defaultdict
+
     from osgar.lib.serialize import deserialize
 
     parser = argparse.ArgumentParser(description='Extract data from log')
@@ -226,6 +228,7 @@ if __name__ == "__main__":
     parser.add_argument('--stream', help='stream ID or name', default=None)
     parser.add_argument('--list-names', '-l', help='list stream names', action='store_true')
     parser.add_argument('--times', help='display timestamps', action='store_true')
+    parser.add_argument('--stat', help='output only message statistics', action='store_true')
     parser.add_argument('--raw', help='skip data deserialization',
                         action='store_true')
     args = parser.parse_args()
@@ -236,13 +239,29 @@ if __name__ == "__main__":
         print(lookup_stream_names(args.logfile))
         sys.exit()
 
+    stat = defaultdict(int)
+    count = defaultdict(int)
     with LogReader(args.logfile, only_stream_id=only_stream) as log:
         for timestamp, stream_id, data in log:
+            if args.stat:
+                stat[stream_id] += len(data)
+                count[stream_id] += 1
+                continue
             if not args.raw and stream_id != 0:
                 data = deserialize(data)
             if args.times:
                 print(timestamp, stream_id, data)
             else:
                 sys.stdout.buffer.write(data)
+
+    if args.stat:
+        seconds = timestamp.total_seconds()
+        names = ['sys'] + lookup_stream_names(args.logfile)
+        column_width = max([len(x) for x in names])
+        for k, name in enumerate(names):
+            print('%2d' % k, name.rjust(column_width),
+                  '%10d | %5d | %5.1fHz' % (stat.get(k, 0), count[k],
+                      count[k]/seconds))
+        print('\nTotal time', timestamp)
 
 # vim: expandtab sw=4 ts=4
