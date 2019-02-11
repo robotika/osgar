@@ -44,7 +44,7 @@ def create_video(logfile, stream, outfile, add_time=False, start_time_sec=0, fps
         writer.release()
 
 
-if __name__ == "__main__":
+def main():
     import argparse
 
     parser = argparse.ArgumentParser(description='Convert logfile to AVI video')
@@ -59,6 +59,10 @@ if __name__ == "__main__":
 
     create_video(args.logfile, args.stream, args.out, add_time=args.display_time,
                  start_time_sec=args.start_time_sec, fps=args.fps)
+
+
+if __name__ == "__main__":
+    main()
 
 # vim: expandtab sw=4 ts=4 
 
