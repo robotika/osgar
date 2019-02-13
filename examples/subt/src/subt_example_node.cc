@@ -269,7 +269,16 @@ int main(int argc, char** argv)
   // Instantiate a communication handler for sending and receiving data.
   Controller controller(argv[1], robotAddressMap[argv[1]]);
 
-  ROS_INFO("MDXStarting competitor 1.1\n");
+  ROS_INFO("MDXStarting competitor 2.0\n");
+  int ii;
+  for(ii=0; ii < argc; ii++)
+    ROS_INFO("%s", argv[ii]);
+
+  double offset_x, offset_y, offset_z;
+  char *path = argv[3];
+  offset_x = atof(argv[4]);
+  offset_y = atof(argv[5]);
+  offset_z = atof(argv[6]);
 
   subt::msgs::Artifact artifact;
   ignition::msgs::Pose pose;
@@ -294,7 +303,7 @@ int main(int argc, char** argv)
 	  ros::spinOnce();
 	  r.sleep();
 	  ROS_INFO("MD Test\n");
-	  FILE *fd = fopen("/home/martind/md/osgar/examples/subt/call_base.txt", "r");
+	  FILE *fd = fopen(path, "r");
 	  if(fd != NULL)
 	  {
 		  ROS_INFO("MD SendToBaseStation\n");
@@ -307,9 +316,9 @@ int main(int argc, char** argv)
 			  ROS_INFO_STREAM("MD y" << y);
 			  ROS_INFO_STREAM("MD z" << z);
 
-			  pose.mutable_position()->set_x(x - 2);
-			  pose.mutable_position()->set_y(y - 4);
-			  pose.mutable_position()->set_z(z - 0.5);
+			  pose.mutable_position()->set_x(x + offset_x);
+			  pose.mutable_position()->set_y(y + offset_y);
+			  pose.mutable_position()->set_z(z + offset_z);
 
         int type = -1;
         if(strcmp(buf, "TYPE_BACKPACK") == 0)
