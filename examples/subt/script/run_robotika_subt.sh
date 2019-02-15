@@ -11,12 +11,12 @@ source ~/subt_ws/install/setup.sh
 export DISPLAY=:0  # Even when connected through ssh, Gazebo needs a local window.
 roslaunch subt_gazebo competition.launch scenario:=tunnel_qual extra_gazebo_args:="-r" &
 GAZEBO_PID=$!
-sleep 10
+sleep 20
 
 # Set up robots.
 X2_SENSOR_CONFIG_4=1 DISPLAY=:0 roslaunch subt_example x2lr_team.launch &
 ROBOTS_SIM_PID=$!
-sleep 15
+sleep 25
 
 # Control the robots.
 export PYTHONPATH=${PYTHONPATH}:~/md/osgar
