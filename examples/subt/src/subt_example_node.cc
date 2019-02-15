@@ -29,6 +29,10 @@
 #include <subt_gazebo/CommsClient.hh>
 #include <subt_gazebo/protobuf/artifact.pb.h>
 
+#include <subt_msgs/PoseFromArtifact.h>
+
+
+
 /// \brief. Example control class, running as a ROS node to control a robot.
 class Controller
 {
@@ -112,6 +116,26 @@ class Controller
     artifact.mutable_pose()->CopyFrom(_pose);
     return this->client->SendToBaseStation(artifact);
   }
+
+  public: bool get_origin(double *x, double *y, double *z)
+  {
+	  ros::NodeHandle nodeHandle;
+	  ros::ServiceClient cli = nodeHandle.serviceClient<subt_msgs::PoseFromArtifact>(
+			  "/subt/pose_from_artifact_origin");
+	  subt_msgs::PoseFromArtifact srv;
+	  srv.request.robot_name.data = this->name;
+
+	  bool ret = cli.call(srv);
+	  if(ret)
+	  {
+	  	geometry_msgs::Pose origin = srv.response.pose.pose;
+		*x = origin.position.x;
+		*y = origin.position.y;
+		*z = origin.position.z;
+	  }
+	  return ret;
+  }
+
 };
 
 /////////////////////////////////////////////////
@@ -274,11 +298,22 @@ int main(int argc, char** argv)
   for(ii=0; ii < argc; ii++)
     ROS_INFO("%s", argv[ii]);
 
+
+
+
   double offset_x, offset_y, offset_z;
   char *path = argv[3];
   offset_x = atof(argv[4]);
   offset_y = atof(argv[5]);
   offset_z = atof(argv[6]);
+
+  ROS_INFO("%s before %lf %lf %lf", argv[1], offset_x, offset_y, offset_z);
+
+  controller.get_origin(&offset_x, &offset_y, &offset_z);
+
+  ROS_INFO("%s after %lf %lf %lf", argv[1], offset_x, offset_y, offset_z);
+
+
 
   subt::msgs::Artifact artifact;
   ignition::msgs::Pose pose;
