@@ -2,9 +2,9 @@
 
 # Cleanup
 rm -rf ~/.gazebo/log/*
-rm -f ~/md/osgar/examples/subt/call_base.txt
-rm -f ~/md/osgar/examples/subt/call_base_x2l.txt
-rm -f ~/md/osgar/examples/subt/call_base_x2r.txt
+rm -f osgar/examples/subt/call_base.txt
+rm -f osgar/examples/subt/call_base_x2l.txt
+rm -f osgar/examples/subt/call_base_x2r.txt
 source ~/subt_ws/install/setup.sh
 
 # Start gazebo.
@@ -19,8 +19,8 @@ ROBOTS_SIM_PID=$!
 sleep 25
 
 # Control the robots.
-export PYTHONPATH=${PYTHONPATH}:~/md/osgar
-cd ~/md/osgar/examples/subt
+export PYTHONPATH=${PYTHONPATH}:$(pwd)/osgar
+cd osgar/examples/subt
 python3 subt.py run subt-x2-left.json &
 ROBOT_LEFT_PID=$!
 python3 subt.py run subt-x2-right.json &
