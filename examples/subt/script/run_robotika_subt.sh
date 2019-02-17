@@ -54,6 +54,9 @@ wait ${ROBOT_RIGHT_PID}
 kill ${ROBOTS_SIM_PID}
 kill ${GAZEBO_PID}
 
+# Get some time for final reporting.
+sleep 10
+
 # Convert the log.
 #time gz log -f ~/.gazebo/log/*/gzserver/state.log --filter *.pose/*.pose -z 60 -o ~/.gazebo/log/subt_tunnel_qual_sim_state.log
 
