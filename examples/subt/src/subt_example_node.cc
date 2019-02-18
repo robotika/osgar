@@ -299,19 +299,12 @@ int main(int argc, char** argv)
     ROS_INFO("%s", argv[ii]);
 
 
+  char *path = argv[3];
 
 
   double offset_x, offset_y, offset_z;
-  char *path = argv[3];
-  offset_x = atof(argv[4]);
-  offset_y = atof(argv[5]);
-  offset_z = atof(argv[6]);
-
-  ROS_INFO("%s before %lf %lf %lf", argv[1], offset_x, offset_y, offset_z);
-
   controller.get_origin(&offset_x, &offset_y, &offset_z);
-
-  ROS_INFO("%s after %lf %lf %lf", argv[1], offset_x, offset_y, offset_z);
+  ROS_INFO("%s offset %lf %lf %lf", argv[1], offset_x, offset_y, offset_z);
 
 
 
