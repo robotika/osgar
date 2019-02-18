@@ -217,13 +217,13 @@ class VectorFieldHistogram:
             li = self.__bin(left)
             ri = self.__bin(right)
 
-            return [ False if binaryPolarHistogram[i] == False and i >= ri and i <= li else True for i in xrange(len(binaryPolarHistogram)) ]
+            return [ False if binaryPolarHistogram[i] == False and i >= ri and i <= li else True for i in range(len(binaryPolarHistogram)) ]
 
     def __openWindows(self, maskedPolarHistogram):
         openWindows = []
         prev = True
 
-        for i in xrange(1 + len(maskedPolarHistogram)):
+        for i in range(1 + len(maskedPolarHistogram)):
             mask = True if i == len(maskedPolarHistogram) else maskedPolarHistogram[i]
             if prev == True and mask == False: # Right edge of a window.
                 right = self.__angle(i)
