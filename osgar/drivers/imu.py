@@ -59,6 +59,8 @@ class IMU(Thread):
                 for out in self.process_gen(data):
                     assert out is not None
                     self.bus.publish('orientation', out)
+                    # publish separately yaw, pitch and roll in 1/100th deg
+                    self.bus.publish('rot', [int(round(x * 100)) for x in out[0]])
         except BusShutdownException:
             pass
 

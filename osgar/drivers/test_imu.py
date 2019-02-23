@@ -16,7 +16,7 @@ class IMUTest(unittest.TestCase):
     def test_start_stop(self):
         config = {}
         logger = MagicMock()
-        bus = BusHandler(logger, out={'orientation':[]}, name='imu')
+        bus = BusHandler(logger, out={'orientation':[], 'rot':[]}, name='imu')
         imu = IMU(config, bus=bus)
         imu.start()
         imu.request_stop()
@@ -26,7 +26,7 @@ class IMUTest(unittest.TestCase):
         config = {}
         logger = MagicMock()
         robot_bus = BusHandler(logger, out={}, name='robot')
-        bus = BusHandler(logger, out={'orientation':[(robot_bus.queue, 'orientation')]}, name='imu')
+        bus = BusHandler(logger, out={'orientation':[(robot_bus.queue, 'orientation')], 'rot':[]}, name='imu')
         imu = IMU(config, bus=bus)
         imu.start()
         imu.bus.queue.put((123, 'raw', self.nmea_line))
