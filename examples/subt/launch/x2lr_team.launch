@@ -31,8 +31,8 @@
   </group>
 
   <!-- Competitor's control nodes -->
-  <node name="$(arg x1_name)_control" pkg="subt_example" type="subt_example_node" args="$(arg x1_name) $(arg x1_name) ../../../osgar/examples/subt/call_base_x2l.txt" />
-  <node name="$(arg x2_name)_control" pkg="subt_example" type="subt_example_node" args="$(arg x2_name) $(arg x2_name) ../../../osgar/examples/subt/call_base_x2r.txt" />
+  <node name="$(arg x1_name)_control" pkg="subt_example" type="subt_example_node" args="$(arg x1_name) $(arg x1_name) ../../../osgar/examples/subt/call_base_x2l.txt" cwd="node" />
+  <node name="$(arg x2_name)_control" pkg="subt_example" type="subt_example_node" args="$(arg x2_name) $(arg x2_name) ../../../osgar/examples/subt/call_base_x2r.txt" cwd="node" />
 
   <!-- Teleop node -->
   <arg name="joy_dev" default="/dev/input/js0" />
