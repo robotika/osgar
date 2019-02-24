@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock, call
 import time
 
-from osgar.drivers.logsocket import LogTCPStaticIP as LogTCP, LogTCPDynamicIP, LogTCPServer, LogUDP
+from osgar.drivers.logsocket import LogTCPStaticIP as LogTCP, LogTCPDynamicIP, LogTCPServer, LogUDP, LogHTTP
 from osgar.bus import BusHandler
 
 
@@ -106,5 +106,27 @@ class LogSocketTest(unittest.TestCase):
                     call(('10.1.10.1', 8000)),
                     call(('192.168.1.31', 8010))
                 ])
+
+    def test_http_sleep(self):
+        # reported as bug for IP camera running at full speed
+        with patch('osgar.drivers.logsocket.urllib.request.urlopen') as mock:
+            instance = mock.return_value
+            instance.__enter__.return_value.read = MagicMock(return_value=b'123')
+            logger = MagicMock()
+            logger.register = MagicMock(return_value=1)
+            bus = BusHandler(logger, out={'raw':[]})
+            config = {
+              "url": "http://192.168.0.99/img.jpg",
+              "sleep": 1.0,
+              "timeout": 1.0
+            }
+            device = LogHTTP(config=config, bus=bus)
+            device.start()
+            time.sleep(0.1)
+            device.request_stop()
+            device.join()
+            self.assertEqual(
+                    len(instance.__enter__.return_value.read.call_args_list),
+                    1)  # it should be just one call and sleep
 
 # vim: expandtab sw=4 ts=4

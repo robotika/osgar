@@ -160,6 +160,7 @@ class LogHTTP:
         self.input_thread = Thread(target=self.run_input, daemon=True)
 
         self.url = config['url']
+        self.sleep = config.get('sleep', None)
         self.bus = bus
 
     def start(self):
@@ -177,6 +178,8 @@ class LogHTTP:
                     self.bus.publish('raw', data)
             except socket.timeout:
                 pass
+            if self.sleep is not None:
+                self.bus.sleep(self.sleep)
 
     def request_stop(self):
         self.bus.shutdown()
