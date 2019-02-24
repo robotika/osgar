@@ -337,7 +337,8 @@ int main(int argc, char** argv)
 		  ROS_INFO("MD SendToBaseStation\n");
 		  double x, y, z;
 		  char buf[256];
-		  if(fscanf(fd, "%s %lf %lf %lf", buf, &x, &y, &z) == 4)
+      bool ret = false;
+		  while(fscanf(fd, "%s %lf %lf %lf", buf, &x, &y, &z) == 4)
 		  {
 			  ROS_INFO_STREAM("MD artf" << buf);
 			  ROS_INFO_STREAM("MD x" << x);
@@ -364,15 +365,16 @@ int main(int argc, char** argv)
 
  			  ROS_INFO_STREAM("MD enum" << type);
 
-        bool ret = controller.ReportArtifact(type, pose);
+        ret |= controller.ReportArtifact(type, pose);
 	  	  if(ret)
 		    {
 			    ROS_INFO("MD SUCCESS\n");
-			    break;
   		  }
 	  	  else
 		  	  ROS_INFO("MD FAILURE\n");
       }
+      if(ret)
+        break;  // at least some artifacts sucessfully reported
 //		  controller.client->SendToBaseStation(artifact);
 	  }
 	  i++;
