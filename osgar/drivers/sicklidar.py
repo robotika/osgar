@@ -24,7 +24,7 @@ class SICKLidar(Thread):
     def parse_raw_data(raw_data):
         """Parse scan data for TiM571 and TiM551 SICK LIDARs"""
         data = raw_data.split()
-        assert len(data) in [854, 846, 583, ], len(data)
+        assert len(data) in [854, 846, 583, 1663], len(data)
         assert data[1] == b'LMDscandata', data[:2]
         timestamp = int(data[9], 16)  # TODO verify
         freq = int(data[16], 16)
@@ -37,7 +37,21 @@ class SICKLidar(Thread):
         scan_start = 26
         scan_end = scan_start + scan_size
         dist = [int(x, 16) for x in data[scan_start:scan_end]]
-        return dist
+
+        remission = None
+        # should have have scan remission?
+        rssi_index = scan_end + 1
+        if rssi_index < len(data) and data[rssi_index] == b'RSSI1':
+            assert int(data[rssi_index + 2], 16) == 0, data[rssi_index + 2]
+            angular_step = int(data[rssi_index + 4], 16)
+            assert angular_step == resolution, (angular_step, resolution)
+
+            amount = int(data[rssi_index + 5], 16)
+            assert amount == scan_size, (amount, scan_size)
+            rssi_index += 6
+            remission = [int(x,16) for x in data[rssi_index:rssi_index + amount]]
+
+        return dist, remission
 
     def process_packet(self, packet):
         if packet.startswith(STX) and packet.endswith(ETX):
@@ -58,7 +72,7 @@ class SICKLidar(Thread):
                 yield ret
             # now process only existing (remaining) buffer
             self.buf, packet = self.split_buffer(self.buf)  
-
+ 
     def run(self):
         try:
             self.bus.publish('raw', STX + b'sRN LMDscandata' + ETX)
@@ -67,7 +81,10 @@ class SICKLidar(Thread):
                 dt, __, data = packet
                 for out in self.process_gen(data):
                     assert out is not None
-                    self.bus.publish('scan', out)
+                    scan, remission = out
+                    self.bus.publish('scan', scan)
+#                    print(dt, [x for x in zip(scan, remission)])
+#                    print()
                     if self.sleep is not None:
                         self.bus.sleep(self.sleep)
                     self.bus.publish('raw', STX + b'sRN LMDscandata' + ETX)
@@ -77,3 +94,5 @@ class SICKLidar(Thread):
     def request_stop(self):
         self.bus.shutdown()
 
+
+# vim: expandtab sw=4 ts=4
