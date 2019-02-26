@@ -17,6 +17,8 @@ from osgar.lib.config import get_class_by_name
 
 WINDOW_SIZE = 1200, 660
 TAIL_MIN_STEP = 0.1  # in meters
+HISTORY_SIZE = 100
+
 g_scale = 30
 
 
@@ -161,7 +163,34 @@ def draw(foreground, pose, scan, poses=[], image=None, callback=None, acc_pts=No
                 pygame.draw.line(foreground, (200, 200, 0), a, b, 1)
 
 
-def lidarview(gen, callback=False):
+class History:
+    def __init__(self, gen, history_size=HISTORY_SIZE):
+        self.gen = gen
+        self.history_size = history_size
+        self.history = []
+        self.index = 0
+
+    def prev(self):
+        if self.index > 0 and self.history[self.index - 1] is not None:
+            self.index -= 1
+        return self.history[self.index]
+
+    def next(self):
+        if self.index + 1 >= len(self.history):
+            if self.gen is not None:
+                try:
+                    self.history.append(next(self.gen))
+                except StopIteration:
+                    self.gen = None
+
+        if self.index + 1 < len(self.history):
+            self.index += 1
+            if self.index == len(self.history)-1 and len(self.history) > self.history_size:
+                self.history[self.index - self.history_size] = None
+        return self.history[self.index]
+
+
+def lidarview(gen, caption_filename, callback=False):
     global g_scale
 
     pygame.init()    
@@ -185,17 +214,27 @@ def lidarview(gen, callback=False):
 
     paused = False
     camera_on = True
+    map_on = False
     poses = []
     acc_pts = []
     skip_frames = 0
     frames_step = 0
-    for timestamp, pose, scan, image, eof in gen:
-        # remove potential duplicity of poses (i.e. when not moving)
-        if len(poses) == 0 or math.hypot(poses[-1][0] - pose[0], poses[-1][1] - pose[1]) >= TAIL_MIN_STEP:
-            poses.append(pose)
 
-        acc_pts.extend(scan2xy(pose, scan))
-        acc_pts = filter_pts(acc_pts)
+    history = History(gen)
+    max_timestamp = None
+    while True:
+        timestamp, pose, scan, image, eof = history.next()
+
+        if max_timestamp is None or max_timestamp < timestamp:
+            # build map only for new data
+            max_timestamp = timestamp
+
+            # remove potential duplicity of poses (i.e. when not moving)
+            if len(poses) == 0 or math.hypot(poses[-1][0] - pose[0], poses[-1][1] - pose[1]) >= TAIL_MIN_STEP:
+                poses.append(pose)
+
+            acc_pts.extend(scan2xy(pose, scan))
+            acc_pts = filter_pts(acc_pts)
 
         if skip_frames > 0 and not eof:
             skip_frames -= 1
@@ -203,7 +242,7 @@ def lidarview(gen, callback=False):
         skip_frames = frames_step
 
         while True:
-            caption = "Time %s" % timestamp
+            caption = caption_filename + ": %s" % timestamp
             if paused:
                 caption += ' (PAUSED)'
             if frames_step > 0:
@@ -213,10 +252,10 @@ def lidarview(gen, callback=False):
             pygame.display.set_caption(caption)
 
             foreground.fill((0, 0, 0))
-            if camera_on:
-                draw(foreground, pose, scan, poses=poses, image=image, callback=callback)
-            else:
-                draw(foreground, pose, scan, poses=poses, callback=callback, acc_pts=acc_pts)
+            draw(foreground, pose, scan, poses=poses,
+                 image=image if camera_on else None,
+                 acc_pts=acc_pts if map_on else None,
+                 callback=callback)
             screen.blit(background, (0, 0))
             screen.blit(foreground, (0, 0))
             pygame.display.flip() 
@@ -241,6 +280,8 @@ def lidarview(gen, callback=False):
                     g_scale /= 2.0
                 if event.key == K_c:
                     camera_on = not camera_on
+                if event.key == K_m:
+                    map_on = not map_on
                 if event.key == K_0:
                     frames_step = 0
                     sleep_time = 100
@@ -251,12 +292,20 @@ def lidarview(gen, callback=False):
                     frames_step = 20
                     sleep_time = 10
 
+                if event.key == K_RIGHT:
+                    break
+                if event.key == K_LEFT:
+                    paused = True
+                    history.prev()
+                    history.prev()
+                    break
             if event.type == pygame.NOEVENT and not paused and not eof:
                 break
 
 
 def main():
     import argparse
+    import os.path
 
     parser = argparse.ArgumentParser(description='View lidar scans')
     parser.add_argument('logfile', help='recorded log file')
@@ -274,11 +323,14 @@ def main():
     if args.callback is not None:
         callback = get_class_by_name(args.callback)
 
+    filename = os.path.basename(args.logfile)
     if args.legacy:
-        lidarview(scans_gen_legacy(args.logfile), callback=callback)
+        lidarview(scans_gen_legacy(args.logfile), caption_filename=filename, 
+                  callback=callback)
     else:
         lidarview(scans_gen(args.logfile, lidar_name=args.lidar,
                             poses_name=args.poses, camera_name=args.camera),
+                  caption_filename=filename,
                   callback=callback)
 
 if __name__ == "__main__":
