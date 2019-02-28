@@ -10,7 +10,7 @@ import numpy as np
 from osgar.node import Node
 
 
-WALL_DISTANCE = 0.7  # m
+WALL_DISTANCE = 1.5  #0.7  # m
 DESIRED_SPEED = 0.5  # m/s
 
 BLIND_ZONE_MM = 100  # self-reflections of the laser itself
