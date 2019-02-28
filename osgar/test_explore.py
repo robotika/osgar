@@ -24,7 +24,7 @@ class ExploreTest(unittest.TestCase):
         # nothing close -> no command
         scan = [0] * 271  # 1deg resolution
         cmd = follow_wall_angle(scan, radius=1.0, right_wall=True)
-        self.assertIsNone(cmd)
+        self.assertAlmostEqual(cmd, math.radians(-20))
 
         # parallel wall at 1m on the right
         scan = []
