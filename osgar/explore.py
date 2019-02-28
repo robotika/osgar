@@ -10,10 +10,8 @@ import numpy as np
 from osgar.node import Node
 
 
-SAFE_DISTANCE_STOP = 0.5
-SAFE_DISTANCE_GO = SAFE_DISTANCE_STOP + 0.3
 WALL_DISTANCE = 0.7  # m
-DESIRED_SPEED = 0.4  # m/s
+DESIRED_SPEED = 0.5  # m/s
 
 BLIND_ZONE_MM = 100  # self-reflections of the laser itself
 
@@ -64,13 +62,15 @@ def follow_wall_angle(laser_data, radius, right_wall=False):
             return laser_angle + angle
         else:
             return laser_angle - angle
-    return None
+    # If the desired wall is out of range, we need to slowly turn to the correct side.
+    return math.radians(-20 if right_wall else 20)
 
 
 class FollowWall(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         self.right_wall = config.get('right_wall', False)
+        self.max_speed = DESIRED_SPEED
 
     def send_speed_cmd(self, speed, angular_speed):
         return self.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
@@ -78,29 +78,20 @@ class FollowWall(Node):
     def update(self):  # hack, this method should be called run instead!       
         channel = super().update()  # define self.time
 
-        moving = False
         desired_speed = 0.0
         start_time = self.time
         while self.time - start_time < timedelta(minutes=1):
             channel = super().update()
             if channel == 'scan':
-                assert len(self.scan) == 811, len(self.scan)  # 541
-                dist = min_dist(self.scan[270:-270])  # was 200
+                size = len(self.scan)
+                dist = min_dist(self.scan[size//3:2*size//3])
                 tangent_angle = follow_wall_angle(self.scan, right_wall=self.right_wall,
                                                   radius=WALL_DISTANCE)
-                desired_angular_speed = 1.0 * tangent_angle  # TODO better P-regulator based on angle and free space
-                print(desired_angular_speed)
-                if moving:
-                    if dist is None or dist < SAFE_DISTANCE_STOP:
-                        print("!!! STOP !!!",  dist)
-                        desired_speed = 0.0
-                        desired_angular_speed = 0.0
-                        moving = False
-                else:  # not moving
-                    if dist > SAFE_DISTANCE_GO:
-                        print("GO",  dist)
-                        desired_speed = DESIRED_SPEED
-                        moving = True
+                if dist < 2.0:
+                    desired_speed = (self.max_speed / 2) * (dist - 0.4) / 1.6
+                else:
+                    desired_speed = self.max_speed
+                desired_angular_speed = 0.7 * tangent_angle  # TODO better P-regulator based on angle and free space
                 self.send_speed_cmd(desired_speed, desired_angular_speed)
 
             elif channel == 'emergency_stop':
