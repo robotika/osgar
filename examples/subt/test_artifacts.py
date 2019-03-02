@@ -3,7 +3,7 @@ import math
 
 import cv2
 
-from artifacts import count_red, artf_in_scan
+from artifacts import count_red, count_white, artf_in_scan
 
 
 class ArtifactDetectorTest(unittest.TestCase):
@@ -87,6 +87,10 @@ class ArtifactDetectorTest(unittest.TestCase):
 
         # the proper bounds based on image and the column
         self.assertEqual(artf_in_scan(scan, 152, 219), (2212, 8245))
+
+    def test_electrical_box(self):
+        img = cv2.imread('test_data/artf-electrical-box.jpg')
+        self.assertEqual(count_white(img), (865248, 1266, 959, 0, 1266))
 
 # vim: expandtab sw=4 ts=4
 
