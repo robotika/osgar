@@ -427,6 +427,10 @@ int main(int argc, char** argv)
         {
           type = 0;
         }
+        if(strcmp(buf, "TYPE_ELECTRICAL_BOX") == 0)
+        {
+          type = 2;
+        }
         if(strcmp(buf, "TYPE_EXTINGUISHER") == 0)
         {
           type = 3;
