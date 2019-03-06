@@ -193,7 +193,7 @@ class History:
 def lidarview(gen, caption_filename, callback=False):
     global g_scale
 
-    pygame.init()    
+    pygame.display.init()
     screen = pygame.display.set_mode(WINDOW_SIZE)
 
     # create backgroud
