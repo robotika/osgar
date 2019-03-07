@@ -427,6 +427,10 @@ int main(int argc, char** argv)
         {
           type = 0;
         }
+        if(strcmp(buf, "TYPE_DUCT") == 0)
+        {
+          type = 1;
+        }
         if(strcmp(buf, "TYPE_ELECTRICAL_BOX") == 0)
         {
           type = 2;
@@ -434,6 +438,18 @@ int main(int argc, char** argv)
         if(strcmp(buf, "TYPE_EXTINGUISHER") == 0)
         {
           type = 3;
+        }
+        if(strcmp(buf, "TYPE_PHONE") == 0)
+        {
+          type = 4;
+        }
+        if(strcmp(buf, "TYPE_RADIO") == 0)
+        {
+          type = 5;
+        }
+        if(strcmp(buf, "TYPE_TOOLBOX") == 0)
+        {
+          type = 6;
         }
         if(strcmp(buf, "TYPE_VALVE") == 0)
         {
