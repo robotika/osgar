@@ -378,7 +378,13 @@ int main(int argc, char** argv)
   char *path = argv[3];
 
   double offset_x, offset_y, offset_z;
-  controller.get_origin(&offset_x, &offset_y, &offset_z);
+  ros::Rate r(1);
+  while(!controller.get_origin(&offset_x, &offset_y, &offset_z))
+  {
+    ROS_INFO("%s offset FAILED!", argv[1]);
+    ros::spinOnce();
+    r.sleep();
+  }
   ROS_INFO("%s offset %lf %lf %lf", argv[1], offset_x, offset_y, offset_z);
 
   subt::msgs::Artifact artifact;
@@ -397,7 +403,7 @@ int main(int argc, char** argv)
 //  controller.client->SendToBaseStation(artifact);
 
 //  ros::spin();
-  ros::Rate r(1);
+//  ros::Rate r(1);
   int i;
   while (ros::ok())
   {
