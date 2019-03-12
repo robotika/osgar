@@ -216,7 +216,7 @@ def lookup_stream_id(filename, stream_name):
     return names.index(stream_name) + 1
 
 
-if __name__ == "__main__":
+def main():
     import argparse
     import sys
     from collections import defaultdict
@@ -263,5 +263,8 @@ if __name__ == "__main__":
                   '%10d | %5d | %5.1fHz' % (stat.get(k, 0), count[k],
                       count[k]/seconds))
         print('\nTotal time', timestamp)
+
+if __name__ == "__main__":
+    main()
 
 # vim: expandtab sw=4 ts=4
