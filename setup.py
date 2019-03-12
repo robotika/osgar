@@ -29,6 +29,7 @@ setuptools.setup(
             'lidarview = osgar.tools.lidarview:main [tools]',
             'log2video = osgar.tools.log2video:main [tools]',
             'log2pcap = osgar.tools.log2pcap:main [tools]',
+            'logger = osgar.logger:main',
         ],
     },
     classifiers=[
