@@ -24,10 +24,12 @@ class SICKLidar(Thread):
     def parse_raw_data(raw_data):
         """Parse scan data for TiM571 and TiM551 SICK LIDARs"""
         data = raw_data.split()
-        assert len(data) in [854, 846, 583, 1663], len(data)
+        assert len(data) in [26, 854, 846, 583, 1663], len(data)
         assert data[1] == b'LMDscandata', data[:2]
         timestamp = int(data[9], 16)  # TODO verify
         freq = int(data[16], 16)
+        if len(data) == 26:  # empty scan
+            return [], None
         assert freq == 1500, freq  # TiM 15Hz
         assert data[20] == b'DIST1', data[20]
         resolution = int(data[24], 16)
@@ -72,7 +74,7 @@ class SICKLidar(Thread):
                 yield ret
             # now process only existing (remaining) buffer
             self.buf, packet = self.split_buffer(self.buf)  
- 
+
     def run(self):
         try:
             self.bus.publish('raw', STX + b'sRN LMDscandata' + ETX)
@@ -82,7 +84,8 @@ class SICKLidar(Thread):
                 for out in self.process_gen(data):
                     assert out is not None
                     scan, remission = out
-                    self.bus.publish('scan', scan)
+                    if len(scan) > 0:
+                        self.bus.publish('scan', scan)
 #                    print(dt, [x for x in zip(scan, remission)])
 #                    print()
                     if self.sleep is not None:

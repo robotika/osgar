@@ -70,4 +70,11 @@ A 130 135 134 13D 138 134 131 131 12C 12A 128 128 126 11B 11C 113 11B 10E 2 2 2
         lidar = SICKLidar(config, bus=bus)
         self.assertAlmostEqual(lidar.sleep, 0.1)
 
+    def test_empty_scan(self):
+        tcp_buf = b'\x02sRA LMDscandata 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\x03'
+        data = SICKLidar.parse_raw_data(tcp_buf)
+        self.assertEqual(data, ([], None))  # empty scan and no RSSI
+
+        # TODO test that empty scan is not published!
+
 # vim: expandtab sw=4 ts=4
