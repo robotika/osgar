@@ -215,11 +215,19 @@ def lookup_stream_id(filename, stream_name):
     names = lookup_stream_names(filename)
     return names.index(stream_name) + 1
 
+def calculate_stat(filename):
+    from collections import defaultdict
+    stat = defaultdict(int)
+    count = defaultdict(int)
+    with LogReader(filename) as log:
+        for timestamp, stream_id, data in log:
+            stat[stream_id] += len(data)
+            count[stream_id] += 1
+    return stat, count, timestamp
 
 def main():
     import argparse
     import sys
-    from collections import defaultdict
 
     from osgar.lib.serialize import deserialize
 
@@ -233,28 +241,12 @@ def main():
                         action='store_true')
     args = parser.parse_args()
 
-    only_stream = lookup_stream_id(args.logfile, args.stream)
-
     if args.list_names:
         print(lookup_stream_names(args.logfile))
         sys.exit()
 
-    stat = defaultdict(int)
-    count = defaultdict(int)
-    with LogReader(args.logfile, only_stream_id=only_stream) as log:
-        for timestamp, stream_id, data in log:
-            if args.stat:
-                stat[stream_id] += len(data)
-                count[stream_id] += 1
-                continue
-            if not args.raw and stream_id != 0:
-                data = deserialize(data)
-            if args.times:
-                print(timestamp, stream_id, data)
-            else:
-                sys.stdout.buffer.write(data)
-
     if args.stat:
+        stat, count, timestamp = calculate_stat(args.logfile)
         seconds = timestamp.total_seconds()
         names = ['sys'] + lookup_stream_names(args.logfile)
         column_width = max([len(x) for x in names])
@@ -263,6 +255,18 @@ def main():
                   '%10d | %5d | %5.1fHz' % (stat.get(k, 0), count[k],
                       count[k]/seconds))
         print('\nTotal time', timestamp)
+        sys.exit()
+
+    only_stream = lookup_stream_id(args.logfile, args.stream)
+
+    with LogReader(args.logfile, only_stream_id=only_stream) as log:
+        for timestamp, stream_id, data in log:
+            if not args.raw and stream_id != 0:
+                data = deserialize(data)
+            if args.times:
+                print(timestamp, stream_id, data)
+            else:
+                sys.stdout.buffer.write(data)
 
 if __name__ == "__main__":
     main()
