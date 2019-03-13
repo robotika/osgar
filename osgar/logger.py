@@ -36,6 +36,7 @@ import logging
 import time
 from threading import RLock
 from ast import literal_eval
+import mmap
 
 
 INFO_STREAM_ID = 0
@@ -188,6 +189,72 @@ class LogAsserter(LogReader):
     def write(self, stream_id, data):
         if self.assert_stream_id is not None:
             pass
+
+
+def _create_index(data, pos, start_time=datetime.timedelta()):
+    index = []
+    end = len(data)
+    times, prev = divmod(start_time, datetime.timedelta(microseconds=TIMESTAMP_OVERFLOW_STEP))
+    us_offset = times * TIMESTAMP_OVERFLOW_STEP
+    prev_micros = prev.microseconds + prev.seconds * 10**6 + prev.days * 24 * 3600 * 10**6
+    while pos + 8 < end:
+        start = pos
+        while True:
+            micros, channel, size = struct.unpack('IHH', data[pos:pos+8])
+            pos += 8 + size
+            if size < 0xFFFF:
+                break
+        if prev_micros > micros:
+            us_offset += TIMESTAMP_OVERFLOW_STEP
+        prev_micros = micros
+        dt = datetime.timedelta(microseconds=micros+us_offset)
+        index.append( (start, dt) )
+    if pos == end: # complete file
+        index.append( (pos, dt ) )
+    return index
+
+class LogIndexedReader:
+    def __init__(self, filepath):
+        self.filepath = filepath
+
+    def __enter__(self):
+        self.fd = os.open(self.filepath, os.O_RDONLY)
+        self.data = mmap.mmap(self.fd, 0, access=mmap.ACCESS_READ)
+        assert self.data[0:4] == b'Pyr\x00', self.data[0:4]
+        start_time = datetime.datetime(*struct.unpack('HBBBBBI', self.data[4:4+12]))
+        self.index = _create_index(self.data, 4+12)
+        assert self.index[-1][0] <= len(self.data), (self.index[-1][0], len(self.data))
+        return self
+
+    def __exit__(self, *args):
+        self.data.close()
+        os.close(self.fd)
+
+    def __getitem__(self, index):
+        if index >= len(self):
+            raise IndexError("log index {} out of range".format(index))
+        assert index < len(self)
+        a = self.data[self.index[index][0]:self.index[index+1][0]]
+        pos = 0
+        data = bytes()
+        while True:
+            micros, channel, size = struct.unpack('IHH', a[pos:pos+8])
+            pos += 8
+            data += a[pos:pos+size]
+            pos += size
+            if size < 0xFFFF:
+                break
+        dt = self.index[index][1]
+        return dt, channel, data
+
+    def __len__(self):
+        if (len(self.data) < self.data.size()):
+            self.data.close()
+            self.data = mmap.mmap(self.fd, 0, access=mmap.ACCESS_READ)
+            append = _create_index(self.data, self.index[-1][0], self.index[-1][1])
+            self.index[-1:] = append
+
+        return len(self.index)-1
 
 
 def lookup_stream_names(filename):

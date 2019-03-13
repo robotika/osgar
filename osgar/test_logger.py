@@ -1,15 +1,19 @@
 import unittest
 import os
 import time
+import logging
 from threading import Timer
 from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
+from contextlib import ExitStack
 
 import numpy as np
 
 import osgar.logger  # needed for patching the osgar.logger.datetime.datetime
 from osgar.logger import (LogWriter, LogReader, LogAsserter, INFO_STREAM_ID,
-                          lookup_stream_id)
+                          lookup_stream_id, LogIndexedReader)
+
+logging.getLogger().setLevel(logging.ERROR)
 
 
 class TimeStandsStill:
@@ -32,7 +36,7 @@ def delayed_copy(src, dst, skip_size):
             f2.flush()
 
 
-class LoggerTest(unittest.TestCase):
+class LoggerStreamingTest(unittest.TestCase):
 
     def setUp(self):
         ref = os.environ.get('OSGAR_LOGS')
@@ -303,6 +307,151 @@ class LoggerTest(unittest.TestCase):
             self.assertEqual(data, b'\x01')
             dt, channel, data = next(log)
             self.assertEqual(data, b'\x02')
+        os.remove(filename)
+
+
+class LoggerIndexedTest(unittest.TestCase):
+
+    def setUp(self):
+        ref = os.environ.get('OSGAR_LOGS')
+        if ref is not None:
+            del os.environ['OSGAR_LOGS']
+
+    def test_indexed_reader(self):
+        note = 'test_indexed_reader'
+        sample = [b'\x01', b'\x02', b'\x03']
+        times = []
+        with ExitStack() as at_exit:
+
+            with LogWriter(prefix='tmpIndexed', note=note) as log:
+                at_exit.callback(os.remove, log.filename)
+                for a in sample:
+                    t = log.write(1, a)
+                    times.append(t)
+                    time.sleep(0.001)
+
+            with LogIndexedReader(log.filename) as log:
+                dt, channel, data = log[0]
+                assert data.decode('utf-8') == note, data
+                for i in range(len(sample)):
+                    dt, channel, data = log[i+1]
+                    assert data == sample[i], data
+                    assert dt == times[i], (dt, times[i])
+                assert len(log) == len(sample) + 1, len(log)
+
+    def test_indexed_large_block(self):
+        data = bytes([x for x in range(100)]*1000)
+        self.assertEqual(len(data), 100000)
+        with ExitStack() as at_exit:
+            with LogWriter(prefix='tmpIndexedLarge', note='test_large_block') as log:
+                at_exit.callback(os.remove, log.filename)
+                t1 = log.write(1, data)
+                t2 = log.write(1, data[:0xFFFF])
+                t3 = log.write(1, b'')
+                t4 = log.write(1, b'ABC')
+                t5 = log.write(1, data+data)  # multiple split
+
+            with LogIndexedReader(log.filename) as log:
+                self.assertEqual(len(log[1][2]), 100000)
+                self.assertEqual(len(log[2][2]), 65535)
+                self.assertEqual(len(log[3][2]), 0)
+                self.assertEqual(len(log[4][2]), 3)
+                self.assertEqual(len(log[5][2]), 200000)
+
+    def test_time_overflow(self):
+        with ExitStack() as at_exit:
+            with patch('osgar.logger.datetime.datetime'):
+                osgar.logger.datetime.datetime = TimeStandsStill(datetime(2020, 1, 21))
+                with osgar.logger.LogWriter(prefix='tmp9', note='test_time_overflow') as log:
+                    at_exit.callback(os.remove, log.filename)
+                    t1 = log.write(1, b'\x01')
+                    self.assertEqual(t1, timedelta(0))
+                    osgar.logger.datetime.datetime = TimeStandsStill(datetime(2020, 1, 21, 1))
+                    t2 = log.write(1, b'\x02')
+                    self.assertEqual(t2, timedelta(hours=1))
+                    osgar.logger.datetime.datetime = TimeStandsStill(datetime(2020, 1, 21, 2))
+                    t3 = log.write(1, b'\x03')
+                    self.assertEqual(t3, timedelta(hours=2))
+                    osgar.logger.datetime.datetime = TimeStandsStill(datetime(2020, 1, 21, 4))
+                    # TODO this write should rise exception as the time gap is too big to track!
+                    t4 = log.write(1, b'\x04')
+                    self.assertEqual(t4, timedelta(hours=4))
+            with LogIndexedReader(log.filename) as log:
+                dt, channel, data = log[1]
+                self.assertEqual(dt, timedelta(hours=0))
+                dt, channel, data = log[2]
+                self.assertEqual(dt, timedelta(hours=1))
+                dt, channel, data = log[3]
+                self.assertEqual(dt, timedelta(hours=2))
+    #            dt, channel, data = next(log)
+    #            self.assertEqual(dt, timedelta(hours=4))
+
+    def _test_large_blocks_with_time_overflow(self):
+        with ExitStack() as at_exit:
+            with patch('osgar.logger.datetime.datetime'):
+                osgar.logger.datetime.datetime = TimeStandsStill(datetime(2019, 1, 1))
+                with osgar.logger.LogWriter(prefix='tmpA', note='test_time_overflow with large blocks') as log:
+                    at_exit.callback(os.remove, log.filename)
+                    t1 = log.write(1, b'\x01'*100000)
+                    self.assertEqual(t1, timedelta(0))
+                    osgar.logger.datetime.datetime = TimeStandsStill(datetime(2019, 1, 1, 1))
+                    t2 = log.write(1, b'\x02'*100000)
+                    self.assertEqual(t2, timedelta(hours=1))
+                    osgar.logger.datetime.datetime = TimeStandsStill(datetime(2019, 1, 1, 2))
+                    t3 = log.write(1, b'\x03'*100000)
+                    self.assertEqual(t3, timedelta(hours=2))
+            with LogIndexedReader(filename) as log:
+                dt, channel, data = log[1]
+                self.assertEqual(dt, timedelta(hours=0))
+                dt, channel, data = log[2]
+                self.assertEqual(dt, timedelta(hours=1))
+                dt, channel, data = log[3]
+                self.assertEqual(dt, timedelta(hours=2))
+
+    def test_no_eof(self):
+        with patch('osgar.logger.datetime.datetime'):
+            osgar.logger.datetime.datetime = TimeStandsStill(datetime(2019, 1, 1))
+            with LogWriter(prefix='tmpEof', note='test_EOF') as log:
+                filename = log.filename
+                osgar.logger.datetime.datetime = TimeStandsStill(datetime(2019, 1, 1, 1))
+                t1 = log.write(1, b'\x01'*100)
+                osgar.logger.datetime.datetime = TimeStandsStill(datetime(2019, 1, 1, 2))
+                t2 = log.write(1, b'\x02'*100)
+                osgar.logger.datetime.datetime = TimeStandsStill(datetime(2019, 1, 1, 3))
+                t3 = log.write(1, b'\x03'*100000)
+
+        partial = filename + '.part'
+        with open(filename, 'rb') as f_in, open(partial, 'wb') as f_out:
+            f_out.write(f_in.read(100))
+            f_out.flush()
+
+            with LogIndexedReader(partial) as log:
+                self.assertEqual(len(log), 1)
+                dt, channel, data = log[0]
+                with self.assertRaises(IndexError):
+                    log[1]
+
+                f_out.write(f_in.read(100))
+                f_out.flush()
+                self.assertEqual(len(log), 2)
+                dt, channel, data = log[1]
+                self.assertEqual(data, b'\x01'*100)
+                self.assertEqual(dt, timedelta(hours=1))
+                with self.assertRaises(IndexError):
+                    log[2]
+
+                f_out.write(f_in.read())
+                f_out.flush()
+
+                dt, channel, data = log[2]
+                self.assertEqual(dt, timedelta(hours=2))
+                self.assertEqual(data, b'\x02'*100)
+                dt, channel, data = log[3]
+                self.assertEqual(dt, timedelta(hours=3))
+                self.assertEqual(len(log), 4)
+                self.assertEqual(data, b'\x03'*100000)
+
+        os.remove(partial)
         os.remove(filename)
 
 # vim: expandtab sw=4 ts=4
