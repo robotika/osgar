@@ -15,7 +15,7 @@ class MyApp(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         self.max_speed = config.get('max_speed', 0.1)
-        self.max_angular_speed = math.radians(30)  # TODO config
+        self.max_angular_speed = math.radians(50)  # TODO config
         self.verbose = False
         self.last_position = (0, 0, 0)
         self.is_moving = False
