@@ -10,7 +10,7 @@ from collections import defaultdict
 import pygame
 from pygame.locals import *
 
-from osgar.logger import LogReader, lookup_stream_id, lookup_stream_names
+from osgar.logger import LogReader, LogIndexedReader, lookup_stream_id, lookup_stream_names
 from osgar.lib.serialize import deserialize
 from osgar.lib.config import get_class_by_name
 
@@ -189,6 +189,55 @@ class History:
                 self.history[self.index - self.history_size] = None
         return self.history[self.index]
 
+class Framer:
+    """Creates frames from log entries. Packs together closest scan, pose and camera picture."""
+    def __init__(self, filepath, lidar_name=None, poses_name=None, camera_name=None):
+        self.log = LogIndexedReader(filepath)
+        self.current = 0
+        self.pose, self.scan, self.image = (0, 0, 0), [], None
+        self.lidar_id, self.poses_id, self.camera_id = None, None, None
+        names = lookup_stream_names(filepath)
+        if lidar_name is not None:
+            self.lidar_id = names.index(lidar_name) + 1
+        if poses_name is not None:
+            self.poses_id = names.index(poses_name) + 1
+        if camera_name is not None:
+            self.camera_id = names.index(camera_name) + 1
+
+    def __enter__(self):
+        self.log.__enter__()
+        return self
+
+    def __exit__(self, *args):
+        self.log.__exit__()
+
+    def prev(self):
+        return self._step(-1)
+
+    def next(self):
+        return self._step(1)
+
+    def _step(self, direction):
+        while self.current + direction >= 0 and self.current + direction < len(self.log):
+            self.current += direction
+            timestamp, stream_id, data = self.log[self.current]
+            if stream_id == self.lidar_id:
+                self.scan = deserialize(data)
+                return timestamp, self.pose, self.scan, self.image, False
+            elif stream_id == self.camera_id:
+                jpeg = deserialize(data)
+                self.image = pygame.image.load(io.BytesIO(jpeg), 'JPG').convert()
+                if self.lidar_id is None:
+                    return timestamp, self.pose, self.scan, self.image, False
+            elif stream_id == self.poses_id:
+                arr = deserialize(data)
+                assert len(arr) == 3
+                self.pose = (arr[0]/1000.0, arr[1]/1000.0, math.radians(arr[2]/100.0))
+                if self.lidar_id is None and self.camera_id is None:
+                    return timestamp, self.pose, self.scan, self.image, False
+        return timedelta(), self.pose, self.scan, self.image, True
+
+
 
 def lidarview(gen, caption_filename, callback=False):
     global g_scale
@@ -220,7 +269,8 @@ def lidarview(gen, caption_filename, callback=False):
     skip_frames = 0
     frames_step = 0
 
-    history = History(gen)
+    #history = History(gen)
+    history = gen
     max_timestamp = None
     while True:
         timestamp, pose, scan, image, eof = history.next()
@@ -328,13 +378,10 @@ def main():
         lidarview(scans_gen_legacy(args.logfile), caption_filename=filename, 
                   callback=callback)
     else:
-        lidarview(scans_gen(args.logfile, lidar_name=args.lidar,
-                            poses_name=args.poses, camera_name=args.camera),
-                  caption_filename=filename,
-                  callback=callback)
+        with Framer(args.logfile, lidar_name=args.lidar, poses_name=args.poses, camera_name=args.camera) as framer:
+            lidarview(framer, caption_filename=filename, callback=callback)
 
 if __name__ == "__main__":
     main()
 
 # vim: expandtab sw=4 ts=4 
-
