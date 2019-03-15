@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "lidar": {
+          "driver": "lidar",
+          "in": ["raw"],
+          "out": ["raw", "scan"],
+          "init": {}
+      },
+      "lidar_usb": {
+          "driver": "usb",
+          "in": [],
+          "out": ["raw"],
+          "init": {}
+      }
+    },
+    "links": [["lidar_usb.raw", "lidar.raw"],
+              ["lidar.raw", "lidar_usb.raw"]]
+  }
+}
