@@ -16,8 +16,8 @@ import struct
 
 
 # TIM310
-#import usb.core
-#import usb.util
+import usb.core
+import usb.util
 
 HOST = '192.168.2.23'    # The remote host
 PORT = 2111             # The same port as used by the server
@@ -101,7 +101,7 @@ class LaserUSB( Laser ):
   def sendCmd( self, cmd ):
     for i in range(10):
       try:
-        self.dev.write(2|usb.ENDPOINT_OUT, "\x02"+cmd+"\x03\0", 0)
+        self.dev.write(2|usb.ENDPOINT_OUT, b"\x02" + cmd + b"\x03\0", 0)
         arr = self.dev.read(1|usb.ENDPOINT_IN, 65535, timeout = 100)
         return "".join([chr(x) for x in arr[1:-1]])
       except:
