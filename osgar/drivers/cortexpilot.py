@@ -65,8 +65,8 @@ class Cortexpilot(Node):
                              -self.desired_angular_speed, self.cmd_flags)  # Robik has positive to the right
 #                             self.yaw, self.cmd_flags)
         assert len(packet) < 256, len(packet)  # just to use LSB only
-        ret = bytes([0, 0, len(packet) + 2 + 1, 0x1, 0x0C]) + packet
-        # addr=0x1, cmd=0xC, length is given by payload, addr, cmd and checksum
+        ret = bytes([0, 0, len(packet) + 2 + 1, 0x1, 0x0D]) + packet
+        # addr=0x1, cmd=0xD, length is given by payload, addr, cmd and checksum
         checksum = sum(ret) & 0xFF
         return ret + bytes([(256-checksum) & 0xFF])
 
@@ -92,12 +92,12 @@ class Cortexpilot(Node):
         # expects already validated single sample with 3 bytes length prefix
         #   and checksum at the end
         high, mid, low = data[:3]
-        assert high == 0, high  # fixed packet size 2*256+44 bytes
+        assert high == 0, high  # fixed packet size 2*256+89 bytes
         assert mid == 2, mid
-        assert low == 44, low
+        assert low == 89, low
         addr, cmd = data[3:5]
         assert addr == 1, addr
-        assert cmd == 0xC, cmd
+        assert cmd == 0xD, cmd
         offset = 5  # payload offset
 
         # 4 byte Flags (unsigned long)  0
@@ -140,6 +140,18 @@ class Cortexpilot(Node):
 
         # 4 byte Yaw (float)           70 - Heading (Yaw) - machine orientation to magnetic north <0 .. 359> deg
         self.yaw = struct.unpack_from('<f', data, offset + 70)[0]
+        # 4 byte AccelX (float)        74
+        # 4 byte AccelY (float)        78
+        # 4 byte AccelZ (float)        82
+        # 4 byte GyroX (float)         86
+        # 4 byte GyroY (float)         90
+        # 4 byte GyroZ (float)         94
+        # 4 byte MagX (float)          98
+        # 4 byte MagY (float)          102
+        # 4 byte MagZ (float)          106
+        # 4 byte SystemTick (ulong) 110  - Uptime in milisecond
+        # 4 byte LidarTimestamp (ulong) 114  - Value of SystemTick when lidar scan was received
+        # 480 byte Lidar_Scan          118
 
         if self.last_encoders is not None:
             step = [x - prev for x, prev in zip(encoders, self.last_encoders)]
@@ -166,10 +178,10 @@ class Cortexpilot(Node):
 
         if self.lidar_valid:
             # laser
-            # 2 byte Lidar_LastIdx (ushort)74 - DEPRECATED
-            # 480 byte Lidar_Scan (ushort) 76 - 239 two-bytes distances from Lidar <0 .. 65535> in [cm]
+            # 4 byte LidarTimestamp (unsigned long) 114  - Value of SystemTick when lidar scan was received
+            # 480 byte Lidar_Scan (ushort) 118 - 239 two-bytes distances from Lidar <0 .. 65535> in [cm]
             # Scan is whole 360 deg with resolution 1.5 deg
-            scan = struct.unpack_from('<' + 'H'*239, data, offset + 76)  # TODO should be 240
+            scan = struct.unpack_from('<' + 'H'*239, data, offset + 118)  # TODO should be 240
 
             # restrict scan only to 270 degrees - cut 1/8th on both sides
             scan = scan[30:-30]
