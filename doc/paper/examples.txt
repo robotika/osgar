@@ -1,0 +1,12 @@
+Examples
+
+Spider3 Rider
+
+Spider3 is omnidirectional 4-wheel platform modified for autonomous data
+collection. There are two control modes: Spider and Car. In "spider mode" are
+all wheels pointing in the same direction. Speed and desired direction are
+used for control.
+
+In "car mode" turning radius and speed are specified.
+
+
