@@ -1,0 +1,20 @@
+OSGAR - Open Source Python Library for Autonomous Field Robots
+
+OSGAR (Open Source Garden/Generic Autonomous Robot) is lightweight
+multi-platform Python library targeting record and replay of multiple `nodes`
+(modules = sensors, robots, applications) logged into single file. It has
+similar goals as ROS[1] or ADTF[2], but is minimalistic. It should run on
+different operating systems and also low end devices like Raspberry PI Zero.
+
+In this paper we present basic OSGAR functionality, show applications on
+autonomous robots Spider3 Rider, modified garden tractor John Deere X300R and
+small robot Eduro used for measurements in maize field.
+
+OSGAR can be used also as recording tool for various scientific experiments.
+We give a simple example how to record existing sensors using serial, CAN bus,
+HTTP/TCP/UDP interfaces and demo example how to write your own driver
+targeting specific hardware.
+
+[1] Robot Operating System, ros.org
+[2] ADTF - electrobit.com
+
