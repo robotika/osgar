@@ -2,8 +2,17 @@ OSGAR - Open Source Python Library for Autonomous Field Robots
 
 OSGAR (Open Source Garden/Generic Autonomous Robot) is lightweight
 multi-platform Python library targeting record and replay of multiple `nodes`
-(modules = sensors, robots, applications) logged into single file. It has
-similar goals as ROS[1] or ADTF[2], but is minimalistic. It should run on
+(modules = sensors, robots, applications) logged into single file.
+
+There are main two goals: 
+ * allow for deterministic replay of recorded sessions (like `rr` [1])
+   to enable debugging of software running on robots
+ * allow for later reprocessing of recorded data from sensors (like ADTF [2])
+
+While ROS [3] can record and replay, the result is inherently not deterministic
+due to the way the communication is implemented within ROS. Also ROS has a very
+specific runtime requirements while OSGAR aims to be minimalistic
+and focuses only on Python - it should run on
 different operating systems and also low end devices like Raspberry PI Zero.
 
 In this paper we present basic OSGAR functionality, show applications on
@@ -15,6 +24,7 @@ We give a simple example how to record existing sensors using serial, CAN bus,
 HTTP/TCP/UDP interfaces and demo example how to write your own driver
 targeting specific hardware.
 
-[1] Robot Operating System, ros.org
+[1] rr - https://rr-project.org/
 [2] ADTF - electrobit.com
+[3] Robot Operating System, ros.org
 
