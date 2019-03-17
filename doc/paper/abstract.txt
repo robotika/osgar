@@ -1,10 +1,8 @@
-OSGAR - Open Source Python Library for Autonomous Field Robots
-
 OSGAR (Open Source Garden/Generic Autonomous Robot) is lightweight
 multi-platform Python library targeting record and replay of multiple `nodes`
 (modules = sensors, robots, applications) logged into single file.
 
-There are main two goals: 
+There are two main goals: 
  * allow for deterministic replay of recorded sessions (like `rr` [1])
    to enable debugging of software running on robots
  * allow for later reprocessing of recorded data from sensors (like ADTF [2])
@@ -24,7 +22,13 @@ We give a simple example how to record existing sensors using serial, CAN bus,
 HTTP/TCP/UDP interfaces and demo example how to write your own driver
 targeting specific hardware.
 
+The software is available at GitHub [4] and as Python package [5]. It is
+developed and maintained in cooperation with Robotika.cz [6].
+
 [1] rr - https://rr-project.org/
-[2] ADTF - electrobit.com
+[2] ADTF - https://www.elektrobit.com/
 [3] Robot Operating System, ros.org
+[4] OSGAR source code - https://github.com/robotika/osgar/
+[5] https://pypi.org/project/osgar/
+[6] https://robotika.cz/
 
