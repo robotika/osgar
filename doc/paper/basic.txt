@@ -1,0 +1,26 @@
+The Basic
+
+The OSGAR task is defined by a configuration file. It contains list of nodes
+(processing modules) and connection links (pair of source and destination
+node). Each node has specific initialization section, containing for example
+TCP port, list of input and output streams, and "driver", which is the name of
+the class implementing required functionality.
+
+There are two typical steps: recording the data and replay already recorded
+data. While the real run is executed on deployment machine, the replay should
+behave identically on laptop for example, without real-time constrains.
+Debugging and detail analysis is based on logfiles only.
+
+JSON is used as format for the configuration files. For convenience a set of
+multiple JSON files is allowed to avoid necessity to specify all used
+combinations. Finally driver "app" is dedicated for "application", which is a
+Python node as direct command line parameter.
+
+Usage examples:
+python3 -m osgar.record config/my-gps.json
+python3 -m osgar.replay <logfile> --module <selected node name>
+
+Convenience "app" usage:
+python3 -m osgar.followme run config/my-robot.json
+python3 -m osgar.followme replay <logfile>
+

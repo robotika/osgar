@@ -1,0 +1,17 @@
+The Motivation
+
+Our original motivation was still growing number of robots among which we
+wanted to share the code. The common part was used programming language
+(Python), set of sensors (SICK lidars, IP cameras, GPS) and control of the
+robot via CAN.
+
+Each sensor was recorded into separate log file in proprietary format. CAN
+communication was binary, lidars used Python array serialization via str()
+function and images from camera were stored as separate JPEG file with one
+index file. The recording was tightly linked to given application, like
+navigation of the robot in the row of a maize field.
+
+The new generation of OSGAR was based on unified timestamped message format,
+support of multiple individual streams stored in a single logfile and general
+tools for visualization and data post-processing.
+
