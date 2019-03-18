@@ -7,7 +7,8 @@
           "in": [],
           "out": ["raw"],
           "init": {
-              "port": 0
+              "port": 0,
+              "sleep": 1.0
           }
       }
     },
