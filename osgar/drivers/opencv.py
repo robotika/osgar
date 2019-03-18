@@ -16,6 +16,7 @@ class LogOpenCVCamera:
 
         port = config.get('port', 0)
         self.cap = cv2.VideoCapture(port)
+        self.sleep = config.get('sleep')
 
     def start(self):
         self.input_thread.start()
@@ -31,6 +32,8 @@ class LogOpenCVCamera:
                 retval, data = cv2.imencode('*.jpeg', frame)
                 if len(data) > 0:
                     self.bus.publish('raw', data.tobytes())
+                if self.sleep is not None:
+                    self.bus.sleep(self.sleep)
         self.cap.release()
 
     def request_stop(self):
