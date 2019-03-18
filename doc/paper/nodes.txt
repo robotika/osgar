@@ -1,0 +1,23 @@
+The Nodes
+
+Each node (processing unit) communicate with other nodes with blocking
+functions "listen()" and "publish()". Listen returns tupple containing
+timestamp of the message, channel name and the data. The timestamp is standard
+Python datetime.timedelta with resolution in microseconds starting from zero
+at the beginning of the program. The time is defined by recording computer.
+Note, that at the beginning also absolute datetime is stored so it is possible
+to compare times of multiple logfiles if necessary.
+
+The message data can be any basic Python type: numbers, arrays, dictionaries
+etc. Note, that used "msgpack" serialize both lists and tuples into an array,
+so for reproducebility we recommend to use lists only.
+
+Also float numbers depend on resolution and it is different for different
+number value. We recommend fractions (fixed decimal point) often used in CAN
+bus communication.
+
+The "publish()" method contains channel name and data. It returns current time
+so node can measure current processing delay. The distribution of messages
+among nodes is hanled by OSGAR system. Current solution is with a queue of
+messages created for each node.
+

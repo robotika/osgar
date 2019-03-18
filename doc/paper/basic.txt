@@ -1,4 +1,4 @@
-The Basic
+The Basic Usage
 
 The OSGAR task is defined by a configuration file. It contains list of nodes
 (processing modules) and connection links (pair of source and destination
