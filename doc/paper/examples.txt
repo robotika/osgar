@@ -10,3 +10,33 @@ used for control.
 In "car mode" turning radius and speed are specified.
 
 
+
+Record GPS data
+
+This is an example of JSON configuration for recording GPS data only:
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "gps": {
+          "driver": "gps",
+          "in": ["raw"],
+          "out": ["position"],
+          "init": {}
+      },
+      "gps_serial": {
+          "driver": "serial",
+          "in": [],
+          "out": ["raw"],
+          "init": {"port": "COM5", "speed": 4800}
+      }
+    },
+    "links": [["gps_serial.raw", "gps.raw"]]    
+  }
+}
+
+It has two nodes named "gps" and "gps_serial", where the first one takes care
+of parsing GPS NMEA sentences while the second communicates with the device
+over serial port (COM5, speed 4800bps). The communication is only one-way from
+serial port to the parser.
+
