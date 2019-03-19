@@ -82,7 +82,7 @@ class SubTChallenge:
         self.start_pose = None
         self.traveled_dist = 0.0
         self.time = None
-        self.max_speed = 1.0  # TODO load from config
+        self.max_speed = 0.5  #1.0  # TODO load from config
         self.max_angular_speed = math.radians(45)
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
