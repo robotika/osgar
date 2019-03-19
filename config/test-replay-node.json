@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "replay": {
+          "driver": "replay",
+          "in": [],
+          "out": ["pose2d", "scan", "jpeg", "rotation"],
+          "init": {
+            "filename": "d:\\md\\osgar\\logs\\subt\\eduro\\190305\\wall-190305_203603.log",
+            "pins": {
+              "eduro.pose2d": "pose2d",
+              "lidar.scan": "scan",
+              "imu.rot": "rotation",
+              "camera.raw": "jpeg"
+            }
+          }
+      }
+    },
+    "links": []
+  }
+}

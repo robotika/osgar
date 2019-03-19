@@ -10,6 +10,7 @@ from .sicklidar import SICKLidar
 from .eduro import Eduro
 from .cortexpilot import Cortexpilot
 from .logusb import LogUSB
+from .replay import ReplayDriver
 
 # dictionary of all available drivers
 all_drivers = dict(gps=GPS, imu=IMU, spider=Spider, serial=LogSerial,
@@ -20,5 +21,6 @@ all_drivers = dict(gps=GPS, imu=IMU, spider=Spider, serial=LogSerial,
                    eduro=Eduro,
                    cortexpilot=Cortexpilot,
                    usb=LogUSB,
+                   replay=ReplayDriver,
                    )
 
