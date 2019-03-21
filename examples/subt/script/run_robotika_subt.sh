@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Cleanup
-rm -rf ~/.gazebo/log/*
+#rm -rf ~/.gazebo/log/*
 rm -f osgar/examples/subt/call_base.txt
 rm -f osgar/examples/subt/call_base_x2l.txt
 rm -f osgar/examples/subt/call_base_x2r.txt
@@ -9,7 +9,7 @@ source ~/subt_ws/install/setup.sh
 
 # Start gazebo.
 export DISPLAY=:0  # Even when connected through ssh, Gazebo needs a local window.
-roslaunch subt_gazebo competition.launch scenario:=tunnel_qual extra_gazebo_args:="-r" &
+roslaunch subt_gazebo competition.launch scenario:=tunnel_qual extra_gazebo_args:="-r --record_period 0.0167 --record_filter *.pose/*.pose" &
 GAZEBO_PID=$!
 sleep 20
 
@@ -32,6 +32,8 @@ function shutdown {
        kill ${ROBOT_LEFT_PID}
        kill ${ROBOTS_SIM_PID}
        kill ${GAZEBO_PID}
+       wait
+       exit
 }
 trap shutdown SIGHUP SIGINT SIGTERM
 
@@ -56,6 +58,7 @@ sleep 10
 # Take robot simulation down.
 kill ${ROBOTS_SIM_PID}
 kill ${GAZEBO_PID}
+wait
 
 # Convert the log.
 #time gz log -f ~/.gazebo/log/*/gzserver/state.log --filter *.pose/*.pose -z 60 -o ~/.gazebo/log/subt_tunnel_qual_sim_state.log
