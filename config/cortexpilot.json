@@ -4,7 +4,7 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["emergency_stop", "pose2d"],
+          "in": ["emergency_stop", "pose2d", "scan"],
           "out": ["desired_speed"],
           "init": {
             "max_speed": 0.5
@@ -29,6 +29,20 @@
           "init": {
               "port": 0
           }
+      },
+      "slope_lidar": {
+          "driver": "lidar",
+          "in": ["raw"],
+          "out": ["raw", "scan"],
+          "init": {
+            "sleep": 0.1
+          }
+      },
+      "lidar_usb": {
+          "driver": "usb",
+          "in": [],
+          "out": ["raw"],
+          "init": {}
       }
     },
     "links": [["app.desired_speed", "cortexpilot.desired_speed"],
@@ -36,7 +50,9 @@
               ["cortexpilot.emergency_stop", "app.emergency_stop"],
               ["serial.raw", "cortexpilot.raw"], 
               ["cortexpilot.raw", "serial.raw"],
-              ["cortexpilot.scan", "app.scan"]
+              ["cortexpilot.scan", "app.scan"],
+              ["lidar_usb.raw", "slope_lidar.raw"],
+              ["slope_lidar.raw", "lidar_usb.raw"]
     ]
   }
 }
