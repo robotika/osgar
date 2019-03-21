@@ -6,7 +6,9 @@
           "driver": "lidar",
           "in": ["raw"],
           "out": ["raw", "scan"],
-          "init": {}
+          "init": {
+            "sleep": 0.1
+          }
       },
       "lidar_usb": {
           "driver": "usb",
