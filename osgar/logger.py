@@ -192,26 +192,39 @@ class LogAsserter(LogReader):
 
 
 def _create_index(data, pos, start_time=datetime.timedelta()):
+    """index is list of (pos,timestamp) where the last item
+       `pos` points just past the last valid packet
+       `timestamp` is last valid timestamp
+       this marker says where and when the next parsing
+       should continue when growing the file
+    """
     index = []
     end = len(data)
     times, prev = divmod(start_time, datetime.timedelta(microseconds=TIMESTAMP_OVERFLOW_STEP))
     us_offset = times * TIMESTAMP_OVERFLOW_STEP
     prev_micros = prev.microseconds + prev.seconds * 10**6 + prev.days * 24 * 3600 * 10**6
-    while pos + 8 < end:
+    dt = start_time
+    while pos + 8 <= end:
         start = pos
-        while True:
-            micros, channel, size = struct.unpack('IHH', data[pos:pos+8])
-            pos += 8 + size
-            if size < 0xFFFF:
-                break
+        header = data[pos:pos+8]
+        micros, channel, size = struct.unpack('IHH', header)
         if prev_micros > micros:
             us_offset += TIMESTAMP_OVERFLOW_STEP
         prev_micros = micros
         dt = datetime.timedelta(microseconds=micros+us_offset)
-        index.append( (start, dt) )
-    if pos == end: # complete file
-        index.append( (pos, dt ) )
+        pos += 8 + size
+        while size == 0xFFFF and pos + 8 <= end:
+            header = data[pos:pos+8]
+            micros_, channel, size = struct.unpack('IHH', header)
+            assert micros == micros_
+            pos += 8 + size
+        if pos > end: # current packet is not complete
+            index.append((start, dt))
+            return index
+        index.append((start, dt))
+    index.append((pos, dt))
     return index
+
 
 class LogIndexedReader:
     def __init__(self, filepath):
@@ -231,7 +244,7 @@ class LogIndexedReader:
         os.close(self.fd)
 
     def __getitem__(self, index):
-        if index >= len(self):
+        if abs(index) >= len(self):
             raise IndexError("log index {} out of range".format(index))
         assert index < len(self)
         a = self.data[self.index[index][0]:self.index[index+1][0]]
@@ -247,13 +260,15 @@ class LogIndexedReader:
         dt = self.index[index][1]
         return dt, channel, data
 
-    def __len__(self):
+    def grow(self):
         if (len(self.data) < self.data.size()):
             self.data.close()
             self.data = mmap.mmap(self.fd, 0, access=mmap.ACCESS_READ)
-            append = _create_index(self.data, self.index[-1][0], self.index[-1][1])
-            self.index[-1:] = append
+            index = _create_index(self.data, self.index[-1][0], self.index[-1][1])
+            self.index[-1:] = index
+        return len(self.index)-1
 
+    def __len__(self):
         return len(self.index)-1
 
 
