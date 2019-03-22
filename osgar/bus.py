@@ -4,6 +4,7 @@
 import time
 from queue import Queue
 from datetime import timedelta
+from collections import deque
 
 from osgar.lib.serialize import serialize, deserialize
 
@@ -64,13 +65,15 @@ class LogBusHandler:
         self.reader = log
         self.inputs = inputs
         self.outputs = outputs
-        self.buffer_queue = Queue()
+        self.buffer_queue = deque()
+        self.max_delay = timedelta()
+        self.max_delay_timestamp = timedelta()
 
     def listen(self):
-        if self.buffer_queue.empty():
+        if len(self.buffer_queue) == 0:
             dt, stream_id, bytes_data = next(self.reader)
         else:
-            dt, stream_id, bytes_data = self.buffer_queue.get()
+            dt, stream_id, bytes_data = self.buffer_queue.popleft()
         channel = self.inputs[stream_id]
         data = deserialize(bytes_data)
         return dt, channel, data
@@ -78,13 +81,18 @@ class LogBusHandler:
     def publish(self, channel, data):
         assert channel in self.outputs.values(), (channel, self.outputs.values())
         dt, stream_id, bytes_data = next(self.reader)
-        start = dt
         while stream_id not in self.outputs:
             assert stream_id in self.inputs, stream_id
-            self.buffer_queue.put((dt, stream_id, bytes_data))
+            self.buffer_queue.append((dt, stream_id, bytes_data))
             dt, stream_id, bytes_data = next(self.reader)
-        assert dt - start < ASSERT_QUEUE_DELAY, (dt - start, self.buffer_queue.qsize())
         assert channel == self.outputs[stream_id], (channel, self.outputs[stream_id], dt)  # wrong channel
+        if len(self.buffer_queue) > 0:
+            delay = dt - self.buffer_queue[0][0]
+            if delay > self.max_delay:
+                self.max_delay = delay
+                self.max_delay_timestamp = dt
+            if delay > ASSERT_QUEUE_DELAY:
+                print("maximum delay overshot:", delay)
         ref_data = deserialize(bytes_data)
         assert data == ref_data, (data, ref_data, dt)
         return dt

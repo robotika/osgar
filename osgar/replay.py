@@ -9,6 +9,7 @@ from ast import literal_eval
 from datetime import timedelta
 from queue import Queue
 
+from osgar import logger
 from osgar.logger import LogReader
 from osgar.lib.config import load as config_load, get_class_by_name
 from osgar.bus import LogBusHandler, LogBusHandlerInputsOnly
@@ -16,35 +17,34 @@ from osgar.bus import LogBusHandler, LogBusHandlerInputsOnly
 
 def replay(args, application=None):
     log = LogReader(args.logfile, only_stream_id=0)
-    print(next(log)[-1])  # old arguments
+    print("original args:", next(log)[-1])  # old arguments
     config_str = next(log)[-1]
     config = literal_eval(config_str.decode('ascii'))
     if args.config is not None:
         config = config_load(*args.config)
 
-    names = []
-    for __, __, line in log:
-        d = literal_eval(line.decode('ascii'))
-        if 'names' in d:
-            names = d['names']
-    print(names)
+    names = logger.lookup_stream_names(args.logfile)
+    print("stream names:")
+    for name in names:
+        print(" ", name)
     
     module = args.module
-    assert module in config['robot']['modules'], (module, config['robot']['modules'])
+    assert module in config['robot']['modules'], (module, list(config['robot']['modules'].keys()))
     module_config = config['robot']['modules'][module]
 
     input_names = module_config['in']
     output_names = module_config['out']
-    print(input_names, output_names)
+    print("inputs:", input_names)
+    print("outputs:", output_names)
 
     inputs = {}
     for edge_from, edge_to in config['robot']['links']:
         if edge_to.split('.')[0] == module:
             inputs[1 + names.index(edge_from)] = edge_to.split('.')[1]
-    print(inputs)
+    #print(inputs)
 
     outputs = dict([(1 + names.index('.'.join([module, name])), name) for name in output_names])
-    print(outputs)
+    #print(outputs)
 
     # start reading log from the beginning again
     if args.force:
@@ -72,10 +72,11 @@ if __name__ == "__main__":
     parser.add_argument('--module', help='module name for analysis', required=True)  # TODO default "all"
     args = parser.parse_args()
 
-    module_class = replay(args)
+    module_instance = replay(args)
 
-    module_class.start()
+    module_instance.start()
     # now wait until the module is alive
-    module_class.join()
+    module_instance.join()
+    print("maximum delay:", module_instance.bus.max_delay)
 
 # vim: expandtab sw=4 ts=4
