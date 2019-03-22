@@ -386,7 +386,7 @@ class LoggerIndexedTest(unittest.TestCase):
     #            dt, channel, data = next(log)
     #            self.assertEqual(dt, timedelta(hours=4))
 
-    def _test_large_blocks_with_time_overflow(self):
+    def test_large_blocks_with_time_overflow(self):
         with ExitStack() as at_exit:
             with patch('osgar.logger.datetime.datetime'):
                 osgar.logger.datetime.datetime = TimeStandsStill(datetime(2019, 1, 1))
@@ -400,7 +400,7 @@ class LoggerIndexedTest(unittest.TestCase):
                     osgar.logger.datetime.datetime = TimeStandsStill(datetime(2019, 1, 1, 2))
                     t3 = log.write(1, b'\x03'*100000)
                     self.assertEqual(t3, timedelta(hours=2))
-            with LogIndexedReader(filename) as log:
+            with LogIndexedReader(log.filename) as log:
                 dt, channel, data = log[1]
                 self.assertEqual(dt, timedelta(hours=0))
                 dt, channel, data = log[2]
@@ -433,6 +433,7 @@ class LoggerIndexedTest(unittest.TestCase):
 
                 f_out.write(f_in.read(100))
                 f_out.flush()
+                log.grow()
                 self.assertEqual(len(log), 2)
                 dt, channel, data = log[1]
                 self.assertEqual(data, b'\x01'*100)
@@ -443,6 +444,7 @@ class LoggerIndexedTest(unittest.TestCase):
                 f_out.write(f_in.read())
                 f_out.flush()
 
+                log.grow()
                 dt, channel, data = log[2]
                 self.assertEqual(dt, timedelta(hours=2))
                 self.assertEqual(data, b'\x02'*100)
@@ -453,5 +455,62 @@ class LoggerIndexedTest(unittest.TestCase):
 
         os.remove(partial)
         os.remove(filename)
+
+    def test_large_blocks_with_growing_file(self):
+        block_size = 100000 # fits into 2 packets, so 16 bytes overhead
+        with ExitStack() as at_exit:
+            with patch('osgar.logger.datetime.datetime'):
+                osgar.logger.datetime.datetime = TimeStandsStill(datetime(2019, 1, 1))
+                with osgar.logger.LogWriter(prefix='tmpA', note='') as log:
+                    at_exit.callback(os.remove, log.filename)
+                    t1 = log.write(1, b'\x01'*block_size)
+                    self.assertEqual(t1, timedelta(0))
+                    osgar.logger.datetime.datetime = TimeStandsStill(datetime(2019, 1, 1, 1))
+                    t2 = log.write(1, b'\x02'*block_size)
+                    self.assertEqual(t2, timedelta(hours=1))
+                    osgar.logger.datetime.datetime = TimeStandsStill(datetime(2019, 1, 1, 2))
+                    t3 = log.write(1, b'\x03'*block_size)
+                    self.assertEqual(t3, timedelta(hours=2))
+
+            partial = log.filename + '.part'
+            with open(log.filename, 'rb') as f_in, open(partial, 'wb') as f_out:
+                at_exit.callback(os.remove, partial)
+                # log file starts with 16 byte header
+                f_out.write(f_in.read(16))
+                f_out.write(f_in.read(100))
+                f_out.flush()
+
+                with LogIndexedReader(partial) as log:
+                    with self.assertRaises(IndexError):
+                        log[0]
+                    # add whole block plus 2 headers minus 100 already there
+                    f_out.write(f_in.read(block_size-100+16))
+                    f_out.flush()
+                    log.grow()
+                    self.assertEqual(len(log), 1)
+
+                    # add a partial header only
+                    f_out.write(f_in.read(4))
+                    f_out.flush()
+                    log.grow()
+                    self.assertEqual(len(log), 1)
+
+                    # add another block
+                    f_out.write(f_in.read(block_size+16))
+                    f_out.flush()
+                    log.grow()
+
+                    dt, channel, data = log[0]
+                    self.assertEqual(dt, timedelta(hours=0))
+                    dt, channel, data = log[1]
+                    self.assertEqual(dt, timedelta(hours=1))
+
+                    f_out.write(f_in.read())
+                    f_out.flush()
+                    log.grow()
+
+                    dt, channel, data = log[2]
+                    self.assertEqual(dt, timedelta(hours=2))
+
 
 # vim: expandtab sw=4 ts=4
