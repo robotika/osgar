@@ -4,6 +4,7 @@
 from datetime import timedelta
 import os
 import tempfile
+import pathlib
 
 import cv2
 import numpy as np
@@ -202,12 +203,15 @@ class ArtifactReporter(Node):
         channel = super().update()  # define self.time
         assert channel == "artf_xyz", channel
 
-        print("DETECTED", self.artf_xyz)
+        print("DETECTED:")
+        for art in self.artf_xyz:
+            print(art)
 
         # TODO call SubT API
         # Make all reported information available atomically to avoid race
         # conditions between writing to and reading from the same file.
-        with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
+        dir = pathlib.Path(self.path).resolve().parent
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, dir=dir) as f:
             for artf_type, ix, iy, iz in self.artf_xyz:
                 f.write('%s %.2f %.2f %.2f\n' % (artf_type, ix/1000.0, iy/1000.0, iz/1000.0))
             f.close()
