@@ -356,7 +356,7 @@ class SubTChallenge:
         print("SubT Challenge Ver2!")
         self.go_straight(1.0)  # go to the tunnel entrance (used to be 9m)
         self.collision_detector_enabled = True
-        self.follow_wall(radius = 0.5, right_wall=self.use_right_wall,
+        self.follow_wall(radius = 0.9, right_wall=self.use_right_wall,
                             timeout=timedelta(minutes=12, seconds=0))
         self.collision_detector_enabled = False
 
