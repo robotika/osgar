@@ -270,6 +270,7 @@ def lidarview(gen, caption_filename, callback=False):
     acc_pts = []
     skip_frames = 0
     frames_step = 0
+    save_counter = 0
 
     #history = History(gen)
     history = gen
@@ -343,6 +344,9 @@ def lidarview(gen, caption_filename, callback=False):
                 if event.key == K_2:
                     frames_step = 20
                     sleep_time = 10
+                if event.key == K_s:
+                    pygame.image.save(image, "saveX-{:04}.jpg".format(save_counter))
+                    save_counter += 1
 
                 if event.key == K_RIGHT:
                     break
