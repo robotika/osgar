@@ -218,6 +218,8 @@ class Framer:
         return self._step(1)
 
     def _step(self, direction):
+        if (self.current + direction) >= len(self.log):
+            self.log.grow()
         while self.current + direction >= 0 and self.current + direction < len(self.log):
             self.current += direction
             timestamp, stream_id, data = self.log[self.current]
