@@ -344,6 +344,15 @@ def lidarview(gen, caption_filename, callback=False):
                 if event.key == K_2:
                     frames_step = 20
                     sleep_time = 10
+                if event.key == K_3:
+                    frames_step = 30
+                    sleep_time = 10
+                if event.key == K_4:
+                    frames_step = 40
+                    sleep_time = 10
+                if event.key == K_9:
+                    frames_step = 90
+                    sleep_time = 10
                 if event.key == K_s:
                     pygame.image.save(image, "saveX-{:04}.jpg".format(save_counter))
                     save_counter += 1
