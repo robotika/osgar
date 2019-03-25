@@ -27,7 +27,8 @@
           "in": [],
           "out": ["raw"],
           "init": {
-              "port": 0
+              "port": 0,
+              "sleep": 0.25
           }
       },
       "slope_lidar": {
