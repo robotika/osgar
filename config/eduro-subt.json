@@ -16,6 +16,20 @@
           "out": ["pose2d"],
           "init": {}
       },
+      "detector": {
+          "driver": "artifacts:ArtifactDetector",
+          "in": ["image", "scan"],
+          "out": ["artf"],
+          "init": {}
+      },
+      "reporter": {
+          "driver": "artifacts:ArtifactReporter",
+          "in": ["artf_xyz"],
+          "out": [],
+          "init": {
+            "path": "call_base_x2l.txt"
+          }
+      },
       "eduro": {
           "driver": "eduro",
           "in": ["can", "desired_speed"],
@@ -99,6 +113,9 @@
               ["imu_serial.raw", "imu.raw"],
               ["imu.rot", "app.rot"],
               ["eduro.pose2d", "fusion.pose2d"],
-              ["imu.rot", "fusion.rotation"]]
+              ["imu.rot", "fusion.rotation"],
+              ["camera.raw", "detector.image"],
+              ["detector.artf", "app.artf"],
+              ["app.artf_xyz", "reporter.artf_xyz"]]
   }
 }
