@@ -21,6 +21,10 @@ class LocalPlanner:
 
         obstacles = []
         for (i, measurement) in enumerate(self.last_scan):
+            # Eduro hack, to reduce computations
+            if i % 5 != 0:  # reduce resolution to 5deg!
+                continue
+
             if measurement == 0:
                 continue
             if measurement * 1e-3 > self.max_obstacle_distance:
@@ -67,5 +71,7 @@ class LocalPlanner:
         def is_good(direction):
             return min(is_safe(direction), is_desired(direction))  # Fuzzy AND.
 
-        return max((is_good(math.radians(direction)), math.radians(direction)) for direction in range(-180, 180, 3))
+#        return max((is_good(math.radians(direction)), math.radians(direction)) for direction in range(-180, 180, 3))
+        return max((is_good(math.radians(direction)), math.radians(direction)) for direction in range(-180, 180, 10))
 
+# vim: expandtab sw=4 ts=4
