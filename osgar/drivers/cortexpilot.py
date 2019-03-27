@@ -2,6 +2,7 @@
   Driver for robot Robik from cortexpilot.com
 """
 
+import ctypes
 import struct
 import math
 
@@ -15,6 +16,10 @@ from osgar.bus import BusShutdownException
 ENC_SCALE = 1.241/9958
 WHEEL_DISTANCE = 0.88  # meters TODO confirm
 RAMP_STEP = 0.1  # fractional number for speed in -1.0 .. 1.0
+
+
+def sint32_diff(a, b):
+    return ctypes.c_int32(a - b).value
 
 
 class Cortexpilot(Node):
@@ -154,7 +159,7 @@ class Cortexpilot(Node):
         # 480 byte Lidar_Scan          118
 
         if self.last_encoders is not None:
-            step = [x - prev for x, prev in zip(encoders, self.last_encoders)]
+            step = [sint32_diff(x, prev) for x, prev in zip(encoders, self.last_encoders)]
             self.publish('encoders', step)
 
             dist = ENC_SCALE * sum(step)/len(step)
