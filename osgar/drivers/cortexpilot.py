@@ -42,6 +42,7 @@ class Cortexpilot(Node):
         self.yaw = None
         self.lidar_valid = False
         self.last_speed_cmd = 0.0
+        self.uptime = None
 
     def send_pose(self):
         x, y, heading = self.pose
@@ -155,6 +156,10 @@ class Cortexpilot(Node):
         # 4 byte MagY (float)          102
         # 4 byte MagZ (float)          106
         # 4 byte SystemTick (ulong) 110  - Uptime in milisecond
+        uptime = struct.unpack_from('<I', data, offset + 110)[0]
+        if self.uptime is not None:
+            uptime_diff = uptime - self.uptime
+        self.uptime = uptime
         # 4 byte LidarTimestamp (ulong) 114  - Value of SystemTick when lidar scan was received
         # 480 byte Lidar_Scan          118
 
