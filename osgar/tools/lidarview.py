@@ -383,6 +383,11 @@ def main():
     parser.add_argument('--callback', help='callback function for lidar scans')
 
     args = parser.parse_args()
+    if not any([args.lidar, args.poses, args.camera]):
+        print("Available streams:")
+        for stream in lookup_stream_names(args.logfile):
+            print("  ", stream)
+        return
 
     callback = None
     if args.callback is not None:
