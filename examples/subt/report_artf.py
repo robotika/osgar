@@ -5,7 +5,7 @@ import requests
 
 
 URL_BASE = "http://localhost:8000"
-ARTF_TYPES = ['survivor', 'backpack', 'cell phone', 'drill', 'fire extinguisher']
+ARTF_TYPES = ['Survivor', 'Backpack', 'Cell Phone', 'Drill', 'Fire Extinguisher']
 
 json_headers = {
     "Authorization" : "Bearer subttesttoken123",
