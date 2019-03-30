@@ -115,6 +115,7 @@
               ["eduro.pose2d", "fusion.pose2d"],
               ["imu.rot", "fusion.rotation"],
               ["camera.raw", "detector.image"],
+              ["lidar.scan", "detector.scan"],
               ["detector.artf", "app.artf"],
               ["app.artf_xyz", "reporter.artf_xyz"]]
   }
