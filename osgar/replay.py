@@ -70,9 +70,11 @@ if __name__ == "__main__":
     parser.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
     parser.add_argument('--config', nargs='+', help='force alternative configuration file')
     parser.add_argument('--module', help='module name for analysis', required=True)  # TODO default "all"
+    parser.add_argument('--verbose', '-v', help="verbose mode", action='store_true')
     args = parser.parse_args()
 
     module_instance = replay(args)
+    module_instance.verbose = args.verbose
 
     module_instance.start()
     # now wait until the module is alive
