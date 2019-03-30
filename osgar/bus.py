@@ -106,6 +106,9 @@ class LogBusHandlerInputsOnly:
         self.reader = log
         self.inputs = inputs
         self.time = timedelta(0)
+        # only for compatibility with LogBusHandler 
+        self.max_delay = timedelta()
+        self.max_delay_timestamp = timedelta()
 
     def listen(self):
         dt, stream_id, bytes_data = next(self.reader)
