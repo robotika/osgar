@@ -16,6 +16,14 @@ from osgar.lib.mathex import normalizeAnglePIPI
 from local_planner import LocalPlanner
 
 
+VIRTUAL_WORLD = False  # TODO more suitable parametrization, real robots now look only for red artifacts
+
+RADIUS = 1.0
+SEARCH_TIME_BEGIN = timedelta(minutes=1)
+SEARCH_TIME_END = timedelta(minutes=5)
+RETURN_TIMEOUT = SEARCH_TIME_END + timedelta(minutes=10)  # ??
+
+
 TRACE_STEP = 0.5  # meters in 3D
 
 
@@ -132,9 +140,9 @@ class SubTChallenge:
         size = len(self.scan)
         dist = min_dist(self.scan[size//3:2*size//3])
         if dist < 2.0:
-            desired_speed = 1.2 * (dist - 0.4) / 1.6
+            desired_speed = self.max_speed * (1.2/2.0) * (dist - 0.4) / 1.6
         else:
-            desired_speed = 2.0
+            desired_speed = self.max_speed  # was 2.0
         '''
         desired_angular_speed = 0.7 * safe_direction
         T = math.pi / 2
@@ -169,10 +177,12 @@ class SubTChallenge:
                 break
         print(self.time, 'stop at', self.time - start_time, self.is_moving)
 
-    def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None, stop_on_artf_count=None):
+    def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None, stop_on_artf_count=None,
+            search_since=None):
         start_dist = self.traveled_dist
         start_time = self.sim_time_sec
         desired_speed = 1.0
+        artf_count_before_start = 0
         while self.sim_time_sec - start_time < timeout.total_seconds():
             try:
                 if self.update() == 'scan':
@@ -182,7 +192,9 @@ class SubTChallenge:
                     if dist_limit < self.traveled_dist - start_dist:
                         print('Distance limit reached! At', self.traveled_dist, self.traveled_dist - start_dist)
                         break
-                if stop_on_artf_count is not None and stop_on_artf_count <= len(self.artifacts):
+                if search_since is not None and self.sim_time_sec < search_since.total_seconds():
+                    artf_count_before_start = len(self.artifacts)
+                if stop_on_artf_count is not None and stop_on_artf_count + artf_count_before_start <= len(self.artifacts):
                     break
             except Collision:
                 assert not self.collision_detector_enabled  # collision disables further notification
@@ -229,6 +241,10 @@ class SubTChallenge:
                 self.stat.clear()
 
             self.time = timestamp
+
+            if not VIRTUAL_WORLD:
+                self.sim_time_sec = self.time.total_seconds()
+
             self.stat[channel] += 1
             if channel == 'pose2d':
                 x, y, heading = data
@@ -301,17 +317,17 @@ class SubTChallenge:
     def play(self):
         print("SubT Challenge Ver1!")
 #        self.go_straight(9.0)  # go to the tunnel entrance
-        RADIUS = 1.0
-        TIMEOUT = timedelta(minutes=1)
         dist = self.follow_wall(radius=RADIUS, right_wall=self.use_right_wall, stop_on_artf_count=1,
-                                timeout=TIMEOUT)
+                                search_since=SEARCH_TIME_BEGIN,
+                                timeout=SEARCH_TIME_END)
         print("Going HOME")
         self.turn(math.radians(90), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
         self.turn(math.radians(90), speed=-0.1)
-        self.follow_wall(radius=RADIUS, right_wall=not self.use_right_wall, timeout=TIMEOUT, dist_limit=dist+1)
+        self.follow_wall(radius=RADIUS, right_wall=not self.use_right_wall, timeout=RETURN_TIMEOUT, dist_limit=dist+1)
         if self.artifacts:
             self.bus.publish('artf_xyz', [[artifact_data, round(x*1000), round(y*1000), round(z*1000)]
                                           for artifact_data, (x, y, z) in self.artifacts])
+        self.send_speed_cmd(0, 0)
         self.wait(timedelta(seconds=3))
 #############################################
 
