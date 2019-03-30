@@ -98,7 +98,7 @@ class SubTChallenge:
 
         self.use_right_wall = config.get('right_wall', True)
 
-        self.local_planner = LocalPlanner()
+        self.local_planner = None  # hack LocalPlanner()
 
     def send_speed_cmd(self, speed, angular_speed):
         success = self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
@@ -124,7 +124,10 @@ class SubTChallenge:
         self.send_speed_cmd(0.0, 0.0)
 
     def go_safely(self, desired_direction):
-        safety, safe_direction = self.local_planner.recommend(desired_direction)
+        if self.local_planner is None:
+            safe_direction = desired_direction
+        else:
+            safety, safe_direction = self.local_planner.recommend(desired_direction)
         desired_angular_speed = 1.2 * safe_direction
         size = len(self.scan)
         dist = min_dist(self.scan[size//3:2*size//3])
@@ -253,7 +256,8 @@ class SubTChallenge:
                 self.trace.update_trace(self.xyz)
             elif channel == 'scan':
                 self.scan = data
-                self.local_planner.update(data)
+                if self.local_planner is not None:
+                    self.local_planner.update(data)
             elif channel == 'rot':
                 self.yaw, self.pitch, self.roll = [math.radians(x/100) for x in data]
             elif channel == 'sim_time_sec':
@@ -293,7 +297,25 @@ class SubTChallenge:
         while self.time - start_time < dt:
             self.update()
 
+#############################################
     def play(self):
+        print("SubT Challenge Ver1!")
+#        self.go_straight(9.0)  # go to the tunnel entrance
+        RADIUS = 1.0
+        TIMEOUT = timedelta(minutes=1)
+        dist = self.follow_wall(radius=RADIUS, right_wall=self.use_right_wall, stop_on_artf_count=1,
+                                timeout=TIMEOUT)
+        print("Going HOME")
+        self.turn(math.radians(90), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
+        self.turn(math.radians(90), speed=-0.1)
+        self.follow_wall(radius=RADIUS, right_wall=not self.use_right_wall, timeout=TIMEOUT, dist_limit=dist+1)
+        if self.artifacts:
+            self.bus.publish('artf_xyz', [[artifact_data, round(x*1000), round(y*1000), round(z*1000)]
+                                          for artifact_data, (x, y, z) in self.artifacts])
+        self.wait(timedelta(seconds=3))
+#############################################
+
+    def play_ver2(self):
         print("SubT Challenge Ver2!")
         self.go_straight(1.0)  # go to the tunnel entrance (used to be 9m)
         self.collision_detector_enabled = True
