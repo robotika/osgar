@@ -41,16 +41,13 @@ def replay(args, application=None):
     for edge_from, edge_to in config['robot']['links']:
         if edge_to.split('.')[0] == module:
             inputs[1 + names.index(edge_from)] = edge_to.split('.')[1]
-    #print(inputs)
-
-    outputs = dict([(1 + names.index('.'.join([module, name])), name) for name in output_names])
-    #print(outputs)
 
     # start reading log from the beginning again
     if args.force:
         log = LogReader(args.logfile, only_stream_id=inputs.keys())
         bus = LogBusHandlerInputsOnly(log, inputs=inputs)
     else:
+        outputs = dict([(1 + names.index('.'.join([module, name])), name) for name in output_names])
         streams = list(inputs.keys()) + list(outputs.keys())
         log = LogReader(args.logfile, only_stream_id=streams)
         bus = LogBusHandler(log, inputs=inputs, outputs=outputs)
