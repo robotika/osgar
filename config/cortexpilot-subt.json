@@ -1,0 +1,84 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["emergency_stop", "pose2d", "scan"],
+          "out": ["desired_speed", "pose2d", "artf_xyz"],
+          "init": {
+            "max_speed": 0.5
+          }
+      },
+      "fusion": {
+          "driver": "osgar.drivers.fusion:FusionPose2d",
+          "in": ["pose2d", "rotation"],
+          "out": ["pose2d"],
+          "init": {}
+      },
+      "detector": {
+          "driver": "artifacts:ArtifactDetector",
+          "in": ["image", "scan"],
+          "out": ["artf"],
+          "init": {}
+      },
+      "reporter": {
+          "driver": "artifacts:ArtifactReporter",
+          "in": ["artf_xyz"],
+          "out": [],
+          "init": {
+            "path": "call_base_x2l.txt"
+          }
+      },
+      "cortexpilot": {
+          "driver": "osgar.drivers.cortexpilot:Cortexpilot",
+          "in": ["raw", "desired_speed"],
+          "out": ["raw", "encoders", "emergency_stop", "pose2d", "scan"],
+          "init": {}
+      },
+      "serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyACM0", "speed": 115200}
+      },
+      "camera": {
+          "driver": "osgar.drivers.opencv:LogOpenCVCamera",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+              "port": 0,
+              "sleep": 0.25
+          }
+      },
+      "slope_lidar": {
+          "driver": "lidar",
+          "in": ["raw"],
+          "out": ["raw", "scan"],
+          "init": {
+            "sleep": 0.1
+          }
+      },
+      "lidar_usb": {
+          "driver": "usb",
+          "in": [],
+          "out": ["raw"],
+          "init": {}
+      }
+    },
+    "links": [["app.desired_speed", "cortexpilot.desired_speed"],
+              ["cortexpilot.pose2d", "app.pose2d"],
+              ["cortexpilot.emergency_stop", "app.emergency_stop"],
+              ["serial.raw", "cortexpilot.raw"], 
+              ["cortexpilot.raw", "serial.raw"],
+              ["cortexpilot.scan", "app.scan"],
+              ["lidar_usb.raw", "slope_lidar.raw"],
+              ["slope_lidar.raw", "lidar_usb.raw"],
+              ["cortexpilot.pose2d", "fusion.pose2d"],
+              ["camera.raw", "detector.image"],
+              ["cortexpilot.scan", "detector.scan"],
+              ["detector.artf", "app.artf"],
+              ["app.artf_xyz", "reporter.artf_xyz"]
+    ]
+  }
+}
