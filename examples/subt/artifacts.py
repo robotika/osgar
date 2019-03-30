@@ -10,6 +10,10 @@ import numpy as np
 
 from osgar.node import Node
 
+
+VIRTUAL_WORLD = False  # TODO more suitable parametrization, real robots now look only for red artifacts
+
+
 EXTINGUISHER = 'TYPE_EXTINGUISHER'
 BACKPACK = 'TYPE_BACKPACK'
 VALVE = 'TYPE_VALVE'
@@ -92,7 +96,7 @@ def artf_in_scan(scan, img_x_min, img_x_max, verbose=False):
 
     tmp = [x if x > 0 else 100000 for x in scan]
     dist_mm = min(tmp[left_index:right_index])
-    index = left_index + scan[left_index:right_index].index(dist_mm)
+    index = left_index + tmp[left_index:right_index].index(dist_mm)
     deg_100th = int(((index / angular_resolution) - 135) * 100)
     return deg_100th, dist_mm
 
@@ -123,7 +127,7 @@ class ArtifactDetector(Node):
         img = cv2.imdecode(np.fromstring(self.image, dtype=np.uint8), 1)
         rcount, w, h, x_min, x_max = count_red(img)
         yellow_used = False
-        if rcount == 0:
+        if VIRTUAL_WORLD and rcount == 0:
             wcount, w, h, x_min, x_max = count_white(img)
             if wcount > WHITE_THRESHOLD and 1.8 < w/h < 1.9 and wcount/(w*h) > 0.6:
                 count = wcount
