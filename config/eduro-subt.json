@@ -53,7 +53,7 @@
           "driver": "lidar",
           "in": ["raw"],
           "out": ["raw", "scan"],
-          "init": {"sleep": 0.1}
+          "init": {"sleep": 0.1, "mask": [15, -15]}
       },
       "lidar_tcp": {
           "driver": "tcp",
@@ -65,7 +65,7 @@
           "driver": "lidar",
           "in": ["raw"],
           "out": ["raw", "scan"],
-          "init": {"sleep": 0.1}
+          "init": {"sleep": 0.1, "mask": [30, -30]}
       },
       "slope_lidar_tcp": {
           "driver": "tcp",
