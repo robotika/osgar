@@ -356,6 +356,8 @@ def lidarview(gen, caption_filename, callback=False):
                 if event.key == K_s:
                     pygame.image.save(image, "saveX-{:04}.jpg".format(save_counter))
                     save_counter += 1
+                if event.key == K_d:  # dump scan
+                    print(scan)
 
                 if event.key == K_RIGHT:
                     break
