@@ -77,4 +77,18 @@ A 130 135 134 13D 138 134 131 131 12C 12A 128 128 126 11B 11C 113 11B 10E 2 2 2
 
         # TODO test that empty scan is not published!
 
+    def test_mask(self):
+        config = {
+                'mask': [1, -1]
+                }
+        logger = MagicMock()
+        bus = BusHandler(logger, out={'raw':[], 'scan':[]}, name='lidar')
+        lidar = SICKLidar(config, bus=bus)
+
+        scan = [123] * 270
+        masked_scan = lidar.apply_mask(scan)
+        self.assertEqual(masked_scan[0], 0)
+        self.assertEqual(scan[1:-1], masked_scan[1:-1])
+        self.assertEqual(masked_scan[-1], 0)
+
 # vim: expandtab sw=4 ts=4
