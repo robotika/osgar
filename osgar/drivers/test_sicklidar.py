@@ -91,4 +91,17 @@ A 130 135 134 13D 138 134 131 131 12C 12A 128 128 126 11B 11C 113 11B 10E 2 2 2
         self.assertEqual(scan[1:-1], masked_scan[1:-1])
         self.assertEqual(masked_scan[-1], 0)
 
+
+    def test_blind_zone(self):
+        config = {
+                'blind_zone': 10
+                }
+        logger = MagicMock()
+        bus = BusHandler(logger, out={'raw':[], 'scan':[]}, name='lidar')
+        lidar = SICKLidar(config, bus=bus)
+
+        scan = [123] * 269 + [2]
+        masked_scan = lidar.apply_mask(scan)
+        self.assertEqual(masked_scan[-1], 0)
+
 # vim: expandtab sw=4 ts=4
