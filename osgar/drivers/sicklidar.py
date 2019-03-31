@@ -19,6 +19,7 @@ class SICKLidar(Thread):
         self.bus = bus
         self.buf = b''
         self.sleep = config.get('sleep')
+        self.mask = config.get('mask')
 
     @staticmethod
     def parse_raw_data(raw_data):
@@ -75,6 +76,14 @@ class SICKLidar(Thread):
             # now process only existing (remaining) buffer
             self.buf, packet = self.split_buffer(self.buf)  
 
+    def apply_mask(self, scan):
+        if self.mask is None:
+            return scan
+        assert len(self.mask) == 2, self.mask
+        begin, end = self.mask
+        assert begin >= 0 and end < 0, (begin, end)  # only index array from begin and end is now supported
+        return ([0] * begin) + scan[begin:end] + ([0] * abs(end))
+
     def run(self):
         try:
             self.bus.publish('raw', STX + b'sRN LMDscandata' + ETX)
@@ -85,7 +94,7 @@ class SICKLidar(Thread):
                     assert out is not None
                     scan, remission = out
                     if len(scan) > 0:
-                        self.bus.publish('scan', scan)
+                        self.bus.publish('scan', self.apply_mask(scan))
 #                    print(dt, [x for x in zip(scan, remission)])
 #                    print()
                     if self.sleep is not None:
