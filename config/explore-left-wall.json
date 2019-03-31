@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "init": {
+            "right_wall": false
+          }
+      }
+    }
+  }
+}
+
