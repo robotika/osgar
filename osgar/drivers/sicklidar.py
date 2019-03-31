@@ -1,6 +1,7 @@
 """
   SICK Tim571 LIDAR Driver
 """
+import numpy as np
 
 from threading import Thread
 
@@ -20,6 +21,7 @@ class SICKLidar(Thread):
         self.buf = b''
         self.sleep = config.get('sleep')
         self.mask = config.get('mask')
+        self.blind_zone = config.get('blind_zone')
 
     @staticmethod
     def parse_raw_data(raw_data):
@@ -77,6 +79,12 @@ class SICKLidar(Thread):
             self.buf, packet = self.split_buffer(self.buf)  
 
     def apply_mask(self, scan):
+        if self.blind_zone is not None:
+            arr = np.array(scan)
+            mask = arr < self.blind_zone
+            arr[mask] = 0
+            scan = arr.tolist()
+
         if self.mask is None:
             return scan
         assert len(self.mask) == 2, self.mask
