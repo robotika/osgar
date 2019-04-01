@@ -139,13 +139,24 @@ class Cortexpilot(Node):
         # 4 byte GPS_Lat (ulong)       42 - format Lat * 1E7
         # 4 byte GPS_Lon (ulong)       46 - format Lon * 1E7
         # 4 byte GPS_Brg (float)       50 - GPS Bearing <0 .. 359> deg
+
         # 4 byte AHRS_q0 (float)       54 - Orientation Quaternion
         # 4 byte AHRS_q1 (float)       58 - 
         # 4 byte AHRS_q2 (float)       62 - 
         # 4 byte AHRS_q3 (float)       66 - 
 
+        self.orientation = struct.unpack_from('<ffff', data, offset+54)
+        self.bus.publish('orientation', list(self.orientation))
+
+        q0, q1, q2, q3 = self.orientation  # quaternion
+        x =  math.atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2))
+        y =  math.asin(2*(q0*q2-q3*q1))
+        z =  math.atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3))
+        self.bus.publish('rotation', [round(math.degrees(angle)*100) for angle in [x,y,z]])
+
         # 4 byte Yaw (float)           70 - Heading (Yaw) - machine orientation to magnetic north <0 .. 359> deg
         self.yaw = struct.unpack_from('<f', data, offset + 70)[0]
+        #print(math.degrees(x), math.degrees(y), math.degrees(z), self.yaw)
         # 4 byte AccelX (float)        74
         # 4 byte AccelY (float)        78
         # 4 byte AccelZ (float)        82

@@ -33,7 +33,7 @@
       "cortexpilot": {
           "driver": "osgar.drivers.cortexpilot:Cortexpilot",
           "in": ["raw", "desired_speed"],
-          "out": ["raw", "encoders", "emergency_stop", "pose2d", "scan"],
+          "out": ["raw", "encoders", "emergency_stop", "pose2d", "scan", "orientation", "rotation"],
           "init": {}
       },
       "serial": {
@@ -75,6 +75,7 @@
               ["lidar_usb.raw", "slope_lidar.raw"],
               ["slope_lidar.raw", "lidar_usb.raw"],
               ["cortexpilot.pose2d", "fusion.pose2d"],
+              ["cortexpilot.rotation", "fusion.rotation"],
               ["camera.raw", "detector.image"],
               ["cortexpilot.scan", "detector.scan"],
               ["detector.artf", "app.artf"],
