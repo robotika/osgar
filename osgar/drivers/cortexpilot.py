@@ -152,7 +152,7 @@ class Cortexpilot(Node):
         x =  math.atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2))
         y =  math.asin(2*(q0*q2-q3*q1))
         z =  math.atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3))
-        self.bus.publish('rotation', [round(math.degrees(angle)*100) for angle in [x,y,z])
+        self.bus.publish('rotation', [round(math.degrees(angle)*100) for angle in [x,y,z]])
 
         # 4 byte Yaw (float)           70 - Heading (Yaw) - machine orientation to magnetic north <0 .. 359> deg
         self.yaw = struct.unpack_from('<f', data, offset + 70)[0]
