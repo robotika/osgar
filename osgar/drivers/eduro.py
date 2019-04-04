@@ -34,6 +34,7 @@ class Eduro(Thread):
         self.setDaemon(True)
 
         self.bus = bus
+        self.time = None
 
         self.desired_speed = 0.0  # m/s
         self.desired_angular_speed = 0.0
@@ -164,7 +165,7 @@ class Eduro(Thread):
     def check_restarted_modules(self, module_id, status):
         if module_id in [1, 2]:  # motors
             if status != 5:
-                print(module_id, status)
+                print(self.time, module_id, status)
                 self.prev_enc_raw = {}
                 self.dist_left_diff = 0
                 self.dist_right_diff = 0
@@ -201,7 +202,7 @@ class Eduro(Thread):
     def run(self):
         try:
             while True:
-                dt, channel, data = self.bus.listen()
+                self.time, channel, data = self.bus.listen()
                 if channel == 'can':
                     if len(data) > 0:
                         for status in self.process_gen(data):
