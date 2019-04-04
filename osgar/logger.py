@@ -315,9 +315,10 @@ def main():
 
     parser = argparse.ArgumentParser(description='Extract data from log')
     parser.add_argument('logfile', help='filename of stored file')
-    parser.add_argument('--stream', help='stream ID or name', default=None)
+    parser.add_argument('--stream', help='stream ID or name', default=None, nargs='*')
     parser.add_argument('--list-names', '-l', help='list stream names', action='store_true')
     parser.add_argument('--times', help='display timestamps', action='store_true')
+    parser.add_argument('--sec', help='display timestamps in seconds', action='store_true')
     parser.add_argument('--stat', help='output only message statistics', action='store_true')
     parser.add_argument('--raw', help='skip data deserialization',
                         action='store_true')
@@ -339,7 +340,12 @@ def main():
         print('\nTotal time', timestamp)
         sys.exit()
 
-    only_stream = lookup_stream_id(args.logfile, args.stream)
+    if args.stream is None:
+        only_stream = None
+    else:
+        only_stream = []
+        for name in args.stream:
+            only_stream.append(lookup_stream_id(args.logfile, name))
 
     with LogReader(args.logfile, only_stream_id=only_stream) as log:
         for timestamp, stream_id, data in log:
@@ -347,6 +353,8 @@ def main():
                 data = deserialize(data)
             if args.times:
                 print(timestamp, stream_id, data)
+            elif args.sec:
+                print(timestamp.total_seconds(), stream_id, data)
             else:
                 sys.stdout.buffer.write(data)
 
