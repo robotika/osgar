@@ -18,11 +18,12 @@ class BusShutdownException(Exception):
 
 
 class BusHandler:
-    def __init__(self, logger, name='', out={}):
+    def __init__(self, logger, name='', out={}, slots={}):
         self.logger = logger
         self.queue = Queue()
         self.name = name
         self.out = out
+        self.slots = slots
         self.stream_id = {}
         for publish_name in out.keys():
             idx = self.logger.register('.'.join([self.name, publish_name]))
@@ -35,6 +36,8 @@ class BusHandler:
             timestamp = self.logger.write(stream_id, serialize(data))
             for queue, input_channel in self.out[channel]:
                 queue.put((timestamp, input_channel, data))
+            for slot in self.slots[channel]:
+                slot(data)
         return timestamp
 
     def listen(self):
