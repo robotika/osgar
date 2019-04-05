@@ -113,7 +113,7 @@
               ["imu_serial.raw", "imu.raw"],
               ["imu.rotation", "app.rot"],
               ["eduro.pose2d", "fusion.pose2d"],
-              ["imu.rot", "fusion.rotation"],
+              ["imu.rotation", "fusion.rotation"],
               ["camera.raw", "detector.image"],
               ["lidar.scan", "detector.scan"],
               ["detector.artf", "app.artf"],
