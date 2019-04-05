@@ -68,11 +68,11 @@ class Cortexpilot(Node):
         self.last_speed_cmd = speed_frac
 
         flags = self.cmd_flags
-        if self.emergency_stop is None:
-            flags |= (1<<10)  # turn on green (9th bit)
-        else:
+        if self.emergency_stop is not None:
             if self.emergency_stop:
                 flags |= (1<<11)  # display red LEDs
+            else:
+                flags |= (1<<10)  # turn on green (9th bit)
 
         packet = struct.pack('<ffI', speed_frac,
                              -self.desired_angular_speed, flags)  # Robik has positive to the right
