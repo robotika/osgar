@@ -1,5 +1,5 @@
 """
-  Simple IMU data analysis
+  Simple IMU data parsing (VectorNav VN-100)
 """
 
 from threading import Thread
@@ -9,6 +9,21 @@ from osgar.drivers.gps import checksum
 
 
 def parse_line(line):
+    """
+    Parse $VNYMR message:
+        Yaw  float  deg  Calculated attitude heading angle in degrees.
+        Pitch  float  deg  Calculated attitude pitch angle in degrees.
+        Roll  float  deg  Calculated attitude roll angle in degrees.
+        MagX  float  Gauss  Compensated magnetometer measurement in x-axis.
+        MagY  float  Gauss  Compensated magnetometer measurement in y-axis.
+        MagZ  float  Gauss  Compensated magnetometer measurement in z-axis.
+        AccelX  float  m/s^2 Compensated accelerometer measurement in x-axis.
+        AccelY  float  m/s^2 Compensated accelerometer measurement in y-axis.
+        AccelZ  float  m/s^2 Compensated accelerometer measurement in z-axis.
+        GyroX  float  rad/s  Compensated angular rate in x-axis.
+        GyroY  float  rad/s  Compensated angular rate in y-axis.
+        GyroZ  float  rad/s  Compensated angular rate in z-axis.
+    """
     assert line.startswith(b'$VNYMR'), line
     assert b'*' in line, line
     s = line.split(b'*')[0].split(b',')
@@ -60,7 +75,15 @@ class IMU(Thread):
                     assert out is not None
                     self.bus.publish('orientation', out)
                     # publish separately yaw, pitch and roll in 1/100th deg
-                    self.bus.publish('rot', [int(round(x * 100)) for x in out[0]])
+                    yaw, pitch, roll = out[0]
+                    # The  VN-100  uses a right-handed coordinate system. A positive yaw angle
+                    # is defined as a positive righthanded rotation around the Z-axis. (pointing down)
+                    yaw = 90.0 - yaw
+                    if yaw < -180:
+                        yaw += 360
+                    if yaw > 180:
+                        yaw -= 360
+                    self.bus.publish('rotation', [int(round(x * 100)) for x in [yaw, pitch, roll]])
         except BusShutdownException:
             pass
 
