@@ -68,6 +68,7 @@ class Cortexpilot(Node):
         self.last_speed_cmd = speed_frac
 
         flags = self.cmd_flags
+        flags |= (1<<8)  # agresive turning
         if self.emergency_stop is not None:
             if self.emergency_stop:
                 flags |= (1<<11)  # display red LEDs
