@@ -73,20 +73,29 @@ class LogBusHandler:
         self.max_delay_timestamp = timedelta()
 
     def listen(self):
-        if len(self.buffer_queue) == 0:
-            dt, stream_id, bytes_data = next(self.reader)
-        else:
-            dt, stream_id, bytes_data = self.buffer_queue.popleft()
-        channel = self.inputs[stream_id]
-        data = deserialize(bytes_data)
+        while True:
+            if len(self.buffer_queue) == 0:
+                dt, stream_id, bytes_data = next(self.reader)
+            else:
+                dt, stream_id, bytes_data = self.buffer_queue.popleft()
+            channel = self.inputs[stream_id]
+            data = deserialize(bytes_data)
+            if channel.startswith("slot_"):
+                getattr(self.node, channel)(data)
+            else:
+                break
         return dt, channel, data
 
     def publish(self, channel, data):
         assert channel in self.outputs.values(), (channel, self.outputs.values())
         dt, stream_id, bytes_data = next(self.reader)
         while stream_id not in self.outputs:
-            assert stream_id in self.inputs, stream_id
-            self.buffer_queue.append((dt, stream_id, bytes_data))
+            input_name = self.inputs[stream_id]
+            if input_name.startswith("slot_"):
+                data = deserialize(bytes_data)
+                getattr(self.node, input_name)(data)
+            else:
+                self.buffer_queue.append((dt, stream_id, bytes_data))
             dt, stream_id, bytes_data = next(self.reader)
         assert channel == self.outputs[stream_id], (channel, self.outputs[stream_id], dt)  # wrong channel
         if len(self.buffer_queue) > 0:
