@@ -43,11 +43,14 @@ class LogSerial:
             if len(data) > 0:
                 self.bus.publish('raw', data)
 
+    def slot_raw(self, data):
+        self.com.write(data)
+
     def run_output(self):
         try:
             while True:
                 __, __, data = self.bus.listen()
-                self.com.write(data)
+                self.slot_raw(data)
         except BusShutdownException:
             pass
 
