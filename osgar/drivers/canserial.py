@@ -240,20 +240,26 @@ class CANSerial(Thread):
                 yield ret
             self.buf, packet = self.split_buffer(self.buf)  # i.e. process only existing buffer now
 
+    def slot_raw(self, data):
+        if len(data) > 0:
+            for packet in self.process_gen(data):
+                self.bus.publish('can', packet)
+
+    def slot_can(self, data):
+        if self.can_bridge_initialized:
+            # at the moment is can serial just forwarding raw packets
+            self.bus.publish('raw', data)
+        else:
+            print('CAN bridge not initialized yet!')
+
     def run(self):
         try:
             while True:
                 dt, channel, data = self.bus.listen()
                 if channel == 'raw':
-                    if len(data) > 0:
-                        for packet in self.process_gen(data):
-                            self.bus.publish('can', packet)
+                    self.slot_raw(data)
                 elif channel == 'can':
-                    if self.can_bridge_initialized:
-                        # at the moment is can serial just forwarding raw packets
-                        self.bus.publish('raw', data)
-                    else:
-                        print('CAN bridge not initialized yet!')
+                    self.slot_can(data)
                 else:
                     assert False, channel  # unsupported input channel
         except BusShutdownException:
