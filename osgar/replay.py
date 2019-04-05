@@ -58,7 +58,9 @@ def replay(args, application=None):
         module_class = application
     else:
         module_class = get_class_by_name(driver_name)
-    return module_class(module_config['init'], bus=bus)
+    module_instance = module_class(module_config['init'], bus=bus)
+    bus.node = module_instance
+    return module_instance
 
 
 if __name__ == "__main__":
