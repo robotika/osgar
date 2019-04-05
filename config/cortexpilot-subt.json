@@ -10,12 +10,6 @@
             "max_speed": 0.5
           }
       },
-      "fusion": {
-          "driver": "osgar.drivers.fusion:FusionPose2d",
-          "in": ["pose2d", "rotation"],
-          "out": ["pose2d"],
-          "init": {}
-      },
       "detector": {
           "driver": "artifacts:ArtifactDetector",
           "in": ["image", "scan"],
@@ -74,8 +68,7 @@
               ["cortexpilot.scan", "app.scan"],
               ["lidar_usb.raw", "slope_lidar.raw"],
               ["slope_lidar.raw", "lidar_usb.raw"],
-              ["cortexpilot.pose2d", "fusion.pose2d"],
-              ["cortexpilot.rotation", "fusion.rotation"],
+              ["cortexpilot.rotation", "app.rot"],
               ["camera.raw", "detector.image"],
               ["cortexpilot.scan", "detector.scan"],
               ["detector.artf", "app.artf"],
