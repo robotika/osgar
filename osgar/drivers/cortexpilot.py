@@ -67,8 +67,15 @@ class Cortexpilot(Node):
             speed_frac = self.last_speed_cmd - RAMP_STEP
         self.last_speed_cmd = speed_frac
 
+        flags = self.cmd_flags
+        if self.emergency_stop is not None:
+            if self.emergency_stop:
+                flags |= (1<<11)  # display red LEDs
+            else:
+                flags |= (1<<10)  # turn on green (9th bit)
+
         packet = struct.pack('<ffI', speed_frac,
-                             -self.desired_angular_speed, self.cmd_flags)  # Robik has positive to the right
+                             -self.desired_angular_speed, flags)  # Robik has positive to the right
 #                             self.yaw, self.cmd_flags)
         assert len(packet) < 256, len(packet)  # just to use LSB only
         ret = bytes([0, 0, len(packet) + 2 + 1, 0x1, 0x0D]) + packet
@@ -116,6 +123,7 @@ class Cortexpilot(Node):
         # 4 byte SystemVoltage (float)  4 - battery level for control electronics [V]
         self.flags, self.voltage = struct.unpack_from('<If', data, offset)
         self.lidar_valid = (self.flags & 0x10) == 0x10
+        self.emergency_stop = (self.flags & 0x01) == 0x01
 
         # skipped parsing of:
         # 4 byte PowerVoltage (float)   8 - battery level for motors [V]
