@@ -149,10 +149,11 @@ class Cortexpilot(Node):
         self.bus.publish('orientation', list(self.orientation))
 
         q0, q1, q2, q3 = self.orientation  # quaternion
-        x =  math.atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2))
-        y =  math.asin(2*(q0*q2-q3*q1))
-        z =  math.atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3))
-        self.bus.publish('rotation', [round(math.degrees(angle)*100) for angle in [x,y,z]])
+        ax =  math.atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2))
+        ay =  math.asin(2*(q0*q2-q3*q1))
+        az =  math.atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3))
+        # rotation Euler angles are yaw, pitch and roll
+        self.bus.publish('rotation', [round(math.degrees(angle)*100) for angle in [az, ay, ax]])
 
         # 4 byte Yaw (float)           70 - Heading (Yaw) - machine orientation to magnetic north <0 .. 359> deg
         self.yaw = struct.unpack_from('<f', data, offset + 70)[0]
