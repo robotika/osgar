@@ -86,7 +86,7 @@
       "imu": {
           "driver": "imu",
           "in": ["raw"],
-          "out": ["orientation", "rot"],
+          "out": ["orientation", "rotation"],
           "init": {}
       },
       "imu_serial": {
@@ -111,7 +111,7 @@
               ["eduro.pose2d", "app.pose2d"],
               ["eduro.buttons", "app.buttons"],
               ["imu_serial.raw", "imu.raw"],
-              ["imu.rot", "app.rot"],
+              ["imu.rotation", "app.rot"],
               ["eduro.pose2d", "fusion.pose2d"],
               ["imu.rot", "fusion.rotation"],
               ["camera.raw", "detector.image"],
