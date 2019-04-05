@@ -76,6 +76,7 @@ if __name__ == "__main__":
     module_instance.start()
     # now wait until the module is alive
     module_instance.join()
-    print("maximum delay:", module_instance.bus.max_delay)
+    if not args.force:
+        print("maximum delay:", module_instance.bus.max_delay)
 
 # vim: expandtab sw=4 ts=4
