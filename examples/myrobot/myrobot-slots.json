@@ -1,0 +1,33 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["emergency_stop", "pose2d"],
+          "out": ["desired_speed"],
+          "init": {
+            "max_speed": 0.5
+          }
+      },
+      "myrobot": {
+          "driver": "myrobot:MyRobot",
+          "in": ["slot_desired_speed"],
+          "out": ["emergency_stop", "pose2d"],
+          "init": {}
+      },
+      "timer": {
+          "driver": "myrobot:MyTimer",
+          "in": [],
+          "out": ["tick"],
+          "init": {
+            "sleep": 0.1
+          }
+      }
+    },
+    "links": [["app.desired_speed", "myrobot.slot_desired_speed"],
+              ["myrobot.emergency_stop", "app.emergency_stop"],
+              ["myrobot.pose2d", "app.pose2d"],
+              ["timer.tick", "myrobot.tick"]]
+  }
+}

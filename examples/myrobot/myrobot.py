@@ -47,6 +47,9 @@ class MyRobot(Node):
         heading += self.angular_speed * t
         self.pose = (x, y, heading)
 
+    def slot_desired_speed(self, data):
+        self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
+
     def update(self):
         dt, channel, data = self.listen()
         if self.last_update is not None:
@@ -55,7 +58,7 @@ class MyRobot(Node):
         self.last_update = dt
 
         if channel == 'desired_speed':
-            self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
+            self.slot_desired_speed(data)
 
         self.send_pose()
 
