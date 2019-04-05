@@ -146,7 +146,7 @@ class Cortexpilot(Node):
         # 4 byte AHRS_q3 (float)       66 - 
 
         self.orientation = struct.unpack_from('<ffff', data, offset+54)
-        self.bus.publish('orientation', self.orientation)
+        self.bus.publish('orientation', list(self.orientation))
 
         q0, q1, q2, q3 = self.orientation  # quaternion
         x =  math.atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2))
