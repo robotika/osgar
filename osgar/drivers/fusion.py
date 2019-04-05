@@ -37,7 +37,6 @@ class FusionPose2d(Node):
             self.xyz = x, y, z
         elif channel == 'rotation':
             self.yaw, self.pitch, self.roll = [math.radians(x/100) for x in self.rotation]
-            self.yaw = -self.yaw  # TODO move this into IMU driver
         return channel
 
 # vim: expandtab sw=4 ts=4
