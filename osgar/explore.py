@@ -50,9 +50,9 @@ def follow_wall_angle(laser_data, radius, right_wall=False):
     mask = (data <= 300)  # ignore internal reflections
     data[mask] = 20000
     if right_wall:
-        index = np.argmin(data[:size//2])  # only right side
+        index = np.argmin(data[:2*size//3])  # only right side
     else:
-        index = size//2 + np.argmin(data[size//2:])  # only left side
+        index = size//3 + np.argmin(data[size//3:])  # only left side
     dist = data[index]/1000.0
     laser_angle = math.radians(-135 + index * deg_resolution)
     angle = tangent_circle(dist, radius)
