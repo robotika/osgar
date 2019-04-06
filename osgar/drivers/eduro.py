@@ -17,6 +17,7 @@ CAN_ID_ENCODERS_LEFT = 0x181
 CAN_ID_ENCODERS_RIGHT = 0x182
 CAM_SYSTEM_STATUS = 0x8A  # including emergency STOP button
 CAN_ID_BUTTONS = 0x28A
+CAN_ID_VOLTAGE = 0x18B
 
 UPDATE_TIME_FREQUENCY = 20.0  # Hz
 WHEEL_DIAMETER_LEFT = 427.0 / 445.0 * 0.26/4.0 + 0.00015
@@ -108,6 +109,10 @@ class Eduro(Thread):
                 self.send_leds(blue=0, red=1)
             self.bus.publish('buttons', msg)
 
+    def update_voltage(self, data):
+        battery = data[1] * 256 + data[0]  # 1/100th volts
+        self.bus.publish('voltage', [battery])
+
     def send_speed(self):
         self.SpeedL = self.desired_speed - self.desired_angular_speed * WHEEL_DISTANCE / 2.0
         self.SpeedR = self.desired_speed + self.desired_angular_speed * WHEEL_DISTANCE / 2.0 
@@ -184,6 +189,8 @@ class Eduro(Thread):
                     self.bus.publish('can', CAN_packet(0, [0x80, 0]))  # sendPreOperationMode
             elif msg_id == CAN_ID_BUTTONS:
                 self.update_buttons(packet[2:])
+            elif msg_id == CAN_ID_VOLTAGE:
+                self.update_voltage(packet[2:])
             elif msg_id == CAN_ID_SYNC:
                 # make sure diff is reported _before_ update_pose() which reset counters!
                 self.bus.publish('encoders', [self.dist_left_diff, self.dist_right_diff])
