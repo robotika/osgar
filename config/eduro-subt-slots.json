@@ -4,7 +4,7 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["encoders", "scan", "emergency_stop", "pose2d", "buttons"],
+          "in": ["encoders", "scan", "emergency_stop", "pose2d", "buttons", "voltage"],
           "out": ["desired_speed", "pose2d", "artf_xyz"],
           "init": {
             "laser_pose2d": [0.13, 0.055, 0]
@@ -33,7 +33,7 @@
       "eduro": {
           "driver": "eduro",
           "in": ["slot_can", "slot_desired_speed"],
-          "out": ["can", "encoders", "emergency_stop", "pose2d", "buttons"],
+          "out": ["can", "encoders", "emergency_stop", "pose2d", "buttons", "voltage"],
           "init": {}
       },
       "can": {
@@ -113,6 +113,7 @@
               ["imu_serial.raw", "imu.raw"],
               ["imu.rotation", "app.rot"],
               ["eduro.pose2d", "fusion.pose2d"],
+              ["eduro.voltage", "app.voltage"],
               ["imu.rotation", "fusion.rotation"],
               ["camera.raw", "detector.image"],
               ["lidar.scan", "detector.scan"],
