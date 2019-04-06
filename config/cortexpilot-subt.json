@@ -4,7 +4,7 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["emergency_stop", "pose2d", "scan"],
+          "in": ["emergency_stop", "pose2d", "scan", "voltage"],
           "out": ["desired_speed", "pose2d", "artf_xyz"],
           "init": {
             "max_speed": 0.5
@@ -27,7 +27,7 @@
       "cortexpilot": {
           "driver": "osgar.drivers.cortexpilot:Cortexpilot",
           "in": ["raw", "desired_speed"],
-          "out": ["raw", "encoders", "emergency_stop", "pose2d", "scan", "orientation", "rotation"],
+          "out": ["raw", "encoders", "emergency_stop", "pose2d", "scan", "orientation", "rotation", "voltage"],
           "init": {}
       },
       "serial": {
@@ -62,6 +62,7 @@
     },
     "links": [["app.desired_speed", "cortexpilot.desired_speed"],
               ["cortexpilot.pose2d", "app.pose2d"],
+              ["cortexpilot.voltage", "app.voltage"],
               ["cortexpilot.emergency_stop", "app.emergency_stop"],
               ["serial.raw", "cortexpilot.raw"], 
               ["cortexpilot.raw", "serial.raw"],
