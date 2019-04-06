@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 
 from osgar.node import Node
+from osgar.bus import BusShutdownException
 
 
 VIRTUAL_WORLD = False  # TODO more suitable parametrization, real robots now look only for red artifacts
@@ -113,19 +114,29 @@ class ArtifactDetector(Node):
         self.verbose = False
         self.scan = None  # should laster initialize super()
 
-    def update(self):  # hack, this method should be called run instead!
-        channel = super().update()  # define self.time
-        if channel != "image":
-            return channel
+    def waitForImage(self):
+        channel = ""
+        while channel != "image":
+            self.time, channel, data = self.listen()
+            setattr(self, channel, data)
+        return self.time
 
-        # hack - test communication to BaseStation
-#        if self.time > timedelta(minutes=4):
-#            print('Published', self.best)
-#            self.publish('artf', EXTINGUISHER)
-#        return channel
-        # END OF HACK ....
+    def run(self):
+        try:
+            dropped = 0
+            while True:
+                now = self.publish("dropped", dropped)
+                dropped = -1
+                timestamp = now
+                while timestamp <= now:
+                    timestamp = self.waitForImage()
+                    dropped += 1
+                self.detect(self.image)
+        except BusShutdownException:
+            pass
 
-        img = cv2.imdecode(np.fromstring(self.image, dtype=np.uint8), 1)
+    def detect(self, image):
+        img = cv2.imdecode(np.fromstring(image, dtype=np.uint8), 1)
         rcount, w, h, x_min, x_max = count_red(img)
         yellow_used = False
         if VIRTUAL_WORLD and rcount == 0:
@@ -191,7 +202,6 @@ class ArtifactDetector(Node):
             self.best_img = None
             self.best_info = None
             self.best_scan = None
-        return channel
 
 
 class ArtifactReporter(Node):
