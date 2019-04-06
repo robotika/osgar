@@ -41,7 +41,6 @@ class Cortexpilot(Node):
         self.last_encoders = None
         self.yaw = None
         self.lidar_valid = False
-        self.last_speed_cmd = 0.0
         self.uptime = None
 
     def send_pose(self):
@@ -59,13 +58,12 @@ class Cortexpilot(Node):
             self.yaw = 0.0  # hack!
 
         speed_frac = self.desired_speed
+        speed_dir = -self.desired_angular_speed  # Robik has positive to the right
+        if speed_frac < 0:
+            speed_dir = -speed_dir  # Robik V5.1.1 handles backup backwards
         if not self.lidar_valid:
             speed_frac = 0.0
-        if speed_frac > self.last_speed_cmd + RAMP_STEP:
-            speed_frac = self.last_speed_cmd + RAMP_STEP
-        elif speed_frac < self.last_speed_cmd - RAMP_STEP:
-            speed_frac = self.last_speed_cmd - RAMP_STEP
-        self.last_speed_cmd = speed_frac
+            speed_dir = 0.0
 
         flags = self.cmd_flags
         flags |= (1<<8)  # agresive turning
@@ -75,9 +73,7 @@ class Cortexpilot(Node):
             else:
                 flags |= (1<<10)  # turn on green (9th bit)
 
-        packet = struct.pack('<ffI', speed_frac,
-                             -self.desired_angular_speed, flags)  # Robik has positive to the right
-#                             self.yaw, self.cmd_flags)
+        packet = struct.pack('<ffI', speed_frac, speed_dir, flags)
         assert len(packet) < 256, len(packet)  # just to use LSB only
         ret = bytes([0, 0, len(packet) + 2 + 1, 0x1, 0x0D]) + packet
         # addr=0x1, cmd=0xD, length is given by payload, addr, cmd and checksum
