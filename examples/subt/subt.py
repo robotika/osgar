@@ -238,6 +238,7 @@ class SubTChallenge:
             timestamp, channel, data = packet
             if self.time is None or int(self.time.seconds)//60 != int(timestamp.seconds)//60:
                 print(timestamp, '(%.1f %.1f %.1f)' % self.xyz, sorted(self.stat.items()))
+                print(timestamp, list('%.1f' % v/100 for v in self.votage))
                 self.stat.clear()
 
             self.time = timestamp
@@ -304,6 +305,8 @@ class SubTChallenge:
                 ay = y + math.sin(angle) * dist
                 az = z
                 self.maybe_remember_artifact(artifact_data, (ax, ay, az))
+            elif channel == 'voltage':
+                self.voltage = data
             return channel
 
     def wait(self, dt):  # TODO refactor to some common class

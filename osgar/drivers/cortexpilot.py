@@ -37,7 +37,6 @@ class Cortexpilot(Node):
         self.emergency_stop = None  # uknown state
         self.pose = (0.0, 0.0, 0.0)  # x, y in meters, heading in radians (not corrected to 2PI)
         self.flags = None
-        self.voltage = None
         self.last_encoders = None
         self.yaw = None
         self.lidar_valid = False
@@ -118,13 +117,14 @@ class Cortexpilot(Node):
         #   bit 4 -> 1 = LIDAR ScanValid
         #   bit 5 -> 1 = Manual override
         # 4 byte SystemVoltage (float)  4 - battery level for control electronics [V]
-        self.flags, self.voltage = struct.unpack_from('<If', data, offset)
+        # 4 byte PowerVoltage (float)   8 - battery level for motors [V]
+        self.flags, system_voltage, power_voltage = struct.unpack_from('<Iff', data, offset)
         self.lidar_valid = (self.flags & 0x10) == 0x10
         self.emergency_stop = (self.flags & 0x01) == 0x01
 
-        # skipped parsing of:
-        # 4 byte PowerVoltage (float)   8 - battery level for motors [V]
+        self.bus.publish('voltage', [int(system_voltage*100), int(power_voltage*100)])
 
+        # skipped parsing of:
         # 4 byte SpeedM1 (float)       12 - normalized motor M1 (R) speed <-1.0 1.0>
         # 4 byte SpeedM2 (float)       16 - normalized motor M2 (L) speed <-1.0 1.0>
         motors = struct.unpack_from('<ff', data, offset + 12)
