@@ -18,7 +18,7 @@ from local_planner import LocalPlanner
 
 VIRTUAL_WORLD = False  # TODO more suitable parametrization, real robots now look only for red artifacts
 
-RADIUS = 0.9  # 1.0
+RADIUS = 0.6  # 0.9  # 1.0
 SEARCH_TIME_BEGIN = timedelta(minutes=1)
 SEARCH_TIME_END = timedelta(minutes=5)
 RETURN_TIMEOUT = SEARCH_TIME_END + timedelta(minutes=10)  # ??
@@ -90,7 +90,7 @@ class SubTChallenge:
         self.start_pose = None
         self.traveled_dist = 0.0
         self.time = None
-        self.max_speed = 0.5  #1.0  # TODO load from config
+        self.max_speed = 0.3 #0.5  #1.0  # TODO load from config
         self.max_angular_speed = math.radians(45)
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
@@ -140,8 +140,9 @@ class SubTChallenge:
         desired_angular_speed = 1.2 * safe_direction
         size = len(self.scan)
         dist = min_dist(self.scan[size//3:2*size//3])
-        if dist < 2.0:
-            desired_speed = self.max_speed * (1.2/2.0) * (dist - 0.4) / 1.6
+        if dist < 0.75:  # 2.0:
+#            desired_speed = self.max_speed * (1.2/2.0) * (dist - 0.4) / 1.6
+            desired_speed = self.max_speed * (dist - 0.2) / 0.55
         else:
             desired_speed = self.max_speed  # was 2.0
         '''
