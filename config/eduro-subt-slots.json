@@ -19,7 +19,7 @@
       "detector": {
           "driver": "artifacts:ArtifactDetector",
           "in": ["image", "scan"],
-          "out": ["artf"],
+          "out": ["artf", "dropped"],
           "init": {}
       },
       "reporter": {
