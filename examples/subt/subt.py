@@ -99,6 +99,7 @@ class SubTChallenge:
         self.is_moving = None  # unknown
         self.scan = None  # I should use class Node instead
         self.stat = defaultdict(int)
+        self.voltage = []
         self.artifacts = []
         self.trace = Trace()
         self.collision_detector_enabled = False
