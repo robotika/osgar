@@ -239,7 +239,7 @@ class SubTChallenge:
             timestamp, channel, data = packet
             if self.time is None or int(self.time.seconds)//60 != int(timestamp.seconds)//60:
                 print(timestamp, '(%.1f %.1f %.1f)' % self.xyz, sorted(self.stat.items()))
-                print(timestamp, list('%.1f' % v/100 for v in self.voltage))
+                print(timestamp, list(('%.1f' % (v/100)) for v in self.voltage))
                 self.stat.clear()
 
             self.time = timestamp
