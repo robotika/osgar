@@ -222,7 +222,7 @@ class CANSerial(Thread):
             self.bus.publish('raw', CAN_BRIDGE_START)
             self.can_bridge_initialized = True
             if self.is_canopen:
-                self.reset_all_modules()  # TODO config
+# HACK!                self.reset_all_modules()  # TODO config
                 self.bus.publish('raw', CAN_packet(0, [NMT_CMD_GO_TO_OPERATIONAL, 0]))
             return None
 
