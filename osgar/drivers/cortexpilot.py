@@ -5,6 +5,7 @@
 import ctypes
 import struct
 import math
+from datetime import timedelta
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
@@ -32,6 +33,7 @@ class Cortexpilot(Node):
         self.desired_speed = 0.0  # m/s
         self.desired_angular_speed = 0.0
         self.cmd_flags = 0x40 #0x41  # 0 = remote steering, PWM OFF, laser ON, TODO
+        self.speeds = self.plain_speeds()
 
         # status
         self.emergency_stop = None  # uknown state
@@ -52,12 +54,25 @@ class Cortexpilot(Node):
         checksum = sum(ret) & 0xFF
         return ret + bytes([(256-checksum) & 0xFF])
 
+    def oscilate(self):
+        while True:
+            end = self.time + timedelta(seconds=1)
+            while self.time < end:
+                yield self.desired_speed, -self.desired_angular_speed
+            end = self.time + timedelta(seconds=1)
+            while self.time < end:
+                yield -self.desired_speed, -self.desired_angular_speed
+
+    def plain_speeds(self):
+        while True:
+            yield self.desired_speed, -self.desired_angular_speed
+
     def create_packet(self):
         if self.yaw is None:
             self.yaw = 0.0  # hack!
 
-        speed_frac = self.desired_speed
-        speed_dir = -self.desired_angular_speed  # Robik has positive to the right
+        speed_frac, speed_dir = next(self.speeds)
+
         if speed_frac < 0:
             speed_dir = -speed_dir  # Robik V5.1.1 handles backup backwards
         if not self.lidar_valid:
@@ -238,6 +253,12 @@ class Cortexpilot(Node):
                         self.publish('raw', self.create_packet())
                 if channel == 'desired_speed':
                     self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)                    
+                    if abs(self.desired_speed) < 0.2 and abs(self.desired_angular_speed) > 0.2:
+                        if self.speeds.__name__ != "oscilate":
+                            self.speeds = self.oscilate()
+                    else:
+                        if self.speeds.__name__ == "oscilate":
+                            self.speeds = self.plain_speeds()
                     self.cmd_flags |= 0x02  # PWM ON
 #                    if data == [0, 0]:
 #                        print("TURN OFF")
