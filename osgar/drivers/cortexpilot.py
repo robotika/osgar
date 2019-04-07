@@ -224,9 +224,9 @@ class Cortexpilot(Node):
         lidar_diff = lidar_timestamp - self.lidar_timestamp
         self.lidar_timestamp = lidar_timestamp
         if lidar_diff > 150:
+            print(self.time, "lidar invalid:", lidar_diff)
             self.lidar_valid = False
         if lidar_diff != 0 and self.lidar_valid:
-            print(self.time, lidar_diff)
             # laser
             # 480 byte Lidar_Scan (ushort) 118 - 239 two-bytes distances from Lidar <0 .. 65535> in [cm]
             # Scan is whole 360 deg with resolution 1.5 deg
