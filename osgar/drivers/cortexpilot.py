@@ -9,6 +9,7 @@ from datetime import timedelta
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
+from osgar.lib import quaternion
 
 
 # CPR = 9958 (ticks per revolution)
@@ -81,6 +82,8 @@ class Cortexpilot(Node):
         if not self.lidar_valid:
             speed_frac = 0.0
             speed_dir = 0.0
+
+        #print(self.time, "{:.4f}, {:.4f} \t {:.4f} {:.4f}".format(speed_frac, speed_dir, self.desired_speed, self.desired_angular_speed))
 
         flags = self.cmd_flags
         flags |= (1<<8)  # agresive turning
@@ -168,14 +171,17 @@ class Cortexpilot(Node):
         # 4 byte AHRS_q2 (float)       62 - 
         # 4 byte AHRS_q3 (float)       66 - 
 
-        self.orientation = struct.unpack_from('<ffff', data, offset+54)
+        orientation = struct.unpack_from('<ffff', data, offset+54)
+        self.orientation = quaternion.multiply(orientation, [0.7071068, 0, 0, 0.7071068])
         self.bus.publish('orientation', list(self.orientation))
 
         q0, q1, q2, q3 = self.orientation  # quaternion
+        #print(self.time, "{:.4f} {:.4f} {:.4f} {:.4f}".format(q0, q1, q2, q3))
         ax =  math.atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2))
         ay =  math.asin(2*(q0*q2-q3*q1))
         az =  math.atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3))
         # rotation Euler angles are yaw, pitch and roll
+        #print(self.time, "{:.4f} {:.4f} {:.4f}".format(math.degrees(az), math.degrees(ay), math.degrees(ax)))
         self.bus.publish('rotation', [round(math.degrees(angle)*100) for angle in [az, ay, ax]])
 
         # 4 byte Yaw (float)           70 - Heading (Yaw) - machine orientation to magnetic north <0 .. 359> deg
