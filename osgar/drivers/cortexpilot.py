@@ -42,6 +42,7 @@ class Cortexpilot(Node):
         self.last_encoders = None
         self.yaw = None
         self.lidar_valid = False
+        self.lidar_timestamp = 0
         self.uptime = None
 
     def send_pose(self):
@@ -194,8 +195,6 @@ class Cortexpilot(Node):
         if self.uptime is not None:
             uptime_diff = uptime - self.uptime
         self.uptime = uptime
-        # 4 byte LidarTimestamp (ulong) 114  - Value of SystemTick when lidar scan was received
-        # 480 byte Lidar_Scan          118
 
         if self.last_encoders is not None:
             step = [sint32_diff(x, prev) for x, prev in zip(encoders, self.last_encoders)]
@@ -220,9 +219,15 @@ class Cortexpilot(Node):
             self.send_pose()
         self.last_encoders = encoders
 
-        if self.lidar_valid:
+        # 4 byte LidarTimestamp (ulong) 114  - Value of SystemTick when lidar scan was received
+        lidar_timestamp = struct.unpack_from('<I', data, offset + 114)[0]
+        lidar_diff = lidar_timestamp - self.lidar_timestamp
+        self.lidar_timestamp = lidar_timestamp
+        if lidar_diff > 150:
+            self.lidar_valid = False
+        if lidar_diff != 0 and self.lidar_valid:
+            print(self.time, lidar_diff)
             # laser
-            # 4 byte LidarTimestamp (unsigned long) 114  - Value of SystemTick when lidar scan was received
             # 480 byte Lidar_Scan (ushort) 118 - 239 two-bytes distances from Lidar <0 .. 65535> in [cm]
             # Scan is whole 360 deg with resolution 1.5 deg
             scan = struct.unpack_from('<' + 'H'*239, data, offset + 118)  # TODO should be 240
@@ -230,10 +235,10 @@ class Cortexpilot(Node):
             # restrict scan only to 270 degrees - cut 1/8th on both sides
             scan = scan[30:-30]
             zero_sides = 20
-            scan = [10 * d for d in reversed(scan)]
+            scan = [10 * d for d in reversed(scan)]  # scale to millimeters
             scan[:zero_sides] = [0]*zero_sides
             scan[-zero_sides:] = [0]*zero_sides
-            self.publish('scan', scan)  # scale to millimeters
+            self.publish('scan', scan)
 
     def run(self):
         try:
