@@ -4,7 +4,7 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["encoders", "scan", "emergency_stop", "pose2d", "buttons"],
+          "in": ["encoders", "scan", "emergency_stop", "pose2d", "buttons", "voltage"],
           "out": ["desired_speed", "pose2d", "artf_xyz"],
           "init": {
             "laser_pose2d": [0.13, 0.055, 0]
@@ -19,7 +19,7 @@
       "detector": {
           "driver": "artifacts:ArtifactDetector",
           "in": ["image", "scan"],
-          "out": ["artf"],
+          "out": ["artf", "dropped"],
           "init": {}
       },
       "reporter": {
@@ -32,19 +32,19 @@
       },
       "eduro": {
           "driver": "eduro",
-          "in": ["can", "desired_speed"],
-          "out": ["can", "encoders", "emergency_stop", "pose2d", "buttons"],
+          "in": ["slot_can", "slot_desired_speed"],
+          "out": ["can", "encoders", "emergency_stop", "pose2d", "buttons", "voltage"],
           "init": {}
       },
       "can": {
           "driver": "can",
-          "in": ["raw", "can"],
+          "in": ["slot_raw", "slot_can"],
           "out": ["can", "raw"],
           "init": {"speed": "250k", "canopen":true}
       },
       "serial": {
           "driver": "serial",
-          "in": ["raw"],
+          "in": ["slot_raw"],
           "out": ["raw"],
           "init": {"port": "/dev/ttyS0", "speed": 115200,
                    "rtscts":true, "reset":true}
@@ -96,12 +96,12 @@
           "init": {"port": "/dev/ttyUSB0", "speed": 115200}
       }
     },
-    "links": [["serial.raw", "can.raw"], 
-              ["can.raw", "serial.raw"],
-              ["eduro.can", "can.can"],
-              ["can.can", "eduro.can"],
+    "links": [["serial.raw", "can.slot_raw"], 
+              ["can.raw", "serial.slot_raw"],
+              ["eduro.can", "can.slot_can"],
+              ["can.can", "eduro.slot_can"],
               ["eduro.encoders", "app.encoders"],
-              ["app.desired_speed", "eduro.desired_speed"],
+              ["app.desired_speed", "eduro.slot_desired_speed"],
               ["lidar_tcp.raw", "lidar.raw"], 
               ["lidar.raw", "lidar_tcp.raw"],
               ["slope_lidar_tcp.raw", "slope_lidar.raw"], 
@@ -113,6 +113,7 @@
               ["imu_serial.raw", "imu.raw"],
               ["imu.rotation", "app.rot"],
               ["eduro.pose2d", "fusion.pose2d"],
+              ["eduro.voltage", "app.voltage"],
               ["imu.rotation", "fusion.rotation"],
               ["camera.raw", "detector.image"],
               ["lidar.scan", "detector.scan"],
