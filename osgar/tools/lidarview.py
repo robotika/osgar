@@ -358,6 +358,8 @@ def lidarview(gen, caption_filename, callback=False):
                     save_counter += 1
                 if event.key == K_d:  # dump scan
                     print(scan)
+                if event.key == K_p:  # print position
+                    print(pose)
 
                 if event.key == K_RIGHT:
                     break
