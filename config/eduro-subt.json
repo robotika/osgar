@@ -10,12 +10,6 @@
             "laser_pose2d": [0.13, 0.055, 0]
           }
       },
-      "fusion": {
-          "driver": "osgar.drivers.fusion:FusionPose2d",
-          "in": ["pose2d", "rotation"],
-          "out": ["pose2d"],
-          "init": {}
-      },
       "detector": {
           "driver": "artifacts:ArtifactDetector",
           "in": ["image", "scan"],
@@ -112,9 +106,7 @@
               ["eduro.buttons", "app.buttons"],
               ["imu_serial.raw", "imu.raw"],
               ["imu.rotation", "app.rot"],
-              ["eduro.pose2d", "fusion.pose2d"],
               ["eduro.voltage", "app.voltage"],
-              ["imu.rotation", "fusion.rotation"],
               ["camera.raw", "detector.image"],
               ["lidar.scan", "detector.scan"],
               ["detector.artf", "app.artf"],
