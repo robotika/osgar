@@ -11,3 +11,12 @@ def conjugate(quaternion):
     w, x, y, z = quaternion
     return [w, -x, -y, -z]
 
+def identity():
+    return [1, 0, 0, 0]
+
+def rotate_vector(vector, quaternion):
+    qvector = [0] + vector
+    con = conjugate(quaternion)
+    part1 = multiply(quaternion, qvector)
+    return multiply(part1, con)[1:]
+

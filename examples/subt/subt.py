@@ -12,6 +12,7 @@ import numpy as np
 
 from osgar.explore import follow_wall_angle
 from osgar.lib.mathex import normalizeAnglePIPI
+from osgar.lib import quaternion
 
 from local_planner import LocalPlanner
 
@@ -102,6 +103,8 @@ class SubTChallenge:
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
         self.xyz = (0, 0, 0)  # 3D position for mapping artifacts
+        self.xyz_quat = [0, 0, 0]
+        self.orientation = quaternion.identity()
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.is_moving = None  # unknown
         self.scan = None  # I should use class Node instead
@@ -280,12 +283,18 @@ class SubTChallenge:
                                             round(math.degrees(self.yaw)*100)])
                 self.xyz = x, y, z
                 self.trace.update_trace(self.xyz)
+                # pose3d
+                dist3d = quaternion.rotate_vector([dist, 0, 0], self.orientation)
+                self.xyz_quat = [a+b for a, b in zip(self.xyz_quat, dist3d)]
+                self.bus.publish('pose3d', [self.xyz_quat, self.orientation])
             elif channel == 'scan':
                 self.scan = data
                 if self.local_planner is not None:
                     self.local_planner.update(data)
             elif channel == 'rot':
                 self.yaw, self.pitch, self.roll = [math.radians(x/100) for x in data]
+            elif channel == 'orientation':
+                self.orientation = data
             elif channel == 'sim_time_sec':
                 self.sim_time_sec = data
             elif channel == 'acc':
