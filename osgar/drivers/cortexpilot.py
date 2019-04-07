@@ -223,7 +223,7 @@ class Cortexpilot(Node):
         lidar_timestamp = struct.unpack_from('<I', data, offset + 114)[0]
         lidar_diff = lidar_timestamp - self.lidar_timestamp
         self.lidar_timestamp = lidar_timestamp
-        if lidar_diff > 150:
+        if lidar_diff > 150 and self.lidar_valid:
             print(self.time, "lidar invalid:", lidar_diff)
             self.lidar_valid = False
         if lidar_diff != 0 and self.lidar_valid:
