@@ -19,8 +19,15 @@ from local_planner import LocalPlanner
 VIRTUAL_WORLD = False  # TODO more suitable parametrization, real robots now look only for red artifacts
 
 RADIUS = 0.6  # 0.9  # 1.0
-SEARCH_TIME_BEGIN = timedelta(minutes=1)
-SEARCH_TIME_END = timedelta(minutes=5)
+
+# Return with artifact configuration
+#SEARCH_TIME_BEGIN = timedelta(minutes=1)
+#SEARCH_TIME_END = timedelta(minutes=5)
+
+# No artifacts configuration
+SEARCH_TIME_BEGIN = timedelta(minutes=4)
+SEARCH_TIME_END = timedelta(minutes=4)
+
 RETURN_TIMEOUT = SEARCH_TIME_END + timedelta(minutes=10)  # ??
 
 
