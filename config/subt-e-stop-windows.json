@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "estop": {
+          "driver": "estop:EStop",
+          "in": ["raw"],
+          "out": ["raw", "emergency_stop"],
+          "init": {}
+      },
+      "estop_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "COM29", "speed": 9600}
+      }
+    },
+    "links": [["estop_serial.raw", "estop.raw"],
+              ["estop.raw", "estop_serial.raw"]]
+  }
+}
