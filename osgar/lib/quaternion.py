@@ -20,3 +20,4 @@ def rotate_vector(vector, quaternion):
     part1 = multiply(quaternion, qvector)
     return multiply(part1, con)[1:]
 
+# vim: expandtab sw=4 ts=4
