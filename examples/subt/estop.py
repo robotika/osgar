@@ -33,6 +33,7 @@ class EStop(Node):
             print('packet:', len(packet), packet.hex())
             if packet[-2] == 0x02:
                 self.publish('emergency_stop', True)
+                self.request_stop()
             self.sleep(1.0)
             self.publish('raw', ATIS_FRAME_PACKET)
 
