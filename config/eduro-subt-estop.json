@@ -5,7 +5,7 @@
       "app": {
           "driver": "application",
           "in": ["encoders", "scan", "emergency_stop", "pose2d", "buttons", "voltage"],
-          "out": ["desired_speed", "pose2d", "artf_xyz"],
+          "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d"],
           "init": {
             "laser_pose2d": [0.13, 0.055, 0]
           }
