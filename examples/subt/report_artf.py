@@ -4,11 +4,15 @@
 import requests
 
 
-URL_BASE = "http://localhost:8000"
+#URL_BASE = "http://localhost:8000"  # demo
+URL_BASE = "http://10.100.2.200:8000"  # Miami Tunnel
+#URL_BASE = "http://10.100.1.200:8000"  # Army Tunnel
+
 ARTF_TYPES = ['Survivor', 'Backpack', 'Cell Phone', 'Drill', 'Fire Extinguisher']
 
 json_headers = {
-    "Authorization" : "Bearer subttesttoken123",
+#    "Authorization" : "Bearer subttesttoken123",  # demo
+    "Authorization" : "Bearer NfEwAHEYsKqQkxSf",
     "Content-Type" : "application/json",
 }
 
