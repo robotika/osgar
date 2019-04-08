@@ -75,7 +75,7 @@ class Cortexpilot(Node):
 
         speed_frac, speed_dir = next(self.speeds)
         speed_frac *= 2
-        speed_dir *= 1.5
+        speed_dir *= 1.2
 
         if speed_frac < 0:
             speed_dir = -speed_dir  # Robik V5.1.1 handles backup backwards
