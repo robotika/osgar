@@ -5,7 +5,7 @@
       "app": {
           "driver": "application",
           "in": ["emergency_stop", "pose2d", "scan", "voltage", "orientation"],
-          "out": ["desired_speed", "pose2d", "artf_xyz", "pose3"],
+          "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d"],
           "init": {
             "max_speed": 0.5
           }
