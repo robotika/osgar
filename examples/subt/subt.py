@@ -337,7 +337,7 @@ class SubTChallenge:
 #############################################
     def play(self):
         print("SubT Challenge Ver1!")
-#        self.go_straight(9.0)  # go to the tunnel entrance
+        self.go_straight(2.5)  # go to the tunnel entrance
         dist = self.follow_wall(radius=RADIUS, right_wall=self.use_right_wall, stop_on_artf_count=1,
                                 search_since=SEARCH_TIME_BEGIN,
                                 timeout=SEARCH_TIME_END)
