@@ -1,4 +1,6 @@
 
+import math
+
 def multiply(quaternion1, quaternion0):
     w0, x0, y0, z0 = quaternion0
     w1, x1, y1, z1 = quaternion1
@@ -19,5 +21,17 @@ def rotate_vector(vector, quaternion):
     con = conjugate(quaternion)
     part1 = multiply(quaternion, qvector)
     return multiply(part1, con)[1:]
+
+def euler_zyx(quaternion):
+    w0, x0, y0, z0 = quaternion
+    ax =  math.atan2(2*(w0*x0+y0*z0), 1-2*(x0*x0+y0*y0))
+    ay =  math.asin(2*(w0*y0-z0*x0))
+    az =  math.atan2(2*(w0*z0+x0*y0), 1-2*(y0*y0+z0*z0))
+    return [az, ay, ax]
+
+def heading(quaternion):
+    w0, x0, y0, z0 = quaternion
+    az =  math.atan2(2*(w0*z0+x0*y0), 1-2*(y0*y0+z0*z0))
+    return az
 
 # vim: expandtab sw=4 ts=4
