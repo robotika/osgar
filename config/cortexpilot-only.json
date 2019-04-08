@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "cortexpilot": {
+          "driver": "osgar.drivers.cortexpilot:Cortexpilot",
+          "in": ["raw", "desired_speed"],
+          "out": ["raw", "encoders", "emergency_stop", "pose2d", "scan", "orientation", "rotation", "voltage"],
+          "init": {}
+      },
+      "serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyACM0", "speed": 115200}
+      }
+    },
+    "links": [
+              ["serial.raw", "cortexpilot.raw"],
+              ["cortexpilot.raw", "serial.raw"]
+    ]
+  }
+}
