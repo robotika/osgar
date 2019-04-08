@@ -13,6 +13,7 @@ from pygame.locals import *
 from osgar.logger import LogReader, LogIndexedReader, lookup_stream_id, lookup_stream_names
 from osgar.lib.serialize import deserialize
 from osgar.lib.config import get_class_by_name
+from osgar.lib import quaternion
 
 
 WINDOW_SIZE = 1200, 660
@@ -191,16 +192,22 @@ class History:
 
 class Framer:
     """Creates frames from log entries. Packs together closest scan, pose and camera picture."""
-    def __init__(self, filepath, lidar_name=None, poses_name=None, camera_name=None):
+    def __init__(self, filepath, lidar_name=None, pose2d_name=None, pose3d_name=None, camera_name=None):
         self.log = LogIndexedReader(filepath)
         self.current = 0
-        self.pose, self.scan, self.image = (0, 0, 0), [], None
-        self.lidar_id, self.poses_id, self.camera_id = None, None, None
+        self.pose = [0, 0, 0]
+        self.pose2d = [0, 0, 0]
+        self.pose3d = [[0, 0, 0],[1, 0, 0, 0]]
+        self.scan = []
+        self.image = None
+        self.lidar_id, self.pose2d_id, self.pose3d_id, self.camera_id = None, None, None, None
         names = lookup_stream_names(filepath)
         if lidar_name is not None:
             self.lidar_id = names.index(lidar_name) + 1
-        if poses_name is not None:
-            self.poses_id = names.index(poses_name) + 1
+        if pose2d_name is not None:
+            self.pose2d_id = names.index(pose2d_name) + 1
+        if pose3d_name is not None:
+            self.pose3d_id = names.index(pose3d_name) + 1
         if camera_name is not None:
             self.camera_id = names.index(camera_name) + 1
 
@@ -231,7 +238,13 @@ class Framer:
                 self.image = pygame.image.load(io.BytesIO(jpeg), 'JPG').convert()
                 if self.lidar_id is None:
                     return timestamp, self.pose, self.scan, self.image, False
-            elif stream_id == self.poses_id:
+            elif stream_id == self.pose3d_id:
+                pose3d, orientation = deserialize(data)
+                assert len(pose3d) == 3
+                assert len(orientation) == 4
+                self.pose = [pose3d[0], pose3d[1], quaternion.heading(orientation)]
+                self.pose3d = [pose3d, orientation]
+            elif stream_id == self.pose2d_id:
                 arr = deserialize(data)
                 assert len(arr) == 3
                 self.pose = (arr[0]/1000.0, arr[1]/1000.0, math.radians(arr[2]/100.0))
@@ -381,13 +394,17 @@ def main():
     parser.add_argument('--legacy', help='use old text lidar log format', action='store_true')
 
     parser.add_argument('--lidar', help='stream ID')
-    parser.add_argument('--poses', help='stream ID for pose2d messages')
+
+    pose = parser.add_mutually_exclusive_group()
+    pose.add_argument('--pose2d', help='stream ID for pose2d messages')
+    pose.add_argument('--pose3d', help='stream ID for pose3d messages')
+
     parser.add_argument('--camera', help='stream ID for JPEG images')
 
     parser.add_argument('--callback', help='callback function for lidar scans')
 
     args = parser.parse_args()
-    if not any([args.lidar, args.poses, args.camera]):
+    if not any([args.lidar, args.pose2d, args.pose3d, args.camera]):
         print("Available streams:")
         for stream in lookup_stream_names(args.logfile):
             print("  ", stream)
@@ -402,7 +419,7 @@ def main():
         lidarview(scans_gen_legacy(args.logfile), caption_filename=filename, 
                   callback=callback)
     else:
-        with Framer(args.logfile, lidar_name=args.lidar, poses_name=args.poses, camera_name=args.camera) as framer:
+        with Framer(args.logfile, lidar_name=args.lidar, pose2d_name=args.pose2d, pose3d_name=args.pose3d, camera_name=args.camera) as framer:
             lidarview(framer, caption_filename=filename, callback=callback)
 
 if __name__ == "__main__":
