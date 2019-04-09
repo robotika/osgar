@@ -33,11 +33,18 @@ def create_video(logfile, stream, outfile, add_time=False, start_time_sec=0, fps
                                          fps,
                                          (width, height))
             if add_time:
-                x, y = 800, 100
+                if (width, height) == (640, 480):
+                    x, y = 350, 50
+                    thickness = 3
+                    size = 3.0
+                else:
+                    x, y = 800, 100
+                    thickness = 5
+                    size = 5.0
                 # clip microseconds to miliseconds
                 s = str(timestamp-timedelta(seconds=start_time_sec))[:-3]
                 cv2.putText(img, s, (x, y), cv2.FONT_HERSHEY_PLAIN, 
-                            5.0, (255, 255, 255), thickness=5)
+                            size, (255, 255, 255), thickness=thickness)
 
             if timestamp.total_seconds() > start_time_sec:
                 writer.write(img)
