@@ -150,7 +150,10 @@ def draw(foreground, pose, scan, poses=[], image=None, callback=None, acc_pts=No
             pygame.draw.circle(foreground, (0, 127, 0), scr(x - X, y - Y), 2)
 
     if image is not None:
-        cameraView = pygame.transform.scale(image, (512, 384))
+        width, height = image.get_size()
+        if width > WINDOW_SIZE[0] or height > WINDOW_SIZE[1]:
+            width, height = (512, 384)
+        cameraView = pygame.transform.scale(image, (width, height))
         foreground.blit(cameraView, (0, 0))
 
 
