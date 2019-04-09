@@ -22,6 +22,7 @@ TAIL_MIN_STEP = 0.1  # in meters
 HISTORY_SIZE = 100
 
 g_scale = 30
+g_rotation_offset_rad = 0.0  # set by --rotation (deg)
 
 
 def scans_gen(logfile, lidar_name=None, poses_name=None, camera_name=None):
@@ -252,6 +253,10 @@ class Framer:
                 arr = deserialize(data)
                 assert len(arr) == 3
                 self.pose = (arr[0]/1000.0, arr[1]/1000.0, math.radians(arr[2]/100.0))
+                x, y, heading = self.pose
+                self.pose = (x * math.cos(g_rotation_offset_rad) - y * math.sin(g_rotation_offset_rad),
+                             x * math.sin(g_rotation_offset_rad) + y * math.cos(g_rotation_offset_rad),
+                             heading + g_rotation_offset_rad)
                 if self.lidar_id is None and self.camera_id is None:
                     return timestamp, self.pose, self.scan, self.image, False
         return timedelta(), self.pose, self.scan, self.image, True
@@ -392,6 +397,7 @@ def lidarview(gen, caption_filename, callback=False):
 def main():
     import argparse
     import os.path
+    global g_rotation_offset_rad
 
     parser = argparse.ArgumentParser(description='View lidar scans')
     parser.add_argument('logfile', help='recorded log file')
@@ -407,6 +413,9 @@ def main():
 
     parser.add_argument('--callback', help='callback function for lidar scans')
 
+    parser.add_argument('--rotate', help='rotate poses by angle in degrees, offset',
+                        type=float, default=0.0)
+
     args = parser.parse_args()
     if not any([args.lidar, args.pose2d, args.pose3d, args.camera]):
         print("Available streams:")
@@ -419,6 +428,7 @@ def main():
         callback = get_class_by_name(args.callback)
 
     filename = os.path.basename(args.logfile)
+    g_rotation_offset_rad = math.radians(args.rotate)
     if args.legacy:
         lidarview(scans_gen_legacy(args.logfile), caption_filename=filename, 
                   callback=callback)
