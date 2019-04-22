@@ -18,7 +18,8 @@ from osgar.logger import LogReader, lookup_stream_id
 from osgar.lib.serialize import deserialize
 
 
-def create_video(logfile, stream, outfile, add_time=False, start_time_sec=0, fps=25):
+def create_video(logfile, stream, outfile, add_time=False,
+                 start_time_sec=0, end_time_sec=None, fps=25):
     assert outfile.endswith(".avi"), outFilename
     only_stream = lookup_stream_id(logfile, stream)
     with LogReader(logfile, only_stream_id=only_stream) as log:
@@ -48,6 +49,8 @@ def create_video(logfile, stream, outfile, add_time=False, start_time_sec=0, fps
 
             if timestamp.total_seconds() > start_time_sec:
                 writer.write(img)
+            if end_time_sec is not None and timestamp.total_seconds() > end_time_sec:
+                break
         writer.release()
 
 
@@ -61,11 +64,13 @@ def main():
     parser.add_argument('--display-time', '-t', help='add timestamp info', action='store_true')
     parser.add_argument('--start-time-sec', '-s', help='start video at later time (sec)',
                         type=float, default=0.0)
+    parser.add_argument('--end-time-sec', '-e', help='cut video at given time (sec)',
+                        type=float, default=None)
     parser.add_argument('--fps', help='frames per second', type=int, default=25)
     args = parser.parse_args()
 
     create_video(args.logfile, args.stream, args.out, add_time=args.display_time,
-                 start_time_sec=args.start_time_sec, fps=args.fps)
+                 start_time_sec=args.start_time_sec, end_time_sec=args.end_time_sec, fps=args.fps)
 
 
 if __name__ == "__main__":
