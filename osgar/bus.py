@@ -36,7 +36,7 @@ class BusHandler:
             timestamp = self.logger.write(stream_id, serialize(data))
             for queue, input_channel in self.out[channel]:
                 queue.put((timestamp, input_channel, data))
-            for slot in self.slots[channel]:
+            for slot in self.slots.get(channel, []):
                 slot(data)
         return timestamp
 
