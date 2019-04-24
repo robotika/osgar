@@ -143,7 +143,8 @@ class Cortexpilot(Node):
         self.lidar_valid = (self.flags & 0x10) == 0x10
         self.emergency_stop = (self.flags & 0x01) == 0x01
 
-        self.bus.publish('voltage', [int(system_voltage*100), int(power_voltage*100)])
+        self.voltage = [system_voltage, power_voltage]
+        self.bus.publish('voltage', [int(v*100) for v in self.voltage])
 
         # skipped parsing of:
         # 4 byte SpeedM1 (float)       12 - normalized motor M1 (R) speed <-1.0 1.0>
