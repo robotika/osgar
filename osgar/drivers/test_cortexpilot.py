@@ -95,7 +95,8 @@ class CortextpilotTest(unittest.TestCase):
         robot = Cortexpilot(config={}, bus=MagicMock())
         robot.parse_packet(SAMPLE_DATA)
         self.assertEqual(robot.flags, 0x0)
-        self.assertAlmostEqual(robot.voltage, 10.78643798)
+        self.assertAlmostEqual(robot.voltage[0], 10.78643798)
+        self.assertAlmostEqual(robot.voltage[1], 23.79999923)
 
         # trigger pose update
         robot.parse_packet(SAMPLE_DATA)
