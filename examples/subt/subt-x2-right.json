@@ -16,7 +16,9 @@
           "driver": "artifacts:ArtifactDetector",
           "in": ["image", "scan"],
           "out": ["artf"],
-          "init": {}
+          "init": {
+            "virtual_world": true
+          }
       },
       "reporter": {
           "driver": "artifacts:ArtifactReporter",
