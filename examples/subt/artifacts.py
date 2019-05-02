@@ -13,9 +13,6 @@ from osgar.node import Node
 from osgar.bus import BusShutdownException
 
 
-VIRTUAL_WORLD = False  # TODO more suitable parametrization, real robots now look only for red artifacts
-
-
 EXTINGUISHER = 'TYPE_EXTINGUISHER'
 BACKPACK = 'TYPE_BACKPACK'
 VALVE = 'TYPE_VALVE'
@@ -106,6 +103,7 @@ def artf_in_scan(scan, img_x_min, img_x_max, verbose=False):
 class ArtifactDetector(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        self.is_virtual = config['virtual_world']  # say different "dataset" (now red or all object detection)
         self.best = None
         self.best_count = 0
         self.best_img = None
@@ -139,7 +137,7 @@ class ArtifactDetector(Node):
         img = cv2.imdecode(np.fromstring(image, dtype=np.uint8), 1)
         rcount, w, h, x_min, x_max = count_red(img)
         yellow_used = False
-        if VIRTUAL_WORLD and rcount == 0:
+        if self.is_virtual and rcount == 0:
             wcount, w, h, x_min, x_max = count_white(img)
             if wcount > WHITE_THRESHOLD and 1.8 < w/h < 1.9 and wcount/(w*h) > 0.6:
                 count = wcount
