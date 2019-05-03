@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "imu": {
+          "driver": "lordimu",
+          "in": ["raw"],
+          "out": ["orientation", "rotation"],
+          "init": {}
+      },
+      "imu_serial": {
+          "driver": "serial",
+          "in": [],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyACM0", "speed": 115200}
+      }
+    },
+    "links": [["imu_serial.raw", "imu.raw"]]
+  }
+}
+
