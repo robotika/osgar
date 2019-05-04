@@ -6,7 +6,7 @@
           "driver": "application",
           "in": ["emergency_stop", "pose2d", "scan", "rot", "artf",
                  "sim_time_sec", "acc"],
-          "out": ["desired_speed", "pose2d", "artf_xyz"],
+          "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d"],
           "init": {
             "max_speed": 0.5,
             "right_wall": true
@@ -15,7 +15,7 @@
       "detector": {
           "driver": "artifacts:ArtifactDetector",
           "in": ["image", "scan"],
-          "out": ["artf"],
+          "out": ["artf", "dropped"],
           "init": {
             "virtual_world": true
           }
