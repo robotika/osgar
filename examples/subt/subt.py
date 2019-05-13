@@ -17,7 +17,7 @@ from osgar.lib import quaternion
 from local_planner import LocalPlanner
 
 
-VIRTUAL_WORLD = False  # TODO more suitable parametrization, real robots now look only for red artifacts
+VIRTUAL_WORLD = True  # TODO more suitable parametrization, real robots now look only for red artifacts
 
 RADIUS = 0.6  # 0.9  # 1.0
 
@@ -335,7 +335,7 @@ class SubTChallenge:
             self.update()
 
 #############################################
-    def play(self):
+    def play_system_track(self):
         print("SubT Challenge Ver1!")
         self.go_straight(2.5)  # go to the tunnel entrance
         dist = self.follow_wall(radius=RADIUS, right_wall=self.use_right_wall, stop_on_artf_count=1,
@@ -352,7 +352,7 @@ class SubTChallenge:
         self.wait(timedelta(seconds=3))
 #############################################
 
-    def play_ver2(self):
+    def play_virtual_track(self):
         print("SubT Challenge Ver2!")
         self.go_straight(1.0)  # go to the tunnel entrance (used to be 9m)
         self.collision_detector_enabled = True
@@ -372,6 +372,14 @@ class SubTChallenge:
                                           for artifact_data, (x, y, z) in self.artifacts])
 
         self.wait(timedelta(seconds=30))
+
+#############################################
+
+    def play(self):
+        if VIRTUAL_WORLD:
+            return self.play_virtual_track()
+        else:
+            return self.play_system_track()
 
     def start(self):
         pass
