@@ -12,11 +12,14 @@ EMERGENCY_STOP_PACKET = bytes([0x7E, 0x00, 0x0B, 0x88, 0x01, 0x49, 0x53, 0x00,
 HEADER = bytes([0x7E, 0x00, 0x0B, 0x88, 0x01, 0x49, 0x53])
 PACKET_SIZE = 15  # including header and checksum
 
+MASTER_STOP = bytes.fromhex('7E 00 10 17 01 00 00 00 00 00 00 FF FF FF FE 03 44 31 05 6F')
+
 
 class EStop(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         self._buf = b''
+        self.master = config.get('master', False)
 
     def update(self):  # hack, this method should be called run instead!
         channel = super().update()  # define self.time
@@ -35,11 +38,17 @@ class EStop(Node):
                 self.publish('emergency_stop', True)
                 self.request_stop()
             self.sleep(1.0)
-            self.publish('raw', ATIS_FRAME_PACKET)
+            if self.master:
+                self.publish('raw', MASTER_STOP)
+            else:
+                self.publish('raw', ATIS_FRAME_PACKET)
 
     def run(self):
         try:
-            self.publish('raw', ATIS_FRAME_PACKET)
+            if self.master:
+                self.publish('raw', MASTER_STOP)
+            else:
+                self.publish('raw', ATIS_FRAME_PACKET)
             while True:
                 self.update()
         except BusShutdownException:
