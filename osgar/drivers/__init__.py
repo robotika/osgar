@@ -1,4 +1,3 @@
-
 # dictionary of all available drivers
 all_drivers = dict(gps="osgar.drivers.gps:GPS"
     , imu="osgar.drivers.imu:IMU"
@@ -18,5 +17,6 @@ all_drivers = dict(gps="osgar.drivers.gps:GPS"
     , replay="osgar.drivers.replay:ReplayDriver"
     , lordimu="osgar.drivers.lord_imu:LordIMU"
     , pcan="osgar.drivers.pcan:PeakCAN"
+    , kloubak="osgar.drivers.kloubak:RobotKloubak"
 )
 
