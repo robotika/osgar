@@ -76,7 +76,7 @@ def print_packet(data, dbc = {}):
     else:
         assert len(data) == 2 + size, (len(data), 2 + size)
         if msg_id in dbc:
-            return hex(msg_id), [hex(x) for x in struct.unpack(dbc[msg_id], data[2:])]
+            return hex(msg_id), [x for x in struct.unpack(dbc[msg_id], data[2:])]
         else:
             return hex(msg_id), [hex(x) for x in data[2:]]
 
@@ -279,7 +279,7 @@ if __name__ == "__main__":
     parser.add_argument('logfile', help='filename of stored file')
     parser.add_argument('--stream', help='stream ID or name', default='can.can')
     parser.add_argument('--dbc', help='interpretation of raw data',
-                        choices=['spider', 'eduro'])
+                        choices=['spider', 'eduro', 'kloubak'])
     args = parser.parse_args()
 
     dbc = {}
@@ -299,6 +299,15 @@ if __name__ == "__main__":
             #0x187, 0x387, 0x487  # compass, acc
             0x28A: '<H',    # buttons
             0x18B: '<H',    # battery(V)/100.0
+        }
+    elif args.dbc == 'kloubak':
+        dbc = {
+            0x101: '>i',     # cmd1
+            0x102: '>i',     # cmd2
+            0x91: '>ihh',  # encoders
+            0x92: '>ihh',
+            0x93: '>ihh',
+            0x94: '>ihh',
         }
 
     stream_id = lookup_stream_id(args.logfile, args.stream)
