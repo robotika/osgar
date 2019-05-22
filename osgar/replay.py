@@ -5,6 +5,7 @@
 import argparse
 import sys
 import math
+import logging
 from ast import literal_eval
 from datetime import timedelta
 from queue import Queue
@@ -40,6 +41,9 @@ def replay(args, application=None):
     inputs = {}
     for edge_from, edge_to in config['robot']['links']:
         if edge_to.split('.')[0] == module:
+            if edge_from not in names:
+                logging.warning(f'Missing name: {edge_from}')
+                names.append(edge_from)
             inputs[1 + names.index(edge_from)] = edge_to.split('.')[1]
 
     # start reading log from the beginning again
