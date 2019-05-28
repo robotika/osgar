@@ -25,9 +25,9 @@ class SICKLidar(Thread):
 
     @staticmethod
     def parse_raw_data(raw_data):
-        """Parse scan data for TiM571 and TiM551 SICK LIDARs"""
+        """Parse scan data for TiM571, TiM551, TiM881 SICK LIDARs"""
         data = raw_data.split()
-        assert len(data) in [26, 854, 846, 583, 1663, 580], len(data)
+        assert len(data) in [26, 854, 846, 583, 1663, 580, 843], len(data)
         assert data[1] == b'LMDscandata', data[:2]
         timestamp = int(data[9], 16)  # TODO verify
         freq = int(data[16], 16)
