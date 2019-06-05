@@ -13,11 +13,12 @@ class SubTChallengeTest(unittest.TestCase):
         self.assertEqual(planner.recommend(0), (1.0, 0.0))
 
         scan[135] = 1000
-        scan[100] = 1000  # is the direction defined?!
+        scan[100] = 1000  # the direction from right to left
         planner.update(scan)
         self.assertEqual(planner.recommend(0), 
                 (0.4562465649202554, 1.2217304763960306))
 
+        # extra obstacles should not influence the decision
         for i in range(135):
             scan[i] = 1000
         planner.update(scan)
