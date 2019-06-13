@@ -1,0 +1,37 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "processor": {
+          "driver": "accumulator:Processor",
+          "in": ["map"],
+          "out": ["request"],
+          "init": {}
+      },
+      "accumulator": {
+          "driver": "accumulator:Accumulator",
+          "in": ["xyz", "request"],
+          "out": ["map"],
+          "init": {}
+      },
+      "velodyne": {
+          "driver": "velodyne",
+          "in": ["raw"],
+          "out": ["raw", "xyz"],
+          "init": {}
+      },
+      "velodyne_udp": {
+          "driver": "udp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"host": "192.168.1.201", "port": 2368, "timeout": 3.0, "bufsize": 100000}
+      }
+    },
+    "links": [["velodyne_udp.raw", "velodyne.raw"],
+              ["velodyne.raw", "velodyne_udp.raw"],
+              ["velodyne.xyz", "accumulator.xyz"],
+              ["processor.request", "accumulator.request"],
+              ["accumulator.map", "processor.map"]
+      ]
+  }
+}
