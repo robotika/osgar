@@ -12,7 +12,7 @@
           "driver": "udp",
           "in": ["raw"],
           "out": ["raw"],
-          "init": {"host": "192.168.1.201", "port": 2368, "timeout": 3.0}
+          "init": {"host": "192.168.1.201", "port": 2368, "timeout": 3.0, "bufsize": 100000}
       }
     },
     "links": [["velodyne_udp.raw", "velodyne.raw"],
