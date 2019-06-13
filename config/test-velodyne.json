@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "velodyne": {
+          "driver": "velodyne",
+          "in": ["raw"],
+          "out": ["raw", "xyz"],
+          "init": {}
+      },
+      "velodyne_udp": {
+          "driver": "udp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"host": "192.168.1.201", "port": 2368, "timeout": 3.0}
+      }
+    },
+    "links": [["velodyne_udp.raw", "velodyne.raw"],
+              ["velodyne.raw", "velodyne_udp.raw"]
+      ]
+  }
+}
