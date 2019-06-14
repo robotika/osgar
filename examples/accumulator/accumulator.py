@@ -2,6 +2,7 @@
   Example of a simple application collecting map data
 """
 from osgar.node import Node
+from osgar.bus import BusShutdownException
 
 
 class Processor(Node):
@@ -14,6 +15,14 @@ class Processor(Node):
         print(len(self.map))
         self.sleep(10.0)  # simulate some work here
         self.publish('request', True)
+
+    def run(self):
+        try:
+            self.publish('request', True)
+            while True:
+                self.update()
+        except BusShutdownException:
+            pass
 
 
 class Accumulator(Node):
