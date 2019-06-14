@@ -10,8 +10,9 @@ LASER_ANGLES = [-15, 1, -13, 3, -11, 5, -9, 7, -7, 9, -5, 11, -3, 13, -1, 15]
 NUM_LASERS = 16
 
 
-def parse_packet(data):
+def parse_packet(data, offset_step=100):
     assert len(data) == 1206, len(data)
+    assert offset_step % 100 == 0, offset_step  # must be divisible by 100
     timestamp, factory = struct.unpack_from("<IH", data, offset=1200)
     assert factory == 0x2237, hex(factory)  # 0x22=VLP-16, 0x37=Strongest Return
 #    time = timestamp/1000000.0
@@ -28,7 +29,7 @@ def parse_packet(data):
 #        return  # to catch up-to-date packets again ...
 
     ret = []
-    for offset in range(0, 1200, 200):  # skip every second packet (we need 1deg resolution input 0.4)
+    for offset in range(0, 1200, offset_step):  # 100 bytes per one reading
         flag, azi = struct.unpack_from("<HH", data, offset)
         assert flag == 0xEEFF, hex(flag)
         azimuth = azi/100.0
@@ -51,10 +52,12 @@ def parse_packet(data):
 class Velodyne(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        self.offset_step = config.get('offset_step', 200)  # skip every second packet (we need 1deg resolution input 0.4)
+        assert self.offset_step % 100 == 0, self.offset_step  # must be divisible by 100
 
     def update(self):
         channel = super().update()
         assert channel == 'raw', channel
-        self.publish('xyz', parse_packet(self.raw))
+        self.publish('xyz', parse_packet(self.raw, offset_step=self.offset_step))
 
 # vim: expandtab sw=4 ts=4
