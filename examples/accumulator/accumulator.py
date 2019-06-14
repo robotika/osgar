@@ -12,8 +12,8 @@ class Processor(Node):
     def update(self):
         channel = super().update()
         assert channel == 'map', channel
-        print(len(self.map))
-        self.sleep(10.0)  # simulate some work here
+        print(self.time, len(self.map))
+        self.sleep(0.2)  # simulate some work here
         self.publish('request', True)
 
     def run(self):
