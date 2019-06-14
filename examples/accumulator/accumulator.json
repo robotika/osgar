@@ -18,7 +18,9 @@
           "driver": "velodyne",
           "in": ["raw"],
           "out": ["raw", "xyz"],
-          "init": {}
+          "init": {
+            "offset_step": 100
+          }
       },
       "velodyne_udp": {
           "driver": "udp",
