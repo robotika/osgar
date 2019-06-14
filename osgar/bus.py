@@ -37,7 +37,7 @@ class BusHandler:
             for queue, input_channel in self.out[channel]:
                 queue.put((timestamp, input_channel, data))
             for slot in self.slots.get(channel, []):
-                slot(data)
+                slot(timestamp, data)
         return timestamp
 
     def listen(self):
@@ -81,7 +81,7 @@ class LogBusHandler:
             channel = self.inputs[stream_id]
             data = deserialize(bytes_data)
             if channel.startswith("slot_"):
-                getattr(self.node, channel)(data)
+                getattr(self.node, channel)(dt, data)
             else:
                 break
         return dt, channel, data
@@ -93,7 +93,7 @@ class LogBusHandler:
             input_name = self.inputs[stream_id]
             if input_name.startswith("slot_"):
                 data = deserialize(bytes_data)
-                getattr(self.node, input_name)(data)
+                getattr(self.node, input_name)(dt, data)
             else:
                 self.buffer_queue.append((dt, stream_id, bytes_data))
             dt, stream_id, bytes_data = next(self.reader)

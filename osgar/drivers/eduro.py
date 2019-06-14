@@ -206,13 +206,13 @@ class Eduro(Thread):
         self.process_packet(data)
         yield None
 
-    def slot_can(self, data):
+    def slot_can(self, timestamp, data):
         if len(data) > 0:
             for status in self.process_gen(data):
                 if status is not None:
                     self.bus.publish('can', status)  # TODO
 
-    def slot_desired_speed(self, data):
+    def slot_desired_speed(self, timestamp, data):
         self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
 
     def run(self):
@@ -220,9 +220,9 @@ class Eduro(Thread):
             while True:
                 self.time, channel, data = self.bus.listen()
                 if channel == 'can':
-                    self.slot_can(data)
+                    self.slot_can(self.time, data)
                 elif channel == 'desired_speed':
-                    self.slot_desired_speed(data)
+                    self.slot_desired_speed(self.time, data)
                 else:
                     assert False, channel  # unsupported channel
         except BusShutdownException:
