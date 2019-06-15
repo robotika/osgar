@@ -33,7 +33,7 @@ class Accumulator(Node):
     def update(self):
         channel = super().update()
         if channel == 'request':
-            self.publish('map', self.map_data)
+            self.publish('map', self.map_data[:])
         elif channel == 'xyz':
             self.map_data.extend(self.xyz)
             self.map_data = self.map_data[-100:]  # keep last 100 points
