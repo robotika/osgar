@@ -66,6 +66,10 @@ def parse_packet(packet, verbose=False):
             mag = struct.unpack_from('>fff', packet, i + 2)
             if verbose:
                 print('mag', mag)
+        elif desc == 0x80 and cmd == 0x0C:
+            # CF Euler Angles (0x80, 0x0C)
+            # This value is produced by the Complementary Filter fusion algorithm.
+            pass
 
         # GPS related messages
         elif desc == 0x81 and cmd == 0x03:
