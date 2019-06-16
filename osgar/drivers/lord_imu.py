@@ -109,6 +109,7 @@ class LordIMU(Node):
         super().__init__(config, bus)
         self._buf = b''
         self.raw = None  # not automatically defined yet
+        self.verbose = False
 
     def update(self):
         channel = super().update()
@@ -118,7 +119,7 @@ class LordIMU(Node):
             packet, self._buf = get_packet(self._buf)
             if packet is None:
                 break
-            acc, gyro, euler, quat = parse_packet(packet)
+            acc, gyro, euler, quat = parse_packet(packet, self.verbose)
             if euler is not None:
                 yaw, pitch, roll = euler
                 # This is a three component vector containing the Roll, Pitch and Yaw angles 
@@ -128,4 +129,4 @@ class LordIMU(Node):
             if quat is not None:
                 self.publish('orientation', list(quat))
         
-# vim: expandtab sw=4 ts=43DM-GX5-25
+# vim: expandtab sw=4 ts=4
