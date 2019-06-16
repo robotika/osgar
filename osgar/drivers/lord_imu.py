@@ -41,7 +41,7 @@ def parse_packet(packet, verbose=False):
     desc = packet[2]
 
     # IMU Data Set (0x80)
-    assert desc in [0x80, 0x82], hex(desc)
+    assert desc in [0x80, 0x81, 0x82], hex(desc)
     i = 4
     acc, gyro, euler, quat = None, None, None, None
     while i < packet_size - 2:
@@ -66,6 +66,15 @@ def parse_packet(packet, verbose=False):
             mag = struct.unpack_from('>fff', packet, i + 2)
             if verbose:
                 print('mag', mag)
+
+        # GPS related messages
+        elif desc == 0x81 and cmd == 0x03:
+            pass
+        elif desc == 0x81 and cmd == 0x08:
+            pass
+        elif desc == 0x81 and cmd == 0x0b:
+            pass
+
         elif desc == 0x82 and cmd == 0x03:
             # Orientation, Quaternion (0x82, 0x03)
             q0, q1, q2, q3, valid = struct.unpack_from('>ffffH', packet, i + 2)
@@ -73,13 +82,18 @@ def parse_packet(packet, verbose=False):
                 quat = q0, q1, q2, q3
             if verbose:
                 print('quaterion', q0, q1, q2, q3, valid)
-        elif desc == 0x82 and cmd == 0x0A:
-            # Attitude Uncertainty, Euler Angles (0x82, 0x0A)
+        elif desc == 0x82 and cmd == 0x05:
+            # Orientation, Euler Angles (0x82, 0x05)
             roll, pitch, yaw, valid = struct.unpack_from('>fffH', packet, i + 2)
             if valid == 0x1:
                 euler = yaw, pitch, roll
             if verbose:
                 print('euler', roll, pitch, yaw, valid)
+        elif desc == 0x82 and cmd == 0x0A:
+            # Attitude Uncertainty, Euler Angles (0x82, 0x0A)
+            roll, pitch, yaw, valid = struct.unpack_from('>fffH', packet, i + 2)
+            if verbose:
+                print('euler-uncertain', roll, pitch, yaw, valid)
         elif desc == 0x82 and cmd == 0x0D:
             # Linear Acceleration (0x82, 0x0D)
             # Filter-Compensated Linear Acceleration Data (gravity vector removed)

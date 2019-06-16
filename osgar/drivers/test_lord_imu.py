@@ -48,4 +48,9 @@ class LordIMUTest(unittest.TestCase):
 #        q.put.assert_called_once_with((135, 'raw', 
 #            b'\x00\x00\x03\x01\x01\xfb'))
 
+    def test_parse_gps(self):
+        packet = bytes.fromhex('756581432C034048F4AC14C660A2402C66410EBE08E44071A36872B020C5406DB35C28F5C2904008E5604062F1AA001F0F0807E30610090D11000000000003080B000900000007D716')
+        verify_checksum(packet)
+        parse_packet(packet)
+
 # vim: expandtab sw=4 ts=4
