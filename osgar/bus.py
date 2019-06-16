@@ -124,6 +124,8 @@ class LogBusHandlerInputsOnly:
         self.time = dt
         channel = self.inputs[stream_id]
         data = deserialize(bytes_data)
+        if channel.startswith("slot_"):
+            channel = channel[len('slot_'):]  # workaround for non-slot run
         return dt, channel, data
 
     def publish(self, channel, data):
