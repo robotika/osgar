@@ -9,20 +9,21 @@ import pdb
 
 #OCGM parameters
 OCGM_CELLS_COUNT = 400
-OCGM_CELLS_PER_METER = 18
+OCGM_CELLS_PER_METER = 40
 LIDAR_ANGLE = 0.0 #angle of lidar to the horizont 
 LIDAR_HEIGHT = 0.63 #m
 LIDAR_Y_SHIFT = 0.2 #m
 IGNORE_NEAR_OBSTACLES_DIST = 0.2 #m
 MIN_LIDAR_ANGLE = 40 #degrees
 MAX_LIDAR_ANGLE = 230 #degrees
+HEADING_SHIFT = 0
 
 
 class HorizontalLidarOcgm(Ocgm):
     
     def __init__(self, cells, res, p_d, p_nd, decay,pose,cols,rows):
         super(HorizontalLidarOcgm, self).__init__(cells, res, p_d, p_nd, decay,pose,cols,rows)
-
+        self.ocgmCellsPerMeter = OCGM_CELLS_PER_METER
         # --- tours and polar map definition ---
         self._dt_map = 'f4'
         self._map_prior = 0.0
@@ -32,7 +33,7 @@ class HorizontalLidarOcgm(Ocgm):
         self._v_max = 1.0
         self._v_min = 0.0
         self.lastTimestamp = None
-
+        
     def update(self, scan, timestamp, pose):
         RESOLUTION_STEP = 270 / len(scan) * math.pi / 180
         angle = - 135 * RESOLUTION_STEP    
@@ -50,11 +51,6 @@ class HorizontalLidarOcgm(Ocgm):
             newPoint = [x,y,math.degrees(i * RESOLUTION_STEP),math.sqrt(x*x + y*y)]
             if MIN_LIDAR_ANGLE  <= math.degrees(i * RESOLUTION_STEP) <= MAX_LIDAR_ANGLE: 
                 scanConverted.append(newPoint) 
-                pointX = newPoint[0]*math.cos(pose[2]) - newPoint[1]*math.sin(pose[2])
-                pointY = newPoint[0]*math.sin(pose[2]) + newPoint[1]*math.cos(pose[2])
-                relativePositionX = pose[0] 
-                relativePositionY = pose[1] 
-                currentPointPosition = [relativePositionX,relativePositionY,0]
                 
             angle += RESOLUTION_STEP
             previousScan = currentScan
@@ -81,7 +77,7 @@ class HorizontalLidarOcgm(Ocgm):
                 
         csr = csr_matrix((np.array(csrData, dtype=np.float64), (csrRow, csrCol)), shape=(270, OCGM_CELLS_COUNT))
         csrImage = np.array(csr.toarray()*255, dtype=np.uint8)
-        #cv2.imshow('Lidar CSR Image', csrImage)
+        #cv2.imshow('Lidar CSR Image', csrImage) #for debug
         if self.lastTimestamp == None:
             self.lastTimestamp = timestamp
             
@@ -90,13 +86,15 @@ class HorizontalLidarOcgm(Ocgm):
         vehicleData, mapData = self._update(pose,0, 0, csr, timeDelta.total_seconds())
         mapVisualization = self._logOdds2Image(mapData)
         shape = mapVisualization.shape
-        cv2.circle(mapVisualization, (int(shape[0]/2),int(shape[1]/2)), 2, 255,-1)
-        cv2.imshow('Map Lidar', mapVisualization)
+        self.subCellOffset = vehicleData[0][0]
+        #cv2.circle(mapVisualization, (int(shape[0]/2),int(shape[1]/2)), 2, 255,-1)
+        #cv2.imshow('Map Lidar', mapVisualization) #for debug
+        self.robotCentricMap = mapData
+        mapData = self._normalizeLogOdds(mapData)
+        #self.normalizedRobotCentricMap = mapData
         
-        #rotatedMap = ndi.rotate(mapData,-pose[2]*180/math.pi)
-        #cv2.circle(rotatedMap, (int(shape[0]/2),int(shape[1]/2)), 2, 255,-1)
-        #cv2.imshow('Rotated Map Lidar', self._logOdds2Image(rotatedMap))
-
+        return mapData
+        
     def _correct(self, csr):
         self._polar_map[:] = 0.0
 
@@ -123,7 +121,6 @@ class HorizontalLidarOcgm(Ocgm):
         # ---  apply occupancy map  ---
         self._map += newUpdate
         
-        
     def _logOdds2Image(self,logodds):
         retiled = np.minimum(np.maximum(logodds, self._min_log), -self._min_log)
         _exp = np.exp(retiled)
@@ -131,6 +128,11 @@ class HorizontalLidarOcgm(Ocgm):
         _exp = np.array(np.exp(_exp)*255,dtype=np.uint8)
         return _exp
         
+    def _normalizeLogOdds(self,logodds):
+        retiled = np.minimum(np.maximum(logodds, self._min_log), -self._min_log)
+        _exp = np.exp(retiled)
+        _exp = _exp / (1.0 + _exp)
+        return _exp
         
     
     def _calc_torus_coords(self, scan):
@@ -183,3 +185,30 @@ class HorizontalLidarOcgm(Ocgm):
         #retiled_map = np.minimum(np.maximum(retiled_map, 0.0), 1.0)
         
         return retiled_map
+        
+    def drawImageToVisualLog(self,visualLog,pose):
+        enlargement = visualLog.getPixelsPerMeter() / self.ocgmCellsPerMeter
+        frameWidth = visualLog.getFrameWidth()
+        frameHeight = visualLog.getFrameHeight()
+        odoX = pose[0]
+        odoY = pose[1]
+        image = visualLog.getImage()
+        map = self.robotCentricMap
+        resultMap = self._logOdds2Image(map)
+        
+        #resultMap = np.array(map*255, dtype=np.uint8)
+        mapImage = cv2.resize(resultMap,(int(resultMap.shape[0] * enlargement),int(resultMap.shape[1]*enlargement)))
+        
+        offsetY = -self.subCellOffset[0]  * enlargement * self.ocgmCellsPerMeter
+        offsetX = self.subCellOffset[1]  * enlargement * self.ocgmCellsPerMeter
+
+        border = visualLog.border
+        width = int(mapImage.shape[0])- int(round(offsetX)) - border
+        height = int(mapImage.shape[1])- int(round(offsetY)) - border
+        shiftX = int((frameWidth - mapImage.shape[0])/2)
+        shiftY = int((frameHeight - mapImage.shape[1])/2)
+        for channel in range(0,3):
+            image[shiftX + border + int(round(offsetX)):shiftX + int(mapImage.shape[0]),shiftY + border + int(round(offsetY)):shiftY +int(mapImage.shape[1]),channel] = mapImage[:width,:height]
+
+        
+    

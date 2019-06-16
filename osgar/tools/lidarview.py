@@ -15,6 +15,8 @@ from osgar.lib.serialize import deserialize
 from osgar.lib.config import get_class_by_name
 from osgar.lib import quaternion
 from osgar.lib.horizontal_lidar_ocgm import HorizontalLidarOcgm, OCGM_CELLS_COUNT, OCGM_CELLS_PER_METER
+from osgar.lib.vfh import VFH
+from osgar.lib.visual_log import VisualLog
 
 
 #WINDOW_SIZE = 1200, 660
@@ -299,6 +301,8 @@ def lidarview(gen, caption_filename, callback=False):
     history = gen
     max_timestamp = None
     
+    visualLog = VisualLog()
+    visualLog.init()
     horizontalLidarOcgm = HorizontalLidarOcgm(cells=OCGM_CELLS_COUNT/2,
                                            res=1/OCGM_CELLS_PER_METER,
                                            p_d=0.9,
@@ -308,7 +312,8 @@ def lidarview(gen, caption_filename, callback=False):
                                            cols = 190,
                                            rows = int(OCGM_CELLS_COUNT/2)+1)
 
-
+    vfh = VFH(horizontalLidarOcgm,visualLog)
+    
     while True:
         timestamp, pose, scan, image, eof = history.next()
 
@@ -328,9 +333,16 @@ def lidarview(gen, caption_filename, callback=False):
             continue
         skip_frames = frames_step
 
+        visualLog.init()
         #OCGM update
-        horizontalLidarOcgm.update(scan,timestamp,pose)
-        
+        localMap = horizontalLidarOcgm.update(scan,timestamp,pose)
+        horizontalLidarOcgm.drawImageToVisualLog(visualLog,pose)
+
+        globalWaypoint = (-100,0)
+        #local planner update
+        cmdVel = vfh.update(globalWaypoint,pose,localMap)
+        visualLog.drawCar(pose)
+        visualLog.show()
         while True:
             caption = caption_filename + ": %s" % timestamp
             if paused:

@@ -3,6 +3,8 @@ from scipy.sparse import csr_matrix
 import pdb
 import math
 
+HEADING_SHIFT = math.pi/2
+
 class Ocgm(object):
     
     def __init__(self,cells, res, p_d, p_nd, decay,pose,cols,rows):
@@ -86,7 +88,7 @@ class Ocgm(object):
         omega = 0
 
         #self._phi = np.pi * 0.75-pose.getHeading()
-        self._phi = -pose[2]
+        self._phi = -pose[2] + HEADING_SHIFT
         self._sin_phi = np.cos(self._phi)
         self._cos_phi = np.sin(self._phi)
 
@@ -116,7 +118,7 @@ class Ocgm(object):
 
 
     def _calculate_shift(self, vx, omega,pose):
-        _pos_shift_total = np.array([pose[1] - self.lastPose[1], pose[0] - self.lastPose[0]])  + self._xy_frac
+        _pos_shift_total = np.array([pose[0] - self.lastPose[0], pose[1] - self.lastPose[1]])  + self._xy_frac
         self.lastPose = pose
         _pos_shift_int = np.round(_pos_shift_total / self._res).astype(int)
         self._xy_frac = _pos_shift_total - self._res * _pos_shift_int.astype(float)
