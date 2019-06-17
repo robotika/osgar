@@ -25,8 +25,11 @@ def get_packet(buf):
         i = buf.index(b'\x75\x65')
     except ValueError:
         return None, buf
-    packet_size = buf[i + 3] + 4 + 2  # + header size + checksum
-    if i + packet_size > len(buf):
+    try:
+        packet_size = buf[i + 3] + 4 + 2  # + header size + checksum
+        if i + packet_size > len(buf):
+            return None, buf
+    except IndexError:
         return None, buf
     packet = buf[i:i + packet_size]
     verify_checksum(packet)
