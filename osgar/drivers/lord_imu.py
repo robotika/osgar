@@ -76,10 +76,15 @@ def parse_packet(packet, verbose=False):
 
         # GPS related messages
         elif desc == 0x81 and cmd == 0x03:
+            assert field_length == 44, field_length
             pass
         elif desc == 0x81 and cmd == 0x08:
+            assert field_length == 15, field_length
             pass
         elif desc == 0x81 and cmd == 0x0b:
+            assert field_length == 8, field_length
+            xxx = struct.unpack_from('>BBBBBBBB', packet, i + 2)
+#            print(xxx)
             pass
 
         elif desc == 0x82 and cmd == 0x03:
