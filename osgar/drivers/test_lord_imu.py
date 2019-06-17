@@ -53,4 +53,15 @@ class LordIMUTest(unittest.TestCase):
         verify_checksum(packet)
         parse_packet(packet)
 
+    def test_index_error(self):
+        """
+           bug - used to raise Index Error:
+File "M:\git\osgar\osgar\drivers\lord_imu.py", line 28, in get_packet
+    packet_size = buf[i + 3] + 4 + 2  # + header size + checksum
+IndexError: index out of range
+"""
+        packet, buf = get_packet(b'ue')
+        self.assertIsNone(packet)
+        self.assertEqual(buf, b'ue')
+
 # vim: expandtab sw=4 ts=4
