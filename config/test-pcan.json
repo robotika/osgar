@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "can": {
+          "driver": "pcan",
+          "in": ["can"],
+          "out": ["can"],
+          "init": {}
+      }
+    },
+    "links": []
+  }
+}

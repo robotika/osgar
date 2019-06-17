@@ -17,5 +17,6 @@ all_drivers = dict(gps="osgar.drivers.gps:GPS"
     , usb="osgar.drivers.logusb:LogUSB"
     , replay="osgar.drivers.replay:ReplayDriver"
     , lordimu="osgar.drivers.lord_imu:LordIMU"
+    , pcan="osgar.drivers.pcan:PeakCAN"
 )
 
