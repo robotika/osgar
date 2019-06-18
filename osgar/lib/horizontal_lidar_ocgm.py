@@ -60,7 +60,6 @@ class HorizontalLidarOcgm(Ocgm):
         csrCol = []
         index = 0
         nextPoint = scanConverted[0]
-        
         for i in range(0,len(scanConverted)-1):                                               
             point = scanConverted[i]
             
@@ -102,6 +101,7 @@ class HorizontalLidarOcgm(Ocgm):
         self._csr_m.data *= self._p_d
         
         nonzero_rows = self._csr_m.indptr[1:] - self._csr_m.indptr[:-1] != 0
+        lastData = 0
         for p in range(self._polar_map.shape[0]):
             if nonzero_rows[p]:
                 self._polar_map[p, :self._csr_m.indices[self._csr_m.indptr[p]] - 1] = \
@@ -109,8 +109,16 @@ class HorizontalLidarOcgm(Ocgm):
                     ##
                 self._polar_map[p, self._csr_m.indices[self._csr_m.indptr[p]]] = \
                     self._csr_m.data[self._csr_m.indptr[p]]
+                lastData = self._csr_m.data[self._csr_m.indptr[p]]
             else:
-                self._polar_map[p, :] = self._ism
+                try:
+                    self._polar_map[p, :self._csr_m.indices[self._csr_m.indptr[p]] - 1] = \
+                      self._ism[:self._csr_m.indices[self._csr_m.indptr[p]] - 1]
+            
+                    self._polar_map[p, self._csr_m.indices[self._csr_m.indptr[p]]] = \
+                        lastData
+                except:
+                    self._polar_map[p, :] = lastData#self._ism
         coords = self._calc_torus_coords(csr)
         #cv2.imshow('Polar map Lidar', self._polar_map*255)
         
