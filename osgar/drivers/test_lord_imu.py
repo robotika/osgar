@@ -8,6 +8,8 @@ from osgar.bus import BusHandler
 
 SAMPLE_DATA = b'\x0e\x06=\xea\x01\x19>\xc3R\xd2>\xdb?V\x1e\x93ue\x80*\x0e\x04<\x87C\x97\xbdF%\xd4\xbf\x7f\xb4\x14\x0e\x05\xba.\xd6S\xba)b\xeb\xb9\xf6\xf7\x80\x0e\x06=\xeaD\x10>\xc3\\\xd5>\xdb4\x1d\xda\x04ue\x80*\x0e\x04<\x9d\x1c\xa3\xbdS\x19\xd9\xbf\x7f\xbc^\x0e\x05\xbas\xd7W\xb9\x15\x03\xa0\xbaD\xffc\x0e\x06=\xea'
 
+SAMPLE_GPS_DATA = bytes.fromhex('756581432C034048F4AC14C660A2402C66410EBE08E44071A36872B020C5406DB35C28F5C2904008E5604062F1AA001F0F0807E30610090D11000000000003080B000900000007D716')
+
 
 class LordIMUTest(unittest.TestCase):
 
@@ -50,9 +52,8 @@ class LordIMUTest(unittest.TestCase):
 #            b'\x00\x00\x03\x01\x01\xfb'))
 
     def test_parse_gps(self):
-        packet = bytes.fromhex('756581432C034048F4AC14C660A2402C66410EBE08E44071A36872B020C5406DB35C28F5C2904008E5604062F1AA001F0F0807E30610090D11000000000003080B000900000007D716')
-        verify_checksum(packet)
-        __, __, __, __, gps = parse_packet(packet)
+        verify_checksum(SAMPLE_GPS_DATA)
+        __, __, __, __, gps = parse_packet(SAMPLE_GPS_DATA)
         self.assertEqual(gps, ((49.9115015, 14.199715099999999), 9,
                                datetime.datetime(2019, 6, 16, 9, 13, 17)))
 
