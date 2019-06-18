@@ -170,5 +170,11 @@ class LordIMU(Node):
                         [int(round(math.degrees(x) * 100)) for x in [yaw, pitch, roll]])
             if quat is not None:
                 self.publish('orientation', list(quat))
-        
+            if gps is not None:
+                # TODO check for GPS fix
+                lat, lon = gps[0]
+                x = int(lon * 3600000)  # deg to milisec
+                y = int(lat * 3600000)
+                self.publish('gps_position', [x, y])
+
 # vim: expandtab sw=4 ts=4
