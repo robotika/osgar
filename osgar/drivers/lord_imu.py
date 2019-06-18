@@ -4,6 +4,7 @@
 # www.microstrain.com/sites/default/files/3dm-gx5-25_dcp_manual_8500-0065.pdf
 import struct
 import math
+import datetime
 
 from osgar.node import Node
 
@@ -46,7 +47,8 @@ def parse_packet(packet, verbose=False):
     # IMU Data Set (0x80)
     assert desc in [0x80, 0x81, 0x82], hex(desc)
     i = 4
-    acc, gyro, euler, quat = None, None, None, None
+    acc, gyro, euler, quat, gps = None, None, None, None, None
+    lat, lon, sat_num, gps_time = None, None, None, None
     while i < packet_size - 2:
         field_length = packet[i]
         cmd = packet[i + 1]
@@ -76,16 +78,27 @@ def parse_packet(packet, verbose=False):
 
         # GPS related messages
         elif desc == 0x81 and cmd == 0x03:
+            # LLH Position (0x81, 0x03)
             assert field_length == 44, field_length
-            pass
+            row = struct.unpack_from('>ddddffH', packet, i + 2)
+            lat, lon, height_elipsoid, height_msl, hori, vert, flags = row
+            if verbose:
+                print('GPS', (lat, lon))
         elif desc == 0x81 and cmd == 0x08:
+            # UTC Time (0x81, 0x08)
             assert field_length == 15, field_length
-            pass
+            msg = struct.unpack_from('>HBBBBBIH', packet, i + 2)
+            year, month, day, hour, minute, second, millisecond, flags = msg
+            gps_time = datetime.datetime(year, month, day, hour, minute, second, millisecond)
+            if verbose:
+                print('UTCTime', year, month, day, hour, minute, second, millisecond, flags)
         elif desc == 0x81 and cmd == 0x0b:
+            # GNSS Fix Information (0x81, 0x0B)
             assert field_length == 8, field_length
-            xxx = struct.unpack_from('>BBBBBBBB', packet, i + 2)
-#            print(xxx)
-            pass
+            msg = struct.unpack_from('>BBHH', packet, i + 2)
+            fix_type, sat_num, fix_flags, valid = msg
+            if verbose:
+                print('GPSFix', msg)
 
         elif desc == 0x82 and cmd == 0x03:
             # Orientation, Quaternion (0x82, 0x03)
@@ -127,7 +140,10 @@ def parse_packet(packet, verbose=False):
 
         i += field_length
 
-    return acc, gyro, euler, quat
+    if lat is not None:
+        gps = (lat, lon), sat_num, gps_time
+
+    return acc, gyro, euler, quat, gps
 
 
 class LordIMU(Node):
@@ -145,7 +161,7 @@ class LordIMU(Node):
             packet, self._buf = get_packet(self._buf)
             if packet is None:
                 break
-            acc, gyro, euler, quat = parse_packet(packet, self.verbose)
+            acc, gyro, euler, quat, gps = parse_packet(packet, self.verbose)
             if euler is not None:
                 yaw, pitch, roll = euler
                 # This is a three component vector containing the Roll, Pitch and Yaw angles 
