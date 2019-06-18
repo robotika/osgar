@@ -1,4 +1,5 @@
 import unittest
+import datetime
 from unittest.mock import MagicMock
 
 from osgar.drivers.lord_imu import get_packet, verify_checksum, parse_packet, LordIMU
@@ -18,7 +19,7 @@ class LordIMUTest(unittest.TestCase):
         self.assertTrue(packet.startswith(b'\x75\x65'), packet)
         self.assertEqual(len(packet), 42 + 4 + 2)
 
-        acc, gyro, mag, quat = parse_packet(packet)
+        acc, gyro, mag, quat, gps = parse_packet(packet)
 
     def test_checksum(self):
         packet = bytes.fromhex("7565 0C20 0D08 0103 1200 0A04 000A 0500 0A13 0A01 0511 000A 1000 0A01 000A 0200 0A03 000A D43D")
@@ -51,7 +52,9 @@ class LordIMUTest(unittest.TestCase):
     def test_parse_gps(self):
         packet = bytes.fromhex('756581432C034048F4AC14C660A2402C66410EBE08E44071A36872B020C5406DB35C28F5C2904008E5604062F1AA001F0F0807E30610090D11000000000003080B000900000007D716')
         verify_checksum(packet)
-        parse_packet(packet)
+        __, __, __, __, gps = parse_packet(packet)
+        self.assertEqual(gps, ((49.9115015, 14.199715099999999), 9,
+                               datetime.datetime(2019, 6, 16, 9, 13, 17)))
 
     def test_index_error(self):
         """
