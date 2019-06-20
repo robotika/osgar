@@ -13,7 +13,7 @@ SUPPORTED_VERSIONS = [ROBOT_CONTAINER_VER]
 
 def get_class_by_name(name):
     if name in all_drivers:
-        return all_drivers[name]
+        name = all_drivers[name]
     assert ':' in name, name  # import path and class name expected
     s = name.split(':')
     assert len(s) == 2  # package and class name
