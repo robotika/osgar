@@ -1,28 +1,21 @@
-from .gps import GPS
-from .imu import IMU
-from .spider import Spider
-from .logserial import LogSerial
-from .canserial import CANSerial
-from .simulator import SpiderSimulator
-from .logsocket import (LogTCPStaticIP, LogTCPDynamicIP, LogTCPServer,
-                        LogUDP, LogHTTP)
-from .sicklidar import SICKLidar
-from .eduro import Eduro
-from .cortexpilot import Cortexpilot
-from .logusb import LogUSB
-from .replay import ReplayDriver
-from .lord_imu import LordIMU
 
 # dictionary of all available drivers
-all_drivers = dict(gps=GPS, imu=IMU, spider=Spider, serial=LogSerial,
-                   can=CANSerial, simulator=SpiderSimulator,
-                   tcp=LogTCPStaticIP, tcpdynamic=LogTCPDynamicIP,
-                   tcpserver=LogTCPServer, udp=LogUDP, http=LogHTTP,
-                   lidar=SICKLidar,
-                   eduro=Eduro,
-                   cortexpilot=Cortexpilot,
-                   usb=LogUSB,
-                   replay=ReplayDriver,
-                   lordimu=LordIMU,
-                   )
+all_drivers = dict(gps="osgar.drivers.gps:GPS"
+    , imu="osgar.drivers.imu:IMU"
+    , spider="osgar.drivers.spider:Spider"
+    , serial="osgar.drivers.logserial:LogSerial"
+    , can="osgar.drivers.canserial:CANSerial"
+    , simulator="osgar.drivers.simulator:SpiderSimulator"
+    , tcp="osgar.drivers.logsocket:LogTCPStaticIP"
+    , tcpdynamic="osgar.drivers.logsocket:LogTCPDynamicIP"
+    , tcpserver="osgar.drivers.logsocket:LogTCPServer"
+    , udp="osgar.drivers.logsocket:LogUDP"
+    , http="osgar.drivers.logsocket:LogHTTP"
+    , lidar="osgar.drivers.sicklidar:SICKLidar"
+    , eduro="osgar.drivers.eduro:Eduro"
+    , cortexpilot="osgar.drivers.cortexpilot:Cortexpilot"
+    , usb="osgar.drivers.logusb:LogUSB"
+    , replay="osgar.drivers.replay:ReplayDriver"
+    , lordimu="osgar.drivers.lord_imu:LordIMU"
+)
 
