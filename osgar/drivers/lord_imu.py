@@ -111,7 +111,8 @@ def parse_packet(packet, verbose=False):
             # Orientation, Euler Angles (0x82, 0x05)
             roll, pitch, yaw, valid = struct.unpack_from('>fffH', packet, i + 2)
             if valid == 0x1:
-                euler = yaw, pitch, roll
+#                euler = yaw, pitch, roll
+                euler = math.pi - yaw, pitch, roll  # hacked, guessed
             if verbose:
                 print('euler', roll, pitch, yaw, valid)
         elif desc == 0x82 and cmd == 0x0A:
