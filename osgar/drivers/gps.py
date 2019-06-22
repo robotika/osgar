@@ -52,7 +52,9 @@ def parse_bin(data):
     # Receiver Navigation Status
     if i == 0x03:
         fix = payload[4]
-        assert fix in [2, 3], fix  # 2D, 3D
+        #assert fix in [2, 3], fix  # 2D, 3D
+        if fix not in [2, 3]:
+            print("GPS no fix!")
 
     # 31.18.21 UBX-NAV-SVINFO (0x01 0x30)
     # 31.18.21.1 Space Vehicle Information
