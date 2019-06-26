@@ -14,8 +14,6 @@ try:
 except ImportError:
     print('\nERROR: Please install numpy\n    pip install numpy\n')
 
-import matplotlib.pyplot as plt
-
 from osgar.logger import LogReader, lookup_stream_id
 from osgar.lib.serialize import deserialize
 
@@ -45,15 +43,22 @@ def stabilize_video(logfile, stream, outfile=None):
                 # Sort them in the order of their distance.
                 matches = sorted(matches, key=lambda x: x.distance)
                 print(len(matches))
+                for m in matches[:3]:
+#                    print(m.distance, m.imgIdx, m.queryIdx, m.trainIdx)
+                    assert m.imgIdx == 0, m.imgIdx
+#                    print(kp1[m.queryIdx].pt, kp2[m.trainIdx].pt)
+                    print([a - b for a, b in zip(kp1[m.queryIdx].pt, kp2[m.trainIdx].pt)])
 
                 # Draw first 10 matches.
                 img3 = img1.copy()
-                img3 = cv2.drawMatches(img1, kp1, img2, kp2, matches[:50], flags=2, outImg=img3)
+                img3 = cv2.drawMatches(img1, kp1, img2, kp2, matches[:10], flags=2, outImg=img3)
 
-                plt.imshow(img3), plt.show()
-
-                break
+                cv2.imshow('image', img3)
+                c = cv2.waitKey(100)
+                if c >= 0:
+                    break
             prev = img
+    cv2.destroyAllWindows()
 
 
 def main():
