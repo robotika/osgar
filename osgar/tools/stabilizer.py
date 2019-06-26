@@ -64,8 +64,11 @@ def stabilize_video(logfile, stream, outfile=None):
 
                 # small_image.copyTo(big_image(cv::Rect(x, y, small_image.cols, small_image.rows)));
                 # https://answers.opencv.org/question/37568/how-to-insert-a-small-size-image-on-to-a-big-image/
-                if offset >= 0:
-                    stable[0:480, offset:offset+640, ] = img2
+                if offset < 0:
+                    offset = 0
+                if offset >= 640:
+                    offset = 640
+                stable[0:480, offset:offset+640, ] = img2
 
                 # TODO hystesis, move the boundary
 
