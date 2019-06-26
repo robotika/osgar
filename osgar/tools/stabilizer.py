@@ -43,11 +43,16 @@ def stabilize_video(logfile, stream, outfile=None):
                 # Sort them in the order of their distance.
                 matches = sorted(matches, key=lambda x: x.distance)
                 print(len(matches))
-                for m in matches[:3]:
+                arr = []
+                for m in matches[:10]:
 #                    print(m.distance, m.imgIdx, m.queryIdx, m.trainIdx)
                     assert m.imgIdx == 0, m.imgIdx
 #                    print(kp1[m.queryIdx].pt, kp2[m.trainIdx].pt)
-                    print([a - b for a, b in zip(kp1[m.queryIdx].pt, kp2[m.trainIdx].pt)])
+                    diff = [a - b for a, b in zip(kp1[m.queryIdx].pt, kp2[m.trainIdx].pt)]
+#                    print(diff)
+                    arr.append(int(diff[0]))
+                median = sorted(arr)[len(arr)//2]
+                print(median, arr)
 
                 # Draw first 10 matches.
                 img3 = img1.copy()
