@@ -23,6 +23,8 @@ def stabilize_video(logfile, stream, outfile=None):
     # https://stackoverflow.com/questions/49971484/opencv-orb-descriptor-typeerror-incorrect-type-of-self-must-be-feature2d-or
     # orb = cv2.ORB()
     orb = cv2.ORB_create()
+    offset = 0
+    stable = np.zeros((480, 1280, 3), np.uint8)
     with LogReader(logfile, only_stream_id=only_stream) as log:
         prev = None
         for timestamp, stream_id, data in log:
@@ -52,13 +54,22 @@ def stabilize_video(logfile, stream, outfile=None):
 #                    print(diff)
                     arr.append(int(diff[0]))
                 median = sorted(arr)[len(arr)//2]
-                print(median, arr)
+                offset += median
+                print(offset, median, arr)
 
                 # Draw first 10 matches.
                 img3 = img1.copy()
                 img3 = cv2.drawMatches(img1, kp1, img2, kp2, matches[:10], flags=2, outImg=img3)
+                print(img3.shape)
 
-                cv2.imshow('image', img3)
+                # small_image.copyTo(big_image(cv::Rect(x, y, small_image.cols, small_image.rows)));
+                # https://answers.opencv.org/question/37568/how-to-insert-a-small-size-image-on-to-a-big-image/
+                if offset >= 0:
+                    stable[0:480, offset:offset+640, ] = img2
+
+                # TODO hystesis, move the boundary
+
+                cv2.imshow('image', stable)
                 c = cv2.waitKey(100)
                 if c >= 0:
                     break
