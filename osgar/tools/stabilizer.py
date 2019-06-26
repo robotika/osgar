@@ -18,13 +18,14 @@ from osgar.logger import LogReader, lookup_stream_id
 from osgar.lib.serialize import deserialize
 
 
-def stabilize_video(logfile, stream, outfile=None):
+def stabilize_video(logfile, stream, outfile=None, fps=None):
     only_stream = lookup_stream_id(logfile, stream)
     # https://stackoverflow.com/questions/49971484/opencv-orb-descriptor-typeerror-incorrect-type-of-self-must-be-feature2d-or
     # orb = cv2.ORB()
     orb = cv2.ORB_create()
     offset = 0
     stable = np.zeros((480, 1280, 3), np.uint8)
+    writer = None
     with LogReader(logfile, only_stream_id=only_stream) as log:
         prev = None
         for timestamp, stream_id, data in log:
@@ -71,12 +72,23 @@ def stabilize_video(logfile, stream, outfile=None):
                 stable[0:480, offset:offset+640, ] = img2
 
                 # TODO hystesis, move the boundary
+                if outfile is not None and writer is None:
+                    height, width = stable.shape[:2]
+                    writer = cv2.VideoWriter(outfile,
+                                             cv2.VideoWriter_fourcc('F', 'M', 'P', '4'),
+                                             fps,
+                                             (width, height))
+
+                if writer:
+                    writer.write(stable)
 
                 cv2.imshow('image', stable)
-                c = cv2.waitKey(100)
+                c = cv2.waitKey(10)
                 if c >= 0:
                     break
             prev = img
+    if writer:
+        writer.release()
     cv2.destroyAllWindows()
 
 
@@ -86,9 +98,11 @@ def main():
     parser = argparse.ArgumentParser(description='Stabilize video in logfile')
     parser.add_argument('logfile', help='recorded log file')
     parser.add_argument('--stream', help='stream ID or name', default='camera.raw')
+    parser.add_argument('--out', help='output filename (.avi)')
+    parser.add_argument('--fps', help='frames per second', type=int, default=10)
     args = parser.parse_args()
 
-    stabilize_video(args.logfile, args.stream)
+    stabilize_video(args.logfile, args.stream, outfile=args.out, fps=args.fps)
 
 
 if __name__ == "__main__":
