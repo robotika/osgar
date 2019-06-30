@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "vesc": {
+          "driver": "vesc",
+          "in": ["can"],
+          "out": ["can"],
+          "init": {}
+      },
+      "can": {
+          "driver": "pcan",
+          "in": ["can"],
+          "out": ["can"],
+          "init": {}
+      }
+    },
+    "links": [["can.can", "vesc.can"],
+              ["vesc.can", "can.can"]]
+  }
+}
