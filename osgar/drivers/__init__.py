@@ -23,5 +23,6 @@ all_drivers = dict(
     rosproxy="osgar.drivers.rosproxy:ROSProxy",
     rosmsg="osgar.drivers.rosmsg:ROSMsgParser",
     lora="osgar.drivers.lora:LoRa",
+    vesc="osgar.drivers.vesc:MotorDriverVESC",
 )
 
