@@ -27,7 +27,8 @@
           "in": ["slot_raw"],
           "out": ["raw"],
           "init": {"port": "/dev/ttyS0", "speed": 115200,
-                   "rtscts":true, "reset":true}
+                   "rtscts":true, "reset":true,
+                   "timeout": 0.001}
       },
       "lidar": {
           "driver": "lidar",
