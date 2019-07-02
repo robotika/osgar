@@ -47,7 +47,7 @@ class PeakCAN:
 
     def slot_raw(self, timestamp, packet):
         arbitration_id, data, flags = packet
-        msg = can.Message(arbitration_id, data, is_extended_id=(flags & IS_EXTENDED_ID_MASK))
+        msg = can.Message(arbitration_id=arbitration_id, data=data, is_extended_id=(flags & IS_EXTENDED_ID_MASK))
         self.canbus.send(msg)  # TODO timeout, locks?!
 
     def run_output(self):
