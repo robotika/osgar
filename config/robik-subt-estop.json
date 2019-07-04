@@ -96,7 +96,7 @@
               ["cortexpilot.orientation", "app.orientation"],
               ["cortexpilot_serial.raw", "cortexpilot.raw"],
               ["cortexpilot.raw", "cortexpilot_serial.raw"],
-              ["cortexpilot.scan", "app.scan"],
+              ["cortexpilot.scan", "app.scan360"],
               ["lidar_usb.raw", "slope_lidar.raw"],
               ["slope_lidar.raw", "lidar_usb.raw"],
               ["cortexpilot.rotation", "app.rot"],

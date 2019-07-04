@@ -95,6 +95,7 @@ class SubTChallenge:
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.is_moving = None  # unknown
         self.scan = None  # I should use class Node instead
+        self.flipped = False  # by default use only front part
         self.stat = defaultdict(int)
         self.voltage = []
         self.artifacts = []
@@ -123,7 +124,7 @@ class SubTChallenge:
         self.artifacts.append((artifact_data, artifact_xyz))
 
     def go_straight(self, how_far):
-        print(self.time, "go_straight %.1f" % how_far, self.last_position)
+        print(self.time, "go_straight %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position)
         start_pose = self.last_position
         if how_far >= 0:
             self.send_speed_cmd(self.max_speed, 0.0)
@@ -151,7 +152,10 @@ class SubTChallenge:
         T = math.pi / 2
         desired_speed = 2.0 * (0.8 - min(T, abs(desired_angular_speed)) / T)
         '''
-        self.send_speed_cmd(desired_speed, desired_angular_speed)
+        if self.flipped:
+            self.send_speed_cmd(-desired_speed, desired_angular_speed)  # ??? angular too??!
+        else:
+            self.send_speed_cmd(desired_speed, desired_angular_speed)
 
     def turn(self, angle, with_stop=True, speed=0.0):
         print(self.time, "turn %.1f" % math.degrees(angle))
@@ -180,16 +184,22 @@ class SubTChallenge:
                 break
         print(self.time, 'stop at', self.time - start_time, self.is_moving)
 
-    def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None):
+    def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None, flipped=False):
+        # make sure that we will start with clean data
+        if flipped:
+            self.scan = None
+            self.flipped = True
+
         start_dist = self.traveled_dist
         start_time = self.sim_time_sec
         while self.sim_time_sec - start_time < timeout.total_seconds():
             try:
-                if self.update() == 'scan':
+                channel = self.update()
+                if (channel == 'scan' and not self.flipped) or (channel == 'scan_back' and self.flipped) or channel == 'scan360':
                     desired_direction = follow_wall_angle(self.scan, radius=radius, right_wall=right_wall)
                     self.go_safely(desired_direction)
                 if dist_limit is not None:
-                    if dist_limit < self.traveled_dist - start_dist:
+                    if dist_limit < abs(self.traveled_dist - start_dist):  # robot can return backward -> abs()
                         print('Distance limit reached! At', self.traveled_dist, self.traveled_dist - start_dist)
                         break
             except Collision:
@@ -212,6 +222,8 @@ class SubTChallenge:
                 self.go_straight(1.5)
                 self.stop()
                 self.collision_detector_enabled = True
+        self.scan = None
+        self.flipped = False
         return self.traveled_dist - start_dist
 
     def return_home(self):
@@ -271,8 +283,22 @@ class SubTChallenge:
                 dist3d = quaternion.rotate_vector([dist, 0, 0], self.orientation)
                 self.xyz_quat = [a+b for a, b in zip(self.xyz_quat, dist3d)]
                 self.bus.publish('pose3d', [self.xyz_quat, self.orientation])
-            elif channel == 'scan':
+            elif channel == 'scan' and not self.flipped:
                 self.scan = data
+                if self.local_planner is not None:
+                    self.local_planner.update(data)
+            elif channel == 'scan_back' and self.flipped:
+                self.scan = data
+                if self.local_planner is not None:
+                    self.local_planner.update(data)
+            elif channel == 'scan360':
+                # reduce original 360 degrees scan to 270 degrees oriented forward or backward
+                index45deg = int(round(len(data)/8))
+                if self.flipped:
+                    mid = len(data)//2
+                    self.scan = (data[mid:]+data[:mid])[index45deg:-index45deg]
+                else:
+                    self.scan = data[index45deg:-index45deg]
                 if self.local_planner is not None:
                     self.local_planner.update(data)
             elif channel == 'rot':
@@ -321,12 +347,15 @@ class SubTChallenge:
 #############################################
     def play_system_track(self):
         print("SubT Challenge Ver1!")
+        allow_virtual_flip = True
         self.go_straight(2.5)  # go to the tunnel entrance
         dist = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall, timeout=self.timeout)
         print("Going HOME")
-        self.turn(math.radians(90), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
-        self.turn(math.radians(90), speed=-0.1)
-        self.follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=2.5*self.timeout, dist_limit=dist + 1)
+        if not allow_virtual_flip:
+            self.turn(math.radians(90), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
+            self.turn(math.radians(90), speed=-0.1)
+        self.follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=2.5*self.timeout, dist_limit=dist+1,
+                flipped=allow_virtual_flip)
         if self.artifacts:
             self.bus.publish('artf_xyz', [[artifact_data, round(x*1000), round(y*1000), round(z*1000)]
                                           for artifact_data, (x, y, z) in self.artifacts])
