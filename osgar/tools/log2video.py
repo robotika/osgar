@@ -19,7 +19,8 @@ from osgar.lib.serialize import deserialize
 
 
 def create_video(logfile, stream, outfile, add_time=False,
-                 start_time_sec=0, end_time_sec=None, fps=25):
+                 start_time_sec=0, end_time_sec=None, fps=25,
+                 flip=False):
     assert outfile.endswith(".avi"), outFilename
     only_stream = lookup_stream_id(logfile, stream)
     with LogReader(logfile, only_stream_id=only_stream) as log:
@@ -27,6 +28,8 @@ def create_video(logfile, stream, outfile, add_time=False,
         for timestamp, stream_id, data in log:
             buf = deserialize(data)
             img = cv2.imdecode(np.fromstring(buf, dtype=np.uint8), 1)
+            if flip:
+                img = cv2.flip(img, 0)
             if writer is None:
                 height, width = img.shape[:2]
                 writer = cv2.VideoWriter(outfile,
@@ -67,10 +70,12 @@ def main():
     parser.add_argument('--end-time-sec', '-e', help='cut video at given time (sec)',
                         type=float, default=None)
     parser.add_argument('--fps', help='frames per second', type=int, default=25)
+    parser.add_argument('--flip', help='horizontal flip', action='store_true')
     args = parser.parse_args()
 
     create_video(args.logfile, args.stream, args.out, add_time=args.display_time,
-                 start_time_sec=args.start_time_sec, end_time_sec=args.end_time_sec, fps=args.fps)
+                 start_time_sec=args.start_time_sec, end_time_sec=args.end_time_sec, fps=args.fps,
+                 flip=args.flip)
 
 
 if __name__ == "__main__":
