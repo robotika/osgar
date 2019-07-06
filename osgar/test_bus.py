@@ -4,7 +4,8 @@ from queue import Queue
 from datetime import timedelta
 
 from osgar.bus import (BusHandler, BusShutdownException,
-                       LogBusHandler, LogBusHandlerInputsOnly)
+                       LogBusHandler, LogBusHandlerInputsOnly,
+                       almost_equal)
 
 from osgar.lib.serialize import serialize, deserialize
 
@@ -137,5 +138,15 @@ class BusHandlerTest(unittest.TestCase):
 
         bus = LogBusHandlerInputsOnly(logger, inputs={})
         bus.sleep(0.1)
+
+    def test_almost_equal(self):
+        self.assertTrue(almost_equal(-0.27335569599868276, -0.2733556959986828))
+        self.assertFalse(almost_equal(-0.27, 0.42))
+        self.assertTrue(almost_equal(
+            [[-0.27335569599868276, 2.625292235055242, -0.14962045778119396], [0.7263869464850868, 0.0064504746910471825, -0.007071867505754647, 0.6873936102882865]], 
+            [[-0.2733556959986828,  2.625292235055242, -0.14962045778119396], [0.7263869464850868, 0.0064504746910471825, -0.007071867505754647, 0.6873936102882865]]
+            ))
+        self.assertFalse(almost_equal([1.23], []))
+        self.assertFalse(almost_equal([-0.27], [0.42]))
 
 # vim: expandtab sw=4 ts=4

@@ -12,6 +12,19 @@ from osgar.lib.serialize import serialize, deserialize
 # restrict replay time from given input
 ASSERT_QUEUE_DELAY = timedelta(seconds=.1)
 
+def almost_equal(data, ref_data):
+    if isinstance(data, float) and isinstance(ref_data, float):
+        return abs(data - ref_data) < 1e-6
+    if isinstance(data, list) and isinstance(ref_data, list):
+        if len(data) != len(ref_data):
+            return False
+        for a, b in zip(data, ref_data):
+            if not(almost_equal(a, b)):
+                return False
+        return True
+    # default - use exact match
+    return data == ref_data
+
 
 class BusShutdownException(Exception):
     pass
@@ -106,7 +119,7 @@ class LogBusHandler:
             if delay > ASSERT_QUEUE_DELAY:
                 print("maximum delay overshot:", delay)
         ref_data = deserialize(bytes_data)
-        assert data == ref_data, (data, ref_data, dt)
+        assert almost_equal(data, ref_data), (data, ref_data, dt)
         return dt
 
     def sleep(self, secs):
