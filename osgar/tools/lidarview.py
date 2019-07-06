@@ -23,7 +23,7 @@ HISTORY_SIZE = 100
 
 g_scale = 30
 g_rotation_offset_rad = 0.0  # set by --rotation (deg)
-
+g_lidar_fov_deg = 270  # controlled by --deg (deg)
 
 def scans_gen(logfile, lidar_name=None, poses_name=None, camera_name=None):
     """
@@ -101,7 +101,7 @@ def scan2xy(pose, scan):
     for i, i_dist in enumerate(scan):
         if i_dist == 0 or i_dist >= 10000:
             continue
-        angle = math.radians(270 * (i / len(scan)) - 135) + heading
+        angle = math.radians(g_lidar_fov_deg * (i / len(scan)) - g_lidar_fov_deg/2) + heading
         dist = i_dist/1000.0
         x, y = dist * math.cos(angle), dist * math.sin(angle)
         pts.append((X + x, Y + y))
@@ -126,7 +126,7 @@ def draw(foreground, pose, scan, poses=[], image=None, callback=None, acc_pts=No
     for i, i_dist in enumerate(scan):
         if i_dist == 0 or i_dist >= 10000:
             continue
-        angle = math.radians(270 * (i / len(scan)) - 135) + heading
+        angle = math.radians(g_lidar_fov_deg * (i / len(scan)) - g_lidar_fov_deg/2) + heading
         dist = i_dist/1000.0
         x, y = dist * math.cos(angle), dist * math.sin(angle)
         pygame.draw.circle(foreground, color, scr(x, y), 3)
@@ -397,7 +397,7 @@ def lidarview(gen, caption_filename, callback=False):
 def main():
     import argparse
     import os.path
-    global g_rotation_offset_rad
+    global g_rotation_offset_rad, g_lidar_fov_deg
 
     parser = argparse.ArgumentParser(description='View lidar scans')
     parser.add_argument('logfile', help='recorded log file')
@@ -416,6 +416,9 @@ def main():
     parser.add_argument('--rotate', help='rotate poses by angle in degrees, offset',
                         type=float, default=0.0)
 
+    parser.add_argument('--deg', help='lidar field of view in degrees',
+                        type=float, default=270)
+
     args = parser.parse_args()
     if not any([args.lidar, args.pose2d, args.pose3d, args.camera]):
         print("Available streams:")
@@ -429,6 +432,7 @@ def main():
 
     filename = os.path.basename(args.logfile)
     g_rotation_offset_rad = math.radians(args.rotate)
+    g_lidar_fov_deg = args.deg
     if args.legacy:
         lidarview(scans_gen_legacy(args.logfile), caption_filename=filename, 
                   callback=callback)
