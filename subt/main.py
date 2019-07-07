@@ -17,7 +17,11 @@ from osgar.lib import quaternion
 from subt.local_planner import LocalPlanner
 
 
+LIMIT_ROLL = math.radians(20)
+LIMIT_PITCH = math.radians(20)
+
 TRACE_STEP = 0.5  # meters in 3D
+
 
 def min_dist(laser_data):
     if len(laser_data) > 0:
@@ -184,7 +188,7 @@ class SubTChallenge:
                 break
         print(self.time, 'stop at', self.time - start_time, self.is_moving)
 
-    def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None, flipped=False):
+    def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None, flipped=False, check_tilt=False):
         # make sure that we will start with clean data
         if flipped:
             self.scan = None
@@ -201,6 +205,11 @@ class SubTChallenge:
                 if dist_limit is not None:
                     if dist_limit < abs(self.traveled_dist - start_dist):  # robot can return backward -> abs()
                         print('Distance limit reached! At', self.traveled_dist, self.traveled_dist - start_dist)
+                        break
+                if check_tilt and self.pitch is not None and self.roll is not None:
+                    if abs(self.pitch) > LIMIT_PITCH or abs(self.roll) > LIMIT_ROLL:
+                        print('Pitch/Roll limit triggered termination: (pitch %.1f roll %.1f)' % 
+                                (math.degrees(self.pitch), math.degrees(self.roll)))
                         break
             except Collision:
                 assert not self.collision_detector_enabled  # collision disables further notification
@@ -349,7 +358,7 @@ class SubTChallenge:
         print("SubT Challenge Ver1!")
         allow_virtual_flip = True
         self.go_straight(2.5)  # go to the tunnel entrance
-        dist = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall, timeout=self.timeout)
+        dist = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall, timeout=self.timeout, check_tilt=True)
         print("Going HOME")
         if not allow_virtual_flip:
             self.turn(math.radians(90), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
