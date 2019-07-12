@@ -98,7 +98,7 @@ class SubTChallenge:
         self.start_pose = None
         self.traveled_dist = 0.0
         self.time = None
-        self.max_speed = 0.3 #0.5  #1.0  # TODO load from config
+        self.max_speed = 2.0 #0.3 #0.5  #1.0  # TODO load from config
         self.max_angular_speed = math.radians(45)
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
@@ -117,7 +117,7 @@ class SubTChallenge:
 
         self.use_right_wall = config.get('right_wall', True)
 
-        self.local_planner = None  # hack LocalPlanner()
+        self.local_planner = LocalPlanner() #None  # hack LocalPlanner()
 
     def send_speed_cmd(self, speed, angular_speed):
         success = self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
@@ -354,7 +354,7 @@ class SubTChallenge:
 
     def play_virtual_track(self):
         print("SubT Challenge Ver2!")
-        self.go_straight(1.0)  # go to the tunnel entrance (used to be 9m)
+        self.go_straight(9.0)  # go to the tunnel entrance (used to be 9m)
         self.collision_detector_enabled = True
         self.follow_wall(radius = 0.9, right_wall=self.use_right_wall,
                             timeout=timedelta(minutes=12, seconds=0))
