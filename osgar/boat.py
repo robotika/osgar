@@ -8,10 +8,6 @@ import time
 import math
 from datetime import timedelta
 
-from osgar.logger import LogWriter, LogReader
-from osgar.lib.config import load as config_load
-from osgar.robot import Robot
-
 from osgar.bus import BusHandler
 
 
@@ -211,7 +207,7 @@ class BoatMarina2:
     def start(self):
         pass
 
-    def play0(self):
+    def run0(self):
         self.bus.publish('move', [999, 998])  # uniq values for test
         for i in range(10):
             time.sleep(1)  # TODO use self.time/wait()
@@ -220,7 +216,7 @@ class BoatMarina2:
         time.sleep(1)  # TODO use self.time/wait() ... it has to pass through
                # TODO it should be confirmed from boat that it if already off
 
-    def play(self):
+    def run(self):
         navigate(self, self._waypoints)
         self.set_desired_speed_raw(1000, 1000)
         self.wait(timedelta(seconds=1))
@@ -248,40 +244,8 @@ class BoatMarina2:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Boat Marina 2.0')
-    subparsers = parser.add_subparsers(help='sub-command help', dest='command')
-    subparsers.required = True
-    parser_run = subparsers.add_parser('run', help='run on real HW')
-    parser_run.add_argument('config', nargs='+', help='configuration file')
-    parser_run.add_argument('--note', help='add description')
-    parser_run.add_argument('--duration', help='run navigation for given number of seconds', type=int)
+    from osgar.launcher import launch
 
-    parser_replay = subparsers.add_parser('replay', help='replay from logfile')
-    parser_replay.add_argument('logfile', help='recorded log file')
-    parser_replay.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
-    parser_replay.add_argument('--config', nargs='+', help='force alternative configuration file')
-    parser_replay.add_argument('--duration', help='run navigation for given number of seconds', type=int)  # TODO parse from cmd line
-    args = parser.parse_args()
-
-    if args.duration is not None:
-        TIMEOUT = timedelta(seconds=args.duration)
-
-    if args.command == 'replay':
-        from replay import replay
-        args.module = 'app'
-        game = replay(args, application=BoatMarina2)
-        game.play()
-
-    elif args.command == 'run':
-        log = LogWriter(prefix='boat-', note=str(sys.argv))
-        config = config_load(*args.config)
-        log.write(0, bytes(str(config), 'ascii'))  # write configuration
-        robot = Robot(config=config['robot'], logger=log, application=BoatMarina2)
-        game = robot.modules['app']  # TODO nicer reference
-        robot.start()
-        game.play()
-        robot.finish()
-    else:
-        assert False, args.command  # unsupported command
+    launch(app=BoatMarina2, description='Boat Marina 2.0', prefix='boat-')
 
 # vim: expandtab sw=4 ts=4
