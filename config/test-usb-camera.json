@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "camera-notebook": {
+          "driver": "usbcam",
+          "in": [],
+          "out": ["jpg"],
+          "init": {
+              "bus": 1, 
+              "port": 5,
+              "sleep": 0.1
+          }
+      },
+      "camera-kayeton": {
+          "driver": "usbcam",
+          "in": [],
+          "out": ["jpg"],
+          "init": {
+              "bus": 1, 
+              "port": 3,
+              "sleep": 0.1
+          }
+      }
+    },
+    "links": []
+  }
+}

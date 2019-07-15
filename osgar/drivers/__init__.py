@@ -19,5 +19,6 @@ all_drivers = dict(
     lordimu="osgar.drivers.lord_imu:LordIMU",
     pcan="osgar.drivers.pcan:PeakCAN",
     kloubak="osgar.drivers.kloubak:RobotKloubak",
+    usbcam="osgar.drivers.usbcam:UsbCam",
 )
 
