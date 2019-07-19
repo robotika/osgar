@@ -35,7 +35,10 @@ class UsbCam:
                 # for more info see https://docs.pupil-labs.com/#jpeg-size-estimation-and-custom-video-backends
                 return
 
-        error = "camera not found on bus %i and port %i" % (bus, port)
+        import pprint
+        error = "camera not found on bus %i and ports %s\n" % (bus, str(ports))
+        error += "avalable cameras:\n"
+        error += pprint.pformat(uvc.device_list())
         self.bus.report_error(error)
         print(error, file=sys.stderr)
 
