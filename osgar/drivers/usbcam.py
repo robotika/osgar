@@ -17,8 +17,8 @@ class UsbCam:
         self.bus = bus
 
         bus = config['bus']
-        port = config['port']
-        # to find proper bus and port number run
+        ports = config['ports']
+        # to find proper bus and ports numbers run
         # python -c "import uvc; from pprint import pprint; pprint(uvc.device_list())"
 
         self.sleep = config.get('sleep', 0.1)
@@ -26,7 +26,7 @@ class UsbCam:
         
         dev_list = uvc.device_list()
         for dev in dev_list:
-            if dev['bus_number'] == bus and dev['bus_ports'][0] == port:
+            if dev['bus_number'] == bus and dev['bus_ports'] == ports:
                 self.cap = uvc.Capture(dev["uid"])
                 self.cap.frame_mode = self.cap.avaible_modes[0]
                 self.cap.bandwidth_factor = 1.2
@@ -56,5 +56,10 @@ class UsbCam:
 
     def request_stop(self):
         self.bus.shutdown()
+
+
+if __name__ == "__main__":
+    from pprint import pprint
+    pprint(uvc.device_list())
 
 # vim: expandtab sw=4 ts=4
