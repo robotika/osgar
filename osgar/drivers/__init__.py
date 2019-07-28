@@ -22,5 +22,6 @@ all_drivers = dict(
     usbcam="osgar.drivers.usbcam:UsbCam",
     rosproxy="osgar.drivers.rosproxy:ROSProxy",
     rosmsg="osgar.drivers.rosmsg:ROSMsgParser",
+    lora="osgar.drivers.lora:LoRa",
 )
 
