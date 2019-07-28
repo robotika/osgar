@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "lora": {
+          "driver": "lora",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {}
+      },
+      "lora_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyUSB0", "speed": 115200}
+      }
+    },
+    "links": [["lora_serial.raw", "lora.raw"],
+              ["lora.raw", "lora_serial.raw"]]
+  }
+}
