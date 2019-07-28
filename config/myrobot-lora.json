@@ -1,0 +1,48 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["emergency_stop", "pose2d"],
+          "out": ["desired_speed"],
+          "init": {
+            "max_speed": 0.5
+          }
+      },
+      "myrobot": {
+          "driver": "myrobot:MyRobot",
+          "in": ["desired_speed"],
+          "out": ["emergency_stop", "pose2d"],
+          "init": {}
+      },
+      "timer": {
+          "driver": "myrobot:MyTimer",
+          "in": [],
+          "out": ["tick"],
+          "init": {
+            "sleep": 0.1
+          }
+      },
+      "lora": {
+          "driver": "lora",
+          "in": ["raw", "pose2d"],
+          "out": ["raw"],
+          "init": {}
+      },
+      "lora_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyUSB0", "speed": 115200}
+      }
+    },
+    "links": [["app.desired_speed", "myrobot.desired_speed"],
+              ["myrobot.emergency_stop", "app.emergency_stop"],
+              ["myrobot.pose2d", "app.pose2d"],
+              ["timer.tick", "myrobot.tick"],
+              ["lora_serial.raw", "lora.raw"],
+              ["lora.raw", "lora_serial.raw"],
+              ["myrobot.pose2d", "lora.pose2d"]]
+  }
+}
