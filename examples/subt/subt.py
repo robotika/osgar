@@ -17,8 +17,6 @@ from osgar.lib import quaternion
 from local_planner import LocalPlanner
 
 
-VIRTUAL_WORLD = True  # TODO more suitable parametrization, real robots now look only for red artifacts
-
 RADIUS = 0.6  # 0.9  # 1.0
 
 # Return with artifact configuration
@@ -98,7 +96,7 @@ class SubTChallenge:
         self.start_pose = None
         self.traveled_dist = 0.0
         self.time = None
-        self.max_speed = 2.0 #0.3 #0.5  #1.0  # TODO load from config
+        self.max_speed = config['max_speed']
         self.max_angular_speed = math.radians(45)
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
@@ -116,8 +114,12 @@ class SubTChallenge:
         self.sim_time_sec = 0
 
         self.use_right_wall = config.get('right_wall', True)
+        self.is_virtual = config.get('virtual_world', False)  # workaround to handle tunnel differences
 
-        self.local_planner = LocalPlanner() #None  # hack LocalPlanner()
+        if self.is_virtual:
+            self.local_planner = LocalPlanner()
+        else:
+            self.local_planner = None
 
     def send_speed_cmd(self, speed, angular_speed):
         success = self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
@@ -255,7 +257,7 @@ class SubTChallenge:
 
             self.time = timestamp
 
-            if not VIRTUAL_WORLD:
+            if not self.is_virtual:
                 self.sim_time_sec = self.time.total_seconds()
 
             self.stat[channel] += 1
@@ -376,7 +378,7 @@ class SubTChallenge:
 #############################################
 
     def play(self):
-        if VIRTUAL_WORLD:
+        if self.is_virtual:
             return self.play_virtual_track()
         else:
             return self.play_system_track()
