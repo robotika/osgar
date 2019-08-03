@@ -10,8 +10,8 @@ class ExploreTest(unittest.TestCase):
 
     def test_tangent_circle(self):
         angle = tangent_circle(dist=2.0, radius=1.0)
-#        self.assertAlmostEqual(angle, math.radians(30))
-        self.assertIsNone(angle)  # too far
+        self.assertAlmostEqual(angle, math.radians(30))
+#        self.assertIsNone(angle)  # too far
 
         angle = tangent_circle(dist=2.0, radius=3.0)
 #        self.assertIsNone(angle)  # no tangent
