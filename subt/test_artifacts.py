@@ -3,7 +3,7 @@ import math
 
 import cv2
 
-from artifacts import count_red, count_white, artf_in_scan
+from subt.artifacts import count_red, count_white, artf_in_scan
 
 
 class ArtifactDetectorTest(unittest.TestCase):
