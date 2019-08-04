@@ -13,6 +13,7 @@ import numpy as np
 from osgar.explore import follow_wall_angle
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.lib import quaternion
+from osgar.lib.virtual_bumper import VirtualBumper
 
 from subt.local_planner import LocalPlanner
 
@@ -91,6 +92,11 @@ class SubTChallenge:
         self.max_angular_speed = math.radians(45)
         self.walldist = config['walldist']
         self.timeout = timedelta(seconds=config['timeout'])
+        self.virtual_bumper_sec = config.get('virtual_bumper_sec')
+        virtual_bumper_sec = config.get('virtual_bumper_sec')
+        self.virtual_bumper = None
+        if virtual_bumper_sec is not None:
+            self.virtual_bumper = VirtualBumper(timedelta(seconds=virtual_bumper_sec))
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
         self.xyz = (0, 0, 0)  # 3D position for mapping artifacts
@@ -116,6 +122,8 @@ class SubTChallenge:
             self.local_planner = None
 
     def send_speed_cmd(self, speed, angular_speed):
+        if self.virtual_bumper is not None:
+            self.virtual_bumper.update_desired_speed(speed, angular_speed)
         success = self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
         # Corresponds to gc.disable() in __main__. See a comment there for more details.
         gc.collect()
@@ -127,15 +135,19 @@ class SubTChallenge:
                 return
         self.artifacts.append((artifact_data, artifact_xyz))
 
-    def go_straight(self, how_far):
+    def go_straight(self, how_far, timeout=None):
         print(self.time, "go_straight %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position)
         start_pose = self.last_position
         if how_far >= 0:
             self.send_speed_cmd(self.max_speed, 0.0)
         else:
             self.send_speed_cmd(-self.max_speed, 0.0)
+        start_time = self.time
         while distance(start_pose, self.last_position) < abs(how_far):
             self.update()
+            if timeout is not None and self.time - start_time > timeout:
+                print("go_straight - TIMEOUT!")
+                break
         self.send_speed_cmd(0.0, 0.0)
 
     def go_safely(self, desired_direction):
@@ -211,6 +223,10 @@ class SubTChallenge:
                         print('Pitch/Roll limit triggered termination: (pitch %.1f roll %.1f)' % 
                                 (math.degrees(self.pitch), math.degrees(self.roll)))
                         break
+                if self.virtual_bumper is not None and self.virtual_bumper.collision():
+                    print("VIRTUAL BUMPER - collision")
+                    self.go_straight(-0.3, timeout=timedelta(seconds=10))
+                    break
             except Collision:
                 assert not self.collision_detector_enabled  # collision disables further notification
                 before_stop = self.xyz
@@ -286,6 +302,8 @@ class SubTChallenge:
                 z += math.sin(self.pitch) * dist
                 self.bus.publish('pose2d', [round(x*1000), round(y*1000),
                                             round(math.degrees(self.yaw)*100)])
+                if self.virtual_bumper is not None:
+                    self.virtual_bumper.update_pose(self.time, pose)  # sim time?!
                 self.xyz = x, y, z
                 self.trace.update_trace(self.xyz)
                 # pose3d
