@@ -12,7 +12,7 @@
           }
       },
       "detector": {
-          "driver": "artifacts:ArtifactDetector",
+          "driver": "subt.artifacts:ArtifactDetector",
           "in": ["image", "scan"],
           "out": ["artf", "dropped"],
           "init": {
@@ -20,7 +20,7 @@
           }
       },
       "reporter": {
-          "driver": "artifacts:ArtifactReporter",
+          "driver": "subt.artifacts:ArtifactReporter",
           "in": ["artf_xyz"],
           "out": [],
           "init": {
