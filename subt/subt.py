@@ -14,7 +14,7 @@ from osgar.explore import follow_wall_angle
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.lib import quaternion
 
-from local_planner import LocalPlanner
+from subt.local_planner import LocalPlanner
 
 
 RADIUS = 0.6  # 0.9  # 1.0
