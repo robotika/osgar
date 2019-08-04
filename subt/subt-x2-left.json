@@ -14,7 +14,7 @@
           }
       },
       "detector": {
-          "driver": "artifacts:ArtifactDetector",
+          "driver": "subt.artifacts:ArtifactDetector",
           "in": ["image", "scan"],
           "out": ["artf", "dropped"],
           "init": {
@@ -22,7 +22,7 @@
           }
       },
       "reporter": {
-          "driver": "artifacts:ArtifactReporter",
+          "driver": "subt.artifacts:ArtifactReporter",
           "in": ["artf_xyz"],
           "out": [],
           "init": {
@@ -46,13 +46,13 @@
                         ["/X2L/imu/data", "std_msgs/Imu", "imu_data"],
                         ["/X2L/front_scan", "sensor_msgs/LaserScan", "laser_data"],
                         ["/X2L/camera_front/image_raw/compressed", "sensor_msgs/CompressedImage", "image_data"],
-                        ["/X2L/x2_velocity_controller/odom", "nav_msgs/Odometry", "odom_data"]
+                        ["/X2L/odom", "nav_msgs/Odometry", "odom_data"]
                     ]
 
           }
       },
       "timer": {
-          "driver": "mytimer:MyTimer",
+          "driver": "subt.mytimer:MyTimer",
           "in": [],
           "out": ["tick"],
           "init": {
