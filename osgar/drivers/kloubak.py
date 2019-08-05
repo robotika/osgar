@@ -11,8 +11,15 @@ from osgar.node import Node
 from osgar.bus import BusShutdownException
 
 WHEEL_DISTANCE = 0.475  # m
-VESC_REPORT_FREQ = 100  # Hz
+CENTER_AXLE_DISTANCE = 0.35  # distance from potentiometer
+VESC_REPORT_FREQ = 20  # was 100  # Hz
 ENC_SCALE = 0.25 * math.pi / (4 * 3 * 60 * VESC_REPORT_FREQ)  # scale 4x found experimentally
+
+AD_CENTER = 8128
+AD_MAX_DEG = 70  # not calibrated
+AD_RANGE = 4000  # not calibrated
+AD_HW_LIMIT_LEFT = 12480  # corresponds to circle 37cm of touching left wheels
+AD_HW_LIMIT_RIGHT = 3584  # circle 40cm diameter, touching right wheels
 
 CAN_ID_BUTTONS = 0x1
 CAN_ID_VESC_FRONT_R = 0x91
@@ -60,6 +67,41 @@ def compute_desired_erpm(desired_speed, desired_angular_speed):
     return int(round(left)), int(round(right))
 
 
+def compute_desired_angle(desired_speed, desired_angular_speed):
+    # The angle is computed from triangle, where one
+    # side has length = radius (computed from speed and angular
+    # speed) and the far side is half of CENTER_AXLE_DISTANCE.
+    # The Kloubak part is perpendicular to the turning center.
+#    print(desired_speed, desired_angular_speed)
+    if abs(desired_angular_speed) < 0.000001:
+        return 0.0
+    radius = desired_speed/desired_angular_speed
+#    print(radius)
+    if abs(2 * radius) > CENTER_AXLE_DISTANCE:
+        return 2 * math.asin((CENTER_AXLE_DISTANCE/2) / radius)
+    return math.pi if radius > 0 else -math.pi
+
+
+def joint_rad(analog):
+    if analog is None:
+        return None
+    return math.radians(AD_MAX_DEG * (analog - AD_CENTER)/AD_RANGE)
+
+
+def joint_deg(analog):
+    ret = joint_rad(analog)
+    if ret is None:
+        return None
+    return math.degrees(ret)
+
+
+def compute_rear(speed, angular_speed, joint_angle):
+    ca, sa = math.cos(joint_angle), math.sin(joint_angle)
+    x = ca * speed + sa * angular_speed * CENTER_AXLE_DISTANCE
+    y = -sa * speed + ca * angular_speed * CENTER_AXLE_DISTANCE
+    return x, -y
+
+
 class RobotKloubak(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
@@ -84,6 +126,7 @@ class RobotKloubak(Node):
         self.join_debug_arr = []
         self.count = [0, 0, 0, 0]
         self.count_arr = []
+        self.debug_odo = []
 
     def send_pose(self):
         x, y, heading = self.pose
@@ -119,14 +162,14 @@ class RobotKloubak(Node):
         if self.verbose:
             self.count_arr.append([self.time.total_seconds()] + self.count)
 
-    def update_pose(self):
+    def compute_pose(self, left, right):
         """Update internal pose with 'dt' step"""
-        if self.last_encoders_front_left is None or self.last_encoders_front_right is None:
-            return False
+        if left is None or right is None:
+            return False, None, None
         x, y, heading = self.pose
 
-        metricL = ENC_SCALE * self.last_encoders_front_left  # dt is already part of ENC_SCALE
-        metricR = ENC_SCALE * self.last_encoders_front_right
+        metricL = ENC_SCALE * left  # dt is already part of ENC_SCALE
+        metricR = ENC_SCALE * right
 
         dist = (metricL + metricR)/2.0
         angle = (metricR - metricL)/WHEEL_DISTANCE
@@ -143,8 +186,24 @@ class RobotKloubak(Node):
             x += -r * math.sin(heading) + r * math.sin(heading + angle)
             y += +r * math.cos(heading) - r * math.cos(heading + angle)
             heading += angle # not normalized
-        self.pose = (x, y, heading)
-        return True
+        return True, (x, y, heading), (dist, angle)
+
+    def update_pose(self):
+        ret, pose, motion = self.compute_pose(self.last_encoders_front_left, self.last_encoders_front_right)
+        if ret:
+            self.pose = pose
+        ret2, pose2, motion_rear = self.compute_pose(self.last_encoders_rear_left, self.last_encoders_rear_right)
+        if self.verbose and ret and ret2 and self.last_join_angle is not None:
+#            self.debug_odo.append((self.time.total_seconds(), motion[0], motion_rear[0]))
+#            self.debug_odo.append((self.time.total_seconds(), motion[1], motion_rear[1]))
+#            self.debug_odo.append((self.time.total_seconds(), motion[0], motion[1],
+#                                   motion_rear[0], motion_rear[1],
+#                                   joint_deg(self.last_join_angle)))
+            estimate = compute_rear(motion[0], motion[1], joint_rad(self.last_join_angle))
+#            self.debug_odo.append((self.time.total_seconds(), motion[0], motion_rear[0], estimate[0]))
+#            self.debug_odo.append((self.time.total_seconds(), motion[1], motion_rear[1], estimate[1]))
+            self.debug_odo.append((self.time.total_seconds(), motion_rear[1], estimate[1]))
+        return ret
 
     def process_packet(self, packet, verbose=False):
         if len(packet) >= 2:
@@ -192,7 +251,28 @@ class RobotKloubak(Node):
                     self.last_encoders_front_left, self.last_encoders_front_right,
                     self.last_encoders_rear_left, self.last_encoders_rear_right))
                 self.join_debug_arr.append(self.last_join_angle)
-            if self.desired_speed > 0:
+
+            rear_drive = False  # True  # experimental
+            if rear_drive and self.desired_speed > 0:
+                # control the joint angle and the desired speed
+                self.publish('can', CAN_packet(0x11, stop))  # right front
+                self.publish('can', CAN_packet(0x12, stop))  # left front
+
+                if self.last_join_angle is not None:
+                    desired_angle = compute_desired_angle(self.desired_speed, self.desired_angular_speed)
+                    angle = joint_rad(self.last_join_angle)
+                    diff = abs(desired_angle - angle)
+                    speed = self.desired_speed * (1 - diff/math.radians(AD_MAX_DEG))
+
+                    angular_speed = desired_angle - angle  # i.e. in 1s it should be the same
+                    limit_l, limit_r = compute_desired_erpm(speed, -angular_speed)  # mirror flip (rear)
+
+                if self.last_encoders_rear_right is not None:
+                    self.publish('can', CAN_packet(0x33, list(struct.pack('>i', limit_r))))
+                if self.last_encoders_rear_left is not None:
+                    self.publish('can', CAN_packet(0x34, list(struct.pack('>i', limit_l))))
+
+            elif self.desired_speed > 0:
                 if self.last_encoders_front_right is not None:
                     self.publish('can', CAN_packet(0x31, list(struct.pack('>i', limit_r))))
                 if self.last_encoders_front_left is not None:
@@ -241,8 +321,10 @@ class RobotKloubak(Node):
         """
         Debug - draw encoders
         """
-#        draw(self.enc_debug_arr, self.join_debug_arr)
+        draw(self.enc_debug_arr, self.join_debug_arr)
 #        print(self.count_arr)
-        draw_enc_stat(self.count_arr)
+        print(self.count_arr[-1])
+#        draw_enc_stat(self.count_arr)
+#        draw_enc_stat(self.debug_odo)
 
 # vim: expandtab sw=4 ts=4
