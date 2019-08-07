@@ -90,7 +90,7 @@ def fish2perspective(images, K, D, DIM):
         cv2.imshow('a', undistorted_img)
         print(fname)
         if cv2.waitKey(0) == 27:
-            sys.exit()
+            return
 
 
 def main():
