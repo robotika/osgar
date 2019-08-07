@@ -10,14 +10,15 @@ from .canserial import CAN_packet
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 
-WHEEL_DISTANCE = 0.475  # m
-CENTER_AXLE_DISTANCE = 0.35  # distance from potentiometer
+#WHEEL_DISTANCE = 0.475  # m
+WHEEL_DISTANCE = 0.496  # m K2
+CENTER_AXLE_DISTANCE = 0.348  # distance from potentiometer
 VESC_REPORT_FREQ = 20  # was 100  # Hz
 ENC_SCALE = 0.25 * math.pi / (4 * 3 * 60 * VESC_REPORT_FREQ)  # scale 4x found experimentally
 
-AD_CENTER = 8128
-AD_MAX_DEG = 70  # not calibrated
-AD_RANGE = 4000  # not calibrated
+AD_CENTER = 404 # K2
+AD_MAX_DEG = 79  # K2
+AD_RANGE = 322  # K2
 AD_HW_LIMIT_LEFT = 12480  # corresponds to circle 37cm of touching left wheels
 AD_HW_LIMIT_RIGHT = 3584  # circle 40cm diameter, touching right wheels
 
@@ -85,7 +86,7 @@ def compute_desired_angle(desired_speed, desired_angular_speed):
 def joint_rad(analog):
     if analog is None:
         return None
-    return math.radians(AD_MAX_DEG * (analog - AD_CENTER)/AD_RANGE)
+    return math.radians(AD_MAX_DEG * ( AD_CENTER - analog )/AD_RANGE)
 
 
 def joint_deg(analog):
