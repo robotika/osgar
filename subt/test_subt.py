@@ -3,7 +3,7 @@ import math
 
 import cv2
 
-from subt import Trace
+from subt.main import Trace
 
 
 class SubTChallengeTest(unittest.TestCase):
