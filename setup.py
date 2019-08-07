@@ -20,7 +20,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/robotika/osgar",
     python_requires=">=3.5",
-    packages=['osgar', 'osgar.drivers', 'osgar.lib', 'osgar.tools'],
+    packages=['osgar', 'osgar.drivers', 'osgar.lib', 'osgar.tools', 'subt'],
     package_data={
         '': ['config/*.json'],
     },
@@ -31,6 +31,7 @@ setuptools.setup(
             'log2pcap = osgar.tools.log2pcap:main [tools]',
             'logger = osgar.logger:main',
             'record = osgar.record:main',
+            'subt = subt.main:main',
         ],
     },
     classifiers=[
