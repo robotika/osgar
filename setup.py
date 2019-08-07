@@ -30,6 +30,7 @@ setuptools.setup(
             'log2video = osgar.tools.log2video:main [tools]',
             'log2pcap = osgar.tools.log2pcap:main [tools]',
             'logger = osgar.logger:main',
+            'record = osgar.record:main',
         ],
     },
     classifiers=[
