@@ -19,12 +19,12 @@ class KloubakTest(unittest.TestCase):
         # left wheel should stay and only right one turn, say 180deg/sec
         left, right = compute_desired_erpm(math.pi * wd / 2, math.pi)
         self.assertEqual(left, 0)
-        self.assertEqual(right, 1368)
+        self.assertEqual(right, 1428)
 
         # rotate left with left moving the half the speed of right
         # left should be "wd", right "2*wd"
         left, right = compute_desired_erpm((wd/2 + wd)/2, 0.5)
-        self.assertEqual(left, round(right / 2))
+        self.assertAlmostEqual(left, right / 2, 0)
 
         # backup 0.5m/s
         left, right = compute_desired_erpm(-0.5, 0.0)
