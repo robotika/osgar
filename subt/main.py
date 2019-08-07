@@ -393,7 +393,7 @@ class SubTChallenge:
         pass
 
 
-if __name__ == "__main__":
+def main():
     import argparse
     from osgar.lib.config import load as config_load
     from osgar.record import Recorder
@@ -434,5 +434,9 @@ if __name__ == "__main__":
         robot.start()
         game.play()
         robot.finish()
+
+
+if __name__ == "__main__":
+    main()
 
 # vim: expandtab sw=4 ts=4
