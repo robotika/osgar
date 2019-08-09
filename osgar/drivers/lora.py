@@ -59,6 +59,7 @@ class LoRa(Node):
         self.raw = b''  # should be defined by Node
         self.last_transmit = None
         self.recent_packets = []
+        self.verbose = False
 
     def send_data(self, data):
         self.last_transmit = self.publish('raw', data + b'\n')
@@ -68,14 +69,16 @@ class LoRa(Node):
         self.recent_packets = []
         channel = super().update()  # define self.time
         if channel == 'raw':
-            print(self.time, "update", channel, self.raw)
+            if self.verbose:
+                print(self.time, "update", channel, self.raw)
 
             self.buf, packet = split_lora_buffer(self.buf + self.raw)
             while len(packet) > 0:
                 self.recent_packets.append(packet)
                 addr, data = parse_lora_packet(packet)
                 if addr is not None and self.device_id is not None and self.device_id not in addr:
-                    print('re-transmit')
+                    if self.verbose:
+                        print('re-transmit')
                     self.send_data(packet.strip())  # re-transmit data from other robots
                 self.buf, packet = split_lora_buffer(self.buf)
 
