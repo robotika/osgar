@@ -17,21 +17,7 @@ from osgar.lib import quaternion
 from subt.local_planner import LocalPlanner
 
 
-RADIUS = 0.6  # 0.9  # 1.0
-
-# Return with artifact configuration
-#SEARCH_TIME_BEGIN = timedelta(minutes=1)
-#SEARCH_TIME_END = timedelta(minutes=5)
-
-# No artifacts configuration
-SEARCH_TIME_BEGIN = timedelta(minutes=4)
-SEARCH_TIME_END = timedelta(minutes=4)
-
-RETURN_TIMEOUT = SEARCH_TIME_END + timedelta(minutes=10)  # ??
-
-
 TRACE_STEP = 0.5  # meters in 3D
-
 
 def min_dist(laser_data):
     if len(laser_data) > 0:
@@ -43,6 +29,7 @@ def min_dist(laser_data):
 
 def distance(pose1, pose2):
     return math.hypot(pose1[0] - pose2[0], pose1[1] - pose2[1])
+
 
 def distance3D(xyz1, xyz2, weights=[1.0, 1.0, 1.0]):
     return math.sqrt(sum([w * (a-b)**2 for a, b, w in zip(xyz1, xyz2, weights)]))
@@ -98,6 +85,8 @@ class SubTChallenge:
         self.time = None
         self.max_speed = config['max_speed']
         self.max_angular_speed = math.radians(45)
+        self.walldist = config['walldist']
+        self.timeout = timedelta(seconds=config['timeout'])
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
         self.xyz = (0, 0, 0)  # 3D position for mapping artifacts
@@ -113,7 +102,7 @@ class SubTChallenge:
         self.collision_detector_enabled = False
         self.sim_time_sec = 0
 
-        self.use_right_wall = config.get('right_wall', True)
+        self.use_right_wall = config['right_wall']
         self.is_virtual = config.get('virtual_world', False)  # workaround to handle tunnel differences
 
         if self.is_virtual:
@@ -191,12 +180,9 @@ class SubTChallenge:
                 break
         print(self.time, 'stop at', self.time - start_time, self.is_moving)
 
-    def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None, stop_on_artf_count=None,
-            search_since=None):
+    def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None):
         start_dist = self.traveled_dist
         start_time = self.sim_time_sec
-        desired_speed = 1.0
-        artf_count_before_start = 0
         while self.sim_time_sec - start_time < timeout.total_seconds():
             try:
                 if self.update() == 'scan':
@@ -206,10 +192,6 @@ class SubTChallenge:
                     if dist_limit < self.traveled_dist - start_dist:
                         print('Distance limit reached! At', self.traveled_dist, self.traveled_dist - start_dist)
                         break
-                if search_since is not None and self.sim_time_sec < search_since.total_seconds():
-                    artf_count_before_start = len(self.artifacts)
-                if stop_on_artf_count is not None and stop_on_artf_count + artf_count_before_start <= len(self.artifacts):
-                    break
             except Collision:
                 assert not self.collision_detector_enabled  # collision disables further notification
                 before_stop = self.xyz
@@ -340,13 +322,11 @@ class SubTChallenge:
     def play_system_track(self):
         print("SubT Challenge Ver1!")
         self.go_straight(2.5)  # go to the tunnel entrance
-        dist = self.follow_wall(radius=RADIUS, right_wall=self.use_right_wall, stop_on_artf_count=1,
-                                search_since=SEARCH_TIME_BEGIN,
-                                timeout=SEARCH_TIME_END)
+        dist = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall, timeout=self.timeout)
         print("Going HOME")
         self.turn(math.radians(90), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
         self.turn(math.radians(90), speed=-0.1)
-        self.follow_wall(radius=RADIUS, right_wall=not self.use_right_wall, timeout=RETURN_TIMEOUT, dist_limit=dist+1)
+        self.follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=2.5*self.timeout, dist_limit=dist + 1)
         if self.artifacts:
             self.bus.publish('artf_xyz', [[artifact_data, round(x*1000), round(y*1000), round(z*1000)]
                                           for artifact_data, (x, y, z) in self.artifacts])
@@ -405,6 +385,11 @@ def main():
     parser_run = subparsers.add_parser('run', help='run on real HW')
     parser_run.add_argument('config', nargs='+', help='configuration file')
     parser_run.add_argument('--note', help='add description')
+    parser_run.add_argument('--walldist', help='distance for wall following (default: %(default)sm)', default=1.0, type=float)
+    parser_run.add_argument('--side', help='which side to follow', choices=['left', 'right'], required=True)
+    parser_run.add_argument('--speed', help='maximum speed (default: from config)', type=float)
+    parser_run.add_argument('--timeout', help='seconds of exploring before going home (default: %(default)s)',
+                            type=int, default=10*60)
 
     parser_replay = subparsers.add_parser('replay', help='replay from logfile')
     parser_replay.add_argument('logfile', help='recorded log file')
@@ -428,6 +413,14 @@ def main():
         prefix = os.path.basename(args.config[0]).split('.')[0] + '-'
         log = LogWriter(prefix=prefix, note=str(sys.argv))
         config = config_load(*args.config)
+
+        # apply overrides from command line
+        config['robot']['modules']['app']['init']['walldist'] = args.walldist
+        config['robot']['modules']['app']['init']['right_wall'] = args.side == 'right'
+        config['robot']['modules']['app']['init']['timeout'] = args.timeout
+        if args.speed is not None:
+            config['robot']['modules']['app']['init']['max_speed'] = args.speed
+
         log.write(0, bytes(str(config), 'ascii'))  # write configuration
         robot = Recorder(config=config['robot'], logger=log, application=SubTChallenge)
         game = robot.modules['app']  # TODO nicer reference
