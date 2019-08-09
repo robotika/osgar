@@ -40,7 +40,7 @@
             "subscribe": [
                         ["/X2/imu/data", "std_msgs/Imu", "imu_data"],
                         ["/X2/front_scan", "sensor_msgs/LaserScan", "laser_data"],
-                        ["/X2/camera_front/image_raw/compressed", "sensor_msgs/CompressedImage", "image_data"],
+                        ["/X2/front/image_raw/compressed", "sensor_msgs/CompressedImage", "image_data"],
                         ["/X2/odom", "nav_msgs/Odometry", "odom_data"]
                     ]
 
