@@ -11,7 +11,7 @@
           }
       },
       "detector": {
-          "driver": "artifacts:ArtifactDetector",
+          "driver": "subt.artifacts:ArtifactDetector",
           "in": ["image", "scan"],
           "out": ["artf", "dropped"],
           "init": {
@@ -19,7 +19,7 @@
           }
       },
       "reporter": {
-          "driver": "artifacts:ArtifactReporter",
+          "driver": "subt.artifacts:ArtifactReporter",
           "in": ["artf_xyz"],
           "out": [],
           "init": {
@@ -27,24 +27,39 @@
           }
       },
       "cortexpilot": {
-          "driver": "osgar.drivers.cortexpilot:Cortexpilot",
+          "driver": "cortexpilot",
           "in": ["raw", "desired_speed"],
           "out": ["raw", "encoders", "emergency_stop", "pose2d", "scan", "orientation", "rotation", "voltage"],
           "init": {}
       },
-      "serial": {
+      "cortexpilot_serial": {
           "driver": "serial",
           "in": ["raw"],
           "out": ["raw"],
           "init": {"port": "/dev/ttyACM0", "speed": 115200}
       },
-      "camera": {
-          "driver": "osgar.drivers.opencv:LogOpenCVCamera",
+      "camera_orange": {
+          "driver": "opencv",
           "in": [],
           "out": ["raw"],
           "init": {
-              "port": 0,
-              "sleep": 0.25
+              "port": "/dev/camera_orange",
+              "sleep": 0.25,
+              "model": "fisheye",
+              "K" : [],
+              "D" : []
+          }
+      },
+      "camera_green": {
+          "driver": "opencv",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+              "port": "/dev/camera_green",
+              "sleep": 0.25,
+              "model": "fisheye",
+              "K": [[447.3961204790496, 0.0, 665.325170897681], [0.0, 447.8560744473192, 393.45461818909104], [0.0, 0.0, 1.0]],
+              "D": [[-0.010466264497355346], [-0.0079365073509699], [0.004351357276495163], [-0.0012964835752230174]]
           }
       },
       "slope_lidar": {
@@ -60,23 +75,37 @@
           "in": [],
           "out": ["raw"],
           "init": {}
+      },
+      "estop": {
+          "driver": "subt.estop:EStop",
+          "in": ["raw"],
+          "out": ["raw", "emergency_stop"],
+          "init": {}
+      },
+      "estop_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/estop", "speed": 9600}
       }
     },
     "links": [["app.desired_speed", "cortexpilot.desired_speed"],
               ["cortexpilot.pose2d", "app.pose2d"],
               ["cortexpilot.voltage", "app.voltage"],
               ["cortexpilot.emergency_stop", "app.emergency_stop"],
-	      ["cortexpilot.orientation", "app.orientation"],
-              ["serial.raw", "cortexpilot.raw"], 
-              ["cortexpilot.raw", "serial.raw"],
+              ["cortexpilot.orientation", "app.orientation"],
+              ["cortexpilot_serial.raw", "cortexpilot.raw"],
+              ["cortexpilot.raw", "cortexpilot_serial.raw"],
               ["cortexpilot.scan", "app.scan"],
               ["lidar_usb.raw", "slope_lidar.raw"],
               ["slope_lidar.raw", "lidar_usb.raw"],
               ["cortexpilot.rotation", "app.rot"],
-              ["camera.raw", "detector.image"],
+              ["camera_orange.raw", "detector.image"],
               ["cortexpilot.scan", "detector.scan"],
               ["detector.artf", "app.artf"],
-              ["app.artf_xyz", "reporter.artf_xyz"]
+              ["app.artf_xyz", "reporter.artf_xyz"],
+              ["estop_serial.raw", "estop.raw"],
+              ["estop.raw", "estop_serial.raw"]
     ]
   }
 }

@@ -24,5 +24,6 @@ all_drivers = dict(
     rosmsg="osgar.drivers.rosmsg:ROSMsgParser",
     lora="osgar.drivers.lora:LoRa",
     vesc="osgar.drivers.vesc:MotorDriverVESC",
+    opencv="osgar.drivers.opencv:LogOpenCVCamera",
 )
 
