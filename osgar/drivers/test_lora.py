@@ -58,4 +58,17 @@ class LoRaTest(unittest.TestCase):
         c.join()
         self.assertEqual(c.device_id, 4)
 
+    def test_3rd_party_packet(self):
+        # there are internal debug messages and also 3rd party packets, which we definetely
+        # do not want to re-transmmit and process
+        # In particular there was a bug that missing '|' generated empty addr list
+        self.assertIsNone(parse_lora_packet(b'dhcps: send_off')[0])
+
+        self.assertIsNone(parse_lora_packet(b'0|data')[0])
+        self.assertIsNone(parse_lora_packet(b'6|data')[0])
+        self.assertIsNone(parse_lora_packet(b'42|data')[0])
+
+        # validate all addresses in chain
+        self.assertIsNone(parse_lora_packet(b'4|6|data')[0])
+
 # vim: expandtab sw=4 ts=4

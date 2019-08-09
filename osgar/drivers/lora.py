@@ -26,6 +26,7 @@ from osgar.node import Node
 from osgar.bus import BusShutdownException
 
 ALIVE_MESSAGE = b'alive'
+ALLOWED_DEVICE_IDS = [1, 2, 3, 4, 5]
 
 
 def parse_lora_packet(packet):
@@ -37,10 +38,13 @@ def parse_lora_packet(packet):
     """
     s = packet.split(b'|')
     try:
-        return [int(x) for x in s[:-1]], s[-1].strip()
+        addr, data = [int(x) for x in s[:-1]], s[-1].strip()
     except ValueError:
-        print('Invalid LoRa packet:', packet)
         return None, packet
+
+    if len(addr) < 1 or not min([a in ALLOWED_DEVICE_IDS for a in addr]):
+        return None, packet
+    return addr, data
 
 
 def split_lora_buffer(buf):
