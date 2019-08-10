@@ -311,7 +311,7 @@ class SubTChallenge:
                 if self.local_planner is not None:
                     self.local_planner.update(data)
             elif channel == 'rot':
-                self.yaw, self.pitch, self.roll = [math.radians(x/100) for x in data]
+                self.yaw, self.pitch, self.roll = [normalizeAnglePIPI(math.radians(x/100)) for x in data]
             elif channel == 'orientation':
                 self.orientation = data
             elif channel == 'sim_time_sec':
