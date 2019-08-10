@@ -80,12 +80,12 @@ def record(config_filename, log_prefix, duration_sec=None, application=None):
 
 def main():
     parser = argparse.ArgumentParser(description='Record run on real HW with given configuration')
-    parser.add_argument('config', help='configuration file')
+    parser.add_argument('config', nargs='+', help='configuration file')
     parser.add_argument('--note', help='add description')
     parser.add_argument('--duration', help='recording duration (sec), default infinite', type=float)
     args = parser.parse_args()
 
-    prefix = os.path.basename(args.config).split('.')[0] + '-'
+    prefix = os.path.basename(args.config[0]).split('.')[0] + '-'
     record(args.config, log_prefix=prefix, duration_sec=args.duration)
 
 if __name__ == "__main__":
