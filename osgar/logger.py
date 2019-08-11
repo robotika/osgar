@@ -34,7 +34,8 @@ import struct
 import os
 import logging
 import time
-from threading import RLock
+import threading
+import queue
 from ast import literal_eval
 import mmap
 
@@ -45,9 +46,17 @@ ENV_OSGAR_LOGS = 'OSGAR_LOGS'
 TIMESTAMP_OVERFLOW_STEP = (1 << 32)  # in microseconds resolution
 TIMESTAMP_MASK = TIMESTAMP_OVERFLOW_STEP - 1
 
+
+def writer(filepath, input):
+    with open(filepath, 'wb') as f:
+        for data in iter(input.get, 'STOP'):
+            f.write(data)
+            f.flush()
+
+
 class LogWriter:
     def __init__(self, prefix='naio', note=''):
-        self.lock = RLock()
+        self.lock = threading.RLock()
         self.start_time = datetime.datetime.utcnow()
         self.filename = prefix + self.start_time.strftime("%y%m%d_%H%M%S.log")
         if ENV_OSGAR_LOGS in os.environ:
@@ -55,16 +64,20 @@ class LogWriter:
             self.filename = os.path.join(os.environ[ENV_OSGAR_LOGS], self.filename)
         else:
             logging.warning('Environment variable %s is not set - using working directory' % ENV_OSGAR_LOGS)
-        self.f = open(self.filename, 'wb')
-        self.f.write(b'Pyr\x00')
+
+        self.write_queue = queue.Queue()
+        self.write_process = threading.Thread(target=writer, args=(self.filename, self.write_queue))
+
+        self.write_queue.put(b'Pyr\x00')
 
         t = self.start_time
-        self.f.write(struct.pack('HBBBBBI', t.year, t.month, t.day,
-                t.hour, t.minute, t.second, t.microsecond))
-        self.f.flush()
+        self.write_queue.put(struct.pack('HBBBBBI', t.year, t.month, t.day,
+                            t.hour, t.minute, t.second, t.microsecond))
+
         if len(note) > 0:
             self.write(stream_id=INFO_STREAM_ID, data=bytes(note, encoding='utf-8'))
         self.names = []
+        self.write_process.start()
 
     def register(self, name):
         with self.lock:
@@ -81,19 +94,16 @@ class LogWriter:
             time_frac = (dt.seconds * 1000000 + dt.microseconds) & TIMESTAMP_MASK
             index = 0
             while index + 0xFFFF <= len(bytes_data):
-                self.f.write(struct.pack('IHH', time_frac,
-                             stream_id, 0xFFFF))
-                self.f.write(bytes_data[index:index + 0xFFFF])
+                self.write_queue.put(struct.pack('IHH', time_frac, stream_id, 0xFFFF))
+                self.write_queue.put(bytes_data[index:index + 0xFFFF])
                 index += 0xFFFF
-            self.f.write(struct.pack('IHH', time_frac,
-                         stream_id, len(bytes_data) - index))
-            self.f.write(bytes_data[index:])
-            self.f.flush()
+            self.write_queue.put(struct.pack('IHH', time_frac, stream_id, len(bytes_data) - index))
+            self.write_queue.put(bytes_data[index:])
         return dt
 
     def close(self):
-        self.f.close()
-        self.f = None
+        self.write_queue.put('STOP')
+        self.write_process.join()
 
 
     # context manager functions
