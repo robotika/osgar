@@ -7,6 +7,8 @@ from datetime import timedelta
 from ast import literal_eval
 from collections import defaultdict
 
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "1"
 import pygame
 from pygame.locals import *
 
