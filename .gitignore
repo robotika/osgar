@@ -7,3 +7,5 @@ __pycache__/
 # pycharm dir
 .idea
 
+# created when using `pip install -e .`
+osgar.egg-info/
