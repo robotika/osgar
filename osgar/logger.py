@@ -38,6 +38,8 @@ import threading
 import multiprocessing as mp
 from ast import literal_eval
 import mmap
+import sys
+import signal
 
 
 INFO_STREAM_ID = 0
@@ -49,11 +51,20 @@ TIMESTAMP_MASK = TIMESTAMP_OVERFLOW_STEP - 1
 
 def writer(filepath, input):
     print("LogWriter task started.")
+    sys.stdout.flush()
+    signal.signal(signal.SIGINT, lambda sig, frame: print("LogWriter task SIGINT received - ignoring"))
     with open(filepath, 'wb') as f:
-        for data in iter(input.get, 'STOP'):
-            f.write(data)
-            f.flush()
-    print("LogWriter finished.")
+        try:
+            for data in iter(input.get, 'STOP'):
+                f.write(data)
+                f.flush()
+            sys.stdout.write("got STOP!\n")
+            sys.stdout.flush()
+        except KeyboardInterrupt:
+            print("LogWriter task caught KeyboardInterrupt.")
+            sys.stdout.flush()
+    print("LogWriter task finished.")
+    sys.stdout.flush()
 
 
 class LogWriter:
@@ -104,8 +115,10 @@ class LogWriter:
         return dt
 
     def close(self):
+        print("LogWriter.close()...")
         self.write_queue.put('STOP')
         self.write_process.join()
+        print("LogWriter.close() done.")
 
 
     # context manager functions
@@ -113,7 +126,10 @@ class LogWriter:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.stdout.write("LogWriter.__exit__...\n")
+        sys.stdout.flush()
         self.close()
+        sys.stdout.write("LogWriter.__exit__ done.\n")
 
 
 class LogReader:
