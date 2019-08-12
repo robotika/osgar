@@ -35,7 +35,7 @@ import os
 import logging
 import time
 import threading
-import queue
+import multiprocessing as mp
 from ast import literal_eval
 import mmap
 
@@ -65,8 +65,8 @@ class LogWriter:
         else:
             logging.warning('Environment variable %s is not set - using working directory' % ENV_OSGAR_LOGS)
 
-        self.write_queue = queue.Queue()
-        self.write_process = threading.Thread(target=writer, args=(self.filename, self.write_queue))
+        self.write_queue = mp.Queue()
+        self.write_process = mp.Process(target=writer, args=(self.filename, self.write_queue))
 
         self.write_queue.put(b'Pyr\x00')
 
