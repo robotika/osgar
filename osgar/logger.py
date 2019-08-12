@@ -48,10 +48,12 @@ TIMESTAMP_MASK = TIMESTAMP_OVERFLOW_STEP - 1
 
 
 def writer(filepath, input):
+    print("LogWriter task started.")
     with open(filepath, 'wb') as f:
         for data in iter(input.get, 'STOP'):
             f.write(data)
             f.flush()
+    print("LogWriter finished.")
 
 
 class LogWriter:
