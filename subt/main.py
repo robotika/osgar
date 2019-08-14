@@ -82,6 +82,27 @@ class Collision(Exception):
     pass
 
 
+class EmergencyStopException(Exception):
+    pass
+
+
+class EmergencyStopMonitor:
+    def __init__(self, robot):
+        self.robot = robot
+
+    def update(self, robot):
+        if robot.emergency_stop:
+            raise EmergencyStopException()
+
+    # context manager functions
+    def __enter__(self):
+        self.callback = self.robot.register(self.update)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.robot.unregister(self.callback)
+
+
 class SubTChallenge:
     def __init__(self, config, bus):
         self.bus = bus
@@ -113,6 +134,9 @@ class SubTChallenge:
         self.trace = Trace()
         self.collision_detector_enabled = False
         self.sim_time_sec = 0
+
+        self.emergency_stop = None
+        self.monitors = []  # for Emergency Stop Exception
 
         self.use_right_wall = config['right_wall']
         self.is_virtual = config.get('virtual_world', False)  # workaround to handle tunnel differences
@@ -265,6 +289,14 @@ class SubTChallenge:
                 desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
                 self.go_safely(desired_direction)
 
+    def register(self, callback):
+        self.monitors.append(callback)
+        return callback
+
+    def unregister(self, callback):
+        assert callback in self.monitors
+        self.monitors.remove(callback)
+
     def update(self):
         packet = self.bus.listen()
         if packet is not None:
@@ -363,6 +395,10 @@ class SubTChallenge:
                 self.maybe_remember_artifact(artifact_data, (ax, ay, az))
             elif channel == 'voltage':
                 self.voltage = data
+            elif channel == 'emergency_stop':
+                self.emergency_stop = data
+            for m in self.monitors:
+                m(self)
             return channel
 
     def wait(self, dt):  # TODO refactor to some common class
@@ -375,18 +411,22 @@ class SubTChallenge:
 #############################################
     def play_system_track(self):
         print("SubT Challenge Ver1!")
-        allow_virtual_flip = self.symmetric
-        self.go_straight(2.5)  # go to the tunnel entrance
-        dist = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall, timeout=self.timeout, check_tilt=True)
-        print("Going HOME")
-        if not allow_virtual_flip:
-            self.turn(math.radians(90), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
-            self.turn(math.radians(90), speed=-0.1)
-        self.follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=2.5*self.timeout, dist_limit=dist+1,
-                flipped=allow_virtual_flip)
-        if self.artifacts:
-            self.bus.publish('artf_xyz', [[artifact_data, round(x*1000), round(y*1000), round(z*1000)]
-                                          for artifact_data, (x, y, z) in self.artifacts])
+        try:
+            with EmergencyStopMonitor(self):
+                allow_virtual_flip = self.symmetric
+                self.go_straight(2.5)  # go to the tunnel entrance
+                dist = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall, timeout=self.timeout, check_tilt=True)
+                print("Going HOME")
+                if not allow_virtual_flip:
+                    self.turn(math.radians(90), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
+                    self.turn(math.radians(90), speed=-0.1)
+                self.follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=2.5*self.timeout, dist_limit=dist+1,
+                        flipped=allow_virtual_flip)
+                if self.artifacts:
+                    self.bus.publish('artf_xyz', [[artifact_data, round(x*1000), round(y*1000), round(z*1000)]
+                                              for artifact_data, (x, y, z) in self.artifacts])
+        except EmergencyStopException:
+            print("EMERGENCY STOP - terminating")
         self.send_speed_cmd(0, 0)
         self.wait(timedelta(seconds=3))
 #############################################

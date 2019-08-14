@@ -92,10 +92,10 @@
           "driver": "serial",
           "in": [],
           "out": ["raw"],
-          "init": {"port": "/dev/ttyUSB0", "speed": 115200}
+          "init": {"port": "/dev/vectornav-imu", "speed": 115200}
       },
       "estop": {
-          "driver": "estop:EStop",
+          "driver": "subt.estop:EStop",
           "in": ["raw"],
           "out": ["raw", "emergency_stop"],
           "init": {}
@@ -104,7 +104,7 @@
           "driver": "serial",
           "in": ["raw"],
           "out": ["raw"],
-          "init": {"port": "/dev/ttyUSB1", "speed": 9600}
+          "init": {"port": "/dev/estop", "speed": 9600}
       }
     },
     "links": [["serial.raw", "can.slot_raw"], 
@@ -129,6 +129,7 @@
               ["detector.artf", "app.artf"],
               ["app.artf_xyz", "reporter.artf_xyz"],
               ["estop_serial.raw", "estop.raw"],
-              ["estop.raw", "estop_serial.raw"]]
+              ["estop.raw", "estop_serial.raw"],
+              ["estop.emergency_stop", "app.emergency_stop"]]
   }
 }
