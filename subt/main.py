@@ -92,6 +92,7 @@ class SubTChallenge:
         self.max_angular_speed = math.radians(45)
         self.walldist = config['walldist']
         self.timeout = timedelta(seconds=config['timeout'])
+        self.symmetric = config['symmetric']  # is robot symmetric?
         self.virtual_bumper_sec = config.get('virtual_bumper_sec')
         virtual_bumper_sec = config.get('virtual_bumper_sec')
         self.virtual_bumper = None
@@ -374,7 +375,7 @@ class SubTChallenge:
 #############################################
     def play_system_track(self):
         print("SubT Challenge Ver1!")
-        allow_virtual_flip = True
+        allow_virtual_flip = self.symmetric
         self.go_straight(2.5)  # go to the tunnel entrance
         dist = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall, timeout=self.timeout, check_tilt=True)
         print("Going HOME")
