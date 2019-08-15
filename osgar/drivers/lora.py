@@ -58,6 +58,7 @@ class LoRa(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         self.device_id = config.get('device_id')  # None for "autodetect"
+        self.init_sleep = config.get('sleep')  # needed for Windows on start
         self.min_transmit_dt = timedelta(seconds=10)  # TODO config?
         self.buf = b''
         self.raw = b''  # should be defined by Node
@@ -95,6 +96,8 @@ class LoRa(Node):
 
     def run(self):
         start_time = self.send_data(ALIVE_MESSAGE)
+        if self.init_sleep is not None:
+            self.bus.sleep(self.init_sleep)  # workaround for reset on COM open under Windows
         try:
             if self.device_id is None:
                 # generate unique messages so that it can be identified
