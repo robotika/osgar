@@ -26,6 +26,9 @@ RETURN_LIMIT_PITCH = math.radians(30)
 
 TRACE_STEP = 0.5  # meters in 3D
 
+# accepted LoRa commands
+LORA_GO_HOME_CMD = b'GoHome'
+
 
 def min_dist(laser_data):
     if len(laser_data) > 0:
@@ -137,6 +140,8 @@ class SubTChallenge:
         self.trace = Trace()
         self.collision_detector_enabled = False
         self.sim_time_sec = 0
+
+        self.lora_cmd = None
 
         self.emergency_stop = None
         self.monitors = []  # for Emergency Stop Exception
@@ -259,6 +264,13 @@ class SubTChallenge:
                     print(self.time, "VIRTUAL BUMPER - collision")
                     self.go_straight(-0.3, timeout=timedelta(seconds=10))
                     break
+
+                # the "GoHome" command must be accepted only on the way there and not on the return home
+                if dist_limit is None and self.lora_cmd is not None:
+                    if self.lora_cmd == LORA_GO_HOME_CMD:
+                        print('LoRa cmd - GoHome')
+                        self.lora_cmd = None
+                        break
             except Collision:
                 assert not self.collision_detector_enabled  # collision disables further notification
                 before_stop = self.xyz
@@ -404,6 +416,8 @@ class SubTChallenge:
                 self.voltage = data
             elif channel == 'emergency_stop':
                 self.emergency_stop = data
+            elif channel == 'cmd':
+                self.lora_cmd = data
             for m in self.monitors:
                 m(self)
             return channel
