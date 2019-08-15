@@ -2,7 +2,7 @@ import unittest
 import datetime
 from unittest.mock import MagicMock
 
-from osgar.drivers.lora import LoRa, parse_lora_packet, split_lora_buffer
+from osgar.drivers.lora import LoRa, parse_lora_packet, split_lora_buffer, parse_my_cmd
 from osgar.bus import BusHandler
 
 
@@ -70,5 +70,25 @@ class LoRaTest(unittest.TestCase):
 
         # validate all addresses in chain
         self.assertIsNone(parse_lora_packet(b'4|6|data')[0])
+
+    def test_parse_cmd(self):
+        self.assertEqual(parse_my_cmd(4, b'4:GoHome:14151'), b'GoHome')
+        self.assertIsNone(parse_my_cmd(2, b'4:GoHome:14151'))
+        self.assertIsNone(parse_my_cmd(2, b'nonsense'))
+
+    def test_send_cmd(self):
+        logger = MagicMock()
+        robot_bus = BusHandler(logger, out={}, name='robot')
+        logger.write = MagicMock(return_value=datetime.timedelta(microseconds=9721))
+        bus = BusHandler(logger,
+                         out={'raw':[], 'cmd': [(robot_bus.queue, 'cmd')]},
+                         name='lora')
+
+        c = LoRa(bus=bus, config={'device_id':3})  # force autodetection
+        c.start()
+        c.bus.queue.put((datetime.timedelta(microseconds=1331), 'raw', b'1|3:GoHome:1234\n'))
+        c.request_stop()
+        c.join()
+        self.assertEqual(robot_bus.listen()[2], b'GoHome')
 
 # vim: expandtab sw=4 ts=4

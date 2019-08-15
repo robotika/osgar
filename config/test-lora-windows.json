@@ -5,7 +5,7 @@
       "lora": {
           "driver": "lora",
           "in": ["raw"],
-          "out": ["raw"],
+          "out": ["raw", "cmd"],
           "init": {
             "sleep": 20
           }

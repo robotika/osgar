@@ -108,8 +108,8 @@
       },
       "lora": {
           "driver": "lora",
-          "in": ["raw"],
-          "out": ["raw"],
+          "in": ["raw", "pose2d"],
+          "out": ["raw", "cmd"],
           "init": {}
       },
       "lora_serial": {

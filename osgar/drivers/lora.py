@@ -19,6 +19,13 @@
   Example:
      b'2|5|4|hello' - original message "hello" was sent by device ID=4 and retransmitted
                       by device ID=5 and retransmitted again by device ID=2
+
+  I/O:
+  This driver can now parse commands for particular device in the form:
+    <device_id>:<cmd>:<hash>
+  The <device_id> has to match in order to publish <cmd>. <hash> is used only for distiniction
+  of messages, and the plan is to use seconds since control center start.
+
 """
 from datetime import timedelta
 
@@ -54,6 +61,16 @@ def split_lora_buffer(buf):
     return buf[i+1:], buf[:i+1]
 
 
+def parse_my_cmd(my_id, data):
+    s = data.split(b':')
+    try:
+        if int(s[0]) == my_id:
+            return s[1]
+    except:
+        pass
+    return None
+
+
 class LoRa(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
@@ -81,6 +98,9 @@ class LoRa(Node):
             while len(packet) > 0:
                 self.recent_packets.append(packet)
                 addr, data = parse_lora_packet(packet)
+                cmd = parse_my_cmd(self.device_id, data)
+                if cmd is not None:
+                    self.publish('cmd', cmd)
                 if addr is not None and self.device_id is not None and self.device_id not in addr:
                     if self.verbose:
                         print('re-transmit')
