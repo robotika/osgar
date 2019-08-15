@@ -7,7 +7,8 @@
           "in": ["emergency_stop", "pose2d", "scan", "voltage", "orientation"],
           "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d"],
           "init": {
-            "max_speed": 0.5
+            "max_speed": 0.5,
+            "symmetric": true
           }
       },
       "detector": {
@@ -105,7 +106,8 @@
               ["detector.artf", "app.artf"],
               ["app.artf_xyz", "reporter.artf_xyz"],
               ["estop_serial.raw", "estop.raw"],
-              ["estop.raw", "estop_serial.raw"]
+              ["estop.raw", "estop_serial.raw"],
+              ["estop.emergency_stop", "app.emergency_stop"]
     ]
   }
 }
