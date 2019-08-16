@@ -18,8 +18,11 @@ from osgar.lib.virtual_bumper import VirtualBumper
 from subt.local_planner import LocalPlanner
 
 
+# safety limits for exploration and return home
 LIMIT_ROLL = math.radians(20)
 LIMIT_PITCH = math.radians(20)
+RETURN_LIMIT_ROLL = math.radians(30)
+RETURN_LIMIT_PITCH = math.radians(30)
 
 TRACE_STEP = 0.5  # meters in 3D
 
@@ -225,7 +228,8 @@ class SubTChallenge:
                 break
         print(self.time, 'stop at', self.time - start_time, self.is_moving)
 
-    def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None, flipped=False, check_tilt=False):
+    def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None, flipped=False,
+            pitch_limit=None, roll_limit=None):
         # make sure that we will start with clean data
         if flipped:
             self.scan = None
@@ -243,10 +247,13 @@ class SubTChallenge:
                     if dist_limit < abs(self.traveled_dist - start_dist):  # robot can return backward -> abs()
                         print('Distance limit reached! At', self.traveled_dist, self.traveled_dist - start_dist)
                         break
-                if check_tilt and self.pitch is not None and self.roll is not None:
-                    if abs(self.pitch) > LIMIT_PITCH or abs(self.roll) > LIMIT_ROLL:
-                        print('Pitch/Roll limit triggered termination: (pitch %.1f roll %.1f)' % 
-                                (math.degrees(self.pitch), math.degrees(self.roll)))
+                if pitch_limit is not None and self.pitch is not None:
+                    if abs(self.pitch) > pitch_limit:
+                        print('Pitch limit triggered termination: (pitch %.1f)' % math.degrees(self.pitch))
+                        break
+                if roll_limit is not None and self.roll is not None:
+                    if abs(self.roll) > roll_limit:
+                        print('Roll limit triggered termination: (roll %.1f)' % math.degrees(self.roll))
                         break
                 if self.virtual_bumper is not None and self.virtual_bumper.collision():
                     print("VIRTUAL BUMPER - collision")
@@ -415,13 +422,14 @@ class SubTChallenge:
             with EmergencyStopMonitor(self):
                 allow_virtual_flip = self.symmetric
                 self.go_straight(2.5)  # go to the tunnel entrance
-                dist = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall, timeout=self.timeout, check_tilt=True)
+                dist = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall, timeout=self.timeout,
+                                        pitch_limit=LIMIT_PITCH, roll_limit=LIMIT_ROLL)
                 print("Going HOME")
                 if not allow_virtual_flip:
                     self.turn(math.radians(90), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
                     self.turn(math.radians(90), speed=-0.1)
                 self.follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=2.5*self.timeout, dist_limit=dist+1,
-                        flipped=allow_virtual_flip)
+                        flipped=allow_virtual_flip, pitch_limit=RETURN_LIMIT_PITCH, roll_limit=RETURN_LIMIT_ROLL)
                 if self.artifacts:
                     self.bus.publish('artf_xyz', [[artifact_data, round(x*1000), round(y*1000), round(z*1000)]
                                               for artifact_data, (x, y, z) in self.artifacts])
