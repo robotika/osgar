@@ -79,6 +79,8 @@ def count_yellow(img):
 
 def artf_in_scan(scan, img_x_min, img_x_max, verbose=False):
     """return precise artefact angle and distance for lidar & camera combination"""
+    if scan is None:
+        return 0, 0
     # the scan is already in mm, so angle is modified to int deg*100, ready to send
     x_min, x_max = img_x_min, img_x_max
 
