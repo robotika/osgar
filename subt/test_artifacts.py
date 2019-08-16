@@ -94,5 +94,9 @@ class ArtifactDetectorTest(unittest.TestCase):
         img = cv2.imread(str(curdir/'test_data/artf-electrical-box.jpg'))
         #self.assertEqual(count_white(img), (865248, 1266, 959, 0, 1266))
 
+    def test_missing_scan(self):
+        deg_100th, dist_mm = artf_in_scan(scan=None, img_x_min=100, img_x_max=200)
+        self.assertEqual((deg_100th, dist_mm), (0, 0))
+
 # vim: expandtab sw=4 ts=4
 
