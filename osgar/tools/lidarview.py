@@ -199,7 +199,8 @@ class History:
 
 class Framer:
     """Creates frames from log entries. Packs together closest scan, pose and camera picture."""
-    def __init__(self, filepath, lidar_name=None, pose2d_name=None, pose3d_name=None, camera_name=None):
+    def __init__(self, filepath, lidar_name=None, pose2d_name=None, pose3d_name=None, camera_name=None,
+                 keyframes_name=None):
         self.log = LogIndexedReader(filepath)
         self.current = 0
         self.pose = [0, 0, 0]
@@ -207,7 +208,9 @@ class Framer:
         self.pose3d = [[0, 0, 0],[1, 0, 0, 0]]
         self.scan = []
         self.image = None
+        self.keyframe = None
         self.lidar_id, self.pose2d_id, self.pose3d_id, self.camera_id = None, None, None, None
+        self.keyframes_id = None
         names = lookup_stream_names(filepath)
         if lidar_name is not None:
             self.lidar_id = names.index(lidar_name) + 1
@@ -217,6 +220,8 @@ class Framer:
             self.pose3d_id = names.index(pose3d_name) + 1
         if camera_name is not None:
             self.camera_id = names.index(camera_name) + 1
+        if keyframes_name is not None:
+            self.keyframes_id = names.index(keyframes_name) + 1
 
     def __enter__(self):
         self.log.__enter__()
@@ -237,14 +242,20 @@ class Framer:
         while self.current + direction >= 0 and self.current + direction < len(self.log):
             self.current += direction
             timestamp, stream_id, data = self.log[self.current]
+            if stream_id == self.keyframes_id:
+                self.keyframe = True
             if stream_id == self.lidar_id:
                 self.scan = deserialize(data)
-                return timestamp, self.pose, self.scan, self.image, False
+                keyframe = self.keyframe
+                self.keyframe = False
+                return timestamp, self.pose, self.scan, self.image, keyframe, False
             elif stream_id == self.camera_id:
                 jpeg = deserialize(data)
                 self.image = pygame.image.load(io.BytesIO(jpeg), 'JPG').convert()
                 if self.lidar_id is None:
-                    return timestamp, self.pose, self.scan, self.image, False
+                    keyframe = self.keyframe
+                    self.keyframe = False
+                    return timestamp, self.pose, self.scan, self.image, keyframe, False
             elif stream_id == self.pose3d_id:
                 pose3d, orientation = deserialize(data)
                 assert len(pose3d) == 3
@@ -260,8 +271,10 @@ class Framer:
                              x * math.sin(g_rotation_offset_rad) + y * math.cos(g_rotation_offset_rad),
                              heading + g_rotation_offset_rad)
                 if self.lidar_id is None and self.camera_id is None:
-                    return timestamp, self.pose, self.scan, self.image, False
-        return timedelta(), self.pose, self.scan, self.image, True
+                    keyframe = self.keyframe
+                    self.keyframe = False
+                    return timestamp, self.pose, self.scan, self.image, keyframe, False
+        return timedelta(), self.pose, self.scan, self.image, self.keyframe, True
 
 
 
@@ -299,8 +312,9 @@ def lidarview(gen, caption_filename, callback=False):
     #history = History(gen)
     history = gen
     max_timestamp = None
+    wait_for_keyframe = False
     while True:
-        timestamp, pose, scan, image, eof = history.next()
+        timestamp, pose, scan, image, keyframe, eof = history.next()
 
         if max_timestamp is None or max_timestamp < timestamp:
             # build map only for new data
@@ -312,6 +326,11 @@ def lidarview(gen, caption_filename, callback=False):
 
             acc_pts.extend(scan2xy(pose, scan))
             acc_pts = filter_pts(acc_pts)
+
+        if wait_for_keyframe and not keyframe and not eof:
+            paused = True
+            continue
+        wait_for_keyframe = False
 
         if skip_frames > 0 and not eof:
             skip_frames -= 1
@@ -326,6 +345,8 @@ def lidarview(gen, caption_filename, callback=False):
                 caption += ' step=' + str(frames_step)
             if eof:
                 caption += ' [END]'
+            if keyframe:
+                caption += ' [KEYFRAME]'
             pygame.display.set_caption(caption)
 
             foreground.fill((0, 0, 0))
@@ -384,6 +405,17 @@ def lidarview(gen, caption_filename, callback=False):
                     print(scan)
                 if event.key == K_p:  # print position
                     print(pose)
+                if event.key == K_n:  # next keyframe
+                    if pygame.key.get_mods() & pygame.KMOD_LSHIFT:  # previous keyframe
+                        if keyframe:
+                            history.prev()  # search for the previous one
+                        data = history.prev()
+                        while not data[-2] and not data[-1]:
+                            # EOF is at the beginning as well as at the end
+                            data = history.prev()
+                        history.prev()
+                    wait_for_keyframe = True
+                    paused = False  # let it search for next keyframe
 
                 if event.key == K_RIGHT:
                     break
@@ -413,6 +445,8 @@ def main():
 
     parser.add_argument('--camera', help='stream ID for JPEG images')
 
+    parser.add_argument('--keyframes', help='stream ID typically for artifacts detection')
+
     parser.add_argument('--callback', help='callback function for lidar scans')
 
     parser.add_argument('--rotate', help='rotate poses by angle in degrees, offset',
@@ -439,7 +473,8 @@ def main():
         lidarview(scans_gen_legacy(args.logfile), caption_filename=filename, 
                   callback=callback)
     else:
-        with Framer(args.logfile, lidar_name=args.lidar, pose2d_name=args.pose2d, pose3d_name=args.pose3d, camera_name=args.camera) as framer:
+        with Framer(args.logfile, lidar_name=args.lidar, pose2d_name=args.pose2d, pose3d_name=args.pose3d,
+                    camera_name=args.camera, keyframes_name=args.keyframes) as framer:
             lidarview(framer, caption_filename=filename, callback=callback)
 
 if __name__ == "__main__":
