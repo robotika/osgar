@@ -25,7 +25,7 @@ def main():
         streams = lookup_stream_names(filepath)
         processing = []
         for i, stream in enumerate(streams):
-            if stream == "camera.raw" or stream.endswith('.jpg') or stream.endswith('.image'):
+            if (stream.startswith("camera") and stream.endswith("raw")) or stream.endswith('.jpg') or stream.endswith('.image'):
                 print("processing stream {} => {}".format(i, stream))
                 processing.append(i+1)
         if len(processing) == 0:
