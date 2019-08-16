@@ -171,32 +171,6 @@ def draw(foreground, pose, scan, poses=[], image=None, callback=None, acc_pts=No
                 pygame.draw.line(foreground, (200, 200, 0), a, b, 1)
 
 
-class History:
-    def __init__(self, gen, history_size=HISTORY_SIZE):
-        self.gen = gen
-        self.history_size = history_size
-        self.history = []
-        self.index = 0
-
-    def prev(self):
-        if self.index > 0 and self.history[self.index - 1] is not None:
-            self.index -= 1
-        return self.history[self.index]
-
-    def next(self):
-        if self.index + 1 >= len(self.history):
-            if self.gen is not None:
-                try:
-                    self.history.append(next(self.gen))
-                except StopIteration:
-                    self.gen = None
-
-        if self.index + 1 < len(self.history):
-            self.index += 1
-            if self.index == len(self.history)-1 and len(self.history) > self.history_size:
-                self.history[self.index - self.history_size] = None
-        return self.history[self.index]
-
 class Framer:
     """Creates frames from log entries. Packs together closest scan, pose and camera picture."""
     def __init__(self, filepath, lidar_name=None, pose2d_name=None, pose3d_name=None, camera_name=None,
@@ -309,7 +283,6 @@ def lidarview(gen, caption_filename, callback=False):
     frames_step = 0
     save_counter = 0
 
-    #history = History(gen)
     history = gen
     max_timestamp = None
     wait_for_keyframe = False
