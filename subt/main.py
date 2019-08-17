@@ -207,15 +207,19 @@ class SubTChallenge:
         else:
             self.send_speed_cmd(desired_speed, desired_angular_speed)
 
-    def turn(self, angle, with_stop=True, speed=0.0):
+    def turn(self, angle, with_stop=True, speed=0.0, timeout=None):
         print(self.time, "turn %.1f" % math.degrees(angle))
         start_pose = self.last_position
         if angle >= 0:
             self.send_speed_cmd(speed, self.max_angular_speed)
         else:
             self.send_speed_cmd(speed, -self.max_angular_speed)
+        start_time = self.time
         while abs(normalizeAnglePIPI(start_pose[2] - self.last_position[2])) < abs(angle):
             self.update()
+            if timeout is not None and self.time - start_time > timeout:
+                print(self.time, "turn - TIMEOUT!")
+                break
         if with_stop:
             self.send_speed_cmd(0.0, 0.0)
             start_time = self.time
@@ -444,8 +448,8 @@ class SubTChallenge:
                                         pitch_limit=LIMIT_PITCH, roll_limit=LIMIT_ROLL)
                 print(self.time, "Going HOME")
                 if not allow_virtual_flip:
-                    self.turn(math.radians(90), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
-                    self.turn(math.radians(90), speed=-0.1)
+                    self.turn(math.radians(90), timeout=timedelta(seconds=20))
+                    self.turn(math.radians(90), timeout=timedelta(seconds=20))
                 self.follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=3*self.timeout, dist_limit=3*dist,
                         flipped=allow_virtual_flip, pitch_limit=RETURN_LIMIT_PITCH, roll_limit=RETURN_LIMIT_ROLL)
                 if self.artifacts:
