@@ -174,7 +174,7 @@ def draw(foreground, pose, scan, poses=[], image=None, callback=None, acc_pts=No
 class Framer:
     """Creates frames from log entries. Packs together closest scan, pose and camera picture."""
     def __init__(self, filepath, lidar_name=None, pose2d_name=None, pose3d_name=None, camera_name=None,
-                 keyframes_name=None):
+                 camera2_name=None, keyframes_name=None):
         self.log = LogIndexedReader(filepath)
         self.current = 0
         self.pose = [0, 0, 0]
@@ -182,6 +182,7 @@ class Framer:
         self.pose3d = [[0, 0, 0],[1, 0, 0, 0]]
         self.scan = []
         self.image = None
+        self.image2 = None
         self.keyframe = None
         self.lidar_id, self.pose2d_id, self.pose3d_id, self.camera_id = None, None, None, None
         self.keyframes_id = None
@@ -194,6 +195,8 @@ class Framer:
             self.pose3d_id = names.index(pose3d_name) + 1
         if camera_name is not None:
             self.camera_id = names.index(camera_name) + 1
+        if camera2_name is not None:
+            self.camera2_id = names.index(camera2_name) + 1
         if keyframes_name is not None:
             self.keyframes_id = names.index(keyframes_name) + 1
 
@@ -222,14 +225,17 @@ class Framer:
                 self.scan = deserialize(data)
                 keyframe = self.keyframe
                 self.keyframe = False
-                return timestamp, self.pose, self.scan, self.image, keyframe, False
+                return timestamp, self.pose, self.scan, self.image, self.image2, keyframe, False
             elif stream_id == self.camera_id:
                 jpeg = deserialize(data)
                 self.image = pygame.image.load(io.BytesIO(jpeg), 'JPG').convert()
                 if self.lidar_id is None:
                     keyframe = self.keyframe
                     self.keyframe = False
-                    return timestamp, self.pose, self.scan, self.image, keyframe, False
+                    return timestamp, self.pose, self.scan, self.image, self.image2, keyframe, False
+            elif stream_id == self.camera2_id:
+                jpeg = deserialize(data)
+                self.image2 = pygame.image.load(io.BytesIO(jpeg), 'JPG').convert()
             elif stream_id == self.pose3d_id:
                 pose3d, orientation = deserialize(data)
                 assert len(pose3d) == 3
@@ -247,8 +253,8 @@ class Framer:
                 if self.lidar_id is None and self.camera_id is None:
                     keyframe = self.keyframe
                     self.keyframe = False
-                    return timestamp, self.pose, self.scan, self.image, keyframe, False
-        return timedelta(), self.pose, self.scan, self.image, self.keyframe, True
+                    return timestamp, self.pose, self.scan, self.image, self.image2, keyframe, False
+        return timedelta(), self.pose, self.scan, self.image, self.image2, self.keyframe, True
 
 
 
@@ -276,6 +282,7 @@ def lidarview(gen, caption_filename, callback=False):
 
     paused = False
     camera_on = True
+    use_image2 = False
     map_on = False
     poses = []
     acc_pts = []
@@ -287,7 +294,7 @@ def lidarview(gen, caption_filename, callback=False):
     max_timestamp = None
     wait_for_keyframe = False
     while True:
-        timestamp, pose, scan, image, keyframe, eof = history.next()
+        timestamp, pose, scan, image, image2, keyframe, eof = history.next()
 
         if max_timestamp is None or max_timestamp < timestamp:
             # build map only for new data
@@ -328,8 +335,9 @@ def lidarview(gen, caption_filename, callback=False):
             pygame.display.set_caption(caption)
 
             foreground.fill((0, 0, 0))
+            img = image2 if use_image2 else image
             draw(foreground, pose, scan, poses=poses,
-                 image=image if camera_on else None,
+                 image=img if camera_on else None,
                  acc_pts=acc_pts if map_on else None,
                  callback=callback)
             screen.blit(background, (0, 0))
@@ -355,7 +363,10 @@ def lidarview(gen, caption_filename, callback=False):
                 if event.key in [K_MINUS, K_KP_MINUS]:
                     g_scale /= 2.0
                 if event.key == K_c:
-                    camera_on = not camera_on
+                    if pygame.key.get_mods() & pygame.KMOD_LSHIFT:
+                        use_image2 = not use_image2
+                    else:
+                        camera_on = not camera_on
                 if event.key == K_m:
                     map_on = not map_on
                 if event.key == K_0:
@@ -439,6 +450,7 @@ def main():
     pose.add_argument('--pose3d', help='stream ID for pose3d messages')
 
     parser.add_argument('--camera', help='stream ID for JPEG images')
+    parser.add_argument('--camera2', help='stream ID for 2nd JPEG images')
 
     parser.add_argument('--keyframes', help='stream ID typically for artifacts detection')
 
@@ -469,7 +481,7 @@ def main():
                   callback=callback)
     else:
         with Framer(args.logfile, lidar_name=args.lidar, pose2d_name=args.pose2d, pose3d_name=args.pose3d,
-                    camera_name=args.camera, keyframes_name=args.keyframes) as framer:
+                    camera_name=args.camera, camera2_name=args.camera2, keyframes_name=args.keyframes) as framer:
             lidarview(framer, caption_filename=filename, callback=callback)
 
 if __name__ == "__main__":
