@@ -11,6 +11,7 @@ URL_BASE = "http://10.100.1.200:8000"  # Safety Research (was Army) Tunnel
 #URL_BASE = "http://10.100.2.200:8000"  # Experimental (was Miami) Tunnel
 
 ARTF_TYPES = ['Survivor', 'Backpack', 'Cell Phone', 'Drill', 'Fire Extinguisher']
+ARTF_TYPES_SHORT = [x[0] for x in ARTF_TYPES]
 
 json_headers = {
 #    "Authorization" : "Bearer subttesttoken123",  # demo
@@ -51,15 +52,20 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(description='Report artifact to server')
-    parser.add_argument('artf_type', help='Type of artifact', choices=ARTF_TYPES)
+    parser.add_argument('artf_type', help='Type of artifact', choices=ARTF_TYPES + ARTF_TYPES_SHORT)
     parser.add_argument('x', help='X coordinate in meters', type=float)
     parser.add_argument('y', help='Y coordinate in meters', type=float)
     parser.add_argument('z', help='Z coordinate in meters', type=float)
     args = parser.parse_args()
 
+    artf_type = args.artf_type
+    if artf_type in ARTF_TYPES_SHORT:
+        artf_type = ARTF_TYPES[ARTF_TYPES_SHORT.index(artf_type)]
+
+    print('Reporting:', artf_type)
     get_status()
     time.sleep(2)
-    report_artf(args.artf_type, args.x, args.y, args.z)
+    report_artf(artf_type, args.x, args.y, args.z)
     time.sleep(2)
     get_status()
 
