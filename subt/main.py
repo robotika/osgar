@@ -28,6 +28,7 @@ TRACE_STEP = 0.5  # meters in 3D
 
 # accepted LoRa commands
 LORA_GO_HOME_CMD = b'GoHome'
+LORA_STOP_CMD = b'Stop'
 
 
 def min_dist(laser_data):
@@ -265,11 +266,14 @@ class SubTChallenge:
                     self.go_straight(-0.3, timeout=timedelta(seconds=10))
                     break
 
-                # the "GoHome" command must be accepted only on the way there and not on the return home
-                if dist_limit is None and self.lora_cmd is not None:
-                    if self.lora_cmd == LORA_GO_HOME_CMD:
+                if self.lora_cmd is not None:
+                    # the "GoHome" command must be accepted only on the way there and not on the return home
+                    if dist_limit is None and self.lora_cmd == LORA_GO_HOME_CMD:
                         print('LoRa cmd - GoHome')
                         self.lora_cmd = None
+                        break
+                    if self.lora_cmd == LORA_STOP_CMD:
+                        print('LoRa cmd - Stop')
                         break
             except Collision:
                 assert not self.collision_detector_enabled  # collision disables further notification
