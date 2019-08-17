@@ -124,7 +124,7 @@ class LogBusHandler:
                 self.max_delay = delay
                 self.max_delay_timestamp = dt
             if delay > ASSERT_QUEUE_DELAY:
-                print("maximum delay overshot:", delay)
+                print(dt, "maximum delay overshot:", delay)
         ref_data = deserialize(bytes_data)
         assert almost_equal(data, ref_data), (data, ref_data, dt)
         return dt
