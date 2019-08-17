@@ -383,6 +383,11 @@ def lidarview(gen, caption_filename, callback=False):
                     print(scan)
                 if event.key == K_p:  # print position
                     print(pose)
+                    x, y, heading = pose
+                    if math.hypot(x, y) > 0.1:
+                        print('rotation (deg) =', math.degrees(math.atan2(y, x)))
+                    else:
+                        print('rotation not available')
                 if event.key == K_n:  # next keyframe
                     aborted = False
                     if pygame.key.get_mods() & pygame.KMOD_LSHIFT:  # previous keyframe
