@@ -81,7 +81,7 @@ class LoRa(Node):
         self.raw = b''  # should be defined by Node
         self.last_transmit = None
         self.recent_packets = []
-        self.verbose = False
+        self.verbose = config.get('verbose', False)
 
     def send_data(self, data):
         self.last_transmit = self.publish('raw', data + b'\n')

@@ -7,7 +7,8 @@
           "in": ["raw"],
           "out": ["raw", "cmd"],
           "init": {
-            "sleep": 20
+            "sleep": 20,
+            "verbose": true
           }
       },
       "lora_serial": {
