@@ -27,70 +27,6 @@ g_scale = 30
 g_rotation_offset_rad = 0.0  # set by --rotation (deg)
 g_lidar_fov_deg = 270  # controlled by --deg (deg)
 
-def scans_gen(logfile, lidar_name=None, poses_name=None, camera_name=None):
-    """
-    Generator for (timestamp, pose, lidar, image) where freqency is defined
-    by LIDAR and pose and image is used the most recent
-    """
-    names = lookup_stream_names(logfile)
-    assert not(lidar_name is None and poses_name is None and camera_name is None), names
-
-    lidar_id, poses_id, camera_id = None, None, None
-
-    if lidar_name is not None:
-        lidar_id = names.index(lidar_name) + 1
-    if poses_name is not None:
-        poses_id = names.index(poses_name) + 1
-    if camera_name is not None:
-        camera_id = names.index(camera_name) + 1
-
-    pose = (0, 0, 0)
-    image = None
-    scan = []
-    eof = False
-    streams = [s for s in [lidar_id, poses_id, camera_id] if s is not None]
-    with LogReader(logfile, only_stream_id=streams) as log:
-        for timestamp, stream_id, data in log:
-            if stream_id == lidar_id:
-                scan = deserialize(data)
-                yield timestamp, pose, scan, image, eof
-            elif stream_id == camera_id:
-                jpeg = deserialize(data)
-                image = pygame.image.load(io.BytesIO(jpeg), 'JPG').convert()
-                if lidar_id is None:
-                    yield timestamp, pose, scan, image, eof
-            elif stream_id == poses_id:
-                arr = deserialize(data)
-                assert len(arr) == 3
-                pose = (arr[0]/1000.0, arr[1]/1000.0, math.radians(arr[2]/100.0))
-                if lidar_id is None and camera_id is None:
-                    yield timestamp, pose, scan, image, eof
-
-    # generate last message with EOF ...
-    eof = True
-    yield timestamp, pose, scan, image, eof
-
-
-def scans_gen_legacy(logfile):
-    # old LIDAR text format
-    timestamp = None
-    start_time_sec = None
-    pose = (0, 0, 0)
-    image = None
-    for line in open(logfile):
-        if line.startswith('['):
-            arr = literal_eval(line)
-            yield timestamp, pose, arr, image, False
-        else:
-            s = line.split()
-            if len(s) == 2:
-                time_sec = float(s[1])
-                if start_time_sec is None:
-                    start_time_sec = time_sec
-                timestamp = timedelta(seconds = time_sec - start_time_sec)
-
-    yield timestamp, pose, arr, image, True  # EOF
-
 
 def scr(x, y):
     global g_scale
@@ -441,7 +377,6 @@ def main():
 
     parser = argparse.ArgumentParser(description='View lidar scans')
     parser.add_argument('logfile', help='recorded log file')
-    parser.add_argument('--legacy', help='use old text lidar log format', action='store_true')
 
     parser.add_argument('--lidar', help='stream ID')
 
@@ -476,13 +411,9 @@ def main():
     filename = os.path.basename(args.logfile)
     g_rotation_offset_rad = math.radians(args.rotate)
     g_lidar_fov_deg = args.deg
-    if args.legacy:
-        lidarview(scans_gen_legacy(args.logfile), caption_filename=filename, 
-                  callback=callback)
-    else:
-        with Framer(args.logfile, lidar_name=args.lidar, pose2d_name=args.pose2d, pose3d_name=args.pose3d,
-                    camera_name=args.camera, camera2_name=args.camera2, keyframes_name=args.keyframes) as framer:
-            lidarview(framer, caption_filename=filename, callback=callback)
+    with Framer(args.logfile, lidar_name=args.lidar, pose2d_name=args.pose2d, pose3d_name=args.pose3d,
+                camera_name=args.camera, camera2_name=args.camera2, keyframes_name=args.keyframes) as framer:
+        lidarview(framer, caption_filename=filename, callback=callback)
 
 if __name__ == "__main__":
     main()
