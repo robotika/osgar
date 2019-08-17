@@ -302,7 +302,12 @@ def lidarview(gen, caption_filename, callback=False):
 
         if wait_for_keyframe and not keyframe and not eof:
             paused = True
-            continue
+            caption = caption_filename + ": %s" % timestamp
+            caption += ' searching fwd ...'
+            pygame.display.set_caption(caption)
+            event = pygame.event.poll()
+            if event.type != KEYDOWN:
+                continue
         wait_for_keyframe = False
 
         if skip_frames > 0 and not eof:
@@ -379,6 +384,7 @@ def lidarview(gen, caption_filename, callback=False):
                 if event.key == K_p:  # print position
                     print(pose)
                 if event.key == K_n:  # next keyframe
+                    aborted = False
                     if pygame.key.get_mods() & pygame.KMOD_LSHIFT:  # previous keyframe
                         if keyframe:
                             history.prev()  # search for the previous one
@@ -386,9 +392,20 @@ def lidarview(gen, caption_filename, callback=False):
                         while not data[-2] and not data[-1]:
                             # EOF is at the beginning as well as at the end
                             data = history.prev()
+                            caption = caption_filename + ": %s" % data[0]
+                            caption += ' searching bwd ...'
+                            pygame.display.set_caption(caption)
+                            tmp_event = pygame.event.poll()
+                            if tmp_event.type == KEYDOWN:
+                                aborted = True
+                                timestamp = data[0]
+                                break
                         history.prev()
-                    wait_for_keyframe = True
-                    paused = False  # let it search for next keyframe
+                    if aborted:
+                        paused = True
+                    else:
+                        wait_for_keyframe = True
+                        paused = False  # let it search for next keyframe
 
                 if event.key == K_RIGHT:
                     break
