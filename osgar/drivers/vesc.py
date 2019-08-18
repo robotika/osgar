@@ -104,13 +104,14 @@ commands_send_packet(send_buffer, ind);
                     print(self.time, hex(msg_id), self.tachometer[motor_index])
                 tmp = [None] * 4
                 tmp[motor_index] = self.tachometer[motor_index]
-                self.debug_arr.append([self.time.total_seconds()] + tmp)
+                if self.verbose:
+                    self.debug_arr.append([self.time.total_seconds()] + tmp)
         if (msg_id & 0xF00) == 0x700:
             motor_index = (msg_id & 0xFF) - 1  # reindexed motors from #1 to array index 0
             if len(self.packet[motor_index]) == 19:  # version
                 print(self.time, self.packet[motor_index])
             self.packet[motor_index] = []
-        if self.verbose:
+        if self.verbose > 1:
             print(self.time, hex(msg_id), list(data), flags)
         return channel
 
