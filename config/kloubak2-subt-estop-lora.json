@@ -8,7 +8,9 @@
           "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d"],
           "init": {
             "symmetric": true,
-            "max_speed": 0.5
+            "max_speed": 0.5,
+            "virtual_bumper_sec": 10.0,
+            "virtual_bumper_radius": 0.5
           }
       },
       "detector": {
@@ -125,6 +127,14 @@
           "in": ["raw"],
           "out": ["raw"],
           "init": {"port": "/dev/lora", "speed": 115200}
+      },
+      "wifi": {
+          "driver": "subt.wifisignal:WifiSignal",
+          "in": [],
+          "out": ["wifiscan"],
+          "init": {
+            "sleep": 1.0
+          }
       }
     },
     "links": [["serial.raw", "can.slot_raw"],
@@ -151,7 +161,8 @@
               ["app.artf_xyz", "reporter.artf_xyz"],
               ["lora_serial.raw", "lora.raw"],
               ["lora.raw", "lora_serial.raw"],
-              ["app.pose2d", "lora.pose2d"]
+              ["app.pose2d", "lora.pose2d"],
+              ["lora.cmd", "app.cmd"]
       ]
   }
 }
