@@ -100,7 +100,7 @@ commands_send_packet(send_buffer, ind);
                 b = bytes(data[1:])
                 prev = self.tachometer[motor_index]
                 self.tachometer[motor_index] = struct.unpack_from('>i', b, 3)[0]
-                if prev != self.tachometer[motor_index]:
+                if prev != self.tachometer[motor_index] and self.verbose:
                     print(self.time, hex(msg_id), self.tachometer[motor_index])
                 tmp = [None] * 4
                 tmp[motor_index] = self.tachometer[motor_index]
@@ -108,7 +108,7 @@ commands_send_packet(send_buffer, ind);
         if (msg_id & 0xF00) == 0x700:
             motor_index = (msg_id & 0xFF) - 1  # reindexed motors from #1 to array index 0
             if len(self.packet[motor_index]) == 19:  # version
-                print(self.packet[motor_index])
+                print(self.time, self.packet[motor_index])
             self.packet[motor_index] = []
         if self.verbose:
             print(self.time, hex(msg_id), list(data), flags)
@@ -132,8 +132,8 @@ commands_send_packet(send_buffer, ind);
                         count += 1
                         if count >= 4:
                             break
-                if count != 4:
-                    print("vESC: incomplete loop")
+                if count != 4 and self.verbose:
+                    print(self.time, "vESC: incomplete loop")
 
         except BusShutdownException:
             pass
