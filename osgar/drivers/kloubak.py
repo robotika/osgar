@@ -31,6 +31,8 @@ CAN_ID_SYNC = CAN_ID_VESC_FRONT_L
 CAN_ID_CURRENT = 0x70
 CAN_ID_JOIN_ANGLE = 0x80
 
+#Transferring coefficient for the vesc tachometers to meters: distance = vesc_value * 0.845/100
+
 
 def draw(arr, join_arr):
     import matplotlib.pyplot as plt
