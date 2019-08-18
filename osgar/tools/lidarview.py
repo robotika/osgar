@@ -121,6 +121,7 @@ class Framer:
         self.image2 = None
         self.keyframe = None
         self.lidar_id, self.pose2d_id, self.pose3d_id, self.camera_id = None, None, None, None
+        self.camera2_id = None
         self.keyframes_id = None
         names = lookup_stream_names(filepath)
         if lidar_name is not None:
