@@ -324,6 +324,65 @@ class SubTChallenge:
         assert callback in self.monitors
         self.monitors.remove(callback)
 
+    def on_pose2d(self, timestamp, data):
+        x, y, heading = data
+        pose = (x / 1000.0, y / 1000.0, math.radians(heading / 100.0))
+        if self.last_position is not None:
+            self.is_moving = (self.last_position != pose)
+            dist = math.hypot(pose[0] - self.last_position[0], pose[1] - self.last_position[1])
+            direction = ((pose[0] - self.last_position[0]) * math.cos(self.last_position[2]) +
+                         (pose[1] - self.last_position[1]) * math.sin(self.last_position[2]))
+            if direction < 0:
+                dist = -dist
+        else:
+            dist = 0.0
+        self.last_position = pose
+        if self.start_pose is None:
+            self.start_pose = pose
+        self.traveled_dist += dist
+        x, y, z = self.xyz
+        x += math.cos(self.pitch) * math.cos(self.yaw) * dist
+        y += math.cos(self.pitch) * math.sin(self.yaw) * dist
+        z += math.sin(self.pitch) * dist
+        self.bus.publish('pose2d', [round(x * 1000), round(y * 1000),
+                                    round(math.degrees(self.yaw) * 100)])
+        if self.virtual_bumper is not None:
+            self.virtual_bumper.update_pose(self.time, pose)  # sim time?!
+        self.xyz = x, y, z
+        self.trace.update_trace(self.xyz)
+        # pose3d
+        dist3d = quaternion.rotate_vector([dist, 0, 0], self.orientation)
+        self.xyz_quat = [a + b for a, b in zip(self.xyz_quat, dist3d)]
+        self.bus.publish('pose3d', [self.xyz_quat, self.orientation])
+
+    def on_acc(self, timestamp, data):
+        acc = [x / 1000.0 for x in data]
+        gacc = np.matrix([[0., 0., 9.80]])  # Gravitational acceleration.
+        cos_pitch = math.cos(self.pitch)
+        sin_pitch = math.sin(self.pitch)
+        # TODO: Once roll is correct, incorporate it here too.
+        egacc = np.matrix([  # Expected gravitational acceleration given known pitch.
+            [cos_pitch, 0., sin_pitch],
+            [0., 1., 0.],
+            [-sin_pitch, 0., cos_pitch]
+        ]) * gacc.T
+        cacc = np.asarray(acc) - egacc.T  # Corrected acceleration (without gravitational acceleration).
+        magnitude = math.hypot(cacc[0, 0], cacc[0, 1])
+        if magnitude > 12.0:
+            print(self.time, 'Collision!', acc, 'reported:', self.collision_detector_enabled)
+            if self.collision_detector_enabled:
+                self.collision_detector_enabled = False
+                raise Collision()
+
+    def on_artf(self, timestamp, data):
+        artifact_data, deg_100th, dist_mm = data
+        x, y, z = self.xyz
+        angle, dist = self.yaw + math.radians(deg_100th / 100.0), dist_mm / 1000.0
+        ax = x + math.cos(angle) * dist
+        ay = y + math.sin(angle) * dist
+        az = z
+        self.maybe_remember_artifact(artifact_data, (ax, ay, az))
+
     def update(self):
         packet = self.bus.listen()
         if packet is not None:
@@ -340,36 +399,9 @@ class SubTChallenge:
                 self.sim_time_sec = self.time.total_seconds()
 
             self.stat[channel] += 1
-            if channel == 'pose2d':
-                x, y, heading = data
-                pose = (x/1000.0, y/1000.0, math.radians(heading/100.0))
-                if self.last_position is not None:
-                    self.is_moving = (self.last_position != pose)
-                    dist = math.hypot(pose[0] - self.last_position[0], pose[1] - self.last_position[1])
-                    direction = ((pose[0] - self.last_position[0]) * math.cos(self.last_position[2]) +
-                                 (pose[1] - self.last_position[1]) * math.sin(self.last_position[2]))
-                    if direction < 0:
-                        dist = -dist
-                else:
-                    dist = 0.0
-                self.last_position = pose
-                if self.start_pose is None:
-                    self.start_pose = pose
-                self.traveled_dist += dist
-                x, y, z = self.xyz
-                x += math.cos(self.pitch) * math.cos(self.yaw) * dist
-                y += math.cos(self.pitch) * math.sin(self.yaw) * dist
-                z += math.sin(self.pitch) * dist
-                self.bus.publish('pose2d', [round(x*1000), round(y*1000),
-                                            round(math.degrees(self.yaw)*100)])
-                if self.virtual_bumper is not None:
-                    self.virtual_bumper.update_pose(self.time, pose)  # sim time?!
-                self.xyz = x, y, z
-                self.trace.update_trace(self.xyz)
-                # pose3d
-                dist3d = quaternion.rotate_vector([dist, 0, 0], self.orientation)
-                self.xyz_quat = [a+b for a, b in zip(self.xyz_quat, dist3d)]
-                self.bus.publish('pose3d', [self.xyz_quat, self.orientation])
+            handler = getattr(self, "on_" + channel, None)
+            if handler is not None:
+                handler(timestamp, data)
             elif channel == 'scan' and not self.flipped:
                 self.scan = data
                 if self.local_planner is not None:
@@ -394,32 +426,6 @@ class SubTChallenge:
                 self.orientation = data
             elif channel == 'sim_time_sec':
                 self.sim_time_sec = data
-            elif channel == 'acc':
-                acc = [x/1000.0 for x in data]
-                gacc = np.matrix([[0., 0., 9.80]])  # Gravitational acceleration.
-                cos_pitch = math.cos(self.pitch)
-                sin_pitch = math.sin(self.pitch)
-                # TODO: Once roll is correct, incorporate it here too.
-                egacc = np.matrix([  # Expected gravitational acceleration given known pitch.
-                    [ cos_pitch, 0., sin_pitch],
-                    [        0., 1., 0.],
-                    [-sin_pitch, 0., cos_pitch]
-                ]) * gacc.T
-                cacc = np.asarray(acc) - egacc.T  # Corrected acceleration (without gravitational acceleration).
-                magnitude = math.hypot(cacc[0, 0], cacc[0, 1])
-                if magnitude > 12.0:
-                    print(self.time, 'Collision!', acc, 'reported:', self.collision_detector_enabled)
-                    if self.collision_detector_enabled:
-                        self.collision_detector_enabled = False
-                        raise Collision()
-            elif channel == 'artf':
-                artifact_data, deg_100th, dist_mm = data
-                x, y, z = self.xyz
-                angle, dist = self.yaw + math.radians(deg_100th/100.0), dist_mm/1000.0
-                ax = x + math.cos(angle) * dist
-                ay = y + math.sin(angle) * dist
-                az = z
-                self.maybe_remember_artifact(artifact_data, (ax, ay, az))
             elif channel == 'voltage':
                 self.voltage = data
             elif channel == 'emergency_stop':
