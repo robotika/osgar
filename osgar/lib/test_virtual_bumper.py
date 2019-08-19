@@ -7,7 +7,7 @@ from osgar.lib.virtual_bumper import VirtualBumper
 
 class VirtualBumperTest(unittest.TestCase):    
     def test_usage(self):
-        vb = VirtualBumper(timedelta(seconds=2.5))
+        vb = VirtualBumper(timedelta(seconds=2.5), dist_radius_limit=0.1)
         t0 = timedelta(seconds=12)
         t_step = timedelta(seconds=1)
         pose = [1.0, 2.0, math.pi]
@@ -23,7 +23,7 @@ class VirtualBumperTest(unittest.TestCase):
         self.assertFalse(vb.collision())
 
     def test_motion(self):
-        vb = VirtualBumper(timedelta(seconds=2))
+        vb = VirtualBumper(timedelta(seconds=2), dist_radius_limit=0.1)
         t0 = timedelta(seconds=0)
         t_step = timedelta(seconds=1)
         pose = [0.0, 0.0, 0.0]
@@ -52,7 +52,7 @@ class VirtualBumperTest(unittest.TestCase):
             (7.213, -1.344, -1.55439023182615),
             (7.213, -1.344, -1.556833692778942),
             (7.213, -1.344, -1.556833692778942)]
-        vb = VirtualBumper(timedelta(seconds=2))
+        vb = VirtualBumper(timedelta(seconds=2), dist_radius_limit=0.1)
         t0 = timedelta(seconds=0)
         t_step = timedelta(seconds=0.5)
         vb.update_desired_speed(0.5, 0.0)
@@ -62,7 +62,7 @@ class VirtualBumperTest(unittest.TestCase):
 
     def test_false_trigger_via_lora_pause(self):
         # bug shown during LoRa command "Pause"
-        vb = VirtualBumper(timedelta(seconds=2))
+        vb = VirtualBumper(timedelta(seconds=2), dist_radius_limit=0.1)
         vb.update_desired_speed(0.5, 0.0)
         vb.update_pose(timedelta(seconds=2.479321), (0.0, 0.0, 0.0))
         vb.update_pose(timedelta(seconds=27.612698), (2.503, -0.013, -0.00977))

@@ -6,15 +6,16 @@
 import math
 
 
-def equal_poses(pose1, pose2):
+def equal_poses(pose1, pose2, dist_limit):
     x1, y1, heading1 = pose1
     x2, y2, heading2 = pose2
-    return abs(x1 - x2) < 0.01 and abs(y1 - y2) < 0.01 and abs(heading1 - heading2) < math.radians(1)
+    return math.hypot(x2 - x1, y2 - y1) < dist_limit
 
 
 class VirtualBumper:
-    def __init__(self, stuck_time):
-        self.stuck_time = stuck_time
+    def __init__(self, stuck_time_limit, dist_radius_limit):
+        self.stuck_time_limit = stuck_time_limit
+        self.dist_radius_limit = dist_radius_limit
         self.should_be_moving = False  # status based on desired speed commands
         self.verbose = False
         self.reset_counters()
@@ -35,7 +36,7 @@ class VirtualBumper:
         if self.verbose:
             print('VirtualBumper', timestamp, pose)
         if self.last_pose is not None:
-            if equal_poses(pose, self.last_pose):
+            if equal_poses(pose, self.last_pose, self.dist_radius_limit):
                 self.not_moving = timestamp - self.last_pose_time
             else:
                 self.last_pose = pose
@@ -52,6 +53,6 @@ class VirtualBumper:
     def collision(self):
         if self.not_moving is None:
             return False
-        return self.not_moving >= self.stuck_time
+        return self.not_moving >= self.stuck_time_limit
 
 # vim: expandtab sw=4 ts=4

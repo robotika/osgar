@@ -127,7 +127,8 @@ class SubTChallenge:
         virtual_bumper_sec = config.get('virtual_bumper_sec')
         self.virtual_bumper = None
         if virtual_bumper_sec is not None:
-            self.virtual_bumper = VirtualBumper(timedelta(seconds=virtual_bumper_sec))
+            virtual_bumper_radius = config.get('virtual_bumper_radius', 0.1)
+            self.virtual_bumper = VirtualBumper(timedelta(seconds=virtual_bumper_sec), virtual_bumper_radius)
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
         self.xyz = (0, 0, 0)  # 3D position for mapping artifacts
