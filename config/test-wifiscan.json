@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "wifi": {
+          "driver": "subt.wifisignal:WifiSignal",
+          "in": [],
+          "out": ["wifiscan"],
+          "init": {
+            "sleep": 1.0
+          }
+      }
+    },
+    "links": []
+  }
+}
