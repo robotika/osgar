@@ -3,7 +3,7 @@ import math
 from unittest.mock import MagicMock
 
 from osgar.drivers.kloubak import (compute_desired_erpm, compute_desired_angle,
-        WHEEL_DISTANCE, compute_rear, CENTER_AXLE_DISTANCE)
+        WHEEL_DISTANCE, compute_rear, CENTER_AXLE_DISTANCE, RobotKloubak)
 
 
 class KloubakTest(unittest.TestCase):
@@ -70,5 +70,18 @@ class KloubakTest(unittest.TestCase):
         # another case "ValueError: math domain error"
         angle = compute_desired_angle(0.1, -1.0637781790905438)
         self.assertAlmostEqual(angle, -math.pi)
+
+    def test_invalid_can_message(self):
+        # this message killed Kloubak K2 on DARPA SubT Tunnel Circuit, Day 2
+        config = {}
+        bus = MagicMock()
+        k2 = RobotKloubak(config, bus)
+        # this used to assert:
+        #      assert len(data) == 1, len(data)
+        #   AssertionError: 8
+        k2.update_buttons(b'\x00\x00\x04\x1f\x00\x1f\x00\x7f')
+        self.assertEqual(k2.can_errors, 1)
+
+        k2.update_encoders(msg_id=0x92, data=b'\x97')
 
 # vim: expandtab sw=4 ts=4
