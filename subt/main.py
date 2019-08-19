@@ -29,6 +29,8 @@ TRACE_STEP = 0.5  # meters in 3D
 # accepted LoRa commands
 LORA_GO_HOME_CMD = b'GoHome'
 LORA_STOP_CMD = b'Stop'
+LORA_PAUSE_CMD = b'Pause'
+LORA_CONTINUE_CMD = b'Continue'
 
 
 def min_dist(laser_data):
@@ -247,12 +249,17 @@ class SubTChallenge:
 
         start_dist = self.traveled_dist
         start_time = self.sim_time_sec
-        while self.sim_time_sec - start_time < timeout.total_seconds():
+
+        last_pause_time = timedelta()  # for multiple Pause
+        current_pause_time = timedelta()
+        pause_start_time = None
+        while self.sim_time_sec - start_time < (timeout + last_pause_time + current_pause_time).total_seconds():
             try:
                 channel = self.update()
                 if (channel == 'scan' and not self.flipped) or (channel == 'scan_back' and self.flipped) or channel == 'scan360':
-                    desired_direction = follow_wall_angle(self.scan, radius=radius, right_wall=right_wall)
-                    self.go_safely(desired_direction)
+                    if pause_start_time is None:
+                        desired_direction = follow_wall_angle(self.scan, radius=radius, right_wall=right_wall)
+                        self.go_safely(desired_direction)
                 if dist_limit is not None:
                     if dist_limit < abs(self.traveled_dist - start_dist):  # robot can return backward -> abs()
                         print(self.time, 'Distance limit reached! At', self.traveled_dist, self.traveled_dist - start_dist)
@@ -273,12 +280,30 @@ class SubTChallenge:
                 if self.lora_cmd is not None:
                     # the "GoHome" command must be accepted only on the way there and not on the return home
                     if dist_limit is None and self.lora_cmd == LORA_GO_HOME_CMD:
-                        print('LoRa cmd - GoHome')
+                        print(self.time, 'LoRa cmd - GoHome')
                         self.lora_cmd = None
                         break
                     if self.lora_cmd == LORA_STOP_CMD:
-                        print('LoRa cmd - Stop')
-                        break
+                        print(self.time, 'LoRa cmd - Stop')
+                        raise EmergencyStopException()
+                    elif self.lora_cmd == LORA_PAUSE_CMD:
+                        print(self.time, 'LoRa cmd - Pause')
+                        self.send_speed_cmd(0, 0)
+                        if pause_start_time is None:
+                            # ignore repeated Pause
+                            pause_start_time = self.time
+                        self.lora_cmd = None
+                    elif self.lora_cmd == LORA_CONTINUE_CMD:
+                        print(self.time, 'LoRa cmd - Continue')
+                        if pause_start_time is not None:
+                            # ignore Continue without Pause
+                            last_pause_time += self.time - pause_start_time
+                            pause_start_time = None
+                        self.lora_cmd = None
+                if pause_start_time is not None:
+                    current_pause_time = self.time - pause_start_time
+                else:
+                    current_pause_time = timedelta()
             except Collision:
                 assert not self.collision_detector_enabled  # collision disables further notification
                 before_stop = self.xyz
