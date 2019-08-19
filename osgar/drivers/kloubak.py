@@ -123,6 +123,7 @@ class RobotKloubak(Node):
         self.last_encoders_rear_right = None
         self.last_encoders_time = None
         self.last_join_angle = None
+        self.can_errors = 0  # count errors instead of assert
 
         self.verbose = False  # should be in Node
         self.enc_debug_arr = []
@@ -137,7 +138,10 @@ class RobotKloubak(Node):
                                 round(math.degrees(heading)*100)])
 
     def update_buttons(self, data):
-        assert len(data) == 1, len(data)
+        # assert len(data) == 1, len(data)
+        if len(data) != 1:
+            self.can_errors += 1
+            return
         val = data[0]
         if self.buttons is None or val != self.buttons:
             self.buttons = val
@@ -148,7 +152,10 @@ class RobotKloubak(Node):
                 print('Emergency STOP:', self.emergency_stop)
 
     def update_encoders(self, msg_id, data):
-        assert len(data) == 8, data
+        # assert len(data) == 8, data
+        if len(data) != 8:
+            self.can_errors += 1
+            return
         rpm3, current, duty_cycle = struct.unpack('>ihh', data)
         if msg_id == CAN_ID_VESC_FRONT_L:
             self.last_encoders_front_left = rpm3
@@ -221,14 +228,19 @@ class RobotKloubak(Node):
             elif msg_id in [CAN_ID_VESC_FRONT_L, CAN_ID_VESC_FRONT_R, CAN_ID_VESC_REAR_L, CAN_ID_VESC_REAR_R]:
                 self.update_encoders(msg_id, packet[2:])
             elif msg_id == CAN_ID_CURRENT:
-                assert len(packet) == 5, len(packet)  # expected 24bit integer miliAmps
-                current = struct.unpack_from('>i', packet, 1)[0] & 0xFFFFFF
-#                print(current)
+                # assert len(packet) == 5, len(packet)  # expected 24bit integer miliAmps
+                if len(packet) == 5:
+                    current = struct.unpack_from('>i', packet, 1)[0] & 0xFFFFFF
+#                    print(current)
+                else:
+                    self.can_errors += 1
             elif msg_id == CAN_ID_JOIN_ANGLE:
-                assert len(packet) == 2 + 4, len(packet)
-                self.last_join_angle = struct.unpack_from('>i', packet, 2)[0]
-#                print(self.last_join_angle)
-
+                # assert len(packet) == 2 + 4, len(packet)
+                if len(packet) == 2 + 4:
+                    self.last_join_angle = struct.unpack_from('>i', packet, 2)[0]
+#                    print(self.last_join_angle)
+                else:
+                    self.can_errors += 1
             if msg_id == CAN_ID_SYNC:
                 self.publish('encoders', 
                         [self.last_encoders_front_left, self.last_encoders_front_right,
@@ -323,6 +335,7 @@ class RobotKloubak(Node):
                     assert False, channel  # unsupported channel
         except BusShutdownException:
             pass
+        assert self.can_errors == 0, self.can_errors  # summary over whole run
 
     def draw(self):
         """
