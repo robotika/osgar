@@ -559,8 +559,8 @@ def main():
     if args.command == 'replay':
         from osgar.replay import replay
         args.module = 'app'
-        game = replay(args, application=SubTChallenge)
-        game.play()
+        app = replay(args, application=SubTChallenge)
+        app.play()
 
     elif args.command == 'run':
         # To reduce latency spikes as described in https://morepypy.blogspot.com/2019/01/pypy-for-low-latency-systems.html.
@@ -570,7 +570,6 @@ def main():
 
         # support simultaneously multiple platforms
         prefix = os.path.basename(args.config[0]).split('.')[0] + '-'
-        log = LogWriter(prefix=prefix, note=str(sys.argv))
         config = config_load(*args.config)
 
         # apply overrides from command line
@@ -580,12 +579,13 @@ def main():
         if args.speed is not None:
             config['robot']['modules']['app']['init']['max_speed'] = args.speed
 
-        log.write(0, bytes(str(config), 'ascii'))  # write configuration
-        robot = Recorder(config=config['robot'], logger=log, application=SubTChallenge)
-        game = robot.modules['app']  # TODO nicer reference
-        robot.start()
-        game.play()
-        robot.finish()
+        with LogWriter(prefix=prefix, note=str(sys.argv)) as log:
+            log.write(0, bytes(str(config), 'ascii'))  # write configuration
+            robot = Recorder(config=config['robot'], logger=log, application=SubTChallenge)
+            app = robot.modules['app']  # TODO nicer reference
+            robot.start()
+            app.play()
+            robot.finish()
 
 
 if __name__ == "__main__":

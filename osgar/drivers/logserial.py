@@ -63,11 +63,11 @@ if __name__ == "__main__":
     from osgar.bus import BusHandler
 
     config = { 'port': 'COM5', 'speed': 4800 }
-    log = LogWriter(prefix='test-')
-    device = LogSerial(config, bus=BusHandler(log, out={'raw':[]}))
-    device.start()
-    time.sleep(2)
-    device.request_stop()
-    device.join()
+    with LogWriter(prefix='test-') as log:
+        device = LogSerial(config, bus=BusHandler(log, out={'raw':[]}))
+        device.start()
+        time.sleep(2)
+        device.request_stop()
+        device.join()
 
 # vim: expandtab sw=4 ts=4
