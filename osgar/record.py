@@ -17,14 +17,14 @@ class Recorder:
     def __init__(self, config, logger, application=None):
         self.modules = {}
 
-        que = {}
+        buses = {}
         for module_name, module_config in config['modules'].items():
             out, slots = {}, {}
             for output_type in module_config['out']:
                 out[output_type] = []
                 slots[output_type] = []
             bus = BusHandler(logger, out=out, slots=slots, name=module_name)
-            que[module_name] = bus.queue
+            buses[module_name] = bus
 
             module_class = module_config['driver']
             if module_class == 'application':
@@ -38,9 +38,9 @@ class Recorder:
         for from_module, to_module in config['links']:
             (from_driver, from_name), (to_driver, to_name) = from_module.split('.'), to_module.split('.')
             if to_name.startswith('slot_'):
-                self.modules[from_driver].bus.slots[from_name].append(getattr(self.modules[to_driver], to_name))
+                buses[from_driver].slots[from_name].append(getattr(self.modules[to_driver], to_name))
             else:
-                self.modules[from_driver].bus.out[from_name].append((self.modules[to_driver].bus.queue, to_name))
+                buses[from_driver].out[from_name].append((buses[to_driver].queue, to_name))
 
     def start(self):
         for module in self.modules.values():
