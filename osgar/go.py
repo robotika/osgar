@@ -40,9 +40,13 @@ class Go(Node):
 
     def run(self):
         print(self.time, "Go One Meter!")
-        self.send_speed_cmd(self.speed, 0.0)
+        self.update()  # define self.time
         start_time = self.time
-        while self.traveled_dist < self.dist and self.time - start_time < self.timeout:
+        if self.dist >= 0:
+            self.send_speed_cmd(self.speed, 0.0)
+        else:
+            self.send_speed_cmd(-self.speed, 0.0)
+        while self.traveled_dist < abs(self.dist) and self.time - start_time < self.timeout:
             self.update()
         print(self.time, "STOP")
         self.send_speed_cmd(0.0, 0.0)
@@ -85,7 +89,7 @@ if __name__ == "__main__":
         game.run()
 
     elif args.command == 'run':
-        prefix = os.path.basename(args.config[0]).split('.')[0] + '-'
+        prefix = 'go-' + os.path.basename(args.config[0]).split('.')[0] + '-'
         log = LogWriter(prefix=prefix, note=str(sys.argv))
         config = config_load(*args.config)
 
@@ -99,7 +103,7 @@ if __name__ == "__main__":
         robot = Recorder(config=config['robot'], logger=log, application=Go)
         game = robot.modules['app']
         robot.start()
-        game.play()
+        game.run()
         robot.finish()
 
 # vim: expandtab sw=4 ts=4
