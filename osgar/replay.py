@@ -42,7 +42,7 @@ def replay(args, application=None):
     for edge_from, edge_to in config['robot']['links']:
         if edge_to.split('.')[0] == module:
             if edge_from not in names:
-                logging.warning(f'Missing name: {edge_from}')
+                logging.warning('Missing name: %s' % edge_from)
                 names.append(edge_from)
             inputs[1 + names.index(edge_from)] = edge_to.split('.')[1]
 
