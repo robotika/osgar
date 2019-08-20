@@ -39,8 +39,8 @@ class Go(Node):
             self.update()
 
     def run(self):
-        print(self.time, "Go One Meter!")
         self.update()  # define self.time
+        print(self.time, "Go!")
         start_time = self.time
         if self.dist >= 0:
             self.send_speed_cmd(self.speed, 0.0)
@@ -103,6 +103,7 @@ if __name__ == "__main__":
         robot = Recorder(config=config['robot'], logger=log, application=Go)
         game = robot.modules['app']
         robot.start()
+        game.join()
         robot.finish()
 
 # vim: expandtab sw=4 ts=4

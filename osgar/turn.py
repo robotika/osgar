@@ -124,6 +124,7 @@ if __name__ == "__main__":
         robot = Recorder(config=config['robot'], logger=log, application=Turn)
         game = robot.modules['app']
         robot.start()
+        game.join()
         robot.finish()
 
 # vim: expandtab sw=4 ts=4
