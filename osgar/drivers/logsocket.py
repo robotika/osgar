@@ -190,11 +190,11 @@ if __name__ == "__main__":
     from osgar.bus import BusHandler
 
     config = {'host':'localhost', 'port': 8001, 'timeout': 1.0}
-    log = LogWriter(prefix='test-tcp-')
-    device = LogTCP(config, bus=BusHandler(log, out={'raw':[]}))
-    device.start()
-    time.sleep(2)
-    device.request_stop()
-    device.join()
+    with LogWriter(prefix='test-tcp-') as log:
+        device = LogTCP(config, bus=BusHandler(log, out={'raw':[]}))
+        device.start()
+        time.sleep(2)
+        device.request_stop()
+        device.join()
 
 # vim: expandtab sw=4 ts=4
