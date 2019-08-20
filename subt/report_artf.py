@@ -4,6 +4,8 @@
 """
 import requests
 import time
+import math
+import json
 
 
 #URL_BASE = "http://localhost:8000"  # demo
@@ -48,6 +50,30 @@ def report_artf(artf_type, x, y, z):
     print("-------------------")
 
 
+def triple(x, y, z):
+    """
+    Generate 3 coordinates with the same Z and XY in triangle of 4m
+    """
+    dist = 4.0
+    arr = []
+    for angle_deg in [0, 120, 240]:
+        angle = math.radians(angle_deg)
+        arr.append((x + math.cos(angle)*dist, y + math.sin(angle)*dist, z))
+    return arr
+
+
+def score(artf_type, x, y, z):
+    """
+    return True for scored artifact report
+    """
+    before = json.loads(bytes.decode(get_status()))
+    time.sleep(2)
+    report_artf(artf_type, x, y, z)
+    time.sleep(2)
+    after = json.loads(bytes.decode(get_status()))
+    return before['score'] < after['score']
+
+
 if __name__ == '__main__':
     import argparse
 
@@ -56,6 +82,8 @@ if __name__ == '__main__':
     parser.add_argument('x', help='X coordinate in meters', type=float)
     parser.add_argument('y', help='Y coordinate in meters', type=float)
     parser.add_argument('z', help='Z coordinate in meters', type=float)
+    parser.add_argument('--only-one', '-1', help='only one exact shot',
+                        action='store_true')
     args = parser.parse_args()
 
     artf_type = args.artf_type
@@ -63,11 +91,12 @@ if __name__ == '__main__':
         artf_type = ARTF_TYPES[ARTF_TYPES_SHORT.index(artf_type)]
 
     print('Reporting:', artf_type)
-    get_status()
-    time.sleep(2)
-    report_artf(artf_type, args.x, args.y, args.z)
-    time.sleep(2)
-    get_status()
+    if args.only_one:
+        print(score(artf_type, args.x, args.y, args.z))
+    else:
+        for x, y, z in triple(args.x, args.y, args.z):
+            if score(artf_type, x, y, z):
+                break
 
 # vim: expandtab sw=4 ts=4
 
