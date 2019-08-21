@@ -333,7 +333,7 @@ def lidarview(gen, caption_filename, callback=False):
                     print(pose)
                     x, y, heading = pose
                     if math.hypot(x, y) > 0.1:
-                        print('rotation (deg) =', math.degrees(math.atan2(y, x)))
+                        print('rotation (deg) =', math.degrees(math.atan2(y, x)), 'dist =', math.hypot(x, y))
                     else:
                         print('rotation not available')
                 if event.key == K_n:  # next keyframe
