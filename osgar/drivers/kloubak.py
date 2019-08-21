@@ -31,6 +31,8 @@ CAN_ID_SYNC = CAN_ID_VESC_FRONT_L
 CAN_ID_CURRENT = 0x70
 CAN_ID_JOIN_ANGLE = 0x80
 
+MIN_SPEED = 0.3
+
 #Transferring coefficient for the vesc tachometers to meters: distance = vesc_value * 0.845/100
 
 
@@ -75,11 +77,9 @@ def compute_desired_angle(desired_speed, desired_angular_speed):
     # side has length = radius (computed from speed and angular
     # speed) and the far side is half of CENTER_AXLE_DISTANCE.
     # The Kloubak part is perpendicular to the turning center.
-#    print(desired_speed, desired_angular_speed)
     if abs(desired_angular_speed) < 0.000001:
         return 0.0
     radius = desired_speed/desired_angular_speed
-#    print(radius)
     if abs(2 * radius) > CENTER_AXLE_DISTANCE:
         return 2 * math.asin((CENTER_AXLE_DISTANCE/2) / radius)
     return math.pi if radius > 0 else -math.pi
@@ -257,7 +257,19 @@ class RobotKloubak(Node):
 
     def slot_can(self, timestamp, data):
         self.time = timestamp
-        limit_l, limit_r = compute_desired_erpm(self.desired_speed, self.desired_angular_speed)
+
+        send_speed = self.desired_speed
+        if self.last_join_angle is not None and abs(self.desired_speed) > MIN_SPEED:
+            desired_angle = compute_desired_angle(self.desired_speed, self.desired_angular_speed)
+            angle = joint_rad(self.last_join_angle)
+            angle_diff = abs( desired_angle - angle )
+            if angle_diff > 0.2 and self.desired_speed > 0:
+                send_speed = max(MIN_SPEED, self.desired_speed * (1.2 - angle_diff))  # 1 rad is 57 deg
+            elif angle_diff > 0.2 and self.desired_speed < 0:
+                send_speed = min(- MIN_SPEED, self.desired_speed * (1.2 - angle_diff))  # 1 rad is 57 deg
+
+        limit_l, limit_r = compute_desired_erpm(send_speed, self.desired_angular_speed)
+#        limit_l, limit_r = compute_desired_erpm(self.desired_speed, self.desired_angular_speed)
         if self.process_packet(data):
             stop = [0, 0, 0, 0]
             if self.verbose:
@@ -312,7 +324,6 @@ class RobotKloubak(Node):
                 self.publish('can', CAN_packet(0x12, stop))  # left front
                 self.publish('can', CAN_packet(0x13, stop))  # right rear
                 self.publish('can', CAN_packet(0x14, stop))  # left rear
-
 
     def slot_desired_speed(self, timestamp, data):
         self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
