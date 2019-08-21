@@ -489,13 +489,48 @@ class SubTChallenge:
             with EmergencyStopMonitor(self):
                 allow_virtual_flip = self.symmetric
                 self.go_straight(2.5)  # go to the tunnel entrance
-                dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall, timeout=self.timeout,
-                                        pitch_limit=LIMIT_PITCH, roll_limit=LIMIT_ROLL)
+                walldist = self.walldist
+                total_dist = 0.0
+                start_time = self.sim_time_sec
+                while self.sim_time_sec - start_time < self.timeout.total_seconds():
+                    dist, reason = self.follow_wall(radius=walldist, right_wall=self.use_right_wall, timeout=self.timeout,
+                                            pitch_limit=LIMIT_PITCH, roll_limit=LIMIT_ROLL)
+                    total_dist += dist
+                    if reason is None or reason in [REASON_LORA,]:
+                        break
+
+                    walldist += 0.2
+                    if not allow_virtual_flip:
+                        # Eduro not supported yet
+                        if reason in [REASON_VIRTUAL_BUMPER,]:
+                            # virtual bumper already tried to backup a bit
+                            continue
+                        # for large slope rather return home
+                        break
+
+                    # re-try with bigger distance
+                    print(self.time, "Re-try because of", reason)
+                    for repeat in range(2):
+                        self.follow_wall(radius=walldist, right_wall=not self.use_right_wall, timeout=timedelta(seconds=30), dist_limit=2.0,
+                            flipped=allow_virtual_flip, pitch_limit=RETURN_LIMIT_PITCH, roll_limit=RETURN_LIMIT_ROLL)
+
+                        dist, reason = self.follow_wall(radius=walldist, right_wall=self.use_right_wall, timeout=timedelta(seconds=40), dist_limit=4.0,
+                                                pitch_limit=LIMIT_PITCH, roll_limit=LIMIT_ROLL)
+                        total_dist += dist
+                        if reason is None:
+                            break
+                        if reason in [REASON_LORA, REASON_DIST_REACHED]:
+                            break
+                        walldist += 0.2
+                    walldist = self.walldist
+                    if reason in [REASON_LORA,]:
+                        break
+
                 print(self.time, "Going HOME", reason)
                 if not allow_virtual_flip:
                     self.turn(math.radians(90), timeout=timedelta(seconds=20))
                     self.turn(math.radians(90), timeout=timedelta(seconds=20))
-                self.follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=3*self.timeout, dist_limit=3*dist,
+                self.follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=3*self.timeout, dist_limit=3*total_dist,
                         flipped=allow_virtual_flip, pitch_limit=RETURN_LIMIT_PITCH, roll_limit=RETURN_LIMIT_ROLL)
                 if self.artifacts:
                     self.bus.publish('artf_xyz', [[artifact_data, round(x*1000), round(y*1000), round(z*1000)]
