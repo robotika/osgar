@@ -33,6 +33,7 @@ class Turn(Node):
             pose = (x/1000.0, y/1000.0, math.radians(heading/100.0))
             if self.start_pose is None:
                 self.start_pose = pose
+            self.last_position = pose
             if self.last_position is not None:
                 self.is_moving = (self.last_position != pose)
 
