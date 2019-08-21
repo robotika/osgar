@@ -111,7 +111,6 @@ if __name__ == "__main__":
 
     elif args.command == 'run':
         prefix = 'turn-' + os.path.basename(args.config[0]).split('.')[0] + '-'
-        log = LogWriter(prefix=prefix, note=str(sys.argv))
         config = config_load(*args.config)
 
         # apply overrides from command line
@@ -120,11 +119,12 @@ if __name__ == "__main__":
         if args.speed is not None:
             config['robot']['modules']['app']['init']['max_speed'] = args.speed
 
-        log.write(0, bytes(str(config), 'ascii'))  # write configuration
-        robot = Recorder(config=config['robot'], logger=log, application=Turn)
-        game = robot.modules['app']
-        robot.start()
-        game.join()
-        robot.finish()
+        with LogWriter(prefix=prefix, note=str(sys.argv)) as log:
+            log.write(0, bytes(str(config), 'ascii'))  # write configuration
+            robot = Recorder(config=config['robot'], logger=log, application=Turn)
+            game = robot.modules['app']
+            robot.start()
+            game.join()
+            robot.finish()
 
 # vim: expandtab sw=4 ts=4
