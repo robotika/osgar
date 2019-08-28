@@ -28,6 +28,7 @@
 
 """
 from datetime import timedelta
+from ast import literal_eval
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
@@ -71,6 +72,27 @@ def parse_my_cmd(my_id, data):
     return None
 
 
+def draw_lora_positions(arr):
+    """
+    Draw positions of tripples:
+        (time, ID, (x. y, heading))
+    """
+    import matplotlib.pyplot as plt
+    t = [a[0] for a in arr]
+    robot_ids = sorted(list(set([a[1] for a in arr])))
+    print('Robot IDs', robot_ids)
+
+    for robot_id in robot_ids:
+        x = [a[2][0]/1000.0 for a in arr if a[1] == robot_id]
+        y = [a[2][1]/1000.0 for a in arr if a[1] == robot_id]
+        line = plt.plot(x, y, '-o', linewidth=2, label='Robot #%d' % robot_id)
+
+#    plt.xlabel('time (s)')
+    plt.axes().set_aspect('equal', 'datalim')
+    plt.legend()
+    plt.show()
+
+
 class LoRa(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
@@ -82,6 +104,7 @@ class LoRa(Node):
         self.last_transmit = None
         self.recent_packets = []
         self.verbose = config.get('verbose', False)
+        self.debug_robot_poses = []
 
     def send_data(self, data):
         self.last_transmit = self.publish('raw', data + b'\n')
@@ -98,6 +121,8 @@ class LoRa(Node):
             while len(packet) > 0:
                 self.recent_packets.append(packet)
                 addr, data = parse_lora_packet(packet)
+                if addr is not None and data.startswith(b'[') and self.verbose:
+                    self.debug_robot_poses.append((self.time.total_seconds(), addr[-1], literal_eval(data.decode('ascii'))))
                 cmd = parse_my_cmd(self.device_id, data)
                 if cmd is not None:
                     self.publish('cmd', cmd)
@@ -141,5 +166,12 @@ class LoRa(Node):
                 self.update()
         except BusShutdownException:
             pass
+
+    def draw(self):
+        """
+        Debug Draw
+        """
+        draw_lora_positions(self.debug_robot_poses)
+
 
 # vim: expandtab sw=4 ts=4
