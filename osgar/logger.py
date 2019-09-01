@@ -46,10 +46,16 @@ TIMESTAMP_OVERFLOW_STEP = (1 << 32)  # in microseconds resolution
 TIMESTAMP_MASK = TIMESTAMP_OVERFLOW_STEP - 1
 
 class LogWriter:
-    def __init__(self, prefix='naio', note=''):
+    def __init__(self, prefix='', note='', filename=None, start_time=None):
         self.lock = RLock()
-        self.start_time = datetime.datetime.utcnow()
-        self.filename = prefix + self.start_time.strftime("%y%m%d_%H%M%S.log")
+        if start_time is None:
+            self.start_time = datetime.datetime.utcnow()
+        else:
+            self.start_time = start_time
+        if filename is None:
+            self.filename = prefix + self.start_time.strftime("%y%m%d_%H%M%S.log")
+        else:
+            self.filename = filename
         if ENV_OSGAR_LOGS in os.environ:
             os.makedirs(os.environ[ENV_OSGAR_LOGS], exist_ok=True)
             self.filename = os.path.join(os.environ[ENV_OSGAR_LOGS], self.filename)
@@ -73,9 +79,11 @@ class LogWriter:
             self.write(stream_id=INFO_STREAM_ID, data=bytes(str({'names': self.names}), encoding='ascii'))
             return len(self.names)
 
-    def write(self, stream_id, data):
+    def write(self, stream_id, data, dt=None):
         with self.lock:
-            dt = datetime.datetime.utcnow() - self.start_time
+            if dt is None:
+                # by defaut generate timestamps automatically
+                dt = datetime.datetime.utcnow() - self.start_time
             bytes_data = data
             assert dt.days == 0, dt  # multiple days not supported yet
             time_frac = (dt.seconds * 1000000 + dt.microseconds) & TIMESTAMP_MASK
