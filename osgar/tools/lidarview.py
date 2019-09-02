@@ -18,8 +18,8 @@ from osgar.lib.config import get_class_by_name
 from osgar.lib import quaternion
 
 
-#WINDOW_SIZE = 1200, 660
-WINDOW_SIZE = 1600, 1000
+WINDOW_SIZE = 1200, 660
+#WINDOW_SIZE = 1600, 1000
 TAIL_MIN_STEP = 0.1  # in meters
 HISTORY_SIZE = 100
 
