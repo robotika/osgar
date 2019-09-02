@@ -9,6 +9,7 @@
           "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d"],
           "init": {
             "max_speed": 0.5,
+            "symmetric": false,
             "virtual_world": true
           }
       },
