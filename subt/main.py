@@ -545,7 +545,7 @@ class SubTChallenge:
 
     def play_virtual_track(self):
         print("SubT Challenge Ver2!")
-        self.turn(math.radians(45))
+        self.turn(math.radians(-45))
         self.go_straight(7.0)  # go to the tunnel entrance (used to be 9m)
         self.collision_detector_enabled = True
         self.follow_wall(radius = 0.9, right_wall=self.use_right_wall,
