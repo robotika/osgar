@@ -87,7 +87,6 @@ def parse_raw_image(data, dump_filename=None):
 def parse_jpeg_image(data, dump_filename=None):
     # http://docs.ros.org/api/sensor_msgs/html/msg/CompressedImage.html
     size = struct.unpack_from('<I', data)[0]
-    assert size < 230467, size  # expected size for raw image during experiment
     # http://docs.ros.org/melodic/api/std_msgs/html/msg/Header.html
     pos = 4
     seq, timestamp_sec, timestamp_nsec, frame_id_size = struct.unpack_from('<IIII', data, pos)
