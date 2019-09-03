@@ -20,9 +20,15 @@ from osgar.lib.serialize import deserialize
 
 def create_video(logfile, stream, outfile, add_time=False,
                  start_time_sec=0, end_time_sec=None, fps=25,
-                 flip=False):
+                 flip=False, camera2=None):
     assert outfile.endswith(".avi"), outFilename
     only_stream = lookup_stream_id(logfile, stream)
+    if camera2 is not None:
+        dual_cam_id = lookup_stream_id(logfile, camera2)
+        only_stream = [only_stream, dual_cam_id]
+        img1, img2 = None, None
+    else:
+        dual_cam_id = None
     with LogReader(logfile, only_stream_id=only_stream) as log:
         writer = None
         for timestamp, stream_id, data in log:
@@ -30,6 +36,15 @@ def create_video(logfile, stream, outfile, add_time=False,
             img = cv2.imdecode(np.fromstring(buf, dtype=np.uint8), 1)
             if flip:
                 img = cv2.flip(img, 0)
+            if dual_cam_id is not None:
+                if stream_id == dual_cam_id:
+                    img2 = img
+                else:
+                    img1 = img
+                # make sure that both images are defined before you create writer
+                if img1 is None or img2 is None:
+                    continue
+                img = np.concatenate((img1, img2), axis=1)
             if writer is None:
                 height, width = img.shape[:2]
                 writer = cv2.VideoWriter(outfile,
@@ -63,6 +78,7 @@ def main():
     parser = argparse.ArgumentParser(description='Convert logfile to AVI video')
     parser.add_argument('logfile', help='recorded log file')
     parser.add_argument('--stream', help='stream ID or name', default='camera.raw')
+    parser.add_argument('--camera2', help='optional 2nd camera stream ID or name')
     parser.add_argument('--out', '-o', help='output AVI file', default='out.avi')
     parser.add_argument('--display-time', '-t', help='add timestamp info', action='store_true')
     parser.add_argument('--start-time-sec', '-s', help='start video at later time (sec)',
@@ -75,7 +91,7 @@ def main():
 
     create_video(args.logfile, args.stream, args.out, add_time=args.display_time,
                  start_time_sec=args.start_time_sec, end_time_sec=args.end_time_sec, fps=args.fps,
-                 flip=args.flip)
+                 flip=args.flip, camera2=args.camera2)
 
 
 if __name__ == "__main__":
