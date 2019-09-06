@@ -162,7 +162,7 @@ class SubTChallenge:
 
         self.last_send_time = None
         if self.is_virtual:
-            self.local_planner = None #LocalPlanner()  # HACK!!
+            self.local_planner = LocalPlanner()
         else:
             self.local_planner = None
 
