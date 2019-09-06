@@ -160,6 +160,7 @@ class SubTChallenge:
         self.use_right_wall = config['right_wall']
         self.is_virtual = config.get('virtual_world', False)  # workaround to handle tunnel differences
 
+        self.last_send_time = None
         if self.is_virtual:
             self.local_planner = None #LocalPlanner()  # HACK!!
         else:
@@ -168,10 +169,9 @@ class SubTChallenge:
     def send_speed_cmd(self, speed, angular_speed):
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_desired_speed(speed, angular_speed)
-        success = self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
+        self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
         # Corresponds to gc.disable() in __main__. See a comment there for more details.
         gc.collect()
-        return success
 
     def maybe_remember_artifact(self, artifact_data, artifact_xyz):
         for _, (x, y, z) in self.artifacts:
@@ -383,7 +383,7 @@ class SubTChallenge:
         x += math.cos(self.pitch) * math.cos(self.yaw) * dist
         y += math.cos(self.pitch) * math.sin(self.yaw) * dist
         z += math.sin(self.pitch) * dist
-        self.bus.publish('pose2d', [round(x * 1000), round(y * 1000),
+        self.last_send_time = self.bus.publish('pose2d', [round(x * 1000), round(y * 1000),
                                     round(math.degrees(self.yaw) * 100)])
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_pose(self.time, pose)  # sim time?!
@@ -443,9 +443,12 @@ class SubTChallenge:
             if handler is not None:
                 handler(timestamp, data)
             elif channel == 'scan' and not self.flipped:
+                if self.last_send_time is not None and self.time - self.last_send_time > timedelta(seconds=0.05):
+                    print('queue delay', self.time - self.last_send_time)
                 self.scan = data
                 if self.local_planner is not None:
-                    self.local_planner.update(data)
+                    if self.last_send_time is not None and self.time - self.last_send_time < timedelta(seconds=0.1):
+                        self.local_planner.update(data)
             elif channel == 'scan_back' and self.flipped:
                 self.scan = data
                 if self.local_planner is not None:
