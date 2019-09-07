@@ -93,25 +93,37 @@
           "driver": "rosmsg",
           "in": ["slot_raw"],
           "out": ["rot", "acc"],
-          "init": {"topic_type": "std_msgs/Imu"}
+          "init": {
+            "topic_type": "std_msgs/Imu",
+            "downsample": 25
+          }
       },
       "rosmsg_laser": {
           "driver": "rosmsg",
           "in": ["slot_raw"],
           "out": ["scan"],
-          "init": {"topic_type": "sensor_msgs/LaserScan"}
+          "init": {
+            "topic_type": "sensor_msgs/LaserScan",
+            "downsample": 2
+          }
       },
       "rosmsg_image": {
           "driver": "rosmsg",
           "in": ["slot_raw"],
           "out": ["image"],
-          "init": {"topic_type": "sensor_msgs/CompressedImage"}
+          "init": {
+            "topic_type": "sensor_msgs/CompressedImage",
+            "downsample": 2
+          }
       },
       "rosmsg_odom": {
           "driver": "rosmsg",
           "in": ["slot_raw"],
           "out": ["pose2d", "sim_time_sec"],
-          "init": {"topic_type": "nav_msgs/Odometry"}
+          "init": {
+            "topic_type": "nav_msgs/Odometry",
+            "downsample": 5
+          }
       }
     },
     "links": [["app.desired_speed", "ros.desired_speed"],
