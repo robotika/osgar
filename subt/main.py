@@ -443,11 +443,11 @@ class SubTChallenge:
             if handler is not None:
                 handler(timestamp, data)
             elif channel == 'scan' and not self.flipped:
-                if self.last_send_time is not None and self.time - self.last_send_time > timedelta(seconds=0.05):
+                if self.last_send_time is not None and self.last_send_time - self.time > timedelta(seconds=0.1):
                     print('queue delay', self.time - self.last_send_time)
                 self.scan = data
                 if self.local_planner is not None:
-                    if self.last_send_time is not None and self.time - self.last_send_time < timedelta(seconds=0.1):
+                    if self.last_send_time is not None and self.last_send_time - self.time < timedelta(seconds=0.1):
                         self.local_planner.update(data)
             elif channel == 'scan_back' and self.flipped:
                 self.scan = data
@@ -551,13 +551,13 @@ class SubTChallenge:
         self.turn(math.radians(-45))
         self.go_straight(7.0)  # go to the tunnel entrance (used to be 9m)
         self.collision_detector_enabled = True
-        self.follow_wall(radius = 0.9, right_wall=self.use_right_wall,
+        dist, reason = self.follow_wall(radius = 0.9, right_wall=self.use_right_wall,
                             timeout=timedelta(minutes=1, seconds=0))  # was 12 min
         self.collision_detector_enabled = False
 
         print("Artifacts:", self.artifacts)
 
-        print("Going HOME")
+        print(self.time, "Going HOME", dist, reason)
         self.return_home()
 
         self.send_speed_cmd(0, 0)
