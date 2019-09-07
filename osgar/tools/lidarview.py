@@ -10,6 +10,7 @@ import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "1"
 import pygame
 from pygame.locals import *
+import cv2  # for video output
 
 from osgar.logger import LogIndexedReader, lookup_stream_names
 from osgar.lib.serialize import deserialize
@@ -205,9 +206,16 @@ class Framer:
         return timedelta(), self.pose, self.scan, self.image, self.image2, self.keyframe, True
 
 
-
-def lidarview(gen, caption_filename, callback=False):
+def lidarview(gen, caption_filename, callback=False, out_video=None):
     global g_scale
+
+    if out_video is not None:
+        width, height = WINDOW_SIZE
+        fps = 10
+        writer = cv2.VideoWriter(out_video,
+                                 cv2.VideoWriter_fourcc('F', 'M', 'P', '4'),
+                                 fps,
+                                 (width, height))
 
     pygame.display.init()
     screen = pygame.display.set_mode(WINDOW_SIZE)
@@ -291,6 +299,12 @@ def lidarview(gen, caption_filename, callback=False):
             screen.blit(background, (0, 0))
             screen.blit(foreground, (0, 0))
             pygame.display.flip() 
+
+            if out_video is not None:
+                # hacked image conversion - there is surely direct way!
+                pygame.image.save(screen, "tmp.jpg")
+                im = cv2.imread("tmp.jpg", 1)
+                writer.write(im)
 
             if paused or eof:
                 event = pygame.event.wait()
@@ -380,6 +394,8 @@ def lidarview(gen, caption_filename, callback=False):
                     break
             if event.type == pygame.NOEVENT and not paused and not eof:
                 break
+    if out_video is not None:
+        writer.release()
 
 
 def main():
@@ -409,6 +425,8 @@ def main():
     parser.add_argument('--deg', help='lidar field of view in degrees',
                         type=float, default=270)
 
+    parser.add_argument('--create-video', help='filename of output video')
+
     args = parser.parse_args()
     if not any([args.lidar, args.pose2d, args.pose3d, args.camera]):
         print("Available streams:")
@@ -425,7 +443,7 @@ def main():
     g_lidar_fov_deg = args.deg
     with Framer(args.logfile, lidar_name=args.lidar, pose2d_name=args.pose2d, pose3d_name=args.pose3d,
                 camera_name=args.camera, camera2_name=args.camera2, keyframes_name=args.keyframes) as framer:
-        lidarview(framer, caption_filename=filename, callback=callback)
+        lidarview(framer, caption_filename=filename, callback=callback, out_video=args.create_video)
 
 if __name__ == "__main__":
     main()
