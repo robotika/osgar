@@ -91,25 +91,25 @@
       },
       "rosmsg_imu": {
           "driver": "rosmsg",
-          "in": ["addr", "raw"],
+          "in": ["slot_raw"],
           "out": ["rot", "acc"],
           "init": {"topic_type": "std_msgs/Imu"}
       },
       "rosmsg_laser": {
           "driver": "rosmsg",
-          "in": ["raw"],
+          "in": ["slot_raw"],
           "out": ["scan"],
           "init": {"topic_type": "sensor_msgs/LaserScan"}
       },
       "rosmsg_image": {
           "driver": "rosmsg",
-          "in": ["raw"],
+          "in": ["slot_raw"],
           "out": ["image"],
           "init": {"topic_type": "sensor_msgs/CompressedImage"}
       },
       "rosmsg_odom": {
           "driver": "rosmsg",
-          "in": ["raw"],
+          "in": ["slot_raw"],
           "out": ["pose2d", "sim_time_sec"],
           "init": {"topic_type": "nav_msgs/Odometry"}
       }
@@ -121,27 +121,27 @@
               ["ros.imu_data_addr", "tcp_imu_data.addr"],
               ["ros.imu_data", "tcp_imu_data.raw"],
               ["tcp_imu_data.raw", "ros.imu_data"],
-              ["tcp_imu_data.raw", "rosmsg_imu.raw"],
+              ["tcp_imu_data.raw", "rosmsg_imu.slot_raw"],
               ["rosmsg_imu.rot", "app.rot"],
               ["rosmsg_imu.acc", "app.acc"],
 
               ["ros.laser_data_addr", "tcp_laser_data.addr"],
               ["ros.laser_data", "tcp_laser_data.raw"],
               ["tcp_laser_data.raw", "ros.laser_data"],
-              ["tcp_laser_data.raw", "rosmsg_laser.raw"],
+              ["tcp_laser_data.raw", "rosmsg_laser.slot_raw"],
               ["rosmsg_laser.scan", "app.scan"],
               ["rosmsg_laser.scan", "detector.scan"],
 
               ["ros.image_data_addr", "tcp_image_data.addr"],
               ["ros.image_data", "tcp_image_data.raw"],
               ["tcp_image_data.raw", "ros.image_data"],
-              ["tcp_image_data.raw", "rosmsg_image.raw"],
+              ["tcp_image_data.raw", "rosmsg_image.slot_raw"],
               ["rosmsg_image.image", "detector.image"],
 
               ["ros.odom_data_addr", "tcp_odom_data.addr"],
               ["ros.odom_data", "tcp_odom_data.raw"],
               ["tcp_odom_data.raw", "ros.odom_data"],
-              ["tcp_odom_data.raw", "rosmsg_odom.raw"],
+              ["tcp_odom_data.raw", "rosmsg_odom.slot_raw"],
               ["rosmsg_odom.pose2d", "app.pose2d"],
               ["rosmsg_odom.sim_time_sec", "app.sim_time_sec"],
 
