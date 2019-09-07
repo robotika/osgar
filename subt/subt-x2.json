@@ -69,7 +69,9 @@
           "driver": "tcpdynamic",
           "in": ["addr", "raw"],
           "out": ["raw"],
-          "init": {}
+          "init": {
+            "bufsize": 10000
+          }
       },
       "tcp_laser_data": {
           "driver": "tcpdynamic",
