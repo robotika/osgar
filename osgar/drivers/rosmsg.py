@@ -240,6 +240,8 @@ class ROSMsgParser(Thread):
 
         # initial message contains structure
         self.header = None
+        self.count = 0
+        self.downsample = config.get('downsample', 1)
 
     def get_packet(self):
         data = self._buf
@@ -261,7 +263,11 @@ class ROSMsgParser(Thread):
             return
         if self.header is None:
             self.header = packet
-        elif self.topic_type == 'sensor_msgs/CompressedImage':
+            return
+        self.count += 1
+        if self.count % self.downsample != 0:
+            return
+        if self.topic_type == 'sensor_msgs/CompressedImage':
             self.bus.publish('image', parse_jpeg_image(packet))
         elif self.topic_type == 'sensor_msgs/LaserScan':
             self.bus.publish('scan', parse_laser(packet))
