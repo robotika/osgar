@@ -29,7 +29,7 @@
 
 #include <subt_communication_broker/common_types.h>
 #include <subt_communication_broker/subt_communication_client.h>
-#include <subt_gazebo/protobuf/artifact.pb.h>
+#include <subt_ign/protobuf/artifact.pb.h>
 #include <subt_msgs/PoseFromArtifact.h>
 
 #include <subt_example/CreatePeer.h>
