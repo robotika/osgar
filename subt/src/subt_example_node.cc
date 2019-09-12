@@ -122,7 +122,7 @@ class Controller
     subt::msgs::Artifact artifact;
     artifact.set_type(_type);
     artifact.mutable_pose()->CopyFrom(_pose);
-    return this->client->SendTo(artifact.SerializeAsString(), "BaseStation");
+    return this->client->SendTo(artifact.SerializeAsString(), subt::kBaseStationName);
   }
 
   public: bool start_scoring()
