@@ -125,6 +125,16 @@ class Controller
     return this->client->SendTo(artifact.SerializeAsString(), "BaseStation");
   }
 
+  public: bool start_scoring()
+  {
+    ignition::msgs::Boolean req;
+    ignition::msgs::Boolean rep;
+    unsigned int timeout = 5000;
+    bool result;
+    req.set_data(true);
+    return this->node.Request("/subt/start", req, timeout, rep, result); 
+  }
+
   public: bool get_origin_gazebo(double *x, double *y, double *z)
   {
     ros::NodeHandle nodeHandle;
@@ -431,6 +441,9 @@ int main(int argc, char** argv)
 
 //  ros::spin();
 //  ros::Rate r(1);
+  bool start = controller.start_scoring();
+  ROS_INFO("start_scoring %d", (int)start);
+
   int i;
   while (ros::ok())
   {
