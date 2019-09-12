@@ -153,7 +153,7 @@ class Controller
     bool result;
     req.set_data("X2"); 
 
-    bool ret = this->node.Request("/subt/pose_from_artifact_origin", req, timeout, rep, result)
+    bool ret = this->node.Request("/subt/pose_from_artifact_origin", req, timeout, rep, result);
 
     if(ret)
     {
