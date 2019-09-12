@@ -34,6 +34,10 @@
 
 #include <subt_example/CreatePeer.h>
 
+#include <ignition/transport/Node.hh>  // new type of communication including origin
+#include "subt_ign/CommonTypes.hh"
+
+
 /// \brief. Example control class, running as a ROS node to control a robot.
 class Controller
 {
@@ -121,7 +125,7 @@ class Controller
     return this->client->SendTo(artifact.SerializeAsString(), "BaseStation");
   }
 
-  public: bool get_origin(double *x, double *y, double *z)
+  public: bool get_origin_gazebo(double *x, double *y, double *z)
   {
     ros::NodeHandle nodeHandle;
     ros::ServiceClient cli = nodeHandle.serviceClient<subt_msgs::PoseFromArtifact>(
@@ -139,6 +143,29 @@ class Controller
     }
     return ret;
   }
+
+  public: bool get_origin(double *x, double *y, double *z)
+  {
+    // Ignition version
+    ignition::msgs::StringMsg req;
+    ignition::msgs::Pose rep;
+    unsigned int timeout = 5000;
+    bool result;
+    req.set_data("X2"); 
+
+    bool ret = this->node.Request("/subt/pose_from_artifact_origin", req, timeout, rep, result)
+
+    if(ret)
+    {
+    *x = rep.position().x();
+    *y = rep.position().y();
+    *z = rep.position().z();
+    }
+    return ret;
+  }
+
+  /// \brief The ignition transport node comms handler.
+  protected: ignition::transport::Node node; 
 
  private:
   // indexed by remote name, store port and Callback function
