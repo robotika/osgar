@@ -468,38 +468,42 @@ int main(int argc, char** argv)
         pose.mutable_position()->set_y(y + offset_y);
         pose.mutable_position()->set_z(z + offset_z);
 
-        int type = -1;
+        uint32_t type = 42;
         if(strcmp(buf, "TYPE_BACKPACK") == 0)
         {
-          type = 0;
+          type = TYPE_BACKPACK;
         }
         if(strcmp(buf, "TYPE_DUCT") == 0)
         {
-          type = 1;
+          type = TYPE_DUCT;
         }
         if(strcmp(buf, "TYPE_ELECTRICAL_BOX") == 0)
         {
-          type = 2;
+          type = TYPE_ELECTRICAL_BOX;
         }
         if(strcmp(buf, "TYPE_EXTINGUISHER") == 0)
         {
-          type = 3;
+          type = TYPE_EXTINGUISHER;
         }
         if(strcmp(buf, "TYPE_PHONE") == 0)
         {
-          type = 4;
+          type = TYPE_PHONE;
         }
         if(strcmp(buf, "TYPE_RADIO") == 0)
         {
-          type = 5;
+          type = TYPE_RADIO;
+        }
+        if(strcmp(buf, "TYPE_RESCUE_RANDY") == 0)
+        {
+          type = TYPE_RESCUE_RANDY;
         }
         if(strcmp(buf, "TYPE_TOOLBOX") == 0)
         {
-          type = 6;
+          type = TYPE_TOOLBOX;
         }
         if(strcmp(buf, "TYPE_VALVE") == 0)
         {
-          type = 7;
+          type = TYPE_VALVE;
         }
 
         ROS_INFO_STREAM("MD enum" << type);
