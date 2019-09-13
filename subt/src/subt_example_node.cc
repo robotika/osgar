@@ -468,7 +468,7 @@ int main(int argc, char** argv)
         pose.mutable_position()->set_y(y + offset_y);
         pose.mutable_position()->set_z(z + offset_z);
 
-        uint32_t type = 42;
+        subt::ArtifactType type;
         if(strcmp(buf, "TYPE_BACKPACK") == 0)
         {
           type = subt::ArtifactType::TYPE_BACKPACK;
@@ -506,9 +506,9 @@ int main(int argc, char** argv)
           type = subt::ArtifactType::TYPE_VALVE;
         }
 
-        ROS_INFO_STREAM("MD enum" << type);
+        ROS_INFO_STREAM("MD enum" << static_cast<uint32_t>(type));
 
-        ret |= controller.ReportArtifact(type, pose);
+        ret |= controller.ReportArtifact(static_cast<uint32_t>(type), pose);
         if(ret)
         {
           ROS_INFO("MD SUCCESS\n");
