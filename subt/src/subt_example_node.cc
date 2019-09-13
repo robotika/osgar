@@ -471,39 +471,39 @@ int main(int argc, char** argv)
         uint32_t type = 42;
         if(strcmp(buf, "TYPE_BACKPACK") == 0)
         {
-          type = TYPE_BACKPACK;
+          type = subt::ArtifactType::TYPE_BACKPACK;
         }
         if(strcmp(buf, "TYPE_DUCT") == 0)
         {
-          type = TYPE_DUCT;
+          type = subt::ArtifactType::TYPE_DUCT;
         }
         if(strcmp(buf, "TYPE_ELECTRICAL_BOX") == 0)
         {
-          type = TYPE_ELECTRICAL_BOX;
+          type = subt::ArtifactType::TYPE_ELECTRICAL_BOX;
         }
         if(strcmp(buf, "TYPE_EXTINGUISHER") == 0)
         {
-          type = TYPE_EXTINGUISHER;
+          type = subt::ArtifactType::TYPE_EXTINGUISHER;
         }
         if(strcmp(buf, "TYPE_PHONE") == 0)
         {
-          type = TYPE_PHONE;
+          type = subt::ArtifactType::TYPE_PHONE;
         }
         if(strcmp(buf, "TYPE_RADIO") == 0)
         {
-          type = TYPE_RADIO;
+          type = subt::ArtifactType::TYPE_RADIO;
         }
         if(strcmp(buf, "TYPE_RESCUE_RANDY") == 0)
         {
-          type = TYPE_RESCUE_RANDY;
+          type = subt::ArtifactType::TYPE_RESCUE_RANDY;
         }
         if(strcmp(buf, "TYPE_TOOLBOX") == 0)
         {
-          type = TYPE_TOOLBOX;
+          type = subt::ArtifactType::TYPE_TOOLBOX;
         }
         if(strcmp(buf, "TYPE_VALVE") == 0)
         {
-          type = TYPE_VALVE;
+          type = subt::ArtifactType::TYPE_VALVE;
         }
 
         ROS_INFO_STREAM("MD enum" << type);
