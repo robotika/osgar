@@ -560,10 +560,10 @@ class SubTChallenge:
         print(self.time, "Going HOME", dist, reason)
 
         # use OLD VERSION until issue with IMU is resolved
-#        self.return_home()
-        self.turn(math.radians(90), timeout=timedelta(seconds=20), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
-        self.turn(math.radians(90), timeout=timedelta(seconds=20), speed=-0.1)
-        self.follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=2*self.timeout, dist_limit=dist+1)
+        self.return_home()
+#        self.turn(math.radians(90), timeout=timedelta(seconds=20), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
+#        self.turn(math.radians(90), timeout=timedelta(seconds=20), speed=-0.1)
+#        self.follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=2*self.timeout, dist_limit=dist+1)
         # END OF OLD VERSION
 
         self.send_speed_cmd(0, 0)
