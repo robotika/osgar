@@ -97,7 +97,7 @@
           "out": ["rot", "acc"],
           "init": {
             "topic_type": "std_msgs/Imu",
-            "downsample": 25
+            "downsample": 5
           }
       },
       "rosmsg_laser": {
