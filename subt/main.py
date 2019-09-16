@@ -355,6 +355,7 @@ class SubTChallenge:
                 x, y = self.xyz[:2]
                 desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
                 self.go_safely(desired_direction)
+        print('return_home: dist', distance3D(self.xyz, (0, 0, 0)), 'time(sec)', self.sim_time_sec - start_time)
 
     def register(self, callback):
         self.monitors.append(callback)
