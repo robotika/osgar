@@ -342,13 +342,14 @@ class SubTChallenge:
         self.flipped = False
         return self.traveled_dist - start_dist, reason
 
-    def return_home(self):
+    def return_home(self, timeout):
         HOME_THRESHOLD = 5.0
         SHORTCUT_RADIUS = 2.3
         MAX_TARGET_DISTANCE = 5.0
         assert(MAX_TARGET_DISTANCE > SHORTCUT_RADIUS) # Because otherwise we could end up with a target point more distant from home than the robot.
         self.trace.prune(SHORTCUT_RADIUS)
-        while distance3D(self.xyz, (0, 0, 0)) > HOME_THRESHOLD:
+        start_time = self.sim_time_sec
+        while distance3D(self.xyz, (0, 0, 0)) > HOME_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
             if self.update() == 'scan':
                 target_x, target_y = self.trace.where_to(self.xyz, MAX_TARGET_DISTANCE)[:2]
                 x, y = self.xyz[:2]
@@ -560,7 +561,7 @@ class SubTChallenge:
         print(self.time, "Going HOME", dist, reason)
 
         # use OLD VERSION until issue with IMU is resolved
-        self.return_home()
+        self.return_home(self.timeout)
 #        self.turn(math.radians(90), timeout=timedelta(seconds=20), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
 #        self.turn(math.radians(90), timeout=timedelta(seconds=20), speed=-0.1)
 #        self.follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=2*self.timeout, dist_limit=dist+1)
