@@ -104,7 +104,8 @@
           "in": ["slot_raw"],
           "out": ["scan"],
           "init": {
-            "topic_type": "sensor_msgs/LaserScan"
+            "topic_type": "sensor_msgs/LaserScan",
+            "downsample": 2
           }
       },
       "rosmsg_image": {
