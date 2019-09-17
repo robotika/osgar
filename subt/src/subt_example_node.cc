@@ -38,6 +38,24 @@
 #include "subt_ign/CommonTypes.hh"
 
 
+
+void boundCallback(const std::string &_srcAddress,
+                   const std::string &_dstAddress,
+                   const uint32_t _dstPort,
+                   const std::string &_data)
+{
+  subt::msgs::ArtifactScore res;
+  if (!res.ParseFromString(_data))
+  {
+    ROS_ERROR("CommClientCallback(): Error deserializing message.");
+  }
+
+  // Add code to handle communication callbacks.
+  ROS_INFO("Message from [%s] to [%s] on port [%u]:\n [%s]", _srcAddress.c_str(),
+      _dstAddress.c_str(), _dstPort, res.DebugString().c_str());
+}
+
+
 /// \brief. Example control class, running as a ROS node to control a robot.
 class Controller
 {
@@ -197,7 +215,8 @@ Controller::Controller(const std::string &_name,
       = this->n.subscribe<std_msgs::String>(
           _name + "/comm", 1, &Controller::TeleopCommCallback, this);
 
-  this->client->Bind(&Controller::CommClientCallback, this);
+//  this->client->Bind(&Controller::CommClientCallback, this);
+  this->client->Bind(&boundCallback, this);
 
   this->velPub
       = this->n.advertise<geometry_msgs::Twist>(_name + "/cmd_vel", 1);
