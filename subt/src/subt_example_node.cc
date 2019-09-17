@@ -149,7 +149,7 @@ class Controller
     }
 
     // Report it.
-    this->client->SendTo(serializedData, subt::kBaseStationName);
+    return this->client->SendTo(serializedData, subt::kBaseStationName);
   }
 
   public: bool start_scoring()
@@ -216,7 +216,7 @@ Controller::Controller(const std::string &_name,
           _name + "/comm", 1, &Controller::TeleopCommCallback, this);
 
 //  this->client->Bind(&Controller::CommClientCallback, this);
-  this->client->Bind(&boundCallback, this);
+  this->client->Bind(&boundCallback);
 
   this->velPub
       = this->n.advertise<geometry_msgs::Twist>(_name + "/cmd_vel", 1);
