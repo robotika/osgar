@@ -446,7 +446,7 @@ class SubTChallenge:
                 handler(timestamp, data)
             elif channel == 'scan' and not self.flipped:
                 if self.last_send_time is not None and self.last_send_time - self.time > timedelta(seconds=0.1):
-                    print('queue delay', self.time - self.last_send_time)
+                    print('queue delay', self.last_send_time - self.time)
                 self.scan = data
                 if self.local_planner is not None:
                     if self.last_send_time is not None and self.last_send_time - self.time < timedelta(seconds=0.1):
