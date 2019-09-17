@@ -571,7 +571,7 @@ class SubTChallenge:
         self.send_speed_cmd(0, 0)
 
         # TEST BEGIN - report artifact
-        self.artifacts.append(('TYPE_EXTINGUISHER', (-6.536, 38.524, 0.0)))
+        self.artifacts.append(('TYPE_EXTINGUISHER', (0.0, 0.0, 0.0)))
         # TEST END
 
         if self.artifacts:
