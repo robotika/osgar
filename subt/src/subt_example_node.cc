@@ -122,7 +122,16 @@ class Controller
     subt::msgs::Artifact artifact;
     artifact.set_type(_type);
     artifact.mutable_pose()->CopyFrom(_pose);
-    return this->client->SendTo(artifact.SerializeAsString(), subt::kBaseStationName);
+
+    // Serialize the artifact.
+    std::string serializedData;
+    if (!artifact.SerializeToString(&serializedData)) {
+      std::cerr << "ReportArtifact(): Error serializing message\n"
+                << artifact.DebugString() << std::endl;
+    }
+
+    // Report it.
+    this->client->SendTo(serializedData, subt::kBaseStationName);
   }
 
   public: bool start_scoring()
@@ -133,25 +142,6 @@ class Controller
     bool result;
     req.set_data(true);
     return this->node.Request("/subt/start", req, timeout, rep, result); 
-  }
-
-  public: bool get_origin_gazebo(double *x, double *y, double *z)
-  {
-    ros::NodeHandle nodeHandle;
-    ros::ServiceClient cli = nodeHandle.serviceClient<subt_msgs::PoseFromArtifact>(
-        "/subt/pose_from_artifact_origin");
-    subt_msgs::PoseFromArtifact srv;
-    srv.request.robot_name.data = this->name;
-
-    bool ret = cli.call(srv);
-    if(ret)
-    {
-      geometry_msgs::Pose origin = srv.response.pose.pose;
-    *x = origin.position.x;
-    *y = origin.position.y;
-    *z = origin.position.z;
-    }
-    return ret;
   }
 
   public: bool get_origin(double *x, double *y, double *z)
