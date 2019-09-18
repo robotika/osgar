@@ -149,7 +149,7 @@ class Controller
     }
 
     // Report it.
-    return this->client->SendTo(serializedData, "BaseStation"); //subt::kBaseStationName);
+    return this->client->SendTo(serializedData, "base_station"); //subt::kBaseStationName);
   }
 
   public: bool start_scoring()
