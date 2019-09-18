@@ -17,6 +17,7 @@ from osgar.logger import LogReader, LogIndexedReader, lookup_stream_id, lookup_s
 from osgar.lib.serialize import deserialize
 from osgar.lib.config import get_class_by_name
 from osgar.lib import quaternion
+from osgar.lib import camera_thresholding
 
 
 WINDOW_SIZE = 1200, 660
@@ -206,6 +207,7 @@ def lidarview(gen, caption_filename, callback=False, out_video=None):
                                  fps,
                                  (width, height))
 
+    cameraThresholding = camera_thresholding.CameraThresholding()
     pygame.display.init()
     screen = pygame.display.set_mode(WINDOW_SIZE)
 
@@ -240,7 +242,7 @@ def lidarview(gen, caption_filename, callback=False, out_video=None):
     wait_for_keyframe = False
     while True:
         timestamp, pose, scan, image, image2, keyframe, eof = history.next()
-
+        cameraThresholding.update(image)
         if max_timestamp is None or max_timestamp < timestamp:
             # build map only for new data
             max_timestamp = timestamp
