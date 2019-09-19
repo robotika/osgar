@@ -12,7 +12,7 @@
           "driver": "serial",
           "in": ["raw"],
           "out": ["raw"],
-          "init": {"port": "/dev/ttyUSB0", "speed": 115200}
+          "init": {"port": "/dev/lora", "speed": 115200}
       }
     },
     "links": [["lora_serial.raw", "lora.raw"],
