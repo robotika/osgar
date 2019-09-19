@@ -21,7 +21,7 @@ RADIO = 'TYPE_RADIO'
 TOOLBOX = 'TYPE_TOOLBOX'
 DUCT = 'TYPE_DUCT'
 
-RED_THRESHOLD = 100
+RED_THRESHOLD = 50  # virtual QVGA, used to be 100
 YELLOW_THRESHOLD = 40
 WHITE_THRESHOLD = 20000
 
@@ -56,7 +56,7 @@ def count_red(img):
     b = img[:,:,0]
     g = img[:,:,1]
     r = img[:,:,2]
-    mask = np.logical_and(r > 100, np.logical_and(r/2 > g, r/2 > b))
+    mask = np.logical_and(r > 20, np.logical_and(r/2 > g, r/2 > b))  # QVGA virtual, dark images, used to be 100
     return count_mask(mask)
 
 
