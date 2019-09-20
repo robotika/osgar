@@ -88,7 +88,6 @@ class LogWriter:
             self.f.write(struct.pack('IHH', time_frac,
                          stream_id, len(bytes_data) - index))
             self.f.write(bytes_data[index:])
-            self.f.flush()
         return dt
 
     def close(self):
