@@ -148,6 +148,7 @@
               ["tcp_image_data.raw", "ros.image_data"],
               ["tcp_image_data.raw", "rosmsg_image.slot_raw"],
               ["rosmsg_image.image", "detector.image"],
+              ["rosmsg_image.image", "app.image"],
 
               ["ros.odom_data_addr", "tcp_odom_data.addr"],
               ["ros.odom_data", "tcp_odom_data.raw"],
