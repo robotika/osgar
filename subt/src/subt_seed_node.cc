@@ -66,7 +66,7 @@ class Controller
   private: subt_msgs::PoseFromArtifact originSrv;
 
   /// \brief True if robot has arrived at destination.
-  private: bool arrived{false};
+  public: bool arrived{false};
 
   /// \brief True if started.
   private: bool started{false};
@@ -206,7 +206,7 @@ not available.");
     artifact.mutable_pose()->mutable_position()->set_y(37);
     artifact.mutable_pose()->mutable_position()->set_z(0.004);
 
-    this->ReportArtifact(artifact);
+//    this->ReportArtifact(artifact);
     /*
     std::string serializedData;
     if (!artifact.SerializeToString(&serializedData))
@@ -266,14 +266,14 @@ int main(int argc, char** argv)
   // example. You can write your controller using alternative methods.
   // To get started with ROS visit: http://wiki.ros.org/ROS/Tutorials
   ros::Rate loop_rate(10);
-  while (ros::ok())
+  while (ros::ok() && !controller.arrived)
   {
     controller.Update();
     ros::spinOnce();
     loop_rate.sleep();
   }
 
-  char *path = "call_base.txt";
+  char *path = "/home/developer/subt_solution/osgar/call_base.txt";
   double offset_x, offset_y, offset_z;
 
   offset_x = -6.0;
