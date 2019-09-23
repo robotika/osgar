@@ -281,6 +281,7 @@ int main(int argc, char** argv)
   offset_z = 0.0;
 
   int i;
+  ros::Rate r(1);
   while (ros::ok())
   {
     ros::spinOnce();
@@ -352,7 +353,7 @@ int main(int argc, char** argv)
 
         ROS_INFO_STREAM("MD enum" << static_cast<uint32_t>(type));
 
-        ret |= controller.ReportArtifact(static_cast<uint32_t>(type), pose);
+        ret |= controller.ReportArtifact(artifact);
         if(ret)
         {
           ROS_INFO("MD SUCCESS\n");
