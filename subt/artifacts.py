@@ -20,6 +20,9 @@ PHONE = 'TYPE_PHONE'
 RADIO = 'TYPE_RADIO'
 TOOLBOX = 'TYPE_TOOLBOX'
 DUCT = 'TYPE_DUCT'
+DRILL = 'TYPE_DRILL'
+RESCUE_RANDY = 'TYPE_RESCUE_RANDY'
+
 
 RED_THRESHOLD = 50  # virtual QVGA, used to be 100
 YELLOW_THRESHOLD = 40
@@ -86,8 +89,9 @@ def artf_in_scan(scan, img_x_min, img_x_max, verbose=False):
     angular_resolution = len(scan) / 270
     mid_index = len(scan) // 2
     camera_fov_deg = 60
-    deg_max = camera_fov_deg * (1280 / 2 - x_min) / 1280  # small value on the left corresponds to positive angle
-    deg_min = camera_fov_deg * (1280 / 2 - x_max) / 1280
+    width = 320  # 1280
+    deg_max = camera_fov_deg * (width / 2 - x_min) / width  # small value on the left corresponds to positive angle
+    deg_min = camera_fov_deg * (width / 2 - x_max) / width
     tolerance = int(5 * angular_resolution)  # in paritular the valve is detected with offset
     left_index = mid_index + int(deg_min * angular_resolution) - tolerance
     right_index = mid_index + int(deg_max * angular_resolution) + tolerance
@@ -176,7 +180,7 @@ class ArtifactDetector(Node):
             if red_used:
                 print('h/w', h/w)
                 if self.best < 1000:
-                    artf = VALVE
+                    artf = DRILL  # VALVE - hack for simple02
                 elif h/w > 2.4:
                     artf = EXTINGUISHER
                 elif h/w > 1.0:
