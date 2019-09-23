@@ -320,6 +320,10 @@ int main(int argc, char** argv)
         {
           type = subt::ArtifactType::TYPE_DUCT;
         }
+        if(strcmp(buf, "TYPE_DRILL") == 0)
+        {
+          type = subt::ArtifactType::TYPE_DRILL;
+        }
         if(strcmp(buf, "TYPE_ELECTRICAL_BOX") == 0)
         {
           type = subt::ArtifactType::TYPE_ELECTRICAL_BOX;
