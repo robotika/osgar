@@ -147,26 +147,6 @@ void Controller::Update()
       return;
   }
 
-  // Add code that should be processed every iteration.
-
-  std::chrono::time_point<std::chrono::system_clock> now =
-    std::chrono::system_clock::now();
-
-  if (std::chrono::duration<double>(now - this->lastMsgSentTime).count() > 5.0)
-  {
-    // Here, we are assuming that the robot names are "X1" and "X2".
-    if (this->name == "X1")
-    {
-      this->client->SendTo("Hello from " + this->name, "X2");
-    }
-    else
-    {
-      this->client->SendTo("Hello from " + this->name, "X1");
-    }
-    this->lastMsgSentTime = now;
-  }
-
-
   if (this->arrived)
     return;
 
@@ -220,64 +200,6 @@ not available.");
       ROS_ERROR("CommsClient failed to Send serialized data.");
     }
   }
-  // Move towards entrance
-  else
-  {
-    // Yaw w.r.t. entrance
-    // Quaternion to yaw:
-    // https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles#Source_Code_2
-    auto q = pose.orientation;
-    double siny_cosp = +2.0 * (q.w * q.z + q.x * q.y);
-    double cosy_cosp = +1.0 - 2.0 * (q.y * q.y + q.z * q.z);
-    auto yaw = atan2(siny_cosp, cosy_cosp);
-
-    auto facingFront = abs(yaw) < 0.1;
-    auto facingEast = abs(yaw + M_PI * 0.5) < 0.1;
-    auto facingWest = abs(yaw - M_PI * 0.5) < 0.1;
-
-    auto onCenter = abs(pose.position.y) <= 1.0;
-    auto westOfCenter = pose.position.y > 1.0;
-    auto eastOfCenter = pose.position.y < -1.0;
-
-    double linVel = 3.0;
-    double angVel = 1.5;
-
-    // Robot is facing entrance
-    if (facingFront && onCenter)
-    {
-      msg.linear.x = linVel;
-      msg.angular.z = angVel * -yaw;
-    }
-    // Turn to center line
-    else if (!facingEast && westOfCenter)
-    {
-      msg.angular.z = -angVel;
-    }
-    else if (!facingWest && eastOfCenter)
-    {
-      msg.angular.z = angVel;
-    }
-    // Go to center line
-    else if (facingEast && westOfCenter)
-    {
-      msg.linear.x = linVel;
-    }
-    else if (facingWest && eastOfCenter)
-    {
-      msg.linear.x = linVel;
-    }
-    // Center line, not facing entrance
-    else if (onCenter && !facingFront)
-    {
-      msg.angular.z = angVel * -yaw;
-    }
-    else
-    {
-      ROS_ERROR("Unhandled case");
-    }
-  }
-
-  this->velPub.publish(msg);
 }
 
 /////////////////////////////////////////////////
