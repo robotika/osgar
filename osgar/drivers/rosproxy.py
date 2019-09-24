@@ -13,7 +13,17 @@ import socket
 
 from osgar.bus import BusShutdownException
 
-NODE_HOST, NODE_PORT = ('127.0.0.1', 8000)
+# http://wiki.ros.org/ROS/EnvironmentVariables
+# ROS_IP/ROS_HOSTNAME
+# ROS_IP and ROS_HOSTNAME are optional environment variable that sets the declared network address of a ROS
+# Node or tool. The options are mutually exclusive, if both are set ROS_HOSTNAME will take precedence.
+# Use ROS_IP if you are specifying an IP address, and ROS_HOSTNAME if you are specifying a host name.
+# When a ROS component reports a URI to the master or other components, this value will be used.
+# This setting is only needed in situations where you have multiple addresses for a computer and need to
+# force ROS to a particular one.
+ROS_IP = os.environ.get('ROS_IP', '127.0.0.1')
+
+NODE_HOST, NODE_PORT = (ROS_IP, 8000)
 PUBLISH_PORT = 8123  # can be changed in configuration
 
 
@@ -81,7 +91,8 @@ class ROSProxy(Thread):
         # ROS_MASTER_URI is a required setting that tells nodes where they can locate the master.
         # It should be set to the XML-RPC URI of the master.
         self.ros_master_uri = config.get('ros_master_uri', os.environ['ROS_MASTER_URI'])
-        self.ros_client_uri = config['ros_client_uri']
+
+        self.ros_client_uri = config['ros_client_uri'].replace('$ROS_IP$', ROS_IP)
 
         NODE_PORT = config.get('node_port', NODE_PORT)  # workaround for dynamic port assignment
         PUBLISH_PORT = config.get('publish_port', PUBLISH_PORT)
@@ -108,7 +119,7 @@ class ROSProxy(Thread):
         # define TCP connection
         # note, that ROS returns name (protocol_params[1]) instead of IP, which is problem to lookup
         #     -> using local IP for now
-        self.bus.publish(publish_name + '_addr', ['127.0.0.1', protocol_params[2]])        
+        self.bus.publish(publish_name + '_addr', [ROS_IP, protocol_params[2]])
 
         # initialize connection
         header = prefix4BytesLen(
