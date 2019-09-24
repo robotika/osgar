@@ -21,7 +21,9 @@ class LogSocket:
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.output_thread = Thread(target=self.run_output, daemon=True)
 
-        host = config.get('host').replace('$ROS_IP$', ROS_IP)
+        host = config.get('host')
+        if host is not None:
+            host = host.replace('$ROS_IP$', ROS_IP)
         port = config.get('port')
         self.pair = (host, port)  # (None, None) for unknown address
         if 'timeout' in config:
