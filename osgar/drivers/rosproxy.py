@@ -76,7 +76,11 @@ class ROSProxy(Thread):
         self.desired_speed = 0.0
         self.desired_angular_speed = 0.0
 
-        self.ros_master_uri = config['ros_master_uri']
+        # http://wiki.ros.org/ROS/EnvironmentVariables
+        # ROS_MASTER_URI
+        # ROS_MASTER_URI is a required setting that tells nodes where they can locate the master.
+        # It should be set to the XML-RPC URI of the master.
+        self.ros_master_uri = config.get('ros_master_uri', os.environ['ROS_MASTER_URI'])
         self.ros_client_uri = config['ros_client_uri']
 
         NODE_PORT = config.get('node_port', NODE_PORT)  # workaround for dynamic port assignment
