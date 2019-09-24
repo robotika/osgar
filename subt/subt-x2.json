@@ -34,7 +34,7 @@
 	          "laser_data", "laser_data_addr", "image_data", "image_data_addr",
             "odom_data", "odom_data_addr"],
           "init": {
-            "ros_client_uri": "http://127.0.0.1:8000",
+            "ros_client_uri": "http://$ROS_IP$:8000",
             "topic": "/X2/cmd_vel",
             "topic_type": "geometry_msgs/Twist",
             "subscribe": [
@@ -59,7 +59,7 @@
           "in": ["raw"],
           "out": ["raw"],
           "init": {
-            "host": "127.0.0.1",
+            "host": "$ROS_IP$",
             "port": 8123,
             "timeout": 1.0
           }
