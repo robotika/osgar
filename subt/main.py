@@ -570,10 +570,6 @@ class SubTChallenge:
 
         self.send_speed_cmd(0, 0)
 
-        # TEST BEGIN - report artifact
-        self.artifacts.append(('TYPE_EXTINGUISHER', (0.0, 0.0, 0.0)))
-        # TEST END
-
         if self.artifacts:
             self.bus.publish('artf_xyz', [[artifact_data, round(x*1000), round(y*1000), round(z*1000)] 
                                           for artifact_data, (x, y, z) in self.artifacts])
