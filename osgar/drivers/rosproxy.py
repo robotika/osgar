@@ -7,9 +7,8 @@ import struct
 from xmlrpc.client import ServerProxy
 from xmlrpc.server import SimpleXMLRPCServer
 import math
-
+import os
 import socket
-
 
 from osgar.bus import BusShutdownException
 
