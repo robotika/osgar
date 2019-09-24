@@ -25,7 +25,7 @@ RESCUE_RANDY = 'TYPE_RESCUE_RANDY'
 
 
 RED_THRESHOLD = 50  # virtual QVGA, used to be 100
-YELLOW_THRESHOLD = 40
+YELLOW_THRESHOLD = 80
 WHITE_THRESHOLD = 20000
 
 
@@ -75,7 +75,7 @@ def count_yellow(img):
     b = img[:,:,0]
     g = img[:,:,1]
     r = img[:,:,2]
-    mask = np.logical_and(r >= 240, np.logical_and(g >= 240, b < 180))
+    mask = np.logical_and(r >= 60, np.logical_and(r/4 > b, g/4 > b))
     return count_mask(mask)
 
 
@@ -142,17 +142,13 @@ class ArtifactDetector(Node):
         img = cv2.imdecode(np.fromstring(image, dtype=np.uint8), 1)
         rcount, w, h, x_min, x_max = count_red(img)
         yellow_used = False
-        if self.is_virtual and rcount == 0:
-            wcount, w, h, x_min, x_max = count_white(img)
-            if wcount > WHITE_THRESHOLD and 1.8 < w/h < 1.9 and wcount/(w*h) > 0.6:
-                count = wcount
+        if self.is_virtual and rcount < 20:
+            ycount, w, h, x_min, x_max = count_yellow(img)
+            if ycount > YELLOW_THRESHOLD:
+                yellow_used = True
+                count = ycount
             else:
-                ycount, w, h, x_min, x_max = count_yellow(img)
-                if ycount > YELLOW_THRESHOLD:
-                    yellow_used = True
-                    count = ycount
-                else:
-                    count = 0
+                count = rcount
         else:
             count = rcount
 
@@ -188,9 +184,7 @@ class ArtifactDetector(Node):
                 else:
                     artf = TOOLBOX
             elif yellow_used:
-                artf = RADIO
-            else:
-                artf = ELECTRICAL_BOX
+                artf = RESCUE_RANDY  # used to be RADIO
 
             dx_mm, dy_mm = 0, 0  # relative offset to current robot position
             # TODO if VALVE -> find it in scan
