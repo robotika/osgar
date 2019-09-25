@@ -14,20 +14,20 @@ sensors = set()
 def callback_imu(data):
     global sensors
     if 'imu' not in sensors:
-        rospy.loginfo(rospy.get_caller_id() + "Imu heard %s", data.data)
+        rospy.loginfo(rospy.get_caller_id() + "Imu")
         sensors.add('imu')
 
 
 def callback_scan(data):
-    rospy.loginfo(rospy.get_caller_id() + "LidarScan heard %s", data.data)
+    rospy.loginfo(rospy.get_caller_id() + "LidarScan")
 
 
 def callback_image(data):
-    rospy.loginfo(rospy.get_caller_id() + "Image heard %s", data.data)
+    rospy.loginfo(rospy.get_caller_id() + "Image")
 
 
 def callback_odom(data):
-    rospy.loginfo(rospy.get_caller_id() + "Odom heard %s", data.data)
+    rospy.loginfo(rospy.get_caller_id() + "Odom")
 
 
 def wait_for_sensors():
