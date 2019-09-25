@@ -77,7 +77,7 @@ class Controller
   /// \brief Name of this robot.
   private: std::string name;
 
-  private: double prev_x(0.0);
+  private: double prev_x{0.0};
 
   public: bool ReportArtifact(subt::msgs::Artifact& artifact)
   {
