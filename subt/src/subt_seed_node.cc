@@ -54,7 +54,7 @@ class Controller
   private: ros::NodeHandle n;
 
   /// \brief publisher to send cmd_vel
-  private: ros::Publisher velPub;
+//  private: ros::Publisher velPub;
 
   /// \brief Communication client.
   private: std::unique_ptr<subt::CommsClient> client;
@@ -154,8 +154,8 @@ void Controller::Update()
       this->client->Bind(&Controller::CommClientCallback, this);
 
       // Create a cmd_vel publisher to control a vehicle.
-      this->velPub = this->n.advertise<geometry_msgs::Twist>(
-          this->name + "/cmd_vel", 1);
+//      this->velPub = this->n.advertise<geometry_msgs::Twist>(
+//          this->name + "/cmd_vel", 1);
 
       // Create a cmd_vel publisher to control a vehicle.
       this->originClient = this->n.serviceClient<subt_msgs::PoseFromArtifact>(
@@ -178,8 +178,8 @@ robot may not exist, be outside staging area, or the service is \
 not available.");
 
     // Stop robot
-    geometry_msgs::Twist msg;
-    this->velPub.publish(msg);
+//    geometry_msgs::Twist msg;
+//    this->velPub.publish(msg);
     return;
   }
 
