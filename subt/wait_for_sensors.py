@@ -19,15 +19,24 @@ def callback_imu(data):
 
 
 def callback_scan(data):
-    rospy.loginfo(rospy.get_caller_id() + "LidarScan")
+    global sensors
+    if 'scan' not in sensors:
+        rospy.loginfo(rospy.get_caller_id() + "LidarScan")
+        sensors.add('scan')
 
 
 def callback_image(data):
-    rospy.loginfo(rospy.get_caller_id() + "Image")
+    global sensors
+    if 'image' not in sensors:
+        rospy.loginfo(rospy.get_caller_id() + "Image")
+        sensors.add('image')
 
 
 def callback_odom(data):
-    rospy.loginfo(rospy.get_caller_id() + "Odom")
+    global sensors
+    if 'odom' not in sensors:
+        rospy.loginfo(rospy.get_caller_id() + "Odom")
+        sensors.add('odom')
 
 
 def wait_for_sensors():
