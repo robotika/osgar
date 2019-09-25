@@ -12,5 +12,5 @@ sleep 10
 
 cd osgar
 
-python3 -m subt run subt/subt-x2.json --side left --walldist 0.75 --timeout 180 --note "try to visit artifact and return home" | python subt/std2ros.py
+python3 -m subt run subt/subt-x2.json --side left --walldist 0.75 --timeout 180 --note "try to visit artifact and return home" 2>&1 | python subt/std2ros.py
 
