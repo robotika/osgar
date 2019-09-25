@@ -190,6 +190,8 @@ not available.");
   double dist = pose.position.x * pose.position.x +
     pose.position.y * pose.position.y;
 
+  ROS_INFO_STREAM("MD robot pose " << pose.position.x << " " << pose.position.y << " dist=" << dist);
+
   // Arrived
   if (dist < 0.3 || pose.position.x >= -0.3)
   {
