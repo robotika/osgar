@@ -77,6 +77,8 @@ class Controller
   /// \brief Name of this robot.
   private: std::string name;
 
+  private: double prev_x(0.0);
+
   public: bool ReportArtifact(subt::msgs::Artifact& artifact)
   {
     std::string serializedData;
@@ -190,7 +192,9 @@ not available.");
   double dist = pose.position.x * pose.position.x +
     pose.position.y * pose.position.y;
 
-  ROS_INFO_STREAM("MD robot pose " << pose.position.x << " " << pose.position.y << " dist=" << dist);
+  if(prev_x != pose.position.x)
+    ROS_INFO_STREAM("MD robot pose " << pose.position.x << " " << pose.position.y << " dist=" << dist);
+  prev_x = pose.position.x;
 
   // Arrived
   if (dist < 0.3 || pose.position.x >= -0.3)
