@@ -9,6 +9,8 @@ sleep 30
 # Run your solution.
 roslaunch subt_seed x1.launch &
 
+sleep 10
+
 cd osgar
 
 python subt/wait_for_sensors.py
