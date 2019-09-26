@@ -22,6 +22,7 @@
 #include <rosgraph_msgs/Clock.h>
 
 #include <string>
+#include <stdlib.h>     /* abs */
 
 #include <subt_communication_broker/subt_communication_client.h>
 #include <subt_ign/CommonTypes.hh>
@@ -77,7 +78,7 @@ class Controller
   /// \brief Name of this robot.
   private: std::string name;
 
-  private: double prev_x{0.0};
+  private: double prev_dist2{0.0};
 
   public: bool ReportArtifact(subt::msgs::Artifact& artifact)
   {
@@ -192,9 +193,11 @@ not available.");
   double dist = pose.position.x * pose.position.x +
     pose.position.y * pose.position.y;
 
-  if(prev_x != pose.position.x)
+  if(abs(prev_dist2 - dist) > 1.0)
+  {
     ROS_INFO_STREAM("MD robot pose " << pose.position.x << " " << pose.position.y << " dist=" << dist);
-  prev_x = pose.position.x;
+    prev_dist2 = dist;
+  }
 
   // Arrived
   if (dist < 0.3 || pose.position.x >= -0.3)
