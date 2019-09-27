@@ -51,19 +51,28 @@ int g_countOdom = 0;
 void *g_context;
 void *g_responder;
 
+#define MAX_MSG_SIZE 1000000  // is 1MB enough?
+
 void initZeroMQ()
 {
   g_context = zmq_ctx_new ();
-  g_responder = zmq_socket (g_context, ZMQ_REP);
+  g_responder = zmq_socket (g_context, ZMQ_PUSH);  // use "Pipeline pattern" to send all data to Python3
   int rc = zmq_bind (g_responder, "tcp://*:5555");
   assert (rc == 0);
 }
 
 void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
 {
-  if(g_countImu == 0)  // only once for test
-    zmq_send(g_responder, "World", 5, 0);
+  static uint8_t buf[MAX_MSG_SIZE];
 
+  if(g_countImu % 100 == 0)  // for test limit it to slow updates
+  {
+    //zmq_send(g_responder, "World", 5, 0);
+    uint32_t size = msg->serializationLength();
+    assert(size < MAX_MSG_SIZE);
+    msg->serialize(buf, 0);
+    zmq_send(g_responder, buf, size, 0);
+  }
 //  ROS_INFO("I heard: [%s]", msg->data.c_str());
   if(g_countImu % 100 == 0)
     ROS_INFO("received Imu %d ", g_countImu);
