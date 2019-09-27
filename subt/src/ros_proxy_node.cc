@@ -51,12 +51,20 @@ int g_countOdom = 0;
 void *g_context;
 void *g_responder;
 
+void *g_contextIn;
+void *g_responderIn;
+
 void initZeroMQ()
 {
   g_context = zmq_ctx_new ();
   g_responder = zmq_socket (g_context, ZMQ_PUSH);  // use "Pipeline pattern" to send all data to Python3
   int rc = zmq_bind (g_responder, "tcp://*:5555");
   assert (rc == 0);
+
+  // received
+  g_contextIn = zmq_ctx_new ();
+  g_responderIn = zmq_socket (g_contextIn, ZMQ_PULL);  // use "Pipeline pattern" to send all data to Python3
+  zmq_connect (g_requesterIn, "tcp://localhost:5556");
 }
 
 void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
@@ -278,6 +286,12 @@ not available.");
 
   // Simple example for robot to go to entrance
   geometry_msgs::Twist msg;
+  char buffer[100];
+  while(zmq_recv(g_requesterIn, buffer, 100, ZMQ_DONTWAIT) > 0)
+  {
+    // TODO deserialize buffer
+    this->velPub.publish(msg);
+  }
 
   // Distance to goal
   double dist = pose.position.x * pose.position.x +
