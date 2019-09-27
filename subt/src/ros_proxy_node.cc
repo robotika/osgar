@@ -70,7 +70,11 @@ void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
     //zmq_send(g_responder, "World", 5, 0);
     uint32_t size = ros::serialization::serializationLength(*msg);
     assert(size < MAX_MSG_SIZE);
-    msg->serialize(buf, 0);
+    //msg->serialize(buf, 0);
+    //SerializedMessage serializeMessage(const M& message)
+    ros::serialization::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
+
+
     zmq_send(g_responder, buf, size, 0);
   }
 //  ROS_INFO("I heard: [%s]", msg->data.c_str());
