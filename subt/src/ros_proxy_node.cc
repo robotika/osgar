@@ -39,15 +39,31 @@
 #include <subt_ign/CommonTypes.hh>
 #include <subt_ign/protobuf/artifact.pb.h>
 
+// PROXY PART
+#include <zmq.h>
+#include <assert.h>
 
 int g_countImu = 0;
 int g_countScan = 0;
 int g_countImage = 0;
 int g_countOdom = 0;
 
+void *g_context;
+void *g_responder;
+
+void initZeroMQ()
+{
+  g_context = zmq_ctx_new ();
+  g_responder = zmq_socket (g_context, ZMQ_REP);
+  int rc = zmq_bind (g_responder, "tcp://*:5555");
+  assert (rc == 0);
+}
 
 void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
 {
+  if(g_countImu == 0)  // only once for test
+    zmq_send(g_responder, "World", 5, 0);
+
 //  ROS_INFO("I heard: [%s]", msg->data.c_str());
   if(g_countImu % 100 == 0)
     ROS_INFO("received Imu %d ", g_countImu);
@@ -291,6 +307,9 @@ not available.");
 /////////////////////////////////////////////////
 int main(int argc, char** argv)
 {
+  // init ROS proxy server
+  initZeroMQ();
+
   // Initialize ros
   ros::init(argc, argv, argv[1]);
 
