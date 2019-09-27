@@ -44,9 +44,9 @@ link_directories(
 )
 
 ## Declare a C++ executable
-add_executable(subt_seed_node src/subt_seed_node.cc)
-add_dependencies(subt_seed_node ${catkin_EXPORTED_TARGETS})
-target_link_libraries(subt_seed_node ${catkin_LIBRARIES})
+add_executable(report_artf report_artf.cc)
+add_dependencies(report_artf ${catkin_EXPORTED_TARGETS})
+target_link_libraries(report_artf ${catkin_LIBRARIES})
 
 ###########
 ## Tests ##
