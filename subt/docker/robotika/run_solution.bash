@@ -6,6 +6,11 @@
 # Wait for the bridge
 sleep 30
 
+cd osgar
+python3 subt/zmq_go.py &
+python3 -m osgar.record config/test-zeromq.json &
+cd ..
+
 # Run your solution.
 #roslaunch subt_seed x1.launch &
 roslaunch subt_seed x1.launch
