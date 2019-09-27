@@ -290,7 +290,7 @@ not available.");
   int size;
   while((size=zmq_recv(g_requester, buffer, 100, ZMQ_DONTWAIT)) > 0)
   {
-    SerializedMessage sm(buffer, size);
+    ros::SerializedMessage sm(buffer, size);
     ros::serialization::deserializeMessage(sm, msg);
     this->velPub.publish(msg);
   }
