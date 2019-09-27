@@ -22,6 +22,8 @@
 
 #include <chrono>
 #include <geometry_msgs/Twist.h>
+#include <sensor_msgs/LaserScan.h>
+
 #include <subt_msgs/PoseFromArtifact.h>
 #include <ros/ros.h>
 #include <std_srvs/SetBool.h>
@@ -33,6 +35,14 @@
 #include <subt_communication_broker/subt_communication_client.h>
 #include <subt_ign/CommonTypes.hh>
 #include <subt_ign/protobuf/artifact.pb.h>
+
+
+void chatterCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
+{
+//  ROS_INFO("I heard: [%s]", msg->data.c_str());
+  ROS_INFO("received Scan");
+}
+
 
 /// \brief. Example control class, running as a ROS node to control a robot.
 class Controller
@@ -73,6 +83,7 @@ class Controller
   subt_msgs::PoseFromArtifact originSrv;
 
 
+  ros::Subscriber subScan;
 
   /// \brief True if robot has arrived at destination.
   public: bool arrived{false};
@@ -165,6 +176,8 @@ void Controller::Update()
       // Create a cmd_vel publisher to control a vehicle.
       this->velPub = this->n.advertise<geometry_msgs::Twist>(
           this->name + "/cmd_vel", 1);
+
+      this->subScan = n.subscribe(this->name + "/front_scan", 1000, chatterCallback);
 
       // Create a cmd_vel publisher to control a vehicle.
       this->originClient = this->n.serviceClient<subt_msgs::PoseFromArtifact>(
