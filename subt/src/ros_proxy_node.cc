@@ -22,7 +22,10 @@
 
 #include <chrono>
 #include <geometry_msgs/Twist.h>
+#include <sensor_msgs/Imu.h>
 #include <sensor_msgs/LaserScan.h>
+#include <sensor_msgs/Image.h>
+#include <nav_msgs/Odometry.h>
 
 #include <subt_msgs/PoseFromArtifact.h>
 #include <ros/ros.h>
@@ -37,10 +40,25 @@
 #include <subt_ign/protobuf/artifact.pb.h>
 
 
-void chatterCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
+void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
 {
 //  ROS_INFO("I heard: [%s]", msg->data.c_str());
+  ROS_INFO("received Imu");
+}
+
+void scanCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
+{
   ROS_INFO("received Scan");
+}
+
+void imageCallback(const sensor_msgs::Image::ConstPtr& msg)
+{
+  ROS_INFO("received Image");
+}
+
+void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
+{
+  ROS_INFO("received Odom");
 }
 
 
@@ -82,8 +100,10 @@ class Controller
   /// \brief Service to request pose from origin.
   subt_msgs::PoseFromArtifact originSrv;
 
-
+  ros::Subscriber subImu;
   ros::Subscriber subScan;
+  ros::Subscriber subImage;
+  ros::Subscriber subOdom;
 
   /// \brief True if robot has arrived at destination.
   public: bool arrived{false};
@@ -177,7 +197,10 @@ void Controller::Update()
       this->velPub = this->n.advertise<geometry_msgs::Twist>(
           this->name + "/cmd_vel", 1);
 
-      this->subScan = n.subscribe(this->name + "/front_scan", 1000, chatterCallback);
+      this->subImu  = n.subscribe(this->name + "/imu/data", 1000, imuCallback);
+      this->subScan = n.subscribe(this->name + "/front_scan", 1000, scanCallback);
+      this->subImage = n.subscribe(this->name + "/front/image_raw/compressed", 1000, imageCallback);
+      this->subOdom = n.subscribe(this->name + "/nav_msgs/Odometry", 1000, odomCallback);
 
       // Create a cmd_vel publisher to control a vehicle.
       this->originClient = this->n.serviceClient<subt_msgs::PoseFromArtifact>(
