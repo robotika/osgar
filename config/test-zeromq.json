@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "zeromq": {
+          "driver": "zeromq",
+          "in": [],
+          "out": ["raw"],
+          "init": {}
+      }
+    },
+    "links": []
+  }
+}

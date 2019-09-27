@@ -25,5 +25,6 @@ all_drivers = dict(
     lora="osgar.drivers.lora:LoRa",
     vesc="osgar.drivers.vesc:MotorDriverVESC",
     opencv="osgar.drivers.opencv:LogOpenCVCamera",
+    zeromq="osgar.drivers.logzeromq:LogZeroMQ",
 )
 
