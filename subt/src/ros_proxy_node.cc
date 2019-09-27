@@ -24,7 +24,7 @@
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/LaserScan.h>
-#include <sensor_msgs/Image.h>
+#include <sensor_msgs/CompressedImage.h>
 #include <nav_msgs/Odometry.h>
 
 #include <subt_msgs/PoseFromArtifact.h>
@@ -40,25 +40,39 @@
 #include <subt_ign/protobuf/artifact.pb.h>
 
 
+int g_countImu = 0;
+int g_countScan = 0;
+int g_countImage = 0;
+int g_countOdom = 0;
+
+
 void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
 {
 //  ROS_INFO("I heard: [%s]", msg->data.c_str());
-  ROS_INFO("received Imu");
+  if(g_countImu % 100 == 0)
+    ROS_INFO("received Imu %d ", g_countImu);
+  g_countImu++;
 }
 
 void scanCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
 {
-  ROS_INFO("received Scan");
+  if(g_countScan % 100 == 0)
+    ROS_INFO("received Scan %d", g_countScan);
+  g_countScan++;
 }
 
-void imageCallback(const sensor_msgs::Image::ConstPtr& msg)
+void imageCallback(const sensor_msgs::CompressedImage::ConstPtr& msg)
 {
-  ROS_INFO("received Image");
+  if(g_countImage % 100 == 0)
+    ROS_INFO("received Image %d", g_countImage);
+  g_countImage++;
 }
 
 void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
 {
-  ROS_INFO("received Odom");
+  if(g_countOdom % 100 == 0)
+    ROS_INFO("received Odom %d", g_countOdom);
+  g_countOdom++;
 }
 
 
@@ -200,7 +214,7 @@ void Controller::Update()
       this->subImu  = n.subscribe(this->name + "/imu/data", 1000, imuCallback);
       this->subScan = n.subscribe(this->name + "/front_scan", 1000, scanCallback);
       this->subImage = n.subscribe(this->name + "/front/image_raw/compressed", 1000, imageCallback);
-      this->subOdom = n.subscribe(this->name + "/nav_msgs/Odometry", 1000, odomCallback);
+      this->subOdom = n.subscribe(this->name + "/odom", 1000, odomCallback);
 
       // Create a cmd_vel publisher to control a vehicle.
       this->originClient = this->n.serviceClient<subt_msgs::PoseFromArtifact>(
