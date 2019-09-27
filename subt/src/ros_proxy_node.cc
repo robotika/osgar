@@ -287,9 +287,11 @@ not available.");
   // Simple example for robot to go to entrance
   geometry_msgs::Twist msg;
   char buffer[100];
-  while(zmq_recv(g_requester, buffer, 100, ZMQ_DONTWAIT) > 0)
+  int size;
+  while((size=zmq_recv(g_requester, buffer, 100, ZMQ_DONTWAIT)) > 0)
   {
-    // TODO deserialize buffer
+    SerializedMessage sm(buffer, size);
+    ros::serialization::deserializeMessage(sm, msg);
     this->velPub.publish(msg);
   }
 
