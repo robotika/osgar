@@ -72,7 +72,7 @@ void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
     assert(size < MAX_MSG_SIZE);
     //msg->serialize(buf, 0);
     //SerializedMessage serializeMessage(const M& message)
-    ros::serialization::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
+    ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
 
 
     zmq_send(g_responder, buf, size, 0);
