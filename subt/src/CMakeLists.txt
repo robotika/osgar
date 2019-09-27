@@ -44,7 +44,7 @@ link_directories(
 )
 
 ## Declare a C++ executable
-add_executable(report_artf report_artf.cc)
+add_executable(report_artf src/report_artf.cc)
 add_dependencies(report_artf ${catkin_EXPORTED_TARGETS})
 target_link_libraries(report_artf ${catkin_LIBRARIES})
 
