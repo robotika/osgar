@@ -51,8 +51,6 @@ int g_countOdom = 0;
 void *g_context;
 void *g_responder;
 
-#define MAX_MSG_SIZE 1000000  // is 1MB enough?
-
 void initZeroMQ()
 {
   g_context = zmq_ctx_new ();
@@ -63,19 +61,12 @@ void initZeroMQ()
 
 void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
 {
-  static uint8_t buf[MAX_MSG_SIZE];
-
   if(g_countImu % 100 == 0)  // for test limit it to slow updates
   {
     //zmq_send(g_responder, "World", 5, 0);
-    uint32_t size = ros::serialization::serializationLength(*msg);
-    assert(size < MAX_MSG_SIZE);
-    //msg->serialize(buf, 0);
-    //SerializedMessage serializeMessage(const M& message)
+    //uint32_t size = ros::serialization::serializationLength(*msg);
     ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-
-
-    zmq_send(g_responder, buf, size, 0);
+    zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
   }
 //  ROS_INFO("I heard: [%s]", msg->data.c_str());
   if(g_countImu % 100 == 0)
