@@ -68,7 +68,7 @@ void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
   if(g_countImu % 100 == 0)  // for test limit it to slow updates
   {
     //zmq_send(g_responder, "World", 5, 0);
-    uint32_t size = msg->serializationLength();
+    uint32_t size = ros::serialization::serializationLength(*msg);
     assert(size < MAX_MSG_SIZE);
     msg->serialize(buf, 0);
     zmq_send(g_responder, buf, size, 0);
