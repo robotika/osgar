@@ -4,7 +4,7 @@
 . ~/subt_solution/install/setup.sh
 
 # Wait for the bridge
-#sleep 30
+sleep 30
 
 # Run your solution.
 #roslaunch subt_seed x1.launch &
