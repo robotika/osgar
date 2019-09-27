@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "zeromq": {
+          "driver": "zeromq",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+            "mode": "PULL",
+            "endpoint": "tcp://localhost:5555"
+          }
+      }
+    },
+    "links": []
+  }
+}

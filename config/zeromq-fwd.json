@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "receiver": {
+          "driver": "zeromq",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+            "mode": "PULL",
+            "endpoint": "tcp://localhost:5555"
+          }
+      },
+      "transmitter": {
+          "driver": "zeromq",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+            "mode": "PUSH",
+            "endpoint": "tcp://localhost:5556"
+          }
+      }
+    },
+    "links": [["receiver.raw", "transmitter.raw"]]
+  }
+}
