@@ -280,6 +280,9 @@ class ROSMsgParser(Thread):
         if b'X2/base_link/camera_front' in packet:  #self.topic_type == 'sensor_msgs/CompressedImage':
             self.bus.publish('image', parse_jpeg_image(packet))
         elif b'X2/base_link/front_laser' in packet:  #self.topic_type == 'sensor_msgs/LaserScan':
+            self.count += 1
+            if self.count % self.downsample != 0:
+                return
             self.bus.publish('scan', parse_laser(packet))
         elif b'X2/odom' in packet:  #self.topic_type == 'nav_msgs/Odometry':
             prev = self.timestamp_sec
