@@ -279,12 +279,14 @@ not available.");
   int size;
   while((size=zmq_recv(g_requester, buffer, 100, ZMQ_DONTWAIT)) > 0)
   {
-    uint8_t *ptr = new uint8_t[size];
+    // inspired by http://docs.ros.org/indigo/api/roscpp_serialization/html/serialization_8h_source.html
+    ros::SerializedMessage m;
+    m.num_bytes = size;
+    m.buf.reset(new uint8_t[m.num_bytes]);
     int i;
     for(i = 0; i < size; i++)
-      ptr[i] = buffer[i];
-    ros::SerializedMessage sm(ptr, size);
-    ros::serialization::deserializeMessage(sm, msg);
+      m.buf[i] = buffer[i];
+    ros::serialization::deserializeMessage(m, msg);
     ROS_INFO_STREAM("MD speed" << msg.linear.x);
     this->velPub.publish(msg);
   }
