@@ -296,7 +296,8 @@ class ROSMsgParser(Thread):
             self.bus.publish('acc', [round(x * 1000) for x in acc])
 
     def slot_tick(self, timestamp, data):
-        cmd = prefix4BytesLen(packCmdVel(self.desired_speed, self.desired_angular_speed))
+        #cmd = prefix4BytesLen(packCmdVel(self.desired_speed, self.desired_angular_speed))
+        cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
         self.bus.publish('cmd_vel', cmd)
 
     def slot_desired_speed(self, timestamp, data):
