@@ -58,7 +58,7 @@
           "in": ["slot_raw", "desired_speed", "tick"],
           "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd_vel"],
           "init": {
-            "topic_type": "std_msgs/Imu"
+            "downsample": 2
           }
       }
     },
