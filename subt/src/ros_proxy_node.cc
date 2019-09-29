@@ -104,7 +104,7 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
   g_countOdom++;
 }
 
-bool getSpeedCmd(geometry_msgs::Twist msg;)
+bool getSpeedCmd(geometry_msgs::Twist& msg)
 { 
   char buffer[100];
   int size;
