@@ -207,7 +207,7 @@ def lidarview(gen, caption_filename, callback=False, out_video=None):
                                  fps,
                                  (width, height))
 
-    cameraThresholding = camera_thresholding.CameraThresholding()
+#    cameraThresholding = camera_thresholding.CameraThresholding()
     pygame.display.init()
     screen = pygame.display.set_mode(WINDOW_SIZE)
 
@@ -242,7 +242,7 @@ def lidarview(gen, caption_filename, callback=False, out_video=None):
     wait_for_keyframe = False
     while True:
         timestamp, pose, scan, image, image2, keyframe, eof = history.next()
-        cameraThresholding.update(image)
+#        cameraThresholding.update(image)
         if max_timestamp is None or max_timestamp < timestamp:
             # build map only for new data
             max_timestamp = timestamp
