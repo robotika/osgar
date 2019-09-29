@@ -1,0 +1,87 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["emergency_stop", "pose2d", "scan", "rot", "artf",
+                 "sim_time_sec", "acc"],
+          "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d"],
+          "init": {
+            "max_speed": 0.5,
+            "symmetric": false,
+            "virtual_world": true
+          }
+      },
+      "detector": {
+          "driver": "subt.artifacts:ArtifactDetector",
+          "in": ["image", "scan"],
+          "out": ["artf", "dropped"],
+          "init": {
+            "virtual_world": true
+          }
+      },
+      "reporter": {
+          "driver": "subt.artifacts:ArtifactReporter",
+          "in": ["artf_xyz"],
+          "out": [],
+          "init": {}
+      },
+      "transmitter": {
+          "driver": "zeromq",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+            "mode": "PUSH",
+            "endpoint": "tcp://localhost:5556"
+          }
+      },
+      "timer": {
+          "driver": "subt.mytimer:MyTimer",
+          "in": [],
+          "out": ["tick"],
+          "init": {
+            "sleep": 0.1
+          }
+      },
+      "receiver": {
+          "driver": "zeromq",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+            "mode": "PULL",
+            "endpoint": "tcp://localhost:5555"
+          }
+      },
+      "rosmsg": {
+          "driver": "rosmsg",
+          "in": ["slot_raw", "desired_speed", "tick"],
+          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec"],
+          "init": {
+            "topic_type": "std_msgs/Imu"
+          }
+      }
+    },
+    "links": [["app.desired_speed", "rosmsg.desired_speed"],
+
+              ["receiver.raw", "rosmsg.slot_raw"],
+              ["rosmsg.cmd_vel", "transmitter.raw"],
+
+              ["rosmsg.rot", "app.rot"],
+              ["rosmsg.acc", "app.acc"],
+
+              ["rosmsg.scan", "app.scan"],
+              ["rosmsg.scan", "detector.scan"],
+
+              ["rosmsg.image", "detector.image"],
+              ["rosmsg.image", "app.image"],
+
+              ["rosmsg.pose2d", "app.pose2d"],
+              ["rosmsg.sim_time_sec", "app.sim_time_sec"],
+
+              ["detector.artf", "app.artf"],
+              ["app.artf_xyz", "reporter.artf_xyz"],
+
+              ["timer.tick", "rosmsg.tick"]]
+  }
+}
