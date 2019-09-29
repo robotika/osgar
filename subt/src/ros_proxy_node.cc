@@ -63,8 +63,9 @@ void initZeroMQ()
 
   // received
   g_contextIn = zmq_ctx_new ();
-  g_requester = zmq_socket (g_contextIn, ZMQ_PULL);  // use "Pipeline pattern" to send all data to Python3
-  zmq_connect (g_requester, "tcp://localhost:5556");
+  g_requester = zmq_socket (g_contextIn, ZMQ_PULL);  // use "Pipeline pattern" to receive all data to Python3
+  rc = zmq_bind (g_requester, "tcp://*:5556");
+  assert (rc == 0);
 }
 
 void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
