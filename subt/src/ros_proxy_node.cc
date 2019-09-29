@@ -70,11 +70,8 @@ void initZeroMQ()
 
 void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
 {
-  if(g_countImu % 100 == 0)  // for test limit it to slow updates
-  {
-    ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-    zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
-  }
+  ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
+  zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
   if(g_countImu % 100 == 0)
     ROS_INFO("received Imu %d ", g_countImu);
   g_countImu++;
@@ -82,11 +79,8 @@ void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
 
 void scanCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
 {
-  if(g_countScan % 100 == 0)
-  {
-    ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-    zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
-  }
+  ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
+  zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
   if(g_countScan % 100 == 0)
     ROS_INFO("received Scan %d", g_countScan);
   g_countScan++;
@@ -94,11 +88,8 @@ void scanCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
 
 void imageCallback(const sensor_msgs::CompressedImage::ConstPtr& msg)
 {
-  if(g_countImage % 100 == 0)
-  {
-    ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-    zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
-  }
+  ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
+  zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
   if(g_countImage % 100 == 0)
     ROS_INFO("received Image %d", g_countImage);
   g_countImage++;
@@ -106,11 +97,8 @@ void imageCallback(const sensor_msgs::CompressedImage::ConstPtr& msg)
 
 void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
 {
-  if(g_countOdom % 100 == 0)
-  {
-    ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-    zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
-  }
+  ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
+  zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
   if(g_countOdom % 100 == 0)
     ROS_INFO("received Odom %d", g_countOdom);
   g_countOdom++;
