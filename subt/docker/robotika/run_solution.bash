@@ -7,8 +7,7 @@
 sleep 30
 
 cd osgar
-python3 -m subt.zmq_go &
-python3 -m osgar.record config/test-zeromq.json &
+python3 -m osgar.record config/zeromq-fwd.json &
 cd ..
 
 # Run your solution.
