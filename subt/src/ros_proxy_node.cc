@@ -280,13 +280,26 @@ not available.");
   while((size=zmq_recv(g_requester, buffer, 100, ZMQ_DONTWAIT)) > 0)
   {
     // inspired by http://docs.ros.org/indigo/api/roscpp_serialization/html/serialization_8h_source.html
-    ros::SerializedMessage m;
-    m.num_bytes = size;
-    m.buf.reset(new uint8_t[m.num_bytes]);
-    int i;
-    for(i = 0; i < size; i++)
-      m.buf[i] = buffer[i];
-    ros::serialization::deserializeMessage(m, msg);
+//    ros::SerializedMessage m;
+//    m.num_bytes = size;
+//    m.buf.reset(new uint8_t[m.num_bytes]);
+//    int i;
+//    for(i = 0; i < size; i++)
+//      m.buf[i] = buffer[i];
+//    ros::serialization::deserializeMessage(m, msg);
+//    F*CK ROS DESERIALIZATION! :( ... one day, maybe ...
+    double speed, angular_speed;
+    int c = sscanf("cmd_vel %lf %lf", buf, &speed, &angular_speed);
+    if(c == 2)
+    {
+      msg.linear.x = speed;
+      msg.angular.z = angular_speed;
+    }
+    else
+    {
+      ROS_INFO_STREAM("MD bad parsing" << c << " " << buffer);
+    }
+
     ROS_INFO_STREAM("MD speed" << msg.linear.x);
     this->velPub.publish(msg);
   }
