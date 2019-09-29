@@ -153,7 +153,7 @@ class Controller
   private: ros::NodeHandle n;
 
   /// \brief publisher to send cmd_vel
-  private: ros::Publisher velPub;
+  public: ros::Publisher velPub;
 
   /// \brief Communication client.
   private: std::unique_ptr<subt::CommsClient> client;
@@ -411,7 +411,7 @@ int main(int argc, char** argv)
     geometry_msgs::Twist msg;
     while(getSpeedCmd(msg))
     {
-      this->velPub.publish(msg);
+      controller.velPub.publish(msg);
     }
 
     ros::spinOnce();
