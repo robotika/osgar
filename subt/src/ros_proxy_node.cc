@@ -104,6 +104,27 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
   g_countOdom++;
 }
 
+bool getSpeedCmd(geometry_msgs::Twist msg;)
+{ 
+  char buffer[100];
+  int size;
+  if((size=zmq_recv(g_requester, buffer, 100, ZMQ_DONTWAIT)) > 0)
+  {
+    double speed, angular_speed;
+    int c = sscanf(buffer, "cmd_vel %lf %lf", &speed, &angular_speed);
+    if(c == 2)
+    {
+      msg.linear.x = speed;
+      msg.angular.z = angular_speed;
+      return true;
+    }
+    else
+    {
+      ROS_INFO_STREAM("MD bad parsing" << c << " " << buffer);
+    }
+  }
+  return false;
+}
 
 /// \brief. Example control class, running as a ROS node to control a robot.
 class Controller
@@ -275,32 +296,8 @@ not available.");
 
   // Simple example for robot to go to entrance
   geometry_msgs::Twist msg;
-  uint8_t buffer[100];
-  int size;
-  while((size=zmq_recv(g_requester, buffer, 100, ZMQ_DONTWAIT)) > 0)
+  while(getSpeedCmd(msg))
   {
-    // inspired by http://docs.ros.org/indigo/api/roscpp_serialization/html/serialization_8h_source.html
-//    ros::SerializedMessage m;
-//    m.num_bytes = size;
-//    m.buf.reset(new uint8_t[m.num_bytes]);
-//    int i;
-//    for(i = 0; i < size; i++)
-//      m.buf[i] = buffer[i];
-//    ros::serialization::deserializeMessage(m, msg);
-//    F*CK ROS DESERIALIZATION! :( ... one day, maybe ...
-    double speed, angular_speed;
-    int c = sscanf("cmd_vel %lf %lf", buf, &speed, &angular_speed);
-    if(c == 2)
-    {
-      msg.linear.x = speed;
-      msg.angular.z = angular_speed;
-    }
-    else
-    {
-      ROS_INFO_STREAM("MD bad parsing" << c << " " << buffer);
-    }
-
-    ROS_INFO_STREAM("MD speed" << msg.linear.x);
     this->velPub.publish(msg);
   }
 
@@ -392,7 +389,7 @@ int main(int argc, char** argv)
   // This sample code iteratively calls Controller::Update. This is just an
   // example. You can write your controller using alternative methods.
   // To get started with ROS visit: http://wiki.ros.org/ROS/Tutorials
-  ros::Rate loop_rate(10);
+  ros::Rate loop_rate(20);
   while (ros::ok() && !controller.arrived)
   {
     controller.Update();
@@ -408,12 +405,20 @@ int main(int argc, char** argv)
   offset_z = 0.0;
 
   int i;
-  ros::Rate r(1);
+  ros::Rate r(20);
   while (ros::ok())
   {
+    geometry_msgs::Twist msg;
+    while(getSpeedCmd(msg))
+    {
+      this->velPub.publish(msg);
+    }
+
     ros::spinOnce();
-    r.sleep();
-    ROS_INFO("MD Test\n");
+//    r.sleep();
+
+
+//    ROS_INFO("MD Test\n");
     FILE *fd = fopen(path, "r");
     if(fd != NULL)
     {
