@@ -15,12 +15,17 @@ ROS_MESSAGE_TYPES = {
     'std_msgs/Imu': '6a62c6daae103f4ff57a132d6f95cec2',
 }
 
-
+#### DUPLICATE with rosproxy.py !!! ####
 def prefix4BytesLen(s):
     "adding ROS length"
     if type(s) == str:
         s = bytes(s, encoding='ascii')
     return struct.pack("I", len(s)) + s
+
+
+def packCmdVel(speed, angularSpeed):
+    return struct.pack("dddddd", speed, 0, 0, 0, 0, angularSpeed)
+#########################################
 
 
 def parse_imu( data ):
@@ -243,6 +248,9 @@ class ROSMsgParser(Thread):
         self.count = 0
         self.downsample = config.get('downsample', 1)
 
+        self.desired_speed = 0.0  # m/s
+        self.desired_angular_speed = 0.0
+
     def get_packet(self):
         data = self._buf
         if len(data) < 4:
@@ -288,10 +296,11 @@ class ROSMsgParser(Thread):
             self.bus.publish('acc', [round(x * 1000) for x in acc])
 
     def slot_tick(self, timestamp, data):
-        self.bus.publish('cmd_vel', b'HACK')
+        cmd = prefix4BytesLen(packCmdVel(self.desired_speed, self.desired_angular_speed))
+        self.bus.publish('cmd_vel', cmd)
 
     def slot_desired_speed(self, timestamp, data):
-        pass
+        self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
 
     def run(self):
         try:
