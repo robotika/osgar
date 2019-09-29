@@ -279,10 +279,13 @@ not available.");
   int size;
   while((size=zmq_recv(g_requester, buffer, 100, ZMQ_DONTWAIT)) > 0)
   {
-    // TODO deserialization
-//    ros::SerializedMessage sm(buffer, size);
-//    ros::serialization::deserializeMessage(sm, msg);
-    msg.linear.x = 1.0;
+    uint8_t *ptr = new uint8_t[size];
+    int i;
+    for(i = 0; i < size; i++)
+      ptr[i] = buffer[i];
+    ros::SerializedMessage sm(ptr, size);
+    ros::serialization::deserializeMessage(sm, msg);
+    ROS_INFO_STREAM("MD speed" << msg.linear.x);
     this->velPub.publish(msg);
   }
 
