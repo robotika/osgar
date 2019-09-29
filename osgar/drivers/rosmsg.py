@@ -257,21 +257,23 @@ class ROSMsgParser(Thread):
         return ret
 
     def slot_raw(self, timestamp, data):
-        self._buf += data
-        packet = self.get_packet()
-        if packet is None:
-            return
-        if self.header is None:
-            self.header = packet
-            return
-        self.count += 1
-        if self.count % self.downsample != 0:
-            return
-        if self.topic_type == 'sensor_msgs/CompressedImage':
+#        self._buf += data
+#        packet = self.get_packet()
+#        if packet is None:
+#            return
+#        if self.header is None:
+#            self.header = packet
+#            return
+#        self.count += 1
+#        if self.count % self.downsample != 0:
+#            return
+        packet = data  # ZMQ hack
+        # TODO parse properly header "frame ID"
+        if b'X2/base_link/camera_front' in packet:  #self.topic_type == 'sensor_msgs/CompressedImage':
             self.bus.publish('image', parse_jpeg_image(packet))
-        elif self.topic_type == 'sensor_msgs/LaserScan':
+        elif b'X2/base_link/front_laser' in packet:  #self.topic_type == 'sensor_msgs/LaserScan':
             self.bus.publish('scan', parse_laser(packet))
-        elif self.topic_type == 'nav_msgs/Odometry':
+        elif b'X2/odom' in packet:  #self.topic_type == 'nav_msgs/Odometry':
             prev = self.timestamp_sec
             self.timestamp_sec, (x, y, heading) = parse_odom(packet)
             self.bus.publish('pose2d', [round(x*1000),
@@ -279,11 +281,17 @@ class ROSMsgParser(Thread):
                                         round(math.degrees(heading)*100)])
             if prev != self.timestamp_sec:
                 self.bus.publish('sim_time_sec', self.timestamp_sec)
-        elif self.topic_type == 'std_msgs/Imu':
+        elif b'X2/base_link/imu_sensor' in packet:  # self.topic_type == 'std_msgs/Imu':
             acc, rot = parse_imu(packet)
             self.bus.publish('rot', [round(math.degrees(angle)*100) 
                                      for angle in rot])
             self.bus.publish('acc', [round(x * 1000) for x in acc])
+
+    def slot_tick(self, timestamp, data):
+        self.bus.publish('cmd_vel', b'HACK')
+
+    def slot_desired_speed(self, timestamp, data):
+        pass
 
     def run(self):
         try:
@@ -291,6 +299,10 @@ class ROSMsgParser(Thread):
                 timestamp, channel, data = self.bus.listen()
                 if channel == 'raw':
                     self.slot_raw(timestamp, data)
+                elif channel == 'tick':
+                    self.slot_tick(timestamp, data)
+                elif channel == 'desired_speed':
+                    self.slot_desired_speed(timestamp, data)
                 else:
                     assert False, channel  # unsupported input channel
         except BusShutdownException:
