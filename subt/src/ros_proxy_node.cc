@@ -106,21 +106,30 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
 
 bool getSpeedCmd(geometry_msgs::Twist& msg)
 { 
-  char buffer[100];
+  char buffer[10000];
   int size;
-  if((size=zmq_recv(g_requester, buffer, 100, ZMQ_DONTWAIT)) > 0)
+  while((size=zmq_recv(g_requester, buffer, 10000, ZMQ_DONTWAIT)) > 0)
   {
-    double speed, angular_speed;
-    int c = sscanf(buffer, "cmd_vel %lf %lf", &speed, &angular_speed);
-    if(c == 2)
+    if(strncmp(buffer, "stdout ", 7) == 0)
     {
-      msg.linear.x = speed;
-      msg.angular.z = angular_speed;
-      return true;
+      buffer[size - 1] = 0;
+      ROS_INFO(buffer);
     }
     else
     {
-      ROS_INFO_STREAM("MD bad parsing" << c << " " << buffer);
+      double speed, angular_speed;
+      int c = sscanf(buffer, "cmd_vel %lf %lf", &speed, &angular_speed);
+      if(c == 2)
+      {
+        msg.linear.x = speed;
+        msg.angular.z = angular_speed;
+        return true;
+      }
+      else
+      {
+        ROS_INFO_STREAM("MD bad parsing" << c << " " << buffer);
+        break;
+      }
     }
   }
   return false;
