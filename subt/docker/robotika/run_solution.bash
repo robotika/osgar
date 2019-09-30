@@ -7,7 +7,7 @@
 sleep 30
 
 cd osgar
-python3 -m subt run subt/zmq-subt-x2.json --side left --walldist 0.75 --timeout 180 --note "try to visit artifact and return home" &
+python3 -m subt run subt/zmq-subt-x2.json --side auto --walldist 0.75 --timeout 180 --note "try to visit artifact and return home" &
 cd ..
 
 # Run your solution.
