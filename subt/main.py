@@ -490,7 +490,7 @@ class SubTChallenge:
             self.update()
 
     def stdout(self, s):
-        self.bus.publish(s)
+        self.bus.publish('stdout', s)
         print(s)
 
 #############################################
