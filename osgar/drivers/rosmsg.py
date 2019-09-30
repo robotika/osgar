@@ -232,6 +232,15 @@ def parse_points(data):
     assert pos == len(data), (pos, len(data))
 
 
+def get_frame_id(data):
+    size = struct.unpack_from('<I', data)[0]
+    pos = 4
+    seq, timestamp_sec, timestamp_nsec, frame_id_size = struct.unpack_from('<IIII', data, pos)
+    pos += 4 + 4 + 4 + 4
+    frame_id = data[pos:pos+frame_id_size]
+    return frame_id
+
+
 class ROSMsgParser(Thread):
     def __init__(self, config, bus):
         Thread.__init__(self)
@@ -276,15 +285,16 @@ class ROSMsgParser(Thread):
 #        if self.count % self.downsample != 0:
 #            return
         packet = data  # ZMQ hack
+        frame_id = get_frame_id(data)
         # TODO parse properly header "frame ID"
-        if b'X2/base_link/camera_front' in packet:  #self.topic_type == 'sensor_msgs/CompressedImage':
+        if frame_id.endswith(b'/base_link/camera_front'):  #self.topic_type == 'sensor_msgs/CompressedImage':
             self.bus.publish('image', parse_jpeg_image(packet))
-        elif b'X2/base_link/front_laser' in packet:  #self.topic_type == 'sensor_msgs/LaserScan':
+        elif frame_id.endswith(b'/base_link/front_laser'):  #self.topic_type == 'sensor_msgs/LaserScan':
             self.count += 1
             if self.count % self.downsample != 0:
                 return
             self.bus.publish('scan', parse_laser(packet))
-        elif b'X2/odom' in packet:  #self.topic_type == 'nav_msgs/Odometry':
+        elif frame_id.endswith(b'/odom'):  #self.topic_type == 'nav_msgs/Odometry':
             prev = self.timestamp_sec
             self.timestamp_sec, (x, y, heading) = parse_odom(packet)
             self.bus.publish('pose2d', [round(x*1000),
@@ -292,7 +302,7 @@ class ROSMsgParser(Thread):
                                         round(math.degrees(heading)*100)])
             if prev != self.timestamp_sec:
                 self.bus.publish('sim_time_sec', self.timestamp_sec)
-        elif b'X2/base_link/imu_sensor' in packet:  # self.topic_type == 'std_msgs/Imu':
+        elif frame_id.endswith(b'/base_link/imu_sensor'):  # self.topic_type == 'std_msgs/Imu':
             acc, rot = parse_imu(packet)
             self.bus.publish('rot', [round(math.degrees(angle)*100) 
                                      for angle in rot])
