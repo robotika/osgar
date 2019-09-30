@@ -306,6 +306,10 @@ class ROSMsgParser(Thread):
     def slot_desired_speed(self, timestamp, data):
         self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
 
+    def slot_stdout(self, timestamp, data):
+        cmd = b'stdout ' + data  # redirect to ROS_INFO
+        self.bus.publish('cmd_vel', cmd)
+
     def run(self):
         try:
             while True:
@@ -316,6 +320,8 @@ class ROSMsgParser(Thread):
                     self.slot_tick(timestamp, data)
                 elif channel == 'desired_speed':
                     self.slot_desired_speed(timestamp, data)
+                elif channel == 'stdout':
+                    self.slot_stdout(timestamp, data)
                 else:
                     assert False, channel  # unsupported input channel
         except BusShutdownException:
