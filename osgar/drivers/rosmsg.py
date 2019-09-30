@@ -307,7 +307,7 @@ class ROSMsgParser(Thread):
         self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
 
     def slot_stdout(self, timestamp, data):
-        cmd = b'stdout ' + data  # redirect to ROS_INFO
+        cmd = b'stdout ' + bytes(data, 'utf-8')  # redirect to ROS_INFO
         self.bus.publish('cmd_vel', cmd)
 
     def run(self):
