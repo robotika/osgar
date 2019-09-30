@@ -163,6 +163,7 @@ class SubTChallenge:
 
         self.last_send_time = None
         self.origin = None  # unknown initial position
+        self.robot_name = None  # received with origin
         if self.is_virtual:
             self.local_planner = LocalPlanner()
         else:
@@ -474,8 +475,9 @@ class SubTChallenge:
             elif channel == 'sim_time_sec':
                 self.sim_time_sec = data
             elif channel == 'origin':
-                if self.origin is None:
-                    self.origin = data  # accept only initial offset
+                if self.origin is None:  # accept only initial offset
+                    self.robot_name = data[0]
+                    self.origin = data[1:]
             elif channel == 'voltage':
                 self.voltage = data
             elif channel == 'emergency_stop':
@@ -566,10 +568,10 @@ class SubTChallenge:
         self.stdout("Waiting for origin ...")
         while self.origin is None:
             self.update()
-        self.stdout('Origin:', self.origin)
+        self.stdout('Origin:', self.origin, self.robot_name)
 
         if self.use_right_wall == 'auto':
-            self.use_right_wall = (self.origin[1] < 0)
+            self.use_right_wall = self.robot_name.endswith('R')
         self.stdout('Use right wall:', self.use_right_wall)
         x, y, z = self.origin
         self.stdout('angle', math.degrees(math.atan2(-y, -x)), 'dist', math.hypot(x, y))
