@@ -104,10 +104,10 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
   g_countOdom++;
 }
 
-void sendOrigin(double x, double y, double z)
+void sendOrigin(std::string& name, double x, double y, double z)
 {
   char buf[100];
-  int size = sprintf(buf, "origin %lf %lf %lf", x, y, z);
+  int size = sprintf(buf, "origin %s %lf %lf %lf", name.c_str(), x, y, z);
   zmq_send(g_responder, buf, size, 0);
 }
 
@@ -310,7 +310,7 @@ not available.");
 
   auto pose = this->originSrv.response.pose.pose;
   // send position to Python3 code
-  sendOrigin(pose.position.x, pose.position.y, pose.position.z);
+  sendOrigin(this->name, pose.position.x, pose.position.y, pose.position.z);
 
   // Simple example for robot to go to entrance
   geometry_msgs::Twist msg;
