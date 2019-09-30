@@ -7,6 +7,7 @@ import os.path
 import math
 from datetime import timedelta
 from collections import defaultdict
+from io import StringIO
 
 import numpy as np
 
@@ -431,7 +432,7 @@ class SubTChallenge:
 #            print('SubT', packet)
             timestamp, channel, data = packet
             if self.time is None or int(self.time.seconds)//60 != int(timestamp.seconds)//60:
-                self.stdout(str(((timestamp, '(%.1f %.1f %.1f)' % self.xyz, sorted(self.stat.items())))))
+                self.stdout(timestamp, '(%.1f %.1f %.1f)' % self.xyz, sorted(self.stat.items()))
                 print(timestamp, list(('%.1f' % (v/100)) for v in self.voltage))
                 self.stat.clear()
 
@@ -489,9 +490,13 @@ class SubTChallenge:
         while self.time - start_time < dt:
             self.update()
 
-    def stdout(self, s):
-        self.bus.publish('stdout', s)
-        print(s)
+    def stdout(self, *args, **kwargs):
+        output = StringIO()
+        print(*args, file=output, **kwargs)
+        contents = output.getvalue().strip()
+        output.close()
+        self.bus.publish('stdout', contents)
+        print(contents)
 
 #############################################
     def play_system_track(self):
@@ -561,9 +566,9 @@ class SubTChallenge:
                             timeout=self.timeout)  # timedelta(minutes=1, seconds=0))  # was 12 min
         self.collision_detector_enabled = False
 
-        self.stdout(str(("Artifacts:", self.artifacts)))
+        self.stdout("Artifacts:", self.artifacts)
 
-        self.stdout(str((self.time, "Going HOME", dist, reason)))
+        self.stdout(self.time, "Going HOME", dist, reason)
 
         # use OLD VERSION until issue with IMU is resolved
         self.return_home(self.timeout)
