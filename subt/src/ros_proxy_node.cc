@@ -113,7 +113,7 @@ bool getSpeedCmd(geometry_msgs::Twist& msg)
     if(strncmp(buffer, "stdout ", 7) == 0)
     {
       buffer[size - 1] = 0;
-      ROS_INFO(buffer);
+      ROS_INFO("Python3: %s", buffer);
     }
     else
     {
