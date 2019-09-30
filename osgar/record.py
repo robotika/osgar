@@ -6,7 +6,8 @@ import argparse
 import sys
 import os
 import time
-from queue import Queue
+import signal
+import threading
 
 from osgar.logger import LogWriter
 from osgar.lib.config import load, get_class_by_name
@@ -15,6 +16,7 @@ from osgar.bus import BusHandler
 
 class Recorder:
     def __init__(self, config, logger, application=None):
+        self.stop_requested = threading.Event()
         self.modules = {}
 
         buses = {}
@@ -42,6 +44,8 @@ class Recorder:
             else:
                 buses[from_driver].out[from_name].append((buses[to_driver].queue, to_name))
 
+        signal.signal(signal.SIGINT, self.request_stop)
+
     def start(self):
         for module in self.modules.values():
             module.start()
@@ -50,10 +54,20 @@ class Recorder:
         pass
 
     def finish(self):
+        self.request_stop()
+        self.join()
+
+    def request_stop(self, sig=None, frame=None):
+        if self.stop_requested.is_set():
+            return
         for module in self.modules.values():
             module.request_stop()
+        self.stop_requested.set()
+
+    def join(self):
         for module in self.modules.values():
             module.join()
+
 
 
 def record(config_filename, log_prefix, duration_sec=None, application=None):
@@ -70,13 +84,7 @@ def record(config_filename, log_prefix, duration_sec=None, application=None):
                 app = recorder.modules['app']  # TODO nicer reference
                 app.join()  # wait for application termination
             else:
-                if duration_sec is None:
-                    while True:
-                        time.sleep(1.0)
-                else:
-                    time.sleep(duration_sec)
-        except KeyboardInterrupt:
-            print("record() caught KeyboardInterrupt")
+                recorder.stop_requested.wait(duration_sec)
         finally:
             recorder.finish()
 
