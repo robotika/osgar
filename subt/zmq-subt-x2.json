@@ -5,7 +5,7 @@
       "app": {
           "driver": "application",
           "in": ["emergency_stop", "pose2d", "scan", "rot", "artf",
-                 "sim_time_sec", "acc"],
+                 "sim_time_sec", "acc", "origin"],
           "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout"],
           "init": {
             "max_speed": 0.5,
@@ -56,7 +56,7 @@
       "rosmsg": {
           "driver": "rosmsg",
           "in": ["slot_raw", "desired_speed", "tick", "stdout"],
-          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd_vel"],
+          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd_vel", "origin"],
           "init": {
             "downsample": 2
           }
@@ -64,6 +64,7 @@
     },
     "links": [["app.desired_speed", "rosmsg.desired_speed"],
               ["app.stdout", "rosmsg.stdout"],
+              ["rosmsg.origin", "app.origin"],
 
               ["receiver.raw", "rosmsg.slot_raw"],
               ["rosmsg.cmd_vel", "transmitter.raw"],
