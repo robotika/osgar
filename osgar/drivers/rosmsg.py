@@ -285,6 +285,10 @@ class ROSMsgParser(Thread):
 #        if self.count % self.downsample != 0:
 #            return
         packet = data  # ZMQ hack
+        if data.startswith(b'origin'):
+            s = data.split()
+            self.bus.publish('origin', [float(x) for x in s[1:]])
+            return
         frame_id = get_frame_id(data)
         # TODO parse properly header "frame ID"
         if frame_id.endswith(b'/base_link/camera_front'):  #self.topic_type == 'sensor_msgs/CompressedImage':
