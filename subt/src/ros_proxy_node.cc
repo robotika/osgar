@@ -418,8 +418,8 @@ int main(int argc, char** argv)
   char *path = "/home/developer/subt_solution/osgar/call_base.txt";
   double offset_x, offset_y, offset_z;
 
-  offset_x = -6.0;
-  offset_y = 5.0;
+  offset_x = 0.0;  // let the controller handle necessary offset based on origin
+  offset_y = 0.0;
   offset_z = 0.0;
 
   int i;
