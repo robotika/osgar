@@ -568,11 +568,14 @@ class SubTChallenge:
             self.update()
         self.stdout('Origin:', self.origin)
 
-        if self.right_wall == 'auto':
-            self.right_wall = (origin[1] < 0)
+        if self.use_right_wall == 'auto':
+            self.use_right_wall = (self.origin[1] < 0)
+        self.stdout('Use right wall:', self.use_right_wall)
+        x, y, z = self.origin
+        self.stdout('angle', math.degrees(math.atan2(-y, -x)), 'dist', math.hypot(x, y))
 
-        self.turn(math.radians(-45))
-        self.go_straight(7.0)  # go to the tunnel entrance (used to be 9m)
+        self.turn(math.atan2(-y, -x))
+        self.go_straight(math.hypot(x, y))  # go to the tunnel entrance
         self.collision_detector_enabled = True
         dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,  # was radius=0.9
                             timeout=self.timeout)  # timedelta(minutes=1, seconds=0))  # was 12 min
