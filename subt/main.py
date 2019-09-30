@@ -574,6 +574,10 @@ class SubTChallenge:
         x, y, z = self.origin
         self.stdout('angle', math.degrees(math.atan2(-y, -x)), 'dist', math.hypot(x, y))
 
+        if self.use_right_wall:
+            # add extra sleep to give a chance to the first robot
+            self.wait(timedelta(seconds=10))
+
         self.turn(math.atan2(-y, -x))
         self.go_straight(math.hypot(x, y))  # go to the tunnel entrance
         self.collision_detector_enabled = True
