@@ -599,7 +599,8 @@ class SubTChallenge:
         self.send_speed_cmd(0, 0)
 
         if self.artifacts:
-            self.bus.publish('artf_xyz', [[artifact_data, round(x*1000), round(y*1000), round(z*1000)] 
+            x0, y0, z0 = self.origin
+            self.bus.publish('artf_xyz', [[artifact_data, round((x + x0)*1000), round((y + y0)*1000), round((z + z0)*1000)] 
                                           for artifact_data, (x, y, z) in self.artifacts])
 
         self.wait(timedelta(seconds=30))
