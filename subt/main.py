@@ -162,6 +162,7 @@ class SubTChallenge:
         self.is_virtual = config.get('virtual_world', False)  # workaround to handle tunnel differences
 
         self.last_send_time = None
+        self.origin = None  # unknown initial position
         if self.is_virtual:
             self.local_planner = LocalPlanner()
         else:
@@ -472,7 +473,9 @@ class SubTChallenge:
                 self.orientation = data
             elif channel == 'sim_time_sec':
                 self.sim_time_sec = data
-
+            elif channel == 'origin':
+                if self.origin is None:
+                    self.origin = data  # accept only initial offset
             elif channel == 'voltage':
                 self.voltage = data
             elif channel == 'emergency_stop':
@@ -559,6 +562,15 @@ class SubTChallenge:
 
     def play_virtual_track(self):
         self.stdout("SubT Challenge Ver2!")
+
+        self.stdout("Waiting for origin ...")
+        while self.origin is None:
+            self.update()
+        self.stdout('Origin:', self.origin)
+
+        if self.right_wall == 'auto':
+            self.right_wall = (origin[1] < 0)
+
         self.turn(math.radians(-45))
         self.go_straight(7.0)  # go to the tunnel entrance (used to be 9m)
         self.collision_detector_enabled = True
@@ -616,7 +628,7 @@ def main():
     parser_run.add_argument('config', nargs='+', help='configuration file')
     parser_run.add_argument('--note', help='add description')
     parser_run.add_argument('--walldist', help='distance for wall following (default: %(default)sm)', default=1.0, type=float)
-    parser_run.add_argument('--side', help='which side to follow', choices=['left', 'right'], required=True)
+    parser_run.add_argument('--side', help='which side to follow', choices=['left', 'right', 'auto'], required=True)
     parser_run.add_argument('--speed', help='maximum speed (default: from config)', type=float)
     parser_run.add_argument('--timeout', help='seconds of exploring before going home (default: %(default)s)',
                             type=int, default=10*60)
@@ -645,7 +657,10 @@ def main():
 
         # apply overrides from command line
         config['robot']['modules']['app']['init']['walldist'] = args.walldist
-        config['robot']['modules']['app']['init']['right_wall'] = args.side == 'right'
+        if args.side == 'auto':
+            config['robot']['modules']['app']['init']['right_wall'] = 'auto'
+        else:
+            config['robot']['modules']['app']['init']['right_wall'] = args.side == 'right'
         config['robot']['modules']['app']['init']['timeout'] = args.timeout
         if args.speed is not None:
             config['robot']['modules']['app']['init']['max_speed'] = args.speed
