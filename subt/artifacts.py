@@ -94,8 +94,8 @@ def artf_in_scan(scan, width, img_x_min, img_x_max, verbose=False):
     tolerance = int(5 * angular_resolution)  # in paritular the valve is detected with offset
     left_index = mid_index + int(deg_min * angular_resolution) - tolerance
     right_index = mid_index + int(deg_max * angular_resolution) + tolerance
-    if verbose:
-        print('SubSelection', deg_min, deg_max, left_index, right_index, scan[left_index:right_index])
+#    if verbose:
+#        print('SubSelection', deg_min, deg_max, left_index, right_index, scan[left_index:right_index])
 
     tmp = [x if x > 0 else 100000 for x in scan]
     dist_mm = min(tmp[left_index:right_index])
