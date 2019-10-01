@@ -79,7 +79,7 @@ def count_yellow(img):
     return count_mask(mask)
 
 
-def artf_in_scan(scan, img_x_min, img_x_max, verbose=False):
+def artf_in_scan(scan, width, img_x_min, img_x_max, verbose=False):
     """return precise artefact angle and distance for lidar & camera combination"""
     if scan is None:
         return 0, 0
@@ -89,7 +89,6 @@ def artf_in_scan(scan, img_x_min, img_x_max, verbose=False):
     angular_resolution = len(scan) / 270
     mid_index = len(scan) // 2
     camera_fov_deg = 60
-    width = 320  # 1280
     deg_max = camera_fov_deg * (width / 2 - x_min) / width  # small value on the left corresponds to positive angle
     deg_min = camera_fov_deg * (width / 2 - x_max) / width
     tolerance = int(5 * angular_resolution)  # in paritular the valve is detected with offset
@@ -116,6 +115,7 @@ class ArtifactDetector(Node):
         self.best_scan = None
         self.verbose = False
         self.scan = None  # should laster initialize super()
+        self.width = None  # detect from incoming images
 
     def waitForImage(self):
         channel = ""
@@ -140,6 +140,10 @@ class ArtifactDetector(Node):
 
     def detect(self, image):
         img = cv2.imdecode(np.fromstring(image, dtype=np.uint8), 1)
+        if self.width is None:
+            print('Image resolution', img.shape)
+            self.width = img.shape[1]
+        assert self.width == img.shape[1], (self.width, img.shape[1])
         rcount, w, h, x_min, x_max = count_red(img)
         yellow_used = False
         if self.is_virtual and rcount < 20:
@@ -168,7 +172,7 @@ class ArtifactDetector(Node):
             w, h, x_min, x_max, red_used, yellow_used = self.best_info
             print('Published', self.best)
             if red_used or yellow_used:
-                deg_100th, dist_mm = artf_in_scan(self.best_scan, x_min, x_max, verbose=True)
+                deg_100th, dist_mm = artf_in_scan(self.best_scan, self.width, x_min, x_max, verbose=True)
             else:
                 deg_100th, dist_mm = 0, 500  # in front of the robot
             print('Relative position:', deg_100th, dist_mm)
