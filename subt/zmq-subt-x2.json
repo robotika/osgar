@@ -16,7 +16,7 @@
       "detector": {
           "driver": "subt.artifacts:ArtifactDetector",
           "in": ["image", "scan"],
-          "out": ["artf", "dropped"],
+          "out": ["artf", "dropped", "debug_artf"],
           "init": {
             "virtual_world": true
           }
