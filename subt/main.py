@@ -177,9 +177,11 @@ class SubTChallenge:
         gc.collect()
 
     def maybe_remember_artifact(self, artifact_data, artifact_xyz):
-        for _, (x, y, z) in self.artifacts:
+        for stored_data, (x, y, z) in self.artifacts:
             if distance3D((x, y, z), artifact_xyz) < 4.0:
-                return
+                # in case of uncertain type, rather report both
+                if stored_data == artifact_data:
+                    return
         self.artifacts.append((artifact_data, artifact_xyz))
 
     def go_straight(self, how_far, timeout=None):
