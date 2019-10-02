@@ -20,6 +20,18 @@ def extract_poses(filename):
     cursor.execute("SELECT * FROM migrations;")
     print('Start record:', cursor.fetchall())
 
+    cursor.execute("SELECT * FROM topics;")
+    topics = cursor.fetchall()
+    print(topics)
+
+    cursor.execute("SELECT * FROM messages;")
+    for i, row in enumerate(cursor):
+        index, time_ns, topic_id, data = row
+        if topic_id == 1:
+            print(index, data, len(data))
+        if i > 20:
+            break
+
 
 if __name__ == "__main__":
     import argparse
