@@ -56,14 +56,16 @@ def count_mask(mask):
     return count, w, h, x_min, x_max
 
 
-def count_red(img, filtered=False):
+def count_red(img, filtered=True):  #filtered=False):
     b = img[:,:,0]
     g = img[:,:,1]
     r = img[:,:,2]
     mask = np.logical_and(r > 20, np.logical_and(r/2 > g, r/2 > b))  # QVGA virtual, dark images, used to be 100
     if filtered:
         not_mask = np.logical_not(mask)
-        kernel = np.ones((5,5), np.uint8)
+#        kernel = np.ones((5,5), np.uint8)
+#        kernel = np.ones((3,3), np.uint8)
+        kernel = np.ones((2,2), np.uint8)
         img2 = img.copy()
         img2[mask] = (255, 255, 255)
         img2[not_mask] = (0, 0, 0)
