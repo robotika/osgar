@@ -4,6 +4,7 @@
 from datetime import timedelta
 import os
 import tempfile
+from io import StringIO
 
 import cv2
 import numpy as np
@@ -141,6 +142,15 @@ class ArtifactDetector(Node):
             setattr(self, channel, data)
         return self.time
 
+    def stdout(self, *args, **kwargs):
+        # maybe refactor to Node?
+        output = StringIO()
+        print(*args, file=output, **kwargs)
+        contents = output.getvalue().strip()
+        output.close()
+        self.publish('stdout', contents)
+        print(contents)
+
     def run(self):
         try:
             dropped = 0
@@ -158,7 +168,7 @@ class ArtifactDetector(Node):
     def detect(self, image):
         img = cv2.imdecode(np.fromstring(image, dtype=np.uint8), 1)
         if self.width is None:
-            print('Image resolution', img.shape)
+            self.stdout('Image resolution', img.shape)
             self.width = img.shape[1]
         assert self.width == img.shape[1], (self.width, img.shape[1])
         rcount, w, h, x_min, x_max = count_red(img)
@@ -191,7 +201,7 @@ class ArtifactDetector(Node):
                 # revise noisy points
                 rcount, w, h, x_min, x_max = count_red(img, filtered=True)
                 if rcount == 0:
-                    print('Invalid after filtering!')
+                    self.stdout('Invalid after filtering!')
                     # reset detector
                     self.best = None
                     self.best_count = 0
@@ -199,7 +209,7 @@ class ArtifactDetector(Node):
                     self.best_info = None
                     self.best_scan = None
                     return
-                print(rcount, w, h, x_min, x_max, w/h, count/(w*h))
+                self.stdout(rcount, w, h, x_min, x_max, w/h, count/(w*h))
 
             print('Published', self.best)
             if red_used or yellow_used:
@@ -288,7 +298,8 @@ if __name__ == '__main__':
     logger.register = MagicMock(return_value=1)
     logger.write = MagicMock(return_value=timedelta(0))
     output = Queue()
-    bus = BusHandler(logger=logger, out={'artf': [(output, 'artf')], 'dropped': [], 'debug_artf': []})
+    bus = BusHandler(logger=logger, out={'artf': [(output, 'artf')], 'dropped': [], 'debug_artf': [],
+                                         'stdout': []})
     detector = ArtifactDetector(config, bus)
     detector.verbose = args.verbose
     detector.start()
