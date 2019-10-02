@@ -77,6 +77,11 @@ def count_red(img, filtered=False):
     mask = b == 255
     if filtered:
         # detect largest blob in img2
+        kernel = np.ones((3,3), np.uint8)
+        img2 = cv2.dilate(img2, kernel, iterations=1)
+#        cv2.imwrite('artf.jpg', img2)
+        b = img2[:,:,0]
+        mask = b == 255
         reddish = b.astype(np.uint8)
         __, bin_img = cv2.threshold(reddish, 160, 255, cv2.THRESH_BINARY)
         
@@ -91,7 +96,7 @@ def count_red(img, filtered=False):
 #        print(best_area, best_cnt)
         x, y, w, h = cv2.boundingRect(best_cnt)
         # count, w, h, x_min, x_max
-        return int(best_area), w, y, x, x+w
+        return int(best_area), w, h, x, x+w
 
     return count_mask(mask)
 
