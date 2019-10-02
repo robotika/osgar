@@ -201,7 +201,7 @@ class ArtifactDetector(Node):
                 # revise noisy points
                 rcount, w, h, x_min, x_max = count_red(img, filtered=True)
                 if rcount == 0:
-                    self.stdout('Invalid after filtering!')
+                    self.stdout('Invalid after filtering! orig count=', self.best)
                     # reset detector
                     self.best = None
                     self.best_count = 0
@@ -211,15 +211,13 @@ class ArtifactDetector(Node):
                     return
                 self.stdout(rcount, w, h, x_min, x_max, w/h, count/(w*h))
 
-            print('Published', self.best)
             if red_used or yellow_used:
                 deg_100th, dist_mm = artf_in_scan(self.best_scan, self.width, x_min, x_max, verbose=True)
             else:
                 deg_100th, dist_mm = 0, 500  # in front of the robot
-            print('Relative position:', deg_100th, dist_mm)
 
             if red_used:
-                print('h/w', h/w)
+                self.stdout('h/w', h/w)
 #                if self.best < 1000:
 #                    artf = DRILL  # VALVE - hack for simple02
 #                elif h/w > 2.4:
@@ -236,6 +234,7 @@ class ArtifactDetector(Node):
                     artf = DRILL
             elif yellow_used:
                 artf = RESCUE_RANDY  # used to be RADIO
+            self.stdout(self.time, 'Relative position:', self.best, deg_100th, dist_mm, artf)
 
             dx_mm, dy_mm = 0, 0  # relative offset to current robot position
             # TODO if VALVE -> find it in scan
