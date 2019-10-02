@@ -56,30 +56,43 @@ def count_mask(mask):
     return count, w, h, x_min, x_max
 
 
-def count_red(img, filtered=True):  #filtered=False):
+def count_red(img, filtered=False):
     b = img[:,:,0]
     g = img[:,:,1]
     r = img[:,:,2]
     mask = np.logical_and(r > 20, np.logical_and(r/2 > g, r/2 > b))  # QVGA virtual, dark images, used to be 100
-    if filtered:
-        not_mask = np.logical_not(mask)
-#        kernel = np.ones((5,5), np.uint8)
-#        kernel = np.ones((3,3), np.uint8)
-        kernel = np.ones((2,2), np.uint8)
-        img2 = img.copy()
-        img2[mask] = (255, 255, 255)
-        img2[not_mask] = (0, 0, 0)
-        img2 = cv2.erode(img2, kernel, iterations=1)
-#        cv2.imwrite('artf.jpg', img2)
+    not_mask = np.logical_not(mask)
+    kernel = np.ones((2,2), np.uint8)
+    img2 = img.copy()
+    img2[mask] = (255, 255, 255)
+    img2[not_mask] = (0, 0, 0)
+    img2 = cv2.erode(img2, kernel, iterations=1)
+#    cv2.imwrite('artf.jpg', img2)
 #        print('mask', mask.shape)
 #        for x in range(mask.shape[0]):
 #            for y in range(mask.shape[1]):
 #                if mask[x][y]:
 #                    print(x, y)
-        b = img2[:,:,0]
-        g = img2[:,:,1]
-        r = img2[:,:,2]
-        mask = b == 255
+    b = img2[:,:,0]
+    mask = b == 255
+    if filtered:
+        # detect largest blob in img2
+        reddish = b.astype(np.uint8)
+        __, bin_img = cv2.threshold(reddish, 160, 255, cv2.THRESH_BINARY)
+        
+        im2, contours, hierarchy = cv2.findContours(bin_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        best_cnt = None
+        best_area = None
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if best_area is None or area > best_area:
+                best_area = area
+                best_cnt = cnt
+#        print(best_area, best_cnt)
+        x, y, w, h = cv2.boundingRect(best_cnt)
+        # count, w, h, x_min, x_max
+        return int(best_area), w, y, x, x+w
+
     return count_mask(mask)
 
 
