@@ -16,7 +16,7 @@
       "detector": {
           "driver": "subt.artifacts:ArtifactDetector",
           "in": ["image", "scan"],
-          "out": ["artf", "dropped", "debug_artf"],
+          "out": ["artf", "dropped", "debug_artf", "stdout"],
           "init": {
             "virtual_world": true
           }
@@ -82,6 +82,7 @@
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
 
               ["detector.artf", "app.artf"],
+              ["detector.stdout", "rosmsg.stdout"],
               ["app.artf_xyz", "reporter.artf_xyz"],
 
               ["timer.tick", "rosmsg.tick"]]
