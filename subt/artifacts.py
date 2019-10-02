@@ -201,6 +201,7 @@ class ArtifactDetector(Node):
             w, h, x_min, x_max, red_used, yellow_used = self.best_info
             if red_used:
                 # revise noisy points
+                img = cv2.imdecode(np.fromstring(self.best_img, dtype=np.uint8), 1)
                 rcount, w, h, x_min, x_max = count_red(img, filtered=True)
                 if rcount == 0:
                     self.stdout('Invalid after filtering! orig count=', self.best)
