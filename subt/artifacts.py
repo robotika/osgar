@@ -185,7 +185,7 @@ class ArtifactDetector(Node):
         else:
             count = rcount
 
-        if self.verbose and count > 0:
+        if self.verbose and count >= 20:
             print(self.time, img.shape, count, w, h, x_min, x_max, w/h, count/(w*h))
         if self.best_count > 0:
             self.best_count -= 1
