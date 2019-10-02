@@ -3,22 +3,37 @@
 . /opt/ros/melodic/setup.bash
 . ~/subt_solution/install/setup.sh
 
-# Wait for the bridge
+echo "Wait for the bridge"
 sleep 30
 
+echo "Start robot solution"
 cd osgar
 python3 -m subt run subt/zmq-subt-x2.json --side auto --walldist 0.9 --timeout 100 --speed 1.0 --note "try to visit artifact and return home" &
+ROBOT_PID=$!
 cd ..
 
 # Run your solution.
-#roslaunch subt_seed x1.launch &
-roslaunch subt_seed x1.launch
+roslaunch subt_seed x1.launch &
+ROS_PID=$!
 
-#sleep 10
+# Turn everything off in case of CTRL+C and friends.
+function shutdown {
+       kill ${ROBOT_PID}
+       kill ${ROS_PID}
+       wait
+       exit
+}
+trap shutdown SIGHUP SIGINT SIGTERM
 
-#cd osgar
 
-#python subt/wait_for_sensors.py
+# Wait for the controllers to finish.
+wait ${ROBOT_PID}
 
-#python3 -m subt run subt/subt-x2.json --side left --walldist 0.75 --timeout 180 --note "try to visit artifact and return home" 2>&1 | python subt/std2ros.py
+echo "Sleep and finish"
+sleep 30
 
+rosservice call '/subt/finish' true
+
+# Take robot simulation down.
+kill ${ROS_PID}
+wait
