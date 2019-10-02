@@ -55,11 +55,28 @@ def count_mask(mask):
     return count, w, h, x_min, x_max
 
 
-def count_red(img):
+def count_red(img, filtered=False):
     b = img[:,:,0]
     g = img[:,:,1]
     r = img[:,:,2]
     mask = np.logical_and(r > 20, np.logical_and(r/2 > g, r/2 > b))  # QVGA virtual, dark images, used to be 100
+    if filtered:
+        not_mask = np.logical_not(mask)
+        kernel = np.ones((5,5), np.uint8)
+        img2 = img.copy()
+        img2[mask] = (255, 255, 255)
+        img2[not_mask] = (0, 0, 0)
+        img2 = cv2.erode(img2, kernel, iterations=1)
+#        cv2.imwrite('artf.jpg', img2)
+#        print('mask', mask.shape)
+#        for x in range(mask.shape[0]):
+#            for y in range(mask.shape[1]):
+#                if mask[x][y]:
+#                    print(x, y)
+        b = img2[:,:,0]
+        g = img2[:,:,1]
+        r = img2[:,:,2]
+        mask = b == 255
     return count_mask(mask)
 
 
@@ -170,6 +187,11 @@ class ArtifactDetector(Node):
 
         if self.best is not None and self.best_count == 0:
             w, h, x_min, x_max, red_used, yellow_used = self.best_info
+            if red_used:
+                # revise noisy points
+                rcount, w, h, x_min, x_max = count_red(img, filtered=True)
+                print(rcount, w, h, x_min, x_max, w/h, count/(w*h))
+
             print('Published', self.best)
             if red_used or yellow_used:
                 deg_100th, dist_mm = artf_in_scan(self.best_scan, self.width, x_min, x_max, verbose=True)
@@ -179,14 +201,20 @@ class ArtifactDetector(Node):
 
             if red_used:
                 print('h/w', h/w)
+#                if self.best < 1000:
+#                    artf = DRILL  # VALVE - hack for simple02
+#                elif h/w > 2.4:
+#                    artf = EXTINGUISHER
+#                elif h/w > 1.0:
+#                    artf = BACKPACK
+#                else:
+#                    artf = TOOLBOX
                 if self.best < 1000:
-                    artf = DRILL  # VALVE - hack for simple02
-                elif h/w > 2.4:
+                    artf = DRILL  # VALVE - hack for simple02, fallback for empty image
+                if h/w > 2:
                     artf = EXTINGUISHER
-                elif h/w > 1.0:
-                    artf = BACKPACK
                 else:
-                    artf = TOOLBOX
+                    artf = DRILL
             elif yellow_used:
                 artf = RESCUE_RANDY  # used to be RADIO
 
