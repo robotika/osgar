@@ -80,7 +80,7 @@ services:
   # solution container connects to the first bridge, and therefore controls
   # the X1 robot.
   solution1:
-    image: 200670743174.dkr.ecr.us-east-1.amazonaws.com/subt/robotika:ver14
+    image: robotika
     networks:
       relay_net1:
         ipv4_address: 172.29.1.2
@@ -108,7 +108,7 @@ services:
   # This solution container connects to the second bridge, and therefore
   # controls the X2 robot.
   solution2:
-    image: 200670743174.dkr.ecr.us-east-1.amazonaws.com/subt/robotika:ver14
+    image: robotika
     networks:
       relay_net2:
         ipv4_address: 172.30.1.2
