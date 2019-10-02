@@ -190,6 +190,15 @@ class ArtifactDetector(Node):
             if red_used:
                 # revise noisy points
                 rcount, w, h, x_min, x_max = count_red(img, filtered=True)
+                if rcount == 0:
+                    print('Invalid after filtering!')
+                    # reset detector
+                    self.best = None
+                    self.best_count = 0
+                    self.best_img = None
+                    self.best_info = None
+                    self.best_scan = None
+                    return
                 print(rcount, w, h, x_min, x_max, w/h, count/(w*h))
 
             print('Published', self.best)
