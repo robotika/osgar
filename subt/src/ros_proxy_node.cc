@@ -305,31 +305,8 @@ not available.");
   // Arrived
   if (dist < 0.3 || pose.position.x >= -0.3)
   {
-    msg.linear.x = 0;
-    msg.angular.z = 0;
     this->arrived = true;
     ROS_INFO("Arrived at entrance!");
-
-    // Report an artifact
-    // Hardcoded to tunnel_circuit_practice_01's exginguisher_3
-    subt::msgs::Artifact artifact;
-    artifact.set_type(static_cast<uint32_t>(subt::ArtifactType::TYPE_EXTINGUISHER));
-    artifact.mutable_pose()->mutable_position()->set_x(-8.1);
-    artifact.mutable_pose()->mutable_position()->set_y(37);
-    artifact.mutable_pose()->mutable_position()->set_z(0.004);
-
-//    this->ReportArtifact(artifact);
-    /*
-    std::string serializedData;
-    if (!artifact.SerializeToString(&serializedData))
-    {
-      ROS_ERROR("ReportArtifact(): Error serializing message [%s]",
-          artifact.DebugString().c_str());
-    }
-    else if (!this->client->SendTo(serializedData, subt::kBaseStationName))
-    {
-      ROS_ERROR("CommsClient failed to Send serialized data.");
-    }*/
   }
 }
 
@@ -507,15 +484,6 @@ int main(int argc, char** argv)
     loop_rate.sleep();
   }
 
-  char *path = "/home/developer/subt_solution/osgar/call_baseXXX.txt"; // ignore the name for now
-  double offset_x, offset_y, offset_z;
-
-  offset_x = 0.0;  // let the controller handle necessary offset based on origin
-  offset_y = 0.0;
-  offset_z = 0.0;
-
-  int i;
-  ros::Rate r(20);
   while (ros::ok())
   {
     geometry_msgs::Twist msg;
@@ -523,96 +491,7 @@ int main(int argc, char** argv)
     {
       controller.velPub.publish(msg);
     }
-
     ros::spinOnce();
-//    r.sleep();
-
-
-//    ROS_INFO("MD Test\n");
-    FILE *fd = fopen(path, "r");
-    if(fd != NULL)
-    {
-      ROS_INFO("MD SendToBaseStation\n");
-      double x, y, z;
-      char buf[256];
-      bool ret = false;
-      while(fscanf(fd, "%s %lf %lf %lf", buf, &x, &y, &z) == 4)
-      {
-        ROS_INFO_STREAM("MD artf" << buf);
-        ROS_INFO_STREAM("MD x" << x);
-        ROS_INFO_STREAM("MD y" << y);
-        ROS_INFO_STREAM("MD z" << z);
-
-//        pose.mutable_position()->set_x(x + offset_x);
-//        pose.mutable_position()->set_y(y + offset_y);
-//        pose.mutable_position()->set_z(z + offset_z);
-        
-        subt::msgs::Artifact artifact;
-//        artifact.set_type(static_cast<uint32_t>(subt::ArtifactType::TYPE_EXTINGUISHER));
-        artifact.mutable_pose()->mutable_position()->set_x(x + offset_x);
-        artifact.mutable_pose()->mutable_position()->set_y(y + offset_y);
-        artifact.mutable_pose()->mutable_position()->set_z(z + offset_z);
-
-        subt::ArtifactType type;
-        if(strcmp(buf, "TYPE_BACKPACK") == 0)
-        {
-          type = subt::ArtifactType::TYPE_BACKPACK;
-        }
-        if(strcmp(buf, "TYPE_DUCT") == 0)
-        {
-          type = subt::ArtifactType::TYPE_DUCT;
-        }
-        if(strcmp(buf, "TYPE_DRILL") == 0)
-        {
-          type = subt::ArtifactType::TYPE_DRILL;
-        }
-        if(strcmp(buf, "TYPE_ELECTRICAL_BOX") == 0)
-        {
-          type = subt::ArtifactType::TYPE_ELECTRICAL_BOX;
-        }
-        if(strcmp(buf, "TYPE_EXTINGUISHER") == 0)
-        {
-          type = subt::ArtifactType::TYPE_EXTINGUISHER;
-        }
-        if(strcmp(buf, "TYPE_PHONE") == 0)
-        {
-          type = subt::ArtifactType::TYPE_PHONE;
-        }
-        if(strcmp(buf, "TYPE_RADIO") == 0)
-        {
-          type = subt::ArtifactType::TYPE_RADIO;
-        }
-        if(strcmp(buf, "TYPE_RESCUE_RANDY") == 0)
-        {
-          type = subt::ArtifactType::TYPE_RESCUE_RANDY;
-        }
-        if(strcmp(buf, "TYPE_TOOLBOX") == 0)
-        {
-          type = subt::ArtifactType::TYPE_TOOLBOX;
-        }
-        if(strcmp(buf, "TYPE_VALVE") == 0)
-        {
-          type = subt::ArtifactType::TYPE_VALVE;
-        }
-
-        artifact.set_type(static_cast<uint32_t>(type));
-
-        ROS_INFO_STREAM("MD enum" << static_cast<uint32_t>(type));
-
-        ret |= controller.ReportArtifact(artifact);
-        if(ret)
-        {
-          ROS_INFO("MD SUCCESS\n");
-        }
-        else
-          ROS_INFO("MD FAILURE\n");
-      }
-      if(ret)
-      {
-        break;  // at least some artifacts sucessfully reported
-      }
-    }
-    i++;
   }
   ros::spin();
   return 0;
