@@ -24,7 +24,7 @@
       "reporter": {
           "driver": "subt.artifacts:ArtifactReporter",
           "in": ["artf_xyz"],
-          "out": [],
+          "out": ["artf_cmd"],
           "init": {}
       },
       "transmitter": {
@@ -84,6 +84,7 @@
               ["detector.artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],
               ["app.artf_xyz", "reporter.artf_xyz"],
+              ["reporter.artf_cmd", "transmitter.raw"],
 
               ["timer.tick", "rosmsg.tick"]]
   }
