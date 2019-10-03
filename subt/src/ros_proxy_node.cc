@@ -408,6 +408,7 @@ bool Controller::getSpeedCmd(geometry_msgs::Twist& msg)
       {
         ROS_INFO("ERROR! - failed to parse received artifact info");
       }
+      this->arrived = false;  // re-enable origin query
     }
     else
     {
@@ -477,21 +478,25 @@ int main(int argc, char** argv)
   // example. You can write your controller using alternative methods.
   // To get started with ROS visit: http://wiki.ros.org/ROS/Tutorials
   ros::Rate loop_rate(20);
-  while (ros::ok() && !controller.arrived)
-  {
-    controller.Update();
-    ros::spinOnce();
-    loop_rate.sleep();
-  }
-
   while (ros::ok())
   {
-    geometry_msgs::Twist msg;
-    while(controller.getSpeedCmd(msg))
+    while (ros::ok() && !controller.arrived)
     {
-      controller.velPub.publish(msg);
+      controller.Update();
+      ros::spinOnce();
+      loop_rate.sleep();
     }
-    ros::spinOnce();
+
+    while (ros::ok() && controller.arrived)
+    {
+      geometry_msgs::Twist msg;
+      while(controller.getSpeedCmd(msg))
+      {
+        controller.velPub.publish(msg);
+      }
+      ros::spinOnce();
+      loop_rate.sleep();
+    }
   }
   ros::spin();
   return 0;
