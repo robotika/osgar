@@ -187,6 +187,7 @@ class Controller
   }
 
   public: bool getSpeedCmd(geometry_msgs::Twist& msg);
+  public: bool parseArtf(char *input_str, subt::msgs::Artifact& artifact);
 };
 
 /////////////////////////////////////////////////
@@ -332,6 +333,74 @@ not available.");
   }
 }
 
+
+/////////////////////////////////////////////////
+bool Controller::parseArtf(char *input_str, subt::msgs::Artifact& artifact)
+{
+  double x, y, z;
+  char buf[256];
+
+  if(sscanf(input_str, "%s %lf %lf %lf", buf, &x, &y, &z) == 4)
+  {
+        ROS_INFO_STREAM("MD artf = " << buf);
+        ROS_INFO_STREAM("MD x = " << x);
+        ROS_INFO_STREAM("MD y = " << y);
+        ROS_INFO_STREAM("MD z = " << z);
+
+        artifact.mutable_pose()->mutable_position()->set_x(x);
+        artifact.mutable_pose()->mutable_position()->set_y(y);
+        artifact.mutable_pose()->mutable_position()->set_z(z);
+
+        subt::ArtifactType type;
+        if(strcmp(buf, "TYPE_BACKPACK") == 0)
+        {
+          type = subt::ArtifactType::TYPE_BACKPACK;
+        }
+        if(strcmp(buf, "TYPE_DUCT") == 0)
+        {
+          type = subt::ArtifactType::TYPE_DUCT;
+        }
+        if(strcmp(buf, "TYPE_DRILL") == 0)
+        {
+          type = subt::ArtifactType::TYPE_DRILL;
+        }
+        if(strcmp(buf, "TYPE_ELECTRICAL_BOX") == 0)
+        {
+          type = subt::ArtifactType::TYPE_ELECTRICAL_BOX;
+        }
+        if(strcmp(buf, "TYPE_EXTINGUISHER") == 0)
+        {
+          type = subt::ArtifactType::TYPE_EXTINGUISHER;
+        }
+        if(strcmp(buf, "TYPE_PHONE") == 0)
+        {
+          type = subt::ArtifactType::TYPE_PHONE;
+        }
+        if(strcmp(buf, "TYPE_RADIO") == 0)
+        {
+          type = subt::ArtifactType::TYPE_RADIO;
+        }
+        if(strcmp(buf, "TYPE_RESCUE_RANDY") == 0)
+        {
+          type = subt::ArtifactType::TYPE_RESCUE_RANDY;
+        }
+        if(strcmp(buf, "TYPE_TOOLBOX") == 0)
+        {
+          type = subt::ArtifactType::TYPE_TOOLBOX;
+        }
+        if(strcmp(buf, "TYPE_VALVE") == 0)
+        {
+          type = subt::ArtifactType::TYPE_VALVE;
+        }
+
+        artifact.set_type(static_cast<uint32_t>(type));
+
+        ROS_INFO_STREAM("MD enum = " << static_cast<uint32_t>(type));
+        return true;
+  }
+  return false;
+}
+
 /////////////////////////////////////////////////
 bool Controller::getSpeedCmd(geometry_msgs::Twist& msg)
 { 
@@ -346,9 +415,22 @@ bool Controller::getSpeedCmd(geometry_msgs::Twist& msg)
     }
     else if(strncmp(buffer, "artf ", 5) == 0)
     {
+      subt::msgs::Artifact artifact;
       buffer[size] = 0;
       ROS_INFO("artf: %s", buffer);
-      // TODO report or store and return??
+      if(parseArtf(buffer, artifact))
+      {
+        if(this->ReportArtifact(artifact))
+        {
+          ROS_INFO("MD SUCCESS\n");
+        }
+        else
+          ROS_INFO("MD FAILURE\n");
+      }
+      else
+      {
+        ROS_INFO("ERROR! - failed to parse received artifact info");
+      }
     }
     else
     {
@@ -425,7 +507,7 @@ int main(int argc, char** argv)
     loop_rate.sleep();
   }
 
-  char *path = "/home/developer/subt_solution/osgar/call_base.txt";
+  char *path = "/home/developer/subt_solution/osgar/call_baseXXX.txt"; // ignore the name for now
   double offset_x, offset_y, offset_z;
 
   offset_x = 0.0;  // let the controller handle necessary offset based on origin
