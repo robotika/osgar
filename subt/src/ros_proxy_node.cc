@@ -418,7 +418,7 @@ bool Controller::getSpeedCmd(geometry_msgs::Twist& msg)
       subt::msgs::Artifact artifact;
       buffer[size] = 0;
       ROS_INFO("artf: %s", buffer);
-      if(parseArtf(buffer, artifact))
+      if(parseArtf(buffer + 5, artifact)) // skip initial prefix "artf "
       {
         if(this->ReportArtifact(artifact))
         {
