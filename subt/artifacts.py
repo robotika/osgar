@@ -302,7 +302,9 @@ class ArtifactReporter(Node):
         dir = os.path.dirname(os.path.abspath(self.path))
         with tempfile.NamedTemporaryFile(mode="w", delete=False, dir=dir) as f:
             for artf_type, ix, iy, iz in self.artf_xyz:
-                f.write('%s %.2f %.2f %.2f\n' % (artf_type, ix/1000.0, iy/1000.0, iz/1000.0))
+                s = '%s %.2f %.2f %.2f\n' % (artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
+                f.write(s)
+                self.publish('artf_cmd', bytes(s, encoding='ascii'))
             f.close()
             os.rename(f.name, self.path)
 
