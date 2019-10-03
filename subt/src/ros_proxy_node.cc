@@ -122,6 +122,12 @@ bool getSpeedCmd(geometry_msgs::Twist& msg)
       buffer[size] = 0;
       ROS_INFO("Python3: %s", buffer);
     }
+    else if(strncmp(buffer, "artf ", 5) == 0)
+    {
+      buffer[size] = 0;
+      ROS_INFO("artf: %s", buffer);
+      // TODO report or store and return??
+    }
     else
     {
       double speed, angular_speed;
