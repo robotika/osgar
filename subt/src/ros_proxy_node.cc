@@ -111,42 +111,6 @@ void sendOrigin(std::string& name, double x, double y, double z)
   zmq_send(g_responder, buf, size, 0);
 }
 
-bool getSpeedCmd(geometry_msgs::Twist& msg)
-{ 
-  char buffer[10000];
-  int size;
-  while((size=zmq_recv(g_requester, buffer, 10000, ZMQ_DONTWAIT)) > 0)
-  {
-    if(strncmp(buffer, "stdout ", 7) == 0)
-    {
-      buffer[size] = 0;
-      ROS_INFO("Python3: %s", buffer);
-    }
-    else if(strncmp(buffer, "artf ", 5) == 0)
-    {
-      buffer[size] = 0;
-      ROS_INFO("artf: %s", buffer);
-      // TODO report or store and return??
-    }
-    else
-    {
-      double speed, angular_speed;
-      int c = sscanf(buffer, "cmd_vel %lf %lf", &speed, &angular_speed);
-      if(c == 2)
-      {
-        msg.linear.x = speed;
-        msg.angular.z = angular_speed;
-        return true;
-      }
-      else
-      {
-        ROS_INFO_STREAM("MD bad parsing" << c << " " << buffer);
-        break;
-      }
-    }
-  }
-  return false;
-}
 
 /// \brief. Example control class, running as a ROS node to control a robot.
 class Controller
@@ -221,6 +185,8 @@ class Controller
     }
     return true;
   }
+
+  public: bool getSpeedCmd(geometry_msgs::Twist& msg);
 };
 
 /////////////////////////////////////////////////
@@ -320,7 +286,7 @@ not available.");
 
   // Simple example for robot to go to entrance
   geometry_msgs::Twist msg;
-  while(getSpeedCmd(msg))
+  while(this->getSpeedCmd(msg))
   {
     this->velPub.publish(msg);
   }
@@ -364,6 +330,44 @@ not available.");
       ROS_ERROR("CommsClient failed to Send serialized data.");
     }*/
   }
+}
+
+/////////////////////////////////////////////////
+bool Controller::getSpeedCmd(geometry_msgs::Twist& msg)
+{ 
+  char buffer[10000];
+  int size;
+  while((size=zmq_recv(g_requester, buffer, 10000, ZMQ_DONTWAIT)) > 0)
+  {
+    if(strncmp(buffer, "stdout ", 7) == 0)
+    {
+      buffer[size] = 0;
+      ROS_INFO("Python3: %s", buffer);
+    }
+    else if(strncmp(buffer, "artf ", 5) == 0)
+    {
+      buffer[size] = 0;
+      ROS_INFO("artf: %s", buffer);
+      // TODO report or store and return??
+    }
+    else
+    {
+      double speed, angular_speed;
+      int c = sscanf(buffer, "cmd_vel %lf %lf", &speed, &angular_speed);
+      if(c == 2)
+      {
+        msg.linear.x = speed;
+        msg.angular.z = angular_speed;
+        return true;
+      }
+      else
+      {
+        ROS_INFO_STREAM("MD bad parsing" << c << " " << buffer);
+        break;
+      }
+    }
+  }
+  return false;
 }
 
 /////////////////////////////////////////////////
@@ -433,7 +437,7 @@ int main(int argc, char** argv)
   while (ros::ok())
   {
     geometry_msgs::Twist msg;
-    while(getSpeedCmd(msg))
+    while(controller.getSpeedCmd(msg))
     {
       controller.velPub.publish(msg);
     }
