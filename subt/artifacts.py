@@ -56,7 +56,7 @@ def count_mask(mask):
     return count, w, h, x_min, x_max
 
 
-def count_red(img, filtered=False):
+def count_red(img, filtered=False, stdout=None):
     b = img[:,:,0]
     g = img[:,:,1]
     r = img[:,:,2]
@@ -95,6 +95,16 @@ def count_red(img, filtered=False):
                 best_cnt = cnt
 #        print(best_area, best_cnt)
         x, y, w, h = cv2.boundingRect(best_cnt)
+
+        if stdout is not None:
+            # dump image to stdout
+            # https://stackoverflow.com/questions/50670326/how-to-check-if-point-is-placed-inside-contour
+            print(x, y, w, h)
+            for j in range(y, y + h):
+                s = ''
+                for i in range(x, x + w ):
+                    s += 'X' if mask[j][i] else '.'
+                stdout(s)
         # count, w, h, x_min, x_max
         return int(best_area), w, h, x, x+w
 
@@ -220,7 +230,7 @@ class ArtifactDetector(Node):
             if red_used:
                 # revise noisy points
                 img = cv2.imdecode(np.fromstring(self.best_img, dtype=np.uint8), 1)
-                rcount, w, h, x_min, x_max = count_red(img, filtered=True)
+                rcount, w, h, x_min, x_max = count_red(img, filtered=True, stdout=self.stdout)
                 if rcount == 0:
                     self.stdout('Invalid after filtering! orig count=', self.best)
                     # reset detector
