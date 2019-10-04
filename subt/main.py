@@ -163,6 +163,7 @@ class SubTChallenge:
 
         self.last_send_time = None
         self.origin = None  # unknown initial position
+        self.origin_quat = None
         self.robot_name = None  # received with origin
         if self.is_virtual:
             self.local_planner = LocalPlanner()
@@ -479,7 +480,8 @@ class SubTChallenge:
             elif channel == 'origin':
                 if self.origin is None:  # accept only initial offset
                     self.robot_name = data[0].decode('ascii')
-                    self.origin = data[1:]
+                    self.origin = data[1:4]
+                    self.origin_quat = data[4:]
             elif channel == 'voltage':
                 self.voltage = data
             elif channel == 'emergency_stop':
