@@ -490,12 +490,17 @@ class SubTChallenge:
                 m(self)
             return channel
 
-    def wait(self, dt):  # TODO refactor to some common class
-        if self.time is None:
-            self.update()
-        start_time = self.time
-        while self.time - start_time < dt:
-            self.update()
+    def wait(self, dt, use_sim_time=False):  # TODO refactor to some common class
+        if use_sim_time:
+            start_sim_time_sec = self.sim_time_sec
+            while self.sim_time_sec - start_sim_time_sec < dt.total_seconds():
+                self.update()
+        else:
+            if self.time is None:
+                self.update()
+            start_time = self.time
+            while self.time - start_time < dt:
+                self.update()
 
     def stdout(self, *args, **kwargs):
         output = StringIO()
@@ -564,23 +569,14 @@ class SubTChallenge:
         self.wait(timedelta(seconds=3))
 #############################################
 
-    def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver2!")
-
+    def play_virtual_part(self):
         self.stdout("Waiting for origin ...")
         while self.origin is None:
             self.update()
         self.stdout('Origin:', self.origin, self.robot_name)
 
-        if self.use_right_wall == 'auto':
-            self.use_right_wall = self.robot_name.endswith('R')
-        self.stdout('Use right wall:', self.use_right_wall)
         x, y, z = self.origin
         self.stdout('angle', math.degrees(math.atan2(-y, -x)), 'dist', math.hypot(x, y))
-
-        if self.use_right_wall:
-            # add extra sleep to give a chance to the first robot
-            self.wait(timedelta(seconds=10))
 
         self.turn(math.atan2(-y, -x))
         self.go_straight(math.hypot(x, y))  # go to the tunnel entrance
@@ -593,13 +589,7 @@ class SubTChallenge:
 
         self.stdout(self.time, "Going HOME", dist, reason)
 
-        # use OLD VERSION until issue with IMU is resolved
         self.return_home(self.timeout)
-#        self.turn(math.radians(90), timeout=timedelta(seconds=20), speed=-0.1)  # it is safer to turn and see the wall + slowly backup
-#        self.turn(math.radians(90), timeout=timedelta(seconds=20), speed=-0.1)
-#        self.follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=2*self.timeout, dist_limit=dist+1)
-        # END OF OLD VERSION
-
         self.send_speed_cmd(0, 0)
 
         if self.artifacts:
@@ -607,7 +597,25 @@ class SubTChallenge:
             self.bus.publish('artf_xyz', [[artifact_data, round((x + x0)*1000), round((y + y0)*1000), round((z + z0)*1000)] 
                                           for artifact_data, (x, y, z) in self.artifacts])
 
-        self.wait(timedelta(seconds=30))
+        self.wait(timedelta(seconds=30), use_sim_time=True)
+
+
+    def play_virtual_track(self):
+        self.stdout("SubT Challenge Ver2!")
+        self.stdout("Waiting for robot_name ...")
+        while self.robot_name is None:
+            self.update()
+        self.stdout('robot_name:', self.robot_name)
+
+        if self.use_right_wall == 'auto':
+            self.use_right_wall = self.robot_name.endswith('R')
+        self.stdout('Use right wall:', self.use_right_wall)
+
+        if self.use_right_wall:
+            # add extra sleep to give a chance to the first robot
+            self.wait(timedelta(seconds=10), use_sim_time=True)
+
+        self.play_virtual_part()
 
 #############################################
 
