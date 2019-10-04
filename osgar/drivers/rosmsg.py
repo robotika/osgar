@@ -324,6 +324,10 @@ class ROSMsgParser(Thread):
         cmd = b'stdout ' + bytes(data, 'utf-8')  # redirect to ROS_INFO
         self.bus.publish('cmd_vel', cmd)
 
+    def slot_request_origin(self, timestamp, data):
+        cmd = b'request_origin'
+        self.bus.publish('cmd_vel', cmd)
+
     def run(self):
         try:
             while True:
@@ -336,6 +340,8 @@ class ROSMsgParser(Thread):
                     self.slot_desired_speed(timestamp, data)
                 elif channel == 'stdout':
                     self.slot_stdout(timestamp, data)
+                elif channel == 'request_origin':
+                    self.slot_request_origin(timestamp, data)
                 else:
                     assert False, channel  # unsupported input channel
         except BusShutdownException:
