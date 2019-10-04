@@ -571,6 +571,8 @@ class SubTChallenge:
 
     def play_virtual_part(self):
         self.stdout("Waiting for origin ...")
+        self.origin = None  # invalidate origin
+        self.bus.publish('request_origin', True)
         while self.origin is None:
             self.update()
         self.stdout('Origin:', self.origin, self.robot_name)
@@ -621,7 +623,6 @@ class SubTChallenge:
         self.stdout('Artifacts before start:', self.artifacts)
 
         for timeout_sec in times_sec[1:]:
-            self.origin = None  # invalidate origin
             self.timeout = timedelta(seconds=timeout_sec)
             self.play_virtual_part()
             self.stdout('Final xyz:', self.xyz)
