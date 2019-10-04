@@ -621,8 +621,10 @@ class SubTChallenge:
         self.stdout('Artifacts before start:', self.artifacts)
 
         for timeout_sec in times_sec[1:]:
+            self.origin = None  # invalidate origin
             self.timeout = timedelta(seconds=timeout_sec)
             self.play_virtual_part()
+            self.stdout('Final xyz:', self.xyz)
 
 #############################################
 
