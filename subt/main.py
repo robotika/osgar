@@ -625,6 +625,9 @@ class SubTChallenge:
             self.timeout = timedelta(seconds=timeout_sec)
             self.play_virtual_part()
             self.stdout('Final xyz:', self.xyz)
+            x, y, z = self.xyz
+            x0, y0, z0 = self.origin
+            self.stdout('Final xyz (DARPA coord system):', (x + x0, y + y0, z + z0))
 
 #############################################
 
