@@ -390,6 +390,10 @@ bool Controller::getSpeedCmd(geometry_msgs::Twist& msg)
       buffer[size] = 0;
       ROS_INFO("Python3: %s", buffer);
     }
+    else if(strncmp(buffer, "query_origin", 12) == 0)
+    {
+      this->arrived = false;  // re-enable origin query
+    }
     else if(strncmp(buffer, "artf ", 5) == 0)
     {
       subt::msgs::Artifact artifact;
@@ -408,7 +412,6 @@ bool Controller::getSpeedCmd(geometry_msgs::Twist& msg)
       {
         ROS_INFO("ERROR! - failed to parse received artifact info");
       }
-      this->arrived = false;  // re-enable origin query
     }
     else
     {
