@@ -163,7 +163,7 @@ class SubTChallenge:
 
         self.last_send_time = None
         self.origin = None  # unknown initial position
-        self.origin_quat = None
+        self.origin_quat = quaternion.identity()
         self.robot_name = None  # received with origin
         if self.is_virtual:
             self.local_planner = LocalPlanner()
@@ -481,7 +481,8 @@ class SubTChallenge:
                 if self.origin is None:  # accept only initial offset
                     self.robot_name = data[0].decode('ascii')
                     self.origin = data[1:4]
-                    self.origin_quat = data[4:]
+                    qx, qy, qz, qw = data[4:]
+                    self.origin_quat = qw, qx, qy, qz  # quaternion
             elif channel == 'voltage':
                 self.voltage = data
             elif channel == 'emergency_stop':
@@ -580,9 +581,10 @@ class SubTChallenge:
         self.stdout('Origin:', self.origin, self.robot_name)
 
         x, y, z = self.origin
-        self.stdout('angle', math.degrees(math.atan2(-y, -x)), 'dist', math.hypot(x, y))
+        heading = quaternion.heading(self.origin_quat)
+        self.stdout('heading', math.degrees(heading), 'angle', math.degrees(math.atan2(-y, -x)), 'dist', math.hypot(x, y))
 
-        self.turn(math.atan2(-y, -x))
+        self.turn(normalizeAnglePIPI(math.atan2(-y, -x) - heading))
         self.go_straight(math.hypot(x, y))  # go to the tunnel entrance
         self.collision_detector_enabled = True
         dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,  # was radius=0.9
@@ -593,7 +595,7 @@ class SubTChallenge:
 
         self.stdout(self.time, "Going HOME", dist, reason)
 
-        self.return_home(self.timeout)
+        self.return_home(2 * self.timeout)
         self.send_speed_cmd(0, 0)
 
         if self.artifacts:
@@ -601,7 +603,7 @@ class SubTChallenge:
             self.bus.publish('artf_xyz', [[artifact_data, round((x + x0)*1000), round((y + y0)*1000), round((z + z0)*1000)] 
                                           for artifact_data, (x, y, z) in self.artifacts])
 
-        self.wait(timedelta(seconds=30), use_sim_time=True)
+        self.wait(timedelta(seconds=10), use_sim_time=True)
 
 
     def play_virtual_track(self):
@@ -631,6 +633,8 @@ class SubTChallenge:
             x, y, z = self.xyz
             x0, y0, z0 = self.origin
             self.stdout('Final xyz (DARPA coord system):', (x + x0, y + y0, z + z0))
+
+        self.wait(timedelta(seconds=30), use_sim_time=True)
 
 #############################################
 
