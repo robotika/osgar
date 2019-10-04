@@ -620,8 +620,8 @@ class SubTChallenge:
         # potential wrong artifacts:
         self.stdout('Artifacts before start:', self.artifacts)
 
-        for timeout in times_sec[1:]:
-            self.timeout = timeout
+        for timeout_sec in times_sec[1:]:
+            self.timeout = timedelta(seconds=timeout_sec)
             self.play_virtual_part()
 
 #############################################
