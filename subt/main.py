@@ -617,7 +617,7 @@ class SubTChallenge:
             self.use_right_wall = self.robot_name.endswith('R')
         self.stdout('Use right wall:', self.use_right_wall)
 
-        times_sec = [int(x) for x in self.robot_name[1:-1].split('_')]
+        times_sec = [int(x) for x in self.robot_name[1:-1].split('F')]
         self.stdout('Using times', times_sec)
 
         # add extra sleep to give a chance to the other robot (based on name)
