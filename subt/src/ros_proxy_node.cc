@@ -392,7 +392,7 @@ bool Controller::getSpeedCmd(geometry_msgs::Twist& msg)
       buffer[size] = 0;
       ROS_INFO("Python3: %s", buffer);
     }
-    else if(strncmp(buffer, "query_origin", 12) == 0)
+    else if(strncmp(buffer, "request_origin", 14) == 0)
     {
       this->arrived = false;  // re-enable origin query
     }
