@@ -37,3 +37,6 @@ rosservice call '/subt/finish' true
 # Take robot simulation down.
 kill ${ROS_PID}
 wait
+
+echo "10 minutes for logfile download"
+sleep 600
