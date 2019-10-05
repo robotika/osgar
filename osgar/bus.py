@@ -36,11 +36,17 @@ class BusHandler:
         self.logger = logger
         self.queue = Queue()
         self.name = name
-        self.out = out
+        self.out = dict([(k.split(':')[0], v) for k, v in out.items()])  # keep only prefixes
         self.slots = slots
         self.stream_id = {}
+        self.no_output = set()
         for publish_name in out.keys():
-            idx = self.logger.register('.'.join([self.name, publish_name]))
+            if publish_name.endswith(':null'):
+                publish_name = publish_name[:-5]
+                idx = self.logger.register('.'.join([self.name, publish_name]))
+                self.no_output.add(idx)
+            else:
+                idx = self.logger.register('.'.join([self.name, publish_name]))
             self.stream_id[publish_name] = idx
         self._is_alive = True
         self.compressed_output = (name == 'tcp_point_data')  # hack
@@ -48,7 +54,9 @@ class BusHandler:
     def publish(self, channel, data):
         with self.logger.lock:
             stream_id = self.stream_id[channel]  # local maping of indexes
-            if self.compressed_output:
+            if stream_id in self.no_output:
+                to_write = serialize(None)  # i.e. at least there will be timestamp record
+            elif self.compressed_output:
                 to_write = zlib.compress(serialize(data))
             else:
                 to_write = serialize(data)

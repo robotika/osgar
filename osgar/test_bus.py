@@ -160,4 +160,11 @@ class BusHandlerTest(unittest.TestCase):
             b'x\x9c\xed\xc1\x01\r\x00\x00\x08\x03 #\xbc\x85\xfdC\xd8\xcb\x1e\x1fp\x9b' +
             b'\x01\x00\x00\x00\x00\x00\x00\x00\x00\x80\x02\x0f\x9f\xba\x00\xfd')
 
+    def test_null_output(self):
+        logger = MagicMock()
+        logger.register = MagicMock(return_value=1)
+        bus = BusHandler(logger, out={'raw:null':[]}, name='receiver')
+        bus.publish('raw', b'write to /dev/null')
+        logger.write.assert_called_once_with(1, serialize(None))
+
 # vim: expandtab sw=4 ts=4
