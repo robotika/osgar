@@ -164,6 +164,7 @@ class SubTChallenge:
         self.last_send_time = None
         self.origin = None  # unknown initial position
         self.origin_quat = quaternion.identity()
+        self.offset = (0, 0, 0)
         self.robot_name = None  # received with origin
         if self.is_virtual:
             self.local_planner = LocalPlanner()
@@ -425,10 +426,11 @@ class SubTChallenge:
     def on_artf(self, timestamp, data):
         artifact_data, deg_100th, dist_mm = data
         x, y, z = self.xyz
+        x0, y0, z0 = self.offset
         angle, dist = self.yaw + math.radians(deg_100th / 100.0), dist_mm / 1000.0
-        ax = x + math.cos(angle) * dist
-        ay = y + math.sin(angle) * dist
-        az = z
+        ax = x0 + x + math.cos(angle) * dist
+        ay = y0 + y + math.sin(angle) * dist
+        az = z0 + z
         self.maybe_remember_artifact(artifact_data, (ax, ay, az))
 
     def update(self):
@@ -581,6 +583,9 @@ class SubTChallenge:
         self.stdout('Origin:', self.origin, self.robot_name)
 
         x, y, z = self.origin
+        x1, y1, z1 = self.xyz
+        self.offset = x - x1, y - y1, z - z1
+        self.stdout('Offset:', self.offset)
         heading = quaternion.heading(self.origin_quat)
         self.stdout('heading', math.degrees(heading), 'angle', math.degrees(math.atan2(-y, -x)), 'dist', math.hypot(x, y))
 
@@ -599,8 +604,7 @@ class SubTChallenge:
         self.send_speed_cmd(0, 0)
 
         if self.artifacts:
-            x0, y0, z0 = self.origin
-            self.bus.publish('artf_xyz', [[artifact_data, round((x + x0)*1000), round((y + y0)*1000), round((z + z0)*1000)] 
+            self.bus.publish('artf_xyz', [[artifact_data, round(x*1000), round(y*1000), round(z*1000)] 
                                           for artifact_data, (x, y, z) in self.artifacts])
 
         self.wait(timedelta(seconds=10), use_sim_time=True)
