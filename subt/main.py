@@ -416,7 +416,7 @@ class SubTChallenge:
         cacc = np.asarray(acc) - egacc.T  # Corrected acceleration (without gravitational acceleration).
         magnitude = math.hypot(cacc[0, 0], cacc[0, 1])
         # used to be 12 - see https://bitbucket.org/osrf/subt/issues/166/expected-x2-acceleration
-        if magnitude > 18.0:
+        if magnitude > 20:  #18.0:
             print(self.time, 'Collision!', acc, 'reported:', self.collision_detector_enabled)
             if self.collision_detector_enabled:
                 self.collision_detector_enabled = False
