@@ -163,7 +163,7 @@ class BusHandlerTest(unittest.TestCase):
     def test_null_output(self):
         logger = MagicMock()
         logger.register = MagicMock(return_value=1)
-        bus = BusHandler(logger, out={'raw:null':[]}, name='receiver')
+        bus = BusHandler(logger, out={'raw':[]}, name='receiver', no_output=['raw'])
         bus.publish('raw', b'write to /dev/null')
         logger.write.assert_called_once_with(1, serialize(None))
 

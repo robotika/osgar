@@ -32,7 +32,9 @@ class BusShutdownException(Exception):
 
 
 class BusHandler:
-    def __init__(self, logger, name='', out={}, slots={}):
+    def __init__(self, logger, name='', out={}, slots={}, no_output=None):
+        if no_output is None:
+            no_output = []
         self.logger = logger
         self.queue = Queue()
         self.name = name
@@ -41,12 +43,9 @@ class BusHandler:
         self.stream_id = {}
         self.no_output = set()
         for publish_name in out.keys():
-            if publish_name.endswith(':null'):
-                publish_name = publish_name[:-5]
-                idx = self.logger.register('.'.join([self.name, publish_name]))
+            idx = self.logger.register('.'.join([self.name, publish_name]))
+            if publish_name in no_output:
                 self.no_output.add(idx)
-            else:
-                idx = self.logger.register('.'.join([self.name, publish_name]))
             self.stream_id[publish_name] = idx
         self._is_alive = True
         self.compressed_output = (name == 'tcp_point_data')  # hack
