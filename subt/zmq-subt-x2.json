@@ -67,7 +67,7 @@
               ["app.request_origin", "rosmsg.request_origin"],
               ["rosmsg.origin", "app.origin"],
 
-              ["receiver.raw:null", "rosmsg.slot_raw"],
+              ["receiver.raw", "rosmsg.slot_raw"],
               ["rosmsg.cmd_vel", "transmitter.raw"],
 
               ["rosmsg.rot", "app.rot"],
@@ -76,8 +76,8 @@
               ["rosmsg.scan", "app.scan"],
               ["rosmsg.scan", "detector.scan"],
 
-              ["rosmsg.image:null", "detector.image"],
-              ["rosmsg.image:null", "app.image"],
+              ["rosmsg.image", "detector.image"],
+              ["rosmsg.image", "app.image"],
 
               ["rosmsg.pose2d", "app.pose2d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
