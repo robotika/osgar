@@ -26,5 +26,6 @@ all_drivers = dict(
     vesc="osgar.drivers.vesc:MotorDriverVESC",
     opencv="osgar.drivers.opencv:LogOpenCVCamera",
     zeromq="osgar.drivers.logzeromq:LogZeroMQ",
+    stdin="osgar.drivers.stdin:LogStdIn",
 )
 

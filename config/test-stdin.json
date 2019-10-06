@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "stdin": {
+          "driver": "stdin",
+          "in": [],
+          "out": ["line"],
+          "init": {
+            "linenum": true,
+            "sleep": 0.001
+          }
+      }
+    },
+    "links": []
+  }
+}
