@@ -1,0 +1,33 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "stdin": {
+          "driver": "stdin",
+          "in": [],
+          "out": ["line"],
+          "init": {
+            "linenum": true
+          }
+      },
+      "transmitter": {
+          "driver": "zeromq",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+            "mode": "PUSH",
+            "endpoint": "tcp://localhost:5556"
+          }
+      },
+      "rosmsg": {
+          "driver": "rosmsg",
+          "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
+          "out": ["rot", "acc", "scan", "image:null", "pose2d", "sim_time_sec", "cmd_vel", "origin"],
+          "init": {
+          }
+      }
+    },
+    "links": [["stdin.line", "rosmsg.stdout"],
+              ["rosmsg.cmd_vel", "transmitter.raw"]]
+  }
+}
