@@ -622,7 +622,7 @@ class SubTChallenge:
         self.stdout("Size:", )
         with open(filename, 'rb') as f:
             for i in range(0, size, 100):
-                self.stdout(i, read(100))
+                self.stdout(i, f.read(100))
         self.stdout("Dump END")
 
     def play_virtual_track(self):
