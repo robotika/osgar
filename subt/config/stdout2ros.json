@@ -7,7 +7,8 @@
           "in": [],
           "out": ["line"],
           "init": {
-            "linenum": true
+            "linenum": true,
+            "sleep": 0.001
           }
       },
       "transmitter": {
