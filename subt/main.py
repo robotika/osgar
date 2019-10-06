@@ -591,10 +591,15 @@ class SubTChallenge:
 
         self.turn(normalizeAnglePIPI(math.atan2(-y, -x) - heading))
         self.go_straight(math.hypot(x, y))  # go to the tunnel entrance
-        self.collision_detector_enabled = True
-        dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,  # was radius=0.9
-                            timeout=self.timeout, pitch_limit=LIMIT_PITCH, roll_limit=None)
-        self.collision_detector_enabled = False
+        for loop in range(3):
+            self.collision_detector_enabled = True
+            dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,  # was radius=0.9
+                                timeout=self.timeout, pitch_limit=LIMIT_PITCH, roll_limit=None)
+            self.collision_detector_enabled = False
+            if reason is None or reason != REASON_PITCH_LIMIT:
+                break
+            self.stdout(self.time, "Microstep HOME", loop, dist, reason)
+            self.return_home(timedelta(seconds=10))
 
         self.stdout("Artifacts:", self.artifacts)
 
