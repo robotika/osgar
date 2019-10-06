@@ -614,6 +614,16 @@ class SubTChallenge:
 
         self.wait(timedelta(seconds=10), use_sim_time=True)
 
+    def dumplog(self):
+        import os
+        filename = self.bus.logger.filename  # deep hack
+        self.stdout("Dump Log:", filename)
+        size = statinfo = os.stat(filename).st_size
+        self.stdout("Size:", )
+        with open(filename, 'rb') as f:
+            for i in range(0, size, 100):
+                self.stdout(i, read(100))
+        self.stdout("Dump END")
 
     def play_virtual_track(self):
         self.stdout("SubT Challenge Ver2!")
@@ -644,6 +654,7 @@ class SubTChallenge:
             self.stdout('Final xyz (DARPA coord system):', (x + x0, y + y0, z + z0))
 
         self.wait(timedelta(seconds=30), use_sim_time=True)
+        self.dumplog()
 
 #############################################
 
