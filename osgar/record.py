@@ -75,8 +75,9 @@ def record(config_filename, log_prefix, duration_sec=None, application=None):
                 app.join()  # wait for application termination
             else:
                 if duration_sec is None:
-                    while True:
-                        time.sleep(1.0)
+                    # wait for all modules to finish
+                    for m in recorder.modules.values():
+                        m.join()
                 else:
                     time.sleep(duration_sec)
         except KeyboardInterrupt:
