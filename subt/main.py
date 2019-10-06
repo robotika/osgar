@@ -593,7 +593,7 @@ class SubTChallenge:
         self.go_straight(math.hypot(x, y))  # go to the tunnel entrance
         self.collision_detector_enabled = True
         dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,  # was radius=0.9
-                            timeout=self.timeout)  # timedelta(minutes=1, seconds=0))  # was 12 min
+                            timeout=self.timeout, pitch_limit=LIMIT_PITCH, roll_limit=None)
         self.collision_detector_enabled = False
 
         self.stdout("Artifacts:", self.artifacts)
