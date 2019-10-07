@@ -18,6 +18,7 @@ def aws2log(filename, outname):
                 break
 
         with open(outname, 'wb') as out:
+            prev = None
             i = 0
             for line in f:
                 if 'Python3' in line:
