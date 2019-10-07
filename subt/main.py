@@ -619,7 +619,7 @@ class SubTChallenge:
         filename = self.bus.logger.filename  # deep hack
         self.stdout("Dump Log:", filename)
         size = statinfo = os.stat(filename).st_size
-        self.stdout("Size:", )
+        self.stdout("Size:", size)
         with open(filename, 'rb') as f:
             for i in range(0, size, 100):
                 self.stdout(i, f.read(100))
@@ -655,6 +655,7 @@ class SubTChallenge:
 
         self.wait(timedelta(seconds=30), use_sim_time=True)
         self.dumplog()
+        self.wait(timedelta(seconds=10), use_sim_time=True)
 
 #############################################
 
