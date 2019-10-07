@@ -660,7 +660,7 @@ class SubTChallenge:
             self.play_virtual_part()
             self.stdout('Final xyz:', self.xyz)
             x, y, z = self.xyz
-            x0, y0, z0 = self.origin
+            x0, y0, z0 = self.offset
             self.stdout('Final xyz (DARPA coord system):', (x + x0, y + y0, z + z0))
 
         self.wait(timedelta(seconds=30), use_sim_time=True)
