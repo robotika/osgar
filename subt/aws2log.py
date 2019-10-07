@@ -49,7 +49,7 @@ def fix_log_header(filename):
 
     new_filename = filename + '.new'
     with LogWriter(filename=new_filename) as log:
-        for i in range(1, 20):  # TODO check count
+        for i in range(1, 25):  # TODO check count
             log.register('name'+str(i))
         log.f.write(data[start_index:end_index])
 
