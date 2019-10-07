@@ -2,11 +2,19 @@
   Convert AWS ROS_INFO dump into OSGAR logfile
 """
 import sys
-import os.path
+import os
+from itertools import chain
 
 
 def aws2log(filename, outname, recover=False):
-    with open(filename) as f:
+    dirname = os.path.dirname(filename)
+    names = [name for name in os.listdir(dirname) if name.startswith(os.path.basename(filename))]
+    print(sorted(names, reverse=True))
+    files = [open(os.path.join(dirname, name)) for name in sorted(names, reverse=True)]
+
+#    with open(filename) as f:
+    if True:
+        f = chain(*files)
         if not recover:
             # search for the beginning
             for line in f:
