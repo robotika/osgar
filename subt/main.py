@@ -165,6 +165,7 @@ class SubTChallenge:
         self.origin = None  # unknown initial position
         self.origin_quat = quaternion.identity()
         self.offset = (0, 0, 0)
+        self.origin_error = False
         self.robot_name = None  # received with origin
         if self.is_virtual:
             self.local_planner = LocalPlanner()
@@ -482,9 +483,13 @@ class SubTChallenge:
             elif channel == 'origin':
                 if self.origin is None:  # accept only initial offset
                     self.robot_name = data[0].decode('ascii')
-                    self.origin = data[1:4]
-                    qx, qy, qz, qw = data[4:]
-                    self.origin_quat = qw, qx, qy, qz  # quaternion
+                    if len(data) == 8:
+                        self.origin = data[1:4]
+                        qx, qy, qz, qw = data[4:]
+                        self.origin_quat = qw, qx, qy, qz  # quaternion
+                    else:
+                        self.stdout('Origin ERROR received')
+                        self.origin_error = True
             elif channel == 'voltage':
                 self.voltage = data
             elif channel == 'emergency_stop':
@@ -577,20 +582,25 @@ class SubTChallenge:
     def play_virtual_part(self):
         self.stdout("Waiting for origin ...")
         self.origin = None  # invalidate origin
+        self.origin_error = False
         self.bus.publish('request_origin', True)
-        while self.origin is None:
+        while self.origin is None and not self.origin_error:
             self.update()
         self.stdout('Origin:', self.origin, self.robot_name)
 
-        x, y, z = self.origin
-        x1, y1, z1 = self.xyz
-        self.offset = x - x1, y - y1, z - z1
-        self.stdout('Offset:', self.offset)
-        heading = quaternion.heading(self.origin_quat)
-        self.stdout('heading', math.degrees(heading), 'angle', math.degrees(math.atan2(-y, -x)), 'dist', math.hypot(x, y))
+        if self.origin is not None:
+            x, y, z = self.origin
+            x1, y1, z1 = self.xyz
+            self.offset = x - x1, y - y1, z - z1
+            self.stdout('Offset:', self.offset)
+            heading = quaternion.heading(self.origin_quat)
+            self.stdout('heading', math.degrees(heading), 'angle', math.degrees(math.atan2(-y, -x)), 'dist', math.hypot(x, y))
 
-        self.turn(normalizeAnglePIPI(math.atan2(-y, -x) - heading))
-        self.go_straight(math.hypot(x, y))  # go to the tunnel entrance
+            self.turn(normalizeAnglePIPI(math.atan2(-y, -x) - heading))
+            self.go_straight(math.hypot(x, y))  # go to the tunnel entrance
+        else:
+            # lost in tunnel
+            self.stdout('Lost in tunnel:', self.origin_error, self.offset)
         for loop in range(3):
             self.collision_detector_enabled = True
             dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,  # was radius=0.9
