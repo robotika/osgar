@@ -432,7 +432,11 @@ class SubTChallenge:
         ax = x0 + x + math.cos(angle) * dist
         ay = y0 + y + math.sin(angle) * dist
         az = z0 + z
-        self.maybe_remember_artifact(artifact_data, (ax, ay, az))
+        if -20 < ax < 0 and -10 < ay < 10:
+            # filter out elements on staging area
+            self.stdout(self.time, 'Robot at:', (ax, ay, az))
+        else:
+            self.maybe_remember_artifact(artifact_data, (ax, ay, az))
 
     def update(self):
         packet = self.bus.listen()
