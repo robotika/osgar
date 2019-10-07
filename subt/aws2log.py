@@ -36,6 +36,23 @@ def aws2log(filename, outname, recover=False):
                     i += 1
 
 
+def fix_log_header(filename):
+    from osgar.logger import LogWriter
+
+    with open(filename, 'rb') as f:
+        data = f.read()
+    if data.startswith(b'Pyr'):
+        return  # seems to be OK
+
+    start_index = data.index(b'cmd_vel') - 2 - 8  # msgpack index and IHH time, stream, len
+    end_index = data.rindex(b'cmd_vel') - 2 - 8  # msgpack index and IHH time, stream, len
+
+    new_filename = filename + '.new'
+    with LogWriter(filename=new_filename) as log:
+        for i in range(1, 20):  # TODO check count
+            log.register('name'+str(i))
+        log.f.write(data[start_index:end_index])
+
 
 if __name__ == '__main__':
     import argparse
@@ -47,5 +64,7 @@ if __name__ == '__main__':
 
     outname = os.path.join(os.path.dirname(args.filename), 'osgar.log')
     aws2log(args.filename, outname=outname, recover=args.recover)
+    if args.recover:
+        fix_log_header(outname)
 
 # vim: expandtab sw=4 ts=4
