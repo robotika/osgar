@@ -16,19 +16,18 @@ def aws2log(filename):
                 print(line)
                 break
 
-        i = 0
-        for line in f:
-            if 'Python3' in line:
-                assert 'stdout' in line, line
-                s = line.split('Python3: stdout ')[1]
-                offset = int(s.split()[0])
-                data = s[s.index(' '):]
-                assert i * 100 == offset, (i, s, prev)
-                prev = line
-                i += 1
-#                print(i, offset, data)
-#                if i > 10:
-#                    break
+        with open('out.log', 'wb') as out:
+            i = 0
+            for line in f:
+                if 'Python3' in line:
+                    assert 'stdout' in line, line
+                    s = line.split('Python3: stdout ')[1]
+                    offset = int(s.split()[0])
+                    data = eval(s[s.index(' '):])
+                    out.write(data)
+                    assert i * 100 == offset, (i, s, prev)
+                    prev = line
+                    i += 1
 
 
 
