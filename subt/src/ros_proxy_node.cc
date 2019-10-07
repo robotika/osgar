@@ -112,6 +112,13 @@ void sendOrigin(std::string& name, double x, double y, double z,
   zmq_send(g_responder, buf, size, 0);
 }
 
+void sendOriginError(std::string& name)
+{
+  char buf[1000];
+  int size = sprintf(buf, "origin %s ERROR", name.c_str());
+  zmq_send(g_responder, buf, size, 0);
+}
+
 
 /// \brief. Example control class, running as a ROS node to control a robot.
 class Controller
@@ -275,6 +282,9 @@ void Controller::Update()
     ROS_ERROR("Failed to call pose_from_artifact_origin service, \
 robot may not exist, be outside staging area, or the service is \
 not available.");
+
+    sendOriginError(this->name);
+    this->arrived = true; // give up ... is it good idea?
 
     // Stop robot
     geometry_msgs::Twist msg;
