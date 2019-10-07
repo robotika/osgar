@@ -32,15 +32,6 @@ wait ${ROBOT_PID}
 echo "Sleep and finish"
 sleep 30
 
-echo "Dump logfile"
-cd osgar
-ls -lh | python3 -m osgar.record subt/config/stdout2ros.json --duration 10
-sleep 1
-cat zmq-subt-x2-*.log | base64 | python3 -m osgar.record subt/config/stdout2ros.json --duration 600
-cd ..
-echo "Dump completed"
-
-
 rosservice call '/subt/finish' true
 
 # Take robot simulation down.
