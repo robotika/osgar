@@ -2,9 +2,10 @@
   Convert AWS ROS_INFO dump into OSGAR logfile
 """
 import sys
+import os.path
 
 
-def aws2log(filename):
+def aws2log(filename, outname):
     with open(filename) as f:
         for line in f:
             if 'Python3' in line and 'Dump' in line:
@@ -16,7 +17,7 @@ def aws2log(filename):
                 print(line)
                 break
 
-        with open('out.log', 'wb') as out:
+        with open(outname, 'wb') as out:
             i = 0
             for line in f:
                 if 'Python3' in line:
@@ -38,6 +39,7 @@ if __name__ == '__main__':
     parser.add_argument('filename', help='AWS ROS recorded log file')
     args = parser.parse_args()
 
-    aws2log(args.filename)
+    outname = os.path.join(os.path.dirname(args.filename), 'osgar.log')
+    aws2log(args.filename, outname=outname)
 
 # vim: expandtab sw=4 ts=4
