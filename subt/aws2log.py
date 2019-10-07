@@ -20,6 +20,9 @@ def aws2log(filename, outname, recover=False):
             for line in f:
                 if 'Python3' in line and 'Dump' in line:
                     print(line)
+                    outname = 'aws-' + line.split()[-1].strip()
+                    print(outname)
+                    outname = os.path.join(os.path.dirname(filename), outname)
                     break
 
             for line in f:
