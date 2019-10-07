@@ -287,7 +287,10 @@ class ROSMsgParser(Thread):
         packet = data  # ZMQ hack
         if data.startswith(b'origin'):
             s = data.split()
-            self.bus.publish('origin', [s[1]] + [float(x) for x in s[2:]])
+            if 'ERROR' in s:
+                self.bus.publish('origin', s[1:])
+            else:
+                self.bus.publish('origin', [s[1]] + [float(x) for x in s[2:]])
             return
         frame_id = get_frame_id(data)
         # TODO parse properly header "frame ID"
