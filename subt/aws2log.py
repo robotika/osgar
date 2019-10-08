@@ -39,7 +39,7 @@ def aws2log(filename, outname, recover=False):
                     s = line.split('Python3: stdout ')[1]
                     try:
                         offset = int(s.split()[0])
-                        if len(s) > 1 and s[1].startswith("b'"):
+                        if len(s.split()) > 1 and s.split()[1].startswith('b'):
                             data = eval(s[s.index(' '):])
                             out.write(data)
                             if prev is None and recover:
