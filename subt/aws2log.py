@@ -37,14 +37,18 @@ def aws2log(filename, outname, recover=False):
                 if 'Python3' in line:
                     assert 'stdout' in line, line
                     s = line.split('Python3: stdout ')[1]
-                    offset = int(s.split()[0])
-                    data = eval(s[s.index(' '):])
-                    out.write(data)
-                    if prev is None and recover:
-                        i = offset//100
-                    assert i * 100 == offset, (i, s, prev)
-                    prev = line
-                    i += 1
+                    try:
+                        offset = int(s.split()[0])
+                        if len(s) > 1 and s[1].startswith("b'"):
+                            data = eval(s[s.index(' '):])
+                            out.write(data)
+                            if prev is None and recover:
+                                i = offset//100
+                            assert i * 100 == offset, (i, s, prev)
+                            prev = line
+                            i += 1
+                    except ValueError:
+                        pass  # interlaced dump of images from detector
 
 
 def fix_log_header(filename):
