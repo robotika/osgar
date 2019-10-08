@@ -613,6 +613,7 @@ class SubTChallenge:
             if reason is None or reason != REASON_PITCH_LIMIT:
                 break
             self.stdout(self.time, "Microstep HOME", loop, dist, reason)
+            self.go_straight(-0.3, timeout=timedelta(seconds=10))
             self.return_home(timedelta(seconds=10))
 
         self.stdout("Artifacts:", self.artifacts)
