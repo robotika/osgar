@@ -15,6 +15,7 @@ from osgar.explore import follow_wall_angle
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.lib import quaternion
 from osgar.lib.virtual_bumper import VirtualBumper
+from osgar.lib.lidar_pts import equal_scans
 
 from subt.local_planner import LocalPlanner
 
@@ -171,6 +172,7 @@ class SubTChallenge:
             self.local_planner = LocalPlanner()
         else:
             self.local_planner = None
+        self.ref_scan = None
 
     def send_speed_cmd(self, speed, angular_speed):
         if self.virtual_bumper is not None:
@@ -461,6 +463,18 @@ class SubTChallenge:
                 if self.last_send_time is not None and self.last_send_time - self.time > timedelta(seconds=0.1):
                     print('queue delay', self.last_send_time - self.time)
                 self.scan = data
+                if self.ref_scan is None or not equal_scans(self.scan, self.ref_scan, 200):
+                    self.ref_scan = self.scan
+                    self.ref_count = 0
+                else:
+                    self.ref_count += 1
+                    if self.ref_count > 30:
+                        print('Robot is stuck!', self.ref_count)
+                        if self.collision_detector_enabled:
+                            self.collision_detector_enabled = False
+                            raise Collision()
+                        self.ref_count = 0
+
                 if self.local_planner is not None:
                     if self.last_send_time is not None and self.last_send_time - self.time < timedelta(seconds=0.1):
                         self.local_planner.update(data)
