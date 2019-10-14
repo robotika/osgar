@@ -5,6 +5,7 @@
 
 import struct
 import math
+import ctypes
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
@@ -13,7 +14,8 @@ from osgar.bus import BusShutdownException
 WHEEL_DISTANCE = 0.496  # m K2
 CENTER_AXLE_DISTANCE = 0.348  # distance from potentiometer
 VESC_REPORT_FREQ = 20  # was 100  # Hz
-ENC_SCALE = 0.25 * math.pi / (4 * 3 * 60 * VESC_REPORT_FREQ)  # scale 4x found experimentally
+SPEED_ENC_SCALE = 0.25 * math.pi / (4 * 3 * 60 * VESC_REPORT_FREQ)  # scale 4x found experimentally
+ENC_SCALE = 8.0/950  # TODO proper calibration
 
 AD_CENTER = 515 # K2
 AD_MAX_DEG = 79  # K2
@@ -29,6 +31,12 @@ CAN_ID_VESC_REAR_L = 0x94
 CAN_ID_SYNC = CAN_ID_VESC_FRONT_L
 CAN_ID_CURRENT = 0x70
 CAN_ID_JOIN_ANGLE = 0x80
+CAN_ID_ENCODERS = 0x83
+
+INDEX_FRONT_LEFT = 1
+INDEX_FRONT_RIGHT = 0
+INDEX_REAR_LEFT = 3
+INDEX_REAR_RIGHT = 2
 
 MIN_SPEED = 0.3
 
@@ -69,7 +77,7 @@ def draw_enc_stat(arr):
 
 
 def compute_desired_erpm(desired_speed, desired_angular_speed):
-    scale = 1 / (VESC_REPORT_FREQ * ENC_SCALE)
+    scale = 1 / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)
     left = scale * (desired_speed - desired_angular_speed * WHEEL_DISTANCE / 2)
     right = scale * (desired_speed + desired_angular_speed * WHEEL_DISTANCE / 2)
     return int(round(left)), int(round(right))
@@ -108,6 +116,10 @@ def compute_rear(speed, angular_speed, joint_angle):
     return x, -y
 
 
+def sint16_diff(a, b):
+    return ctypes.c_int16(a - b).value
+
+
 class RobotKloubak(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
@@ -125,6 +137,9 @@ class RobotKloubak(Node):
         self.last_encoders_rear_left = None
         self.last_encoders_rear_right = None
         self.last_encoders_time = None
+        self.last_pose_encoders = [0, 0, 0, 0]  # accumulated tacho readings
+        self.encoders = [0, 0, 0, 0]  # handling 16bit integrer overflow
+        self.last_encoders_16bit = None  # raw readings
         self.last_join_angle = None
         self.can_errors = 0  # count errors instead of assert
 
@@ -155,6 +170,19 @@ class RobotKloubak(Node):
                 print('Emergency STOP:', self.emergency_stop)
 
     def update_encoders(self, msg_id, data):
+        if msg_id == 0x83:
+            encoders = struct.unpack('>HHHH', data)
+            if self.last_encoders_time is not None:
+                diff = [sint16_diff(e, prev) for prev, e in zip(self.last_encoders_16bit, encoders)]
+            else:
+                diff = [0, 0, 0, 0]
+            self.encoders = [e + d for e, d in zip(self.encoders, diff)]
+            self.last_encoders_16bit = encoders
+            self.last_encoders_time = self.time
+            if self.verbose:
+                print(self.time - self.last_encoders_time, diff, self.encoders)
+            return
+        assert msg_id in [0x91, 0x92, 0x93, 0x94], hex(msg_id)
         # assert len(data) == 8, data
         if len(data) != 8:
             self.can_errors += 1
@@ -202,14 +230,16 @@ class RobotKloubak(Node):
         return True, (x, y, heading), (dist, angle)
 
     def update_pose(self):
+        diff = [e - prev for e, prev in zip(self.encoders, self.last_pose_encoders)]
+        self.last_pose_encoders = self.encoders
         if self.desired_speed >= 0:
-            ret, pose, motion = self.compute_pose(self.last_encoders_rear_left, self.last_encoders_rear_right)
+            ret, pose, motion = self.compute_pose(diff[INDEX_REAR_LEFT], diff[INDEX_REAR_RIGHT])
         else:
-            ret, pose, motion = self.compute_pose(self.last_encoders_front_left, self.last_encoders_front_right)
-        
+            ret, pose, motion = self.compute_pose(diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT])
+
         if ret:
             self.pose = pose
-            
+
         if self.verbose and ret and self.last_join_angle is not None:
 #            self.debug_odo.append((self.time.total_seconds(), motion[0], motion_rear[0]))
 #            self.debug_odo.append((self.time.total_seconds(), motion[1], motion_rear[1]))
@@ -226,7 +256,7 @@ class RobotKloubak(Node):
         msg_id, payload, flags = packet
         if msg_id == CAN_ID_BUTTONS:
             self.update_buttons(payload)
-        elif msg_id in [CAN_ID_VESC_FRONT_L, CAN_ID_VESC_FRONT_R, CAN_ID_VESC_REAR_L, CAN_ID_VESC_REAR_R]:
+        elif msg_id in [CAN_ID_ENCODERS, CAN_ID_VESC_FRONT_L, CAN_ID_VESC_FRONT_R, CAN_ID_VESC_REAR_L, CAN_ID_VESC_REAR_R]:
             self.update_encoders(msg_id, payload)
         elif msg_id == CAN_ID_CURRENT:
             # expected 24bit integer miliAmps
@@ -241,12 +271,14 @@ class RobotKloubak(Node):
 #                print(self.last_join_angle)
             else:
                 self.can_errors += 1
-        if msg_id == CAN_ID_SYNC:
+        if msg_id == CAN_ID_ENCODERS:
+            diff = [e - prev for e, prev in zip(self.encoders, self.last_pose_encoders)]
             self.publish('encoders', 
-                    [self.last_encoders_front_left, self.last_encoders_front_right,
-                     self.last_encoders_rear_left, self.last_encoders_rear_right])
+                    [diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT],
+                     diff[INDEX_REAR_LEFT], diff[INDEX_REAR_RIGHT]])
             if self.update_pose():
                 self.send_pose()
+
                 # reset all encoder values to be sure that new reading were received
 #                self.last_encoders_front_left = None
 #                self.last_encoders_front_right = None
