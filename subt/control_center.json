@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "cc": {
+          "driver": "subt.control_center:ControlCenter",
+          "in": [],
+          "out": ["cmd"],
+          "init": {
+          }
+      },
+      "lora": {
+          "driver": "lora",
+          "in": ["raw"],
+          "out": ["raw", "cmd"],
+          "init": {
+            "sleep": 20,
+            "verbose": true
+          }
+      },
+      "lora_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "COM35", "speed": 115200}
+      }
+    },
+    "links": [["lora_serial.raw", "lora.raw"],
+              ["lora.raw", "lora_serial.raw"],
+              ["cc.cmd", "lora.pose2d"]]
+  }
+}
