@@ -31,6 +31,8 @@ CAN_ID_VESC_REAR_L = 0x94
 CAN_ID_SYNC = CAN_ID_VESC_FRONT_L
 CAN_ID_CURRENT = 0x70
 CAN_ID_JOIN_ANGLE = 0x80
+CAN_ID_REGULATED_VOLTAGE = 0x81
+CAN_ID_VOLTAGE = 0x82
 CAN_ID_ENCODERS = 0x83
 
 INDEX_FRONT_LEFT = 1
@@ -141,6 +143,7 @@ class RobotKloubak(Node):
         self.encoders = [0, 0, 0, 0]  # handling 16bit integrer overflow
         self.last_encoders_16bit = None  # raw readings
         self.last_join_angle = None
+        self.voltage = None
         self.can_errors = 0  # count errors instead of assert
 
         self.verbose = False  # should be in Node
@@ -269,6 +272,12 @@ class RobotKloubak(Node):
             if len(payload) == 4:
                 self.last_join_angle = struct.unpack('>i', payload)[0]
 #                print(self.last_join_angle)
+            else:
+                self.can_errors += 1
+        elif msg_id == CAN_ID_VOLTAGE:
+            if len(payload) == 4:
+                self.voltage = struct.unpack_from('>i', payload)[0]
+#                print(self.voltage)
             else:
                 self.can_errors += 1
         if msg_id == CAN_ID_ENCODERS:
