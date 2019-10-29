@@ -242,12 +242,18 @@ class CANSerial(Thread):
     def slot_raw(self, timestamp, data):
         if len(data) > 0:
             for packet in self.process_gen(data):
-                self.bus.publish('can', packet)
+                msg_id, rtr, size = parse_header(packet)
+                if rtr == 0:
+                    assert size + 2 == len(packet), (size, len(packet))
+                # TODO verify how rtr is handled on PCAN?
+                self.bus.publish('can', [msg_id, packet[2:], 0])
 
     def slot_can(self, timestamp, data):
         if self.can_bridge_initialized:
-            # at the moment is can serial just forwarding raw packets
-            self.bus.publish('raw', data)
+            # at the moment is can serial just forwarding translation of raw packets
+            msg_id, payload, flags = data
+            assert flags == 0, flags  # CAN bridge supports only basic addressing
+            self.bus.publish('raw', CAN_packet(msg_id, payload))
         else:
             print('CAN bridge not initialized yet!')
 
