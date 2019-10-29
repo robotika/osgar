@@ -1,8 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, call
 
-from osgar.drivers.eduro import Eduro, sint32_diff
-from osgar.drivers.canserial import CAN_packet
+from osgar.drivers.eduro import Eduro, sint32_diff, CAN_triplet
 from osgar.bus import BusHandler
 
 
@@ -16,7 +15,7 @@ class EduroTest(unittest.TestCase):
                 out={'can': [], 'encoders': [], 'emergency_stop': [],
                      'pose2d': [(q, 'pose2d'),], 'buttons': []})
         eduro = Eduro(config={}, bus=bus)
-        sync = CAN_packet(0x80, [])
+        sync = CAN_triplet(0x80, [])
         bus.queue.put((123, 'can', sync))
         bus.shutdown()
         eduro.run()
@@ -31,7 +30,7 @@ class EduroTest(unittest.TestCase):
                 out={'can': [], 'encoders': [], 'emergency_stop': [],
                      'pose2d': [], 'buttons': [(q, 'buttons')]})
         eduro = Eduro(config={}, bus=bus)
-        buttons_msg = CAN_packet(0x28A, [0, 0])
+        buttons_msg = CAN_triplet(0x28A, [0, 0])
         bus.queue.put((42, 'can', buttons_msg))
         bus.shutdown()
         eduro.run()
@@ -45,15 +44,15 @@ class EduroTest(unittest.TestCase):
                 out={'can': [], 'encoders': [(q, 'encoders')], 'emergency_stop': [],
                      'pose2d': [], 'buttons': []})
         eduro = Eduro(config={}, bus=bus)
-        sync = CAN_packet(0x80, [])
+        sync = CAN_triplet(0x80, [])
 
-        enc_left = CAN_packet(0x181, [0xff, 0xff, 0xff, 0x7f])
+        enc_left = CAN_triplet(0x181, [0xff, 0xff, 0xff, 0x7f])
         bus.queue.put((42, 'can', enc_left))
         bus.queue.put((123, 'can', sync))
 
-        enc_left = CAN_packet(0x181, [0x01, 0x00, 0x00, 0x80])
+        enc_left = CAN_triplet(0x181, [0x01, 0x00, 0x00, 0x80])
         bus.queue.put((44, 'can', enc_left))
-        sync = CAN_packet(0x80, [])
+        sync = CAN_triplet(0x80, [])
         bus.queue.put((123, 'can', sync))
 
         bus.shutdown()
@@ -75,6 +74,6 @@ class EduroTest(unittest.TestCase):
         eduro._rampLastLeft = 1417
         eduro._rampLastRight = 3891
         eduro.send_speed()
-        bus.publish.assert_called_once_with('can', b'@$\xa9\x05\xa0\x0f')
+        bus.publish.assert_called_once_with('can', [0x201, b'\xa9\x05\xa0\x0f', 0])
 
 # vim: expandtab sw=4 ts=4

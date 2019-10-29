@@ -9,7 +9,6 @@ import math
 from threading import Thread
 
 from osgar.bus import BusShutdownException
-from .canserial import CAN_packet
 
 CAN_ID_SYNC = 0x80
 CAN_ID_ENCODERS_LEFT = 0x181
@@ -26,6 +25,10 @@ WHEEL_DISTANCE = 0.315
 
 def sint32_diff(a, b):
     return ctypes.c_int32(a - b).value
+
+
+def CAN_triplet(msg_id, data):
+    return [msg_id, bytes(data), 0]  # flags=0, i.e basic addressing
 
 
 class Eduro(Thread):
@@ -93,7 +96,7 @@ class Eduro(Thread):
         self.pose = (x, y, heading)
 
     def send_leds(self, blue, red):
-        self.bus.publish('can', CAN_packet(0x30A, [0xFF, 0xFF, blue, red]))
+        self.bus.publish('can', CAN_triplet(0x30A, [0xFF, 0xFF, blue, red]))
 
     def update_buttons(self, data):
         assert len(data) == 2, len(data)
@@ -153,7 +156,7 @@ class Eduro(Thread):
             left = -left*maxLim//right
             right = -maxLim
 
-        self.bus.publish('can', CAN_packet(0x201, [
+        self.bus.publish('can', CAN_triplet(0x201, [
             left&0xff, (left>>8)&0xff,
             right&0xff, (right>>8)&0xff]))
 
@@ -162,7 +165,7 @@ class Eduro(Thread):
             left, right = 1000, 1000
         else:
             left, right = 0, 0
-        self.bus.publish('can', CAN_packet(0x201, [
+        self.bus.publish('can', CAN_triplet(0x201, [
             left&0xff, (left>>8)&0xff,
             right&0xff, (right>>8)&0xff]))
 
@@ -175,31 +178,29 @@ class Eduro(Thread):
                 self.dist_right_diff = 0
 
     def process_packet(self, packet, verbose=False):
-        if len(packet) >= 2:
-            msg_id = ((packet[0]) << 3) | (((packet[1]) >> 5) & 0x1f)
-#            print(hex(msg_id), packet[2:])
-            if msg_id in [CAN_ID_ENCODERS_LEFT, CAN_ID_ENCODERS_RIGHT]:
-                self.update_encoders(msg_id, packet[2:])
-            elif msg_id == CAM_SYSTEM_STATUS:
-                self.update_emergency_stop(packet[2:])
-                self.bus.publish('emergency_stop', self.emergency_stop)
-                if self.emergency_stop:
-                    print("Eduro - emergency stop")
-                    self.bus.publish('can', CAN_packet(0, [0x80, 0]))  # sendPreOperationMode
-            elif msg_id == CAN_ID_BUTTONS:
-                self.update_buttons(packet[2:])
-            elif msg_id == CAN_ID_VOLTAGE:
-                self.update_voltage(packet[2:])
-            elif msg_id == CAN_ID_SYNC:
-                # make sure diff is reported _before_ update_pose() which reset counters!
-                self.bus.publish('encoders', [self.dist_left_diff, self.dist_right_diff])
-                self.update_pose()
-                x, y, heading = self.pose
-                self.bus.publish('pose2d', [round(x*1000), round(y*1000), round(math.degrees(heading)*100)])
-                self.send_speed()
-            elif msg_id & 0xFF0 == 0x700:  # heart beat message
-                assert len(packet) == 3, len(packet)
-                self.check_restarted_modules(msg_id & 0xF, packet[2])
+        msg_id, payload, flags = packet
+        if msg_id in [CAN_ID_ENCODERS_LEFT, CAN_ID_ENCODERS_RIGHT]:
+            self.update_encoders(msg_id, payload)
+        elif msg_id == CAM_SYSTEM_STATUS:
+            self.update_emergency_stop(payload)
+            self.bus.publish('emergency_stop', self.emergency_stop)
+            if self.emergency_stop:
+                print("Eduro - emergency stop")
+                self.bus.publish('can', CAN_triplet(0, [0x80, 0]))  # sendPreOperationMode
+        elif msg_id == CAN_ID_BUTTONS:
+            self.update_buttons(payload)
+        elif msg_id == CAN_ID_VOLTAGE:
+            self.update_voltage(payload)
+        elif msg_id == CAN_ID_SYNC:
+            # make sure diff is reported _before_ update_pose() which reset counters!
+            self.bus.publish('encoders', [self.dist_left_diff, self.dist_right_diff])
+            self.update_pose()
+            x, y, heading = self.pose
+            self.bus.publish('pose2d', [round(x*1000), round(y*1000), round(math.degrees(heading)*100)])
+            self.send_speed()
+        elif msg_id & 0xFF0 == 0x700:  # heart beat message
+            assert len(payload) == 1, len(payload)
+            self.check_restarted_modules(msg_id & 0xF, payload[0])
 
     def process_gen(self, data, verbose=False):
         self.process_packet(data)
