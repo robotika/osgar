@@ -35,6 +35,8 @@ CAN_ID_VESC_REAR_K3_R = 0x95
 CAN_ID_VESC_REAR_K3_L = 0x96
 CAN_ID_SYNC = CAN_ID_VESC_FRONT_L
 CAN_ID_CURRENT = 0x70
+CAN_ID_DOWNDROPS_FRONT = 0x71
+CAN_ID_DOWNDROPS_REAR = 0x72
 CAN_ID_JOIN_ANGLE = 0x80
 CAN_ID_REGULATED_VOLTAGE = 0x81
 CAN_ID_VOLTAGE = 0x82
@@ -251,6 +253,8 @@ class RobotKloubak(Node):
         self.last_join_angle = None
         self.last_join_angle2 = None
         self.voltage = None
+        self.downdrops_front = None  # array of downdrop sensors
+        self.downdrops_rear = None
         self.can_errors = 0  # count errors instead of assert
 
         # new per axis encoders
@@ -441,6 +445,20 @@ class RobotKloubak(Node):
             if len(payload) == 4:
                 self.voltage = struct.unpack_from('>i', payload)[0]
 #                print(self.voltage)
+            else:
+                self.can_errors += 1
+        elif msg_id == CAN_ID_DOWNDROPS_FRONT:
+            # assert len(packet) == 2 + 4, len(packet)
+            if len(payload) == 4:
+                self.downdrops_front = struct.unpack_from('>HH', payload)
+#                print(self.time, self.downdrops_front)
+            else:
+                self.can_errors += 1
+        elif msg_id == CAN_ID_DOWNDROPS_REAR:
+            # assert len(packet) == 2 + 4, len(packet)
+            if len(payload) == 4:
+                self.downdrops_rear = struct.unpack_from('>HH', payload)
+#                print(self.time, self.downdrops_rear)
             else:
                 self.can_errors += 1
         if msg_id == CAN_ID_ENCODERS:
