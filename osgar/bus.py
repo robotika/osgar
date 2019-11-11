@@ -107,7 +107,7 @@ class LogBusHandler:
         return dt, channel, data
 
     def publish(self, channel, data):
-        assert channel in self.outputs.values(), (channel, self.outputs.values())
+        assert channel in self.outputs.values(), (channel, tuple(self.outputs.values()))
         dt, stream_id, bytes_data = next(self.reader)
         while stream_id not in self.outputs:
             input_name = self.inputs[stream_id]

@@ -81,7 +81,7 @@ class BusHandlerTest(unittest.TestCase):
         bus.listen()
         with self.assertRaises(AssertionError) as e:
             bus.publish('can', b'parsed data')
-        self.assertEqual(str(e.exception), "(b'parsed data', [8, 9], datetime.timedelta(0, 0, 30))")
+        self.assertEqual(e.exception.args[0], (b'parsed data', [8, 9], timedelta(0, 0, 30)))
 
     def test_wrong_publish_channel(self):
         log_data = [
@@ -96,11 +96,11 @@ class BusHandlerTest(unittest.TestCase):
         bus.listen()
         with self.assertRaises(AssertionError) as e:
             bus.publish('can2', [8, 9])
-        self.assertEqual(str(e.exception), "('can2', 'can', datetime.timedelta(0, 0, 30))")
+        self.assertEqual(e.exception.args[0], ('can2', 'can', timedelta(0, 0, 30)))
 
         with self.assertRaises(AssertionError) as e:
             bus.publish('can3', [1, 2])
-        self.assertEqual(str(e.exception), "('can3', dict_values(['can', 'can2']))")
+        self.assertEqual(e.exception.args[0], ('can3', ('can', 'can2')))
 
     def test_log_bus_handler_inputs_onlye(self):
         log_data = [

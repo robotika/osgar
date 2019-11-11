@@ -19,7 +19,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/robotika/osgar",
-    python_requires=">=3.5",
+    python_requires=">=3.6",
     packages=['osgar', 'osgar.drivers', 'osgar.lib', 'osgar.tools', 'subt'],
     package_data={
         '': ['config/*.json'],
