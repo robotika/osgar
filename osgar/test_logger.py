@@ -6,6 +6,7 @@ from threading import Timer
 from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
 from contextlib import ExitStack
+import functools
 
 import numpy as np
 
@@ -512,5 +513,58 @@ class LoggerIndexedTest(unittest.TestCase):
                     dt, channel, data = log[2]
                     self.assertEqual(dt, timedelta(hours=2))
 
+def func_to_be_logged(a):
+    return a**2
+
+class class_to_be_logged:
+    def __init__(self, some, param):
+        self.some = some
+        self.param = param
+    def get_some(self):
+        return self.some
+    def get_param(self):
+        return self.param
+
+class LoggedTest(unittest.TestCase):
+
+    def test_func(self):
+        with LogWriter(prefix='tmp-logged-func', note='') as log:
+            filename = log.filename
+            stream_id = log.register("my pretty func name")
+            log_write = functools.partial(log.write, stream_id)
+            logged = osgar.logger.logged_func(func_to_be_logged, log_write)
+            logged(2)
+            logged(16)
+
+        with LogReader(filename, only_stream_id=stream_id) as log:
+            log_assert = functools.partial(_log_assert, log, stream_id)
+            logged = osgar.logger.logged_func(func_to_be_logged, log_assert)
+            logged(2)
+            logged(16)
+
+        os.remove(filename)
+
+    def test_instance(self):
+        with LogWriter(prefix='tmp-logged-instance', note='') as log:
+            filename = log.filename
+            stream_id = log.register("my pretty instance name")
+            log_write = functools.partial(log.write, stream_id)
+            logged = osgar.logger.logged_instance(class_to_be_logged("a", 200), log_write)
+            logged.get_some()
+            logged.get_param()
+
+        with LogReader(filename, only_stream_id=stream_id) as log:
+            log_assert = functools.partial(_log_assert, log, stream_id)
+            logged = osgar.logger.logged_instance(class_to_be_logged("a", 200), log_assert)
+            logged.get_some()
+            logged.get_param()
+
+        os.remove(filename)
+
+
+def _log_assert(log, stream_id, data):
+    logged = next(log)
+    assert logged[1] == stream_id
+    assert logged[2] == data
 
 # vim: expandtab sw=4 ts=4
