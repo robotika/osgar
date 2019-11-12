@@ -1,17 +1,17 @@
 """
   Internal bus for communication among modules
 """
-import time
-import zlib
-from queue import Queue
 from datetime import timedelta
 from collections import deque
+
+import trio
 
 from osgar.lib.serialize import serialize, deserialize
 
 
 # restrict replay time from given input
 ASSERT_QUEUE_DELAY = timedelta(seconds=.1)
+
 
 def almost_equal(data, ref_data):
     if isinstance(data, float) and isinstance(ref_data, float):
@@ -31,56 +31,57 @@ class BusShutdownException(Exception):
     pass
 
 
-class BusHandler:
-    def __init__(self, logger, name='', out={}, slots={}):
-        self.logger = logger
-        self.queue = Queue()
-        self.name = name
-        self.out = out
-        self.slots = slots
-        self.stream_id = {}
-        for publish_name in out.keys():
-            idx = self.logger.register('.'.join([self.name, publish_name]))
-            self.stream_id[publish_name] = idx
-        self._is_alive = True
-        self.compressed_output = (name == 'tcp_point_data')  # hack
+async def BusHandler(logger, name='', out=[]):
+    self = _BusHandler(logger, name, out)
+    for output_name in out:
+        idx = await self.logger.register('.'.join([self.name, output_name]))
+        self.stream_id[output_name] = idx
+    return self
 
-    def publish(self, channel, data):
-        with self.logger.lock:
-            stream_id = self.stream_id[channel]  # local maping of indexes
-            if self.compressed_output:
-                to_write = zlib.compress(serialize(data))
-            else:
-                to_write = serialize(data)
-            timestamp = self.logger.write(stream_id, to_write)
+
+def connect(node_from, output, node_to, input):
+    node_from.out[output].append((node_to.receive_channel, input))
+
+
+class _BusHandler:
+
+    def __init__(self, logger, name, out):
+        self.logger = logger
+        self.send_channel, self.receive_channel = trio.open_memory_channel(100)
+        self.name = name
+        self.out = {output_name: [] for output_name in out}
+        self.stream_id = {}
+        self._is_alive = True
+
+    async def publish(self, channel, data):
+        async with self.logger.lock:
+            stream_id = self.stream_id[channel]  # local mapping outputs to indexes in log
+            to_write = serialize(data)
+            timestamp = await self.logger.write(stream_id, to_write)
 
             for queue, input_channel in self.out[channel]:
-                queue.put((timestamp, input_channel, data))
-            for slot in self.slots.get(channel, []):
-                slot(timestamp, data)
+                await queue.send((timestamp, input_channel, data))
         return timestamp
 
-    def listen(self):
-        packet = self.queue.get()
+    async def listen(self):
+        packet = await  self.receive_channel.receive()
         if packet is None:
             raise BusShutdownException()
         timestamp, channel, data = packet
         return timestamp, channel, data
 
-    def sleep(self, secs):
-        time.sleep(secs)
+    async def sleep(self, secs):
+        await trio.sleep(secs)
 
     def is_alive(self):
         return self._is_alive
 
-    def shutdown(self):
+    async def shutdown(self):
         self._is_alive = False
-        self.queue.put(None)
+        await self.send_channel.send(None)
 
-    def report_error(self, err):
-        with self.logger.lock:
-            self.logger.write(0, bytes(str({'error': str(err)}),
-                                       encoding='ascii'))
+    async def report_error(self, err):
+        await self.logger.error(err)
 
 
 class LogBusHandler:

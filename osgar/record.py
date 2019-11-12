@@ -5,99 +5,60 @@
 import argparse
 import sys
 import os
-import time
-import signal
-import threading
+import math
+
+import trio
 
 from osgar.logger import LogWriter
 from osgar.lib.config import load, get_class_by_name
-from osgar.bus import BusHandler
+import osgar.bus
 
 
-class Recorder:
-    def __init__(self, config, logger, application=None):
-        self.stop_requested = threading.Event()
-        self.modules = {}
+async def build_graph(nursery, config, logger, application):
+    # stop_requested = trio.Event() # TODO: see end of function
+    buses = {}
+    ret = None
 
-        buses = {}
-        for module_name, module_config in config['modules'].items():
-            out, slots = {}, {}
-            for output_type in module_config['out']:
-                out[output_type] = []
-                slots[output_type] = []
-            bus = BusHandler(logger, out=out, slots=slots, name=module_name)
-            buses[module_name] = bus
+    for module_name, module_config in config['modules'].items():
+        buses[module_name] = await osgar.bus.BusHandler(logger, name=module_name, out=module_config['out'])
 
-            module_class = module_config['driver']
-            if module_class == 'application':
-                assert application is not None  # external application required
-                module = application(module_config['init'], bus=bus)
-            else:
-                module = get_class_by_name(module_class)(module_config['init'], bus=bus)
+    for from_module, to_module in config['links']:
+        (from_driver, from_name), (to_driver, to_name) = from_module.split('.'), to_module.split('.')
+        osgar.bus.connect(buses[from_driver], from_name, buses[to_driver], to_name)
 
-            self.modules[module_name] = module
+    for module_name, module_config in config['modules'].items():
+        module_class = module_config['driver']
+        if module_class == 'application':
+            assert application is not None  # external application required
+            ret = nursery.start_soon(application, nursery, module_config['init'], buses[module_name])
+        else:
+            nursery.start_soon(get_class_by_name(module_class), nursery, module_config['init'], buses[module_name])
 
-        for from_module, to_module in config['links']:
-            (from_driver, from_name), (to_driver, to_name) = from_module.split('.'), to_module.split('.')
-            if to_name.startswith('slot_'):
-                buses[from_driver].slots[from_name].append(getattr(self.modules[to_driver], to_name))
-            else:
-                buses[from_driver].out[from_name].append((buses[to_driver].queue, to_name))
-
-        signal.signal(signal.SIGINT, self.request_stop)
-
-    def start(self):
-        for module in self.modules.values():
-            module.start()
-
-    def update(self):
-        pass
-
-    def finish(self):
-        self.request_stop()
-        self.join()
-
-    def request_stop(self, sig=None, frame=None):
-        if self.stop_requested.is_set():
-            return
-        for module in self.modules.values():
-            module.request_stop()
-        self.stop_requested.set()
-
-    def join(self):
-        for module in self.modules.values():
-            module.join()
+    # signal.signal(signal.SIGINT, self.request_stop) # TODO
+    return ret
 
 
-
-def record(config_filename, log_prefix, duration_sec=None, application=None):
-    if type(config_filename) == str:
-        config = load(config_filename)
-    else:
-        config = load(*config_filename)
-    with LogWriter(prefix=log_prefix, note=str(sys.argv)) as log:
-        try:
-            log.write(0, bytes(str(config), 'ascii'))  # write configuration
-            recorder = Recorder(config=config['robot'], logger=log, application=application)
-            recorder.start()
-            if application is not None:
-                app = recorder.modules['app']  # TODO nicer reference
-                app.join()  # wait for application termination
-            else:
-                recorder.stop_requested.wait(duration_sec)
-        finally:
-            recorder.finish()
+async def record(config, log_prefix, duration_sec=math.inf, application=None):
+    async with LogWriter(prefix=log_prefix, note=str(sys.argv)) as log:
+        await log.write(0, bytes(str(config), 'ascii'))  # write configuration
+        with trio.move_on_after(duration_sec):
+            async with trio.open_nursery() as nursery:
+                app = await build_graph(nursery, config['robot'], log, application)
+                if app is not None:
+                    await app
+                    nursery.cancel_scope.cancel()
 
 
 def main():
     parser = argparse.ArgumentParser(description='Record run on real HW with given configuration')
     parser.add_argument('config', nargs='+', help='configuration file')
     parser.add_argument('--note', help='add description')
-    parser.add_argument('--duration', help='recording duration (sec), default infinite', type=float)
+    parser.add_argument('--duration', help='recording duration (sec), default infinite', type=float, default=math.inf)
     args = parser.parse_args()
-
+    config = load(*args.config)
     prefix = os.path.basename(args.config[0]).split('.')[0] + '-'
-    record(args.config, log_prefix=prefix, duration_sec=args.duration)
+    trio.run(record, config, prefix, args.duration)
+
 
 if __name__ == "__main__":
     main()

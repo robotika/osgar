@@ -3,9 +3,9 @@
   "robot": {
     "modules": {
       "camera": {
-          "driver": "osgar.drivers.opencv:LogOpenCVCamera",
+          "driver": "osgar.drivers.opencv:opencv",
           "in": [],
-          "out": ["raw"],
+          "out": ["jpg"],
           "init": {
               "port": 0,
               "sleep": 1.0

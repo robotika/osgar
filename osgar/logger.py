@@ -34,10 +34,10 @@ import struct
 import os
 import logging
 import time
-from threading import RLock
 from ast import literal_eval
 import mmap
 
+import trio
 
 INFO_STREAM_ID = 0
 ENV_OSGAR_LOGS = 'OSGAR_LOGS'
@@ -47,7 +47,7 @@ TIMESTAMP_MASK = TIMESTAMP_OVERFLOW_STEP - 1
 
 class LogWriter:
     def __init__(self, prefix='', note='', filename=None, start_time=None):
-        self.lock = RLock()
+        self.lock = trio.Lock()
         if start_time is None:
             self.start_time = datetime.datetime.utcnow()
         else:
@@ -61,55 +61,50 @@ class LogWriter:
             self.filename = os.path.join(os.environ[ENV_OSGAR_LOGS], self.filename)
         else:
             logging.warning('Environment variable %s is not set - using working directory' % ENV_OSGAR_LOGS)
-        self.f = open(self.filename, 'wb')
-        self.f.write(b'Pyr\x00')
+        self.note = note
 
-        t = self.start_time
-        self.f.write(struct.pack('HBBBBBI', t.year, t.month, t.day,
-                t.hour, t.minute, t.second, t.microsecond))
-        self.f.flush()
-        if len(note) > 0:
-            self.write(stream_id=INFO_STREAM_ID, data=bytes(note, encoding='utf-8'))
-        self.names = []
+    async def register(self, name):
+        assert name not in self.names, (name, self.names)
+        self.names.append(name)
+        idx = len(self.names)
+        await self.write(INFO_STREAM_ID, bytes(str({'names': self.names}), encoding='ascii'))
+        return idx
 
-    def register(self, name):
-        with self.lock:
-            assert name not in self.names, (name, self.names)
-            self.names.append(name)
-            self.write(stream_id=INFO_STREAM_ID, data=bytes(str({'names': self.names}), encoding='ascii'))
-            return len(self.names)
+    async def error(self, err):
+        await self.write(INFO_STREAM_ID, bytes(str({'error': str(err)}), encoding='ascii'))
 
-    def write(self, stream_id, data, dt=None):
-        with self.lock:
-            if dt is None:
-                # by defaut generate timestamps automatically
-                dt = datetime.datetime.utcnow() - self.start_time
-            bytes_data = data
-            assert dt.days == 0, dt  # multiple days not supported yet
-            time_frac = (dt.seconds * 1000000 + dt.microseconds) & TIMESTAMP_MASK
-            index = 0
-            while index + 0xFFFF <= len(bytes_data):
-                self.f.write(struct.pack('IHH', time_frac,
-                             stream_id, 0xFFFF))
-                self.f.write(bytes_data[index:index + 0xFFFF])
-                index += 0xFFFF
-            self.f.write(struct.pack('IHH', time_frac,
-                         stream_id, len(bytes_data) - index))
-            self.f.write(bytes_data[index:])
-            self.f.flush()
+    async def write(self, stream_id, data, dt=None):
+        if dt is None:
+            # by defaut generate timestamps automatically
+            dt = datetime.datetime.utcnow() - self.start_time
+        bytes_data = data
+        assert dt.days == 0, dt  # multiple days not supported yet
+        time_frac = (dt.seconds * 1000000 + dt.microseconds) & TIMESTAMP_MASK
+        index = 0
+        while index + 0xFFFF <= len(bytes_data):
+            await self.f.write(struct.pack('IHH', time_frac,
+                         stream_id, 0xFFFF))
+            await self.f.write(bytes_data[index:index + 0xFFFF])
+            index += 0xFFFF
+        await self.f.write(struct.pack('IHH', time_frac, stream_id, len(bytes_data) - index))
+        await self.f.write(bytes_data[index:])
         return dt
 
-    def close(self):
-        self.f.close()
-        self.f = None
+    async def __aenter__(self):
+        self.f = await trio.open_file(self.filename, 'wb')
+        await self.f.write(b'Pyr\x00')
 
+        t = self.start_time
+        await self.f.write(struct.pack('HBBBBBI', t.year, t.month, t.day,
+                t.hour, t.minute, t.second, t.microsecond))
 
-    # context manager functions
-    def __enter__(self):
+        if len(self.note) > 0:
+            await self.write(stream_id=INFO_STREAM_ID, data=bytes(self.note, encoding='utf-8'))
+        self.names = []
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.f.aclose()
 
 
 class LogReader:
