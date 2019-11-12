@@ -6,7 +6,6 @@
 import struct
 import math
 
-from .canserial import CAN_packet
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 
@@ -34,6 +33,10 @@ CAN_ID_JOIN_ANGLE = 0x80
 MIN_SPEED = 0.3
 
 #Transferring coefficient for the vesc tachometers to meters: distance = vesc_value * 0.845/100
+
+
+def CAN_triplet(msg_id, data):
+    return [msg_id, bytes(data), 0]  # flags=0, i.e basic addressing
 
 
 def draw(arr, join_arr):
@@ -220,39 +223,36 @@ class RobotKloubak(Node):
         return ret
 
     def process_packet(self, packet, verbose=False):
-        if len(packet) >= 2:
-            msg_id = ((packet[0]) << 3) | (((packet[1]) >> 5) & 0x1f)
-#            print(hex(msg_id), packet[2:])
-            if msg_id == CAN_ID_BUTTONS:
-                self.update_buttons(packet[2:])
-            elif msg_id in [CAN_ID_VESC_FRONT_L, CAN_ID_VESC_FRONT_R, CAN_ID_VESC_REAR_L, CAN_ID_VESC_REAR_R]:
-                self.update_encoders(msg_id, packet[2:])
-            elif msg_id == CAN_ID_CURRENT:
-                # assert len(packet) == 5, len(packet)  # expected 24bit integer miliAmps
-                if len(packet) == 5:
-                    current = struct.unpack_from('>i', packet, 1)[0] & 0xFFFFFF
-#                    print(current)
-                else:
-                    self.can_errors += 1
-            elif msg_id == CAN_ID_JOIN_ANGLE:
-                # assert len(packet) == 2 + 4, len(packet)
-                if len(packet) == 2 + 4:
-                    self.last_join_angle = struct.unpack_from('>i', packet, 2)[0]
-#                    print(self.last_join_angle)
-                else:
-                    self.can_errors += 1
-            if msg_id == CAN_ID_SYNC:
-                self.publish('encoders', 
-                        [self.last_encoders_front_left, self.last_encoders_front_right,
-                         self.last_encoders_rear_left, self.last_encoders_rear_right])
-                if self.update_pose():
-                    self.send_pose()
+        msg_id, payload, flags = packet
+        if msg_id == CAN_ID_BUTTONS:
+            self.update_buttons(payload)
+        elif msg_id in [CAN_ID_VESC_FRONT_L, CAN_ID_VESC_FRONT_R, CAN_ID_VESC_REAR_L, CAN_ID_VESC_REAR_R]:
+            self.update_encoders(msg_id, payload)
+        elif msg_id == CAN_ID_CURRENT:
+            # expected 24bit integer miliAmps
+            if len(payload) == 3:
+                current = struct.unpack('>i', b'\x00' + payload)[0]
+#                print(current)
+            else:
+                self.can_errors += 1
+        elif msg_id == CAN_ID_JOIN_ANGLE:
+            if len(payload) == 4:
+                self.last_join_angle = struct.unpack('>i', payload)[0]
+#                print(self.last_join_angle)
+            else:
+                self.can_errors += 1
+        if msg_id == CAN_ID_SYNC:
+            self.publish('encoders', 
+                    [self.last_encoders_front_left, self.last_encoders_front_right,
+                     self.last_encoders_rear_left, self.last_encoders_rear_right])
+            if self.update_pose():
+                self.send_pose()
                 # reset all encoder values to be sure that new reading were received
 #                self.last_encoders_front_left = None
 #                self.last_encoders_front_right = None
 #                self.last_encoders_rear_left = None
 #                self.last_encoders_rear_right = None
-                return True
+            return True
         return False
 
     def slot_can(self, timestamp, data):
@@ -286,8 +286,8 @@ class RobotKloubak(Node):
             rear_drive = False  # True  # experimental
             if rear_drive and self.desired_speed > 0:
                 # control the joint angle and the desired speed
-                self.publish('can', CAN_packet(0x11, stop))  # right front
-                self.publish('can', CAN_packet(0x12, stop))  # left front
+                self.publish('can', CAN_triplet(0x11, stop))  # right front
+                self.publish('can', CAN_triplet(0x12, stop))  # left front
 
                 if self.last_join_angle is not None:
                     desired_angle = compute_desired_angle(self.desired_speed, self.desired_angular_speed)
@@ -299,31 +299,31 @@ class RobotKloubak(Node):
                     limit_l, limit_r = compute_desired_erpm(speed, -angular_speed)  # mirror flip (rear)
 
                 if self.last_encoders_rear_right is not None:
-                    self.publish('can', CAN_packet(0x33, list(struct.pack('>i', limit_r))))
+                    self.publish('can', CAN_triplet(0x33, list(struct.pack('>i', limit_r))))
                 if self.last_encoders_rear_left is not None:
-                    self.publish('can', CAN_packet(0x34, list(struct.pack('>i', limit_l))))
+                    self.publish('can', CAN_triplet(0x34, list(struct.pack('>i', limit_l))))
 
             elif self.desired_speed > 0:
                 if self.last_encoders_front_right is not None:
-                    self.publish('can', CAN_packet(0x31, list(struct.pack('>i', limit_r))))
+                    self.publish('can', CAN_triplet(0x31, list(struct.pack('>i', limit_r))))
                 if self.last_encoders_front_left is not None:
-                    self.publish('can', CAN_packet(0x32, list(struct.pack('>i', limit_l))))
-                self.publish('can', CAN_packet(0x13, stop))  # right rear
-                self.publish('can', CAN_packet(0x14, stop))  # left rear
+                    self.publish('can', CAN_triplet(0x32, list(struct.pack('>i', limit_l))))
+                self.publish('can', CAN_triplet(0x13, stop))  # right rear
+                self.publish('can', CAN_triplet(0x14, stop))  # left rear
 
             elif self.desired_speed < 0:
                 if self.last_encoders_rear_right is not None:
-                    self.publish('can', CAN_packet(0x33, list(struct.pack('>i', limit_r))))
+                    self.publish('can', CAN_triplet(0x33, list(struct.pack('>i', limit_r))))
                 if self.last_encoders_rear_left is not None:
-                    self.publish('can', CAN_packet(0x34, list(struct.pack('>i', limit_l))))
-                self.publish('can', CAN_packet(0x11, stop))  # right front
-                self.publish('can', CAN_packet(0x12, stop))  # left front 
+                    self.publish('can', CAN_triplet(0x34, list(struct.pack('>i', limit_l))))
+                self.publish('can', CAN_triplet(0x11, stop))  # right front
+                self.publish('can', CAN_triplet(0x12, stop))  # left front 
 
             else:
-                self.publish('can', CAN_packet(0x11, stop))  # right front
-                self.publish('can', CAN_packet(0x12, stop))  # left front
-                self.publish('can', CAN_packet(0x13, stop))  # right rear
-                self.publish('can', CAN_packet(0x14, stop))  # left rear
+                self.publish('can', CAN_triplet(0x11, stop))  # right front
+                self.publish('can', CAN_triplet(0x12, stop))  # left front
+                self.publish('can', CAN_triplet(0x13, stop))  # right rear
+                self.publish('can', CAN_triplet(0x14, stop))  # left rear
 
     def slot_desired_speed(self, timestamp, data):
         self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
