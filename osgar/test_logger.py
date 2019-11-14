@@ -542,6 +542,12 @@ class LoggedTest(unittest.TestCase):
             logged(2)
             logged(16)
 
+        with LogReader(filename, only_stream_id=stream_id) as log:
+            log_replay = functools.partial(_log_replay, log, stream_id)
+            replayed = osgar.logger.replayed_func(func_to_be_logged, log_replay)
+            self.assertEqual(func_to_be_logged(2), replayed(2))
+            self.assertEqual(func_to_be_logged(16), replayed(16))
+
         os.remove(filename)
 
     def test_instance(self):
@@ -566,5 +572,11 @@ def _log_assert(log, stream_id, data):
     logged = next(log)
     assert logged[1] == stream_id
     assert logged[2] == data
+
+def _log_replay(log, stream_id):
+    item = next(log)
+    assert item[1] == stream_id
+    return item[2]
+
 
 # vim: expandtab sw=4 ts=4

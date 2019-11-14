@@ -292,6 +292,15 @@ def logged_func(func, log_write):
         return ret
     return logged
 
+def replayed_func(func, log_replay):
+    @functools.wraps(func)
+    def replayed(*args, **kwargs):
+        data = log_replay()
+        largs, lkwargs, ret = osgar.lib.serialize.deserialize(data)
+        assert tuple(largs) == args and lkwargs == kwargs
+        return ret
+    return replayed
+
 class logged_instance:
 
     def __init__(self, instance, logger):
