@@ -8,8 +8,6 @@ import sys
 
 import uvc
 
-from osgar.bus import BusShutdownException
-
 
 class UsbCam:
     def __init__(self, config, bus):

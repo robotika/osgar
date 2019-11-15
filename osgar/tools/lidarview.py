@@ -4,7 +4,6 @@
 import math
 import io
 from datetime import timedelta
-from ast import literal_eval
 from collections import defaultdict
 
 import os
@@ -12,7 +11,7 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "1"
 import pygame
 from pygame.locals import *
 
-from osgar.logger import LogReader, LogIndexedReader, lookup_stream_id, lookup_stream_names
+from osgar.logger import LogIndexedReader, lookup_stream_names
 from osgar.lib.serialize import deserialize
 from osgar.lib.config import get_class_by_name
 from osgar.lib import quaternion

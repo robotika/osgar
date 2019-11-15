@@ -5,7 +5,6 @@
 from threading import Thread
 
 from osgar.bus import BusShutdownException
-from osgar.drivers.gps import checksum
 
 
 def parse_line(line):

@@ -15,7 +15,6 @@ https://github.com/njanirudh/Aruco_Tracker/blob/master/camera_calibration.py
 
 import cv2
 import glob
-from pprint import pprint
 import numpy as np
 
 PATTERN = (8,5)

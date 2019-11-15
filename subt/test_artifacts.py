@@ -1,10 +1,9 @@
 import unittest
-import math
 from pathlib import Path
 
 import cv2
 
-from subt.artifacts import count_red, count_white, artf_in_scan
+from subt.artifacts import artf_in_scan
 
 curdir = Path(__file__).parent
 

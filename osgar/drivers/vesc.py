@@ -28,7 +28,6 @@
 """
 
 import struct
-import math
 from datetime import timedelta
 
 from osgar.node import Node

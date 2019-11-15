@@ -1,7 +1,6 @@
 import unittest
 from array import array
 
-from osgar.drivers.logusb import LogUSB
 from osgar.lib.serialize import serialize, deserialize
 
 

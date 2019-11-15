@@ -2,7 +2,6 @@ import unittest
 import math
 
 from osgar.drivers.simulator import SpiderSimulator
-from osgar.bus import BusHandler
 
 
 class SpiderSimulatorTest(unittest.TestCase):

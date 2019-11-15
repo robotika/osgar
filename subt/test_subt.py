@@ -1,7 +1,4 @@
 import unittest
-import math
-
-import cv2
 
 from subt.main import Trace
 

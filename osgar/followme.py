@@ -1,7 +1,6 @@
 """
   Follow Me (primary target Eduro robot)
 """
-import sys
 import math
 from datetime import timedelta
 

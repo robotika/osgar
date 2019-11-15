@@ -1,6 +1,4 @@
 import unittest
-from unittest.mock import MagicMock
-import math
 
 from osgar.drivers.rosmsg import (ROSMsgParser, parse_jpeg_image, parse_laser,
                                   parse_odom, parse_imu, parse_points)

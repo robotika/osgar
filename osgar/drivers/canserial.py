@@ -2,7 +2,6 @@
   Wrapper for CAN-serial communication and control of CAN bridge
 """
 
-import serial
 import struct
 from threading import Thread
 from collections import OrderedDict

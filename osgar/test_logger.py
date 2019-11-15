@@ -4,10 +4,8 @@ import time
 import logging
 from threading import Timer
 from datetime import datetime, timedelta
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from contextlib import ExitStack
-
-import numpy as np
 
 import osgar.logger  # needed for patching the osgar.logger.datetime.datetime
 from osgar.logger import (LogWriter, LogReader, LogAsserter, INFO_STREAM_ID,

@@ -1,8 +1,8 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 import math
 
-from subt.report_artf import get_status, report_artf, triple, score
+from subt.report_artf import triple, score
 
 
 class ReportArtfTest(unittest.TestCase):

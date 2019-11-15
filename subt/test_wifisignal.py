@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, patch
 from time import sleep
 
 from subt.wifisignal import WifiSignal
-from osgar.bus import BusShutdownException
 
 
 class WifiSignalTest(unittest.TestCase):
