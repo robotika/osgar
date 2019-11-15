@@ -3,7 +3,6 @@
 """
 
 
-import serial
 import struct
 from threading import Thread
 

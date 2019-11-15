@@ -1,8 +1,6 @@
 """
   Remove some streams from logfile
 """
-from datetime import timedelta
-
 from osgar.logger import LogReader, LogWriter, lookup_stream_id, lookup_stream_names
 
 

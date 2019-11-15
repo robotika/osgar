@@ -1,6 +1,6 @@
 import unittest
 
-from osgar.lib.serialize import serialize, deserialize
+from osgar.lib.serialize import serialize
 
 
 class SerializeTest(unittest.TestCase):

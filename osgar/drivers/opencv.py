@@ -5,10 +5,6 @@
 import cv2
 from threading import Thread
 
-from osgar.logger import LogWriter
-from osgar.bus import BusShutdownException
-
-
 class LogOpenCVCamera:
     def __init__(self, config, bus):
         self.input_thread = Thread(target=self.run_input, daemon=True)

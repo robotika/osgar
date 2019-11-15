@@ -1,6 +1,5 @@
 import unittest
 from unittest.mock import MagicMock
-import math
 
 from osgar.followme import FollowMe, EmergencyStopException
 from osgar.bus import BusHandler

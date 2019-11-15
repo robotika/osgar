@@ -3,16 +3,12 @@
 """
 # based on Spide3 "ro2018.py"
 
-import argparse
-import sys
 import math
 from datetime import timedelta
-from queue import Queue
 
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.node import Node
 from osgar.drivers.gps import INVALID_COORDINATES
-from osgar.bus import BusHandler
 
 
 def geo_length(pos1, pos2):

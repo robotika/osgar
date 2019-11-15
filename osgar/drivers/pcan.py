@@ -15,8 +15,6 @@
 #  http://docs.ros.org/melodic/api/can_msgs/html/msg/Frame.html
 #
 
-import struct
-
 import can
 from threading import Thread
 

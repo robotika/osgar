@@ -6,7 +6,6 @@ from threading import Thread
 
 from osgar.logger import LogReader, lookup_stream_names
 from osgar.lib.serialize import deserialize
-from osgar.bus import BusShutdownException
 
 
 class ReplayDriver:

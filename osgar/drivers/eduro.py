@@ -4,7 +4,6 @@
 
 
 import ctypes
-import serial
 import struct
 import math
 from threading import Thread

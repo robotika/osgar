@@ -3,12 +3,8 @@
 """
 
 import argparse
-import sys
-import math
 import logging
 from ast import literal_eval
-from datetime import timedelta
-from queue import Queue
 
 from osgar import logger
 from osgar.logger import LogReader

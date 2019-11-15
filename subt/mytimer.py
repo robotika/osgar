@@ -1,7 +1,6 @@
 """
   Timer
 """
-import math
 from threading import Thread
 
 from osgar.bus import BusShutdownException

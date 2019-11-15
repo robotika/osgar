@@ -2,13 +2,11 @@ import apriltag
 import cv2
 import numpy
 
-from osgar.logger import LogIndexedReader, LogReader, lookup_stream_id, lookup_stream_names
+from osgar.logger import LogReader, lookup_stream_names
 from osgar.lib.serialize import deserialize
 
 def main():
     import argparse
-    import sys
-    import io
     from pprint import pprint
 
     parser = argparse.ArgumentParser(description='')

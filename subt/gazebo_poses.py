@@ -1,5 +1,5 @@
 from xml.sax.handler import ContentHandler
-from xml.sax import make_parser, saxutils
+from xml.sax import make_parser
 
 import base64
 import zlib

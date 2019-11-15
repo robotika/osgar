@@ -1,7 +1,6 @@
 import subprocess
 
 from osgar.node import Node
-from osgar.bus import BusShutdownException
 
 
 def wifi_scan():

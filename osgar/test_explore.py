@@ -1,7 +1,5 @@
 import unittest
 import math
-from unittest.mock import MagicMock
-from datetime import timedelta
 
 from osgar.explore import tangent_circle, follow_wall_angle
 
