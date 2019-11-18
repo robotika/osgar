@@ -38,6 +38,7 @@ from threading import RLock
 from ast import literal_eval
 import mmap
 
+
 INFO_STREAM_ID = 0
 ENV_OSGAR_LOGS = 'OSGAR_LOGS'
 
