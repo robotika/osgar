@@ -6,7 +6,6 @@ from threading import Timer
 from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
 from contextlib import ExitStack
-import functools
 
 import numpy as np
 
