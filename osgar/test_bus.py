@@ -193,9 +193,8 @@ class BusHandlerTest(unittest.TestCase):
         logger.register = MagicMock(return_value=1)
         logger.write = MagicMock(return_value=timedelta(123))
         bus = BusHandler(logger, 'test')
-        LA = bus.logged(A)
         a = A(4)
-        la = LA(4)
+        la = bus.logged(A, 4)
 
         self.assertEqual(a.doSomething(2), la.doSomething(2))
         logger.register.assert_called_once_with('test.A')
@@ -211,9 +210,8 @@ class BusHandlerTest(unittest.TestCase):
             (0, 0, serialize([[2], {}, 8])),
         ]
         bus = LogBusHandler(iter(log), [], [])
-        LA = bus.logged(A)
         a = A(4)
-        la = LA(4)
+        la = bus.logged(A, 4)
 
         self.assertEqual(a.doSomething(2), la.doSomething(2))
 

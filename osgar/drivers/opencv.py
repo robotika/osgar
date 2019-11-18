@@ -15,7 +15,7 @@ class LogOpenCVCamera:
         self.bus = bus
 
         port = config.get('port', 0)
-        self.cap = cv2.VideoCapture(port)
+        self.cap = bus.logged(cv2.VideoCapture, port)
         self.sleep = config.get('sleep')
 
     def start(self):

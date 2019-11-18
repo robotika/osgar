@@ -33,7 +33,7 @@ def replay(args, application=None):
     assert module in config['robot']['modules'], (module, list(config['robot']['modules'].keys()))
     module_config = config['robot']['modules'][module]
 
-    input_names = module_config['in']
+    input_names = module_config['in'] + ['VideoCapture']
     output_names = module_config['out']
     print("inputs:", input_names)
     print("outputs:", output_names)
