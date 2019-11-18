@@ -37,10 +37,7 @@ import time
 from threading import RLock
 from ast import literal_eval
 import mmap
-import functools
 import types
-
-import osgar.lib.serialize
 
 INFO_STREAM_ID = 0
 ENV_OSGAR_LOGS = 'OSGAR_LOGS'
@@ -281,39 +278,6 @@ class LogIndexedReader:
 
     def __len__(self):
         return len(self.index)-1
-
-
-def logged_func(func, log_write):
-    @functools.wraps(func)
-    def logged(*args, **kwargs):
-        ret = func(*args, **kwargs)
-        data = osgar.lib.serialize.serialize([args, kwargs, ret])
-        log_write(data)
-        return ret
-    return logged
-
-def replayed_func(func, log_replay):
-    @functools.wraps(func)
-    def replayed(*args, **kwargs):
-        data = log_replay()
-        largs, lkwargs, ret = osgar.lib.serialize.deserialize(data)
-        assert tuple(largs) == args and lkwargs == kwargs
-        return ret
-    return replayed
-
-class logged_instance:
-
-    def __init__(self, instance, logger):
-        self.instance = instance
-        self.logger = logger
-
-    def __getattr__(self, attr):
-        orig_attr = getattr(self.instance, attr)
-        if isinstance(orig_attr, types.MethodType):
-            logged = logged_func(orig_attr, self.logger)
-            setattr(self, attr, logged)
-            return logged
-        return orig_attr
 
 
 def lookup_stream_names(filename):

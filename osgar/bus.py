@@ -3,6 +3,8 @@
 """
 import time
 import zlib
+import functools
+import types
 from queue import Queue
 from datetime import timedelta
 from collections import deque
@@ -29,6 +31,60 @@ def almost_equal(data, ref_data):
 
 class BusShutdownException(Exception):
     pass
+
+
+def _logged_func(func, log_write):
+    @functools.wraps(func)
+    def logged(*args, **kwargs):
+        ret = func(*args, **kwargs)
+        data = serialize([args, kwargs, ret])
+        log_write(data)
+        return ret
+    return logged
+
+
+def _replayed_func(func, log_read):
+    @functools.wraps(func)
+    def replayed(*args, **kwargs):
+        dt, stream_id, data = log_read()
+        log_args, log_kwargs, log_ret = deserialize(data)
+        assert tuple(log_args) == args, (tuple(log_args), args)
+        assert log_kwargs == kwargs
+        return log_ret
+    return replayed
+
+
+def _logged_class(klass, log_write):
+    class Logged:
+        def __init__(self, *args, **kwargs):
+            self._orig = klass(*args, **kwargs)
+
+        def __getattr__(self, attr):
+            orig_attr = getattr(self._orig, attr)
+            if isinstance(orig_attr, types.MethodType):
+                logged = _logged_func(orig_attr, log_write)
+                setattr(self, attr, logged)
+                return logged
+            raise RuntimeError("only methods can be accessed on logged class")
+    return Logged
+
+
+def _replayed_class(klass, log_read):
+    class Replayed:
+        def __init__(self, *args, **kwards):
+            pass
+
+        def __getattr__(self, attr):
+            return self._replay
+
+        def _replay(self, *args, **kwargs):
+            dt, stream_id, data = log_read()
+            log_args, log_kwargs, log_ret = deserialize(data)
+            assert tuple(log_args) == args, (tuple(log_args), args)
+            assert log_kwargs == kwargs
+            return log_ret
+
+    return Replayed
 
 
 class BusHandler:
@@ -66,6 +122,13 @@ class BusHandler:
             raise BusShutdownException()
         timestamp, channel, data = packet
         return timestamp, channel, data
+
+    def logged(self, what):
+        stream_id = self.logger.register(f"{self.name}.{what.__name__}")
+        log_write = functools.partial(self.logger.write, stream_id)
+        if isinstance(what, types.FunctionType):
+            return _logged_func(what, log_write)
+        return _logged_class(what, log_write)
 
     def sleep(self, secs):
         time.sleep(secs)
@@ -128,6 +191,12 @@ class LogBusHandler:
         ref_data = deserialize(bytes_data)
         assert almost_equal(data, ref_data), (data, ref_data, dt)
         return dt
+
+    def logged(self, what):
+        #stream_id = self.reader.register(f"{self.name}.{what.__name__}")
+        if isinstance(what, types.FunctionType):
+            return _replayed_func(what, self.reader.__next__)
+        return _replayed_class(what, self.reader.__next__)
 
     def sleep(self, secs):
         pass

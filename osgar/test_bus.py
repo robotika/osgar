@@ -160,4 +160,62 @@ class BusHandlerTest(unittest.TestCase):
             b'x\x9c\xed\xc1\x01\r\x00\x00\x08\x03 #\xbc\x85\xfdC\xd8\xcb\x1e\x1fp\x9b' +
             b'\x01\x00\x00\x00\x00\x00\x00\x00\x00\x80\x02\x0f\x9f\xba\x00\xfd')
 
+    def test_logged_func_log(self):
+        def func_to_be_logged(a):
+            return a ** 2
+        logger = MagicMock()
+        logger.register = MagicMock(return_value=1)
+        logger.write = MagicMock(return_value=timedelta(123))
+        bus = BusHandler(logger, 'test')
+        logged = bus.logged(func_to_be_logged)
+        self.assertEqual(func_to_be_logged(2), logged(2))
+        logger.register.assert_called_with('test.func_to_be_logged')
+        logger.write.assert_called_once_with(1, serialize([[2],{},4]))
+
+    def test_logged_func_replay(self):
+        def func_to_be_logged(a):
+            return a ** 2
+        log = [
+            (0, 0, serialize([[2], {}, 4])),
+        ]
+        bus = LogBusHandler(iter(log), [], [])
+        logged = bus.logged(func_to_be_logged)
+        self.assertEqual(func_to_be_logged(2), logged(2))
+
+    def test_logged_class_log(self):
+        class A:
+            def __init__(self, aa):
+                self.aa = aa
+            def doSomething(self, b):
+                return self.aa * b
+
+        logger = MagicMock()
+        logger.register = MagicMock(return_value=1)
+        logger.write = MagicMock(return_value=timedelta(123))
+        bus = BusHandler(logger, 'test')
+        LA = bus.logged(A)
+        a = A(4)
+        la = LA(4)
+
+        self.assertEqual(a.doSomething(2), la.doSomething(2))
+        logger.register.assert_called_once_with('test.A')
+        logger.write.assert_called_once_with(1, serialize([[2],{},8]))
+
+    def test_logged_class_replay(self):
+        class A:
+            def __init__(self, aa):
+                self.aa = aa
+            def doSomething(self, b):
+                return self.aa * b
+        log = [
+            (0, 0, serialize([[2], {}, 8])),
+        ]
+        bus = LogBusHandler(iter(log), [], [])
+        LA = bus.logged(A)
+        a = A(4)
+        la = LA(4)
+
+        self.assertEqual(a.doSomething(2), la.doSomething(2))
+
+
 # vim: expandtab sw=4 ts=4
