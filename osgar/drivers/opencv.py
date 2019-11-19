@@ -28,8 +28,10 @@ class LogOpenCVCamera:
         while self.bus.is_alive():
             # Capture frame-by-frame
             ret, frame = self.cap.read()
+            print(ret)
             if ret:
                 retval, data = cv2.imencode('*.jpeg', frame)
+                print(len(data))
                 if len(data) > 0:
                     self.bus.publish('raw', data.tobytes())
                 if self.sleep is not None:

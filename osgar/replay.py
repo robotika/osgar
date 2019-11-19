@@ -33,8 +33,8 @@ def replay(args, application=None):
     assert module in config['robot']['modules'], (module, list(config['robot']['modules'].keys()))
     module_config = config['robot']['modules'][module]
 
-    input_names = module_config['in'] + ['VideoCapture']
-    output_names = module_config['out']
+    input_names = module_config['in']
+    output_names = module_config['out'] + ["VideoCapture"]
     print("inputs:", input_names)
     print("outputs:", output_names)
 
@@ -53,6 +53,7 @@ def replay(args, application=None):
     else:
         outputs = dict([(1 + names.index('.'.join([module, name])), name) for name in output_names])
         streams = list(inputs.keys()) + list(outputs.keys())
+        print(streams)
         log = LogReader(args.logfile, only_stream_id=streams)
         bus = LogBusHandler(log, inputs=inputs, outputs=outputs)
 

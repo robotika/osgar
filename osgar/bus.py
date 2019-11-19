@@ -63,6 +63,7 @@ def _logged_class(klass, log_write, *args, **kwargs):
             #print(attr, orig_attr, type(orig_attr))
             if isinstance(orig_attr, (types.MethodType, types.BuiltinMethodType)):
                 logged = _logged_func(orig_attr, log_write)
+                # TODO: record method name along as well (for debugging)
                 setattr(self, attr, logged)
                 return logged
             raise RuntimeError("only methods can be accessed on logged class")
@@ -76,6 +77,7 @@ def _replayed_class(klass, log_read, *args, **kwargs):
 
         def _replay(self, *args, **kwargs):
             dt, stream_id, data = log_read()
+            print(dt, stream_id, data[:10])
             log_args, log_kwargs, log_ret = deserialize(data)
             assert tuple(log_args) == args, (tuple(log_args), args)
             assert log_kwargs == kwargs
