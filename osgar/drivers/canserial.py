@@ -56,6 +56,8 @@ def get_node_id(msg_id):
 
 def CAN_packet(msg_id, data):
     header = [(msg_id>>3) & 0xff, (msg_id<<5) & 0xe0 | (len(data) & 0xf)]
+    if isinstance(data, bytes):
+        return bytes(header) + data
     return bytes(header + data)
 
 
