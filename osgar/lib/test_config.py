@@ -1,6 +1,6 @@
 import os
 import unittest
-from osgar.lib.config import load, merge_dict, MergeConflictError, get_class_by_name
+from osgar.lib.config import config_load, merge_dict, MergeConflictError, get_class_by_name
 from osgar.drivers.logsocket import LogTCPStaticIP as LogTCP
 
 def test_data(filename, test_dir='test_data'):
@@ -17,14 +17,14 @@ class ConfigTest(unittest.TestCase):
     def test_load_config_files(self):
         conf_dir = '../../config'
         filename = test_data('ro2018-spider-gps-imu.json', conf_dir)
-        conf = load(filename)
+        conf = config_load(filename)
         self.assertEqual(conf['version'], 2)
 
     def test_multiple_config_files(self):
         conf_dir = '../../config'
         filename1 = test_data('ro2018-spider-gps-imu.json', conf_dir)
         filename2 = test_data('ro2018-czu-waypoints.json', conf_dir)
-        conf = load(filename1, filename2)
+        conf = config_load(filename1, filename2)
         self.assertIn('maxspeed',conf['robot']['modules']['app']['init'])
         self.assertIn('out',conf['robot']['modules']['app'])
 

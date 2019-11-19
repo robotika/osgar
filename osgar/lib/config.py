@@ -26,7 +26,7 @@ class MergeConflictError(Exception):
     pass
 
 
-def load(*filenames):
+def config_load(*filenames):
     ret = {}
     for filename in filenames:
         with open(filename) as f:
