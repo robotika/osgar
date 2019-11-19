@@ -81,7 +81,7 @@ if __name__ == "__main__":
     import os.path
     import sys
     from osgar.replay import replay
-    from osgar.lib.config import load as config_load
+    from osgar.lib.config import config_load
     from osgar.record import Recorder
     from osgar.logger import LogWriter
 

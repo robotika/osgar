@@ -8,7 +8,7 @@ from ast import literal_eval
 
 from osgar import logger
 from osgar.logger import LogReader
-from osgar.lib.config import load as config_load, get_class_by_name
+from osgar.lib.config import config_load, get_class_by_name
 from osgar.bus import LogBusHandler, LogBusHandlerInputsOnly
 
 

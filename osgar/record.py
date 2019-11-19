@@ -9,7 +9,7 @@ import signal
 import threading
 
 from osgar.logger import LogWriter
-from osgar.lib.config import load, get_class_by_name
+from osgar.lib.config import config_load, get_class_by_name
 from osgar.bus import BusHandler
 
 
@@ -68,12 +68,11 @@ class Recorder:
             module.join()
 
 
-
 def record(config_filename, log_prefix, duration_sec=None, application=None):
     if type(config_filename) == str:
-        config = load(config_filename)
+        config = config_load(config_filename)
     else:
-        config = load(*config_filename)
+        config = config_load(*config_filename)
     with LogWriter(prefix=log_prefix, note=str(sys.argv)) as log:
         try:
             log.write(0, bytes(str(config), 'ascii'))  # write configuration

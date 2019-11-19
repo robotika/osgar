@@ -21,7 +21,7 @@ import sys
 import math
 from datetime import timedelta
 
-from osgar.lib.config import load as config_load
+from osgar.lib.config import config_load
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.record import Recorder
 
