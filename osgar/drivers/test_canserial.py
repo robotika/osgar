@@ -52,4 +52,8 @@ class CANSerialTest(unittest.TestCase):
         can.check_and_restart_module(2, 5)
         self.assertEqual(can.modules_for_restart, set())
 
+    def test_can_packet_bytes(self):
+        # it should support both list of integers as well as payload bytes()
+        self.assertEqual(CAN_packet(0x400, bytes([0, 0])), b'\x80\x02\x00\x00')
+
 # vim: expandtab sw=4 ts=4
