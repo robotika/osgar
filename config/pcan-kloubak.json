@@ -1,0 +1,33 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["emergency_stop", "pose2d"],
+          "out": ["desired_speed"],
+          "init": {
+            "max_speed": 0.5
+          }
+      },
+      "kloubak": {
+          "driver": "kloubak",
+          "in": ["can", "desired_speed"],
+          "out": ["can", "encoders", "emergency_stop", "pose2d"],
+          "init": {}
+      },          
+      "can": {
+          "driver": "pcan",
+          "in": ["can"],
+          "out": ["can"],
+          "init": {}
+      }
+    },
+    "links": [["kloubak.can", "can.can"],
+              ["can.can", "kloubak.can"],
+              ["app.desired_speed", "kloubak.desired_speed"],
+              ["kloubak.pose2d", "app.pose2d"]
+      ]
+  }
+}
+
