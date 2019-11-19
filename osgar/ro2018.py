@@ -227,9 +227,9 @@ if __name__ == "__main__":
 
     elif args.command == 'run':
         with LogWriter(prefix='ro2018-', note=str(sys.argv)) as log:
-            config = config_load(*args.config)
+            config = config_load(*args.config, application=RoboOrienteering2018)
             log.write(0, bytes(str(config), 'ascii'))  # write configuration
-            robot = Recorder(config=config['robot'], logger=log, application=RoboOrienteering2018)
+            robot = Recorder(config=config['robot'], logger=log)
             app = robot.modules['app']  # TODO nicer reference
             robot.start()
             app.play()

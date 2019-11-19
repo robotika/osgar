@@ -112,7 +112,7 @@ if __name__ == "__main__":
 
     elif args.command == 'run':
         prefix = 'turn-' + os.path.basename(args.config[0]).split('.')[0] + '-'
-        config = config_load(*args.config)
+        config = config_load(*args.config, application=Turn)
 
         # apply overrides from command line
         config['robot']['modules']['app']['init']['angle_deg'] = args.angle
@@ -122,7 +122,7 @@ if __name__ == "__main__":
 
         with LogWriter(prefix=prefix, note=str(sys.argv)) as log:
             log.write(0, bytes(str(config), 'ascii'))  # write configuration
-            robot = Recorder(config=config['robot'], logger=log, application=Turn)
+            robot = Recorder(config=config['robot'], logger=log)
             game = robot.modules['app']
             robot.start()
             game.join()

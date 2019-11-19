@@ -2,6 +2,7 @@
   Osgar Config Class
 """
 import json
+import sys
 from importlib import import_module
 
 from osgar.drivers import all_drivers
@@ -26,7 +27,14 @@ class MergeConflictError(Exception):
     pass
 
 
-def config_load(*filenames):
+def _application2import(application):
+    # ModuleSpec: https://www.python.org/dev/peps/pep-0451/
+    # __qualname__: https://www.python.org/dev/peps/pep-3155/
+    s = sys.modules[application.__module__].__spec__
+    return f"{s.name}:{application.__qualname__}"
+
+
+def config_load(*filenames, application=None):
     ret = {}
     for filename in filenames:
         with open(filename) as f:
@@ -34,6 +42,13 @@ def config_load(*filenames):
             assert 'version' in data, data
             assert data['version'] in SUPPORTED_VERSIONS, data['version']
             ret = merge_dict(ret, data)
+    if application is None:
+        return ret
+    if not isinstance(application, str):
+        application = _application2import(application)
+    for module_name, module_config in ret['robot']['modules'].items():
+        if module_config['driver'] == 'application':
+            module_config['driver'] = application
     return ret
 
 

@@ -18,7 +18,7 @@ def replay(args, application=None):
     config_str = next(log)[-1]
     config = literal_eval(config_str.decode('ascii'))
     if args.config is not None:
-        config = config_load(*args.config)
+        config = config_load(*args.config, application=application)
 
     names = logger.lookup_stream_names(args.logfile)
     print("stream names:")
@@ -53,11 +53,7 @@ def replay(args, application=None):
         bus = LogBusHandler(log, inputs=inputs, outputs=outputs)
 
     driver_name = module_config['driver']
-    if driver_name == 'application':
-        assert application is not None
-        module_class = application
-    else:
-        module_class = get_class_by_name(driver_name)
+    module_class = get_class_by_name(driver_name)
     module_instance = module_class(module_config['init'], bus=bus)
     bus.node = module_instance
     return module_instance

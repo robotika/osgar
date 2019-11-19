@@ -54,5 +54,13 @@ class ConfigTest(unittest.TestCase):
         node = get_class_by_name('udp')
         self.assertNotEqual(node, LogTCP)
 
+    def test_application(self):
+        conf_dir = '../../config'
+        filename = test_data('ro2018-spider-gps-imu.json', conf_dir)
+        conf = config_load(filename, application=MyTestRobot)
+        self.assertTrue(conf['robot']['modules']['app']['driver'].endswith('lib.test_config:MyTestRobot'))
+        conf = config_load(filename, application='osgar.lib.test_config:MyTestRobot')
+        self.assertTrue(conf['robot']['modules']['app']['driver'].endswith('lib.test_config:MyTestRobot'))
+
 # vim: expandtab sw=4 ts=4
 

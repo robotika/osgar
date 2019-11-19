@@ -25,7 +25,7 @@ from osgar.lib.config import config_load
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.record import Recorder
 
-from scan_feature import detect_box, detect_transporter
+from .scan_feature import detect_box, detect_transporter
 
 
 # TODO shared place for multiple applications
@@ -290,7 +290,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.command == 'replay':
-        from replay import replay
+        from osgar.replay import replay
         args.module = 'app'
         game = replay(args, application=SICKRobot2018)
         game.verbose = args.verbose
@@ -298,9 +298,9 @@ if __name__ == "__main__":
 
     elif args.command == 'run':
         with LogWriter(prefix='eduro-', note=str(sys.argv)) as log:
-            config = config_load(*args.config)
+            config = config_load(*args.config, application=SICKRobot2018)
             log.write(0, bytes(str(config), 'ascii'))  # write configuration
-            robot = Recorder(config=config['robot'], logger=log, application=SICKRobot2018)
+            robot = Recorder(config=config['robot'], logger=log)
             game = robot.modules['app']  # TODO nicer reference
             robot.start()
             game.play()

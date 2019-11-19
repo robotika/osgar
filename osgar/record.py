@@ -14,7 +14,7 @@ from osgar.bus import BusHandler
 
 
 class Recorder:
-    def __init__(self, config, logger, application=None):
+    def __init__(self, config, logger):
         self.stop_requested = threading.Event()
         self.modules = {}
 
@@ -25,15 +25,8 @@ class Recorder:
                 out[output_type] = []
                 slots[output_type] = []
             bus = BusHandler(logger, out=out, slots=slots, name=module_name)
+            module = get_class_by_name(module_config['driver'])(module_config['init'], bus=bus)
             buses[module_name] = bus
-
-            module_class = module_config['driver']
-            if module_class == 'application':
-                assert application is not None  # external application required
-                module = application(module_config['init'], bus=bus)
-            else:
-                module = get_class_by_name(module_class)(module_config['init'], bus=bus)
-
             self.modules[module_name] = module
 
         for from_module, to_module in config['links']:
@@ -69,14 +62,13 @@ class Recorder:
 
 
 def record(config_filename, log_prefix, duration_sec=None, application=None):
-    if type(config_filename) == str:
-        config = config_load(config_filename)
-    else:
-        config = config_load(*config_filename)
+    if isinstance(config_filename, str):
+        config_filename = [config_filename]
+    config = config_load(*config_filename, application=application)
     with LogWriter(prefix=log_prefix, note=str(sys.argv)) as log:
         try:
             log.write(0, bytes(str(config), 'ascii'))  # write configuration
-            recorder = Recorder(config=config['robot'], logger=log, application=application)
+            recorder = Recorder(config=config['robot'], logger=log)
             recorder.start()
             if application is not None:
                 app = recorder.modules['app']  # TODO nicer reference
