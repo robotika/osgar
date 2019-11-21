@@ -12,6 +12,8 @@ from osgar.bus import BusShutdownException
 
 class LogSocket:
     def __init__(self, socket, config, bus):
+        bus.register('raw')
+        self.verbose = False
         self.socket = socket
 
         self.input_thread = Thread(target=self.run_input, daemon=True)
@@ -96,8 +98,10 @@ class LogTCPDynamicIP(LogTCPBase):
         # the "input_thread" is triggered by "output_thread" so make sure
         # that "output_thread" is finished and cannot cause race condition
         self.output_thread.join(timeout=timeout)
-        if self.input_thread.is_alive():
+        try:
             self.input_thread.join(timeout=timeout)
+        except RuntimeError:
+            pass
 
     def run_output(self):
         try:
@@ -130,13 +134,16 @@ class LogTCPServer(LogTCPBase):
         self.timeout = config.get('timeout')
 
     def run_input(self):
-        print("Waiting ...")
+        if self.verbose:
+            print("Waiting ...")
         self.socket.listen(1)
-        print("end of listen")
+        if self.verbose:
+            print("end of listen")
         while self.bus.is_alive():
             try:
                 self.socket, addr = self.socket.accept()
-                print('Connected by', addr)
+                if self.verbose:
+                    print('Connected by', addr)
                 if self.timeout is not None:
                     self.socket.settimeout(self.timeout)
                 super().run_input()
@@ -157,6 +164,7 @@ class LogUDP(LogSocket):
 
 class LogHTTP:
     def __init__(self, config, bus):
+        bus.register('raw')
         self.input_thread = Thread(target=self.run_input, daemon=True)
 
         self.url = config['url']

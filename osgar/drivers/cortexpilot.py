@@ -27,6 +27,7 @@ def sint32_diff(a, b):
 class Cortexpilot(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register('raw', 'encoders', 'emergency_stop', 'pose2d', 'buttons')
 
         self._buf = b''
 

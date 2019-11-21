@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock, call
 import time
 
 from osgar.drivers.logsocket import LogTCPStaticIP as LogTCP, LogTCPDynamicIP, LogTCPServer, LogUDP, LogHTTP
-from osgar.bus import BusHandler
+from osgar.bus import Bus
 
 
 class LogSocketTest(unittest.TestCase):
@@ -14,10 +14,13 @@ class LogSocketTest(unittest.TestCase):
 
             logger = MagicMock()
             logger.register = MagicMock(return_value=1)
-            bus = BusHandler(logger)
+            bus = Bus(logger)
             config = {'host': '192.168.2.23', 'port':2111}
-            device = LogTCP(config=config, bus=bus)
-            bus.queue.put((1, 'raw', b'bin data'))
+            device = LogTCP(config=config, bus=bus.handle('tcp'))
+            tester = bus.handle('tester')
+            tester.register('raw')
+            bus.connect('tester.raw', 'tcp.raw')
+            tester.publish('raw', b'bin data')
             device.start()
             device.request_stop()
             device.join()
@@ -29,10 +32,13 @@ class LogSocketTest(unittest.TestCase):
             instance = mock.return_value
 
             logger = MagicMock()
-            bus = BusHandler(logger)
+            bus = Bus(logger)
             config = {'host': '192.168.2.23', 'port':2111}
-            device = LogUDP(config=config, bus=bus)
-            bus.queue.put((1, 'raw', b'bin data'))
+            device = LogUDP(config=config, bus=bus.handle('udp'))
+            tester = bus.handle('tester')
+            tester.register('raw')
+            bus.connect('tester.raw', 'udp.raw')
+            tester.publish('raw', b'bin data')
             device.start()
             device.request_stop()
             device.join()
@@ -46,9 +52,12 @@ class LogSocketTest(unittest.TestCase):
             instance.recv = MagicMock(return_value=b'some bin data')
 
             logger = MagicMock()
-            bus = BusHandler(logger)
+            bus = Bus(logger)
             config = {'host': '192.168.1.2', 'port':8080}
-            device = LogTCPServer(config=config, bus=bus)
+            device = LogTCPServer(config=config, bus=bus.handle('tcp'))
+            tester = bus.handle('tester')
+            bus.connect('tcp.raw', 'tester.raw')
+
             device.start()
             device.request_stop()
             device.join()
@@ -61,12 +70,13 @@ class LogSocketTest(unittest.TestCase):
             instance = mock.return_value
 
             logger = MagicMock()
-            bus = BusHandler(logger)
-            bus.queue.put((1, 'addr', ['10.1.10.1', 8000]))
-            config = {}
-            device = LogTCPDynamicIP(config=config, bus=bus)
+            bus = Bus(logger)
+            device = LogTCPDynamicIP(config={}, bus=bus.handle('tcpdyn'))
+            tester = bus.handle('tester')
+            tester.register('addr')
+            bus.connect('tester.addr', 'tcpdyn.addr')
+            tester.publish('addr', ['10.1.10.1', 8000])
             device.start()
-            time.sleep(0.1)
             device.request_stop()
             device.join()
 
@@ -77,11 +87,10 @@ class LogSocketTest(unittest.TestCase):
             instance = mock.return_value
 
             logger = MagicMock()
-            bus = BusHandler(logger)
+            bus = Bus(logger)
             config = {}
-            device = LogTCPDynamicIP(config=config, bus=bus)
+            device = LogTCPDynamicIP(config=config, bus=bus.handle('tcp'))
             device.start()
-            time.sleep(0.1)
             device.request_stop()
             device.join()
 
@@ -92,13 +101,15 @@ class LogSocketTest(unittest.TestCase):
             instance = mock.return_value
 
             logger = MagicMock()
-            bus = BusHandler(logger)
-            bus.queue.put((1, 'addr', ['10.1.10.1', 8000]))
-            bus.queue.put((42, 'addr', ['192.168.1.31', 8010]))
-            config = {}
-            device = LogTCPDynamicIP(config=config, bus=bus)
+            bus = Bus(logger)
+            device = LogTCPDynamicIP(config={}, bus=bus.handle('tcpdyn'))
+            tester = bus.handle('tester')
+            tester.register('addr')
+            bus.connect('tester.addr', 'tcpdyn.addr')
+            tester.publish('addr', ['10.1.10.1', 8000])
+            tester.publish('addr', ['192.168.1.31', 8010])
             device.start()
-            time.sleep(0.1)
+            tester.sleep(0.1)
             device.request_stop()
             device.join()
 
@@ -114,15 +125,20 @@ class LogSocketTest(unittest.TestCase):
             instance.__enter__.return_value.read = MagicMock(return_value=b'123')
             logger = MagicMock()
             logger.register = MagicMock(return_value=1)
-            bus = BusHandler(logger, out={'raw':[]})
+            logger.write = MagicMock(return_value=123)
+            bus = Bus(logger)
             config = {
               "url": "http://192.168.0.99/img.jpg",
-              "sleep": 1.0,
+              "sleep": 0.1,
               "timeout": 1.0
             }
-            device = LogHTTP(config=config, bus=bus)
+            device = LogHTTP(config=config, bus=bus.handle('http'))
+            tester = bus.handle('tester')
+            bus.connect('http.raw', 'tester.raw')
+
             device.start()
-            time.sleep(0.1)
+            data = tester.listen()
+            self.assertEqual(data, (123, 'raw', b'123'))
             device.request_stop()
             device.join()
             self.assertEqual(

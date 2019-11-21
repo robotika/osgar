@@ -33,6 +33,7 @@ def CAN_triplet(msg_id, data):
 
 class Eduro(Thread):
     def __init__(self, config, bus):
+        bus.register('can', 'buttons', 'voltage', 'emergency_stop', 'encoders', 'pose2d')
         Thread.__init__(self)
         self.setDaemon(True)
 

@@ -96,6 +96,7 @@ def draw_lora_positions(arr):
 class LoRa(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register('raw', 'cmd')
         self.device_id = config.get('device_id')  # None for "autodetect"
         self.init_sleep = config.get('sleep')  # needed for Windows on start
         self.min_transmit_dt = timedelta(seconds=10)  # TODO config?

@@ -33,6 +33,7 @@ def parse_line(line):
 
 class IMU(Thread):
     def __init__(self, config, bus):
+        bus.register('orientation', 'rotation')
         Thread.__init__(self)
         self.setDaemon(True)
 

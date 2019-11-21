@@ -22,6 +22,7 @@ def CAN_packet(msg_id, data):
 
 class Spider(Thread):
     def __init__(self, config, bus):
+        bus.register('can', 'status')
         Thread.__init__(self)
         self.setDaemon(True)
 

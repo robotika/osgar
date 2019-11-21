@@ -11,6 +11,7 @@ from osgar.bus import BusShutdownException
 
 class LogSerial:
     def __init__(self, config, bus):
+        bus.register('raw')
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.output_thread = Thread(target=self.run_output, daemon=True)
 

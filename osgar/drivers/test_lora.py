@@ -3,7 +3,7 @@ import datetime
 from unittest.mock import MagicMock
 
 from osgar.drivers.lora import LoRa, parse_lora_packet, split_lora_buffer, parse_my_cmd
-from osgar.bus import BusHandler
+from osgar.bus import Bus
 
 
 class LoRaTest(unittest.TestCase):
@@ -19,14 +19,13 @@ class LoRaTest(unittest.TestCase):
     def test_autodetect(self):
         SAMPLE_DATA = b'1|cmd=home\n'
         logger = MagicMock()
-        robot_bus = BusHandler(logger, out={}, name='robot')
-        bus = BusHandler(logger,
-                         out={'raw':[(robot_bus.queue, 'raw')]},
-                         name='lora')
-
-        c = LoRa(bus=bus, config={'device_id': 4})
+        bus = Bus(logger)
+        c = LoRa(bus=bus.handle('lora'), config={'device_id': 4})
+        tester = bus.handle('tester')
+        tester.register('raw')
+        bus.connect('tester.raw', 'lora.raw')
         c.start()
-        c.bus.queue.put((123, 'raw', SAMPLE_DATA))
+        tester.publish('raw', SAMPLE_DATA)
         c.request_stop()
         c.join()
         self.assertEqual(c.device_id, 4)
@@ -42,18 +41,16 @@ class LoRaTest(unittest.TestCase):
 
     def test_autodetect_bug(self):
         logger = MagicMock()
-        robot_bus = BusHandler(logger, out={}, name='robot')
         logger.write = MagicMock(return_value=datetime.timedelta(microseconds=9721))
-        bus = BusHandler(logger,
-                         out={'raw':[(robot_bus.queue, 'raw')]},
-                         name='lora')
-
-        c = LoRa(bus=bus, config={})  # force autodetection
+        bus = Bus(logger)
+        c = LoRa(bus=bus.handle('lora'), config={})  # force autodetection
+        tester = bus.handle('tester')
+        tester.register('raw')
+        bus.connect('tester.raw', 'lora.raw')
         c.start()
-        c.bus.queue.put((datetime.timedelta(microseconds=1331), 'raw', b'4|alive\n'))
-#        c.bus.queue.put((datetime.timedelta(microseconds=29000), 'raw', b'4|alive-9721\n'))
-        c.bus.queue.put((datetime.timedelta(microseconds=29000), 'raw', b'4|alive-97'))
-        c.bus.queue.put((datetime.timedelta(microseconds=29200), 'raw', b'21\n'))
+        tester.publish('raw', b'4|alive\n')
+        tester.publish('raw', b'4|alive-97')
+        tester.publish('raw', b'21\n')
         c.request_stop()
         c.join()
         self.assertEqual(c.device_id, 4)
@@ -78,17 +75,17 @@ class LoRaTest(unittest.TestCase):
 
     def test_send_cmd(self):
         logger = MagicMock()
-        robot_bus = BusHandler(logger, out={}, name='robot')
+        bus = Bus(logger)
         logger.write = MagicMock(return_value=datetime.timedelta(microseconds=9721))
-        bus = BusHandler(logger,
-                         out={'raw':[], 'cmd': [(robot_bus.queue, 'cmd')]},
-                         name='lora')
-
-        c = LoRa(bus=bus, config={'device_id':3})  # force autodetection
+        c = LoRa(bus=bus.handle('lora'), config={'device_id':3})
+        tester = bus.handle('tester')
+        tester.register('raw')
+        bus.connect('lora.cmd', 'tester.cmd')
+        bus.connect('tester.raw', 'lora.raw')
         c.start()
-        c.bus.queue.put((datetime.timedelta(microseconds=1331), 'raw', b'1|3:GoHome:1234\n'))
+        tester.publish('raw', b'1|3:GoHome:1234\n')
         c.request_stop()
         c.join()
-        self.assertEqual(robot_bus.listen()[2], b'GoHome')
+        self.assertEqual(tester.listen()[2], b'GoHome')
 
 # vim: expandtab sw=4 ts=4

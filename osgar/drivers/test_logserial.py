@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 from osgar.drivers.logserial import LogSerial
-from osgar.bus import BusHandler
+from osgar.bus import Bus
 
 
 class LogSerialTest(unittest.TestCase):
@@ -12,10 +12,13 @@ class LogSerialTest(unittest.TestCase):
             instance = mock.return_value
 
             logger = MagicMock()
-            bus = BusHandler(logger)
+            bus = Bus(logger)
             config = {'port':'COM13:', 'speed':4800}
-            device = LogSerial(config=config, bus=bus)
-            bus.queue.put((1, 2, b'bin data'))
+            device = LogSerial(config=config, bus=bus.handle('serial'))
+            tester = bus.handle('tester')
+            tester.register('raw')
+            bus.connect('tester.raw', 'serial.raw')
+            tester.publish('raw', b'bin data')
             device.start()
             device.request_stop()
             device.join()

@@ -151,6 +151,7 @@ def parse_packet(packet, verbose=False):
 class LordIMU(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register('orientation', 'rotation')
         self._buf = b''
         self.raw = None  # not automatically defined yet
         self.verbose = False

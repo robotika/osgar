@@ -65,6 +65,7 @@ class MyXMLRPCServer(Thread):
 
 class ROSProxy(Thread):
     def __init__(self, config, bus):
+        bus.register('cmd_vel', 'imu_data', 'imu_data_addr')
         global NODE_PORT, PUBLISH_PORT
         Thread.__init__(self)
         self.setDaemon(True)

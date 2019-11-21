@@ -113,6 +113,7 @@ def split_buffer(data):
 
 class GPS(Thread):
     def __init__(self, config, bus):
+        bus.register('position')
         Thread.__init__(self)
         self.setDaemon(True)
 

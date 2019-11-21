@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 
 from osgar.drivers.sicklidar import SICKLidar
-from osgar.bus import BusHandler
+from osgar.bus import Bus
 
 
 class SICKLidarTest(unittest.TestCase):
@@ -10,8 +10,8 @@ class SICKLidarTest(unittest.TestCase):
     def test_start_stop(self):
         config = {}
         logger = MagicMock()
-        bus = BusHandler(logger, out={'raw':[], 'scan':[]}, name='lidar')
-        lidar = SICKLidar(config, bus=bus)
+        bus = Bus(logger)
+        lidar = SICKLidar(config, bus=bus.handle('lidar'))
         lidar.start()
         lidar.request_stop()
         lidar.join()
@@ -62,12 +62,12 @@ A 130 135 134 13D 138 134 131 131 12C 12A 128 128 126 11B 11C 113 11B 10E 2 2 2
     def test_sleep(self):
         config = {}
         logger = MagicMock()
-        bus = BusHandler(logger, out={'raw':[], 'scan':[]}, name='lidar')
-        lidar = SICKLidar(config, bus=bus)
+        bus = Bus(logger)
+        lidar = SICKLidar(config, bus=bus.handle('lidar'))
         self.assertIsNone(lidar.sleep)
 
         config = {"sleep": 0.1}
-        lidar = SICKLidar(config, bus=bus)
+        lidar = SICKLidar(config, bus=bus.handle('lidar'))
         self.assertAlmostEqual(lidar.sleep, 0.1)
 
     def test_empty_scan(self):
@@ -82,8 +82,8 @@ A 130 135 134 13D 138 134 131 131 12C 12A 128 128 126 11B 11C 113 11B 10E 2 2 2
                 'mask': [1, -1]
                 }
         logger = MagicMock()
-        bus = BusHandler(logger, out={'raw':[], 'scan':[]}, name='lidar')
-        lidar = SICKLidar(config, bus=bus)
+        bus = Bus(logger)
+        lidar = SICKLidar(config, bus=bus.handle('lidar'))
 
         scan = [123] * 270
         masked_scan = lidar.apply_mask(scan)
@@ -97,8 +97,8 @@ A 130 135 134 13D 138 134 131 131 12C 12A 128 128 126 11B 11C 113 11B 10E 2 2 2
                 'blind_zone': 10
                 }
         logger = MagicMock()
-        bus = BusHandler(logger, out={'raw':[], 'scan':[]}, name='lidar')
-        lidar = SICKLidar(config, bus=bus)
+        bus = Bus(logger)
+        lidar = SICKLidar(config, bus=bus.handle('lidar'))
 
         scan = [123] * 269 + [2]
         masked_scan = lidar.apply_mask(scan)

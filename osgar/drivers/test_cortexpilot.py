@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock, call
 
 from osgar.drivers.cortexpilot import Cortexpilot
-from osgar.bus import BusHandler
+from osgar.bus import Bus
 
 SAMPLE_DATA = bytes.fromhex(
         '000259010d0000000040952c416666be410000000000000000000000800000000000000' +
@@ -27,40 +27,40 @@ SAMPLE_DATA = bytes.fromhex(
 class CortextpilotTest(unittest.TestCase):
 
     def test_usage(self):
-        q = MagicMock()
         logger = MagicMock()
         logger.write = MagicMock(return_value=135)
-        bus = BusHandler(logger=logger,
-                out={'raw': [(q, 'raw')], 'encoders': [], 'emergency_stop': [],
-                     'pose2d': [], 'buttons': []})
-        robot = Cortexpilot(config={}, bus=bus)
+        bus = Bus(logger)
+        handle = bus.handle('cortexpilot')
+        tester = bus.handle('tester')
+        robot = Cortexpilot(config={}, bus=handle)
+        bus.connect('cortexpilot.raw', 'tester.raw')
         robot.start()
         robot.request_stop()
         robot.join()
-        # at first request firmware version
-        q.put.assert_called_once_with((135, 'raw', 
-            b'\x00\x00\x03\x01\x01\xfb'))
+        tester.shutdown()
+        self.assertEqual(tester.listen(), (135, 'raw', b'\x00\x00\x03\x01\x01\xfb'))
 
     def test_2nd_loop(self):
         q = MagicMock()
         logger = MagicMock()
         logger.write = MagicMock(return_value=135)
-        bus = BusHandler(logger=logger,
-                out={'raw': [(q, 'raw')], 'encoders': [], 'emergency_stop': [],
-                     'pose2d': [], 'buttons': []})
-        robot = Cortexpilot(config={}, bus=bus)
-        bus.queue.put((123, 'raw', b'\x00\x00\x10\x01\x01Robik V4.0.2\x00\x8f'))
+        bus = Bus(logger)
+        handle = bus.handle('cortexpilot')
+        tester = bus.handle('tester')
+        robot = Cortexpilot(config={}, bus=handle)
+        bus.connect('cortexpilot.raw', 'tester.raw')
+        handle.queue.put((123, 'raw', b'\x00\x00\x10\x01\x01Robik V4.0.2\x00\x8f'))
         robot.start()
         robot.request_stop()
         robot.join()
+        tester.shutdown() # so that listen() does not block
 
-        self.assertEqual(q.put.call_args_list, [
-            call((135, 'raw', b'\x00\x00\x03\x01\x01\xfb')),  # request version
-            call((135, 'raw', bytes.fromhex('00000f010d000000000000000040010000a2'))) # cmd
-            ])
+        self.assertEqual(tester.listen(), (135, 'raw', b'\x00\x00\x03\x01\x01\xfb')) # request version
+        self.assertEqual(tester.listen(), (135, 'raw', bytes.fromhex('00000f010d000000000000000040010000a2'))) # cmd
+
 
     def test_create_packet(self):
-        robot = Cortexpilot(config={}, bus=None)
+        robot = Cortexpilot(config={}, bus=MagicMock())
         packet = robot.create_packet()
         self.assertEqual(len(packet), 3 + 15)
         self.assertEqual(sum(packet) % 256, 0)
@@ -78,7 +78,7 @@ class CortextpilotTest(unittest.TestCase):
         packet = robot.create_packet()
 
     def test_get_packet(self):
-        robot = Cortexpilot(config={}, bus=None)
+        robot = Cortexpilot(config={}, bus=MagicMock())
         packet = robot.get_packet()
         self.assertIsNone(packet)
 

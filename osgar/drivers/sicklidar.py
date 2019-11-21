@@ -14,6 +14,7 @@ ETX = b'\x03'
 
 class SICKLidar(Thread):
     def __init__(self, config, bus):
+        bus.register('raw', 'scan')
         Thread.__init__(self)
         self.setDaemon(True)
 

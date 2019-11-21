@@ -6,7 +6,7 @@ import os
 from xmlrpc.server import SimpleXMLRPCServer
 
 from osgar.drivers.rosproxy import ROSProxy, prefix4BytesLen
-from osgar.bus import BusHandler
+from osgar.bus import Bus
 
 
 # TODO refactor into common testing code
@@ -78,8 +78,7 @@ class ROSProxyTest(unittest.TestCase):
 
     def test_usage(self):
         logger = MagicMock()
-        bus = BusHandler(logger, out={'cmd_vel':[], 'imu_data':[],
-                                      'imu_data_addr':[]})
+        bus = Bus(logger)
         config = {
                 'ros_master_uri': 'http://127.0.0.1:11311',
                 'ros_client_uri': 'http://127.0.0.1:8000',
@@ -92,7 +91,7 @@ class ROSProxyTest(unittest.TestCase):
                 }
 
         master = DummyROSMaster(('127.0.0.1', 11311))
-        proxy = ROSProxy(config=config, bus=bus)
+        proxy = ROSProxy(config=config, bus=bus.handle('ros'))
         with GlobalExceptionWatcher():
             proxy.start()
             proxy.request_stop()
