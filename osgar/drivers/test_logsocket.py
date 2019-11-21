@@ -48,8 +48,9 @@ class LogSocketTest(unittest.TestCase):
     def test_tcp_server(self):
         with patch('osgar.drivers.logsocket.socket.socket') as mock:
             instance = mock.return_value
-            instance.accept = MagicMock(return_value=('127.0.0.1', 1234))
-            instance.recv = MagicMock(return_value=b'some bin data')
+            accept = MagicMock()
+            accept.recv = MagicMock(return_value=b'some bin data')
+            instance.accept = MagicMock(return_value=(accept, ('127.0.0.1', 1234)))
 
             logger = MagicMock()
             bus = Bus(logger)
@@ -59,11 +60,14 @@ class LogSocketTest(unittest.TestCase):
             bus.connect('tcp.raw', 'tester.raw')
 
             device.start()
+            tester.listen()
             device.request_stop()
             device.join()
 
             instance.listen.assert_called_once_with(1)
             instance.bind.assert_called_once_with(('192.168.1.2', 8080))
+            instance.accept.assert_called_once_with()
+            accept.recv.assert_called_with(device.bufsize)
 
     def test_dynamic_tcp(self):
         with patch('osgar.drivers.logsocket.socket.socket') as mock:
