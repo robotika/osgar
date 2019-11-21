@@ -10,7 +10,7 @@ import threading
 
 from osgar.logger import LogWriter
 from osgar.lib.config import config_load, get_class_by_name
-from osgar.bus import BusHandler
+from osgar.bus import Bus
 
 
 class Recorder:
@@ -18,23 +18,13 @@ class Recorder:
         self.stop_requested = threading.Event()
         self.modules = {}
 
-        buses = {}
+        bus = Bus(logger)
         for module_name, module_config in config['modules'].items():
-            out, slots = {}, {}
-            for output_type in module_config['out']:
-                out[output_type] = []
-                slots[output_type] = []
-            bus = BusHandler(logger, out=out, slots=slots, name=module_name)
-            module = get_class_by_name(module_config['driver'])(module_config['init'], bus=bus)
-            buses[module_name] = bus
-            self.modules[module_name] = module
+            klass = get_class_by_name(module_config['driver'])
+            self.modules[module_name] = klass(module_config['init'], bus=bus.handle(module_name))
 
-        for from_module, to_module in config['links']:
-            (from_driver, from_name), (to_driver, to_name) = from_module.split('.'), to_module.split('.')
-            if to_name.startswith('slot_'):
-                buses[from_driver].slots[from_name].append(getattr(self.modules[to_driver], to_name))
-            else:
-                buses[from_driver].out[from_name].append((buses[to_driver].queue, to_name))
+        for sender, receiver in config['links']:
+            bus.connect(sender, receiver, self.modules)
 
         signal.signal(signal.SIGINT, self.request_stop)
 

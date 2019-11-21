@@ -2,7 +2,6 @@
   Internal bus for communication among modules
 """
 import time
-import zlib
 from queue import Queue
 from datetime import timedelta
 from collections import deque
@@ -31,29 +30,52 @@ class BusShutdownException(Exception):
     pass
 
 
+class Bus:
+    def __init__(self, logger):
+        self.logger = logger
+        self.handles = {}
+
+    def handle(self, name):
+        return self.handles.setdefault(name, BusHandler(self.logger, name))
+
+    def connect(self, sender, receiver, modules=None):
+        sender, output = sender.split('.')
+        receiver, input = receiver.split('.')
+        self.handles[sender].connect(output, self.handles[receiver], input, modules)
+
+
 class BusHandler:
-    def __init__(self, logger, name='', out={}, slots={}):
+    def __init__(self, logger, name):
         self.logger = logger
         self.queue = Queue()
         self.name = name
-        self.out = out
-        self.slots = slots
+        self.out = {}
+        self.slots = {}
         self.stream_id = {}
-        for publish_name in out.keys():
-            idx = self.logger.register('.'.join([self.name, publish_name]))
-            self.stream_id[publish_name] = idx
         self._is_alive = True
-        self.compressed_output = (name == 'tcp_point_data')  # hack
+
+    def register(self, *outputs):
+        for o in outputs:
+            if o in self.stream_id:
+                continue
+            idx = self.logger.register(f'{self.name}.{o}')
+            self.stream_id[o] = idx
+            self.out[o] = []
+            self.slots[o] = []
+
+    def connect(self, output, receiver, input, modules):
+        if input.startswith('slot_'):
+            assert modules is not None
+            assert receiver in modules
+            self.slots[output].append(getattr(modules[receiver], input))
+        else:
+            self.out[output].append((receiver.queue, input))
 
     def publish(self, channel, data):
         with self.logger.lock:
             stream_id = self.stream_id[channel]  # local maping of indexes
-            if self.compressed_output:
-                to_write = zlib.compress(serialize(data))
-            else:
-                to_write = serialize(data)
+            to_write = serialize(data)
             timestamp = self.logger.write(stream_id, to_write)
-
             for queue, input_channel in self.out[channel]:
                 queue.put((timestamp, input_channel, data))
             for slot in self.slots.get(channel, []):

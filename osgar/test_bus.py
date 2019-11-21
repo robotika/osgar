@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 from datetime import timedelta
 
-from osgar.bus import (BusHandler, BusShutdownException,
+from osgar.bus import (Bus, BusShutdownException,
                        LogBusHandler, LogBusHandlerInputsOnly,
                        almost_equal)
 
@@ -13,42 +13,52 @@ class BusHandlerTest(unittest.TestCase):
 
     def test_publish(self):
         logger = MagicMock()
-        bus = BusHandler(logger)
+        bus = Bus(logger)
+        handle = bus.handle('test')
         with self.assertRaises(KeyError):
-            bus.publish('raw', b'some binary data')
+            handle.publish('raw', b'some binary data')
 
         logger = MagicMock()
         logger.register = MagicMock(return_value=1)
-        bus = BusHandler(logger, out={'raw':[]})
-        bus.publish('raw', b'some binary data 2nd try')
+        bus = Bus(logger)
+        handle = bus.handle('test')
+        handle.register('raw')
+        handle.publish('raw', b'some binary data 2nd try')
         logger.write.assert_called_once_with(1, b'\xc4\x18some binary data 2nd try')
 
     def test_publish_serialization(self):
         logger = MagicMock()
         logger.register = MagicMock(return_value=1)
-        bus = BusHandler(logger, out={'position':[]})
-        bus.publish('position', (-123, 456))
+        bus = Bus(logger)
+        handle = bus.handle('test')
+        handle.register('position')
+        handle.publish('position', (-123, 456))
         logger.write.assert_called_once_with(1, b'\x92\xd0\x85\xcd\x01\xc8')
 
     def test_listen(self):
         logger = MagicMock()
-        handler = BusHandler(logger)
+        bus = Bus(logger)
+        handler = bus.handle('test')
         handler.queue.put((1, 2, b"bin data"))
         self.assertEqual(handler.listen(), (1, 2, b"bin data"))
 
     def test_two_modules(self):
         logger = MagicMock()
-        handler2 = BusHandler(logger)
-        handler1 = BusHandler(logger, out={'raw':[(handler2.queue, 42)]})
+        bus = Bus(logger)
+        handler2 = bus.handle('2')
+        handler1 = bus.handle('1')
+        handler1.register('raw')
+        bus.connect('1.raw', '2.42')
 
         logger.write = MagicMock(return_value=123)
         handler1.publish('raw', b"Hello!")
 
-        self.assertEqual(handler2.listen(), (123, 42, b"Hello!"))
+        self.assertEqual(handler2.listen(), (123, '42', b"Hello!"))
 
     def test_shutdown(self):
         logger = MagicMock()
-        handler = BusHandler(logger)
+        bus = Bus(logger)
+        handler = bus.handle('test')
         handler.shutdown()
         with self.assertRaises(BusShutdownException):
             handler.listen()
@@ -56,16 +66,19 @@ class BusHandlerTest(unittest.TestCase):
     def test_named_publish(self):
         logger = MagicMock()
         logger.register = MagicMock(return_value=1)
-        bus = BusHandler(logger, name='gps_serial', out={'raw':[]})
-        bus.publish('raw', b'bin data')
+        bus = Bus(logger)
+        handle = bus.handle('gps_serial')
+        handle.register('raw')
+        handle.publish('raw', b'bin data')
         logger.write.assert_called_once_with(1, b'\xc4\x08bin data')
 
     def test_alive(self):
         logger = MagicMock()
-        bus = BusHandler(logger, out={})
-        self.assertTrue(bus.is_alive())
-        bus.shutdown()
-        self.assertFalse(bus.is_alive())
+        bus = Bus(logger)
+        handle = bus.handle('test')
+        self.assertTrue(handle.is_alive())
+        handle.shutdown()
+        self.assertFalse(handle.is_alive())
 
     def test_log_bus_handler(self):
         log_data = [
@@ -116,21 +129,25 @@ class BusHandlerTest(unittest.TestCase):
 
     def test_report_error(self):
         log = MagicMock()
-        bus = BusHandler(log)
-        bus.report_error(KeyError(123))
+        bus = Bus(log)
+        handle = bus.handle('test')
+        handle.report_error(KeyError(123))
         log.write.assert_called_once_with(0, b"{'error': '123'}")
 
     def test_publish_time(self):
         logger = MagicMock()
         logger.register = MagicMock(return_value=1)
         logger.write = MagicMock(return_value=timedelta(123))
-        bus = BusHandler(logger, out={'stdout':[]})
-        self.assertEqual(bus.publish('stdout', 'hello world!'), timedelta(123))
+        bus = Bus(logger)
+        handle = bus.handle('test')
+        handle.register('stdout')
+        self.assertEqual(handle.publish('stdout', 'hello world!'), timedelta(123))
 
     def test_bus_sleep(self):
         logger = MagicMock()
-        bus = BusHandler(logger, out={})
-        bus.sleep(0.1)
+        bus = Bus(logger)
+        handle = bus.handle('test')
+        handle.sleep(0.1)
 
         bus = LogBusHandler(logger, inputs={}, outputs={})
         bus.sleep(0.1)
@@ -147,16 +164,5 @@ class BusHandlerTest(unittest.TestCase):
             ))
         self.assertFalse(almost_equal([1.23], []))
         self.assertFalse(almost_equal([-0.27], [0.42]))
-
-    def test_compression(self):
-        logger = MagicMock()
-        logger.register = MagicMock(return_value=1)
-        bus = BusHandler(logger, out={'raw':[]}, name='tcp_point_data')
-        # TODO proper definition what should be compressed - now hardcoded to name "tcp_point_data"
-        self.assertTrue(bus.compressed_output)
-        bus.publish('raw', b'\00'*10000)
-        logger.write.assert_called_once_with(1, 
-            b'x\x9c\xed\xc1\x01\r\x00\x00\x08\x03 #\xbc\x85\xfdC\xd8\xcb\x1e\x1fp\x9b' +
-            b'\x01\x00\x00\x00\x00\x00\x00\x00\x00\x80\x02\x0f\x9f\xba\x00\xfd')
 
 # vim: expandtab sw=4 ts=4
