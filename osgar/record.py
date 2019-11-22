@@ -15,6 +15,7 @@ from osgar.bus import Bus
 
 class Recorder:
     def __init__(self, config, logger):
+        logger.write(0, bytes(str(config), 'ascii'))
         self.stop_requested = threading.Event()
         self.modules = {}
 
@@ -28,27 +29,22 @@ class Recorder:
 
         signal.signal(signal.SIGINT, self.request_stop)
 
-    def start(self):
+    def __enter__(self):
         for module in self.modules.values():
             module.start()
+        return self
 
-    def update(self):
-        pass
-
-    def finish(self):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         self.request_stop()
-        self.join()
+        for module in self.modules.values():
+            module.join()
 
-    def request_stop(self, sig=None, frame=None):
+    def request_stop(self, signum=None, frame=None): # pylint: disable=unused-argument
         if self.stop_requested.is_set():
             return
         for module in self.modules.values():
             module.request_stop()
         self.stop_requested.set()
-
-    def join(self):
-        for module in self.modules.values():
-            module.join()
 
 
 def record(config_filename, log_prefix, duration_sec=None, application=None):
@@ -56,17 +52,12 @@ def record(config_filename, log_prefix, duration_sec=None, application=None):
         config_filename = [config_filename]
     config = config_load(*config_filename, application=application)
     with LogWriter(prefix=log_prefix, note=str(sys.argv)) as log:
-        try:
-            log.write(0, bytes(str(config), 'ascii'))  # write configuration
-            recorder = Recorder(config=config['robot'], logger=log)
-            recorder.start()
+        with Recorder(config=config['robot'], logger=log) as recorder:
             if application is not None:
-                app = recorder.modules['app']  # TODO nicer reference
-                app.join()  # wait for application termination
+                app = recorder.modules['app']
+                app.join()
             else:
                 recorder.stop_requested.wait(duration_sec)
-        finally:
-            recorder.finish()
 
 
 def main():

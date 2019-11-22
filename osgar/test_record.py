@@ -11,10 +11,8 @@ class RecorderTest(unittest.TestCase):
 
     def test_dummy_usage(self):
         empty_config = {'modules': {}, 'links':[]}
-        recorder = Recorder(config=empty_config, logger=None)
-        recorder.start()
-        recorder.update()
-        recorder.finish()
+        with Recorder(config=empty_config, logger=MagicMock()) as recorder:
+            pass
 
     def test_config(self):
         with patch('osgar.drivers.logserial.serial.Serial') as mock:
@@ -37,14 +35,10 @@ class RecorderTest(unittest.TestCase):
                     'links': [('serial_gps.raw', 'gps.raw')]
             }
             logger = MagicMock()
-            recorder = Recorder(config=config, logger=logger)
-            self.assertEqual(len(recorder.modules), 2)
-            self.assertEqual(sum([sum([len(q) for q in module.bus.out.values()])
-                                  for module in recorder.modules.values()]), 1)
-            recorder.start()
-            time.sleep(0.1)
-            recorder.update()
-            recorder.finish()
+            with Recorder(config=config, logger=logger) as recorder:
+                self.assertEqual(len(recorder.modules), 2)
+                self.assertEqual(sum([sum([len(q) for q in module.bus.out.values()])
+                                      for module in recorder.modules.values()]), 1)
 
     def test_spider_config(self):
         # first example with loop spider <-> serial
