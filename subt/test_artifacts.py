@@ -1,9 +1,10 @@
 import unittest
+import math
 from pathlib import Path
 
 import cv2
 
-from subt.artifacts import artf_in_scan
+from subt.artifacts import count_red, count_white, artf_in_scan
 
 curdir = Path(__file__).parent
 
@@ -84,17 +85,17 @@ class ArtifactDetectorTest(unittest.TestCase):
 5067, 5050, 5041, 5071, 5099, 5123, 5165, 5385, 5433, 5479]
 
         # artf_TYPE_VALVE_228.jpg based on red pixels
-        self.assertEqual(artf_in_scan(scan, 247, 259), (2212, 8245))
+        self.assertEqual(artf_in_scan(scan, 1280, 247, 259), (2212, 8245))
 
         # the proper bounds based on image and the column
-        self.assertEqual(artf_in_scan(scan, 152, 219), (2212, 8245))
+        self.assertEqual(artf_in_scan(scan, 1280, 152, 219), (2212, 8245))
 
     def test_electrical_box(self):
         img = cv2.imread(str(curdir/'test_data/artf-electrical-box.jpg'))
         #self.assertEqual(count_white(img), (865248, 1266, 959, 0, 1266))
 
     def test_missing_scan(self):
-        deg_100th, dist_mm = artf_in_scan(scan=None, img_x_min=100, img_x_max=200)
+        deg_100th, dist_mm = artf_in_scan(scan=None, width=1280, img_x_min=100, img_x_max=200)
         self.assertEqual((deg_100th, dist_mm), (0, 0))
 
 # vim: expandtab sw=4 ts=4
