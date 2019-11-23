@@ -71,4 +71,15 @@ def dual_convex_hull(scan, debug_poly=None):
         debug_poly.append([p[0] for p in hull_right])
         debug_poly[-1].append(hull_right[0][0])  # close polygon
 
+
+def equal_scans(scan1, scan2, tollerance=10):
+    """
+    Compare two scans for "almost identity". Expected inputs are raw scans (in millimeters).
+    """
+    assert len(scan1) == len(scan2), (len(scan1), len(scan2))
+    arr1 = np.array(scan1)
+    arr2 = np.array(scan2)
+    diff = arr1 - arr2
+    return np.abs(diff).max() <= tollerance
+
 # vim: expandtab sw=4 ts=4
