@@ -7,6 +7,7 @@ import os.path
 import math
 from datetime import timedelta
 from collections import defaultdict
+from io import StringIO
 
 import numpy as np
 
@@ -14,15 +15,16 @@ from osgar.explore import follow_wall_angle
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.lib import quaternion
 from osgar.lib.virtual_bumper import VirtualBumper
+from osgar.lib.lidar_pts import equal_scans
 
 from subt.local_planner import LocalPlanner
 
 
 # safety limits for exploration and return home
-LIMIT_ROLL = math.radians(20)
-LIMIT_PITCH = math.radians(20)
-RETURN_LIMIT_ROLL = math.radians(30)
-RETURN_LIMIT_PITCH = math.radians(30)
+LIMIT_ROLL = math.radians(25)  # in Virtual Urban are ramps with 20deg slope
+LIMIT_PITCH = math.radians(25)
+RETURN_LIMIT_ROLL = math.radians(35)
+RETURN_LIMIT_PITCH = math.radians(35)
 
 TRACE_STEP = 0.5  # meters in 3D
 
@@ -160,23 +162,31 @@ class SubTChallenge:
         self.use_right_wall = config['right_wall']
         self.is_virtual = config.get('virtual_world', False)  # workaround to handle tunnel differences
 
+        self.last_send_time = None
+        self.origin = None  # unknown initial position
+        self.origin_quat = quaternion.identity()
+        self.offset = (0, 0, 0)
+        self.origin_error = False
+        self.robot_name = None  # received with origin
         if self.is_virtual:
             self.local_planner = LocalPlanner()
         else:
             self.local_planner = None
+        self.ref_scan = None
 
     def send_speed_cmd(self, speed, angular_speed):
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_desired_speed(speed, angular_speed)
-        success = self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
+        self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
         # Corresponds to gc.disable() in __main__. See a comment there for more details.
         gc.collect()
-        return success
 
     def maybe_remember_artifact(self, artifact_data, artifact_xyz):
-        for _, (x, y, z) in self.artifacts:
+        for stored_data, (x, y, z) in self.artifacts:
             if distance3D((x, y, z), artifact_xyz) < 4.0:
-                return
+                # in case of uncertain type, rather report both
+                if stored_data == artifact_data:
+                    return
         self.artifacts.append((artifact_data, artifact_xyz))
 
     def go_straight(self, how_far, timeout=None):
@@ -342,18 +352,20 @@ class SubTChallenge:
         self.flipped = False
         return self.traveled_dist - start_dist, reason
 
-    def return_home(self):
+    def return_home(self, timeout):
         HOME_THRESHOLD = 5.0
         SHORTCUT_RADIUS = 2.3
         MAX_TARGET_DISTANCE = 5.0
         assert(MAX_TARGET_DISTANCE > SHORTCUT_RADIUS) # Because otherwise we could end up with a target point more distant from home than the robot.
         self.trace.prune(SHORTCUT_RADIUS)
-        while distance3D(self.xyz, (0, 0, 0)) > HOME_THRESHOLD:
+        start_time = self.sim_time_sec
+        while distance3D(self.xyz, (0, 0, 0)) > HOME_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
             if self.update() == 'scan':
                 target_x, target_y = self.trace.where_to(self.xyz, MAX_TARGET_DISTANCE)[:2]
                 x, y = self.xyz[:2]
                 desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
                 self.go_safely(desired_direction)
+        print('return_home: dist', distance3D(self.xyz, (0, 0, 0)), 'time(sec)', self.sim_time_sec - start_time)
 
     def register(self, callback):
         self.monitors.append(callback)
@@ -383,7 +395,7 @@ class SubTChallenge:
         x += math.cos(self.pitch) * math.cos(self.yaw) * dist
         y += math.cos(self.pitch) * math.sin(self.yaw) * dist
         z += math.sin(self.pitch) * dist
-        self.bus.publish('pose2d', [round(x * 1000), round(y * 1000),
+        self.last_send_time = self.bus.publish('pose2d', [round(x * 1000), round(y * 1000),
                                     round(math.degrees(self.yaw) * 100)])
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_pose(self.time, pose)  # sim time?!
@@ -407,7 +419,8 @@ class SubTChallenge:
         ]) * gacc.T
         cacc = np.asarray(acc) - egacc.T  # Corrected acceleration (without gravitational acceleration).
         magnitude = math.hypot(cacc[0, 0], cacc[0, 1])
-        if magnitude > 12.0:
+        # used to be 12 - see https://bitbucket.org/osrf/subt/issues/166/expected-x2-acceleration
+        if magnitude > 20:  #18.0:
             print(self.time, 'Collision!', acc, 'reported:', self.collision_detector_enabled)
             if self.collision_detector_enabled:
                 self.collision_detector_enabled = False
@@ -416,11 +429,16 @@ class SubTChallenge:
     def on_artf(self, timestamp, data):
         artifact_data, deg_100th, dist_mm = data
         x, y, z = self.xyz
+        x0, y0, z0 = self.offset
         angle, dist = self.yaw + math.radians(deg_100th / 100.0), dist_mm / 1000.0
-        ax = x + math.cos(angle) * dist
-        ay = y + math.sin(angle) * dist
-        az = z
-        self.maybe_remember_artifact(artifact_data, (ax, ay, az))
+        ax = x0 + x + math.cos(angle) * dist
+        ay = y0 + y + math.sin(angle) * dist
+        az = z0 + z
+        if -20 < ax < 0 and -10 < ay < 10:
+            # filter out elements on staging area
+            self.stdout(self.time, 'Robot at:', (ax, ay, az))
+        else:
+            self.maybe_remember_artifact(artifact_data, (ax, ay, az))
 
     def update(self):
         packet = self.bus.listen()
@@ -428,7 +446,7 @@ class SubTChallenge:
 #            print('SubT', packet)
             timestamp, channel, data = packet
             if self.time is None or int(self.time.seconds)//60 != int(timestamp.seconds)//60:
-                print(timestamp, '(%.1f %.1f %.1f)' % self.xyz, sorted(self.stat.items()))
+                self.stdout(timestamp, '(%.1f %.1f %.1f)' % self.xyz, sorted(self.stat.items()))
                 print(timestamp, list(('%.1f' % (v/100)) for v in self.voltage))
                 self.stat.clear()
 
@@ -442,9 +460,24 @@ class SubTChallenge:
             if handler is not None:
                 handler(timestamp, data)
             elif channel == 'scan' and not self.flipped:
+                if self.last_send_time is not None and self.last_send_time - self.time > timedelta(seconds=0.1):
+                    print('queue delay', self.last_send_time - self.time)
                 self.scan = data
+                if self.ref_scan is None or not equal_scans(self.scan, self.ref_scan, 200):
+                    self.ref_scan = self.scan
+                    self.ref_count = 0
+                else:
+                    self.ref_count += 1
+                    if self.ref_count > 30:
+                        print('Robot is stuck!', self.ref_count)
+                        if self.collision_detector_enabled:
+                            self.collision_detector_enabled = False
+                            raise Collision()
+                        self.ref_count = 0
+
                 if self.local_planner is not None:
-                    self.local_planner.update(data)
+                    if self.last_send_time is not None and self.last_send_time - self.time < timedelta(seconds=0.1):
+                        self.local_planner.update(data)
             elif channel == 'scan_back' and self.flipped:
                 self.scan = data
                 if self.local_planner is not None:
@@ -465,6 +498,16 @@ class SubTChallenge:
                 self.orientation = data
             elif channel == 'sim_time_sec':
                 self.sim_time_sec = data
+            elif channel == 'origin':
+                if self.origin is None:  # accept only initial offset
+                    self.robot_name = data[0].decode('ascii')
+                    if len(data) == 8:
+                        self.origin = data[1:4]
+                        qx, qy, qz, qw = data[4:]
+                        self.origin_quat = qw, qx, qy, qz  # quaternion
+                    else:
+                        self.stdout('Origin ERROR received')
+                        self.origin_error = True
             elif channel == 'voltage':
                 self.voltage = data
             elif channel == 'emergency_stop':
@@ -475,12 +518,25 @@ class SubTChallenge:
                 m(self)
             return channel
 
-    def wait(self, dt):  # TODO refactor to some common class
-        if self.time is None:
-            self.update()
-        start_time = self.time
-        while self.time - start_time < dt:
-            self.update()
+    def wait(self, dt, use_sim_time=False):  # TODO refactor to some common class
+        if use_sim_time:
+            start_sim_time_sec = self.sim_time_sec
+            while self.sim_time_sec - start_sim_time_sec < dt.total_seconds():
+                self.update()
+        else:
+            if self.time is None:
+                self.update()
+            start_time = self.time
+            while self.time - start_time < dt:
+                self.update()
+
+    def stdout(self, *args, **kwargs):
+        output = StringIO()
+        print(*args, file=output, **kwargs)
+        contents = output.getvalue().strip()
+        output.close()
+        self.bus.publish('stdout', contents)
+        print(contents)
 
 #############################################
     def play_system_track(self):
@@ -541,26 +597,94 @@ class SubTChallenge:
         self.wait(timedelta(seconds=3))
 #############################################
 
-    def play_virtual_track(self):
-        print("SubT Challenge Ver2!")
-        self.go_straight(9.0)  # go to the tunnel entrance (used to be 9m)
-        self.collision_detector_enabled = True
-        self.follow_wall(radius = 0.9, right_wall=self.use_right_wall,
-                            timeout=timedelta(minutes=12, seconds=0))
-        self.collision_detector_enabled = False
+    def play_virtual_part(self):
+        self.stdout("Waiting for origin ...")
+        self.origin = None  # invalidate origin
+        self.origin_error = False
+        self.bus.publish('request_origin', True)
+        while self.origin is None and not self.origin_error:
+            self.update()
+        self.stdout('Origin:', self.origin, self.robot_name)
 
-        print("Artifacts:", self.artifacts)
+        if self.origin is not None:
+            x, y, z = self.origin
+            x1, y1, z1 = self.xyz
+            self.offset = x - x1, y - y1, z - z1
+            self.stdout('Offset:', self.offset)
+            heading = quaternion.heading(self.origin_quat)
+            self.stdout('heading', math.degrees(heading), 'angle', math.degrees(math.atan2(-y, -x)), 'dist', math.hypot(x, y))
 
-        print("Going HOME")
-        self.return_home()
+            self.turn(normalizeAnglePIPI(math.atan2(-y, -x) - heading))
+            self.go_straight(math.hypot(x, y))  # go to the tunnel entrance
+        else:
+            # lost in tunnel
+            self.stdout('Lost in tunnel:', self.origin_error, self.offset)
+        for loop in range(3):
+            self.collision_detector_enabled = True
+            dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,  # was radius=0.9
+                                timeout=self.timeout, pitch_limit=LIMIT_PITCH, roll_limit=None)
+            self.collision_detector_enabled = False
+            if reason is None or reason != REASON_PITCH_LIMIT:
+                break
+            self.stdout(self.time, "Microstep HOME %d %.3f" % (loop, dist), reason)
+            self.go_straight(-0.3, timeout=timedelta(seconds=10))
+            self.return_home(timedelta(seconds=10))
 
+        self.stdout("Artifacts:", self.artifacts)
+
+        self.stdout(self.time, "Going HOME %.3f" % dist, reason)
+
+        self.return_home(2 * self.timeout)
         self.send_speed_cmd(0, 0)
 
         if self.artifacts:
             self.bus.publish('artf_xyz', [[artifact_data, round(x*1000), round(y*1000), round(z*1000)] 
                                           for artifact_data, (x, y, z) in self.artifacts])
 
-        self.wait(timedelta(seconds=30))
+        self.wait(timedelta(seconds=10), use_sim_time=True)
+
+    def dumplog(self):
+        import os
+        filename = self.bus.logger.filename  # deep hack
+        self.stdout("Dump Log:", filename)
+        size = statinfo = os.stat(filename).st_size
+        self.stdout("Size:", size)
+        with open(filename, 'rb') as f:
+            for i in range(0, size, 100):
+                self.stdout(i, f.read(100))
+        self.stdout("Dump END")
+
+    def play_virtual_track(self):
+        self.stdout("SubT Challenge Ver2!")
+        self.stdout("Waiting for robot_name ...")
+        while self.robot_name is None:
+            self.update()
+        self.stdout('robot_name:', self.robot_name)
+
+        if self.use_right_wall == 'auto':
+            self.use_right_wall = self.robot_name.endswith('R')
+        self.stdout('Use right wall:', self.use_right_wall)
+
+        times_sec = [int(x) for x in self.robot_name[1:-1].split('F')]
+        self.stdout('Using times', times_sec)
+
+        # add extra sleep to give a chance to the other robot (based on name)
+        self.wait(timedelta(seconds=times_sec[0]), use_sim_time=True)
+
+        # potential wrong artifacts:
+        self.stdout('Artifacts before start:', self.artifacts)
+
+        for timeout_sec in times_sec[1:]:
+            self.timeout = timedelta(seconds=timeout_sec)
+            self.play_virtual_part()
+            self.stdout('Final xyz:', self.xyz)
+            x, y, z = self.xyz
+            x0, y0, z0 = self.offset
+            self.stdout('Final xyz (DARPA coord system):', (x + x0, y + y0, z + z0))
+
+        self.wait(timedelta(seconds=30), use_sim_time=True)
+#        self.dumplog()
+#        self.wait(timedelta(seconds=10), use_sim_time=True)
 
 #############################################
 
@@ -584,7 +708,7 @@ def main():
     import argparse
     from osgar.lib.config import config_load
     from osgar.record import Recorder
-    from osgar.logger import LogWriter
+    from osgar.logger import LogWriter, LogReader
 
     parser = argparse.ArgumentParser(description='SubT Challenge')
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
@@ -593,7 +717,7 @@ def main():
     parser_run.add_argument('config', nargs='+', help='configuration file')
     parser_run.add_argument('--note', help='add description')
     parser_run.add_argument('--walldist', help='distance for wall following (default: %(default)sm)', default=1.0, type=float)
-    parser_run.add_argument('--side', help='which side to follow', choices=['left', 'right'], required=True)
+    parser_run.add_argument('--side', help='which side to follow', choices=['left', 'right', 'auto'], required=True)
     parser_run.add_argument('--speed', help='maximum speed (default: from config)', type=float)
     parser_run.add_argument('--timeout', help='seconds of exploring before going home (default: %(default)s)',
                             type=int, default=10*60)
@@ -618,18 +742,21 @@ def main():
 
         # support simultaneously multiple platforms
         prefix = os.path.basename(args.config[0]).split('.')[0] + '-'
-        config = config_load(*args.config, application=SubTChallenge)
+        config = config_load(*args.config)
 
         # apply overrides from command line
         config['robot']['modules']['app']['init']['walldist'] = args.walldist
-        config['robot']['modules']['app']['init']['right_wall'] = args.side == 'right'
+        if args.side == 'auto':
+            config['robot']['modules']['app']['init']['right_wall'] = 'auto'
+        else:
+            config['robot']['modules']['app']['init']['right_wall'] = args.side == 'right'
         config['robot']['modules']['app']['init']['timeout'] = args.timeout
         if args.speed is not None:
             config['robot']['modules']['app']['init']['max_speed'] = args.speed
 
         with LogWriter(prefix=prefix, note=str(sys.argv)) as log:
             log.write(0, bytes(str(config), 'ascii'))  # write configuration
-            robot = Recorder(config=config['robot'], logger=log)
+            robot = Recorder(config=config['robot'], logger=log, application=SubTChallenge)
             app = robot.modules['app']  # TODO nicer reference
             robot.start()
             app.play()
