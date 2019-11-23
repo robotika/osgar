@@ -5,7 +5,7 @@
 from threading import Thread
 import struct
 import math
-
+import os
 
 from osgar.bus import BusShutdownException
 
@@ -15,12 +15,17 @@ ROS_MESSAGE_TYPES = {
     'std_msgs/Imu': '6a62c6daae103f4ff57a132d6f95cec2',
 }
 
-
+#### DUPLICATE with rosproxy.py !!! ####
 def prefix4BytesLen(s):
     "adding ROS length"
     if type(s) == str:
         s = bytes(s, encoding='ascii')
     return struct.pack("I", len(s)) + s
+
+
+def packCmdVel(speed, angularSpeed):
+    return struct.pack("dddddd", speed, 0, 0, 0, 0, angularSpeed)
+#########################################
 
 
 def parse_imu( data ):
@@ -87,7 +92,6 @@ def parse_raw_image(data, dump_filename=None):
 def parse_jpeg_image(data, dump_filename=None):
     # http://docs.ros.org/api/sensor_msgs/html/msg/CompressedImage.html
     size = struct.unpack_from('<I', data)[0]
-    assert size < 230467, size  # expected size for raw image during experiment
     # http://docs.ros.org/melodic/api/std_msgs/html/msg/Header.html
     pos = 4
     seq, timestamp_sec, timestamp_nsec, frame_id_size = struct.unpack_from('<IIII', data, pos)
@@ -228,6 +232,27 @@ def parse_points(data):
     assert pos == len(data), (pos, len(data))
 
 
+def parse_clock(data):
+    size = struct.unpack_from('<I', data)[0]
+    assert size == 8, size  # clock does not contain type, only NTP time
+    pos = 4
+    timestamp_sec, timestamp_nsec = struct.unpack_from('<II', data, pos)
+    return (timestamp_sec, timestamp_nsec)
+
+
+def get_frame_id(data):
+    size = struct.unpack_from('<I', data)[0]
+    pos = 4
+    if size == 8:
+        # exception for /clock ?!
+        return b'/clock'
+
+    seq, timestamp_sec, timestamp_nsec, frame_id_size = struct.unpack_from('<IIII', data, pos)
+    pos += 4 + 4 + 4 + 4
+    frame_id = data[pos:pos+frame_id_size]
+    return frame_id
+
+
 class ROSMsgParser(Thread):
     def __init__(self, config, bus):
         Thread.__init__(self)
@@ -238,6 +263,15 @@ class ROSMsgParser(Thread):
 
         self.topic_type = config.get('topic_type')
         self.timestamp_sec = None
+        self.timestamp_nsec = None
+
+        # initial message contains structure
+        self.header = None
+        self.count = 0
+        self.downsample = config.get('downsample', 1)
+
+        self.desired_speed = 0.0  # m/s
+        self.desired_angular_speed = 0.0
 
     def get_packet(self):
         data = self._buf
@@ -252,34 +286,80 @@ class ROSMsgParser(Thread):
         ret, self._buf = data[:size], data[size:]        
         return ret
 
+    def slot_raw(self, timestamp, data):
+#        self._buf += data
+#        packet = self.get_packet()
+#        if packet is None:
+#            return
+#        if self.header is None:
+#            self.header = packet
+#            return
+#        self.count += 1
+#        if self.count % self.downsample != 0:
+#            return
+        packet = data  # ZMQ hack
+        if data.startswith(b'origin'):
+            s = data.split()
+            if b'ERROR' in s:
+                self.bus.publish('origin', s[1:])
+            else:
+                self.bus.publish('origin', [s[1]] + [float(x) for x in s[2:]])
+            return
+        frame_id = get_frame_id(data)
+        # TODO parse properly header "frame ID"
+        if frame_id.endswith(b'/base_link/camera_front'):  #self.topic_type == 'sensor_msgs/CompressedImage':
+            self.bus.publish('image', parse_jpeg_image(packet))
+        elif frame_id.endswith(b'/base_link/front_laser'):  #self.topic_type == 'sensor_msgs/LaserScan':
+            self.count += 1
+            if self.count % self.downsample != 0:
+                return
+            self.bus.publish('scan', parse_laser(packet))
+        elif frame_id.endswith(b'/odom'):  #self.topic_type == 'nav_msgs/Odometry':
+            __, (x, y, heading) = parse_odom(packet)
+            self.bus.publish('pose2d', [round(x*1000),
+                                        round(y*1000),
+                                        round(math.degrees(heading)*100)])
+        elif frame_id.endswith(b'/base_link/imu_sensor'):  # self.topic_type == 'std_msgs/Imu':
+            acc, rot = parse_imu(packet)
+            self.bus.publish('rot', [round(math.degrees(angle)*100) 
+                                     for angle in rot])
+            self.bus.publish('acc', [round(x * 1000) for x in acc])
+        elif frame_id.endswith(b'/clock'):
+            prev = self.timestamp_sec
+            self.timestamp_sec, self.timestamp_nsec = parse_clock(packet)
+            if prev != self.timestamp_sec:
+                self.bus.publish('sim_time_sec', self.timestamp_sec)
+
+            ms = self.timestamp_nsec//1000000
+            if self.timestamp_sec > 0 and ms % 50 == 0:  # 20Hz
+                cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
+                self.bus.publish('cmd_vel', cmd)
+
+    def slot_desired_speed(self, timestamp, data):
+        self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
+
+    def slot_stdout(self, timestamp, data):
+        cmd = b'stdout ' + bytes(data, 'utf-8')  # redirect to ROS_INFO
+        self.bus.publish('cmd_vel', cmd)
+
+    def slot_request_origin(self, timestamp, data):
+        cmd = b'request_origin'
+        self.bus.publish('cmd_vel', cmd)
+
     def run(self):
         try:
-            header = None
-            # initial message contains structure
             while True:
                 timestamp, channel, data = self.bus.listen()
-                self._buf += data
-                packet = self.get_packet()
-                if packet is not None:
-                    if header is None:
-                        header = packet
-                    elif self.topic_type == 'sensor_msgs/CompressedImage':
-                        self.bus.publish('image', parse_jpeg_image(packet))
-                    elif self.topic_type == 'sensor_msgs/LaserScan':
-                        self.bus.publish('scan', parse_laser(packet))
-                    elif self.topic_type == 'nav_msgs/Odometry':
-                        prev = self.timestamp_sec
-                        self.timestamp_sec, (x, y, heading) = parse_odom(packet)
-                        self.bus.publish('pose2d', [round(x*1000),
-                                    round(y*1000),
-                                    round(math.degrees(heading)*100)])
-                        if prev != self.timestamp_sec:
-                            self.bus.publish('sim_time_sec', self.timestamp_sec)
-                    elif self.topic_type == 'std_msgs/Imu':
-                        acc, rot = parse_imu(packet)
-                        self.bus.publish('rot', [round(math.degrees(angle)*100) 
-                                                 for angle in rot])
-                        self.bus.publish('acc', [round(x * 1000) for x in acc])
+                if channel == 'raw':
+                    self.slot_raw(timestamp, data)
+                elif channel == 'desired_speed':
+                    self.slot_desired_speed(timestamp, data)
+                elif channel == 'stdout':
+                    self.slot_stdout(timestamp, data)
+                elif channel == 'request_origin':
+                    self.slot_request_origin(timestamp, data)
+                else:
+                    assert False, channel  # unsupported input channel
         except BusShutdownException:
             pass
 
