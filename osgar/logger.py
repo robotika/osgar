@@ -327,6 +327,7 @@ def main():
     parser.add_argument('--list-names', '-l', help='list stream names', action='store_true')
     parser.add_argument('--times', help='display timestamps', action='store_true')
     parser.add_argument('--sec', help='display timestamps in seconds', action='store_true')
+    parser.add_argument('--format', help='use python format - available fields sec, timestamp, stream_id, data')
     parser.add_argument('--stat', help='output only message statistics', action='store_true')
     parser.add_argument('--raw', help='skip data deserialization',
                         action='store_true')
@@ -363,6 +364,13 @@ def main():
                 print(timestamp, stream_id, data)
             elif args.sec:
                 print(timestamp.total_seconds(), stream_id, data)
+            elif args.format:
+                kw = dict(sec=timestamp.total_seconds(),
+                          timestamp=timestamp,
+                          stream_id=stream_id,
+                          data=data,
+                          )
+                print(eval(f"f'{args.format}'", kw))
             else:
                 sys.stdout.buffer.write(data)
 
