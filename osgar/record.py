@@ -47,13 +47,10 @@ class Recorder:
         self.stop_requested.set()
 
 
-def record(config_filename, log_prefix, duration_sec=None, application=None):
-    if isinstance(config_filename, str):
-        config_filename = [config_filename]
-    config = config_load(*config_filename, application=application)
+def record(config, log_prefix, duration_sec=None):
     with LogWriter(prefix=log_prefix, note=str(sys.argv)) as log:
         with Recorder(config=config['robot'], logger=log) as recorder:
-            if application is not None:
+            if 'app' in recorder.modules:
                 app = recorder.modules['app']
                 app.join()
             else:
@@ -65,10 +62,12 @@ def main():
     parser.add_argument('config', nargs='+', help='configuration file')
     parser.add_argument('--note', help='add description')
     parser.add_argument('--duration', help='recording duration (sec), default infinite', type=float)
+    parser.add_argument('--application', help='import string to application', default=None)
     args = parser.parse_args()
 
     prefix = os.path.basename(args.config[0]).split('.')[0] + '-'
-    record(args.config, log_prefix=prefix, duration_sec=args.duration)
+    cfg = config_load(*args.config, application=args.application)
+    record(cfg, log_prefix=prefix, duration_sec=args.duration)
 
 if __name__ == "__main__":
     main()

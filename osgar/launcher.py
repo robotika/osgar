@@ -8,6 +8,7 @@ import argparse
 
 from osgar.record import record
 from osgar.replay import replay
+from osgar.lib.config import config_load
 
 
 def launch(app, description, prefix):
@@ -32,6 +33,7 @@ def launch(app, description, prefix):
         game.run()
 
     elif args.command == 'run':
-        record(args.config, log_prefix=prefix, application=app)
+        cfg = config_load(*args.config, application=args.application)
+        record(cfg, log_prefix=prefix)
 
 # vim: expandtab sw=4 ts=4
