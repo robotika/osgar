@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 from osgar.drivers.eduro import Eduro, sint32_diff, CAN_triplet
 from osgar.bus import Bus

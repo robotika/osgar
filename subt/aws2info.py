@@ -1,9 +1,6 @@
 """
   Extract position with topics statistic from AWS ROS_INFO output
 """
-import sys
-import os
-from itertools import chain
 
 
 def aws2info(filename, outname):

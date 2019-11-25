@@ -5,7 +5,6 @@
 from threading import Thread
 import struct
 import math
-import os
 
 from osgar.bus import BusShutdownException
 

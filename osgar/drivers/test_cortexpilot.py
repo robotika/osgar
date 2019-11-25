@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 from osgar.drivers.cortexpilot import Cortexpilot
 from osgar.bus import Bus

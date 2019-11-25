@@ -1,6 +1,5 @@
 import unittest
 from unittest.mock import patch, MagicMock, call
-import time
 
 from osgar.drivers.logsocket import LogTCPStaticIP as LogTCP, LogTCPDynamicIP, LogTCPServer, LogUDP, LogHTTP
 from osgar.bus import Bus

@@ -6,7 +6,6 @@
 """
 # based on format specification at
 #   http://wiki.ros.org/Bags/Format/2.0
-import sys
 import os
 import struct
 

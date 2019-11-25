@@ -2,8 +2,6 @@ import unittest
 from unittest.mock import MagicMock
 import time
 
-import zmq
-
 from osgar.drivers.logzeromq import LogZeroMQ
 from osgar.bus import BusShutdownException
 
