@@ -2,9 +2,10 @@
   SubT Challenge Version 1
 """
 import gc
-import sys
 import os.path
 import math
+import threading
+
 from datetime import timedelta
 from collections import defaultdict
 from io import StringIO
@@ -695,20 +696,19 @@ class SubTChallenge:
             return self.play_system_track()
 
     def start(self):
-        pass
+        self.thread = threading.Thread(target=self.play)
 
     def request_stop(self):
         self.bus.shutdown()
 
     def join(self):
-        pass
+        self.thread.join()
 
 
 def main():
     import argparse
     from osgar.lib.config import config_load
-    from osgar.record import Recorder
-    from osgar.logger import LogWriter, LogReader
+    from osgar.record import record
 
     parser = argparse.ArgumentParser(description='SubT Challenge')
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
@@ -742,25 +742,19 @@ def main():
 
         # support simultaneously multiple platforms
         prefix = os.path.basename(args.config[0]).split('.')[0] + '-'
-        config = config_load(*args.config, application=SubTChallenge)
+        cfg = config_load(*args.config, application=SubTChallenge)
 
         # apply overrides from command line
-        config['robot']['modules']['app']['init']['walldist'] = args.walldist
+        cfg['robot']['modules']['app']['init']['walldist'] = args.walldist
         if args.side == 'auto':
-            config['robot']['modules']['app']['init']['right_wall'] = 'auto'
+            cfg['robot']['modules']['app']['init']['right_wall'] = 'auto'
         else:
-            config['robot']['modules']['app']['init']['right_wall'] = args.side == 'right'
-        config['robot']['modules']['app']['init']['timeout'] = args.timeout
+            cfg['robot']['modules']['app']['init']['right_wall'] = args.side == 'right'
+        cfg['robot']['modules']['app']['init']['timeout'] = args.timeout
         if args.speed is not None:
-            config['robot']['modules']['app']['init']['max_speed'] = args.speed
+            cfg['robot']['modules']['app']['init']['max_speed'] = args.speed
 
-        with LogWriter(prefix=prefix, note=str(sys.argv)) as log:
-            log.write(0, bytes(str(config), 'ascii'))  # write configuration
-            robot = Recorder(config=config['robot'], logger=log)
-            app = robot.modules['app']  # TODO nicer reference
-            robot.start()
-            app.play()
-            robot.finish()
+        record(cfg, prefix)
 
 
 if __name__ == "__main__":

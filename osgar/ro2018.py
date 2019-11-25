@@ -3,14 +3,14 @@
 """
 
 import argparse
-import sys
 import math
+import threading
+
 from datetime import timedelta
 
-from osgar.logger import LogWriter
 from osgar.lib.config import config_load
 from osgar.lib.mathex import normalizeAnglePIPI
-from osgar.record import Recorder
+from osgar.record import record
 
 from osgar.drivers.gps import INVALID_COORDINATES
 
@@ -105,13 +105,14 @@ class RoboOrienteering2018:
         self.cmd = [speed, desired_steering]
 
     def start(self):
-        pass
+        self.thread = threading.Thread(target=self.play)
+        self.thread.start()
 
     def request_stop(self):
         self.bus.shutdown()
 
     def join(self):
-        pass
+        self.thread.join()
 
     def register(self, callback):
         self.monitors.append(callback)
@@ -226,14 +227,8 @@ if __name__ == "__main__":
         app.play()
 
     elif args.command == 'run':
-        with LogWriter(prefix='ro2018-', note=str(sys.argv)) as log:
-            config = config_load(*args.config, application=RoboOrienteering2018)
-            log.write(0, bytes(str(config), 'ascii'))  # write configuration
-            robot = Recorder(config=config['robot'], logger=log)
-            app = robot.modules['app']  # TODO nicer reference
-            robot.start()
-            app.play()
-            robot.finish()
+        cfg = config_load(*args.config, application=RoboOrienteering2018)
+        record(cfg, 'ro2018-')
     else:
         assert False, args.command  # unsupported command
 

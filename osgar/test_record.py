@@ -1,6 +1,5 @@
 import unittest
 from unittest.mock import patch, MagicMock
-import time
 import json
 import os
 

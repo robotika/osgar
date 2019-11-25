@@ -17,13 +17,14 @@
       http://osgar.robotika.cz/eduro-181013_164907.log
   Eduro scored 3 points and reached 3rd place.
 """
-import sys
 import math
+import threading
+
 from datetime import timedelta
 
 from osgar.lib.config import config_load
 from osgar.lib.mathex import normalizeAnglePIPI
-from osgar.record import Recorder
+from osgar.record import record
 
 from .scan_feature import detect_box, detect_transporter
 
@@ -262,13 +263,14 @@ class SICKRobot2018:
             self.wait(timedelta(seconds=1))
 
     def start(self):
-        pass
+        self.thread = threading.Thread(target=self.play)
+        self.thread.start()
 
     def request_stop(self):
         self.bus.shutdown()
 
     def join(self):
-        pass
+        self.thread.join()
 
 
 if __name__ == "__main__":
@@ -297,13 +299,7 @@ if __name__ == "__main__":
         game.play()
 
     elif args.command == 'run':
-        with LogWriter(prefix='eduro-', note=str(sys.argv)) as log:
-            config = config_load(*args.config, application=SICKRobot2018)
-            log.write(0, bytes(str(config), 'ascii'))  # write configuration
-            robot = Recorder(config=config['robot'], logger=log)
-            game = robot.modules['app']  # TODO nicer reference
-            robot.start()
-            game.play()
-            robot.finish()
+        cfg = config_load(*args.config, application=SICKRobot2018)
+        record(cfg, 'eduro-')
 
 # vim: expandtab sw=4 ts=4

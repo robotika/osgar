@@ -79,11 +79,9 @@ class Turn(Node):
 if __name__ == "__main__":
     import argparse
     import os.path
-    import sys
     from osgar.replay import replay
+    from osgar.record import record
     from osgar.lib.config import config_load
-    from osgar.record import Recorder
-    from osgar.logger import LogWriter
 
     parser = argparse.ArgumentParser(description='go')
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
@@ -112,20 +110,14 @@ if __name__ == "__main__":
 
     elif args.command == 'run':
         prefix = 'turn-' + os.path.basename(args.config[0]).split('.')[0] + '-'
-        config = config_load(*args.config, application=Turn)
+        cfg = config_load(*args.config, application=Turn)
 
         # apply overrides from command line
-        config['robot']['modules']['app']['init']['angle_deg'] = args.angle
-        config['robot']['modules']['app']['init']['timeout'] = args.timeout
+        cfg['robot']['modules']['app']['init']['angle_deg'] = args.angle
+        cfg['robot']['modules']['app']['init']['timeout'] = args.timeout
         if args.speed is not None:
-            config['robot']['modules']['app']['init']['max_speed'] = args.speed
+            cfg['robot']['modules']['app']['init']['max_speed'] = args.speed
 
-        with LogWriter(prefix=prefix, note=str(sys.argv)) as log:
-            log.write(0, bytes(str(config), 'ascii'))  # write configuration
-            robot = Recorder(config=config['robot'], logger=log)
-            game = robot.modules['app']
-            robot.start()
-            game.join()
-            robot.finish()
+        record(cfg, prefix)
 
 # vim: expandtab sw=4 ts=4
