@@ -14,8 +14,8 @@ from osgar.bus import BusShutdownException
 WHEEL_DISTANCE = 0.496  # m K2
 CENTER_AXLE_DISTANCE = 0.348  # distance from potentiometer
 VESC_REPORT_FREQ = 20  # was 100  # Hz
-SPEED_ENC_SCALE = 0.25 * math.pi / (4 * 3 * 60 * VESC_REPORT_FREQ)  # scale 4x found experimentally
-ENC_SCALE = 8.0/950  # TODO proper calibration
+SPEED_ENC_SCALE = (33/25)*0.25 * math.pi / (4 * 3 * 60 * VESC_REPORT_FREQ)  # scale 4x found experimentally
+ENC_SCALE = (33/25)*8.0/950  # TODO proper calibration (scale for large 33" wheels, old were 25")
 
 AD_CENTER = 515 # K2
 AD_MAX_DEG = 79  # K2

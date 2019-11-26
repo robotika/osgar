@@ -12,14 +12,14 @@ class KloubakTest(unittest.TestCase):
         # go straight 1m/s
         left, right = compute_desired_erpm(1.0, 0.0)
         self.assertEqual(left, right)
-        self.assertEqual(left, 917)
+        self.assertEqual(left, 694)  # 917 for 25" wheels and 694 for 33"
 
         wd = WHEEL_DISTANCE
 
         # left wheel should stay and only right one turn, say 180deg/sec
         left, right = compute_desired_erpm(math.pi * wd / 2, math.pi)
         self.assertEqual(left, 0)
-        self.assertEqual(right, 1428)
+        self.assertEqual(right, 1082)  # 1428 for 25" wheels and 1082 for 33"
 
         # rotate left with left moving the half the speed of right
         # left should be "wd", right "2*wd"
@@ -29,7 +29,7 @@ class KloubakTest(unittest.TestCase):
         # backup 0.5m/s
         left, right = compute_desired_erpm(-0.5, 0.0)
         self.assertEqual(left, right)
-        self.assertEqual(left, -458)
+        self.assertEqual(left, -347)  # -458 for 25" wheels and -347 for 33"
 
     def test_compute_rear(self):
         speed, angular = compute_rear(1.0, 0.0, 0.0)
