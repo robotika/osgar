@@ -32,6 +32,7 @@
 #include <ros/ros.h>
 #include <std_srvs/SetBool.h>
 #include <rosgraph_msgs/Clock.h>
+#include <std_msgs/String.h>
 
 #include <string>
 #include <stdlib.h>     /* abs */
@@ -160,6 +161,9 @@ class Controller
   /// \brief publisher to send cmd_vel
   public: ros::Publisher velPub;
 
+  /// \brief publisher to send logging data
+  public: ros::Publisher robotDataPub;
+
   /// \brief Communication client.
   private: std::unique_ptr<subt::CommsClient> client;
 
@@ -208,6 +212,7 @@ class Controller
 
   public: bool getSpeedCmd(geometry_msgs::Twist& msg);
   public: bool parseArtf(char *input_str, subt::msgs::Artifact& artifact);
+  public: void sendLogPart();
 };
 
 /////////////////////////////////////////////////
@@ -269,6 +274,11 @@ void Controller::Update()
       // Create a cmd_vel publisher to control a vehicle.
       this->velPub = this->n.advertise<geometry_msgs::Twist>(
           this->name + "/cmd_vel", 1);
+
+      // Create data logging publisher
+      // https://bitbucket.org/osrf/subt/pull-requests/329/support-recording-up-to-2gb-of-custom-data/diff
+      this->robotDataPub = this->n.advertise<std_msgs::String>(
+          "/robot_data", 1);
 
       this->subClock  = n.subscribe("/clock", 1000, clockCallback);
       this->subImu  = n.subscribe(this->name + "/imu/data", 1000, imuCallback);
@@ -335,6 +345,21 @@ not available.");
   }
 }
 
+
+void Controller::sendLogPart()
+{
+  if (!this->started)
+    return;
+  // Test empty log
+  // based on Nate example:
+  //   https://bitbucket.org/osrf/subt_seed/branch/log_sensor_msgs#diff
+  std_msgs::String log;
+  std::ostringstream stream;
+  ros::Time currentTime = ros::Time::now();
+  stream << currentTime.sec + currentTime.nsec*1e-9 << ": Hello " << this->name;
+  log.data = stream.str().c_str();
+  this->robotDataPub.publish(log);
+}
 
 /////////////////////////////////////////////////
 bool Controller::parseArtf(char *input_str, subt::msgs::Artifact& artifact)
@@ -513,6 +538,7 @@ int main(int argc, char** argv)
       controller.Update();
       ros::spinOnce();
       loop_rate.sleep();
+      controller.sendLogPart();
     }
 
     while (ros::ok() && controller.arrived)
@@ -524,6 +550,7 @@ int main(int argc, char** argv)
       }
       ros::spinOnce();
       loop_rate.sleep();
+      controller.sendLogPart();
     }
   }
   ros::spin();
