@@ -191,6 +191,9 @@ class Controller
   /// \brief Name of this robot.
   private: std::string name;
 
+  private: std::string logFilename;
+  long int log_offset{-1};
+
   private: double prev_dist2{0.0};
 
   public: bool ReportArtifact(subt::msgs::Artifact& artifact)
@@ -348,8 +351,11 @@ not available.");
 
 void Controller::sendLogPart()
 {
-  if (!this->started)
+   // the ROS logger availability is currently not known
+   // see https://bitbucket.org/osrf/subt/issues/276/when-is-ros-bag-recorder-ready
+  if (g_countClock < 1000)
     return;
+
   // Test empty log
   // based on Nate example:
   //   https://bitbucket.org/osrf/subt_seed/branch/log_sensor_msgs#diff
@@ -359,6 +365,29 @@ void Controller::sendLogPart()
   stream << currentTime.sec + currentTime.nsec*1e-9 << ": Hello " << this->name;
   log.data = stream.str().c_str();
   this->robotDataPub.publish(log);
+
+  if (this->log_offset >= 0)
+  {
+    FILE *fd = fopen(this->logFilename.c_str(), "rb");
+    if(fd != NULL)
+    {
+      char buf[1000000];
+      fseek(fd, this->log_offset, SEEK_SET);
+      size_t size = fread(buf, 1, 1000000, fd);
+      fclose(fd);
+      this->log_offset += size;
+      std::string s;
+      size_t i;
+      for(i = 0; i < size; i++)
+        s += buf[i];
+      log.data = s;
+      this->robotDataPub.publish(log);
+    }
+    else
+    {
+      ROS_INFO_STREAM("Error opening: " << this->logFilename);
+    }
+  }
 }
 
 /////////////////////////////////////////////////
@@ -462,6 +491,13 @@ bool Controller::getSpeedCmd(geometry_msgs::Twist& msg)
       {
         ROS_INFO("ERROR! - failed to parse received artifact info");
       }
+    }
+    else if(strncmp(buffer, "file ", 5) == 0)
+    {
+      buffer[size] = 0;
+      ROS_INFO("FILE: %s", buffer);
+      this->logFilename = buffer + 5;
+      this->log_offset = 0;
     }
     else
     {
