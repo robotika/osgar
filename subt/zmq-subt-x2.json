@@ -48,7 +48,7 @@
       "rosmsg": {
           "driver": "rosmsg",
           "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
-          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd_vel", "origin"],
+          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin"],
           "init": {
             "downsample": 2
           }
@@ -60,7 +60,7 @@
               ["rosmsg.origin", "app.origin"],
 
               ["receiver.raw", "rosmsg.slot_raw"],
-              ["rosmsg.cmd_vel", "transmitter.raw"],
+              ["rosmsg.cmd", "transmitter.raw"],
 
               ["rosmsg.rot", "app.rot"],
               ["rosmsg.acc", "app.acc"],
