@@ -333,23 +333,23 @@ class ROSMsgParser(Thread):
             ms = self.timestamp_nsec//1000000
             if self.timestamp_sec > 0 and ms % 50 == 0:  # 20Hz
                 cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
-                self.bus.publish('cmd_vel', cmd)
+                self.bus.publish('cmd', cmd)
 
     def slot_desired_speed(self, timestamp, data):
         self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
 
     def slot_stdout(self, timestamp, data):
         cmd = b'stdout ' + bytes(data, 'utf-8')  # redirect to ROS_INFO
-        self.bus.publish('cmd_vel', cmd)
+        self.bus.publish('cmd', cmd)
 
     def slot_request_origin(self, timestamp, data):
         cmd = b'request_origin'
-        self.bus.publish('cmd_vel', cmd)
+        self.bus.publish('cmd', cmd)
 
     def send_filename(self):
         filename = self.bus.logger.filename  # deep hack
         cmd = b'file ' + bytes(filename, encoding='ascii')
-        self.bus.publish('cmd_vel', cmd)
+        self.bus.publish('cmd', cmd)
 
     def run(self):
         try:
