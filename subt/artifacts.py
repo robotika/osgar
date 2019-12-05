@@ -155,6 +155,7 @@ def artf_in_scan(scan, width, img_x_min, img_x_max, verbose=False):
 class ArtifactDetector(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register("artf", "dropped", "debug_artf", "stdout")
         self.is_virtual = config['virtual_world']  # say different "dataset" (now red or all object detection)
         self.best = None
         self.best_count = 0
@@ -286,6 +287,7 @@ class ArtifactDetector(Node):
 class ArtifactReporter(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register("artf_cmd")
         self.path = config.get('path', 'call_base.txt')
 
     def update(self):  # hack, this method should be called run instead!

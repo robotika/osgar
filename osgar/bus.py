@@ -66,8 +66,8 @@ class BusHandler:
     def connect(self, output, receiver, input, modules):
         if input.startswith('slot_'):
             assert modules is not None
-            assert receiver in modules
-            self.slots[output].append(getattr(modules[receiver], input))
+            assert receiver.name in modules
+            self.slots[output].append(getattr(modules[receiver.name], input))
         else:
             self.out[output].append((receiver.queue, input))
 
