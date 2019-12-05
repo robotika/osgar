@@ -332,8 +332,7 @@ if __name__ == '__main__':
     logger.register = MagicMock(return_value=1)
     logger.write = MagicMock(return_value=timedelta(0))
     output = Queue()
-    bus = BusHandler(logger=logger, out={'artf': [(output, 'artf')], 'dropped': [], 'debug_artf': [],
-                                         'stdout': []})
+    bus = BusHandler(logger=logger, name="detector")
     detector = ArtifactDetector(config, bus)
     detector.verbose = args.verbose
     detector.start()
