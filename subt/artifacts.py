@@ -258,12 +258,11 @@ class ArtifactDetector(Node):
 #                    artf = BACKPACK
 #                else:
 #                    artf = TOOLBOX
-                if self.best < 1000:
-                    artf = DRILL  # VALVE - hack for simple02, fallback for empty image
-                if h/w > 2:
-                    artf = EXTINGUISHER
-                else:
-                    artf = DRILL
+#                if self.best < 1000:
+#                    artf = DRILL  # VALVE - hack for simple02, fallback for empty image
+#                if h/w > 2:
+#                    artf = EXTINGUISHER
+                artf = BACKPACK
             elif yellow_used:
                 artf = RESCUE_RANDY  # used to be RADIO
             self.stdout(self.time, 'Relative position:', self.best, deg_100th, dist_mm, artf)
