@@ -114,6 +114,9 @@ class LogBusHandler:
         self.max_delay = timedelta()
         self.max_delay_timestamp = timedelta()
 
+    def register(self, *outputs):
+        pass
+
     def listen(self):
         while True:
             if len(self.buffer_queue) == 0:
@@ -160,6 +163,9 @@ class LogBusHandlerInputsOnly:
         self.reader = log
         self.inputs = inputs
         self.time = timedelta(0)
+
+    def register(self, *outputs):
+        pass
 
     def listen(self):
         dt, stream_id, bytes_data = next(self.reader)
