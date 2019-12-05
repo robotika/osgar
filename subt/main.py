@@ -125,6 +125,7 @@ class EmergencyStopMonitor:
 class SubTChallenge:
     def __init__(self, config, bus):
         self.bus = bus
+        bus.register("desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout", "request_origin")
         self.start_pose = None
         self.traveled_dist = 0.0
         self.time = None
@@ -697,6 +698,7 @@ class SubTChallenge:
 
     def start(self):
         self.thread = threading.Thread(target=self.play)
+        self.thread.start()
 
     def request_stop(self):
         self.bus.shutdown()
