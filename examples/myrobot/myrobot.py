@@ -11,6 +11,7 @@ from osgar.bus import BusShutdownException
 class MyTimer(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register('tick')
         self.sleep_time = config['sleep']
 
     def run(self):
@@ -26,6 +27,7 @@ class MyTimer(Node):
 class MyRobot(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register('pose2d')
         self.pose = (0, 0, 0)
         self.speed, self.angular_speed = 0, 0
         self.desired_speed, self.desired_angular_speed = 0, 0

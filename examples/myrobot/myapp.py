@@ -14,6 +14,7 @@ def distance(pose1, pose2):
 class MyApp(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register('desired_speed')
         self.max_speed = config.get('max_speed', 0.1)
         self.max_angular_speed = math.radians(50)  # TODO config
         self.verbose = False

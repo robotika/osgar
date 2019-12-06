@@ -26,6 +26,7 @@ def min_dist(laser_data):
 class FollowMe(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register('desired_speed')
         self.last_position = [0, 0, 0]  # proper should be None, but we really start from zero
         self.raise_exception_on_stop = False
         self.verbose = False

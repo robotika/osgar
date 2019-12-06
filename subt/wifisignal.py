@@ -19,6 +19,7 @@ def wifi_scan():
 class WifiSignal(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register('wifiscan')
         self.sleep_time = config.get('sleep', 1.0)
         # TODO ssid
         # search SSID
@@ -28,6 +29,7 @@ class WifiSignal(Node):
             wifi_list = wifi_scan()
             now = self.publish("wifiscan", wifi_list)
             self.sleep(self.sleep_time)
+
 
 if __name__ == "__main__":
     import time

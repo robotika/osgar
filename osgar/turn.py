@@ -12,6 +12,7 @@ from osgar.bus import BusShutdownException
 class Turn(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register('desired_speed')
         self.start_pose = None
         self.verbose = False
         self.speed = config['max_speed']

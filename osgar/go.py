@@ -10,6 +10,7 @@ from osgar.node import Node
 class Go(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register('desired_speed')
         self.start_pose = None
         self.traveled_dist = 0.0
         self.verbose = False

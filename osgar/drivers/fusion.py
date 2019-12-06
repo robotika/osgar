@@ -9,6 +9,7 @@ from osgar.node import Node
 class FusionPose2d(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register('pose2d')
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.xyz = 0, 0, 0
         self.last_position = None

@@ -48,6 +48,7 @@ def draw_diff(arr):
 class MotorDriverVESC(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register('can')
         self.debug_arr = []
         self.prev = {}
         self.verbose = False  # TODO move into Node

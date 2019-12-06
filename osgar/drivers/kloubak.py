@@ -125,6 +125,7 @@ def sint16_diff(a, b):
 class RobotKloubak(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register('pose2d', 'emergency_stop', 'encoders', 'can')
 
         # commands
         self.desired_speed = 0.0  # m/s
@@ -282,7 +283,7 @@ class RobotKloubak(Node):
                 self.can_errors += 1
         if msg_id == CAN_ID_ENCODERS:
             diff = [e - prev for e, prev in zip(self.encoders, self.last_pose_encoders)]
-            self.publish('encoders', 
+            self.publish('encoders',
                     [diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT],
                      diff[INDEX_REAR_LEFT], diff[INDEX_REAR_RIGHT]])
             if self.update_pose():

@@ -53,6 +53,7 @@ class EmergencyStopMonitor:
 class GPSNavigation(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register('desired_speed')
         self.maxspeed = config.get('maxspeed', 0.5)
         self.goals = [latlon2xy(lat, lon) for lat, lon in config['waypoints']]
         self.last_position = None  # (lon, lat) in milliseconds

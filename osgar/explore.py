@@ -69,6 +69,7 @@ def follow_wall_angle(laser_data, radius, right_wall=False):
 class FollowWall(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register('desired_speed')
         self.right_wall = config.get('right_wall', False)
         self.max_speed = DESIRED_SPEED
 

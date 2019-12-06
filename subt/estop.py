@@ -18,6 +18,7 @@ MASTER_STOP = bytes.fromhex('7E 00 10 17 01 00 00 00 00 00 00 FF FF FF FE 03 44 
 class EStop(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register('emergency_stop', 'raw')
         self._buf = b''
         self.master = config.get('master', False)
 
