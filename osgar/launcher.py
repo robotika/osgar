@@ -33,7 +33,7 @@ def launch(app, description, prefix):
         game.run()
 
     elif args.command == 'run':
-        cfg = config_load(*args.config, application=args.application)
+        cfg = config_load(*args.config, application=app)
         record(cfg, log_prefix=prefix)
 
 # vim: expandtab sw=4 ts=4
