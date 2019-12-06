@@ -15,7 +15,6 @@ from osgar.bus import Bus
 
 class Recorder:
     def __init__(self, config, logger):
-        logger.write(0, bytes(str(config), 'ascii'))
         self.stop_requested = threading.Event()
         self.modules = {}
 
@@ -49,6 +48,7 @@ class Recorder:
 
 def record(config, log_prefix, duration_sec=None):
     with LogWriter(prefix=log_prefix, note=str(sys.argv)) as log:
+        log.write(0, bytes(str(config), 'ascii'))
         with Recorder(config=config['robot'], logger=log) as recorder:
             if 'app' in recorder.modules:
                 app = recorder.modules['app']
