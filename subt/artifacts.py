@@ -316,7 +316,7 @@ if __name__ == '__main__':
     from unittest.mock import MagicMock
     from queue import Queue
     import argparse
-    from osgar.bus import BusHandler
+    from osgar.bus import Bus
 
     parser = argparse.ArgumentParser(description='Run artifact detection and classification for given JPEG image')
     parser.add_argument('filename', help='JPEG filename')
@@ -331,13 +331,16 @@ if __name__ == '__main__':
     logger.register = MagicMock(return_value=1)
     logger.write = MagicMock(return_value=timedelta(0))
     output = Queue()
-    bus = BusHandler(logger=logger, name="detector")
-    detector = ArtifactDetector(config, bus)
+    bus = Bus(logger)
+    detector = ArtifactDetector(config, bus.handle('detector'))
     detector.verbose = args.verbose
     detector.start()
-    bus.queue.put((timedelta(0), 'scan', [2000]*270))  # pretend that everything is at 2 meters
+    tester = bus.handle('tester')
+    tester.register('scan', 'image')
+    bus.connect('tester.scan', 'detector.scan')
+    tester.publish('scan', [2000]*270)  # pretend that everything is at 2 meters
     for i in range(10 + 1):  # workaround for local minima
-        bus.queue.put((timedelta(seconds=1), 'image', jpeg_data))
+        tester.publish('image', jpeg_data)
     detector.request_stop()
     detector.join()
     if output.empty():

@@ -195,11 +195,12 @@ class LogHTTP:
 
 if __name__ == "__main__":
     import time
-    from osgar.bus import BusHandler
+    from osgar.bus import Bus
 
     config = {'host':'localhost', 'port': 8001, 'timeout': 1.0}
     with LogWriter(prefix='test-tcp-') as log:
-        device = LogTCP(config, bus=BusHandler(log, out={'raw':[]}))
+        bus = Bus(log)
+        device = LogTCPStaticIP(config, bus=bus.handle('tcp'))
         device.start()
         time.sleep(2)
         device.request_stop()

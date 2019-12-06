@@ -36,7 +36,7 @@ class Bus:
         self.handles = {}
 
     def handle(self, name):
-        return self.handles.setdefault(name, BusHandler(self.logger, name))
+        return self.handles.setdefault(name, _BusHandler(self.logger, name))
 
     def connect(self, sender, receiver, modules=None):
         sender, output = sender.split('.')
@@ -44,7 +44,7 @@ class Bus:
         self.handles[sender].connect(output, self.handles[receiver], input, modules)
 
 
-class BusHandler:
+class _BusHandler:
     def __init__(self, logger, name):
         self.logger = logger
         self.queue = Queue()

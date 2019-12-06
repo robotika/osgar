@@ -61,11 +61,12 @@ class LogSerial:
 
 if __name__ == "__main__":
     import time
-    from osgar.bus import BusHandler
+    from osgar.bus import Bus
 
     config = { 'port': 'COM5', 'speed': 4800 }
     with LogWriter(prefix='test-') as log:
-        device = LogSerial(config, bus=BusHandler(log, out={'raw':[]}))
+        bus = Bus(log)
+        device = LogSerial(config, bus=bus.handle('serial'))
         device.start()
         time.sleep(2)
         device.request_stop()
