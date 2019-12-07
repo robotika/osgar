@@ -84,6 +84,7 @@ def print_packet(data, dbc = {}):
 
 class CANSerial(Thread):
     def __init__(self, config, bus):
+        bus.register('can', 'raw')
         Thread.__init__(self)
         self.setDaemon(True)
 
