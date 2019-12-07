@@ -9,6 +9,7 @@ class LogOpenCVCamera:
     def __init__(self, config, bus):
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.bus = bus
+        bus.register('raw')
 
         port = config.get('port', 0)
         self.cap = cv2.VideoCapture(port)
