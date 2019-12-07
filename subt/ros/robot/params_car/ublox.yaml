@@ -1,0 +1,41 @@
+debug: 2               # Range 0-4 (0 means no debug statements will print)
+
+device: /dev/ttyGPS
+frame_id: gps
+dynamic_model: portable
+fix_mode: auto              # Switches between 2D/3D automatically
+dr_limit: 0                 # Dead reckoning limit
+enable_ppp: false           # Advanced setting not supported by all devices
+
+rate: 4                     # Measurement rate in Hz
+nav_rate: 4                 # in number of measurement cycles
+
+uart1:
+        baudrate: 9600          # baudrate is device specific, check the device manual
+        in: 1                     # UBX
+        out: 1                    # RTCM
+
+# RTCM out config
+rtcm:
+        ids: [5, 87, 77, 230]     # RTCM Messages to configure
+        rates: [1, 1, 1, 10]      # Rates of RTCM messages above,
+                                  # in number of navigation solutions
+dat:
+        set: false                # Do not set the user configured datum
+        
+# GNSS Config, verify which GNSS are supported by your device
+gnss:
+        gps: true                 # (not required since it defaults to true)
+        glonass: true
+        beidou: true
+        qzss: false
+        sbas: false
+
+inf:
+        all: true                   # Whether to display INF messages
+
+#Message subscriptions
+subscribe:
+        all: true                 # Subscribe to all messages
+        aid:
+                all: false                # ... except AID messages

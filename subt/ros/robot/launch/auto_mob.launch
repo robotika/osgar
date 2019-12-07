@@ -1,0 +1,191 @@
+<launch>
+	<env name="DISPLAY" value=":0.0"/>
+	<!-- LOGGING -->
+	<env name="ROSCONSOLE_CONFIG_FILE"  value="$(find robot)/custom_rosconsole.conf"/>
+        <arg name="record_sensors" default="true" />
+        <!--node pkg="rosbag" type="record" name="rosbag_record" args="record -o /home/pavliik/develop/ros_ws/bags/ /tf /camera/color/image_raw/compressed /camera/color/camera_info /rs_t265/odom/sample /camera/depth/image_rect_raw /camera/depth/camera_info /wheel_odom  __name:=my_bag" if="$(arg record_sensors)"/-->
+        <node pkg="rosbag" type="play" name="player" output="screen" args="--pause --clock /home/pavliik/develop/ros_ws/bags/_2020-02-14-00-35-16.bag" unless="$(arg record_sensors)"/>
+	<group unless="$(arg record_sensors)">
+		<param name="use_sim_time" value="true"/>
+	</group>
+	<group if="$(arg record_sensors)">
+                <param name="use_sim_time" value="false"/>
+        </group>
+
+	<!--node pkg="robotour_global_planner" type="empty_map.py" name="empty_map" output="screen" >
+        </node-->	
+	
+	<!--node pkg="explore_lite" type="explore" respawn="false" name="explore" output="screen">
+  		<param name="robot_base_frame" value="base_link"/>
+  		<param name="costmap_topic" value="/move_base/global_costmap/costmap"/>
+  		<param name="costmap_updates_topic" value="/move_base/global_costmap/costmap_updates"/>
+  		<param name="visualize" value="true"/>
+  		<param name="planner_frequency" value="0.33"/>
+  		<param name="progress_timeout" value="30.0"/>
+  		<param name="potential_scale" value="3.0"/>
+  		<param name="orientation_scale" value="0.0"/>
+  		<param name="gain_scale" value="1.0"/>
+  		<param name="transform_tolerance" value="0.3"/>
+  		<param name="min_frontier_size" value="0.4"/>
+	</node-->
+	<!-- ROBOT BASE /-->
+	<include file="$(find base)/launch/base.launch" if="$(arg record_sensors)">
+		<arg name="port" value="/dev/ttyArduino" />
+	</include>
+	<!--node name="base_transform" pkg="base" type="base_transform.py"  output="screen"/-->
+	<!--node name="virtual_bumper" pkg="base" type="virtual_bumper.py"  output="screen"/-->
+	<node name="map_to_scan" pkg="robot" type="map_to_scan.py"  output="screen"/>
+	<!--node name="voronoi_filter" pkg="robot" type="voronoi_filter.py"  output="screen">
+		<remap from="odom" to="/rs_t265/odom/sample" />
+		<remap from="local_map" to="/move_base/local_costmap/costmap" />
+
+	</node-->
+	<!--node name="globalmap_to_localmap" pkg="robot" type="globalmap_to_localmap.py"  output="screen">
+		<remap from="odom" to="/rs_t265/odom/sample" />
+		<remap from="map_out" to="/local_map" />
+		<remap from="map_in" to="/rtabmap/grid_map" />
+	
+	</node-->
+
+	<!-- NAVIGATION -->
+        <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+	        <rosparam file="$(find robot)/params_mob/costmap_common_params.yaml" command="load" ns="global_costmap" />
+	        <rosparam file="$(find robot)/params_mob/costmap_common_params.yaml" command="load" ns="local_costmap" />
+		<rosparam file="$(find robot)/params_mob/move_base_params.yaml" command="load" />
+                <rosparam file="$(find robot)/params_mob/local_costmap_params.yaml" command="load" />
+                <rosparam file="$(find robot)/params_mob/global_costmap_params.yaml" command="load" />
+                <rosparam file="$(find robot)/params_mob/base_local_planner_params.yaml" command="load" />
+		<!--remap from="map" to="/rtabmap/grid_map" /-->
+		<!--remap from="map" to="/map" /-->
+		<remap from="odom" to="/rs_t265/odom/sample" />
+
+
+        </node>
+	<!--node pkg="tuw_voronoi_graph" type="tuw_voronoi_graph_node" name="graph_generator" output="screen">
+		<remap from="map" to="/move_base/local_costmap/costmap" />
+                <param name="publish_voronoi_map_image"       value="true"/>
+                <param name="map_inflation"       value="0.2"/>
+                <param name="loop_rate"       value="1.0"/>
+	</node-->
+	<!--node name="voronoi_planner" pkg="robot" type="voronoi_planner.py"  output="screen"/-->
+	<!--include file="$(find straight_drive)/launch/straight_drive.launch"/-->
+
+	<!-- OSGAR /-->
+        <node pkg="robot" type="rospy_zmq.py" name="osgar" output="screen">
+		<remap from="odom" to="/rs_t265/odom/sample"/>
+		<remap from="image" to="/camera/color/image_raw/compressed"/>
+		<remap from="depth_image" to="/camera/depth/image_rect_raw"/>
+	</node>	
+	<!-- LOCALIZATION /-->
+	<!--rosparam command="load" file="$(find robot)/params_mob/ekf_params.yaml" /-->
+	<!--node pkg="robot_localization" type="ekf_localization_node" name="ekf_se_map" clear_params="true">
+    		<remap from="odometry/filtered" to="odometry/filtered_map"/>
+  	</node-->
+	<node pkg="gmapping" type="slam_gmapping" name="gmapping_node" output="screen" >
+        	<param name="map_frame"  value="odom"/>
+		<param name="transform_publish_period"  value="0"/>
+	</node>
+
+	<!--group ns="rtabmap">
+    		<node pkg="nodelet" type="nodelet" name="rgbd_sync" args="standalone rtabmap_ros/rgbd_sync" output="screen">
+	    		<remap from="rgb/image"       to="/camera/color/image_raw"/>
+	    		<remap from="depth/image"     to="/camera/aligned_depth_to_color/image_raw"/>
+	    		<remap from="rgb/camera_info" to="/camera/color/camera_info"/>
+      
+      			<param name="approx"       value="false"/> 
+    		</node>
+    
+    
+    		<node name="rtabmap" pkg="rtabmap_ros" type="rtabmap" output="screen" args="MINUSMINUSdelete_db_on_start">
+	  		<param name="frame_id" type="string" value="camera_link"/>
+	  		<param name="odom_frame_id" type="string" value="odom"/>	
+          		<param name="subscribe_depth" type="bool" value="false"/>
+	  		<param name="subscribe_rgbd" type="bool" value="false"/>
+	  		<param name="subscribe_scan" type="bool" value="true"/>
+	  		<param name="subscribe_scan_cloud" type="bool" value="false"/>
+	  		<param name="subscribe_odom_info" type="bool" value="false"/>
+			<remap from="scan_cloud"       to="/camera/depth_registered/points"/>
+	  		<remap from="rgb/image"       to="/camera/color/image_raw"/>
+          		<remap from="depth/image"     to="/camera/depth/image_rect_raw"/>
+          		<remap from="rgb/camera_info" to="/camera/color/camera_info"/>
+			<remap from="scan" to="/depth_scan"/>
+	  		<remap from="odom" to="/rs_t265/odom/sample"/>
+
+          		<remap from="rgbd_image" to="rgbd_image"/>
+
+          		<param name="queue_size" type="int" value="10"/>
+
+          		<param name="RGBD/AngularUpdate"        type="string" value="0.01"/>
+          		<param name="RGBD/LinearUpdate"         type="string" value="0.01"/>
+	  		<param name="RGBD/OptimizeFromGraphEnd" type="string" value="false"/>
+			<param name="RGBD/NeighborLinkRefining" type="string" value="true"/>
+	  		<param name="proj_max_height" type="double" value="1.0"/>
+	  		<param name="proj_max_ground_angle" type="double" value="45"/>
+	  		<param name="grid_unknown_space_filled" type="bool" value="true"/>
+	  		<param name="grid_eroded" type="bool" value="true"/>
+			<param name="cloud_noise_filtering_radius" type="double" value="0.3"/>
+                        <param name="cloud_noise_filtering_min_neighbours" type="double" value="10"/>
+    		</node>
+    	</group-->
+
+
+ 	<!-- REMOTE CONTROL /-->	
+	<!--node name="keyboard" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" output="screen">
+		<param name="~speed" value="0.4" />
+		<param name="~turn" value="1.0" />
+	</node-->
+	<!--node pkg="joy" type="joy_node" name="joy_node">
+                <param name="dev" value="/dev/input/js0" />
+                <param name="deadzone" value="0.2" />
+                <param name="autorepeat_rate" value="5" />
+        </node-->
+
+
+	<!-- REAL SENSE /-->	
+        <include file="$(find realsense2_camera)/launch/rs_rgbd.launch" if="$(arg record_sensors)">
+		<arg name="serial_no" value="843112071240"/>
+		<arg name="enable_fisheye"      value="false"/>
+
+  		<arg name="depth_width"         value="848"/>
+  		<arg name="depth_height"        value="480"/>
+  		<arg name="enable_depth"        value="true"/>
+
+  		<arg name="enable_infra1"       value="false"/>
+  		<arg name="enable_infra2"       value="false"/>
+
+  		<arg name="color_width"         value="848"/>
+  		<arg name="color_height"        value="480"/>
+  		<arg name="enable_color"        value="true"/>
+
+  		<arg name="depth_fps"           value="15"/>
+  		<arg name="color_fps"           value="15"/>
+	</include>
+	<include file="$(find realsense2_camera)/launch/rs_t265.launch" if="$(arg record_sensors)"/>
+	
+	<node name="laserscan_kinect" pkg="laserscan_kinect" type="laserscan_kinect" >
+                <remap from="image" to="/camera/depth/image_rect_raw"/>
+                <remap from="camera_info" to="/camera/depth/camera_info"/>
+      		<rosparam command="load" file="$(find robot)/params_mob/depth_scan_params.yaml" />
+        	<remap from="scan" to="/scan"/>
+	</node>
+
+        <!--node pkg="depthimage_to_laserscan" type="depthimage_to_laserscan" name="depthimage_to_laserscan" >
+                <param name="scan_height" value="3"/>
+		<param name="range_min" value="0.2"/>
+                <param name="output_frame_id" value="base_link/front_laser"/>
+                <remap from="image" to="camera/depth/image_rect_raw" />
+                <remap from="camera_info" to="camera/depth/camera_info" />
+        </node-->
+	<node if="$(arg record_sensors)" pkg="tf" type="static_transform_publisher" name="laserscan" args="0 0 0 0 0 0 camera_link base_link/front_laser 100"/>
+        <!--node pkg="tf" type="static_transform_publisher" name="dept_camera_for_replay" args="1 0 0 0 0 0  base_link/front_laser camera_depth_optical_frame 100"/-->
+	<!--node pkg="tf" type="static_transform_publisher" name="map" args="0 0 0 0 0 0 map odom 100"/-->
+        <node name="cliff_detector" pkg="cliff_detector" type="cliff_detector" output="screen" >
+                <remap from="image" to="/camera/depth/image_rect_raw"/>
+                <remap from="camera_info" to="/camera/depth/camera_info"/>
+                <rosparam command="load" file="$(find robot)/params_mob/cliff_detector_params.yaml" />
+        </node>
+        <!-- TF transformations x y z yaw pitch roll -->
+        <node if="$(arg record_sensors)" pkg="tf" type="static_transform_publisher" name="realsense" args="0.06 0 0.17 0 0 0 /base_link /camera_link 100"/> 
+	<!--node pkg="tf" type="static_transform_publisher" name="tracking" args="0.06 0 0.17 0 0 0 /base_link /rs_t265_link  100"/-->       
+</launch>
+

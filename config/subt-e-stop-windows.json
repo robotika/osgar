@@ -3,7 +3,7 @@
   "robot": {
     "modules": {
       "estop": {
-          "driver": "estop:EStop",
+          "driver": "subt.estop:EStop",
           "in": ["raw"],
           "out": ["raw", "emergency_stop"],
           "init": {}

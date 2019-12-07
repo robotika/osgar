@@ -1,0 +1,7 @@
+<launch>
+	<arg name="port"/>
+  	<env name="ROSCONSOLE_CONFIG_FILE" value="$(find base)/custom_rosconsole.conf"/>
+  	<node name="base" pkg="base" type="base_$(env ROBOT).py"  output="screen">
+		<param name="port" value="$(arg port)" />  
+	</node>
+</launch>

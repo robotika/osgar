@@ -1,0 +1,115 @@
+<launch>
+	<env name="DISPLAY" value=":0.0"/>
+	<!-- LOGGING -->
+        <arg name="record_sensors" default="true" />
+        <node pkg="rosbag" type="record" name="rosbag_record" args="record -o /media/pavliik/SSD/bags/ /cv_camera/image_raw /cv_camera/camera_info /odom /imu /scan_vertical /scan_horizontal /ublox/fix  __name:=my_bag" if="$(arg record_sensors)"/>
+        <node pkg="rosbag" type="play" name="player" output="screen" args="--pause --clock /media/pavliik/SSD/bags/_2019-09-12-23-27-09.bag" unless="$(arg record_sensors)"/>
+	<group unless="$(arg record_sensors)">
+		<param name="use_sim_time" value="true"/>
+	</group>
+	<group if="$(arg record_sensors)">
+                <param name="use_sim_time" value="false"/>
+        </group>
+
+
+	<!-- ROBOT BASE /-->
+	<include file="$(find base)/launch/base.launch" if="$(arg record_sensors)">
+		<arg name="port" value="/dev/ttyArduino" />
+	</include>
+	<node name="base_transform" pkg="base" type="base_transform.py"  output="screen"/>
+	<node name="car_rotation" pkg="base" type="car_rotation.py"  output="screen"/>
+
+
+	<!-- NAVIGATION -->
+        <arg name="map_url" default="package://robot/maps/jenstejn_small.osm" />
+	<node pkg="robotour_global_planner" type="empty_map.py" name="empty_map" output="screen" >
+        </node>
+        <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+	        <rosparam file="$(find robot)/params_car/costmap_common_params.yaml" command="load" ns="global_costmap" />
+	        <rosparam file="$(find robot)/params_car/costmap_common_params.yaml" command="load" ns="local_costmap" />
+                <rosparam file="$(find robot)/params_car/local_costmap_params.yaml" command="load" />
+                <rosparam file="$(find robot)/params_car/global_costmap_params.yaml" command="load" />
+                <rosparam file="$(find robot)/params_car/base_local_planner_DWA_params.yaml" command="load" />
+                <param name="base_global_planner" type="string" value="carrot_planner/CarrotPlanner" />
+                <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS"/>
+                <param name="controller_frequency" value="10.0"/>
+        </node>
+	<node pkg="robotour_global_planner" type="robotour_planner.py" name="robotour_planner" output="screen">
+		 <param name="osm_file" value="$(arg map_url)" />
+	</node>
+	<!-- Start map server -->
+  	<node pkg="osm_cartography" type="osm_server" name="osm_server" output="screen" />
+	<!-- Start map visualization -->
+	<node pkg="osm_cartography" type="viz_osm" name="viz_osm" >
+    		<param name="map_url" value="$(arg map_url)" />
+	</node>
+	<!--node pkg="tf" type="static_transform_publisher" name="tf_map_local_map" args="471595.0 5554150.0 0 0 0 0 1 /map /local_map 100" >
+    		<param name="capability_group" value="0 tf"/>
+  	</node-->	
+
+	
+	<!-- LOCALIZATION /-->
+	<rosparam command="load" file="$(find robot)/params_car/ekf_params.yaml" />
+  	<rosparam command="load" file="$(find robot)/params_car/navsat_params.yaml" />
+	<node pkg="robot_localization" type="ekf_localization_node" name="ekf_se_map" clear_params="true">
+    		<remap from="odometry/filtered" to="odometry/filtered_map"/>
+  	</node>
+	<node pkg="robot_localization" type="navsat_transform_node" name="navsat_transform" clear_params="true" respawn="true">
+    		<remap from="/imu/data" to="/imu" />
+    		<remap from="/gps/fix" to="/snapped_gps" />
+    		<remap from="/odometry/filtered" to="/odometry/filtered_map" />
+	</node>
+
+
+ 	<!-- REMOTE CONTROL /-->	
+	<!--node name="keyboard" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" output="screen">
+		<param name="~speed" value="0.4" />
+		<param name="~turn" value="1.0" />
+	</node-->
+	<!--node pkg="joy" type="joy_node" name="joy_node">
+                <param name="dev" value="/dev/input/js0" />
+                <param name="deadzone" value="0.2" />
+                <param name="autorepeat_rate" value="5" />
+        </node-->
+
+	
+	<!--SICK -->
+	<param name="robot_description" command="$(find xacro)/xacro --inorder '$(find sick_tim)/urdf/example.urdf.xacro'" />
+  	<node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
+	<node name="sick_tim310s01" pkg="sick_tim" type="sick_tim310s01" respawn="false" output="screen" if="$(arg record_sensors)">
+        	<param name="min_ang" type="double" value="-1.27" />
+      		<param name="max_ang" type="double" value="1.27" />
+		<remap from="/scan" to="/scan_horizontal" />
+	</node>
+        <node pkg="tf" type="static_transform_publisher" name="tim310_tf" args="0.24 0 0.18 0 0 0 /base_link /laser_mount_link 100"/>
+	<node name="sick_tim571_2050101" pkg="sick_tim" type="sick_tim551_2050001" respawn="false" output="screen" if="$(arg record_sensors)">
+        	<remap from="/scan" to="/scan_vertical" />
+         	<param name="hostname" type="string" value="192.168.0.1" />
+         	<param name="port" type="string" value="2112" />
+         	<param name="timelimit" type="int" value="5" />
+	</node>
+	
+	<!-- GPS -->
+	<node pkg="ublox_gps" type="ublox_gps" name="ublox"
+        	output="screen"
+        	clear_params="true"
+        	respawn="true"
+       	 	respawn_delay="30" if="$(arg record_sensors)">
+    		<rosparam command="load" file="$(find robot)/params_car/ublox.yaml" />
+    		<param name="config_on_startup" value="false"/>
+  	</node>
+
+
+	<!--CAMERA -->
+	<node pkg="cv_camera" type="cv_camera_node" name="cv_camera" output="screen" if="$(arg record_sensors)">
+                <param name="flip_image" value="false" />
+                <param name="device_id" value="1" />
+                <param name="image_width" value="640" />
+                <param name="image_height" value="480" />
+                <param name="rate" value="10"/>
+		<param name="camera_info_url" value="package://robot/params_car/camera_calibration.yaml"/>
+        </node>
+	<node pkg="tf" type="static_transform_publisher" name="camera_tf" args="0.24 0 0.18 0 0 0 /base_link /camera 100"/>
+        
+</launch>
+
