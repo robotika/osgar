@@ -88,4 +88,22 @@ class LoRaTest(unittest.TestCase):
         c.join()
         self.assertEqual(tester.listen()[2], b'GoHome')
 
+    def test_control_center(self):
+        logger = MagicMock()
+        bus = Bus(logger)
+        logger.write = MagicMock(return_value=datetime.timedelta(seconds=97))
+        c = LoRa(bus=bus.handle('lora'), config={'device_id':1})
+        app = bus.handle('app')
+        app.register('cmd')
+        tester = bus.handle('serial')
+        tester.register('raw')
+        bus.connect('app.cmd', 'lora.cmd')
+        bus.connect('lora.raw', 'serial.raw')
+        c.start()
+        app.publish('cmd', [3, b'Pause'])
+        c.request_stop()
+        c.join()
+        self.assertEqual(tester.listen()[2], b'alive\n')
+        self.assertEqual(tester.listen()[2], b'3:Pause:97\n')
+
 # vim: expandtab sw=4 ts=4

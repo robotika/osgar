@@ -23,7 +23,7 @@
   I/O:
   This driver can now parse commands for particular device in the form:
     <device_id>:<cmd>:<hash>
-  The <device_id> has to match in order to publish <cmd>. <hash> is used only for distiniction
+  The <device_id> has to match in order to publish <cmd>. <hash> is used only for distinction
   of messages, and the plan is to use seconds since control center start.
 
 """
@@ -133,9 +133,12 @@ class LoRa(Node):
                     self.send_data(packet.strip())  # re-transmit data from other robots
                 self.buf, packet = split_lora_buffer(self.buf)
 
-        elif channel == 'pose2d':  # accept all types of messages?
+        elif channel == 'pose2d':
             if self.last_transmit is None or self.time > self.last_transmit + self.min_transmit_dt:
                 self.send_data(bytes(str(self.pose2d), encoding='ascii'))
+        elif channel == 'cmd':
+            assert len(self.cmd) == 2, self.cmd
+            self.send_data(b'%d:%s:%d' % (self.cmd[0], self.cmd[1], int(self.time.total_seconds())))
         else:
             assert False, channel  # not supported
         return channel
