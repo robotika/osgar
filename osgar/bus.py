@@ -64,6 +64,8 @@ class _BusHandler:
             self.slots[o] = []
 
     def connect(self, output, receiver, input, modules):
+        if output not in self.out:
+            raise RuntimeError(f"'{self.name}' does not have '{output}' as output.")
         if input.startswith('slot_'):
             assert modules is not None
             assert receiver.name in modules
