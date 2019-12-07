@@ -323,7 +323,7 @@ class RobotKloubak(Node):
                 self.enc_debug_arr.append((timestamp.total_seconds(), cmd_l, cmd_r,
                     self.last_encoders_front_left, self.last_encoders_front_right,
                     self.last_encoders_rear_left, self.last_encoders_rear_right))
-                self.join_debug_arr.append(self.last_join_angle)
+                self.join_debug_arr.append(joint_deg(self.last_join_angle))
 
             rear_drive = False  # True  # experimental
             if rear_drive and self.desired_speed > 0:
