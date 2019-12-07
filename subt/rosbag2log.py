@@ -85,7 +85,10 @@ def read_rosbag_gen(filename):
             size = struct.unpack('<I', data_len)[0]
             assert size < MAX_RECORD_SIZE, size
             data = f.read(size)
-            assert len(data) == size, (len(data), size)
+            #assert len(data) == size, (len(data), size)
+            if len(data) != size:
+                print("Error", (len(data), size))
+                return
             op = header_dict['op']
             if op == OP_CHUNK:
                 chunk = data
