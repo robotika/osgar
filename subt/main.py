@@ -130,7 +130,7 @@ class SubTChallenge:
         self.traveled_dist = 0.0
         self.time = None
         self.max_speed = config['max_speed']
-        self.max_angular_speed = math.radians(45)
+        self.max_angular_speed = math.radians(20)
         self.walldist = config['walldist']
         self.timeout = timedelta(seconds=config['timeout'])
         self.symmetric = config['symmetric']  # is robot symmetric?
@@ -422,7 +422,7 @@ class SubTChallenge:
         cacc = np.asarray(acc) - egacc.T  # Corrected acceleration (without gravitational acceleration).
         magnitude = math.hypot(cacc[0, 0], cacc[0, 1])
         # used to be 12 - see https://bitbucket.org/osrf/subt/issues/166/expected-x2-acceleration
-        if magnitude > 20:  #18.0:
+        if magnitude > 200:  #18.0:
             print(self.time, 'Collision!', acc, 'reported:', self.collision_detector_enabled)
             if self.collision_detector_enabled:
                 self.collision_detector_enabled = False
@@ -657,7 +657,7 @@ class SubTChallenge:
         self.stdout("Dump END")
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver31!")
+        self.stdout("SubT Challenge Ver33!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
