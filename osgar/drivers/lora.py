@@ -25,6 +25,7 @@
     <device_id>:<cmd>:<hash>
   The <device_id> has to match in order to publish <cmd>. <hash> is used only for distinction
   of messages, and the plan is to use seconds since control center start.
+  Broadcast command for all robots is realized by <device_id> = 0.
 
 """
 from datetime import timedelta
@@ -65,7 +66,8 @@ def split_lora_buffer(buf):
 def parse_my_cmd(my_id, data):
     s = data.split(b':')
     try:
-        if int(s[0]) == my_id:
+        destination_id = int(s[0])
+        if destination_id == my_id or destination_id == 0:
             return s[1]
     except:
         pass

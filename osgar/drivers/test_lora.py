@@ -70,6 +70,7 @@ class LoRaTest(unittest.TestCase):
 
     def test_parse_cmd(self):
         self.assertEqual(parse_my_cmd(4, b'4:GoHome:14151'), b'GoHome')
+        self.assertEqual(parse_my_cmd(4, b'0:Pause:11'), b'Pause')  # 0 for ALL
         self.assertIsNone(parse_my_cmd(2, b'4:GoHome:14151'))
         self.assertIsNone(parse_my_cmd(2, b'nonsense'))
 
