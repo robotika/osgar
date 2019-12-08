@@ -1,7 +1,8 @@
 import unittest
 
 from osgar.drivers.rosmsg import (ROSMsgParser, parse_jpeg_image, parse_laser,
-                                  parse_odom, parse_imu, parse_points)
+                                  parse_odom, parse_imu, parse_points, get_frame_id,
+                                  parse_bool)
 
 
 class ROSMsgParserTest(unittest.TestCase):
@@ -87,5 +88,15 @@ class ROSMsgParserTest(unittest.TestCase):
                 index += 1
                 if index > 10:
                     break
+
+    def test_get_frame_id(self):
+        data = b'\x08\x00\x00\x00\x02\x00\x00\x00\x00\x06\x81\x14'
+        self.assertEqual(get_frame_id(data), b'/clock')
+        data = b'\x01\x00\x00\x00\x00'
+        self.assertEqual(get_frame_id(data), b'/gas_detected')
+
+    def test_parse_bool(self):
+        data = b'\x01\x00\x00\x00\x00'
+        self.assertEqual(parse_bool(data), False)
 
 # vim: expandtab sw=4 ts=4
