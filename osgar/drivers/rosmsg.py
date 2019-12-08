@@ -239,12 +239,23 @@ def parse_clock(data):
     return (timestamp_sec, timestamp_nsec)
 
 
+def parse_bool(data):
+    size = struct.unpack_from('<I', data)[0]
+    assert size == 1, size  # std_msgs::Bool does not contain type, only 1 byte of data
+    val = data[4]
+    assert val in [0, 1], val
+    return val != 0
+
+
 def get_frame_id(data):
     size = struct.unpack_from('<I', data)[0]
     pos = 4
     if size == 8:
         # exception for /clock ?!
         return b'/clock'
+    if size == 1:
+        # exception for Bool -> /gas_detected ?!
+        return b'/gas_detected'
 
     seq, timestamp_sec, timestamp_nsec, frame_id_size = struct.unpack_from('<IIII', data, pos)
     pos += 4 + 4 + 4 + 4
@@ -256,7 +267,7 @@ class ROSMsgParser(Thread):
     def __init__(self, config, bus):
         Thread.__init__(self)
         self.setDaemon(True)
-        bus.register("rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin")
+        bus.register("rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin", "gas_detected")
 
         self.bus = bus
         self._buf = b''
@@ -272,6 +283,7 @@ class ROSMsgParser(Thread):
 
         self.desired_speed = 0.0  # m/s
         self.desired_angular_speed = 0.0
+        self.gas_detected = None  # this SubT Virtual specific :-(
 
     def get_packet(self):
         data = self._buf
@@ -334,6 +346,11 @@ class ROSMsgParser(Thread):
             if self.timestamp_sec > 0 and ms % 50 == 0:  # 20Hz
                 cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
                 self.bus.publish('cmd', cmd)
+        elif frame_id.endswith(b'/gas_detected'):
+            # send only status change
+            if self.gas_detected != parse_bool(packet):
+                self.gas_detected = parse_bool(packet)
+                self.bus.publish('gas_detected', self.gas_detected)
 
     def slot_desired_speed(self, timestamp, data):
         self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
@@ -347,7 +364,10 @@ class ROSMsgParser(Thread):
         self.bus.publish('cmd', cmd)
 
     def send_filename(self):
-        filename = self.bus.logger.filename  # deep hack
+        try:
+            filename = self.bus.logger.filename  # deep hack
+        except AttributeError:
+            filename = "unknown"  # workaround for replay
         cmd = b'file ' + bytes(filename, encoding='ascii')
         self.bus.publish('cmd', cmd)
 
