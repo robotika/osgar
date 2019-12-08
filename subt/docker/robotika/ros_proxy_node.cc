@@ -33,6 +33,7 @@
 #include <std_srvs/SetBool.h>
 #include <rosgraph_msgs/Clock.h>
 #include <std_msgs/String.h>
+#include <std_msgs/Bool.h>
 
 #include <string>
 #include <stdlib.h>     /* abs */
@@ -50,6 +51,7 @@ int g_countImu = 0;
 int g_countScan = 0;
 int g_countImage = 0;
 int g_countOdom = 0;
+int g_countGas = 0;
 
 void *g_context;
 void *g_responder;
@@ -116,6 +118,15 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
   g_countOdom++;
 }
 
+void gasCallback(const std_msgs::Bool::ConstPtr& msg)
+{
+  ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
+  zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
+  if(g_countGas % 100 == 0)
+    ROS_INFO("received Gas %d", g_countGas);
+  g_countGas++;
+}
+
 void sendOrigin(std::string& name, double x, double y, double z,
                 double qx, double qy, double qz, double qw)
 {
@@ -178,6 +189,7 @@ class Controller
   ros::Subscriber subScan;
   ros::Subscriber subImage;
   ros::Subscriber subOdom;
+  ros::Subscriber subGas;
 
   /// \brief True if robot has arrived at destination.
   public: bool arrived{false};
@@ -288,6 +300,7 @@ void Controller::Update()
       this->subScan = n.subscribe(this->name + "/front_scan", 1000, scanCallback);
       this->subImage = n.subscribe(this->name + "/front/image_raw/compressed", 1000, imageCallback);
       this->subOdom = n.subscribe(this->name + "/odom", 1000, odomCallback);
+      this->subGas = n.subscribe(this->name + "/gas_detected", 1000, gasCallback);
 
       // Create a cmd_vel publisher to control a vehicle.
       this->originClient = this->n.serviceClient<subt_msgs::PoseFromArtifact>(
