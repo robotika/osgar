@@ -11,17 +11,15 @@ from osgar.node import Node
 from osgar.bus import BusShutdownException
 
 #WHEEL_DISTANCE = 0.475  # m
-WHEEL_DISTANCE = 0.496  # m K2
-CENTER_AXLE_DISTANCE = 0.348  # distance from potentiometer
+WHEEL_DISTANCE = 0.496  # m K2, can be modified by config
+CENTER_AXLE_DISTANCE = 0.348  # distance from potentiometer, can be modified by config
 VESC_REPORT_FREQ = 20  # was 100  # Hz
 SPEED_ENC_SCALE = (33/25)*0.25 * math.pi / (4 * 3 * 60 * VESC_REPORT_FREQ)  # scale 4x found experimentally
 ENC_SCALE = (33/25)*8.0/950  # TODO proper calibration (scale for large 33" wheels, old were 25")
 
-AD_CENTER = 419.7 # K2
-AD_MAX_DEG = 45  # K2
-AD_RANGE = -182.5  # K2
-AD_HW_LIMIT_LEFT = 12480  # corresponds to circle 37cm of touching left wheels
-AD_HW_LIMIT_RIGHT = 3584  # circle 40cm diameter, touching right wheels
+AD_CENTER = 419.7 # K2, can be modified by config
+AD_CALIBRATION_DEG = 45  # K2, can be modified by config
+AD_RANGE = -182.5  # K2, can be modified by config
 
 CAN_ID_BUTTONS = 0x1
 CAN_ID_VESC_FRONT_R = 0x91
@@ -101,7 +99,7 @@ def compute_desired_angle(desired_speed, desired_angular_speed):
 def joint_rad(analog):
     if analog is None:
         return None
-    return math.radians(AD_MAX_DEG * ( AD_CENTER - analog )/AD_RANGE)
+    return math.radians(AD_CALIBRATION_DEG * ( AD_CENTER - analog )/AD_RANGE)
 
 
 def joint_deg(analog):
@@ -122,10 +120,24 @@ def sint16_diff(a, b):
     return ctypes.c_int16(a - b).value
 
 
+def setup_global_const(config):
+    global WHEEL_DISTANCE
+    global CENTER_AXLE_DISTANCE
+    global AD_CENTER
+    global AD_CALIBRATION_DEG
+    global AD_RANGE
+    WHEEL_DISTANCE = config.get("wheel_distance", WHEEL_DISTANCE)
+    CENTER_AXLE_DISTANCE = config.get("center_axle_distance", CENTER_AXLE_DISTANCE)
+    AD_CENTER = config.get("ad_center", AD_CENTER)
+    AD_CALIBRATION_DEG = config.get("ad_calibration_deg", AD_CALIBRATION_DEG)
+    AD_RANGE = config.get("ad_range", AD_RANGE)
+
+
 class RobotKloubak(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('pose2d', 'emergency_stop', 'encoders', 'can')
+        setup_global_const(config)
 
         # commands
         self.desired_speed = 0.0  # m/s
@@ -335,7 +347,7 @@ class RobotKloubak(Node):
                     desired_angle = compute_desired_angle(self.desired_speed, self.desired_angular_speed)
                     angle = joint_rad(self.last_join_angle)
                     diff = abs(desired_angle - angle)
-                    speed = self.desired_speed * (1 - diff/math.radians(AD_MAX_DEG))
+                    speed = self.desired_speed * (1 - diff/math.radians(80))
 
                     angular_speed = desired_angle - angle  # i.e. in 1s it should be the same
                     limit_l, limit_r = compute_desired_erpm(speed, -angular_speed)  # mirror flip (rear)

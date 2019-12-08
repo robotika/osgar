@@ -10,7 +10,12 @@
             "symmetric": true,
             "max_speed": 0.5,
             "virtual_bumper_sec": 10.0,
-            "virtual_bumper_radius": 0.5
+            "virtual_bumper_radius": 0.5,
+            "wheel_distance": 0.496,
+            "center_axle_distance": 0.348,
+            "ad_center": 419.7,
+            "ad_calibration_deg": 45,
+            "ad_range": -182.5
           }
       },
       "detector": {
