@@ -448,6 +448,14 @@ bool Controller::parseArtf(char *input_str, subt::msgs::Artifact& artifact)
         {
           type = subt::ArtifactType::TYPE_VALVE;
         }
+        if(strcmp(buf, "TYPE_VENT") == 0)
+        {
+          type = subt::ArtifactType::TYPE_VENT;
+        }
+        if(strcmp(buf, "TYPE_GAS") == 0)
+        {
+          type = subt::ArtifactType::TYPE_GAS;
+        }
 
         artifact.set_type(static_cast<uint32_t>(type));
 
