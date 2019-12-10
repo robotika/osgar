@@ -98,7 +98,7 @@ def draw_lora_positions(arr):
 class LoRa(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('raw', 'cmd')
+        bus.register('raw', 'cmd', 'robot_status')
         self.device_id = config.get('device_id')  # None for "autodetect"
         self.init_sleep = config.get('sleep')  # needed for Windows on start
         self.min_transmit_dt = timedelta(seconds=10)  # TODO config?
@@ -124,8 +124,11 @@ class LoRa(Node):
             while len(packet) > 0:
                 self.recent_packets.append(packet)
                 addr, data = parse_lora_packet(packet)
-                if addr is not None and data.startswith(b'[') and self.verbose:
-                    self.debug_robot_poses.append((self.time.total_seconds(), addr[-1], literal_eval(data.decode('ascii'))))
+                if addr is not None and data.startswith(b'['):
+                    pose2d = literal_eval(data.decode('ascii'))
+                    self.publish('robot_status', [addr[-1], pose2d, 'running'])
+                    if self.verbose:
+                        self.debug_robot_poses.append((self.time.total_seconds(), addr[-1], pose))
                 cmd = parse_my_cmd(self.device_id, data)
                 if cmd is not None:
                     self.publish('cmd', cmd)
