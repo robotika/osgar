@@ -7,6 +7,7 @@ import math
 import random
 import sys
 import platform
+from datetime import timedelta
 from contextlib import suppress
 
 from PyQt5.QtCore import pyqtSignal, QSize, Qt, QPointF
@@ -49,30 +50,50 @@ CFG_LORA = {
 
 
 ####################################################################################
-class DummyRobot(osgar.node.Node):
+class DummyRobot:
     def __init__(self, cfg, bus):
-        super().__init__(cfg, bus)
+        self.bus = bus
         bus.register('status')
-        self.sleep_time = cfg['sleep']
         self.speed = cfg.get('speed', 0.5) # m/s
         self.random = random.Random(cfg.get('seed', 1))
         self.x, self.y = cfg.get('x', 0), cfg.get('y', 0) # m
         self.heading = math.radians(cfg.get('heading', 30)) # degrees
         self.id = cfg.get('id', 1)
+        self.thread = threading.Thread(target=self.run)
+
+    def start(self):
+        self.thread.start()
+
+    def request_stop(self):
+        self.bus.shutdown()
+
+    def join(self):
+        self.thread.join()
 
     def run(self):
         x, y = self.x, self.y
         heading = self.heading
+        last_dt = timedelta()
+        current_speed = self.speed
+        state = b'Continue'
         try:
-            while self.is_alive():
-                step = self.sleep_time * self.speed
-                x += step * math.cos(heading)
-                y += step * math.sin(heading)
-                self.publish('status', [self.id, [round(x*1000), round(y*1000), round(math.degrees(heading)*100)], 'running'])
-                if self.random.random() > 0.3:
-                    heading += math.radians(10)
-                self.sleep(self.sleep_time)
-
+            while True:
+                dt, channel, data = self.bus.listen()
+                #print(dt, channel, data, self.id)
+                if channel == 'cmd':
+                    robot_id, cmd = data
+                    if robot_id == 0 or robot_id == self.id:
+                        state = cmd
+                elif channel == 'move':
+                    if state == b'Continue':
+                        step = (dt - last_dt).total_seconds() * current_speed
+                        x += step * math.cos(heading)
+                        y += step * math.sin(heading)
+                        if self.random.random() > 0.3:
+                            heading += math.radians(10)
+                    last_dt = dt
+                    pose2d = [round(x * 1000), round(y * 1000), round(math.degrees(heading) * 100)]
+                    self.bus.publish('status', [self.id, pose2d, state])
         except osgar.bus.BusShutdownException:
             pass
 
@@ -85,10 +106,15 @@ CFG_DEMO = {
           "driver": "subt.control_center_qt:OsgarControlCenter",
           "init": {}
       },
+      "timer": {
+          "driver": "timer",
+          "init": {
+              "sleep": 0.5,
+          }
+      },
       "robot1": {
           "driver": "subt.control_center_qt:DummyRobot",
           "init": {
-              "sleep": 0.5,
               "id": 1,
               "heading": 0*30,
           }
@@ -96,7 +122,6 @@ CFG_DEMO = {
       "robot2": {
           "driver": "subt.control_center_qt:DummyRobot",
           "init": {
-              "sleep": 0.5,
               "id": 2,
               "heading": 1*30,
           }
@@ -104,7 +129,6 @@ CFG_DEMO = {
       "robot3": {
           "driver": "subt.control_center_qt:DummyRobot",
           "init": {
-              "sleep": 0.5,
               "id": 3,
               "heading": 2*30,
           }
@@ -112,17 +136,24 @@ CFG_DEMO = {
       "robot4": {
           "driver": "subt.control_center_qt:DummyRobot",
           "init": {
-              "sleep": 0.5,
               "id": 4,
               "heading": 3*30,
           }
       }
     },
     "links": [
+        ["timer.tick", "robot1.move"],
+        ["timer.tick", "robot2.move"],
+        ["timer.tick", "robot3.move"],
+        ["timer.tick", "robot4.move"],
         ["robot1.status", "cc.robot_status"],
         ["robot2.status", "cc.robot_status"],
         ["robot3.status", "cc.robot_status"],
         ["robot4.status", "cc.robot_status"],
+        ["cc.cmd", "robot1.cmd"],
+        ["cc.cmd", "robot2.cmd"],
+        ["cc.cmd", "robot3.cmd"],
+        ["cc.cmd", "robot4.cmd"],
     ]
   }
 }
@@ -262,7 +293,7 @@ def record(view, cfg):
 
 class View(QWidget):
 
-    robot_status = pyqtSignal(int, list, str)
+    robot_status = pyqtSignal(int, list, bytes)
     show_message = pyqtSignal(str, int)
     colors = [QColor(Qt.white), QColor(Qt.green), QColor(Qt.blue), QColor(Qt.red),
               QColor(Qt.cyan), QColor(Qt.magenta), QColor(Qt.yellow)]
