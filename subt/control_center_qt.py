@@ -57,20 +57,20 @@ class DummyRobot(osgar.node.Node):
         self.speed = cfg.get('speed', 0.5) # m/s
         self.random = random.Random(cfg.get('seed', 1))
         self.x, self.y = cfg.get('x', 0), cfg.get('y', 0) # m
-        self.heading = cfg.get('heading', 30) # degrees
+        self.heading = math.radians(cfg.get('heading', 30)) # degrees
         self.id = cfg.get('id', 1)
 
     def run(self):
-        x, y = self.x*100, self.y*100
+        x, y = self.x, self.y
         heading = self.heading
         try:
             while self.is_alive():
-                step = self.sleep_time * self.speed * 1000
-                x += step * math.cos(math.radians(heading))
-                y += step * math.sin(math.radians(heading))
-                self.publish('status', [self.id, [int(x), int(y), heading*100], 'running'])
+                step = self.sleep_time * self.speed
+                x += step * math.cos(heading)
+                y += step * math.sin(heading)
+                self.publish('status', [self.id, [round(x*1000), round(y*1000), round(math.degrees(heading)*100)], 'running'])
                 if self.random.random() > 0.3:
-                    heading += 10
+                    heading += math.radians(10)
                 self.sleep(self.sleep_time)
 
         except osgar.bus.BusShutdownException:
@@ -154,8 +154,9 @@ class OsgarControlCenter:
             except osgar.bus.BusShutdownException:
                 return
             if channel == "robot_status":
-                robot, pose2d, status = data
-                self.view.robot_status.emit(robot, pose2d, status)
+                robot_id, (x, y, heading), status = data
+                pose2d = [x/1000, y/1000, math.radians(heading/100)]
+                self.view.robot_status.emit(robot_id, pose2d, status)
 
     def pause_mission(self):
         self.bus.publish('cmd', [0, b'Pause'])
@@ -276,14 +277,14 @@ class View(QWidget):
         self.robot_statuses = {}
 
     def on_robot_status(self, robot, pose2d, status):
-        self.show_message.emit(f"received position {pose2d} and status {status} from robot {robot}", 3000)
+        self.show_message.emit(f"robot {robot}: pose2d {pose2d}, status {status}", 3000)
         self.robot_statuses.setdefault(robot, []).append((pose2d, status))
         self.update()
 
     def paintEvent(self, e):
         t = QTransform() # world transform
         t.translate(self.width() / 2, self.height() / 2) # in pixels
-        t.scale(0.1, -0.1) # 1px == 1cm (position is in mm)
+        t.scale(100, -100) # 1px == 1cm (position is in meters)
 
         t2 = QTransform() # just orientation
         t2.scale(1, -1)
@@ -297,7 +298,6 @@ class View(QWidget):
                     robot_position = t.map(QPointF(x, y))
                     path.append(robot_position)
                     qp.drawEllipse(robot_position, 3, 3)
-                heading = math.radians(heading/100.0)
                 facing = QTransform(t2).rotateRadians(heading).map(QPointF(10,0))
                 qp.drawLine(robot_position, robot_position+facing)
                 qp.drawEllipse(robot_position, 5, 5)
