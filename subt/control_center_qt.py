@@ -4,6 +4,7 @@
 
 import threading
 import math
+import random
 import sys
 import platform
 from contextlib import suppress
@@ -48,21 +49,28 @@ CFG_LORA = {
 
 
 ####################################################################################
-class DummyRobotReporter(osgar.node.Node):
+class DummyRobot(osgar.node.Node):
     def __init__(self, cfg, bus):
         super().__init__(cfg, bus)
         bus.register('status')
         self.sleep_time = cfg['sleep']
+        self.speed = cfg.get('speed', 0.5) # m/s
+        self.random = random.Random(cfg.get('seed', 1))
+        self.x, self.y = cfg.get('x', 0), cfg.get('y', 0) # m
+        self.heading = cfg.get('heading', 30) # degrees
+        self.id = cfg.get('id', 1)
 
     def run(self):
-        step = 500
-        x, y = 0, 0
-        heading = 30
+        x, y = self.x*100, self.y*100
+        heading = self.heading
         try:
             while self.is_alive():
+                step = self.sleep_time * self.speed * 1000
                 x += step * math.cos(math.radians(heading))
                 y += step * math.sin(math.radians(heading))
-                self.publish('status', [1, [int(x), int(y), heading*100], 'running'])
+                self.publish('status', [self.id, [int(x), int(y), heading*100], 'running'])
+                if self.random.random() > 0.3:
+                    heading += 10
                 self.sleep(self.sleep_time)
 
         except osgar.bus.BusShutdownException:
@@ -78,13 +86,44 @@ CFG_DEMO = {
           "init": {}
       },
       "robot1": {
-          "driver": "subt.control_center_qt:DummyRobotReporter",
+          "driver": "subt.control_center_qt:DummyRobot",
           "init": {
-              "sleep": 0.5
+              "sleep": 0.5,
+              "id": 1,
+              "heading": 0*30,
+          }
+      },
+      "robot2": {
+          "driver": "subt.control_center_qt:DummyRobot",
+          "init": {
+              "sleep": 0.5,
+              "id": 2,
+              "heading": 1*30,
+          }
+      },
+      "robot3": {
+          "driver": "subt.control_center_qt:DummyRobot",
+          "init": {
+              "sleep": 0.5,
+              "id": 3,
+              "heading": 2*30,
+          }
+      },
+      "robot4": {
+          "driver": "subt.control_center_qt:DummyRobot",
+          "init": {
+              "sleep": 0.5,
+              "id": 4,
+              "heading": 3*30,
           }
       }
     },
-    "links": [["robot1.status", "cc.robot_status"]]
+    "links": [
+        ["robot1.status", "cc.robot_status"],
+        ["robot2.status", "cc.robot_status"],
+        ["robot3.status", "cc.robot_status"],
+        ["robot4.status", "cc.robot_status"],
+    ]
   }
 }
 ####################################################################################
@@ -258,9 +297,10 @@ class View(QWidget):
                     robot_position = t.map(QPointF(x, y))
                     path.append(robot_position)
                     qp.drawEllipse(robot_position, 3, 3)
-                    #heading = math.radians(heading/100.0)
-                    #p2 = QTransform(t2).rotateRadians(heading).map(QPointF(10,0))
-                    #qp.drawLine(p1, p1+p2)
+                heading = math.radians(heading/100.0)
+                facing = QTransform(t2).rotateRadians(heading).map(QPointF(10,0))
+                qp.drawLine(robot_position, robot_position+facing)
+                qp.drawEllipse(robot_position, 5, 5)
                 qp.setPen(base_color.darker())
                 qp.drawPolyline(path)
             qp.setPen(Qt.white)
