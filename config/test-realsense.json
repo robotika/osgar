@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "rs": {
+          "driver": "realsense",
+          "in": ["trigger"],
+          "out": ["pose2d"],
+          "init": {}
+      },
+      "timer": {
+          "driver": "timer",
+          "in": [],
+          "out": ["tick"],
+          "init": {"sleep": 0.1}
+      }
+    },
+    "links": [["timer.tick", "rs.trigger"]]
+  }
+}
