@@ -28,5 +28,6 @@ all_drivers = dict(
     zeromq="osgar.drivers.logzeromq:LogZeroMQ",
     tankmaria="osgar.drivers.tankmaria:RobotTankMaria",
     timer="osgar.drivers.timer:Timer",
+    realsense="osgar.drivers.realsense:RealSense",
 )
 
