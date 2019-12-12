@@ -83,6 +83,10 @@ class DummyRobot:
                 if channel == 'cmd':
                     robot_id, cmd = data
                     if robot_id == 0 or robot_id == self.id:
+                        if cmd == b'Stop':
+                            return
+                        if cmd == b'GoHome':
+                            print(dt, self.id, "GoHome not implemented")
                         state = cmd
                 elif channel == 'move':
                     if state == b'Continue':
@@ -198,6 +202,9 @@ class OsgarControlCenter:
     def stop_mission(self):
         self.bus.publish('cmd', [0, b'Stop'])
 
+    def go_home(self):
+        self.bus.publish('cmd', [0, b'GoHome'])
+
 
 class MainWindow(QMainWindow):
 
@@ -241,9 +248,10 @@ class MainWindow(QMainWindow):
         w = QWidget()
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignTop)
-        layout.addWidget(QPushButton("Pause Mission", clicked=self.on_pause_mission))
-        layout.addWidget(QPushButton("Continue Mission", clicked=self.on_continue_mission))
-        layout.addWidget(QPushButton("Exit Mission", clicked=self.on_stop_mission))
+        layout.addWidget(QPushButton("&Pause Mission", clicked=self.on_pause_mission))
+        layout.addWidget(QPushButton("&Continue Mission", clicked=self.on_continue_mission))
+        layout.addWidget(QPushButton("&Stop Mission", clicked=self.on_stop_mission))
+        layout.addWidget(QPushButton("&Go Home", clicked=self.on_go_home))
         w.setLayout(layout)
         d.setWidget(w)
         d.setDisabled(True)
@@ -278,6 +286,10 @@ class MainWindow(QMainWindow):
     def on_stop_mission(self):
         print("stop mission")
         self.cc.stop_mission()
+
+    def on_go_home(self):
+        print("go home")
+        self.cc.go_home()
 
 
 def record(view, cfg):
@@ -322,7 +334,7 @@ class View(QWidget):
 
         with QPainter(self) as qp:
             for robot, statuses in self.robot_statuses.items():
-                base_color = self.colors[robot]
+                base_color = self.colors[robot%len(self.colors)]
                 qp.setPen(base_color)
                 path = QPolygonF()
                 for (x, y, heading), status in statuses:
