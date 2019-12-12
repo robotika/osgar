@@ -121,6 +121,8 @@ CFG_DEMO = {
           "init": {
               "id": 1,
               "heading": 0*30,
+              "x": 1,
+              "y": 0,
           }
       },
       "robot2": {
@@ -128,6 +130,8 @@ CFG_DEMO = {
           "init": {
               "id": 2,
               "heading": 1*30,
+              "x": 1,
+              "y": 1,
           }
       },
       "robot3": {
@@ -135,6 +139,8 @@ CFG_DEMO = {
           "init": {
               "id": 3,
               "heading": 2*30,
+              "x": 0,
+              "y": 1,
           }
       },
       "robot4": {
@@ -142,6 +148,8 @@ CFG_DEMO = {
           "init": {
               "id": 4,
               "heading": 3*30,
+              "x": -1,
+              "y": 1,
           }
       }
     },
@@ -342,8 +350,9 @@ class View(QWidget):
             # draw scale
             meter = QLineF(t.map(QPointF(1,0)), t.map(QPointF(0,0))).length()
             qp.drawLine(20, self.height()-20, 20 + meter, self.height() - 20)
-            qp.drawLine(20, self.height()-30, 20, self.height()-10)
-            qp.drawLine(20 + meter, self.height()-30, 20 + meter, self.height()-10)
+            qp.drawLine(20, self.height()-25, 20, self.height()-15)
+            qp.drawLine(20 + meter, self.height()-25, 20 + meter, self.height()-15)
+            # draw robot paths
             for robot, statuses in self.robot_statuses.items():
                 base_color = self.colors[robot%len(self.colors)]
                 qp.setPen(base_color)
@@ -352,9 +361,14 @@ class View(QWidget):
                     robot_position = t.map(QPointF(x, y))
                     path.append(robot_position)
                     qp.drawEllipse(robot_position, 3, 3)
+                # draw direction vector of last position
                 facing = QTransform(t2).rotateRadians(heading).map(QPointF(10,0))
                 qp.drawLine(robot_position, robot_position+facing)
-                qp.drawEllipse(robot_position, 5, 5)
+                # highlight last position
+                qp.setBrush(base_color)
+                qp.drawEllipse(robot_position, 4, 4)
+                qp.setBrush(Qt.NoBrush)
+                # draw path
                 qp.setPen(base_color.darker())
                 qp.drawPolyline(path)
             qp.setPen(Qt.white)
