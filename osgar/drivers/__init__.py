@@ -27,5 +27,6 @@ all_drivers = dict(
     opencv="osgar.drivers.opencv:LogOpenCVCamera",
     zeromq="osgar.drivers.logzeromq:LogZeroMQ",
     tankmaria="osgar.drivers.tankmaria:RobotTankMaria",
+    timer="osgar.drivers.timer:Timer",
 )
 
