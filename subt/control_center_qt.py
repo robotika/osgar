@@ -10,7 +10,7 @@ import platform
 from datetime import timedelta
 from contextlib import suppress
 
-from PyQt5.QtCore import pyqtSignal, QSize, Qt, QPointF
+from PyQt5.QtCore import pyqtSignal, QSize, Qt, QPointF, QLineF
 from PyQt5.QtGui import QPalette, QKeySequence, QPainter, QColor, QFont, QTransform, QIcon, QPolygonF
 from PyQt5.QtWidgets import ( QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout,
                               QMessageBox, QMainWindow, QAction, QToolBar, QMenuBar, QCheckBox,
@@ -317,10 +317,11 @@ class View(QWidget):
         p = self.palette()
         p.setColor(self.backgroundRole(), Qt.black)
         self.setPalette(p)
+        self.setMouseTracking(True)
         self.robot_statuses = {}
 
     def on_robot_status(self, robot, pose2d, status):
-        self.show_message.emit(f"robot {robot}: pose2d {pose2d}, status {status}", 3000)
+        #self.show_message.emit(f"robot {robot}: pose2d {pose2d}, status {status}", 3000)
         self.robot_statuses.setdefault(robot, []).append((pose2d, status))
         self.update()
 
@@ -333,6 +334,16 @@ class View(QWidget):
         t2.scale(1, -1)
 
         with QPainter(self) as qp:
+            # draw center cross
+            qp.setPen(Qt.red)
+            center = t.map(QPointF(0,0))
+            qp.drawLine(center-QPointF(10,0), center+QPointF(10,0))
+            qp.drawLine(center-QPointF(0,10), center+QPointF(0,10))
+            # draw scale
+            meter = QLineF(t.map(QPointF(1,0)), t.map(QPointF(0,0))).length()
+            qp.drawLine(20, self.height()-20, 20 + meter, self.height() - 20)
+            qp.drawLine(20, self.height()-30, 20, self.height()-10)
+            qp.drawLine(20 + meter, self.height()-30, 20 + meter, self.height()-10)
             for robot, statuses in self.robot_statuses.items():
                 base_color = self.colors[robot%len(self.colors)]
                 qp.setPen(base_color)
@@ -350,6 +361,19 @@ class View(QWidget):
 
     def sizeHint(self):
         return QSize(800, 600)
+
+    def mouseMoveEvent(self, e):
+        t = QTransform()
+        t.translate(self.width() / 2, self.height() / 2)
+        t.scale(100, -100)
+        t, ok = t.inverted()
+        p = t.map(e.localPos())
+
+        self.show_message.emit(f"[{p.x(): .2f}, {p.y(): .2f}]", 0)
+        #print('-'*20)
+        # for dragging
+        #print(e.globalPos())
+        #print(e.screenPos())
 
 
 def main():
