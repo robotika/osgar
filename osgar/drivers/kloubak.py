@@ -26,6 +26,9 @@ MAX_JOIN_ANGLE = 80 * math.pi/180 # K2, can be modified by config
 AD_CENTER2 = None
 AD_RANGE2 = None
 
+DOWNDROP_TOO_LONG_RAW = 800  # in millimeters, trigger for downdrop/hole
+DOWNDROP_TOO_SHORT_RAW = 350  # in millimeters, trigger for low obstacle, probably not visible by 2D lidar
+
 CAN_ID_BUTTONS = 0x1
 CAN_ID_VESC_FRONT_R = 0x91
 CAN_ID_VESC_FRONT_L = 0x92
@@ -223,10 +226,17 @@ def setup_global_const(config):
 #    TURNING_WHEEL_SPEED = TURNING_ANGULAR_SPEED * WHEEL_DISTANCE / 2
 
 
+def get_downdrop_bumpers(downdrops):
+    """Create Boolean array based on raw downdrops readings"""
+    return [not(DOWNDROP_TOO_SHORT_RAW < dist_mm < DOWNDROP_TOO_LONG_RAW) for dist_mm in downdrops]
+
+
 class RobotKloubak(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('pose2d', 'emergency_stop', 'encoders', 'can')
+        bus.register('pose2d', 'emergency_stop', 'encoders', 'can',
+                     'bumper_front', 'bumper_rear',
+                     'downdrops_front', 'downdrops_rear')
         setup_global_const(config)
 
         # commands
@@ -453,6 +463,8 @@ class RobotKloubak(Node):
             # assert len(packet) == 2 + 4, len(packet)
             if len(payload) == 4:
                 self.downdrops_front = struct.unpack_from('>HH', payload)
+                self.publish('downdrops_front', list(self.downdrops_front))
+                self.publish('bumpers_front', get_downdrop_bumpers(self.downdrops_front))
 #                print(self.time, self.downdrops_front)
                 self.debug_downdrops_front.append(
                         (self.time.total_seconds(), self.downdrops_front[0], self.downdrops_front[1]))
@@ -462,6 +474,8 @@ class RobotKloubak(Node):
             # assert len(packet) == 2 + 4, len(packet)
             if len(payload) == 4:
                 self.downdrops_rear = struct.unpack_from('>HH', payload)
+                self.publish('downdrops_rear', list(self.downdrops_rear))
+                self.publish('bumpers_rear', get_downdrop_bumpers(self.downdrops_rear))
 #                print(self.time, self.downdrops_rear)
                 self.debug_downdrops_rear.append(
                         (self.time.total_seconds(), self.downdrops_rear[0], self.downdrops_rear[1]))
