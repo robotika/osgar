@@ -235,7 +235,7 @@ class RobotKloubak(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('pose2d', 'emergency_stop', 'encoders', 'can',
-                     'bumper_front', 'bumper_rear',
+                     'bumpers_front', 'bumpers_rear',
                      'downdrops_front', 'downdrops_rear')
         setup_global_const(config)
 
