@@ -124,7 +124,16 @@ class LogReader:
         self.start_time = datetime.datetime(*struct.unpack('HBBBBBI', data))
         self.us_offset = 0  # increase after overflow
         self.prev_microseconds = 0
-        self.gen = self._read_gen(only_stream_id=only_stream_id)
+
+        if only_stream_id is None:
+            self.multiple_streams = set()
+        else:
+            try:
+                self.multiple_streams = set(only_stream_id)
+            except TypeError:
+                self.multiple_streams = set([only_stream_id])
+
+        self.gen = self._read_gen()
 
     def _read(self, size):
         buf = self.f.read(size)
@@ -136,14 +145,6 @@ class LogReader:
 
     def _read_gen(self, only_stream_id=None):
         "packed generator - yields (time, stream, data)"
-        if only_stream_id is None:
-            multiple_streams = set()
-        else:
-            try:
-                multiple_streams = set(only_stream_id)
-            except TypeError:
-                multiple_streams = set([only_stream_id])
-
         while True:
             header = self._read(8)
             if len(header) < 8:
@@ -167,7 +168,7 @@ class LogReader:
                 assert len(part) == size, (len(part), size)
                 data += part
 
-            if len(multiple_streams) == 0 or stream_id in multiple_streams:
+            if len(self.multiple_streams) == 0 or stream_id in self.multiple_streams:
                 yield dt, stream_id, data
 
     def close(self):

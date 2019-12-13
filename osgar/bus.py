@@ -117,7 +117,8 @@ class LogBusHandler:
         self.max_delay_timestamp = timedelta()
 
     def register(self, *outputs):
-        pass
+        for o in outputs:
+            assert o in self.outputs.values(), (o, self.outputs)
 
     def listen(self):
         while True:
@@ -125,6 +126,9 @@ class LogBusHandler:
                 dt, stream_id, bytes_data = next(self.reader)
             else:
                 dt, stream_id, bytes_data = self.buffer_queue.popleft()
+            if stream_id not in self.inputs:
+                error = f"unexpected input (stream {stream_id}, known inputs {list(self.inputs.keys())})"
+                raise RuntimeError(error)
             channel = self.inputs[stream_id]
             data = deserialize(bytes_data)
             if channel.startswith("slot_"):
