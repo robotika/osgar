@@ -548,7 +548,7 @@ class SubTChallenge:
         try:
             with EmergencyStopMonitor(self):
                 allow_virtual_flip = self.symmetric
-                self.go_straight(2.5)  # go to the tunnel entrance
+#                self.go_straight(2.5)  # go to the tunnel entrance - commented our for testing
                 walldist = self.walldist
                 total_dist = 0.0
                 start_time = self.sim_time_sec
