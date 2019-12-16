@@ -326,6 +326,11 @@ class View(QWidget):
         p.setColor(self.backgroundRole(), Qt.black)
         self.setPalette(p)
         self.setMouseTracking(True)
+        self.setCursor(Qt.CrossCursor)
+        self.translation = QPointF(0, 0) # how many px is the viewport shifted
+        self.scale = 100  # 1px == 1cm (position is in meters)
+        self.grab_start = None
+        self.grab_diff = QPointF(0, 0)
         self.robot_statuses = {}
 
     def on_robot_status(self, robot, pose2d, status):
@@ -333,13 +338,25 @@ class View(QWidget):
         self.robot_statuses.setdefault(robot, []).append((pose2d, status))
         self.update()
 
-    def paintEvent(self, e):
+    def _transform(self):
         t = QTransform() # world transform
         t.translate(self.width() / 2, self.height() / 2) # in pixels
-        t.scale(100, -100) # 1px == 1cm (position is in meters)
+        t.translate(self.translation.x(), self.translation.y())
+        t.translate(self.grab_diff.x(), self.grab_diff.y())
+        t.scale(self.scale, -self.scale)
+        return t
 
-        t2 = QTransform() # just orientation
-        t2.scale(1, -1)
+    def paintEvent(self, e):
+
+        t = self._transform()
+        #print(t.m11(), t.m12(), t.m13())
+        #print(t.m21(), t.m22(), t.m23())
+        #print(t.m31(), t.m32(), t.m33())
+
+        # just orientation
+        t2 = QTransform(math.copysign(1, t.m11()), t.m12(),
+                        t.m21(), math.copysign(1, t.m22()),
+                        0, 0)
 
         with QPainter(self) as qp:
             # draw center cross
@@ -376,18 +393,31 @@ class View(QWidget):
     def sizeHint(self):
         return QSize(800, 600)
 
+    def mousePressEvent(self, e):
+        if e.buttons() == Qt.LeftButton:
+            self.setCursor(Qt.ClosedHandCursor)
+            self.grab_start = e.globalPos()
+
+    def mouseReleaseEvent(self, e):
+        cursor = self.cursor().shape()
+        if cursor == Qt.ClosedHandCursor:
+            self.grab_start = None
+            self.setCursor(Qt.CrossCursor)
+            self.translation += self.grab_diff
+            self.grab_diff = QPointF(0, 0)
+
     def mouseMoveEvent(self, e):
-        t = QTransform()
-        t.translate(self.width() / 2, self.height() / 2)
-        t.scale(100, -100)
+        t = self._transform()
         t, ok = t.inverted()
         p = t.map(e.localPos())
 
+        # TODO: show in tooltip instead?
         self.show_message.emit(f"[{p.x(): .2f}, {p.y(): .2f}]", 0)
-        #print('-'*20)
-        # for dragging
-        #print(e.globalPos())
-        #print(e.screenPos())
+
+        if self.grab_start is not None:
+            self.grab_diff = e.globalPos() - self.grab_start
+            self.update()
+
 
 
 def main():
