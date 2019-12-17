@@ -126,7 +126,7 @@ class LoRa(Node):
                 addr, data = parse_lora_packet(packet)
                 if addr is not None and data.startswith(b'['):
                     pose2d = literal_eval(data.decode('ascii'))
-                    self.publish('robot_status', [addr[-1], pose2d, 'running'])
+                    self.publish('robot_status', [addr[-1], pose2d, b'running'])  # TODO read it from robot
                     if self.verbose:
                         self.debug_robot_poses.append((self.time.total_seconds(), addr[-1], pose))
                 cmd = parse_my_cmd(self.device_id, data)
