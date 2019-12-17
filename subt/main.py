@@ -175,6 +175,7 @@ class SubTChallenge:
         else:
             self.local_planner = None
         self.ref_scan = None
+        self.pause_start_time = None
 
     def send_speed_cmd(self, speed, angular_speed):
         if self.virtual_bumper is not None:
@@ -273,12 +274,11 @@ class SubTChallenge:
 
         last_pause_time = timedelta()  # for multiple Pause
         current_pause_time = timedelta()
-        pause_start_time = None
         while self.sim_time_sec - start_time < (timeout + last_pause_time + current_pause_time).total_seconds():
             try:
                 channel = self.update()
                 if (channel == 'scan' and not self.flipped) or (channel == 'scan_back' and self.flipped) or channel == 'scan360':
-                    if pause_start_time is None:
+                    if self.pause_start_time is None:
                         desired_direction = follow_wall_angle(self.scan, radius=radius, right_wall=right_wall)
                         self.go_safely(desired_direction)
                 if dist_limit is not None:
@@ -315,19 +315,19 @@ class SubTChallenge:
                     elif self.lora_cmd == LORA_PAUSE_CMD:
                         print(self.time, 'LoRa cmd - Pause')
                         self.send_speed_cmd(0, 0)
-                        if pause_start_time is None:
+                        if self.pause_start_time is None:
                             # ignore repeated Pause
-                            pause_start_time = self.time
+                            self.pause_start_time = self.time
                         self.lora_cmd = None
                     elif self.lora_cmd == LORA_CONTINUE_CMD:
                         print(self.time, 'LoRa cmd - Continue')
-                        if pause_start_time is not None:
+                        if self.pause_start_time is not None:
                             # ignore Continue without Pause
-                            last_pause_time += self.time - pause_start_time
-                            pause_start_time = None
+                            last_pause_time += self.time - self.pause_start_time
+                            self.pause_start_time = None
                         self.lora_cmd = None
-                if pause_start_time is not None:
-                    current_pause_time = self.time - pause_start_time
+                if self.pause_start_time is not None:
+                    current_pause_time = self.time - self.pause_start_time
                 else:
                     current_pause_time = timedelta()
             except Collision:
