@@ -21,9 +21,10 @@ def replay(args, application=None):
         config = config_load(*args.config, application=application)
 
     names = logger.lookup_stream_names(args.logfile)
-    print("streams:")
-    for i, name in enumerate(names):
-        print(f" {i+1:2d} {name}")
+    if args.debug:
+        print("streams:")
+        for i, name in enumerate(names):
+            print(f" {i+1:2d} {name}")
     
     module = args.module
     assert module in config['robot']['modules'], (module, list(config['robot']['modules'].keys()))
@@ -37,14 +38,14 @@ def replay(args, application=None):
                 names.append(edge_from)
             inputs[1 + names.index(edge_from)] = edge_to.split('.')[1]
 
-    print("inputs:")
-    for i, name in sorted(inputs.items()):
-        print(f" {i:2d} {name}")
-
-    outputs = {i+1: out.split('.')[1] for i, out in enumerate(names) if out.startswith(f"{module}.")}
-    print("outputs:")
-    for i, name in sorted(outputs.items()):
-        print(f" {i:2d} {name}")
+    outputs = {i + 1: out.split('.')[1] for i, out in enumerate(names) if out.startswith(f"{module}.")}
+    if args.debug:
+        print("inputs:")
+        for i, name in sorted(inputs.items()):
+            print(f" {i:2d} {name}")
+        print("outputs:")
+        for i, name in sorted(outputs.items()):
+            print(f" {i:2d} {name}")
 
     if args.force:
         reader = LogReader(args.logfile, only_stream_id=inputs.keys())
@@ -70,6 +71,7 @@ if __name__ == "__main__":
     parser.add_argument('--module', help='module name for analysis', required=True)  # TODO default "all"
     parser.add_argument('--verbose', '-v', help="verbose mode", action='store_true')
     parser.add_argument('--draw', help="draw debug results", action='store_true')
+    parser.add_argument('--debug', help="print debug info about I/O streams", action='store_true')
     args = parser.parse_args()
 
     module_instance = replay(args)
