@@ -176,6 +176,8 @@ class SubTChallenge:
             self.local_planner = None
         self.ref_scan = None
         self.pause_start_time = None
+        if config.get('start_paused', False):
+            self.pause_start_time = timedelta()  # paused from the very beginning
 
     def send_speed_cmd(self, speed, angular_speed):
         if self.virtual_bumper is not None:
@@ -723,6 +725,8 @@ def main():
     parser_run.add_argument('--speed', help='maximum speed (default: from config)', type=float)
     parser_run.add_argument('--timeout', help='seconds of exploring before going home (default: %(default)s)',
                             type=int, default=10*60)
+    parser_run.add_argument('--start-paused', dest='start_paused', action='store_true',
+                            help='start robota Paused and wait for LoRa Contine command')
 
     parser_replay = subparsers.add_parser('replay', help='replay from logfile')
     parser_replay.add_argument('logfile', help='recorded log file')
@@ -755,6 +759,8 @@ def main():
         cfg['robot']['modules']['app']['init']['timeout'] = args.timeout
         if args.speed is not None:
             cfg['robot']['modules']['app']['init']['max_speed'] = args.speed
+
+        cfg['robot']['modules']['app']['init']['start_paused'] = args.start_paused
 
         record(cfg, prefix)
 
