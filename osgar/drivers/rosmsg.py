@@ -274,7 +274,7 @@ class ROSMsgParser(Thread):
     def __init__(self, config, bus):
         Thread.__init__(self)
         self.setDaemon(True)
-        bus.register("rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin", "gas_detected", "depth")
+        bus.register("rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin", "gas_detected", "depth:gz")
 
         self.bus = bus
         self._buf = b''
