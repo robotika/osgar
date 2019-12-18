@@ -53,13 +53,20 @@ class _BusHandler:
         self.slots = {}
         self.stream_id = {}
         self._is_alive = True
+        self.no_output = set()
+        self.compressed_output = set()
 
     def register(self, *outputs):
-        for o in outputs:
+        for name_and_type in outputs:
+            o = name_and_type.split(':')[0]  # keep only prefixes
             if o in self.stream_id:
                 continue
             idx = self.logger.register(f'{self.name}.{o}')
             self.stream_id[o] = idx
+            if name_and_type.endswith(':null'):
+                self.no_output.add(idx)
+            if name_and_type.endswith(':gz'):
+                self.compressed_output.add(idx)
             self.out[o] = []
             self.slots[o] = []
 
@@ -76,8 +83,12 @@ class _BusHandler:
     def publish(self, channel, data):
         with self.logger.lock:
             stream_id = self.stream_id[channel]  # local maping of indexes
-            to_write = serialize(data)
+            if stream_id in self.no_output:
+                to_write = serialize(None)  # i.e. at least there will be timestamp record
+            else:
+                to_write = serialize(data, compress=(stream_id in self.compressed_output))
             timestamp = self.logger.write(stream_id, to_write)
+
             for queue, input_channel in self.out[channel]:
                 queue.put((timestamp, input_channel, data))
             for slot in self.slots.get(channel, []):
@@ -118,7 +129,8 @@ class LogBusHandler:
 
     def register(self, *outputs):
         for o in outputs:
-            assert o in self.outputs.values(), (o, self.outputs)
+            # ignore :gz and :null modifiers
+            assert o.split(':')[0] in self.outputs.values(), (o, self.outputs)
 
     def listen(self):
         while True:
