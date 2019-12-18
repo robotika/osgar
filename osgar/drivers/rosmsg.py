@@ -67,7 +67,7 @@ def Xparse_image( data ):
 def parse_raw_image(data, dump_filename=None):
     # http://docs.ros.org/melodic/api/sensor_msgs/html/msg/Image.html
     size = struct.unpack_from('<I', data)[0]
-    assert size == 230467, size  # expected size for raw image during experiment
+#    assert size == 230467, size  # expected size for raw image during experiment
     # http://docs.ros.org/melodic/api/std_msgs/html/msg/Header.html
     pos = 4
     seq, timestamp_sec, timestamp_nsec, frame_id_size = struct.unpack_from('<IIII', data, pos)
@@ -80,12 +80,19 @@ def parse_raw_image(data, dump_filename=None):
     encoding = data[pos:pos+encoding_size]
     pos += encoding_size
 #    print(height, width, encoding)
+    assert encoding == b'32FC1', encoding
     is_bigendian, step, image_arr_size = struct.unpack_from('<BII', data, pos)
     pos += 1 + 4 + 4
+    arr = [min(255, int(10 * x[0])) for x in struct.iter_unpack('f', data[pos:pos + image_arr_size])]
     if dump_filename is not None:
         with open(dump_filename, 'wb') as f:
-            f.write(b'P6\n%d %d\n255\n' % (width, height))
-            f.write(data[pos:pos+image_arr_size])
+            # RGB color format (PPM - Portable PixMap)
+#            f.write(b'P6\n%d %d\n255\n' % (width, height))
+#            f.write(data[pos:pos+image_arr_size])
+            # Grayscale float format (PGM - Portable GrayMap)
+            f.write(b'P5\n%d %d\n255\n' % (width, height))
+            f.write(bytes(arr))
+    return bytes(arr)
 
 
 def parse_jpeg_image(data, dump_filename=None):
@@ -185,7 +192,7 @@ def parse_odom(data):
 def parse_points(data):
     # http://docs.ros.org/melodic/api/sensor_msgs/html/msg/PointCloud2.html
     size = struct.unpack_from('<I', data)[0]
-    assert size == 2457728, size  # expected size for cloud points (beware of variable header! i.e. this assert is wrong in general)
+#    assert size == 2457728, size  # expected size for cloud points (beware of variable header! i.e. this assert is wrong in general)
     pos = 4
     seq, timestamp_sec, timestamp_nsec, frame_id_size = struct.unpack_from('<IIII', data, pos)
     pos += 4 + 4 + 4 + 4
@@ -197,17 +204,17 @@ def parse_points(data):
 #    print(height, width)
     point_field_size = struct.unpack_from('<I', data, pos)[0]
     pos += 4
-    assert point_field_size == 4, point_field_size  # RGBD?
+#     assert point_field_size == 4, point_field_size  # RGBD? - cloud == 5
 #    print(data[pos:pos + 20])
     for i in range(point_field_size):
         str_size = struct.unpack_from('<I', data, pos)[0]
         pos += 4
         assert str_size < 10, str_size
-#        print(data[pos:pos + str_size])
+        print(data[pos:pos + str_size])
         pos += str_size
         offset, datatype, count = struct.unpack_from('<IBI', data, pos)
-#        print(offset, datatype, count)
-        assert datatype == 7, datatype  # uint8 FLOAT32 = 7
+        print(offset, datatype, count)
+        assert datatype in [7, 4], datatype  # uint8 FLOAT32 = 7, uint8 UINT16=4
         assert count == 1, count
         pos += 9
 
@@ -267,7 +274,7 @@ class ROSMsgParser(Thread):
     def __init__(self, config, bus):
         Thread.__init__(self)
         self.setDaemon(True)
-        bus.register("rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin", "gas_detected")
+        bus.register("rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin", "gas_detected", "depth")
 
         self.bus = bus
         self._buf = b''
@@ -317,11 +324,19 @@ class ROSMsgParser(Thread):
             else:
                 self.bus.publish('origin', [s[1]] + [float(x) for x in s[2:]])
             return
+        if data.startswith(b'depth'):
+            depth = parse_raw_image(data[5:])
+            self.bus.publish('depth', depth)
+            return
+        if data.startswith(b'points'):
+            return
         frame_id = get_frame_id(data)
+ #       print(frame_id)
         # TODO parse properly header "frame ID"
         if frame_id.endswith(b'/base_link/camera_front'):  #self.topic_type == 'sensor_msgs/CompressedImage':
             self.bus.publish('image', parse_jpeg_image(packet))
         elif frame_id.endswith(b'/base_link/front_laser'):  #self.topic_type == 'sensor_msgs/LaserScan':
+#            parse_points(packet)  # test
             self.count += 1
             if self.count % self.downsample != 0:
                 return
