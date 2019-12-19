@@ -6,6 +6,8 @@ from threading import Thread
 import struct
 import math
 
+import numpy as np
+
 from osgar.bus import BusShutdownException
 
 ROS_MESSAGE_TYPES = {
@@ -83,7 +85,11 @@ def parse_raw_image(data, dump_filename=None):
     assert encoding == b'32FC1', encoding
     is_bigendian, step, image_arr_size = struct.unpack_from('<BII', data, pos)
     pos += 1 + 4 + 4
-    arr = [min(255, int(10 * x[0])) for x in struct.iter_unpack('f', data[pos:pos + image_arr_size])]
+    # depth is array of floats, OSGAR uses uint16 in millimeters
+    # cut min & max (-inf and inf are used for clipping)
+    arr = np.frombuffer(data[pos:pos + image_arr_size], dtype=np.dtype('f'))*1000
+    arr = np.clip(arr, 0, 0xFFFF)
+    arr = np.ndarray.astype(arr, dtype=np.dtype('H'))
     if dump_filename is not None:
         with open(dump_filename, 'wb') as f:
             # RGB color format (PPM - Portable PixMap)
@@ -91,8 +97,8 @@ def parse_raw_image(data, dump_filename=None):
 #            f.write(data[pos:pos+image_arr_size])
             # Grayscale float format (PGM - Portable GrayMap)
             f.write(b'P5\n%d %d\n255\n' % (width, height))
-            f.write(bytes(arr))
-    return bytes(arr)
+            f.write(bytes([min(255, x//100) for x in arr]))
+    return np.array(arr).reshape((height, width))
 
 
 def parse_jpeg_image(data, dump_filename=None):
