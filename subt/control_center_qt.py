@@ -216,6 +216,10 @@ class OsgarControlCenter:
 
 class MainWindow(QMainWindow):
 
+    zoom_reset = pyqtSignal()
+    zoom_in = pyqtSignal()
+    zoom_out = pyqtSignal()
+
     def __init__(self, arguments):
         super().__init__()
         self.setWindowTitle("Control Center")
@@ -227,6 +231,9 @@ class MainWindow(QMainWindow):
         self.recorder = None
         self.cc = None
         self.centralWidget().show_message.connect(self.status.showMessage)
+        self.zoom_reset.connect(self.centralWidget().on_zoom_reset)
+        self.zoom_in.connect(self.centralWidget().on_zoom_in)
+        self.zoom_out.connect(self.centralWidget().on_zoom_out)
         if "--demo" not in arguments:
             self.cfg = CFG_LORA
             self.status.showMessage("Using LoRa cfg")
@@ -237,12 +244,30 @@ class MainWindow(QMainWindow):
     def _createMenu(self):
         self.menu = self.menuBar()
         self.file_menu = self.menu.addMenu("&File")
+
         exit_action = QAction("Exit", self)
         exit_action.setShortcut(QKeySequence.Quit)
         exit_action.setStatusTip("Exit application")
         exit_action.triggered.connect(self.close)
         exit_action.setIcon(QIcon.fromTheme("application-exit"));
         self.file_menu.addAction(exit_action)
+
+        self.view_menu = self.menu.addMenu("&View")
+
+        zoomin_action = QAction("Zoom in", self)
+        zoomin_action.setShortcut(Qt.Key_Plus)
+        zoomin_action.triggered.connect(self.zoom_in)
+        self.view_menu.addAction(zoomin_action)
+
+        zoomreset_action = QAction("Zoom reset", self)
+        zoomreset_action.setShortcut(Qt.Key_0)
+        zoomreset_action.triggered.connect(self.zoom_reset)
+        self.view_menu.addAction(zoomreset_action)
+
+        zoomout_action = QAction("Zoom out", self)
+        zoomout_action.setShortcut(Qt.Key_Minus)
+        zoomout_action.triggered.connect(self.zoom_out)
+        self.view_menu.addAction(zoomout_action)
 
         self.start_stop = QCheckBox("&Recording", self)
         self.start_stop.stateChanged.connect(self.on_start_stop)
@@ -437,6 +462,17 @@ class View(QWidget):
             self.grab_diff = e.globalPos() - self.grab_start
             self.update()
 
+    def on_zoom_reset(self):
+        self.scale = 100
+        self.update()
+
+    def on_zoom_in(self):
+        self.scale *= 1.1
+        self.update()
+
+    def on_zoom_out(self):
+        self.scale /= 1.1
+        self.update()
 
 
 def main():
