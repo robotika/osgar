@@ -347,48 +347,49 @@ class View(QWidget):
         return t
 
     def paintEvent(self, e):
-
-        t = self._transform()
-        #print(t.m11(), t.m12(), t.m13())
-        #print(t.m21(), t.m22(), t.m23())
-        #print(t.m31(), t.m32(), t.m33())
-
-        # just orientation
-        t2 = QTransform(math.copysign(1, t.m11()), t.m12(),
-                        t.m21(), math.copysign(1, t.m22()),
-                        0, 0)
-
-        with QPainter(self) as qp:
-            # draw center cross
-            qp.setPen(Qt.red)
-            center = t.map(QPointF(0,0))
-            qp.drawLine(center-QPointF(10,0), center+QPointF(10,0))
-            qp.drawLine(center-QPointF(0,10), center+QPointF(0,10))
-            # draw scale
-            meter = QLineF(t.map(QPointF(1,0)), t.map(QPointF(0,0))).length()
-            qp.drawLine(20, self.height()-20, 20 + meter, self.height() - 20)
-            qp.drawLine(20, self.height()-25, 20, self.height()-15)
-            qp.drawLine(20 + meter, self.height()-25, 20 + meter, self.height()-15)
-            # draw robot paths
+        transform = self._transform()
+        with QPainter(self) as painter:
+            self._drawCenterCross(painter, transform)
+            self._drawScale(painter, transform)
             for robot, statuses in self.robot_statuses.items():
                 base_color = self.colors[robot%len(self.colors)]
-                qp.setPen(base_color)
-                path = QPolygonF()
-                for (x, y, heading), status in statuses:
-                    robot_position = t.map(QPointF(x, y))
-                    path.append(robot_position)
-                    qp.drawEllipse(robot_position, 3, 3)
-                # draw direction vector of last position
-                facing = QTransform(t2).rotateRadians(heading).map(QPointF(10,0))
-                qp.drawLine(robot_position, robot_position+facing)
-                # highlight last position
-                qp.setBrush(base_color)
-                qp.drawEllipse(robot_position, 4, 4)
-                qp.setBrush(Qt.NoBrush)
-                # draw path
-                qp.setPen(base_color.darker())
-                qp.drawPolyline(path)
-            qp.setPen(Qt.white)
+                self._drawRobotPath(painter, transform, base_color, statuses)
+
+    def _drawRobotPath(self, painter, transform, base_color, statuses):
+        # just orientation
+        t2 = QTransform(math.copysign(1, transform.m11()), transform.m12(),
+                        transform.m21(), math.copysign(1, transform.m22()),
+                        0, 0)
+
+        painter.setPen(base_color)
+        path = QPolygonF()
+        for (x, y, heading), status in statuses:
+            robot_position = transform.map(QPointF(x, y))
+            path.append(robot_position)
+            painter.drawEllipse(robot_position, 3, 3)
+        # draw direction vector of last position
+        facing = QTransform(t2).rotateRadians(heading).map(QPointF(10, 0))
+        painter.drawLine(robot_position, robot_position + facing)
+        # highlight last position
+        painter.setBrush(base_color)
+        painter.drawEllipse(robot_position, 4, 4)
+        painter.setBrush(Qt.NoBrush)
+        # draw path
+        painter.setPen(base_color.darker())
+        painter.drawPolyline(path)
+
+    def _drawCenterCross(self, painter, transform):
+        painter.setPen(Qt.red)
+        center = transform.map(QPointF(0, 0))
+        painter.drawLine(center - QPointF(10, 0), center + QPointF(10, 0))
+        painter.drawLine(center - QPointF(0, 10), center + QPointF(0, 10))
+
+    def _drawScale(self, painter, transform):
+        painter.setPen(Qt.red)
+        meter = QLineF(transform.map(QPointF(1, 0)), transform.map(QPointF(0, 0))).length()
+        painter.drawLine(20, self.height() - 20, 20 + meter, self.height() - 20)
+        painter.drawLine(20, self.height() - 25, 20, self.height() - 15)
+        painter.drawLine(20 + meter, self.height() - 25, 20 + meter, self.height() - 15)
 
     def sizeHint(self):
         return QSize(800, 600)
