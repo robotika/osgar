@@ -349,11 +349,29 @@ class View(QWidget):
     def paintEvent(self, e):
         transform = self._transform()
         with QPainter(self) as painter:
+            self._drawGrid(painter, transform)
             self._drawCenterCross(painter, transform)
             self._drawScale(painter, transform)
             for robot, statuses in self.robot_statuses.items():
                 base_color = self.colors[robot%len(self.colors)]
                 self._drawRobotPath(painter, transform, base_color, statuses)
+
+    def _drawGrid(self, painter, transform):
+        painter.setPen(QColor(Qt.white).darker().darker())
+        meter = QLineF(transform.map(QPointF(1, 0)), transform.map(QPointF(0, 0))).length()
+        t, ok = transform.inverted()
+        r = self.rect()
+        x, y = [], []
+        for point in [(r.left(),r.top()), (r.left(), r.bottom()), (r.right(), r.top()), (r.right(), r.bottom())]:
+            p = t.map(QPointF(*point))
+            x.append(p.x())
+            y.append(p.y())
+        minx, maxx = min(x), max(x)
+        miny, maxy = min(y), max(y)
+        for i in range(math.ceil(minx), math.ceil(maxx)):
+            painter.drawLine(transform.map(QPointF(i, maxy)), transform.map(QPointF(i, miny)))
+        for j in range(math.ceil(miny), math.ceil(maxy)):
+            painter.drawLine(transform.map(QPointF(maxx, j)), transform.map(QPointF(minx, j)))
 
     def _drawRobotPath(self, painter, transform, base_color, statuses):
         # just orientation
