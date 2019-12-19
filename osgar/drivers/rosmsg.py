@@ -83,7 +83,7 @@ def parse_raw_image(data, dump_filename=None):
     assert encoding == b'32FC1', encoding
     is_bigendian, step, image_arr_size = struct.unpack_from('<BII', data, pos)
     pos += 1 + 4 + 4
-    arr = [min(255, int(10 * x[0])) for x in struct.iter_unpack('f', data[pos:pos + image_arr_size])]
+    arr = [0 if x[0] == float('inf') else min(255, int(10 * x[0])) for x in struct.iter_unpack('f', data[pos:pos + image_arr_size])]
     if dump_filename is not None:
         with open(dump_filename, 'wb') as f:
             # RGB color format (PPM - Portable PixMap)
