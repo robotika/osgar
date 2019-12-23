@@ -83,7 +83,11 @@ def parse_raw_image(data, dump_filename=None):
     assert encoding == b'32FC1', encoding
     is_bigendian, step, image_arr_size = struct.unpack_from('<BII', data, pos)
     pos += 1 + 4 + 4
-    arr = [0 if x[0] == float('inf') else min(255, int(10 * x[0])) for x in struct.iter_unpack('f', data[pos:pos + image_arr_size])]
+    # TODO refactor this part to use numpy, probably
+    # depth is array of floats
+    arr = [x[0] for x in struct.iter_unpack('f', data[pos:pos + image_arr_size])]
+    # cut min & max (-inf and inf are used for clipping) - use 16bit for test now
+    arr = [int(min(0xFFFF, max(0, x*1000))) for x in arr]
     if dump_filename is not None:
         with open(dump_filename, 'wb') as f:
             # RGB color format (PPM - Portable PixMap)
@@ -91,7 +95,7 @@ def parse_raw_image(data, dump_filename=None):
 #            f.write(data[pos:pos+image_arr_size])
             # Grayscale float format (PGM - Portable GrayMap)
             f.write(b'P5\n%d %d\n255\n' % (width, height))
-            f.write(bytes(arr))
+            f.write(bytes([min(255, x//100) for x in arr]))
     return bytes(arr)
 
 
