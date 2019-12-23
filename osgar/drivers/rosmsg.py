@@ -96,7 +96,7 @@ def parse_raw_image(data, dump_filename=None):
             # Grayscale float format (PGM - Portable GrayMap)
             f.write(b'P5\n%d %d\n255\n' % (width, height))
             f.write(bytes([min(255, x//100) for x in arr]))
-    return bytes(arr)
+    return arr
 
 
 def parse_jpeg_image(data, dump_filename=None):
