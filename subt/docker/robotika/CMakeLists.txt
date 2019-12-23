@@ -46,7 +46,7 @@ link_directories(
 ## Declare a C++ executable
 add_executable(subt_seed_node src/subt_seed_node.cc)
 add_dependencies(subt_seed_node ${catkin_EXPORTED_TARGETS})
-target_link_libraries(subt_seed_node ${catkin_LIBRARIES} -lzmq)
+target_link_libraries(subt_seed_node ${catkin_LIBRARIES} -L /usr/lib/x86_64-linux-gnu -lzmq)
 
 ###########
 ## Tests ##
