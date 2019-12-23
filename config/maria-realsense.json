@@ -28,7 +28,7 @@
           "driver": "serial",
           "in": ["raw"],
           "out": ["raw"],
-          "init": {"port": "/dev/arduino-motor", "speed": 9600}
+          "init": {"port": "/dev/arduino-motor", "speed": 115200}
       },
       "rs": {
           "driver": "realsense",
@@ -40,7 +40,6 @@
     "links": [["app.desired_speed", "robot.desired_speed"],
               ["robot.emergency_stop", "app.emergency_stop"],
               ["robot.pose2d", "app.pose2d"],
-              ["timer.tick", "robot.pwm"],
               ["serial.raw", "robot.raw"],
               ["robot.raw", "serial.raw"],
               ["timer.tick", "rs.trigger"]]

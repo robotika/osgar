@@ -7,34 +7,25 @@
           "in": ["emergency_stop", "pose2d"],
           "out": ["desired_speed"],
           "init": {
-            "max_speed": 0.5
+            "max_speed": 0.75
           }
       },
       "robot": {
           "driver": "tankmaria",
-          "in": ["desired_speed", "raw", "pwm"],
+          "in": ["desired_speed", "raw"],
           "out": ["emergency_stop", "pose2d", "raw", "encoders"],
           "init": {}
-      },
-      "timer": {
-          "driver": "osgar.drivers.tankmaria:MariaTimer",
-          "in": [],
-          "out": ["tick"],
-          "init": {
-            "sleep": 0.1
-          }
       },
       "serial": {
           "driver": "serial",
           "in": ["raw"],
           "out": ["raw"],
-          "init": {"port": "/dev/arduino-motor", "speed": 9600}
+          "init": {"port": "/dev/arduino-motor", "speed": 115200}
       }
     },
     "links": [["app.desired_speed", "robot.desired_speed"],
               ["robot.emergency_stop", "app.emergency_stop"],
               ["robot.pose2d", "app.pose2d"],
-              ["timer.tick", "robot.pwm"],
               ["serial.raw", "robot.raw"],
               ["robot.raw", "serial.raw"]]
   }
