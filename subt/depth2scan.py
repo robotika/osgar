@@ -32,7 +32,7 @@ class DepthToScan(Node):
             mask = small == 0xFFFF
             small[mask] = 0
             if self.scan is not None:
-                new_scan = self.scan[:360-80] + small.tolist() + self.scan[360+80:]
+                new_scan = self.scan[:360-80] + np.flip(small, axis=0).tolist() + self.scan[360+80:]
                 assert len(new_scan) == 720, len(new_scan)
                 self.publish('scan', new_scan)
         else:
