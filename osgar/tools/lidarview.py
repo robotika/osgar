@@ -106,6 +106,20 @@ def draw(foreground, pose, scan, poses=[], image=None, callback=None, acc_pts=No
                 pygame.draw.line(foreground, (200, 200, 0), a, b, 1)
 
 
+def get_image(data):
+    """Extract JPEG or RGBD depth image"""
+    if isinstance(data, list):
+        # Grayscale float format (PGM - Portable GrayMap)
+        assert len(data) == 640 * 360, len(data)
+        width, height = 640, 360
+        f = io.BytesIO(b'P5\n%d %d\n255\n' % (width, height) + 
+                       bytes([min(255, x//50) for x in data]))        
+        image = pygame.image.load(f, 'PGM').convert()
+    else:
+        image = pygame.image.load(io.BytesIO(data), 'JPG').convert()
+    return image
+
+
 class Framer:
     """Creates frames from log entries. Packs together closest scan, pose and camera picture."""
     def __init__(self, filepath, lidar_name=None, pose2d_name=None, pose3d_name=None, camera_name=None,
@@ -163,15 +177,13 @@ class Framer:
                 self.keyframe = False
                 return timestamp, self.pose, self.scan, self.image, self.image2, keyframe, False
             elif stream_id == self.camera_id:
-                jpeg = deserialize(data)
-                self.image = pygame.image.load(io.BytesIO(jpeg), 'JPG').convert()
+                self.image = get_image(deserialize(data))
                 if self.lidar_id is None:
                     keyframe = self.keyframe
                     self.keyframe = False
                     return timestamp, self.pose, self.scan, self.image, self.image2, keyframe, False
             elif stream_id == self.camera2_id:
-                jpeg = deserialize(data)
-                self.image2 = pygame.image.load(io.BytesIO(jpeg), 'JPG').convert()
+                self.image2 = get_image(deserialize(data))
             elif stream_id == self.pose3d_id:
                 pose3d, orientation = deserialize(data)
                 assert len(pose3d) == 3
