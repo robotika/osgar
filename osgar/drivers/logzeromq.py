@@ -11,7 +11,7 @@ from osgar.bus import BusShutdownException
 
 class LogZeroMQ:
     def __init__(self, config, bus):
-        bus.register('raw:gz')
+        bus.register('raw:null')
         mode = config['mode']
         endpoint = config['endpoint']
 
