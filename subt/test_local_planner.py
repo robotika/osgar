@@ -1,7 +1,7 @@
 import unittest
 import math
 
-from local_planner import LocalPlanner
+from subt.local_planner import LocalPlanner
 
 
 class SubTChallengeTest(unittest.TestCase):
