@@ -16,14 +16,14 @@ class SubTChallengeTest(unittest.TestCase):
         scan[100] = 1000  # the direction from right to left
         planner.update(scan)
         self.assertEqual(planner.recommend(0), 
-                (0.4562465649202554, 1.2217304763960306))
+                (0.47525253623471064, 1.3089969389957472))
 
         # extra obstacles should not influence the decision
         for i in range(135):
             scan[i] = 1000
         planner.update(scan)
         self.assertEqual(planner.recommend(0), 
-                (0.4562465649202554, 1.2217304763960306))
+                (0.47525253623471064, 1.3089969389957472))
 
 # vim: expandtab sw=4 ts=4
 
