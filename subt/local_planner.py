@@ -1,7 +1,9 @@
 import math
 
+
 def normalize_angle(angle):
     return (angle + math.pi) % (2 * math.pi) - math.pi
+
 
 class LocalPlannerRef:
     def __init__(self, scan_right=math.radians(-135), scan_left=math.radians(135), direction_adherence=math.radians(90), max_obstacle_distance=1.5, obstacle_influence=1.2):
@@ -88,10 +90,6 @@ class LocalPlannerOpt:
 
         obstacles = []
         for (i, measurement) in enumerate(self.last_scan):
-            # Eduro hack, to reduce computations
-            if i % 5 != 0:  # reduce resolution to 5deg!
-                continue
-
             if measurement == 0:
                 continue
             if measurement * 1e-3 > self.max_obstacle_distance:
@@ -138,8 +136,7 @@ class LocalPlannerOpt:
         def is_good(direction):
             return min(is_safe(direction), is_desired(direction))  # Fuzzy AND.
 
-#        return max((is_good(math.radians(direction)), math.radians(direction)) for direction in range(-180, 180, 3))
-        return max((is_good(math.radians(direction)), math.radians(direction)) for direction in range(-180, 180, 10))
+        return max((is_good(math.radians(direction)), math.radians(direction)) for direction in range(-180, 180, 3))
 
 
 class LocalPlanner:
