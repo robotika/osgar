@@ -110,7 +110,7 @@ class LocalPlannerOpt:
             obstacles.append(obstacle_xy)
             valid[int(math.degrees(normalize_angle(measurement_angle))) + 180] = False
 
-        print('obstacles', len(obstacles))
+#        print('obstacles', len(obstacles))
         if not obstacles:
             return 1.0, normalize_angle(desired_dir)
 
@@ -158,15 +158,15 @@ class LocalPlanner:
         self.ref.update(scan)
 
     def recommend(self, desired_dir):
-        global g_count
-        g_count += 1
-        g_pr.enable()
+#        global g_count
+#        g_count += 1
+#        g_pr.enable()
         ret = self.opt.recommend(desired_dir)
-        ref = self.ref.recommend(desired_dir)
-        g_pr.disable()
-        if g_count % 100 == 0:
-            g_pr.print_stats()
-        assert ret == ref, (ret, ref)
+#        ref = self.ref.recommend(desired_dir)
+#        g_pr.disable()
+#        if g_count % 100 == 0:
+#            g_pr.print_stats()
+#        assert ret == ref, (ret, ref)
         return ret
 
 # vim: expandtab sw=4 ts=4
