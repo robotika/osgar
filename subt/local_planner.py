@@ -1,4 +1,9 @@
 import math
+import cProfile
+
+
+g_pr = cProfile.Profile()
+g_count = 0
 
 
 def normalize_angle(angle):
@@ -102,6 +107,7 @@ class LocalPlannerOpt:
 
             obstacles.append(obstacle_xy)
 
+        print('obstacles', len(obstacles))
         if not obstacles:
             return 1.0, normalize_angle(desired_dir)
 
@@ -112,7 +118,7 @@ class LocalPlannerOpt:
 
         def is_risky(direction):
             direction_vector = math.cos(direction), math.sin(direction)
-            riskiness = 0.
+            min_off_track_distance = 1000.
             for obstacle_xy in obstacles:
                 # Obstacles behind the robot from the perspective of the desired direction do not matter.
                 # The formula below computes cos(angle between the two vectors) * their_norms. Norms are positive, so a negative result implies abs(angle) > 90deg.
@@ -124,10 +130,10 @@ class LocalPlannerOpt:
                 # Norm of direction_vector is 1.0, so we do not need to divide by it.
                 off_track_distance = abs(direction_vector[1] * obstacle_xy[0] - direction_vector[0] * obstacle_xy[1])
 
-                r = math.exp(-(off_track_distance / self.obstacle_influence)**2)
-                if r > riskiness: # max as fuzzy OR.
-                    riskiness = r
+                if off_track_distance < min_off_track_distance: # max as fuzzy OR.
+                    min_off_track_distance = off_track_distance
 
+            riskiness = math.exp(-(min_off_track_distance / self.obstacle_influence)**2)
             return riskiness
 
         def is_safe(direction):
@@ -149,8 +155,14 @@ class LocalPlanner:
         self.ref.update(scan)
 
     def recommend(self, desired_dir):
+        global g_count
+        g_count += 1
+        g_pr.enable()
         ret = self.opt.recommend(desired_dir)
         ref = self.ref.recommend(desired_dir)
+        g_pr.disable()
+        if g_count % 100 == 0:
+            g_pr.print_stats()
         assert ret == ref, (ret, ref)
         return ret
 
