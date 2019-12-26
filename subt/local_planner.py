@@ -93,6 +93,8 @@ class LocalPlannerOpt:
         if self.last_scan is None:
             return 1.0, desired_dir
 
+        valid = [True] * 361  # indexed -180 .. 180
+
         obstacles = []
         for (i, measurement) in enumerate(self.last_scan):
             if measurement == 0:
@@ -106,6 +108,7 @@ class LocalPlannerOpt:
             obstacle_xy = [mv * measurement * 1e-3 for mv in measurement_vector]
 
             obstacles.append(obstacle_xy)
+            valid[int(math.degrees(normalize_angle(measurement_angle))) + 180] = False
 
         print('obstacles', len(obstacles))
         if not obstacles:
@@ -142,7 +145,7 @@ class LocalPlannerOpt:
         def is_good(direction):
             return min(is_safe(direction), is_desired(direction))  # Fuzzy AND.
 
-        return max((is_good(math.radians(direction)), math.radians(direction)) for direction in range(-180, 180, 3))
+        return max((is_good(math.radians(direction)), math.radians(direction)) for direction in range(-180, 180, 3) if valid[direction + 180])
 
 
 class LocalPlanner:
