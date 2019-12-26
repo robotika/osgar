@@ -141,25 +141,26 @@ def parse_string(data, dump_filename=None):
     return data[pos:]
 
 
-def extract_log(filename):
-    out_name = os.path.join(os.path.dirname(filename), 'tmp.log')
+def extract_log(filenames):
+    out_name = os.path.join(os.path.dirname(filenames[0]), 'tmp.log')
     with open(out_name, 'wb') as f:
-        for header_dict, data in read_rosbag_gen(filename):
-            op = header_dict['op']
-            conn  = header_dict.get('conn')
-            if conn == 0:
-                if op == OP_MESSAGE_DATA:
-                    d = parse_string(data)
-                    if b'Hello' not in d:
-                        f.write(d)
-                    else:
-                        print(d, len(d))
+        for filename in filenames:
+            for header_dict, data in read_rosbag_gen(filename):
+                op = header_dict['op']
+                conn  = header_dict.get('conn')
+                if conn == 0:
+                    if op == OP_MESSAGE_DATA:
+                        d = parse_string(data)
+                        if b'Hello' not in d:
+                            f.write(d)
+                        else:
+                            print(d, len(d))
 
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('filename', help='JPEG filename')
+    parser.add_argument('filename', help='ROS bag(s)', nargs='+')
     parser.add_argument('-v', '--verbose', help='verbose mode', action='store_true')
     args = parser.parse_args()
 
