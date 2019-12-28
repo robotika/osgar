@@ -99,6 +99,15 @@ class Trace:
     def reverse(self):
         self.trace.reverse()
 
+    def add_line_to(self, xyz):
+        last = self.trace[-1]
+        size = distance3D(last, xyz)
+        dx, dy, dz = xyz[0] - last[0], xyz[1] - last[1], xyz[2] - last[2]
+        for i in range(1, int(size/self.step)):
+            s = self.step * i/size
+            self.trace.append((last[0] + s*dx, last[1] + s*dy, last[2] + s*dz))
+        self.trace.append(xyz)
+
 
 class Collision(Exception):
     pass
@@ -619,16 +628,9 @@ class SubTChallenge:
 
     def test_nav_trace(self):
         trace = Trace()
-        trace.update_trace((1, 0, 0))
-        trace.update_trace((1, -1, 0))
-        trace.update_trace((1, -2, 0))
-        trace.update_trace((1, -3, 0))
-        trace.update_trace((1, -4, 0))
-        trace.update_trace((1, -5, 0))
-        trace.update_trace((2, -5, 0))
-        trace.update_trace((4, -5, 0))
-        trace.update_trace((6, -5, 0))
-        trace.update_trace((8, -5, 0))
+        trace.add_line_to((3, -5, 0))
+        trace.add_line_to((15, -5, 0))
+        trace.add_line_to((15, 10, 0))
         trace.reverse()
         self.follow_trace(trace, timeout=timedelta(seconds=20))
 
@@ -642,7 +644,7 @@ class SubTChallenge:
         self.stdout('Origin:', self.origin, self.robot_name)
 
         self.test_nav_trace()  # hacking - experiment
-
+        """
         if self.origin is not None:
             x, y, z = self.origin
             x1, y1, z1 = self.xyz
@@ -656,6 +658,7 @@ class SubTChallenge:
         else:
             # lost in tunnel
             self.stdout('Lost in tunnel:', self.origin_error, self.offset)
+        """
         for loop in range(3):
             self.collision_detector_enabled = True
             dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,  # was radius=0.9

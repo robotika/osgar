@@ -40,5 +40,11 @@ class SubTChallengeTest(unittest.TestCase):
         st.prune()
         self.assertEqual(len(st.trace), 4)
 
+    def test_add_line_to(self):
+        t = Trace(1.0)
+        t.add_line_to((10, 0, 0))
+        self.assertEqual(t.trace[-1], (10, 0, 0))
+        self.assertEqual(len(t.trace), 11)
+
 # vim: expandtab sw=4 ts=4
 
