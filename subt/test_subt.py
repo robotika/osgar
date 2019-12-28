@@ -54,5 +54,11 @@ class SubTChallengeTest(unittest.TestCase):
         # 2nd report should be ignored
         self.assertEqual(game.maybe_remember_artifact(artf_data, artf_xyz), False)
 
+    def test_add_line_to(self):
+        t = Trace(1.0)
+        t.add_line_to((10, 0, 0))
+        self.assertEqual(t.trace[-1], (10, 0, 0))
+        self.assertEqual(len(t.trace), 11)
+
 # vim: expandtab sw=4 ts=4
 

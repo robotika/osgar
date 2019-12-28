@@ -96,6 +96,18 @@ class Trace:
         # robot is crazy far from the trajectory
         assert(False)
 
+    def reverse(self):
+        self.trace.reverse()
+
+    def add_line_to(self, xyz):
+        last = self.trace[-1]
+        size = distance3D(last, xyz)
+        dx, dy, dz = xyz[0] - last[0], xyz[1] - last[1], xyz[2] - last[2]
+        for i in range(1, int(size/self.step)):
+            s = self.step * i/size
+            self.trace.append((last[0] + s*dx, last[1] + s*dy, last[2] + s*dz))
+        self.trace.append(xyz)
+
 
 class Collision(Exception):
     pass
@@ -376,6 +388,19 @@ class SubTChallenge:
                 self.go_safely(desired_direction)
         print('return_home: dist', distance3D(self.xyz, (0, 0, 0)), 'time(sec)', self.sim_time_sec - start_time)
 
+    def follow_trace(self, trace, timeout, max_target_distance=5.0):
+        print('Follow trace')
+        END_THRESHOLD = 2.0
+        start_time = self.sim_time_sec
+        while distance3D(self.xyz, trace.trace[0]) > END_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
+            if self.update() == 'scan':
+                target_x, target_y = trace.where_to(self.xyz, max_target_distance)[:2]
+                x, y = self.xyz[:2]
+#                print((x, y), (target_x, target_y))
+                desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
+                self.go_safely(desired_direction)
+        print('End of follow trace(sec)', self.sim_time_sec - start_time)
+
     def register(self, callback):
         self.monitors.append(callback)
         return callback
@@ -607,6 +632,72 @@ class SubTChallenge:
         self.wait(timedelta(seconds=3))
 #############################################
 
+    def test_nav_trace0(self):
+        """
+        Navigate to the station platform
+        """
+        trace = Trace()
+        trace.add_line_to((3, -5, 0))
+        trace.add_line_to((15, -5, 0))
+        trace.add_line_to((15, 10, 0))
+        trace.add_line_to((-23, 12, -3.267))
+        trace.add_line_to((-25.656, 6.839, -3.267))
+        trace.add_line_to((-36.762, 7.108, -3.267))
+        trace.add_line_to((-37.582, -22.426, -4.505))
+        trace.add_line_to((-27.098, -23.95, -4.505))  # TODO properly define z-value
+        trace.add_line_to((-27.69, -31.209, -6.297))
+        trace.add_line_to((-28.685, -32.144, -6.297))
+        trace.add_line_to((-30, -32.144, -5.795))
+        trace.add_line_to((-32, -32.144, -5.795))
+        trace.add_line_to((-34, -32.144, -5.795))
+        trace.reverse()
+        self.follow_trace(trace, timeout=timedelta(seconds=180))
+
+    def test_nav_trace1(self):
+        """
+        Navigate to rails
+        """
+        __, dy, __ = self.offset
+        dy -= 5.000014
+        trace = Trace()
+        trace.add_line_to((3, -5 - dy, 0))  # before tunnel
+        trace.add_line_to((15, -5 - dy, 0))  # inside tunnel
+        trace.add_line_to((15, 10 - dy, 0))
+        trace.add_line_to((-23, 12 - dy, -3.267))
+        trace.add_line_to((-25.656, 6.839 - dy, -3.267))
+        trace.add_line_to((-36.762, 7.108 - dy, -3.267))
+        trace.add_line_to((-37.582, -22.426 - dy, -4.505))
+        trace.add_line_to((-25.084, -26.688 - dy, -6.297))
+        trace.add_line_to((-24.981, -36.925 - dy, -6.297))
+        trace.add_line_to((-23, -36.925 - dy, -6.297))
+        trace.add_line_to((-21, -36.925 - dy, -6.297))
+        trace.add_line_to((-19, -39 - dy, -6.297))  # rails?
+
+        # follow railway to the left
+        trace.add_line_to((-18.303, -39.863 - dy, -6.297))
+        trace.add_line_to((-1018.303, -39.863 - dy, -6.297))
+
+        trace.reverse()
+        self.follow_trace(trace, timeout=timedelta(seconds=300), max_target_distance=2.5)
+
+    def test_nav_trace(self):
+        """
+        Navigate to the base station tile end
+        """
+        __, dy, __ = self.offset
+        dy -= 5.000014
+        trace = Trace()
+        trace.add_line_to((3, -5 - dy, 0))  # before tunnel
+        trace.add_line_to((15, -5 - dy, 0))  # inside tunnel
+        trace.add_line_to((15, 10 - dy, 0))
+        trace.add_line_to((-23, 12 - dy, -3.267))
+        trace.add_line_to((-25.656, 6.839 - dy, -3.267))
+        trace.add_line_to((-36.762, 7.108 - dy, -3.267))
+        trace.add_line_to((-37.582, -22.426 - dy, -4.505))
+        trace.add_line_to((-25.084, -26.688 - dy, -6.297))
+        trace.reverse()
+        self.follow_trace(trace, timeout=timedelta(seconds=120), max_target_distance=2.5)
+
     def play_virtual_part(self):
         self.stdout("Waiting for origin ...")
         self.origin = None  # invalidate origin
@@ -624,8 +715,9 @@ class SubTChallenge:
             heading = quaternion.heading(self.origin_quat)
             self.stdout('heading', math.degrees(heading), 'angle', math.degrees(math.atan2(-y, -x)), 'dist', math.hypot(x, y))
 
-            self.turn(normalizeAnglePIPI(math.atan2(-y, -x) - heading))
-            self.go_straight(math.hypot(x, y))  # go to the tunnel entrance
+            self.test_nav_trace()  # hacking - experiment
+#            self.turn(normalizeAnglePIPI(math.atan2(-y, -x) - heading))
+#            self.go_straight(math.hypot(x, y))  # go to the tunnel entrance
         else:
             # lost in tunnel
             self.stdout('Lost in tunnel:', self.origin_error, self.offset)
