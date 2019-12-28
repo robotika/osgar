@@ -371,6 +371,18 @@ class SubTChallenge:
                 self.go_safely(desired_direction)
         print('return_home: dist', distance3D(self.xyz, (0, 0, 0)), 'time(sec)', self.sim_time_sec - start_time)
 
+    def follow_trace(self, trace, timeout):
+        print('Follow trace')
+        MAX_TARGET_DISTANCE = 5.0
+        start_time = self.sim_time_sec
+        while self.sim_time_sec - start_time < timeout.total_seconds():
+            if self.update() == 'scan':
+                target_x, target_y = trace.where_to(self.xyz, MAX_TARGET_DISTANCE)[:2]
+                x, y = self.xyz[:2]
+                desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
+                self.go_safely(desired_direction)
+        print('End of follow trace(sec)', self.sim_time_sec - start_time)
+
     def register(self, callback):
         self.monitors.append(callback)
         return callback
@@ -601,6 +613,17 @@ class SubTChallenge:
         self.wait(timedelta(seconds=3))
 #############################################
 
+    def test_nav_trace(self):
+        trace = Trace()
+        trace.update_trace((0, 0, 0))
+        trace.update_trace((1, 0, 0))
+        trace.update_trace((1, -1, 0))
+        trace.update_trace((1, -2, 0))
+        trace.update_trace((1, -3, 0))
+        trace.update_trace((0, -3, 0))
+        trace.update_trace((-1, -3, 0))
+        self.follow_trace(trace, timeout=timedelta(seconds=20))
+
     def play_virtual_part(self):
         self.stdout("Waiting for origin ...")
         self.origin = None  # invalidate origin
@@ -609,6 +632,8 @@ class SubTChallenge:
         while self.origin is None and not self.origin_error:
             self.update()
         self.stdout('Origin:', self.origin, self.robot_name)
+
+        self.test_nav_trace()  # hacking - experiment
 
         if self.origin is not None:
             x, y, z = self.origin
