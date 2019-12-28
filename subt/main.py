@@ -386,8 +386,9 @@ class SubTChallenge:
     def follow_trace(self, trace, timeout):
         print('Follow trace')
         MAX_TARGET_DISTANCE = 5.0
+        END_THRESHOLD = 2.0
         start_time = self.sim_time_sec
-        while self.sim_time_sec - start_time < timeout.total_seconds():
+        while distance3D(self.xyz, trace.trace[0]) > END_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
             if self.update() == 'scan':
                 target_x, target_y = trace.where_to(self.xyz, MAX_TARGET_DISTANCE)[:2]
                 x, y = self.xyz[:2]
@@ -631,8 +632,16 @@ class SubTChallenge:
         trace.add_line_to((3, -5, 0))
         trace.add_line_to((15, -5, 0))
         trace.add_line_to((15, 10, 0))
+        trace.add_line_to((-23, 12, 0))
+        trace.add_line_to((-25.656, 6.839, 0))
+        trace.add_line_to((-36.762, 7.108, 0))
+        trace.add_line_to((-37.582, -22.426, 0))
+        trace.add_line_to((-27.098, -23.95, 0))
+        trace.add_line_to((-27.69, -31.209, 0))
+        trace.add_line_to((-28.685, -32.144, 0))
+        trace.add_line_to((-30, -32.144, 0))
         trace.reverse()
-        self.follow_trace(trace, timeout=timedelta(seconds=20))
+        self.follow_trace(trace, timeout=timedelta(seconds=180))
 
     def play_virtual_part(self):
         self.stdout("Waiting for origin ...")
