@@ -379,6 +379,7 @@ class SubTChallenge:
             if self.update() == 'scan':
                 target_x, target_y = trace.where_to(self.xyz, MAX_TARGET_DISTANCE)[:2]
                 x, y = self.xyz[:2]
+#                print((x, y), (target_x, target_y))
                 desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
                 self.go_safely(desired_direction)
         print('End of follow trace(sec)', self.sim_time_sec - start_time)
@@ -615,7 +616,7 @@ class SubTChallenge:
 
     def test_nav_trace(self):
         trace = Trace()
-        trace.update_trace((0, 0, 0))
+#        trace.update_trace((0, 0, 0))
         trace.update_trace((1, 0, 0))
         trace.update_trace((1, -1, 0))
         trace.update_trace((1, -2, 0))
