@@ -97,7 +97,7 @@ class Trace:
         assert(False)
 
     def reverse(self):
-        self.trace = reversed(self.trace)
+        self.trace.reverse()
 
 
 class Collision(Exception):
