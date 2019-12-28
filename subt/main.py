@@ -96,6 +96,9 @@ class Trace:
         # robot is crazy far from the trajectory
         assert(False)
 
+    def reverse(self):
+        self.trace = reversed(self.trace)
+
 
 class Collision(Exception):
     pass
@@ -616,13 +619,17 @@ class SubTChallenge:
 
     def test_nav_trace(self):
         trace = Trace()
-#        trace.update_trace((0, 0, 0))
         trace.update_trace((1, 0, 0))
         trace.update_trace((1, -1, 0))
         trace.update_trace((1, -2, 0))
         trace.update_trace((1, -3, 0))
-        trace.update_trace((0, -3, 0))
-        trace.update_trace((-1, -3, 0))
+        trace.update_trace((1, -4, 0))
+        trace.update_trace((1, -5, 0))
+        trace.update_trace((2, -5, 0))
+        trace.update_trace((4, -5, 0))
+        trace.update_trace((6, -5, 0))
+        trace.update_trace((8, -5, 0))
+        trace.reverse()
         self.follow_trace(trace, timeout=timedelta(seconds=20))
 
     def play_virtual_part(self):
