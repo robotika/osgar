@@ -640,6 +640,8 @@ class SubTChallenge:
         trace.add_line_to((-27.69, -31.209, 0))
         trace.add_line_to((-28.685, -32.144, 0))
         trace.add_line_to((-30, -32.144, 0))
+        trace.add_line_to((-32, -32.144, 0))
+        trace.add_line_to((-34, -32.144, 0))
         trace.reverse()
         self.follow_trace(trace, timeout=timedelta(seconds=180))
 
