@@ -318,6 +318,7 @@ if __name__ == '__main__':
     from unittest.mock import MagicMock
     from queue import Queue
     import argparse
+    import datetime
     from osgar.bus import Bus
 
     parser = argparse.ArgumentParser(description='Run artifact detection and classification for given JPEG image')
@@ -331,23 +332,33 @@ if __name__ == '__main__':
     config = {'virtual_world': True}  # for now
     logger = MagicMock()
     logger.register = MagicMock(return_value=1)
-    logger.write = MagicMock(return_value=timedelta(0))
-    output = Queue()
+    def counter():
+        start = datetime.datetime.utcnow()
+        while True:
+            dt = datetime.datetime.utcnow() - start
+            yield dt
+    logger.write = MagicMock(side_effect=counter())
     bus = Bus(logger)
     detector = ArtifactDetector(config, bus.handle('detector'))
     detector.verbose = args.verbose
-    detector.start()
     tester = bus.handle('tester')
-    tester.register('scan', 'image')
+    tester.register('scan', 'image', 'tick')
     bus.connect('tester.scan', 'detector.scan')
+    bus.connect('tester.image', 'detector.image')
+    bus.connect('detector.artf', 'tester.artf')
+    bus.connect('tester.tick', 'tester.tick')
+    bus.connect('detector.dropped', 'tester.dropped')
     tester.publish('scan', [2000]*270)  # pretend that everything is at 2 meters
+    detector.start()
     for i in range(10 + 1):  # workaround for local minima
+        a = tester.listen()
+#        print(i, a)
+        tester.sleep(0.01)
         tester.publish('image', jpeg_data)
     detector.request_stop()
     detector.join()
-    if output.empty():
-        print("NO OUTPUT")
-    else:
-        print(output.get()[2])  # print only output data
+    tester.publish('tick', None)
+    a = tester.listen()
+    print(a)
 
 # vim: expandtab sw=4 ts=4
