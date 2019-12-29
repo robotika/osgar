@@ -129,6 +129,29 @@ def count_yellow(img):
     return count_mask(mask)
 
 
+def count_orange_blue(img):  # for phone
+    b = img[:,:,0]
+    g = img[:,:,1]
+    r = img[:,:,2]
+    mask_orange = np.logical_and(r > 40, np.logical_and(r/1.5 > g, r/2 > b))
+    mask_blue = np.logical_and(b > 40, np.logical_and(b/1.5 > g, b/2 > r))
+
+    #not_mask = np.logical_not(mask_orange)
+    #img2 = img.copy()
+    #img2[not_mask] = (0, 0, 0)
+    #img2[mask_orange] = (0, 128, 255)
+    #img2[mask_blue] = (255, 0, 0)
+    #cv2.imwrite('artf.jpg', img2)
+
+    orange = count_mask(mask_orange)
+    blue = count_mask(mask_blue)
+    if orange[0] == 0 or blue[0] == 0:
+        return 0, None, None, None, None
+
+    mask = np.logical_or(mask_orange, mask_blue)
+    return count_mask(mask)
+
+
 def artf_in_scan(scan, width, img_x_min, img_x_max, verbose=False):
     """return precise artefact angle and distance for lidar & camera combination"""
     if scan is None:
@@ -204,6 +227,7 @@ class ArtifactDetector(Node):
             self.stdout('Image resolution', img.shape)
             self.width = img.shape[1]
         assert self.width == img.shape[1], (self.width, img.shape[1])
+        phone_count, w, h, x_min, x_max = count_orange_blue(img)
         rcount, w, h, x_min, x_max = count_red(img)
         yellow_used = False
         if self.is_virtual and rcount < 20:
