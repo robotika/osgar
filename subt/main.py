@@ -654,8 +654,6 @@ class SubTChallenge:
             self.update()
         self.stdout('Origin:', self.origin, self.robot_name)
 
-        self.test_nav_trace()  # hacking - experiment
-        """
         if self.origin is not None:
             x, y, z = self.origin
             x1, y1, z1 = self.xyz
@@ -664,12 +662,12 @@ class SubTChallenge:
             heading = quaternion.heading(self.origin_quat)
             self.stdout('heading', math.degrees(heading), 'angle', math.degrees(math.atan2(-y, -x)), 'dist', math.hypot(x, y))
 
-            self.turn(normalizeAnglePIPI(math.atan2(-y, -x) - heading))
-            self.go_straight(math.hypot(x, y))  # go to the tunnel entrance
+            self.test_nav_trace()  # hacking - experiment
+#            self.turn(normalizeAnglePIPI(math.atan2(-y, -x) - heading))
+#            self.go_straight(math.hypot(x, y))  # go to the tunnel entrance
         else:
             # lost in tunnel
             self.stdout('Lost in tunnel:', self.origin_error, self.offset)
-        """
         for loop in range(3):
             self.collision_detector_enabled = True
             dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,  # was radius=0.9
