@@ -340,6 +340,7 @@ class ArtifactReporter(Node):
                 s = '%s %.2f %.2f %.2f\n' % (artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
                 f.write(s)
                 self.publish('artf_cmd', bytes('artf ' + s, encoding='ascii'))
+                self.sleep(3.0)  # make sure it is sent and processed!
             f.close()
             os.rename(f.name, self.path)
 
