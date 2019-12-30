@@ -48,6 +48,10 @@
 #include <zmq.h>
 #include <assert.h>
 
+
+#define ROSBAG_SIZE_LIMIT 2000000000L  // 2GB
+
+
 int g_countClock = 0;
 int g_countImu = 0;
 int g_countScan = 0;
@@ -421,7 +425,7 @@ void Controller::sendLogPart()
   log.data = stream.str().c_str();
   this->robotDataPub.publish(log);
 
-  if (this->log_offset >= 0)
+  if (this->log_offset >= 0 && this->log_offset < ROSBAG_SIZE_LIMIT)
   {
     FILE *fd = fopen(this->logFilename.c_str(), "rb");
     if(fd != NULL)
