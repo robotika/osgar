@@ -233,7 +233,7 @@ class ArtifactDetector(Node):
         if phone_count > 50:
             print(self.time, 'phone', phone_count)
             artf = PHONE
-            dx_mm, dy_mm = 0, 0  # relative offset to current robot position
+            deg_100th, dist_mm = 0, 500  # in front of the robot
             self.publish('artf', [artf, deg_100th, dist_mm])
             self.publish('debug_artf', image)  # JPEG
         rcount, w, h, x_min, x_max = count_red(img)
