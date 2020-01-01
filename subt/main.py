@@ -627,7 +627,10 @@ class SubTChallenge:
         self.wait(timedelta(seconds=3))
 #############################################
 
-    def test_nav_trace(self):
+    def test_nav_trace0(self):
+        """
+        Navigate to the station platform
+        """
         trace = Trace()
         trace.add_line_to((3, -5, 0))
         trace.add_line_to((15, -5, 0))
@@ -642,6 +645,26 @@ class SubTChallenge:
         trace.add_line_to((-30, -32.144, -5.795))
         trace.add_line_to((-32, -32.144, -5.795))
         trace.add_line_to((-34, -32.144, -5.795))
+        trace.reverse()
+        self.follow_trace(trace, timeout=timedelta(seconds=180))
+
+    def test_nav_trace(self):
+        """
+        Navigate to rails
+        """
+        trace = Trace()
+        trace.add_line_to((3, -5, 0))
+        trace.add_line_to((15, -5, 0))
+        trace.add_line_to((15, 10, 0))
+        trace.add_line_to((-23, 12, -3.267))
+        trace.add_line_to((-25.656, 6.839, -3.267))
+        trace.add_line_to((-36.762, 7.108, -3.267))
+        trace.add_line_to((-37.582, -22.426, -4.505))
+        trace.add_line_to((-25.084, -26.688, -6.297))
+        trace.add_line_to((-24.981, -36.925, -6.297))
+        trace.add_line_to((-23, -36.925, -6.297))
+        trace.add_line_to((-21, -36.925, -6.297))
+        trace.add_line_to((-19, -39, -6.297))  # rails?
         trace.reverse()
         self.follow_trace(trace, timeout=timedelta(seconds=180))
 
