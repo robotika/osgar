@@ -6,7 +6,7 @@
 echo "Start robot solution"
 export OSGAR_LOGS=`pwd`
 cd osgar
-python3 -m subt run subt/zmq-subt-x2.json --side auto --walldist 0.9 --timeout 100 --speed 1.0 --note "try to visit artifact and return home" &
+python3 -m subt run subt/zmq-subt-x2.json --side auto --walldist 1.5 --timeout 100 --speed 1.0 --note "try to visit artifact and return home" &
 ROBOT_PID=$!
 cd ..
 
