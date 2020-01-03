@@ -71,7 +71,6 @@
               ["rosmsg.rot", "app.rot"],
               ["rosmsg.acc", "app.acc"],
 
-              ["rosmsg.scan", "app.scan"],
               ["rosmsg.scan", "detector.scan"],
               ["rosmsg.scan", "depth2scan.scan"],
 
@@ -79,6 +78,7 @@
               ["rosmsg.image", "app.image"],
 
               ["rosmsg.depth", "depth2scan.depth"],
+              ["depth2scan.scan", "app.scan"],
 
               ["rosmsg.pose2d", "app.pose2d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
