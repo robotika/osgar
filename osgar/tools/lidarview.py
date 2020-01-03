@@ -11,6 +11,7 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "1"
 import pygame
 from pygame.locals import *
 import cv2  # for video output
+import numpy as np  # faster depth data processing
 
 from osgar.logger import LogIndexedReader, lookup_stream_names
 from osgar.lib.serialize import deserialize
@@ -110,12 +111,14 @@ g_depth = None
 def get_image(data):
     """Extract JPEG or RGBD depth image"""
     if isinstance(data, list):
-        # Grayscale float format (PGM - Portable GrayMap)
-        assert len(data) == 640 * 360, len(data)
+        # accept only depth data for ROBOTIKA_X2_SENSOR_CONFIG_1
         width, height = 640, 360
-        f = io.BytesIO(b'P5\n%d %d\n255\n' % (width, height) + 
-                       bytes([min(255, x//50) for x in data]))        
-        image = pygame.image.load(f, 'PGM').convert()
+        assert len(data) == width * height, len(data)
+        # https://www.learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
+        img = np.array(np.array(data).reshape((360, 640))/40, dtype=np.uint8)
+        im_color = cv2.applyColorMap(img, cv2.COLORMAP_JET)
+        # https://stackoverflow.com/questions/19306211/opencv-cv2-image-to-pygame-image
+        image = pygame.image.frombuffer(im_color.tostring(), im_color.shape[1::-1], "RGB")
         global g_depth
         g_depth = data
     else:
