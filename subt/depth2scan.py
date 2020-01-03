@@ -49,7 +49,7 @@ class DepthToScan(Node):
                 new_scan = self.scan[:]
                 for i, val in enumerate(mask1):
                     if val:
-                        new_scan[360+79-i] = small[i]
+                        new_scan[360+79-i] = int(small[i])
                 assert len(new_scan) == 720, len(new_scan)
                 self.publish('scan', new_scan)
         else:
