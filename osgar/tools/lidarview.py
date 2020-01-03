@@ -106,7 +106,7 @@ def draw(foreground, pose, scan, poses=[], image=None, callback=None, acc_pts=No
             for a, b in zip(pts[:-1], pts[1:]):
                 pygame.draw.line(foreground, (200, 200, 0), a, b, 1)
 
-
+g_depth = None
 def get_image(data):
     """Extract JPEG or RGBD depth image"""
     if isinstance(data, list):
@@ -116,6 +116,8 @@ def get_image(data):
         f = io.BytesIO(b'P5\n%d %d\n255\n' % (width, height) + 
                        bytes([min(255, x//50) for x in data]))        
         image = pygame.image.load(f, 'PGM').convert()
+        global g_depth
+        g_depth = data
     else:
         image = pygame.image.load(io.BytesIO(data), 'JPG').convert()
     return image
@@ -354,6 +356,9 @@ def lidarview(gen, caption_filename, callback=False, out_video=None):
                     save_counter += 1
                 if event.key == K_d:  # dump scan
                     print(scan)
+                    if g_depth is not None:
+                        with open('depth.bin', 'wb') as f:
+                            f.write(bytes(str(g_depth), encoding='ascii'))
                 if event.key == K_p:  # print position
                     print(pose)
                     x, y, heading = pose
