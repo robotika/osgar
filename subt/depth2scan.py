@@ -22,7 +22,7 @@ class DepthToScan(Node):
 
         if channel == 'scan':
             assert len(self.scan) == 720, len(self.scan)
-        elif channel == 'depth':
+        elif channel == 'depthXXX':
             assert len(self.depth) == 640 * 360, len(self.depth)
             i = (360//2)*640
             mid_line = np.array(self.depth[i:i+640], dtype=np.dtype('H'))
@@ -33,6 +33,23 @@ class DepthToScan(Node):
             small[mask] = 0
             if self.scan is not None:
                 new_scan = self.scan[:360-80] + np.flip(small, axis=0).tolist() + self.scan[360+80:]
+                assert len(new_scan) == 720, len(new_scan)
+                self.publish('scan', new_scan)
+        elif channel == 'depth':
+            assert len(self.depth) == 640 * 360, len(self.depth)
+            i = 300*640  # slope down lidar
+            mid_line = np.array(self.depth[i:i+640], dtype=np.dtype('H'))
+            # 60*720/270 = 160.0 ... i.e. 160 elements to be replaced
+            # 640/160 = 4.0 ... i.e. downsample by 4
+            small = mid_line[::4]
+            mask0 = small == 0xFFFF
+            diff = abs(small[:-1] - small[1:])
+            mask1 = diff > 100
+            if self.scan is not None:
+                new_scan = self.scan[:]
+                for i, val in enumerate(mask1):
+                    if val:
+                        new_scan[360+79-i] = small[i]
                 assert len(new_scan) == 720, len(new_scan)
                 self.publish('scan', new_scan)
         else:
