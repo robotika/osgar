@@ -21,8 +21,8 @@ class DepthToScan(Node):
         channel = super().update()
         assert channel in ["depth", "scan"], channel
 
-        if channel == 'scan':
-            assert len(self.scan) == 720, len(self.scan)
+        if channel == 'depth':
+            assert len(self.depth) == 640 * 360, len(self.depth)
         elif channel == 'depthXXX':
             assert len(self.depth) == 640 * 360, len(self.depth)
             i = (360//2)*640
@@ -36,8 +36,11 @@ class DepthToScan(Node):
                 new_scan = self.scan[:360-80] + np.flip(small, axis=0).tolist() + self.scan[360+80:]
                 assert len(new_scan) == 720, len(new_scan)
                 self.publish('scan', new_scan)
-        elif channel == 'depth':
-            assert len(self.depth) == 640 * 360, len(self.depth)
+        elif channel == 'scan':
+            assert len(self.scan) == 720, len(self.scan)
+            if self.depth is None:
+                self.publish('scan', self.scan)
+                return channel  # when no depth data are available ...
             i = 300*640  # slope down lidar
             mid_line = np.array(self.depth[i:i+640], dtype=np.dtype('H'))
             # 60*720/270 = 160.0 ... i.e. 160 elements to be replaced
@@ -59,5 +62,6 @@ class DepthToScan(Node):
         else:
             assert False, channel  # unsupported channel
 
+        return channel
 
 # vim: expandtab sw=4 ts=4
