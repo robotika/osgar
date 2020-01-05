@@ -671,6 +671,11 @@ class SubTChallenge:
         trace.add_line_to((-23, -36.925 - dy, -6.297))
         trace.add_line_to((-21, -36.925 - dy, -6.297))
         trace.add_line_to((-19, -39 - dy, -6.297))  # rails?
+
+        # follow railway to the left
+        trace.add_line_to((-18.303, -39.863 - dy, -6.297))
+        trace.add_line_to((-1018.303, -39.863 - dy, -6.297))
+
         trace.reverse()
         self.follow_trace(trace, timeout=timedelta(seconds=180))
 
