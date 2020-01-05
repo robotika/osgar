@@ -174,6 +174,7 @@ class SubTChallenge:
         self.monitors = []  # for Emergency Stop Exception
 
         self.use_right_wall = config['right_wall']
+        self.use_center = False  # navigate into center area (controlled by name ending by 'C')
         self.is_virtual = config.get('virtual_world', False)  # workaround to handle tunnel differences
 
         self.last_send_time = None
@@ -293,7 +294,10 @@ class SubTChallenge:
                 channel = self.update()
                 if (channel == 'scan' and not self.flipped) or (channel == 'scan_back' and self.flipped) or channel == 'scan360':
                     if self.pause_start_time is None:
-                        desired_direction = follow_wall_angle(self.scan, radius=radius, right_wall=right_wall)
+                        if self.use_center:
+                            desired_direction = 0
+                        else:
+                            desired_direction = follow_wall_angle(self.scan, radius=radius, right_wall=right_wall)
                         self.go_safely(desired_direction)
                 if dist_limit is not None:
                     if dist_limit < abs(self.traveled_dist - start_dist):  # robot can return backward -> abs()
@@ -737,6 +741,7 @@ class SubTChallenge:
 
         if self.use_right_wall == 'auto':
             self.use_right_wall = self.robot_name.endswith('R')
+            self.use_center = self.robot_name.endswith('C')
         self.stdout('Use right wall:', self.use_right_wall)
 
         times_sec = [int(x) for x in self.robot_name[1:-1].split('F')]
