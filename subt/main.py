@@ -677,7 +677,7 @@ class SubTChallenge:
         trace.add_line_to((-1018.303, -39.863 - dy, -6.297))
 
         trace.reverse()
-        self.follow_trace(trace, timeout=timedelta(seconds=180))
+        self.follow_trace(trace, timeout=timedelta(seconds=300))
 
     def play_virtual_part(self):
         self.stdout("Waiting for origin ...")
