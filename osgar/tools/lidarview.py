@@ -224,7 +224,7 @@ class Framer:
         return timedelta(), self.pose, self.scan, self.image, self.image2, self.keyframe, self.title, True
 
 
-def lidarview(gen, caption_filename, callback=False, out_video=None):
+def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
     global g_scale
 
     if out_video is not None:
@@ -267,6 +267,10 @@ def lidarview(gen, caption_filename, callback=False, out_video=None):
     history = gen
     max_timestamp = None
     wait_for_keyframe = False
+
+    if jump is not None:
+        gen._step(jump)
+
     while True:
         timestamp, pose, scan, image, image2, keyframe, title, eof = history.next()
 
@@ -456,6 +460,8 @@ def main():
     parser.add_argument('--deg', help='lidar field of view in degrees',
                         type=float, default=270)
 
+    parser.add_argument('--jump', '-j', help='jump to given frame', type=int)
+
     parser.add_argument('--create-video', help='filename of output video')
 
     args = parser.parse_args()
@@ -475,7 +481,7 @@ def main():
     with Framer(args.logfile, lidar_name=args.lidar, pose2d_name=args.pose2d, pose3d_name=args.pose3d,
                 camera_name=args.camera, camera2_name=args.camera2, keyframes_name=args.keyframes,
                 title_name=args.title) as framer:
-        lidarview(framer, caption_filename=filename, callback=callback, out_video=args.create_video)
+        lidarview(framer, caption_filename=filename, callback=callback, out_video=args.create_video, jump=args.jump)
 
 if __name__ == "__main__":
     main()
