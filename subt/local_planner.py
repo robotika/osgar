@@ -35,7 +35,7 @@ class LocalPlannerRef:
             measurement_angle = self.scan_right + (self.scan_left - self.scan_right) * i / float(len(self.last_scan) - 1)
             measurement_vector = math.cos(measurement_angle), math.sin(measurement_angle)
 
-            # Converting from tenths of milimeters to meters.
+            # Converting from millimeters to meters.
             obstacle_xy = [mv * measurement * 1e-3 for mv in measurement_vector]
 
             obstacles.append(obstacle_xy)
@@ -78,6 +78,12 @@ class LocalPlannerRef:
 
 
 class LocalPlannerOpt:
+    """
+    Optimized version of Local Planner.
+    1) ignore all directions into obstacles - there is always a way out (lidar is 270 degrees so it can go freely back)
+       and way into the obstacle will have high penalization cost.
+    2) leave complex evaluation as the last step for already best direction
+    """
     def __init__(self, scan_right=math.radians(-135), scan_left=math.radians(135), direction_adherence=math.radians(90), max_obstacle_distance=1.5, obstacle_influence=1.2):
         self.last_scan = None
         self.scan_right = scan_right
@@ -93,6 +99,7 @@ class LocalPlannerOpt:
         if self.last_scan is None:
             return 1.0, desired_dir
 
+        # valid candidate angles for consideration
         valid = [True] * 361  # indexed -180 .. 180
 
         obstacles = []
@@ -104,7 +111,7 @@ class LocalPlannerOpt:
             measurement_angle = self.scan_right + (self.scan_left - self.scan_right) * i / float(len(self.last_scan) - 1)
             measurement_vector = math.cos(measurement_angle), math.sin(measurement_angle)
 
-            # Converting from tenths of milimeters to meters.
+            # Converting from millimeters to meters.
             obstacle_xy = [mv * measurement * 1e-3 for mv in measurement_vector]
 
             obstacles.append(obstacle_xy)
