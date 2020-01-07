@@ -1,7 +1,7 @@
 import unittest
 import math
 
-from subt.local_planner import LocalPlanner
+from subt.local_planner import LocalPlanner, LocalPlannerRef
 
 
 class SubTChallengeTest(unittest.TestCase):
@@ -24,6 +24,21 @@ class SubTChallengeTest(unittest.TestCase):
         planner.update(scan)
         self.assertEqual(planner.recommend(0), 
                 (0.47525253623471064, 1.3089969389957472))
+
+    def test_corner(self):
+        planner = LocalPlanner()
+        # obstacle defined as line "x + y - 1 = 0", corner defined via abs()
+        # ray defined as t*cos(angle), t*sin(angle)
+        # solution for t = 1/(cos(angle) + sin(angle))
+        angles = [abs(math.radians(i-135)) for i in range(271)]
+        scan = [int(1400 / (math.cos(a) + math.sin(a))) for a in angles]
+        planner.update(scan)
+        self.assertEqual(planner.recommend(0), (0.18451952399298924, 2.0420352248333655))
+
+        # now test also old planner
+        planner_ref = LocalPlannerRef()
+        planner_ref.update(scan)
+        self.assertEqual(planner.recommend(0), planner_ref.recommend(0))
 
 # vim: expandtab sw=4 ts=4
 
