@@ -443,7 +443,8 @@ class SubTChallenge:
             # filter out elements on staging area
             self.stdout(self.time, 'Robot at:', (ax, ay, az))
         else:
-            self.maybe_remember_artifact(artifact_data, (ax, ay, az))
+            if self.maybe_remember_artifact(artifact_data, (ax, ay, az)):
+                self.bus.publish('artf_xyz', [[artifact_data, round(ax*1000), round(ay*1000), round(az*1000)]])
 
     def update(self):
         packet = self.bus.listen()
