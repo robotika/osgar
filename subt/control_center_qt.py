@@ -44,6 +44,7 @@ CFG_LORA = {
     "links": [["lora_serial.raw", "lora.raw"],
               ["lora.raw", "lora_serial.raw"],
               ["lora.robot_status", "cc.robot_status"],
+              ["lora.artf", "cc.artf"],
               ["cc.cmd", "lora.cmd"]]
   }
 }
@@ -200,6 +201,10 @@ class OsgarControlCenter:
                 robot_id, (x, y, heading), status = data
                 pose2d = [x/1000, y/1000, math.radians(heading/100)]
                 self.view.robot_status.emit(robot_id, pose2d, status)
+            elif channel == "artf":
+                robot_id, (artf, x, y, z) = data
+                print(robot_id, artf, (x, y, z))
+                # TODO draw it into map (x, y)
 
     def pause_mission(self):
         self.bus.publish('cmd', [0, b'Pause'])
