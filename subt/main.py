@@ -191,8 +191,9 @@ class SubTChallenge:
             if distance3D((x, y, z), artifact_xyz) < 4.0:
                 # in case of uncertain type, rather report both
                 if stored_data == artifact_data:
-                    return
+                    return False
         self.artifacts.append((artifact_data, artifact_xyz))
+        return True
 
     def go_straight(self, how_far, timeout=None):
         print(self.time, "go_straight %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position)
