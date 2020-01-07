@@ -144,6 +144,10 @@ class LoRa(Node):
         elif channel == 'cmd':
             assert len(self.cmd) == 2, self.cmd
             self.send_data(b'%d:%s:%d' % (self.cmd[0], self.cmd[1], int(self.time.total_seconds())))
+        elif channel == 'artf':
+            # send data as they are, ignore transmit time, ignore transmit failure
+            for artf_item in self.artf:
+                self.send_data(bytes(str(artf_item), encoding='ascii'))
         else:
             assert False, channel  # not supported
         return channel
