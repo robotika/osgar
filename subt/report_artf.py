@@ -12,7 +12,9 @@ import json
 URL_BASE = "http://10.100.1.200:8000"  # Safety Research (was Army) Tunnel
 #URL_BASE = "http://10.100.2.200:8000"  # Experimental (was Miami) Tunnel
 
-ARTF_TYPES = ['Survivor', 'Backpack', 'Cell Phone', 'Drill', 'Fire Extinguisher']
+ARTF_TYPES = ['Survivor', 'Backpack', 'Cell Phone',  # common
+              'Drill', 'Fire Extinguisher',          # tunnel extra
+              'Gas', 'Vent']                         # urban extra
 ARTF_TYPES_SHORT = [x[0] for x in ARTF_TYPES]
 
 json_headers = {
