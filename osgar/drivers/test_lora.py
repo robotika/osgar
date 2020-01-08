@@ -1,6 +1,6 @@
 import unittest
 import datetime
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch, call
 
 from osgar.drivers.lora import LoRa, parse_lora_packet, split_lora_buffer, parse_my_cmd
 from osgar.bus import Bus
@@ -106,5 +106,18 @@ class LoRaTest(unittest.TestCase):
         c.join()
         self.assertEqual(tester.listen()[2], b'alive\n')
         self.assertEqual(tester.listen()[2], b'3:Pause:97\n')
+
+    def test_report_artifact(self):
+        bus = MagicMock()
+        c = LoRa(bus=bus, config={'device_id':1})
+        with patch('osgar.node.Node.update') as p:
+            p.return_value = 'raw'
+            c.raw = b"3|['TYPE_BACKPACK', 3506, -18369, -752]\n"
+            c.update()
+            self.assertEqual(bus.method_calls,
+                             [call.register('raw', 'cmd', 'robot_status'),
+                              call.publish('robot_status', [3, ['TYPE_BACKPACK', 3506, -18369, -752], b'running']),
+                              call.publish('raw', b"3|['TYPE_BACKPACK', 3506, -18369, -752]\n")]
+                             )
 
 # vim: expandtab sw=4 ts=4
