@@ -115,8 +115,8 @@ class LoRaTest(unittest.TestCase):
             c.raw = b"3|['TYPE_BACKPACK', 3506, -18369, -752]\n"
             c.update()
             self.assertEqual(bus.method_calls,
-                             [call.register('raw', 'cmd', 'robot_status'),
-                              call.publish('robot_status', [3, ['TYPE_BACKPACK', 3506, -18369, -752], b'running']),
+                             [call.register('raw', 'cmd', 'robot_status', 'artf'),
+                              call.publish('artf', [3, ['TYPE_BACKPACK', 3506, -18369, -752]]),
                               call.publish('raw', b"3|['TYPE_BACKPACK', 3506, -18369, -752]\n")]
                              )
 
