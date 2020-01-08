@@ -651,7 +651,7 @@ class SubTChallenge:
         trace.reverse()
         self.follow_trace(trace, timeout=timedelta(seconds=180))
 
-    def test_nav_trace(self):
+    def test_nav_trace1(self):
         """
         Navigate to rails
         """
@@ -677,6 +677,24 @@ class SubTChallenge:
 
         trace.reverse()
         self.follow_trace(trace, timeout=timedelta(seconds=300), max_target_distance=2.5)
+
+    def test_nav_trace(self):
+        """
+        Navigate to the base station tile end
+        """
+        __, dy, __ = self.offset
+        dy -= 5.000014
+        trace = Trace()
+        trace.add_line_to((3, -5 - dy, 0))  # before tunnel
+        trace.add_line_to((15, -5 - dy, 0))  # inside tunnel
+        trace.add_line_to((15, 10 - dy, 0))
+        trace.add_line_to((-23, 12 - dy, -3.267))
+        trace.add_line_to((-25.656, 6.839 - dy, -3.267))
+        trace.add_line_to((-36.762, 7.108 - dy, -3.267))
+        trace.add_line_to((-37.582, -22.426 - dy, -4.505))
+        trace.add_line_to((-25.084, -26.688 - dy, -6.297))
+        trace.reverse()
+        self.follow_trace(trace, timeout=timedelta(seconds=120), max_target_distance=2.5)
 
     def play_virtual_part(self):
         self.stdout("Waiting for origin ...")
