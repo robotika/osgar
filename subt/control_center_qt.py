@@ -17,9 +17,13 @@ from PyQt5.QtWidgets import ( QApplication, QWidget, QPushButton, QVBoxLayout, Q
                               QDockWidget)
 
 import osgar.record
+import osgar.replay
 import osgar.logger
 import osgar.bus
 import osgar.node
+
+
+g_filename = None  # filename for replay log
 
 
 ####################################################################################
@@ -239,7 +243,12 @@ class MainWindow(QMainWindow):
         self.zoom_reset.connect(self.centralWidget().on_zoom_reset)
         self.zoom_in.connect(self.centralWidget().on_zoom_in)
         self.zoom_out.connect(self.centralWidget().on_zoom_out)
-        if "--demo" not in arguments:
+        if "--replay" in arguments:
+            self.cfg = None
+            print(arguments)
+            global g_filename
+            g_filename = arguments[-1]
+        elif "--demo" not in arguments:
             self.cfg = CFG_LORA
             self.status.showMessage("Using LoRa cfg")
         else:
@@ -298,7 +307,10 @@ class MainWindow(QMainWindow):
     def on_start_stop(self, state):
         if self.recorder is None:
             assert state == Qt.Checked
-            self.recorder = record(self.centralWidget(), self.cfg)
+            if g_filename is None:
+                self.recorder = record(self.centralWidget(), self.cfg)
+            else:
+                self.recorder = replay(self.centralWidget(), g_filename)
             self.cc = next(self.recorder)
             print("recording started")
         else:
@@ -339,6 +351,18 @@ def record(view, cfg):
         view.robot_statuses = {}
         with recorder:
             yield cc
+
+
+def replay(view, filename):
+    args = type('MyClass', (object,), 
+                {'logfile': filename, 'module': 'cc', 'config': None,
+                 'debug': None, 'force': True})
+    cc = osgar.replay.replay(args)
+    cc.view = view
+    view.robot_statuses = {}
+    cc.start()
+    yield cc
+    cc.join()
 
 
 class View(QWidget):
