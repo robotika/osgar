@@ -1,8 +1,6 @@
 #!/usr/bin/python
 """
-  Statistics on ROSbag data
-  usage:
-       ./rosbag.py <input file>
+  Extract OSGAR logfile from SubT ROS Bag (topic /robot_data)
 """
 # based on format specification at
 #   http://wiki.ros.org/Bags/Format/2.0
@@ -64,45 +62,51 @@ def handle_message_data(index_header_dict, data):
     return header_dict, data[4+header_size:4+header_size+4+size]
 
 
+def read_rosbag_fd_gen(f):
+    """Read ROS Bag with already opened file descriptor f"""
+    header = f.read(13)
+    assert header == b'#ROSBAG V2.0\n', header
+
+    header_len = f.read(4)
+    chunk = None
+    while len(header_len) == 4:
+        size = struct.unpack('<I', header_len)[0]
+        assert size < MAX_RECORD_SIZE, size
+        header = f.read(size)
+        assert len(header) == size, (len(header), size)
+        header_dict = parse_header(header)
+        if 'topic' in header_dict:
+            print('topic', header_dict['conn'], header_dict['topic'])
+
+        data_len = f.read(4)
+        assert len(data_len) == 4, len(data_len)
+        size = struct.unpack('<I', data_len)[0]
+        assert size < MAX_RECORD_SIZE, size
+        data = f.read(size)
+        #assert len(data) == size, (len(data), size)
+        if len(data) != size:
+            print("Error", (len(data), size))
+            return
+        op = header_dict['op']
+        if op == OP_CHUNK:
+            chunk = data
+        elif op == OP_INDEX_DATA:
+            header_count = header_dict['count']
+            assert chunk is not None  # first data then indexes
+            # note, that one "chunk" can be shared by several "indexes"
+            assert size == 12 * header_count, size
+            for t, offset in struct.iter_unpack('<QI', data):
+                assert offset < len(chunk)
+                yield handle_message_data(header_dict, chunk[offset:])
+        else:
+            yield header_dict, data_len + data
+        header_len = f.read(4)
+
+
 def read_rosbag_gen(filename):
     with open(filename, 'rb') as f:
-        header = f.read(13)
-        assert header == b'#ROSBAG V2.0\n', header
-
-        header_len = f.read(4)
-        chunk = None
-        while len(header_len) == 4:
-            size = struct.unpack('<I', header_len)[0]
-            assert size < MAX_RECORD_SIZE, size
-            header = f.read(size)
-            assert len(header) == size, (len(header), size)
-            header_dict = parse_header(header)
-            if 'topic' in header_dict:
-                print('topic', header_dict['conn'], header_dict['topic'])
-
-            data_len = f.read(4)
-            assert len(data_len) == 4, len(data_len)
-            size = struct.unpack('<I', data_len)[0]
-            assert size < MAX_RECORD_SIZE, size
-            data = f.read(size)
-            #assert len(data) == size, (len(data), size)
-            if len(data) != size:
-                print("Error", (len(data), size))
-                return
-            op = header_dict['op']
-            if op == OP_CHUNK:
-                chunk = data
-            elif op == OP_INDEX_DATA:
-                header_count = header_dict['count']
-                assert chunk is not None  # first data then indexes
-                # note, that one "chunk" can be shared by several "indexes"
-                assert size == 12 * header_count, size
-                for t, offset in struct.iter_unpack('<QI', data):
-                    assert offset < len(chunk)
-                    yield handle_message_data(header_dict, chunk[offset:])
-            else:
-                yield header_dict, data_len + data
-            header_len = f.read(4)
+        for data in read_rosbag_fd_gen(f):
+            yield  data
 
 
 def parse_raw_image(data, dump_filename=None):
@@ -141,10 +145,9 @@ def parse_string(data, dump_filename=None):
     return data[pos:]
 
 
-def extract_log(filename):
-    out_name = os.path.join(os.path.dirname(filename), 'tmp.log')
+def extract_log(gen, out_name):
     with open(out_name, 'wb') as f:
-        for header_dict, data in read_rosbag_gen(filename):
+        for header_dict, data in gen:
             op = header_dict['op']
             conn  = header_dict.get('conn')
             if conn == 0:
@@ -158,13 +161,27 @@ def extract_log(filename):
 
 if __name__ == "__main__":
     import argparse
+    import tarfile
+
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('filename', help='JPEG filename')
+    parser.add_argument('filename', help='ROS bag file or tar(.gz)')
     parser.add_argument('-v', '--verbose', help='verbose mode', action='store_true')
     args = parser.parse_args()
 
-    extract_log(args.filename)
-
+    if args.filename.endswith('.tar') or args.filename.endswith('.tar.gz'):
+        # In: "ver41p3-91c332d3-2066-466c-a9b9-e3418bbeb0a9-A10F900L.tar"
+        # Out: "aws-ver41p3-A10F900L.log"
+        s = os.path.basename(args.filename).split('-')
+        name = 'aws-' + s[0] + '-' + s[-1].split('.')[0] + '.log'
+        out_name = os.path.join(os.path.dirname(args.filename), name)
+        with tarfile.open(args.filename, "r") as tar:
+            for member in tar.getmembers():
+                if member.name.startswith('robot_data_0.bag'):
+                    f = tar.extractfile(member)
+                    extract_log(read_rosbag_fd_gen(f), out_name)
+    else:
+        out_name = os.path.join(os.path.dirname(args.filename), 'tmp.log')
+        extract_log(read_rosbag_gen(args.filename), out_name)
 
 # vim: expandtab sw=4 ts=4 
 
