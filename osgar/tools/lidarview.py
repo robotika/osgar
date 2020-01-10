@@ -110,12 +110,11 @@ def draw(foreground, pose, scan, poses=[], image=None, callback=None, acc_pts=No
 g_depth = None
 def get_image(data):
     """Extract JPEG or RGBD depth image"""
-    if isinstance(data, list):
-        # accept only depth data for ROBOTIKA_X2_SENSOR_CONFIG_1
-        width, height = 640, 360
-        assert len(data) == width * height, len(data)
+    # https://stackoverflow.com/questions/12569452/how-to-identify-numpy-types-in-python
+    if isinstance(data, np.ndarray):
+        # depth data for ROBOTIKA_X2_SENSOR_CONFIG_1 (640 x 360)
         # https://www.learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
-        img = np.array(np.array(data).reshape((360, 640))/40, dtype=np.uint8)
+        img = np.array(data/40, dtype=np.uint8)
         im_color = cv2.applyColorMap(img, cv2.COLORMAP_JET)
         # https://stackoverflow.com/questions/19306211/opencv-cv2-image-to-pygame-image
         image = pygame.image.frombuffer(im_color.tostring(), im_color.shape[1::-1], "RGB")
