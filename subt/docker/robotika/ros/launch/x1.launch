@@ -6,7 +6,6 @@
   <!-- Launch your controller nodes -->
   <node name="$(arg robot_name)subt_solution" pkg="subt_seed" type="subt_seed_node" output="screen" args="$(arg robot_name)"/>
   <!--node name="base_transform" pkg="subt_seed" type="base_transform.py"  output="screen"/-->
-  <!--node name="empty_map" pkg="subt_seed" type="empty_map.py"  output="screen"/-->
 
   <!-- NAVIGATION -->
   <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="log">
@@ -30,10 +29,10 @@
 		<remap from="cmd_vel" to="/$(arg robot_name)/cmd_vel"/>
 	</node>
 
-	<node pkg="tuw_voronoi_graph" type="tuw_voronoi_graph_node" name="graph_generator" output="screen">
+	<!--node pkg="tuw_voronoi_graph" type="tuw_voronoi_graph_node" name="graph_generator" output="screen">
                 <remap from="map" to="/rtabmap/grid_map" />
                 <param name="publish_voronoi_map_image"       value="true"/>
-	</node>
+	</node-->
 
 	<group ns="rtabmap">
     <node name="rtabmap" pkg="rtabmap_ros" type="rtabmap" output="screen" args="--delete_db_on_start">

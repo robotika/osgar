@@ -19,16 +19,16 @@ COPY CMakeLists.txt ./src/subt_seed/CMakeLists.txt
 
 ADD ros ./src/
 
-RUN sudo apt install -y ros-melodic-image-geometry
-RUN sudo apt install -y ros-melodic-pcl-ros
-RUN sudo apt install -y ros-melodic-costmap-2d
-RUN sudo apt install -y libdxflib-dev
-RUN sudo apt install -y ros-melodic-rtabmap-ros
-RUN sudo apt install -y ros-melodic-teleop-twist-keyboard
-RUN sudo apt install -y ros-melodic-move-base
-RUN sudo apt install -y ros-melodic-dwa-local-planner
-RUN sudo apt install -y ros-melodic-robot-localization
-RUN sudo apt install -y mc
+RUN sudo apt install -y ros-melodic-image-geometry \
+			ros-melodic-pcl-ros \
+			ros-melodic-costmap-2d \
+			libdxflib-dev \
+			ros-melodic-rtabmap-ros \
+			ros-melodic-teleop-twist-keyboard \
+			ros-melodic-move-base \
+			ros-melodic-dwa-local-planner \
+			ros-melodic-robot-localization \
+			mc
 
 RUN /bin/bash -c 'source /opt/ros/melodic/setup.bash && catkin_make install'
 
