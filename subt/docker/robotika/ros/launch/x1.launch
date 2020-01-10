@@ -1,0 +1,117 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Arguments -->
+  <arg name="robot_name" default="" />
+  <param name="robot_name" value="$(arg robot_name)"/>
+  <!-- Launch your controller nodes -->
+  <node name="$(arg robot_name)subt_solution" pkg="subt_seed" type="subt_seed_node" output="screen" args="$(arg robot_name)"/>
+  <!--node name="base_transform" pkg="subt_seed" type="base_transform.py"  output="screen"/-->
+  <!--node name="empty_map" pkg="subt_seed" type="empty_map.py"  output="screen"/-->
+
+  <!-- NAVIGATION -->
+  <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="log">
+	  <rosparam file="$(find subt_seed)/params/costmap_common_params.yaml" command="load" ns="global_costmap" />
+	  <rosparam file="$(find subt_seed)/params/costmap_common_params.yaml" command="load" ns="local_costmap" />
+	  <rosparam file="$(find subt_seed)/params/move_base_params.yaml" command="load" />
+	  <rosparam file="$(find subt_seed)/params/local_costmap_params.yaml" command="load" />
+          <rosparam file="$(find subt_seed)/params/global_costmap_params.yaml" command="load" />
+          <rosparam file="$(find subt_seed)/params/base_local_planner_params.yaml" command="load" />
+	  <param name="controller_frequency" value="10.0"/>
+	  <remap from="cmd_vel" to="$(arg robot_name)/cmd_vel" />
+	  <!--remap from="map" to="/rtabmap/proj_map" /-->
+	  <remap from="map" to="/rtabmap/grid_map" />
+          <remap from="odom" to="$(arg robot_name)/odom" />
+  </node>
+
+<!-- REMOTE CONTROL /-->	
+	<node name="keyboard" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" output="screen">
+		<param name="~speed" value="0.4" />
+		<param name="~turn" value="1.0" />
+		<remap from="cmd_vel" to="/$(arg robot_name)/cmd_vel"/>
+	</node>
+
+	<node pkg="tuw_voronoi_graph" type="tuw_voronoi_graph_node" name="graph_generator" output="screen">
+                <remap from="map" to="/rtabmap/grid_map" />
+                <param name="publish_voronoi_map_image"       value="true"/>
+	</node>
+
+	<group ns="rtabmap">
+    <node name="rtabmap" pkg="rtabmap_ros" type="rtabmap" output="screen" args="--delete_db_on_start">
+          <param name="frame_id" type="string" value="$(arg robot_name)"/>
+          <!--param name="odom_frame_id" type="string" value="$(arg robot_name)/odom"/-->
+          <param name="subscribe_depth" type="bool" value="false"/>
+          <param name="subscribe_rgbd" type="bool" value="false"/>
+          <param name="subscribe_scan" type="bool" value="false"/>
+          <param name="subscribe_scan_cloud" type="bool" value="true"/>
+          <remap from="scan_cloud"       to="/$(arg robot_name)/rgbd_camera/depth/points"/>
+          <remap from="rgb/image"       to="/$(arg robot_name)/image_raw"/>
+          <remap from="depth/image"     to="/$(arg robot_name)/front/depth"/>
+          <remap from="rgb/camera_info" to="/$(arg robot_name)/camera_info"/>
+          <remap from="scan" to="/$(arg robot_name)/front_scan"/>
+	  <remap from="odom" to="/odometry/filtered"/>
+
+          <remap from="rgbd_image" to="rgbd_image"/>
+
+          <param name="queue_size" type="int" value="10"/>
+
+          <!-- RTAB-Map's parameters -->
+          <param name="RGBD/AngularUpdate"        type="string" value="0.01"/>
+          <param name="RGBD/LinearUpdate"         type="string" value="0.01"/>
+          <param name="RGBD/OptimizeFromGraphEnd" type="string" value="false"/>
+          <param name="proj_max_height" type="double" value="1.0"/>
+          <param name="proj_max_ground_angle" type="double" value="45"/>
+          <param name="grid_unknown_space_filled" type="bool" value="true"/>
+          <param name="grid_eroded" type="bool" value="true"/>
+    </node>
+    </group>
+
+    <!-- LOCALIZATION /-->
+    <rosparam command="load" file="$(find subt_seed)/params/ekf_params.yaml" />
+    <node pkg="robot_localization" type="ekf_localization_node" name="ekf_se_map" clear_params="true">
+                <!--remap from="odometry/filtered" to="odometry/filtered_map"/-->
+    </node>
+   <!--node name="cartographer_node" pkg="cartographer_ros"
+      type="cartographer_node" args="
+          -configuration_directory $(find subt_seed)/params
+          -configuration_basename backpack_3d.lua"
+      output="screen">
+      <remap from="points2" to="/$(arg robot_name)/rgbd_camera/depth/points" />
+      <remap from="imu" to="/$(arg robot_name)/imu/data" />
+      <remap from="odom" to="/$(arg robot_name)/odom"/>
+      <remap from="map" to="/cartogrampher_map"/>
+   </node-->
+
+   <!--node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
+	   type="cartographer_occupancy_grid_node" args="-resolution 0.05">
+		
+       <remap from="map" to="/cartographer_map"/>
+
+   </node-->
+
+	<!--node>
+	  <param name="subscribe_depth" type="bool" value="false"/>
+	  <param name="subscribe_rgbd" type="bool" value="false"/>
+	  <param name="subscribe_scan" type="bool" value="false"/>
+	  <param name="subscribe_scan_cloud" type="bool" value="true"/>
+	  <remap from="scan_cloud"       to="/$(arg robot_name)/rgbd_camera/depth/points"/>
+	  <remap from="rgb/image"       to="/$(arg robot_name)/front/image_raw"/>
+          <remap from="depth/image"     to="/$(arg robot_name)/front/depth"/>
+          <remap from="rgb/camera_info" to="/$(arg robot_name)/front/camera_info"/>
+	  <remap from="scan" to="/$(arg robot_name)/front_scan"/>
+	  <remap from="odom" to="/$(arg robot_name)/odom"/>
+
+          <remap from="rgbd_image" to="rgbd_image"/>
+
+          <param name="queue_size" type="int" value="10"/>
+
+          <param name="RGBD/AngularUpdate"        type="string" value="0.01"/>
+          <param name="RGBD/LinearUpdate"         type="string" value="0.01"/>
+	  <param name="RGBD/OptimizeFromGraphEnd" type="string" value="false"/>
+	  <param name="proj_max_height" type="double" value="1.0"/>
+	  <param name="proj_max_ground_angle" type="double" value="45"/>
+	  <param name="grid_unknown_space_filled" type="bool" value="true"/>
+	  <param name="grid_eroded" type="bool" value="true"/>
+    </node-->
+
+
+</launch>

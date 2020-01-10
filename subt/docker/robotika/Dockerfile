@@ -14,6 +14,24 @@ COPY --chown=developer:developer . ./osgar/
 
 RUN source /opt/ros/melodic/setup.bash && ./osgar/subt/script/sync.sh
 
+COPY subt_seed_node.cc ./src/subt_seed/src/subt_seed_node.cc
+COPY CMakeLists.txt ./src/subt_seed/CMakeLists.txt
+
+ADD ros ./src/
+
+RUN sudo apt install -y ros-melodic-image-geometry
+RUN sudo apt install -y ros-melodic-pcl-ros
+RUN sudo apt install -y ros-melodic-costmap-2d
+RUN sudo apt install -y libdxflib-dev
+RUN sudo apt install -y ros-melodic-rtabmap-ros
+RUN sudo apt install -y ros-melodic-teleop-twist-keyboard
+RUN sudo apt install -y ros-melodic-move-base
+RUN sudo apt install -y ros-melodic-dwa-local-planner
+RUN sudo apt install -y ros-melodic-robot-localization
+RUN sudo apt install -y mc
+
+RUN /bin/bash -c 'source /opt/ros/melodic/setup.bash && catkin_make install'
+
 ENTRYPOINT ["./osgar/subt/docker/robotika/entrypoint.bash"]
 
 CMD ["./osgar/subt/docker/robotika/run_solution.bash"]
