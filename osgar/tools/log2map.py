@@ -20,16 +20,34 @@ def main():
     parser.add_argument('logfile', help='recorded log file')
     parser.add_argument('--out', help='map output file')
     parser.add_argument('--pose2d', help='stream ID for pose2d messages', default='app.pose2d')
+    parser.add_argument('--camera', help='stream ID with image data')
     args = parser.parse_args()
 
     out_filename = args.out
     if out_filename is None:
-        out_filename = os.path.join(os.path.dirname(args.logfile), 'world.jpg')
+        out_filename = os.path.splitext(args.logfile)[0] + '.jpg'
 
     pts = []
-    for dt, channel, data in LogReader(args.logfile, only_stream_id=lookup_stream_id(args.logfile, args.pose2d)):
-        pose = deserialize(data)
-        pts.append(pose[:2])
+    pose_id = lookup_stream_id(args.logfile, args.pose2d)
+    streams = [pose_id]
+    camera_id = None
+    if args.camera is not None:
+        camera_id = lookup_stream_id(args.logfile, args.camera)
+        streams.append(camera_id)
+    valid_motion = True
+    prev = None
+    for dt, channel, data in LogReader(args.logfile, only_stream_id=streams):
+        if channel == pose_id:
+            if valid_motion:
+                pose = deserialize(data)
+                pts.append(pose[:2])
+        elif channel == camera_id:
+            # There are many simulations where robot finishes stuck (or even upside-down).
+            # The odometry is changing but the video is still (identical images).
+            # valid_motion=False describes such problematic case and prevents undesired
+            # scaling of output world map image.
+            valid_motion = prev != data
+            prev = data
     arr = np.array(pts)
     min_x, min_y = np.min(arr, axis=0)
     max_x, max_y = np.max(arr, axis=0)
