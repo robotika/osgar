@@ -1,4 +1,6 @@
 import unittest
+import unittest.mock
+import numpy
 
 from osgar.lib.serialize import serialize, deserialize
 
@@ -20,5 +22,19 @@ class SerializeTest(unittest.TestCase):
         compressed_packet = serialize(data, compress=True)
         self.assertEqual(len(compressed_packet), 22)
         self.assertEqual(deserialize(compressed_packet), data)
+
+    def test_numpy(self):
+        data = numpy.asarray(range(1, 100, 2), dtype=numpy.uint16)
+        packet = serialize(data)
+        self.assertEqual(len(packet), 163)
+        dedata = deserialize(packet)
+        self.assertTrue(numpy.array_equal(dedata, data))
+        self.assertEqual(dedata.dtype, data.dtype)
+
+        with unittest.mock.patch('osgar.lib.serialize.numpy', new=False):
+            with self.assertRaises(TypeError):
+                serialize(data)
+            with self.assertRaises(TypeError):
+                deserialize(packet)
 
 # vim: expandtab sw=4 ts=4
