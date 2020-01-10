@@ -85,3 +85,27 @@ it will be lost with the termination of the docker.
 
 For update it is necessary to repeat all steps above within the docker. You can skip `sync.sh` if there are only
 Python3 code changes. It is necessary to restart the docker to reset it to clean state.
+
+
+## Build "robotika" image
+
+The "robotika" tags used for AWS are in the form "verXXX", where XXX is the release/build number.
+
+```
+cd subt/docker
+./build.bash robotika
+docker tag robotika 200670743174.dkr.ecr.us-east-1.amazonaws.com/subt/robotika:verXXX
+eval `aws ecr get-login --no-include-email`
+docker push 200670743174.dkr.ecr.us-east-1.amazonaws.com/subt/robotika:verXXX
+```
+
+
+## Extraction of OSGAR logfiles from ROS bag
+
+CloudSim supports storing topic /robot_data into ROS bag (up to 2GB). There is helper tool for extraction:
+```
+python -m subt.rosbag2log <downloaded tar file>
+```
+
+Newly extracted file is named by tar file, i.e. `ver41p3-91c332d3-2066-466c-a9b9-e3418bbeb0a9-A10F900L.tar creates`
+new file named `aws-ver41p3-A10F900L.log`
