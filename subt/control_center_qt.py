@@ -331,7 +331,7 @@ class MainWindow(QMainWindow):
 
 
 def record(view, cfg):
-    with osgar.logger.LogWriter(prefix='control-center-') as log:
+    with osgar.logger.LogWriter(prefix='control-center-', note=str(sys.argv)) as log:
         log.write(0, bytes(str(cfg), 'ascii'))
         recorder = osgar.record.Recorder(config=cfg['robot'], logger=log)
         cc = recorder.modules['cc']
