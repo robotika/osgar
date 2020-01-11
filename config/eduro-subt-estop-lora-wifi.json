@@ -154,6 +154,7 @@
               ["lora_serial.raw", "lora.raw"],
               ["lora.raw", "lora_serial.raw"],
               ["app.pose2d", "lora.pose2d"],
-              ["lora.cmd", "app.cmd"]]
+              ["lora.cmd", "app.cmd"],
+              ["app.artf_xyz", "lora.artf"]]
   }
 }
