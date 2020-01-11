@@ -46,12 +46,12 @@ class KloubakTest(unittest.TestCase):
         self.assertAlmostEqual(0.0, compute_desired_angle(1.0, 0.0))
 
         # easy case when the joint has 60 degrees and radius is CENTER_AXLE_DISTANCE
-        self.assertAlmostEqual(math.radians(90),
-                compute_desired_angle(CENTER_AXLE_DISTANCE, 1.0))
+        self.assertAlmostEqual(0.9272952,
+                compute_desired_angle(CENTER_AXLE_DISTANCE, 0.5))
 
         # it should be symmetrical
-        self.assertAlmostEqual(math.radians(-90),
-                compute_desired_angle(CENTER_AXLE_DISTANCE, -1.0))
+        self.assertAlmostEqual(-0.9272952,
+                compute_desired_angle(CENTER_AXLE_DISTANCE, -0.5))
 
         # perpendicular to the left, radius defined by length of joint to wheel center
 #        self.assertAlmostEqual(math.radians(90),
@@ -69,7 +69,7 @@ class KloubakTest(unittest.TestCase):
 
         # another case "ValueError: math domain error"
         angle = compute_desired_angle(0.1, -1.0637781790905438)
-        self.assertAlmostEqual(angle, -2.613930299306476)
+        self.assertAlmostEqual(angle, -1.3962634015954636)
 
     def test_invalid_can_message(self):
         # this message killed Kloubak K2 on DARPA SubT Tunnel Circuit, Day 2
@@ -83,5 +83,24 @@ class KloubakTest(unittest.TestCase):
         self.assertEqual(k2.can_errors, 1)
 
         k2.update_encoders(msg_id=0x92, data=b'\x97')
+
+    def test_partial_axis_encoders_update(self):
+        config = {
+            'num_axis': 3
+        }
+        bus = MagicMock()
+        k3 = RobotKloubak(config, bus)
+        self.assertIsNone(k3.partial_axis_encoders_update((121, 2, 2280, 2486)))
+
+        # epoch change, but incomplete data -> do not return anything
+        self.assertIsNone(k3.partial_axis_encoders_update((122, 1, 2183, 3786)))
+
+        # now proper update
+        self.assertIsNone(k3.partial_axis_encoders_update((122, 2, 2280, 2486)))
+        self.assertIsNone(k3.partial_axis_encoders_update((122, 3, 2164, 2486)))
+
+        # epoch change
+        self.assertEqual(k3.partial_axis_encoders_update((123, 1, 2183, 3786)),
+                         [2183, 3786, 2280, 2486, 2164, 2486])
 
 # vim: expandtab sw=4 ts=4

@@ -22,12 +22,17 @@ TURNING_ANGULAR_SPEED = math.pi/8
 AD_CENTER = 419.7 # K2, can be modified by config
 AD_CALIBRATION_DEG = 45  # K2, can be modified by config
 AD_RANGE = -182.5  # K2, can be modified by config
+MAX_JOIN_ANGLE = 80 * math.pi/180 # K2, can be modified by config
+AD_CENTER2 = None
+AD_RANGE2 = None
 
 CAN_ID_BUTTONS = 0x1
 CAN_ID_VESC_FRONT_R = 0x91
 CAN_ID_VESC_FRONT_L = 0x92
 CAN_ID_VESC_REAR_R = 0x93
 CAN_ID_VESC_REAR_L = 0x94
+CAN_ID_VESC_REAR_K3_R = 0x95
+CAN_ID_VESC_REAR_K3_L = 0x96
 CAN_ID_SYNC = CAN_ID_VESC_FRONT_L
 CAN_ID_CURRENT = 0x70
 CAN_ID_JOIN_ANGLE = 0x80
@@ -39,6 +44,8 @@ INDEX_FRONT_LEFT = 1
 INDEX_FRONT_RIGHT = 0
 INDEX_REAR_LEFT = 3
 INDEX_REAR_RIGHT = 2
+INDEX_REAR_K3_L = 5
+INDEX_REAR_K3_R = 4
 
 MIN_SPEED = 0.3
 
@@ -84,6 +91,40 @@ def draw_enc_stat(arr):
     plt.show()
 
 
+def draw_4wd(speed_arr, join_arr):
+    import numpy as np
+    from matplotlib import pyplot as plt
+
+    fig = plt.figure(figsize=(8,8))
+    if len(speed_arr) > 0:
+        speed_arr = np.array(speed_arr)
+        print(speed_arr.shape)
+        ax1 = fig.add_subplot(211)
+        ax1.plot(speed_arr[:, 0], speed_arr[:, 1], "+r", label="front left")
+        ax1.plot(speed_arr[:, 0], speed_arr[:, 2], "+g", label="front right")
+        ax1.plot(speed_arr[:, 0], speed_arr[:, 3], "+b", label="rear left")
+        ax1.plot(speed_arr[:, 0], speed_arr[:, 4], "+y", label="rear right")
+        ax1.set_xlabel("Time (s)")
+        ax1.set_ylabel("Speed (ms$^{-1}$)")
+        ax1.legend()
+    else:
+        print("No speed data")
+
+    if len(join_arr) > 0:
+        join_arr = np.array(join_arr)
+        print(join_arr.shape)
+        ax2 = fig.add_subplot(212)
+        ax2.plot(join_arr[:, 0], join_arr[:, 1], "+r", label="actual angle")
+        ax2.plot(join_arr[:, 0], join_arr[:, 2], "+g", label="desired angle")
+        ax2.set_xlabel("Time (s)")
+        ax2.set_ylabel("Angle (deg)")
+        ax2.legend()
+    else:
+        print("No join data")
+
+    plt.show()
+
+
 def compute_desired_erpm(desired_speed, desired_angular_speed):
     scale = 1 / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)
     left = scale * (desired_speed - desired_angular_speed * WHEEL_DISTANCE / 2)
@@ -99,7 +140,10 @@ def compute_desired_angle(desired_speed, desired_angular_speed):
     if abs(desired_angular_speed) < 0.000001:
         return 0.0
     radius = desired_speed/desired_angular_speed
-    return 2 * math.atan(CENTER_AXLE_DISTANCE / radius)
+    desired_angle = 2 * math.atan(CENTER_AXLE_DISTANCE / radius)
+    if abs(desired_angle) > MAX_JOIN_ANGLE:
+        return math.copysign(MAX_JOIN_ANGLE, desired_angle)
+    return desired_angle
 
 
 def calculate_wheels_speeds( desired_speed, desired_angular_speed, actual_angle ):
@@ -110,27 +154,31 @@ def calculate_wheels_speeds( desired_speed, desired_angular_speed, actual_angle 
         actual_radius = CENTER_AXLE_DISTANCE / math.tan(actual_angle/2)
         v_fl = v_rl = desired_speed / actual_radius * (actual_radius - WHEEL_DISTANCE / 2)
         v_fr = v_rr = desired_speed / actual_radius * (actual_radius + WHEEL_DISTANCE / 2)
-    if abs( desired_angle - actual_angle ) < 0.1:
+    if abs( desired_angle - actual_angle ) < 0.05: # in radians cca 2.9 deg
         return v_fl, v_fr, v_rl, v_rr
-
-    speed_corection = CENTER_AXLE_DISTANCE * TURNING_ANGULAR_SPEED * math.tan(actual_angle/2)  # positive for left, negative for right
+    turning_angular_speed = abs( desired_angle - actual_angle ) * 1 + math.pi/8
+#    speed_correction = CENTER_AXLE_DISTANCE * TURNING_ANGULAR_SPEED * math.tan(actual_angle / 2)
+    speed_correction = CENTER_AXLE_DISTANCE * turning_angular_speed * math.tan(actual_angle/2)  # positive for left, negative for right
+    turning_wheel_speed = turning_angular_speed * WHEEL_DISTANCE / 2
     if desired_angle - actual_angle > 0:  # turn left
-        v_fl = v_fl - TURNING_WHEEL_SPEED - speed_corection
-        v_fr = v_fr + TURNING_WHEEL_SPEED - speed_corection
-        v_rl = v_rl + TURNING_WHEEL_SPEED + speed_corection
-        v_rr = v_rr - TURNING_WHEEL_SPEED + speed_corection
+        v_fl = v_fl - turning_wheel_speed - speed_correction
+        v_fr = v_fr + turning_wheel_speed - speed_correction
+        v_rl = v_rl + turning_wheel_speed + speed_correction
+        v_rr = v_rr - turning_wheel_speed + speed_correction
     else:  # turn right
-        v_fl = v_fl + TURNING_WHEEL_SPEED + speed_corection
-        v_fr = v_fr - TURNING_WHEEL_SPEED + speed_corection
-        v_rl = v_rl - TURNING_WHEEL_SPEED - speed_corection
-        v_rr = v_rr + TURNING_WHEEL_SPEED - speed_corection
+        v_fl = v_fl + turning_wheel_speed + speed_correction
+        v_fr = v_fr - turning_wheel_speed + speed_correction
+        v_rl = v_rl - turning_wheel_speed - speed_correction
+        v_rr = v_rr + turning_wheel_speed - speed_correction
 #    print(desired_speed, desired_angular_speed, actual_angle, v_fl, v_fr, v_rl, v_rr)
     return v_fl, v_fr, v_rl, v_rr
 
 
-def joint_rad(analog):
+def joint_rad(analog, second_ang = False):
     if analog is None:
         return None
+    if second_ang:
+        return math.radians(AD_CALIBRATION_DEG * (AD_CENTER2 - analog) / AD_RANGE2)
     return math.radians(AD_CALIBRATION_DEG * ( AD_CENTER - analog )/AD_RANGE)
 
 
@@ -156,15 +204,21 @@ def setup_global_const(config):
     global WHEEL_DISTANCE
     global CENTER_AXLE_DISTANCE
     global AD_CENTER
+    global AD_CENTER2
     global AD_CALIBRATION_DEG
     global AD_RANGE
-    global TURNING_WHEEL_SPEED
-    WHEEL_DISTANCE = config.get("wheel_distance", WHEEL_DISTANCE)
-    CENTER_AXLE_DISTANCE = config.get("center_axle_distance", CENTER_AXLE_DISTANCE)
-    AD_CENTER = config.get("ad_center", AD_CENTER)
-    AD_CALIBRATION_DEG = config.get("ad_calibration_deg", AD_CALIBRATION_DEG)
-    AD_RANGE = config.get("ad_range", AD_RANGE)
-    TURNING_WHEEL_SPEED = TURNING_ANGULAR_SPEED * WHEEL_DISTANCE / 2
+    global AD_RANGE2
+    global MAX_JOIN_ANGLE
+#    global TURNING_WHEEL_SPEED
+    WHEEL_DISTANCE = config.get("wheel_distance", WHEEL_DISTANCE )
+    CENTER_AXLE_DISTANCE = config.get("center_axle_distance", CENTER_AXLE_DISTANCE )
+    AD_CENTER = config.get("ad_center", AD_CENTER )
+    AD_CENTER2 = config.get("ad_center2")
+    AD_CALIBRATION_DEG = config.get("ad_calibration_deg", AD_CALIBRATION_DEG )
+    AD_RANGE = config.get("ad_range", AD_RANGE )
+    AD_RANGE2 = config.get("ad_range2")
+    MAX_JOIN_ANGLE = config.get("max_join_angle", MAX_JOIN_ANGLE)
+#    TURNING_WHEEL_SPEED = TURNING_ANGULAR_SPEED * WHEEL_DISTANCE / 2
 
 
 class RobotKloubak(Node):
@@ -178,6 +232,7 @@ class RobotKloubak(Node):
         self.desired_angular_speed = 0.0
         self.v_fl = self.v_fr = self.v_rl = self.v_rr = 0  # values in m/s
         self.drive_mode = DriveMode.ALL
+        self.num_axis = config.get("num_axis", 2)
 
         # status
         self.emergency_stop = None  # unknown state
@@ -187,21 +242,29 @@ class RobotKloubak(Node):
         self.last_encoders_front_right = None
         self.last_encoders_rear_left = None
         self.last_encoders_rear_right = None
+        self.last_encoders_rear_k3_l = None
+        self.last_encoders_rear_k3_r = None
         self.last_encoders_time = None
-        self.last_pose_encoders = [0, 0, 0, 0]  # accumulated tacho readings
-        self.encoders = [0, 0, 0, 0]  # handling 16bit integer overflow
+        self.last_pose_encoders = [0, 0,] * self.num_axis  # accumulated tacho readings
+        self.encoders = [0, 0,] * self.num_axis  # handling 16bit integer overflow
         self.last_encoders_16bit = None  # raw readings
         self.last_join_angle = None
+        self.last_join_angle2 = None
         self.voltage = None
         self.can_errors = 0  # count errors instead of assert
+
+        # new per axis encoders
+        self.epoch = None  # unknown
+        self.partial_encoders = [None, None,] * self.num_axis
 
         self.verbose = False  # should be in Node
         self.enc_debug_arr = []
         self.join_debug_arr = []
-        self.count = [0, 0, 0, 0]
+        self.speed_debug_arr = []
+        self.count = [0, 0,] * self.num_axis
         self.count_arr = []
         self.debug_odo = []
-        print('Kloubak mode:', self.drive_mode)
+        print('Kloubak mode:', self.drive_mode, 'num_axis:', self.num_axis)
 
     def send_pose(self):
         x, y, heading = self.pose
@@ -222,20 +285,51 @@ class RobotKloubak(Node):
                 self.bus.publish('emergency_stop', self.emergency_stop)
                 print('Emergency STOP:', self.emergency_stop)
 
+    def partial_axis_encoders_update(self, arr):
+        # return True when completed
+        # simple report encoders on epoch change -> delayed 1 cycle
+        epoch, axis, left, right = arr
+        ret = self.partial_encoders[:]
+#        assert axis in [1, 2, 3], axis
+        if axis == 0:
+            print("Error: nonvalid axis: ", axis)
+            return None
+        self.partial_encoders[2 * (axis - 1)] = left
+        self.partial_encoders[2 * (axis - 1) + 1] = right
+        if self.epoch is None or self.epoch == epoch:
+            self.epoch = epoch
+            return None
+        self.epoch = epoch
+        if None in ret:
+            return None  # do not publish incomplete readings
+        return ret
+
     def update_encoders(self, msg_id, data):
         if msg_id == 0x83:
-            encoders = struct.unpack('>HHHH', data)
+            if len(data) == 8:
+                # old version used on Kloubak K2, two encoders in single message
+                encoders = struct.unpack('>HHHH', data)
+            elif len(data) == 6:
+                # new version for Kloubak K3, one message per axis
+                arr = struct.unpack('>BBHH', data)
+                encoders = self.partial_axis_encoders_update(arr)
+                if encoders is None:
+                    return
+            else:
+                self.can_errors += 1
+                return
+
             if self.last_encoders_time is not None:
                 diff = [sint16_diff(e, prev) for prev, e in zip(self.last_encoders_16bit, encoders)]
             else:
-                diff = [0, 0, 0, 0]
+                diff = [0,] * len(encoders)  # support both K2 and K3
             self.encoders = [e + d for e, d in zip(self.encoders, diff)]
             self.last_encoders_16bit = encoders
             self.last_encoders_time = self.time
             if self.verbose:
-                print(self.time - self.last_encoders_time, diff, self.encoders)
+                print(self.time, diff, self.encoders)
             return
-        assert msg_id in [0x91, 0x92, 0x93, 0x94], hex(msg_id)
+        assert msg_id in [0x91, 0x92, 0x93, 0x94, 0x95, 0x96], hex(msg_id)
         # assert len(data) == 8, data
         if len(data) != 8:
             self.can_errors += 1
@@ -251,6 +345,10 @@ class RobotKloubak(Node):
             self.last_encoders_rear_left = rpm3
         elif msg_id == CAN_ID_VESC_REAR_R:
             self.last_encoders_rear_right = rpm3
+        if msg_id == CAN_ID_VESC_REAR_K3_L:
+            self.last_encoders_rear_k3_l = rpm3
+        elif msg_id == CAN_ID_VESC_REAR_K3_R:
+            self.last_encoders_rear_k3_r = rpm3
         self.count[msg_id - 0x91] += 1
 #        print(self.count)
         if self.verbose:
@@ -309,7 +407,7 @@ class RobotKloubak(Node):
         msg_id, payload, flags = packet
         if msg_id == CAN_ID_BUTTONS:
             self.update_buttons(payload)
-        elif msg_id in [CAN_ID_ENCODERS, CAN_ID_VESC_FRONT_L, CAN_ID_VESC_FRONT_R, CAN_ID_VESC_REAR_L, CAN_ID_VESC_REAR_R]:
+        elif msg_id in [CAN_ID_ENCODERS, CAN_ID_VESC_FRONT_L, CAN_ID_VESC_FRONT_R, CAN_ID_VESC_REAR_L, CAN_ID_VESC_REAR_R, CAN_ID_VESC_REAR_K3_R, CAN_ID_VESC_REAR_K3_L]:
             self.update_encoders(msg_id, payload)
         elif msg_id == CAN_ID_CURRENT:
             # expected 24bit integer miliAmps
@@ -320,8 +418,15 @@ class RobotKloubak(Node):
                 self.can_errors += 1
         elif msg_id == CAN_ID_JOIN_ANGLE:
             if len(payload) == 4:
-                self.last_join_angle = struct.unpack('>i', payload)[0]
-#                print(self.last_join_angle)
+                if self.num_axis == 3:
+                    self.last_join_angle, self.last_join_angle2 = struct.unpack('>hh', payload)
+    #                print(self.last_join_angle,payload)
+#                    print(self.last_join_angle, self.last_join_angle2)
+                else:
+                    self.last_join_angle = struct.unpack('>i', payload)[0]
+#                    print(self.last_join_angle,payload)
+#                    print(self.last_join_angle)
+
             else:
                 self.can_errors += 1
         elif msg_id == CAN_ID_VOLTAGE:
@@ -347,31 +452,106 @@ class RobotKloubak(Node):
         return False
 
 
-    def update_drive_four_wheels(self, timestamp, data):
-        """Drive all motors"""
-        # update commands for all 4 motors only with new angle reading
-        # (Kloubak does not have any SYNC signal for all motor drivers)
-        if self.last_join_angle:
+    def update_drive_three_axles(self, timestamp, data):
+        if self.last_join_angle and self.desired_speed > 0:
             angle = joint_rad(self.last_join_angle)
-            self.v_fl, self.v_fr, self.v_rl, self.v_rr = calculate_wheels_speeds(self.desired_speed, self.desired_angular_speed, angle)
+            assert abs(angle) < math.pi/2, angle * 180 / math.pi
+            self.v_fl, self.v_fr, self.v_rl, self.v_rr = calculate_wheels_speeds(self.desired_speed,
+                                                                                 self.desired_angular_speed, angle)
+            if self.verbose:
+                self.join_debug_arr.append([timestamp.total_seconds(), angle*180/math.pi, compute_desired_angle( self.desired_speed, self. desired_angular_speed )*180/math.pi] )
+
+        elif self.last_join_angle2 and self.desired_speed < 0:
+            angle = joint_rad(self.last_join_angle2, second_ang = True)
+            assert abs(angle) < math.pi / 2, angle * 180 / math.pi
+            self.v_fl, self.v_fr, self.v_rl, self.v_rr = calculate_wheels_speeds(self.desired_speed,
+                                                                                 self.desired_angular_speed, angle)
+            if self.verbose:
+                self.join_debug_arr.append([timestamp.total_seconds(), angle*180/math.pi, compute_desired_angle( self.desired_speed, self. desired_angular_speed )*180/math.pi] )
 
         if self.process_packet(data):
             stop = [0, 0, 0, 0]
-#            print(self.v_fl, self.v_fr, self.v_rl, self.v_rr)
 
-            if self.desired_speed != 0:
+            if self.verbose:
+                self.speed_debug_arr.append( [ timestamp.total_seconds(), self.v_fl, self.v_fr, self.v_rl, self.v_rr ] )
+
+            if self.desired_speed > 0:
                 if self.last_encoders_front_right is not None:
                     v_fr_2 = int(round(self.v_fr / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
-                    self.publish('can', CAN_triplet(0x31, list(struct.pack('>i', v_fr_2)))) # front right
+                    self.publish('can', CAN_triplet(0x31, list(struct.pack('>i', v_fr_2))))  # front right
                 if self.last_encoders_front_left is not None:
                     v_fl_2 = int(round(self.v_fl / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
-                    self.publish('can', CAN_triplet(0x32, list(struct.pack('>i', v_fl_2)))) # front left
+                    self.publish('can', CAN_triplet(0x32, list(struct.pack('>i', v_fl_2))))  # front left
                 if self.last_encoders_rear_right is not None:
                     v_rr_2 = int(round(self.v_rr / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
-                    self.publish('can', CAN_triplet(0x33, list(struct.pack('>i', v_rr_2))))  # right rear
+                    self.publish('can', CAN_triplet(0x33, list(struct.pack('>i', v_rr_2))))  # right mid
                 if self.last_encoders_rear_left is not None:
                     v_rl_2 = int(round(self.v_rl / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
-                    self.publish('can', CAN_triplet(0x34, list(struct.pack('>i', v_rl_2))))  # left rear
+                    self.publish('can', CAN_triplet(0x34, list(struct.pack('>i', v_rl_2))))  # left mid
+                self.publish('can', CAN_triplet(0x15, stop))  # right rear
+                self.publish('can', CAN_triplet(0x16, stop))  # left rear
+
+            elif self.desired_speed < 0:
+                self.publish('can', CAN_triplet(0x11, stop))  # right front
+                self.publish('can', CAN_triplet(0x12, stop))  # left front
+
+                if self.last_encoders_rear_right is not None:
+                    v_fr_2 = int(round(self.v_fr / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
+                    self.publish('can', CAN_triplet(0x33, list(struct.pack('>i', v_fr_2))))  # mid right
+                if self.last_encoders_rear_left is not None:
+                    v_fl_2 = int(round(self.v_fl / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
+                    self.publish('can', CAN_triplet(0x34, list(struct.pack('>i', v_fl_2))))  # mid left
+                if self.last_encoders_rear_k3_r is not None:
+                    v_rr_2 = int(round(self.v_rr / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
+                    self.publish('can', CAN_triplet(0x35, list(struct.pack('>i', v_rr_2))))  # right rear
+                if self.last_encoders_rear_k3_l is not None:
+                    v_rl_2 = int(round(self.v_rl / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
+                    self.publish('can', CAN_triplet(0x36, list(struct.pack('>i', v_rl_2))))  # left rear
+
+            else:
+                self.publish('can', CAN_triplet(0x11, stop))  # right front
+                self.publish('can', CAN_triplet(0x12, stop))  # left front
+                self.publish('can', CAN_triplet(0x13, stop))  # right mid
+                self.publish('can', CAN_triplet(0x14, stop))  # left mid
+                self.publish('can', CAN_triplet(0x15, stop))  # right rear
+                self.publish('can', CAN_triplet(0x16, stop))  # left rear
+
+
+    def update_drive_two_axles(self, timestamp, data):
+        """Drive all motors"""
+        # update commands for all 4 motors only with new angle reading
+        # (Kloubak does not have any SYNC signal for all motor drivers)
+        # TODO integration front driver?
+        if self.last_join_angle:
+            angle = joint_rad(self.last_join_angle)
+            assert abs(angle) < math.pi / 2, angle * 180 / math.pi
+            self.v_fl, self.v_fr, self.v_rl, self.v_rr = calculate_wheels_speeds(self.desired_speed,
+                                                                                 self.desired_angular_speed, angle)
+            if self.verbose:
+                self.join_debug_arr.append([timestamp.total_seconds(), angle*180/math.pi, compute_desired_angle( self.desired_speed, self. desired_angular_speed )*180/math.pi] )
+
+        if self.process_packet(data):
+            stop = [0, 0, 0, 0]
+#
+            if self.verbose:
+                self.speed_debug_arr.append( [ timestamp.total_seconds(), self.v_fl, self.v_fr, self.v_rl, self.v_rr ] )
+
+            if self.desired_speed != 0: # and self.drive_mode == DriveMode.ALL: ?
+                if self.last_encoders_front_right is not None:
+                    v_fr_2 = int(round(self.v_fr / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
+                    self.publish('can', CAN_triplet(0x31, list(struct.pack('>i', v_fr_2))))  # front right
+                if self.last_encoders_front_left is not None:
+                    v_fl_2 = int(round(self.v_fl / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
+                    self.publish('can', CAN_triplet(0x32, list(struct.pack('>i', v_fl_2))))  # front left
+                if self.last_encoders_rear_right is not None:
+                    v_rr_2 = int(round(self.v_rr / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
+                    self.publish('can', CAN_triplet(0x33, list(struct.pack('>i', v_rr_2))))  # rear right
+                if self.last_encoders_rear_left is not None:
+                    v_rl_2 = int(round(self.v_rl / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
+                    self.publish('can', CAN_triplet(0x34, list(struct.pack('>i', v_rl_2))))  # rear left
+
+#            elif self.drive_mode == DriveMode.FRONT ?
+
             else:
                 self.publish('can', CAN_triplet(0x11, stop))  # right front
                 self.publish('can', CAN_triplet(0x12, stop))  # left front
@@ -430,31 +610,48 @@ class RobotKloubak(Node):
                     self.publish('can', CAN_triplet(0x31, list(struct.pack('>i', limit_r))))
                 if self.last_encoders_front_left is not None:
                     self.publish('can', CAN_triplet(0x32, list(struct.pack('>i', limit_l))))
-                self.publish('can', CAN_triplet(0x13, stop))  # right rear
-                self.publish('can', CAN_triplet(0x14, stop))  # left rear
+                self.publish('can', CAN_triplet(0x13, stop))  # right rear/mid
+                self.publish('can', CAN_triplet(0x14, stop))  # left rear/mid
+                
+                self.publish('can', CAN_triplet(0x15, stop))  # back right
+                self.publish('can', CAN_triplet(0x16, stop))  # back left
 
             elif self.desired_speed < 0:
                 if self.last_encoders_rear_right is not None:
-                    self.publish('can', CAN_triplet(0x33, list(struct.pack('>i', limit_r))))
+                    self.publish('can', CAN_triplet(0x35, list(struct.pack('>i', limit_r))))  # self.publish('can', CAN_triplet(0x33, list(struct.pack('>i', limit_r))))
                 if self.last_encoders_rear_left is not None:
-                    self.publish('can', CAN_triplet(0x34, list(struct.pack('>i', limit_l))))
+                    self.publish('can', CAN_triplet(0x36, list(struct.pack('>i', limit_l))))  # self.publish('can', CAN_triplet(0x34, list(struct.pack('>i', limit_l))))
                 self.publish('can', CAN_triplet(0x11, stop))  # right front
                 self.publish('can', CAN_triplet(0x12, stop))  # left front 
+                
+                self.publish('can', CAN_triplet(0x13, stop))  # rear right/mid
+                self.publish('can', CAN_triplet(0x14, stop))  # rear left/mid 
 
             else:
                 self.publish('can', CAN_triplet(0x11, stop))  # right front
                 self.publish('can', CAN_triplet(0x12, stop))  # left front
-                self.publish('can', CAN_triplet(0x13, stop))  # right rear
-                self.publish('can', CAN_triplet(0x14, stop))  # left rear
+                self.publish('can', CAN_triplet(0x13, stop))  # right rear/mid
+                self.publish('can', CAN_triplet(0x14, stop))  # left rear/mid
+                
+                self.publish('can', CAN_triplet(0x15, stop))  # back right
+                self.publish('can', CAN_triplet(0x16, stop))  # back left
 
     def slot_can(self, timestamp, data):
         self.time = timestamp
-        if self.drive_mode == DriveMode.ALL:
-            self.update_drive_four_wheels(timestamp, data)
-        elif self.drive_mode == DriveMode.FRONT:
-            self.update_drive_front_wheels(timestamp, data)
+        if self.num_axis == 3:
+            self.update_drive_three_axles(timestamp, data)
+
+        elif self.num_axis == 2:
+            if self.drive_mode == DriveMode.ALL:
+                self.update_drive_two_axles(timestamp, data)
+            elif self.drive_mode == DriveMode.FRONT:
+                self.update_drive_front_wheels(timestamp, data)
+            else:
+                assert False, self.drive_mode  # is not supported yet
+
         else:
-            assert False, self.drive_mode  # is not supported yet
+            assert False, self.num_axis  # 2 or 3 are supported only
+
 
     def slot_desired_speed(self, timestamp, data):
         self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
@@ -483,10 +680,11 @@ class RobotKloubak(Node):
         """
         Debug - draw encoders
         """
-        draw(self.enc_debug_arr, self.join_debug_arr)
+#        draw(self.enc_debug_arr, self.join_debug_arr)
 #        print(self.count_arr)
-        print(self.count_arr[-1])
+#        print(self.count_arr[-1])
 #        draw_enc_stat(self.count_arr)
 #        draw_enc_stat(self.debug_odo)
+        draw_4wd( self.speed_debug_arr, self.join_debug_arr )
 
 # vim: expandtab sw=4 ts=4
