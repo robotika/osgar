@@ -34,11 +34,15 @@
           "in": ["slot_can", "slot_desired_speed"],
           "out": ["can", "encoders", "emergency_stop", "pose2d"],
           "init": {
-            "wheel_distance": 0.496,
-            "center_axle_distance": 0.348,
-            "ad_center": 419.7,
-            "ad_calibration_deg": 45,
-            "ad_range": -182.5
+            "num_axis": 3,
+            "wheel_distance": 0.492,
+            "center_axle_distance": 0.265,
+            "ad_calibration_deg": 30,
+            "ad_center": 11323,
+            "ad_range": 7862,
+            "ad_center2": 22533,
+            "ad_range2": -5840,
+            "max_join_angle": 0.785
           }
       },          
       "can": {
@@ -76,7 +80,7 @@
           "driver": "tcp",
           "in": ["raw"],
           "out": ["raw"],
-          "init": {"host": "192.168.1.82", "port": 2111, "timeout": 3.0}
+          "init": {"host": "192.168.1.71", "port": 2111, "timeout": 3.0}
       },
        "camera": {
           "driver": "http",
@@ -133,18 +137,6 @@
           "in": ["raw"],
           "out": ["raw"],
           "init": {"port": "/dev/lora", "speed": 115200}
-      },
-      "rs": {
-          "driver": "realsense",
-          "in": ["trigger"],
-          "out": ["pose2d"],
-          "init": {}
-      },
-      "timer": {
-          "driver": "timer",
-          "in": [],
-          "out": ["tick"],
-          "init": {"sleep": 0.1}
       }
     },
     "links": [["serial.raw", "can.slot_raw"],
@@ -172,9 +164,7 @@
               ["lora_serial.raw", "lora.raw"],
               ["lora.raw", "lora_serial.raw"],
               ["app.pose2d", "lora.pose2d"],
-              ["lora.cmd", "app.cmd"],
-              ["app.artf_xyz", "lora.artf"],
-              ["timer.tick", "rs.trigger"]
+              ["lora.cmd", "app.cmd"]
       ]
   }
 }

@@ -1,0 +1,55 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["encoders", "scan", "scan_back", "emergency_stop", "pose2d", "buttons", "voltage", "rot"],
+          "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout"],
+          "init": {
+            "symmetric": true,
+            "max_speed": 0.5,
+            "virtual_bumper_sec": 10.0,
+            "virtual_bumper_radius": 0.5
+          }
+      },
+      "kloubak": {
+          "driver": "kloubak",
+          "in": ["slot_can", "slot_desired_speed"],
+          "out": ["can", "encoders", "emergency_stop", "pose2d"],
+          "init": {
+            "wheel_distance": 0.492,
+            "center_axle_distance": 0.265,
+            "ad_calibration_deg": 30,
+            "ad_center": 11323,
+            "ad_range": 7862,
+            "ad_center2": 22533,
+            "ad_range2": -5840
+          }
+      },          
+      "can": {
+          "driver": "can",
+          "in": ["slot_raw", "slot_can"],
+          "out": ["can", "raw"],
+          "init": {"speed": "500k", "canopen":false}
+      },
+      "serial": {
+          "driver": "serial",
+          "in": ["slot_raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyS0", "speed": 115200,
+                   "rtscts":true, "reset":true,
+                   "timeout": 0.001}
+      }
+    },
+    "links": [["serial.raw", "can.slot_raw"],
+              ["can.raw", "serial.slot_raw"],
+              ["kloubak.can", "can.slot_can"],
+              ["can.can", "kloubak.slot_can"],
+              ["app.desired_speed", "kloubak.slot_desired_speed"],
+              ["kloubak.pose2d", "app.pose2d"],
+              ["kloubak.emergency_stop", "app.emergency_stop"]
+      ]
+  }
+}
+
