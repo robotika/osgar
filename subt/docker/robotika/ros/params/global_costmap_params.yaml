@@ -2,7 +2,7 @@ global_costmap:
   plugins:
         - {name: static, type: "costmap_2d::StaticLayer"}
         - {name: inflation, type: "costmap_2d::InflationLayer"}
-        - {name: staticlayer, type: "nav_layer_from_points::NavLayerFromPoints"}
+#        - {name: staticlayer, type: "nav_layer_from_points::NavLayerFromPoints"}
   robot_base_frame: X0F40L/base_link
   global_frame: map
   update_frequency: 10.0
