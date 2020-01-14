@@ -55,12 +55,14 @@ def main():
     width_px = 2*BORDER_PX + int(SCALE*(max_x - min_x)/1000.0)
     height_px = 2*BORDER_PX + int(SCALE*(max_y - min_y)/1000.0)
     print(width_px, height_px)
-    world = np.zeros((height_px, width_px))
+    world = np.zeros((height_px, width_px), dtype=np.uint8)
     for x, y in arr:
         px = int(SCALE*(x - min_x)/1000.0) + BORDER_PX
         py = int(SCALE*(y - min_y)/1000.0) + BORDER_PX
         world[height_px - py - 1, px] = 255
-    cv2.imwrite(out_filename, world)
+    user_color_map = np.arange(256, dtype=np.uint8)
+    cimg = cv2.applyColorMap(world, user_color_map)
+    cv2.imwrite(out_filename, cimg)
 
 
 if __name__ == "__main__":
