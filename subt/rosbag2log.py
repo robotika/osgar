@@ -145,8 +145,8 @@ def parse_string(data, dump_filename=None):
     return data[pos:]
 
 
-def extract_log(gen, out_name):
-    with open(out_name, 'wb') as f:
+def extract_log(gen, out_name, append=False):
+    with open(out_name, 'ab' if append else 'wb') as f:
         for header_dict, data in gen:
             op = header_dict['op']
             conn  = header_dict.get('conn')
@@ -165,6 +165,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('filename', help='ROS bag file or tar(.gz)')
+    parser.add_argument('-a', '--all', help='extract all robot_data* files', action='store_true')
     parser.add_argument('-v', '--verbose', help='verbose mode', action='store_true')
     args = parser.parse_args()
 
@@ -173,12 +174,29 @@ if __name__ == "__main__":
         # Out: "aws-ver41p3-A10F900L.log"
         s = os.path.basename(args.filename).split('-')
         name = 'aws-' + s[0] + '-' + s[-1].split('.')[0] + '.log'
+        letter = s[-1][0]
         out_name = os.path.join(os.path.dirname(args.filename), name)
+        robot_data_0_processed = False
         with tarfile.open(args.filename, "r") as tar:
             for member in tar.getmembers():
                 if member.name.startswith('robot_data_0.bag'):
                     f = tar.extractfile(member)
                     extract_log(read_rosbag_fd_gen(f), out_name)
+                    robot_data_0_processed = True
+                elif member.name.startswith('robot_data_1.bag') and args.all:
+                    assert robot_data_0_processed
+                    f = tar.extractfile(member)
+                    extract_log(read_rosbag_fd_gen(f), out_name, append=True)
+                elif member.name.endswith('rosout.log'):
+                    rosout_name = letter + '-rosout.log'
+                    print(member.name)
+                    with open(os.path.join(os.path.dirname(args.filename), rosout_name), 'wb') as f:
+                        f.write(tar.extractfile(member).read())
+                elif (member.name in ['score.yml', 'server_console.log'] or member.name.startswith('subt_urban_') or
+                      (member.name.startswith('state.tlog') and args.all)):
+                    print(member.name)
+                    with open(os.path.join(os.path.dirname(args.filename), member.name.replace(':', '_')), 'wb') as f:
+                        f.write(tar.extractfile(member).read())
     else:
         out_name = os.path.join(os.path.dirname(args.filename), 'tmp.log')
         extract_log(read_rosbag_gen(args.filename), out_name)
