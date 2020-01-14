@@ -179,6 +179,10 @@ if __name__ == "__main__":
                 if member.name.startswith('robot_data_0.bag'):
                     f = tar.extractfile(member)
                     extract_log(read_rosbag_fd_gen(f), out_name)
+                elif member.name in ['score.yml', 'server_console.log'] or member.name.startswith('subt_urban_'):
+                    print(member.name)
+                    with open(os.path.join(os.path.dirname(args.filename), member.name.replace(':', '_')), 'wb') as f:
+                        f.write(tar.extractfile(member).read())
     else:
         out_name = os.path.join(os.path.dirname(args.filename), 'tmp.log')
         extract_log(read_rosbag_gen(args.filename), out_name)
