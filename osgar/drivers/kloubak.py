@@ -6,6 +6,7 @@
 import struct
 import math
 import ctypes
+import enum
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
@@ -16,6 +17,7 @@ CENTER_AXLE_DISTANCE = 0.348  # distance from potentiometer, can be modified by 
 VESC_REPORT_FREQ = 20  # was 100  # Hz
 SPEED_ENC_SCALE = (33/25)*0.25 * math.pi / (4 * 3 * 60 * VESC_REPORT_FREQ)  # scale 4x found experimentally
 ENC_SCALE = (33/25)*8.0/950  # TODO proper calibration (scale for large 33" wheels, old were 25")
+TURNING_ANGULAR_SPEED = math.pi/8
 
 AD_CENTER = 419.7 # K2, can be modified by config
 AD_CALIBRATION_DEG = 45  # K2, can be modified by config
@@ -41,6 +43,12 @@ INDEX_REAR_RIGHT = 2
 MIN_SPEED = 0.3
 
 #Transferring coefficient for the vesc tachometers to meters: distance = vesc_value * 0.845/100
+
+
+class DriveMode(enum.Enum):
+    FRONT = 1
+    REAR = 2
+    ALL = 3  # 4WD
 
 
 def CAN_triplet(msg_id, data):
@@ -86,14 +94,38 @@ def compute_desired_erpm(desired_speed, desired_angular_speed):
 def compute_desired_angle(desired_speed, desired_angular_speed):
     # The angle is computed from triangle, where one
     # side has length = radius (computed from speed and angular
-    # speed) and the far side is half of CENTER_AXLE_DISTANCE.
+    # speed) and the far side is CENTER_AXLE_DISTANCE.
     # The Kloubak part is perpendicular to the turning center.
     if abs(desired_angular_speed) < 0.000001:
         return 0.0
     radius = desired_speed/desired_angular_speed
-    if abs(2 * radius) > CENTER_AXLE_DISTANCE:
-        return 2 * math.asin((CENTER_AXLE_DISTANCE/2) / radius)
-    return math.pi if radius > 0 else -math.pi
+    return 2 * math.atan(CENTER_AXLE_DISTANCE / radius)
+
+
+def calculate_wheels_speeds( desired_speed, desired_angular_speed, actual_angle ):
+    desired_angle = compute_desired_angle( desired_speed, desired_angular_speed)
+    if abs(actual_angle) < 0.05:
+        v_fl = v_rl = v_fr = v_rr = desired_speed
+    else:
+        actual_radius = CENTER_AXLE_DISTANCE / math.tan(actual_angle/2)
+        v_fl = v_rl = desired_speed / actual_radius * (actual_radius - WHEEL_DISTANCE / 2)
+        v_fr = v_rr = desired_speed / actual_radius * (actual_radius + WHEEL_DISTANCE / 2)
+    if abs( desired_angle - actual_angle ) < 0.1:
+        return v_fl, v_fr, v_rl, v_rr
+
+    speed_corection = CENTER_AXLE_DISTANCE * TURNING_ANGULAR_SPEED * math.tan(actual_angle/2)  # positive for left, negative for right
+    if desired_angle - actual_angle > 0:  # turn left
+        v_fl = v_fl - TURNING_WHEEL_SPEED - speed_corection
+        v_fr = v_fr + TURNING_WHEEL_SPEED - speed_corection
+        v_rl = v_rl + TURNING_WHEEL_SPEED + speed_corection
+        v_rr = v_rr - TURNING_WHEEL_SPEED + speed_corection
+    else:  # turn right
+        v_fl = v_fl + TURNING_WHEEL_SPEED + speed_corection
+        v_fr = v_fr - TURNING_WHEEL_SPEED + speed_corection
+        v_rl = v_rl - TURNING_WHEEL_SPEED - speed_corection
+        v_rr = v_rr + TURNING_WHEEL_SPEED - speed_corection
+#    print(desired_speed, desired_angular_speed, actual_angle, v_fl, v_fr, v_rl, v_rr)
+    return v_fl, v_fr, v_rl, v_rr
 
 
 def joint_rad(analog):
@@ -126,11 +158,13 @@ def setup_global_const(config):
     global AD_CENTER
     global AD_CALIBRATION_DEG
     global AD_RANGE
+    global TURNING_WHEEL_SPEED
     WHEEL_DISTANCE = config.get("wheel_distance", WHEEL_DISTANCE)
     CENTER_AXLE_DISTANCE = config.get("center_axle_distance", CENTER_AXLE_DISTANCE)
     AD_CENTER = config.get("ad_center", AD_CENTER)
     AD_CALIBRATION_DEG = config.get("ad_calibration_deg", AD_CALIBRATION_DEG)
     AD_RANGE = config.get("ad_range", AD_RANGE)
+    TURNING_WHEEL_SPEED = TURNING_ANGULAR_SPEED * WHEEL_DISTANCE / 2
 
 
 class RobotKloubak(Node):
@@ -142,9 +176,11 @@ class RobotKloubak(Node):
         # commands
         self.desired_speed = 0.0  # m/s
         self.desired_angular_speed = 0.0
+        self.v_fl = self.v_fr = self.v_rl = self.v_rr = 0  # values in m/s
+        self.drive_mode = DriveMode.ALL
 
         # status
-        self.emergency_stop = None  # uknown state
+        self.emergency_stop = None  # unknown state
         self.pose = (0.0, 0.0, 0.0)  # x, y in meters, heading in radians (not corrected to 2PI)
         self.buttons = None
         self.last_encoders_front_left = None
@@ -153,7 +189,7 @@ class RobotKloubak(Node):
         self.last_encoders_rear_right = None
         self.last_encoders_time = None
         self.last_pose_encoders = [0, 0, 0, 0]  # accumulated tacho readings
-        self.encoders = [0, 0, 0, 0]  # handling 16bit integrer overflow
+        self.encoders = [0, 0, 0, 0]  # handling 16bit integer overflow
         self.last_encoders_16bit = None  # raw readings
         self.last_join_angle = None
         self.voltage = None
@@ -165,6 +201,7 @@ class RobotKloubak(Node):
         self.count = [0, 0, 0, 0]
         self.count_arr = []
         self.debug_odo = []
+        print('Kloubak mode:', self.drive_mode)
 
     def send_pose(self):
         x, y, heading = self.pose
@@ -309,9 +346,40 @@ class RobotKloubak(Node):
             return True
         return False
 
-    def slot_can(self, timestamp, data):
-        self.time = timestamp
 
+    def update_drive_four_wheels(self, timestamp, data):
+        """Drive all motors"""
+        # update commands for all 4 motors only with new angle reading
+        # (Kloubak does not have any SYNC signal for all motor drivers)
+        if self.last_join_angle:
+            angle = joint_rad(self.last_join_angle)
+            self.v_fl, self.v_fr, self.v_rl, self.v_rr = calculate_wheels_speeds(self.desired_speed, self.desired_angular_speed, angle)
+
+        if self.process_packet(data):
+            stop = [0, 0, 0, 0]
+#            print(self.v_fl, self.v_fr, self.v_rl, self.v_rr)
+
+            if self.desired_speed != 0:
+                if self.last_encoders_front_right is not None:
+                    v_fr_2 = int(round(self.v_fr / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
+                    self.publish('can', CAN_triplet(0x31, list(struct.pack('>i', v_fr_2)))) # front right
+                if self.last_encoders_front_left is not None:
+                    v_fl_2 = int(round(self.v_fl / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
+                    self.publish('can', CAN_triplet(0x32, list(struct.pack('>i', v_fl_2)))) # front left
+                if self.last_encoders_rear_right is not None:
+                    v_rr_2 = int(round(self.v_rr / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
+                    self.publish('can', CAN_triplet(0x33, list(struct.pack('>i', v_rr_2))))  # right rear
+                if self.last_encoders_rear_left is not None:
+                    v_rl_2 = int(round(self.v_rl / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
+                    self.publish('can', CAN_triplet(0x34, list(struct.pack('>i', v_rl_2))))  # left rear
+            else:
+                self.publish('can', CAN_triplet(0x11, stop))  # right front
+                self.publish('can', CAN_triplet(0x12, stop))  # left front
+                self.publish('can', CAN_triplet(0x13, stop))  # right rear
+                self.publish('can', CAN_triplet(0x14, stop))  # left rear
+
+
+    def update_drive_front_wheels(self, timestamp, data):
         send_speed = self.desired_speed
         if self.last_join_angle is not None and abs(self.desired_speed) > MIN_SPEED:
             desired_angle = compute_desired_angle(self.desired_speed, self.desired_angular_speed)
@@ -378,6 +446,15 @@ class RobotKloubak(Node):
                 self.publish('can', CAN_triplet(0x12, stop))  # left front
                 self.publish('can', CAN_triplet(0x13, stop))  # right rear
                 self.publish('can', CAN_triplet(0x14, stop))  # left rear
+
+    def slot_can(self, timestamp, data):
+        self.time = timestamp
+        if self.drive_mode == DriveMode.ALL:
+            self.update_drive_four_wheels(timestamp, data)
+        elif self.drive_mode == DriveMode.FRONT:
+            self.update_drive_front_wheels(timestamp, data)
+        else:
+            assert False, self.drive_mode  # is not supported yet
 
     def slot_desired_speed(self, timestamp, data):
         self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)

@@ -46,11 +46,11 @@ class KloubakTest(unittest.TestCase):
         self.assertAlmostEqual(0.0, compute_desired_angle(1.0, 0.0))
 
         # easy case when the joint has 60 degrees and radius is CENTER_AXLE_DISTANCE
-        self.assertAlmostEqual(math.radians(60),
+        self.assertAlmostEqual(math.radians(90),
                 compute_desired_angle(CENTER_AXLE_DISTANCE, 1.0))
 
         # it should be symmetrical
-        self.assertAlmostEqual(math.radians(-60),
+        self.assertAlmostEqual(math.radians(-90),
                 compute_desired_angle(CENTER_AXLE_DISTANCE, -1.0))
 
         # perpendicular to the left, radius defined by length of joint to wheel center
@@ -69,7 +69,7 @@ class KloubakTest(unittest.TestCase):
 
         # another case "ValueError: math domain error"
         angle = compute_desired_angle(0.1, -1.0637781790905438)
-        self.assertAlmostEqual(angle, -math.pi)
+        self.assertAlmostEqual(angle, -2.613930299306476)
 
     def test_invalid_can_message(self):
         # this message killed Kloubak K2 on DARPA SubT Tunnel Circuit, Day 2
