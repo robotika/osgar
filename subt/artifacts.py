@@ -27,7 +27,7 @@ VENT = 'TYPE_VENT'
 GAS = 'TYPE_GAS'
 
 
-RED_THRESHOLD = 50  # virtual QVGA, used to be 100
+RED_THRESHOLD = 1000  # virtual QVGA=50, used to be 100, urban=1000
 YELLOW_THRESHOLD = 80
 WHITE_THRESHOLD = 20000
 
@@ -62,7 +62,8 @@ def count_red(img, filtered=False, stdout=None):
     b = img[:,:,0]
     g = img[:,:,1]
     r = img[:,:,2]
-    mask = np.logical_and(r > 20, np.logical_and(r/2 > g, r/2 > b))  # QVGA virtual, dark images, used to be 100
+    mask = np.logical_and(r > 50, np.logical_and(r/3 > g, r/3 > b))  # QVGA virtual, dark images, used to be 100, r/2
+                                                                     # 3/4-VGA urban, light, strictly red r/3
     not_mask = np.logical_not(mask)
     kernel = np.ones((2,2), np.uint8)
     img2 = img.copy()
