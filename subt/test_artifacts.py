@@ -1,9 +1,10 @@
 import unittest
+from unittest.mock import MagicMock
 from pathlib import Path
 
 import cv2
 
-from subt.artifacts import artf_in_scan
+from subt.artifacts import artf_in_scan, ArtifactDetector
 
 curdir = Path(__file__).parent
 
@@ -96,6 +97,17 @@ class ArtifactDetectorTest(unittest.TestCase):
     def test_missing_scan(self):
         deg_100th, dist_mm = artf_in_scan(scan=None, width=1280, img_x_min=100, img_x_max=200)
         self.assertEqual((deg_100th, dist_mm), (0, 0))
+
+    def test_gas_detected(self):
+        config = {
+            'virtual_world': True
+        }
+        bus = MagicMock()
+        detector = ArtifactDetector(config, bus)
+        data = True
+
+        detector.handle_gas_artifact(data)
+        bus.publish.assert_called()
 
 # vim: expandtab sw=4 ts=4
 
