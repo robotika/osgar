@@ -195,6 +195,7 @@ class ArtifactDetector(Node):
         self.width = None  # detect from incoming images
 
     def handle_gas_artifact(self, data):
+        print(self.time, 'Gas detected', data)
         if data:  # in virtual world only Boolean is used and transition is reported
             deg_100th, dist_mm = 0, 0  # first approximation without scan and entrance detection
             self.publish('artf', [GAS, deg_100th, dist_mm])
