@@ -1,10 +1,60 @@
 """
   Convert depth image to "lidar" scan
 """
+import math
+
 import numpy as np
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
+
+
+frac = math.tan(math.radians(60))/360
+
+
+def vertical_scan(depth, column):
+    # return two arrays x and y
+    arr = np.array(depth[:, column], np.int32)
+    x = arr
+    a = frac * (np.arange(len(arr), 0, -1) - 180)
+    y = x * a + 560
+    return x, y
+
+
+def monotize(arr):
+    """change function to monotonous increasing"""
+    best = arr[0]
+    for i in range(len(arr)):  # TODO optimize
+        best = max(best, arr[i])
+        arr[i] = best
+    return arr
+
+
+def find_step(arr):
+    """input is uniform array of values"""
+    INDEX_STEP = 10  # so for 10cm step there is 60mm height difference -> ~30deg
+    THRESHOLD = 60
+    diff = arr[INDEX_STEP:] - arr[:-INDEX_STEP]
+    mask = diff > THRESHOLD
+    index = np.argmax(mask)
+    if mask[index]:
+        return index + INDEX_STEP
+    return None
+
+
+def vertical_step(depth, column=320):
+    """Detect nearest obstacle for vertical line"""
+    MAX_SIZE = 250  # in cm, 1cm resolution
+    x_arr, y_arr = vertical_scan(depth, column)
+    x_arr //= 10  # reduction to cm
+    d = np.zeros(MAX_SIZE, np.int32)
+    for x, y in zip(x_arr, y_arr):
+        if 0 <= x < MAX_SIZE:
+            d[x] = max(d[x], y)
+    ret = find_step(monotize(d))
+    if ret is None:
+        return None
+    return ret * 10  # return back readings in mm
 
 
 class DepthToScan(Node):
@@ -44,10 +94,42 @@ class DepthToScan(Node):
                         assert False, small
                     new_scan[360+79-i] = int(small[i])
             assert len(new_scan) == 720, len(new_scan)
+
+            # vertical scan experiments
+            center = vertical_step(self.depth)
+            i = len(new_scan)//2
+            if self.verbose:
+                print(self.time, new_scan[i], center)
+            if center is not None and (new_scan[i] > center or new_scan[i] == 0):
+                new_scan[i] = center
             self.publish('scan', new_scan)
         else:
             assert False, channel  # unsupported channel
 
         return channel
+
+if __name__ == '__main__':
+    import argparse
+    import matplotlib.pyplot as plt
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('filename', help='NPZ file with depth data')
+    parser.add_argument('-v', '--verbose', help='verbose mode', action='store_true')
+    parser.add_argument('-d', '--draw', help='draw graph(s)', action='store_true')
+    args = parser.parse_args()
+
+    with np.load(args.filename) as f:
+        depth = f['depth']
+
+    if args.draw:
+        for i in range(0, 640, 159):
+            x, y = vertical_scan(depth, i)
+            plt.plot(x, y, 'o-', linewidth=2)
+
+            d =  vertical_step(depth, i)
+            plt.plot([d, d], [0, 200], '-', linewidth=3)
+
+        plt.axes().set_aspect('equal', 'datalim')
+        plt.show()
 
 # vim: expandtab sw=4 ts=4
