@@ -7,6 +7,12 @@ from osgar.node import Node
 from osgar.bus import BusShutdownException
 
 
+def vertical_step(depth):
+    """Detect nearest obstacle for vertical line"""
+    d = np.array(depth[:, 320], np.int32)
+    pass  # TODO
+
+
 class DepthToScan(Node):
     deg30 = int(30*720/270)
 
