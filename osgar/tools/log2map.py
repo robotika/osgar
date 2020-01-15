@@ -60,7 +60,9 @@ def main():
         px = int(SCALE*(x - min_x)/1000.0) + BORDER_PX
         py = int(SCALE*(y - min_y)/1000.0) + BORDER_PX
         world[height_px - py - 1, px] = 255
-    user_color_map = np.arange(256, dtype=np.uint8)
+    user_color_map = np.zeros((256, 1, 3), dtype=np.uint8)
+    user_color_map[0] = (0, 0, 0)
+    user_color_map[255] = (50, 50, 255)  # BGR -> Red
     cimg = cv2.applyColorMap(world, user_color_map)
     cv2.imwrite(out_filename, cimg)
 
