@@ -17,7 +17,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('logfile', help='recorded log file')
+    parser.add_argument('logfile', help='recorded log file', nargs='+')
     parser.add_argument('--out', help='map output file')
     parser.add_argument('--pose2d', help='stream ID for pose2d messages', default='app.pose2d')
     parser.add_argument('--artf', help='stream ID with artifacts XYZ')
@@ -25,23 +25,24 @@ def main():
 
     out_filename = args.out
     if out_filename is None:
-        out_filename = os.path.splitext(args.logfile)[0] + '.jpg'
+        out_filename = os.path.splitext(args.logfile[0])[0] + '.jpg'
 
     pts = []
     artf = []
-    pose_id = lookup_stream_id(args.logfile, args.pose2d)
-    streams = [pose_id]
-    artf_id = None
-    if args.artf is not None:
-        artf_id = lookup_stream_id(args.logfile, args.artf)
-        streams.append(artf_id)
-    for dt, channel, data in LogReader(args.logfile, only_stream_id=streams):
-        if channel == pose_id:
-            pose = deserialize(data)
-            pts.append(pose[:2])
-        elif channel == artf_id:
-            arr = deserialize(data)
-            artf.extend(arr)
+    for filename in args.logfile:
+        pose_id = lookup_stream_id(filename, args.pose2d)
+        streams = [pose_id]
+        artf_id = None
+        if args.artf is not None:
+            artf_id = lookup_stream_id(filename, args.artf)
+            streams.append(artf_id)
+        for dt, channel, data in LogReader(filename, only_stream_id=streams):
+            if channel == pose_id:
+                pose = deserialize(data)
+                pts.append(pose[:2])
+            elif channel == artf_id:
+                arr = deserialize(data)
+                artf.extend(arr)
     arr = np.array(pts)
     min_x, min_y = np.min(arr, axis=0)
     max_x, max_y = np.max(arr, axis=0)
