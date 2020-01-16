@@ -59,15 +59,23 @@ class DepthToScan(Node):
 
 if __name__ == '__main__':
     import argparse
+    import matplotlib.pyplot as plt
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('filename', help='NPZ file with depth data')
     parser.add_argument('-v', '--verbose', help='verbose mode', action='store_true')
+    parser.add_argument('-d', '--draw', help='draw graph(s)', action='store_true')
     args = parser.parse_args()
 
     with np.load(args.filename) as f:
         depth = f['depth']
 
     vertical_step(depth, verbose=args.verbose)
+    if args.draw:
+        arr = np.array(depth[:, 320], np.int32)
+        x = arr
+        y = np.arange(len(arr))
+        plt.plot(x, y, 'o-', linewidth=2)
+        plt.show()
 
 # vim: expandtab sw=4 ts=4
