@@ -7,10 +7,11 @@ from osgar.node import Node
 from osgar.bus import BusShutdownException
 
 
-def vertical_step(depth):
+def vertical_step(depth, verbose=False):
     """Detect nearest obstacle for vertical line"""
     d = np.array(depth[:, 320], np.int32)
-    pass  # TODO
+    if verbose:
+        print(d)
 
 
 class DepthToScan(Node):
@@ -55,5 +56,18 @@ class DepthToScan(Node):
             assert False, channel  # unsupported channel
 
         return channel
+
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('filename', help='NPZ file with depth data')
+    parser.add_argument('-v', '--verbose', help='verbose mode', action='store_true')
+    args = parser.parse_args()
+
+    with np.load(args.filename) as f:
+        depth = f['depth']
+
+    vertical_step(depth, verbose=args.verbose)
 
 # vim: expandtab sw=4 ts=4
