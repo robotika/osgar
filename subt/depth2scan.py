@@ -9,6 +9,18 @@ from osgar.node import Node
 from osgar.bus import BusShutdownException
 
 
+frac = math.tan(math.radians(60))/360
+
+
+def vertical_scan(depth, column):
+    # return two arrays x and y
+    arr = np.array(depth[:, i], np.int32)
+    x = arr
+    a = frac * (np.arange(len(arr), 0, -1) - 180)
+    y = x * a + 560
+    return x, y
+
+
 def vertical_step(depth, verbose=False):
     """Detect nearest obstacle for vertical line"""
     d = np.array(depth[:, 320], np.int32)
@@ -74,12 +86,9 @@ if __name__ == '__main__':
 
     vertical_step(depth, verbose=args.verbose)
     if args.draw:
-        arr = np.array(depth[:, 320], np.int32)
-        frac = math.tan(math.radians(60))/360
-        x = arr
-        a = frac * (np.arange(len(arr), 0, -1) - 180)
-        y = x * a + 560
-        plt.plot(x, y, 'o-', linewidth=2)
+        for i in range(0, 640, 159):
+            x, y = vertical_scan(depth, i)
+            plt.plot(x, y, 'o-', linewidth=2)
         plt.axes().set_aspect('equal', 'datalim')
         plt.show()
 
