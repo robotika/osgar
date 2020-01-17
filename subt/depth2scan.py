@@ -1,6 +1,8 @@
 """
   Convert depth image to "lidar" scan
 """
+import math
+
 import numpy as np
 
 from osgar.node import Node
@@ -73,9 +75,12 @@ if __name__ == '__main__':
     vertical_step(depth, verbose=args.verbose)
     if args.draw:
         arr = np.array(depth[:, 320], np.int32)
+        frac = math.tan(math.radians(60))/360
         x = arr
-        y = np.arange(len(arr))
+        a = frac * (np.arange(len(arr), 0, -1) - 180)
+        y = x * a + 560
         plt.plot(x, y, 'o-', linewidth=2)
+        plt.axes().set_aspect('equal', 'datalim')
         plt.show()
 
 # vim: expandtab sw=4 ts=4
