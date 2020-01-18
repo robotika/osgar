@@ -61,13 +61,8 @@ def depth2danger(depth_mm):
 
 
 def danger2dist(danger):
-    # we need closes obstacles to robot
-    # argmax of last element
-    # https://stackoverflow.com/questions/8768540/how-to-find-last-occurrence-of-maximum-value-in-a-numpy-ndarray/8768734
-    rev = danger[::-1]
-    d = np.argmax(rev, axis=0)
-    d = 359 - d
-    return d
+    # we need closest obstacles to robot
+    return np.argmax(danger, axis=0)
 
 # vim: expandtab sw=4 ts=4
 
