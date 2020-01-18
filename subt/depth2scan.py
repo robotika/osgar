@@ -67,6 +67,7 @@ class DepthToScan(Node):
         self.depth = None  # initialize inputs
         self.scan = None
         self.verbose = False
+        self.scale = np.array([1/math.cos(math.radians(30*(i-80)/80)) for i in range(160)])
 
     def update(self):
         channel = super().update()
@@ -85,8 +86,10 @@ class DepthToScan(Node):
             # 640/160 = 4.0 ... i.e. downsample by 4
             small = np.array(dist[::4], dtype=np.int32)  # problem with abs() of uint16
             mask = small == 0xFFFF
-            small[mask] = 0            
-            new_scan = self.scan[:720//2-80] + small.tolist() + self.scan[720//2+80:]
+            small = np.array(small * self.scale, dtype=np.int32)
+            small[mask] = 0
+            rev = small[::-1]
+            new_scan = self.scan[:720//2-80] + rev.tolist() + self.scan[720//2+80:]
             assert len(new_scan) == 720, len(new_scan)
             self.publish('scan', new_scan)
         else:
