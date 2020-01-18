@@ -7,6 +7,7 @@ import numpy as np
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
+from osgar.lib.depth import depth2danger, danger2dist
 
 
 frac = math.tan(math.radians(60))/360
@@ -78,30 +79,15 @@ class DepthToScan(Node):
             if self.depth is None:
                 self.publish('scan', self.scan)
                 return channel  # when no depth data are available ...
-            i = 300  # slope down lidar ... used to be (360//2)
-            mid_line = self.depth[i]
+            dist = self.depth[danger2dist(depth2danger(self.depth)), np.arange(640)]
+
             # 60*720/270 = 160.0 ... i.e. 160 elements to be replaced
             # 640/160 = 4.0 ... i.e. downsample by 4
-            small = np.array(mid_line[::4], dtype=np.int32)  # problem with abs() of uint16
-            mask0 = small == 0xFFFF
-            diff = abs(small[:-1] - small[1:])
-            mask1 = diff > 100
-            new_scan = self.scan[:]
-            for i, val in enumerate(mask1):
-                if val:
-                    if self.verbose:
-                        print(i, new_scan[360+79-i], int(small[i]))
-                        assert False, small
-                    new_scan[360+79-i] = int(small[i])
+            small = np.array(dist[::4], dtype=np.int32)  # problem with abs() of uint16
+            mask = small == 0xFFFF
+            small[mask] = 0            
+            new_scan = self.scan[:720//2-80] + small.tolist() + self.scan[720//2+80:]
             assert len(new_scan) == 720, len(new_scan)
-
-            # vertical scan experiments
-            center = vertical_step(self.depth)
-            i = len(new_scan)//2
-            if self.verbose:
-                print(self.time, new_scan[i], center)
-            if center is not None and (new_scan[i] > center or new_scan[i] == 0):
-                new_scan[i] = center
             self.publish('scan', new_scan)
         else:
             assert False, channel  # unsupported channel
