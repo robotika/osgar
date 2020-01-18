@@ -98,6 +98,8 @@ class DepthToScan(Node):
             # vertical scan experiments
             center = vertical_step(self.depth)
             i = len(new_scan)//2
+            if self.verbose:
+                print(self.time, new_scan[i], center)
             if center is not None and (new_scan[i] > center or new_scan[i] == 0):
                 new_scan[i] = center
             self.publish('scan', new_scan)
