@@ -17,13 +17,13 @@ MAXX = 5.
 MAXY = 5.
 
 # Low-height stuff on the ground does not matter. (In meters.)
-MINZ = 0.05
+MINZ = 0.08
 
 # We compare pixels this far away from each other vertically. (In pixels.)
 OFFSET = 1
 
 # How close to the vertical does an obstacle need to be? (In radians.)
-VERTICAL_DIFF_LIMIT = np.radians(75)
+VERTICAL_DIFF_LIMIT = np.radians(45)
 
 # Indices of directions in a matrix with 3D points.
 X, Y, Z = 0, 1, 2
