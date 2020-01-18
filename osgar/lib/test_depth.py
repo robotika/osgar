@@ -16,4 +16,9 @@ class DepthTest(unittest.TestCase):
         self.assertEqual(dist[100], 100)
         self.assertEqual(dist[630], 200)
 
+        values = danger[dist, np.arange(640)]
+        self.assertTrue(values[100])
+        self.assertTrue(values[630])
+        self.assertFalse(values[300])
+
 # vim: expandtab sw=4 ts=4
