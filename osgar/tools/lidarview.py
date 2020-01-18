@@ -17,6 +17,7 @@ from osgar.logger import LogIndexedReader, lookup_stream_names
 from osgar.lib.serialize import deserialize
 from osgar.lib.config import get_class_by_name
 from osgar.lib import quaternion
+from osgar.lib.depth import depth2danger
 
 
 #WINDOW_SIZE = 1200, 660
@@ -114,8 +115,11 @@ def get_image(data):
     if isinstance(data, np.ndarray):
         # depth data for ROBOTIKA_X2_SENSOR_CONFIG_1 (640 x 360)
         # https://www.learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
-        img = np.array(data/40, dtype=np.uint8)
-        im_color = cv2.applyColorMap(img, cv2.COLORMAP_JET)
+        #img = np.array(data/40, dtype=np.uint8)
+        img = np.array(depth2danger(data) * 255, dtype=np.uint8)
+#        im_color = cv2.applyColorMap(img, cv2.COLORMAP_JET)
+        im_color = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+
         # https://stackoverflow.com/questions/19306211/opencv-cv2-image-to-pygame-image
         image = pygame.image.frombuffer(im_color.tostring(), im_color.shape[1::-1], "RGB")
         global g_depth
