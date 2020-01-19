@@ -60,6 +60,7 @@ def depth2danger(depth_mm):
         np.maximum(xyz[:-OFFSET,:,Z], xyz[OFFSET:,:,Z]) >= MINZ,
         # It has to be close to vertical.
         np.abs(slope - np.radians(90)) <= VERTICAL_DIFF_LIMIT]))
+    return danger
 
 
 def depth2dist(depth_mm):
