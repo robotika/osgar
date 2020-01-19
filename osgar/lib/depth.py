@@ -37,7 +37,9 @@ pzs = np.ones((CAMH, CAMW), dtype=np.float)
 # in the scene with a unit forward axis.
 ps = np.dstack([pzs, pxs / FX, pys / FX])
 
-def depth2danger(depth_mm):
+def depth2dist(depth_mm):
+    # return line in mm corresponding to scan
+
     depth = depth_mm * 0.001  # Converting to meters.
     # 3D coordinates of points detected by the depth camera, converted to
     # robot's coordinate system.
@@ -57,12 +59,16 @@ def depth2danger(depth_mm):
         np.maximum(xyz[:-OFFSET,:,Z], xyz[OFFSET:,:,Z]) >= MINZ,
         # It has to be close to vertical.
         np.abs(slope - np.radians(90)) <= VERTICAL_DIFF_LIMIT]))
-    return danger
 
+    dists = np.hypot(xyz[:,:,X], xyz[:,:,Y])
+    FAR_AWAY = 1000.0
+    dists = np.where(danger, dists[OFFSET:,:], FAR_AWAY)
+    scan = np.min(dists, axis=0)
+    mask = scan == FAR_AWAY
+    scan[mask] = 0
+    scan = np.array(scan*1000, dtype=np.int32)
+    return scan
 
-def danger2dist(danger):
-    # we need closest obstacles to robot
-    return np.argmax(danger, axis=0)
 
 if __name__ == '__main__':
     import argparse
@@ -75,13 +81,10 @@ if __name__ == '__main__':
     with np.load(args.filename) as f:
         depth = f['depth']
 
-    dist = depth[danger2dist(depth2danger(depth)), np.arange(640)]
-    print(danger2dist(depth2danger(depth)))
+    dist = depth2dist(depth)
 
     plt.plot(range(640), dist, 'o-', linewidth=2)
     plt.show()
-
-    print(dist)
 
 # vim: expandtab sw=4 ts=4
 
