@@ -139,7 +139,7 @@ def get_image(data):
 class Framer:
     """Creates frames from log entries. Packs together closest scan, pose and camera picture."""
     def __init__(self, filepath, lidar_name=None, pose2d_name=None, pose3d_name=None, camera_name=None,
-                 camera2_name=None, keyframes_name=None):
+                 camera2_name=None, keyframes_name=None, title_name=None):
         self.log = LogIndexedReader(filepath)
         self.current = 0
         self.pose = [0, 0, 0]
@@ -149,9 +149,11 @@ class Framer:
         self.image = None
         self.image2 = None
         self.keyframe = None
+        self.title = None
         self.lidar_id, self.pose2d_id, self.pose3d_id, self.camera_id = None, None, None, None
         self.camera2_id = None
         self.keyframes_id = None
+        self.title_id = None
         names = lookup_stream_names(filepath)
         if lidar_name is not None:
             self.lidar_id = names.index(lidar_name) + 1
@@ -165,6 +167,8 @@ class Framer:
             self.camera2_id = names.index(camera2_name) + 1
         if keyframes_name is not None:
             self.keyframes_id = names.index(keyframes_name) + 1
+        if title_name is not None:
+            self.title_id = names.index(title_name) + 1
 
     def __enter__(self):
         self.log.__enter__()
@@ -187,17 +191,19 @@ class Framer:
             timestamp, stream_id, data = self.log[self.current]
             if stream_id == self.keyframes_id:
                 self.keyframe = True
+            if stream_id == self.title_id:
+                self.title = deserialize(data)
             if stream_id == self.lidar_id:
                 self.scan = deserialize(data)
                 keyframe = self.keyframe
                 self.keyframe = False
-                return timestamp, self.pose, self.scan, self.image, self.image2, keyframe, False
+                return timestamp, self.pose, self.scan, self.image, self.image2, keyframe, self.title, False
             elif stream_id == self.camera_id:
                 self.image = get_image(deserialize(data))
                 if self.lidar_id is None:
                     keyframe = self.keyframe
                     self.keyframe = False
-                    return timestamp, self.pose, self.scan, self.image, self.image2, keyframe, False
+                    return timestamp, self.pose, self.scan, self.image, self.image2, keyframe, self.title, False
             elif stream_id == self.camera2_id:
                 self.image2 = get_image(deserialize(data))
             elif stream_id == self.pose3d_id:
@@ -217,8 +223,8 @@ class Framer:
                 if self.lidar_id is None and self.camera_id is None:
                     keyframe = self.keyframe
                     self.keyframe = False
-                    return timestamp, self.pose, self.scan, self.image, self.image2, keyframe, False
-        return timedelta(), self.pose, self.scan, self.image, self.image2, self.keyframe, True
+                    return timestamp, self.pose, self.scan, self.image, self.image2, keyframe, self.title, False
+        return timedelta(), self.pose, self.scan, self.image, self.image2, self.keyframe, self.title, True
 
 
 def lidarview(gen, caption_filename, callback=False, out_video=None):
@@ -265,7 +271,7 @@ def lidarview(gen, caption_filename, callback=False, out_video=None):
     max_timestamp = None
     wait_for_keyframe = False
     while True:
-        timestamp, pose, scan, image, image2, keyframe, eof = history.next()
+        timestamp, pose, scan, image, image2, keyframe, title, eof = history.next()
 
         if max_timestamp is None or max_timestamp < timestamp:
             # build map only for new data
@@ -295,6 +301,8 @@ def lidarview(gen, caption_filename, callback=False, out_video=None):
 
         while True:
             caption = caption_filename + ": %s" % timestamp
+            if title is not None:
+                caption += ' (' + str(title) + ')'
             if paused:
                 caption += ' (PAUSED)'
             if frames_step > 0:
@@ -441,6 +449,7 @@ def main():
     parser.add_argument('--camera2', help='stream ID for 2nd JPEG images')
 
     parser.add_argument('--keyframes', help='stream ID typically for artifacts detection')
+    parser.add_argument('--title', help='stream ID of data to be displayed in title')
 
     parser.add_argument('--callback', help='callback function for lidar scans')
 
@@ -467,7 +476,8 @@ def main():
     g_rotation_offset_rad = math.radians(args.rotate)
     g_lidar_fov_deg = args.deg
     with Framer(args.logfile, lidar_name=args.lidar, pose2d_name=args.pose2d, pose3d_name=args.pose3d,
-                camera_name=args.camera, camera2_name=args.camera2, keyframes_name=args.keyframes) as framer:
+                camera_name=args.camera, camera2_name=args.camera2, keyframes_name=args.keyframes,
+                title_name=args.title) as framer:
         lidarview(framer, caption_filename=filename, callback=callback, out_video=args.create_video)
 
 if __name__ == "__main__":
