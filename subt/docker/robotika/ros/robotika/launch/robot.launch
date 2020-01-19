@@ -8,6 +8,82 @@
   <!--node name="base_transform" pkg="subt_seed" type="base_transform.py"  output="screen"/-->
   <node name="map_to_scan" pkg="robotika" type="map_to_scan.py"  output="screen"/>
   <!-- NAVIGATION -->
+
+  <!--CAMERA FRAME_ID REMAPING BECAUSE OF BUG IN SIMULATOR-->
+  <node name="frame_changer_front_depth" pkg="robotika" type="image_frame_changer.py"  output="screen">
+	  <param name="src_topic" value="/X0F40L/front_rgbd/depth/image_raw"/>
+	  <param name="dest_topic" value="/X0F40L/front_rgbd/depth/image_raw_optical"/>
+	  <param name="dest_frame" value="X0F40L/base_link/front_realsense_optical"/>
+  </node>
+  <node name="frame_changer_front_rgb" pkg="robotika" type="image_frame_changer.py"  output="screen">
+          <param name="src_topic" value="/X0F40L/front_rgbd/image_raw"/>
+          <param name="dest_topic" value="/X0F40L/front_rgbd/image_raw_optical"/>
+          <param name="dest_frame" value="X0F40L/base_link/front_realsense_optical"/>
+  </node>
+  <node name="frame_changer_front_info" pkg="robotika" type="info_frame_changer.py"  output="screen">
+          <param name="src_topic" value="/X0F40L/front_rgbd/camera_info"/>
+          <param name="dest_topic" value="/X0F40L/front_rgbd/camera_info"/>
+          <param name="dest_frame" value="X0F40L/base_link/front_realsense_optical"/>
+  </node>
+  <node pkg="tf" type="static_transform_publisher" name="front_optical_frame" args="0 0 0 -1.57 0 -1.57 X0F40L/base_link/front_realsense X0F40L/base_link/front_realsense_optical 100"/>
+  <!-- -->  
+  <node name="frame_changer_rear_depth" pkg="robotika" type="image_frame_changer.py"  output="screen">
+          <param name="src_topic" value="/X0F40L/rear_rgbd/depth/image_raw"/>
+          <param name="dest_topic" value="/X0F40L/rear_rgbd/depth/image_raw_optical"/>
+          <param name="dest_frame" value="X0F40L/base_link/rear_realsense_optical"/>
+  </node>
+  <node name="frame_changer_rear_rgb" pkg="robotika" type="image_frame_changer.py"  output="screen">
+          <param name="src_topic" value="/X0F40L/rear_rgbd/image_raw"/>
+          <param name="dest_topic" value="/X0F40L/rear_rgbd/image_raw_optical"/>
+          <param name="dest_frame" value="X0F40L/base_link/rear_realsense_optical"/>
+  </node>
+  <node name="frame_changer_rear_info" pkg="robotika" type="info_frame_changer.py"  output="screen">
+          <param name="src_topic" value="/X0F40L/rear_rgbd/camera_info"/>
+          <param name="dest_topic" value="/X0F40L/rear_rgbd/camera_info"/>
+          <param name="dest_frame" value="X0F40L/base_link/rear_realsense_optical"/>
+  </node>
+  <node pkg="tf" type="static_transform_publisher" name="rear_optical_frame" args="0 0 0 -1.57 0 -1.57 X0F40L/base_link/rear_realsense X0F40L/base_link/rear_realsense_optical 100"/>
+
+  <!-- -->
+  <node name="frame_changer_left_depth" pkg="robotika" type="image_frame_changer.py"  output="screen">
+          <param name="src_topic" value="/X0F40L/left_rgbd/depth/image_raw"/>
+          <param name="dest_topic" value="/X0F40L/left_rgbd/depth/image_raw_optical"/>
+          <param name="dest_frame" value="X0F40L/base_link/left_realsense_optical"/>
+  </node>
+  <node name="frame_changer_left_rgb" pkg="robotika" type="image_frame_changer.py"  output="screen">
+          <param name="src_topic" value="/X0F40L/left_rgbd/image_raw"/>
+          <param name="dest_topic" value="/X0F40L/left_rgbd/image_raw_optical"/>
+          <param name="dest_frame" value="X0F40L/base_link/left_realsense_optical"/>
+  </node>
+  <node name="frame_changer_left_info" pkg="robotika" type="info_frame_changer.py"  output="screen">
+          <param name="src_topic" value="/X0F40L/left_rgbd/camera_info"/>
+          <param name="dest_topic" value="/X0F40L/left_rgbd/camera_info"/>
+          <param name="dest_frame" value="X0F40L/base_link/left_realsense_optical"/>
+  </node>
+  <node pkg="tf" type="static_transform_publisher" name="left_optical_frame" args="0 0 0 -1.57 0 -1.57 X0F40L/base_link/left_realsense X0F40L/base_link/left_realsense_optical 100"/>
+
+  <!-- -->
+  <node name="frame_changer_right_depth" pkg="robotika" type="image_frame_changer.py"  output="screen">
+          <param name="src_topic" value="/X0F40L/right_rgbd/depth/image_raw"/>
+          <param name="dest_topic" value="/X0F40L/right_rgbd/depth/image_raw_optical"/>
+          <param name="dest_frame" value="X0F40L/base_link/right_realsense_optical"/>
+  </node>
+  <node name="frame_changer_right_rgb" pkg="robotika" type="image_frame_changer.py"  output="screen">
+          <param name="src_topic" value="/X0F40L/right_rgbd/image_raw"/>
+          <param name="dest_topic" value="/X0F40L/right_rgbd/image_raw_optical"/>
+          <param name="dest_frame" value="X0F40L/base_link/right_realsense_optical"/>
+  </node>
+  <node name="frame_changer_right_info" pkg="robotika" type="info_frame_changer.py"  output="screen">
+          <param name="src_topic" value="/X0F40L/right_rgbd/camera_info"/>
+          <param name="dest_topic" value="/X0F40L/right_rgbd/camera_info"/>
+          <param name="dest_frame" value="X0F40L/base_link/right_realsense_optical"/>
+  </node>
+  <node pkg="tf" type="static_transform_publisher" name="right_optical_frame" args="0 0 0 -1.57 0 -1.57 X0F40L/base_link/right_realsense X0F40L/base_link/right_realsense_optical 100"/>
+
+
+
+
+
   <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="log">
 	  <rosparam file="$(find robotika)/params/costmap_common_params.yaml" command="load" ns="global_costmap" />
 	  <rosparam file="$(find robotika)/params/costmap_common_params.yaml" command="load" ns="local_costmap" />
@@ -34,36 +110,97 @@
                 <param name="publish_voronoi_map_image"       value="true"/>
 	</node-->
 
-	<group ns="rtabmap">
-    <node name="rtabmap" pkg="rtabmap_ros" type="rtabmap" output="screen" args="--delete_db_on_start">
+    <group ns="rtabmap">
+	    
+	<group ns="front">
+		<node pkg="nodelet" type="nodelet" name="rgbd_sync" args="standalone rtabmap_ros/rgbd_sync" output="screen">
+      	    		<remap from="rgb/image" to="/$(arg robot_name)/front_rgbd/image_raw_optical"/>
+            		<remap from="depth/image"     to="/$(arg robot_name)/front_rgbd/depth/image_raw_optical"/>
+            		<remap from="rgb/camera_info" to="/$(arg robot_name)/front_rgbd/camera_info"/>
+      			<remap from="rgbd_image"      to="rgbd_image"/>
+      			<param name="approx_sync"       value="true"/> 
+    		</node>	
+	</group>
+	<group ns="rear">
+                <node pkg="nodelet" type="nodelet" name="rgbd_sync" args="standalone rtabmap_ros/rgbd_sync" output="screen">
+                        <remap from="rgb/image" to="/$(arg robot_name)/rear_rgbd/image_raw_optical"/>
+                        <remap from="depth/image"     to="/$(arg robot_name)/rear_rgbd/depth/image_raw_optical"/>
+                        <remap from="rgb/camera_info" to="/$(arg robot_name)/rear_rgbd/camera_info"/>
+                        <remap from="rgbd_image"      to="rgbd_image"/>
+                        <param name="approx_sync"       value="true"/>
+                </node>
+	</group>
+
+	<group ns="left">
+                <node pkg="nodelet" type="nodelet" name="rgbd_sync" args="standalone rtabmap_ros/rgbd_sync" output="screen">
+                        <remap from="rgb/image" to="/$(arg robot_name)/left_rgbd/image_raw_optical"/>
+                        <remap from="depth/image"     to="/$(arg robot_name)/left_rgbd/depth/image_raw_optical"/>
+                        <remap from="rgb/camera_info" to="/$(arg robot_name)/left_rgbd/camera_info"/>
+                        <remap from="rgbd_image"      to="rgbd_image"/>
+                        <param name="approx_sync"       value="true"/>
+                </node>
+	</group>
+
+	<group ns="right">
+                <node pkg="nodelet" type="nodelet" name="rgbd_sync" args="standalone rtabmap_ros/rgbd_sync" output="screen">
+                        <remap from="rgb/image" to="/$(arg robot_name)/right_rgbd/image_raw_optical"/>
+                        <remap from="depth/image"     to="/$(arg robot_name)/right_rgbd/depth/image_raw_optical"/>
+                        <remap from="rgb/camera_info" to="/$(arg robot_name)/right_rgbd/camera_info"/>
+                        <remap from="rgbd_image"      to="rgbd_image"/>
+                        <param name="approx_sync"       value="true"/>
+                </node>
+	</group>
+
+	<node name="rtabmap" pkg="rtabmap_ros" type="rtabmap" output="screen" args="--delete_db_on_start">
           <param name="frame_id" type="string" value="$(arg robot_name)"/>
           <!--param name="odom_frame_id" type="string" value="$(arg robot_name)/odom"/-->
           <param name="subscribe_depth" type="bool" value="false"/>
-          <param name="subscribe_rgbd" type="bool" value="false"/>
+          <param name="subscribe_rgbd" type="bool" value="true"/>
           <param name="subscribe_scan" type="bool" value="false"/>
-          <param name="subscribe_scan_cloud" type="bool" value="true"/>
-          <remap from="scan_cloud"       to="/$(arg robot_name)/rgbd_camera/depth/points"/>
+          <param name="subscribe_scan_cloud" type="bool" value="false"/>
+	  <!-->
+	  <remap from="scan_cloud"       to="/$(arg robot_name)/rgbd_camera/depth/points"/>
           <remap from="rgb/image"       to="/$(arg robot_name)/image_raw"/>
           <remap from="depth/image"     to="/$(arg robot_name)/front/depth"/>
-          <remap from="rgb/camera_info" to="/$(arg robot_name)/camera_info"/>
-          <remap from="scan" to="/$(arg robot_name)/front_scan"/>
+	  <remap from="rgb/camera_info" to="/$(arg robot_name)/camera_info"/>
+	  
+	  <remap from="scan_cloud"       to="/$(arg robot_name)/points"/>
+	  <remap from="rgb/image"       to="/$(arg robot_name)/front_rgbd/image_raw"/>
+          <remap from="depth/image"     to="/$(arg robot_name)/front/depth"/>
+          <remap from="rgb/camera_info" to="/$(arg robot_name)/front_rgbd/camera_info"/>
+	  </-->
+	  <remap from="scan" to="/$(arg robot_name)/front_scan"/>
 	  <remap from="odom" to="/odometry/filtered"/>
 
-          <remap from="rgbd_image" to="rgbd_image"/>
+	  <remap from="rgbd_image0" to="front/rgbd_image"/>
+	  <remap from="rgbd_image1" to="rear/rgbd_image"/>
+	  <remap from="rgbd_image2" to="left/rgbd_image"/>
+	  <remap from="rgbd_image3" to="right/rgbd_image"/>
 
           <param name="queue_size" type="int" value="10"/>
-
-          <!-- RTAB-Map's parameters -->
-          <param name="RGBD/AngularUpdate"        type="string" value="0.01"/>
+	  <!-- RTAB-Map's parameters -->
+	  <param name="rgbd_cameras" value="4"/>
+	  
+	  <param name="RGBD/AngularUpdate"        type="string" value="0.01"/>
           <param name="RGBD/LinearUpdate"         type="string" value="0.01"/>
-          <param name="RGBD/OptimizeFromGraphEnd" type="string" value="false"/>
+	  <param name="RGBD/OptimizeFromGraphEnd" type="string" value="false"/>
           <param name="proj_max_height" type="double" value="1.0"/>
           <param name="proj_max_ground_angle" type="double" value="45"/>
           <param name="grid_unknown_space_filled" type="bool" value="true"/>
 	  <param name="grid_eroded" type="bool" value="true"/>
-	  <param name="cloud_noise_filtering_radius" type="double" value="0.1"/>
-	  <param name="cloud_noise_filtering_min_neighbours" type="double" value="10"/>
+	  <param name="cloud_noise_filtering_radius" type="double" value="0.2"/>
+	  <param name="cloud_noise_filtering_min_neighbours" type="double" value="5"/>
+	  
     </node>
+    <!-- Visualisation RTAB-Map -->
+    <!--node pkg="rtabmap_ros" type="rtabmapviz" name="rtabmapviz" args="-d $(find rtabmap_ros)/launch/config/rgbd_gui.ini" output="screen">
+      <param name="subscribe_depth"  type="bool"   value="false"/>
+      <param name="subscribe_rgbd"   type="bool"   value="true"/>
+      <param name="frame_id"            type="string" value="$(arg robot_name)"/>
+      <param name="wait_for_transform"  type="bool"   value="true"/>
+
+      <remap from="rgbd_image"       to="rgbd_image"/>
+    </node-->
     </group>
 
     <!-- LOCALIZATION /-->

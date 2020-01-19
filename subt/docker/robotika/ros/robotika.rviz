@@ -7,6 +7,7 @@ Panels:
         - /Status1
         - /TF1/Frames1
         - /Odometry1/Shape1
+        - /Image1
         - /LaserScan2
       Splitter Ratio: 0.5
     Tree Height: 414
@@ -83,22 +84,36 @@ Visualization Manager:
           Value: true
         X0F40L/base_link:
           Value: false
-        X0F40L/base_link/camera_front:
-          Value: false
         X0F40L/base_link/front_laser:
           Value: false
+        X0F40L/base_link/front_realsense:
+          Value: true
+        X0F40L/base_link/front_realsense_optical:
+          Value: true
         X0F40L/base_link/imu_sensor:
           Value: false
-        X0F40L/front_left_wheel:
-          Value: false
-        X0F40L/front_right_wheel:
-          Value: false
+        X0F40L/base_link/left_realsense:
+          Value: true
+        X0F40L/base_link/left_realsense_optical:
+          Value: true
+        X0F40L/base_link/rear_realsense:
+          Value: true
+        X0F40L/base_link/rear_realsense_optical:
+          Value: true
+        X0F40L/base_link/right_realsense:
+          Value: true
+        X0F40L/base_link/right_realsense_optical:
+          Value: true
+        X0F40L/front_left_wheel_link:
+          Value: true
+        X0F40L/front_right_wheel_link:
+          Value: true
         X0F40L/odom:
           Value: true
-        X0F40L/rear_left_wheel:
-          Value: false
-        X0F40L/rear_right_wheel:
-          Value: false
+        X0F40L/rear_left_wheel_link:
+          Value: true
+        X0F40L/rear_right_wheel_link:
+          Value: true
         map:
           Value: true
         urban_qual:
@@ -115,19 +130,29 @@ Visualization Manager:
           X0F40L/odom:
             X0F40L:
               X0F40L/base_link:
-                X0F40L/base_link/camera_front:
-                  {}
                 X0F40L/base_link/front_laser:
                   {}
+                X0F40L/base_link/front_realsense:
+                  X0F40L/base_link/front_realsense_optical:
+                    {}
                 X0F40L/base_link/imu_sensor:
                   {}
-              X0F40L/front_left_wheel:
+                X0F40L/base_link/left_realsense:
+                  X0F40L/base_link/left_realsense_optical:
+                    {}
+                X0F40L/base_link/rear_realsense:
+                  X0F40L/base_link/rear_realsense_optical:
+                    {}
+                X0F40L/base_link/right_realsense:
+                  X0F40L/base_link/right_realsense_optical:
+                    {}
+              X0F40L/front_left_wheel_link:
                 {}
-              X0F40L/front_right_wheel:
+              X0F40L/front_right_wheel_link:
                 {}
-              X0F40L/rear_left_wheel:
+              X0F40L/rear_left_wheel_link:
                 {}
-              X0F40L/rear_right_wheel:
+              X0F40L/rear_right_wheel_link:
                 {}
       Update Interval: 0
       Value: true
@@ -346,7 +371,7 @@ Visualization Manager:
       Value: false
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /X0F40L/image_raw
+      Image Topic: /X0F40L/front_rgbd/image_raw
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -422,14 +447,14 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6292029023170471
+      Pitch: 0.4942030906677246
       Position:
-        X: -17.173673629760742
-        Y: -0.09611904621124268
-        Z: 19.675548553466797
+        X: 4.439606666564941
+        Y: 4.730853080749512
+        Z: 6.163127899169922
       Target Frame: <Fixed Frame>
       Value: FPS (rviz)
-      Yaw: 6.200654029846191
+      Yaw: 0.38246801495552063
     Saved: ~
 Window Geometry:
   Displays:

@@ -73,10 +73,10 @@ def updateScan():
 if __name__ == '__main__':
     try:
         rospy.init_node('map_to_scan', anonymous=True)
-        scan_pub = rospy.Publisher('/map_scan', LaserScan )
+        robotName = rospy.get_param('robot_name')
+        scan_pub = rospy.Publisher('/' + robotName + '/map_scan', LaserScan )
         rospy.Subscriber('/rtabmap/grid_prob_map',OccupancyGrid, mapCallback)
         transformListener = tf.TransformListener()
-        robotName = rospy.get_param('robot_name') 
         r = rospy.Rate(20) # 5hz
         while not rospy.is_shutdown():
             if lastMap:
