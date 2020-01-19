@@ -7,7 +7,7 @@ import numpy as np
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
-from osgar.lib.depth import depth2danger, danger2dist
+from osgar.lib.depth import depth2dist
 
 
 frac = math.tan(math.radians(60))/360
@@ -80,7 +80,7 @@ class DepthToScan(Node):
             if self.depth is None:
                 self.publish('scan', self.scan)
                 return channel  # when no depth data are available ...
-            dist = self.depth[danger2dist(depth2danger(self.depth)), np.arange(640)]
+            dist = depth2dist(self.depth)
 
             # 60*720/270 = 160.0 ... i.e. 160 elements to be replaced
             # 640/160 = 4.0 ... i.e. downsample by 4
