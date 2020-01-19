@@ -64,5 +64,24 @@ def danger2dist(danger):
     # we need closest obstacles to robot
     return np.argmax(danger, axis=0)
 
+if __name__ == '__main__':
+    import argparse
+    import matplotlib.pyplot as plt
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('filename', help='NPZ file with depth data')
+    args = parser.parse_args()
+
+    with np.load(args.filename) as f:
+        depth = f['depth']
+
+    dist = depth[danger2dist(depth2danger(depth)), np.arange(640)]
+    print(danger2dist(depth2danger(depth)))
+
+    plt.plot(range(640), dist, 'o-', linewidth=2)
+    plt.show()
+
+    print(dist)
+
 # vim: expandtab sw=4 ts=4
 
