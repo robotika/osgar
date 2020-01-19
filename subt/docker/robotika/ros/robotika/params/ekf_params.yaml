@@ -1,5 +1,5 @@
 ekf_se_map:
-        frequency: 10
+        frequency: 40
         sensor_timeout: 0.1
         two_d_mode: true
         transform_time_offset: 0.0 #0.2

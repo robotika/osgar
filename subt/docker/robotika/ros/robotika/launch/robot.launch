@@ -6,20 +6,20 @@
   <!-- Launch your controller nodes -->
   <node name="$(arg robot_name)subt_solution" pkg="subt_seed" type="subt_seed_node" output="screen" args="$(arg robot_name)"/>
   <!--node name="base_transform" pkg="subt_seed" type="base_transform.py"  output="screen"/-->
-
+  <node name="map_to_scan" pkg="robotika" type="map_to_scan.py"  output="screen"/>
   <!-- NAVIGATION -->
   <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="log">
-	  <rosparam file="$(find subt_seed)/params/costmap_common_params.yaml" command="load" ns="global_costmap" />
-	  <rosparam file="$(find subt_seed)/params/costmap_common_params.yaml" command="load" ns="local_costmap" />
-	  <rosparam file="$(find subt_seed)/params/move_base_params.yaml" command="load" />
-	  <rosparam file="$(find subt_seed)/params/local_costmap_params.yaml" command="load" />
-          <rosparam file="$(find subt_seed)/params/global_costmap_params.yaml" command="load" />
-          <rosparam file="$(find subt_seed)/params/base_local_planner_params.yaml" command="load" />
+	  <rosparam file="$(find robotika)/params/costmap_common_params.yaml" command="load" ns="global_costmap" />
+	  <rosparam file="$(find robotika)/params/costmap_common_params.yaml" command="load" ns="local_costmap" />
+	  <rosparam file="$(find robotika)/params/move_base_params.yaml" command="load" />
+	  <rosparam file="$(find robotika)/params/local_costmap_params.yaml" command="load" />
+          <rosparam file="$(find robotika)/params/global_costmap_params.yaml" command="load" />
+          <rosparam file="$(find robotika)/params/base_local_planner_params.yaml" command="load" />
 	  <param name="controller_frequency" value="10.0"/>
 	  <remap from="cmd_vel" to="$(arg robot_name)/cmd_vel" />
 	  <!--remap from="map" to="/rtabmap/proj_map" /-->
 	  <remap from="map" to="/rtabmap/grid_map" />
-          <remap from="odom" to="$(arg robot_name)/odom" />
+	  <remap from="odom" to="$(arg robot_name)/odom" />
   </node>
 
 <!-- REMOTE CONTROL /-->	
@@ -60,12 +60,14 @@
           <param name="proj_max_height" type="double" value="1.0"/>
           <param name="proj_max_ground_angle" type="double" value="45"/>
           <param name="grid_unknown_space_filled" type="bool" value="true"/>
-          <param name="grid_eroded" type="bool" value="true"/>
+	  <param name="grid_eroded" type="bool" value="true"/>
+	  <param name="cloud_noise_filtering_radius" type="double" value="0.1"/>
+	  <param name="cloud_noise_filtering_min_neighbours" type="double" value="10"/>
     </node>
     </group>
 
     <!-- LOCALIZATION /-->
-    <rosparam command="load" file="$(find subt_seed)/params/ekf_params.yaml" />
+    <rosparam command="load" file="$(find robotika)/params/ekf_params.yaml" />
     <node pkg="robot_localization" type="ekf_localization_node" name="ekf_se_map" clear_params="true">
                 <!--remap from="odometry/filtered" to="odometry/filtered_map"/-->
     </node>
