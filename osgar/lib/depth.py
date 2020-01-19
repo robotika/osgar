@@ -37,6 +37,31 @@ pzs = np.ones((CAMH, CAMW), dtype=np.float)
 # in the scene with a unit forward axis.
 ps = np.dstack([pzs, pxs / FX, pys / FX])
 
+
+def depth2danger(depth_mm):
+    # COPY & PASTE - refactoring needed!
+
+    depth = depth_mm * 0.001  # Converting to meters.
+    # 3D coordinates of points detected by the depth camera, converted to
+    # robot's coordinate system.
+    xyz = ps * np.expand_dims(depth, axis=Z) + [[[CAMX, CAMY, CAMZ]]]
+    # Relative positions of 3D points placed OFFSET pixels above each other.
+    rel_xyz = xyz[:-OFFSET,:,:] - xyz[OFFSET:,:,:]
+    # Slope of a line connecting two points in the vertical plane they
+    # define.
+    slope = np.arctan2(
+            rel_xyz[:,:,Z], np.hypot(rel_xyz[:,:,X], rel_xyz[:,:,Y]))
+
+    danger = np.logical_and.reduce(np.stack([
+        # It has to be near.
+        np.minimum(xyz[:-OFFSET,:,X], xyz[OFFSET:,:,X]) <= MAXX,
+        np.minimum(xyz[:-OFFSET,:,Y], xyz[OFFSET:,:,Y]) <= MAXY,
+        # It should not be something small on the ground.
+        np.maximum(xyz[:-OFFSET,:,Z], xyz[OFFSET:,:,Z]) >= MINZ,
+        # It has to be close to vertical.
+        np.abs(slope - np.radians(90)) <= VERTICAL_DIFF_LIMIT]))
+
+
 def depth2dist(depth_mm):
     # return line in mm corresponding to scan
 
