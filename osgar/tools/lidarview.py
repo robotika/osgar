@@ -109,16 +109,20 @@ def draw(foreground, pose, scan, poses=[], image=None, callback=None, acc_pts=No
                 pygame.draw.line(foreground, (200, 200, 0), a, b, 1)
 
 g_depth = None
+g_danger_binary_image = False
+
 def get_image(data):
     """Extract JPEG or RGBD depth image"""
     # https://stackoverflow.com/questions/12569452/how-to-identify-numpy-types-in-python
     if isinstance(data, np.ndarray):
         # depth data for ROBOTIKA_X2_SENSOR_CONFIG_1 (640 x 360)
         # https://www.learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
-        #img = np.array(data/40, dtype=np.uint8)
-        img = np.array(depth2danger(data) * 255, dtype=np.uint8)
-#        im_color = cv2.applyColorMap(img, cv2.COLORMAP_JET)
-        im_color = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+        if g_danger_binary_image:
+            img = np.array(depth2danger(data) * 255, dtype=np.uint8)
+            im_color = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+        else:
+            img = np.array(data/40, dtype=np.uint8)
+            im_color = cv2.applyColorMap(img, cv2.COLORMAP_JET)
 
         # https://stackoverflow.com/questions/19306211/opencv-cv2-image-to-pygame-image
         image = pygame.image.frombuffer(im_color.tostring(), im_color.shape[1::-1], "RGB")
@@ -364,6 +368,10 @@ def lidarview(gen, caption_filename, callback=False, out_video=None):
                 if event.key == K_s:
                     pygame.image.save(image, "saveX-{:04}.jpg".format(save_counter))
                     save_counter += 1
+                if event.key == K_b:  # swap binary danger image on/off
+                    global g_danger_binary_image
+                    g_danger_binary_image = not g_danger_binary_image
+                    history.prev()
                 if event.key == K_d:  # dump scan
                     print(scan)
                     if g_depth is not None:
