@@ -85,9 +85,9 @@ class DepthToScan(Node):
             # 60*720/270 = 160.0 ... i.e. 160 elements to be replaced
             # 640/160 = 4.0 ... i.e. downsample by 4
             small = np.array(dist[::4], dtype=np.int32)  # problem with abs() of uint16
-            mask = small == 0xFFFF
-            small = np.array(small * self.scale, dtype=np.int32)
-            small[mask] = 0
+#            mask = small == 0xFFFF
+#            small = np.array(small * self.scale, dtype=np.int32)
+#            small[mask] = 0
             rev = small[::-1]
             new_scan = self.scan[:720//2-80] + rev.tolist() + self.scan[720//2+80:]
             assert len(new_scan) == 720, len(new_scan)
