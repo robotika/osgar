@@ -54,7 +54,7 @@ def updateScan():
     #cv2.imshow('Map',cv2.resize(mapArray,(300,300))) 
     scan = LaserScan()
     scan.header.stamp = rospy.Time.now()
-    scan.header.frame_id = robotName #"base_link/front_laser"
+    scan.header.frame_id = robotName + "/base_link/front_laser"
     scan.angle_min = -math.pi #* 3/4
     scan.angle_max = math.pi #* 3/4
     scan.angle_increment = 2 * math.pi / polar.shape[0]   #should be multiplied by 3/2?

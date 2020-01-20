@@ -14,7 +14,7 @@ COPY --chown=developer:developer . ./osgar/
 
 RUN source /opt/ros/melodic/setup.bash && ./osgar/subt/script/sync.sh
 
-COPY ros_proxy_node.cc ./src/subt_seed/src/subt_seed_node.cc
+COPY subt_seed_node.cc ./src/subt_seed/src/subt_seed_node.cc
 COPY CMakeLists.txt ./src/subt_seed/CMakeLists.txt
 
 ADD ros ./src

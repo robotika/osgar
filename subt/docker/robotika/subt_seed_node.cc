@@ -252,8 +252,8 @@ void Controller::Update()
           this->name + "/cmd_vel", 1);
 
       this->subImu  = n.subscribe(this->name + "/imu/data", 1000, imuCallback);
-      this->subScan = n.subscribe(this->name + "/front_scan", 1000, scanCallback);
-      this->subImage = n.subscribe(this->name + "/front/image_raw/compressed", 1000, imageCallback);
+      this->subScan = n.subscribe(this->name + "/map_scan", 1000, scanCallback);
+      this->subImage = n.subscribe(this->name + "/front_rgbd/image_raw/compressed", 1000, imageCallback);
       this->subOdom = n.subscribe(this->name + "/odom", 1000, odomCallback);
 
       // Create a cmd_vel publisher to control a vehicle.
