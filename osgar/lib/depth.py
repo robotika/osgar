@@ -25,6 +25,14 @@ OFFSET = 1
 # How close to the vertical does an obstacle need to be? (In radians.)
 VERTICAL_DIFF_LIMIT = np.radians(45)
 
+
+# Which rows of the image do we consider "low".
+CAM_LOW = CAMH // 2 + 1
+
+# How much of a slope do we still consider "normal".
+MAX_SLOPE = np.radians(-15)
+
+
 # Indices of directions in a matrix with 3D points.
 X, Y, Z = 0, 1, 2
 
@@ -92,6 +100,26 @@ def depth2dist(depth_mm):
     scan = np.min(dists, axis=0)
     mask = scan == FAR_AWAY
     scan[mask] = 0
+
+    # down drops
+    low_xyz = ps[CAM_LOW:,:] * np.expand_dims(
+            depth[CAM_LOW:,:], axis=Z) + [[[CAMX, CAMY, CAMZ]]]
+    dists = np.hypot(low_xyz[:,:,X], low_xyz[:,:,Y])
+    slopes = np.arctan2(low_xyz[:,:,Z], dists)
+    below_ground = slopes < MAX_SLOPE
+
+    # Let's calculate, where we should see ground.
+    q = CAMZ / (CAMZ - low_xyz[:,:,Z])
+    expected_ground = low_xyz * np.expand_dims(q, 2)
+    ground_dists = np.hypot(expected_ground[:,:,X], expected_ground[:,:,Y])
+    FAR_AWAY = 1000.
+    scan_down = np.min(
+            np.where(below_ground, ground_dists, FAR_AWAY),
+            axis=0)
+
+    mask = scan_down < FAR_AWAY
+    scan[mask] = scan_down[mask]  # down drop readings are more important then walls
+
     scan = np.array(scan*1000, dtype=np.int32)
     return scan
 
