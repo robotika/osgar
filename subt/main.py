@@ -685,17 +685,18 @@ class SubTChallenge:
         """
         Navigate to the base station tile end
         """
-        __, dy, __ = self.offset
+        dx, dy, __ = self.offset
+        dx -= -7.500005
         dy -= 5.000014
         trace = Trace()
-        trace.add_line_to((3, -5 - dy, 0))  # before tunnel
-        trace.add_line_to((15, -5 - dy, 0))  # inside tunnel
-        trace.add_line_to((15, 10 - dy, 0))
-        trace.add_line_to((-23, 12 - dy, -3.267))
-        trace.add_line_to((-25.656, 6.839 - dy, -3.267))
-        trace.add_line_to((-36.762, 7.108 - dy, -3.267))
-        trace.add_line_to((-37.582, -22.426 - dy, -4.505))
-        trace.add_line_to((-25.084, -26.688 - dy, -6.297))
+        trace.add_line_to((3 - dx, -5 - dy, 0))  # before tunnel
+        trace.add_line_to((15 - dx, -5 - dy, 0))  # inside tunnel
+        trace.add_line_to((15 - dx, 10 - dy, 0))
+        trace.add_line_to((-23 - dx, 12 - dy, -3.267))
+        trace.add_line_to((-25.656 - dx, 6.839 - dy, -3.267))
+        trace.add_line_to((-36.762 - dx, 7.108 - dy, -3.267))
+        trace.add_line_to((-37.582 - dx, -22.426 - dy, -4.505))
+        trace.add_line_to((-25.084 - dx, -26.688 - dy, -6.297))
         trace.reverse()
         self.follow_trace(trace, timeout=timedelta(seconds=120), max_target_distance=2.5)
 
