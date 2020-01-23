@@ -27,9 +27,28 @@ def extract_poses(filename):
     cursor.execute("SELECT * FROM messages;")
     for i, row in enumerate(cursor):
         index, time_ns, topic_id, data = row
-        if topic_id == 1:
-            print(index, data, len(data))
-        if i > 20:
+        if topic_id == 2:  # '/world/urban_circuit_practice_03/dynamic_pose/info'
+            print(data[:10].hex())
+#            print(index, data, len(data))
+#           print(index, len(data))
+#        if b'A60F900L' in data:  #i > 100:
+#        if b'E180F200F700L' in data:  #i > 100:
+#            assert b'\x08A60F900L' in data, data
+#            print(data[:30])
+#            print(data)
+#            break
+            """
+            print('----------------')
+            index = 0
+#            while index < len(data):
+            for j in range(10):
+                size = data[index]
+                index += 1
+                print(size, data[index:index + size])
+                index += size
+                print(index, len(data))
+                """
+        if i > 100000:
             break
 
 
