@@ -16,22 +16,19 @@ methods = ['cv2.TM_CCOEFF', 'cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR',
 methods = ['cv2.TM_CCORR_NORMED']
 
 
-for meth in methods:
-    img = img2.copy()
-    method = eval(meth)
+def match_template(img):
+#    img = img2.copy()
 
     # Apply template Matching
-    res = cv2.matchTemplate(img,template,method)
+    res = cv2.matchTemplate(img, template, cv2.TM_CCORR_NORMED)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
     print(max_val, max_loc)
-
-    # If the method is TM_SQDIFF or TM_SQDIFF_NORMED, take minimum
-    if method in [cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED]:
-        top_left = min_loc
-    else:
-        top_left = max_loc
+    top_left = max_loc
     bottom_right = (top_left[0] + w, top_left[1] + h)
+    return max_val
 
+
+def draw():
     cv2.rectangle(img,top_left, bottom_right, 255, 2)
 
     plt.subplot(121),plt.imshow(res,cmap = 'gray')
@@ -41,4 +38,29 @@ for meth in methods:
     plt.suptitle(meth)
 
     plt.show()
+
+
+if __name__ == '__main__':
+    import argparse
+    from osgar.logger import LogReader, lookup_stream_id
+    from osgar.lib.serialize import deserialize
+
+    parser = argparse.ArgumentParser(description='Run artifact detection and classification for given JPEG image')
+    parser.add_argument('filename', help='logfile')
+    args = parser.parse_args()
+
+    filename = args.filename
+
+    stream_id = lookup_stream_id(filename, 'rosmsg.image')
+    for dt, channel, data in LogReader(filename, only_stream_id=stream_id):
+        buf = deserialize(data)
+        img = cv2.imdecode(np.fromstring(buf, dtype=np.uint8), 0)
+        
+        val = match_template(img)
+        assert val < 0.98, dt
+
+
+
+
+# vim: expandtab sw=4 ts=4
 
