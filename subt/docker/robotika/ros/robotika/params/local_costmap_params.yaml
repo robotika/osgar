@@ -3,8 +3,8 @@ local_costmap:
     - {name: obstacles,        type: "costmap_2d::ObstacleLayer"}
   # assuming receiving a cloud from rtabmap_ros/obstacles_detection node
 
-  global_frame: X0F40L/odom
-  robot_base_frame: X0F40L/base_link
+  global_frame: odom
+  robot_base_frame: base_link
   update_frequency: 10.0
   publish_frequency: 10.0
   static_map: false
@@ -20,9 +20,9 @@ local_costmap:
     observation_sources: laser_scan_sensor
 
     laser_scan_sensor: {
-      sensor_frame: X0F40L/base_link/front_laser,
+      sensor_frame: base_link/front_laser,
       data_type: LaserScan,
-      topic: "/X0F40L/front_scan",
+      topic: "/front_scan",
       expected_update_rate: 0.5,
       marking: true,
       clearing: true,

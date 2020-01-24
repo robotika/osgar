@@ -5,7 +5,9 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Status1
+        - /LocalMap1
         - /TF1/Frames1
+        - /OdometryFiltered1
         - /Odometry1/Shape1
         - /Image1
         - /LaserScan2
@@ -69,12 +71,12 @@ Visualization Manager:
       Class: rviz/Map
       Color Scheme: map
       Draw Behind: false
-      Enabled: false
+      Enabled: true
       Name: LocalMap
-      Topic: /move_base/local_costmap/costmap
+      Topic: /X0F40L/local_map
       Unreliable: false
       Use Timestamp: false
-      Value: false
+      Value: true
     - Class: rviz/TF
       Enabled: true
       Frame Timeout: 15
@@ -84,35 +86,21 @@ Visualization Manager:
           Value: true
         X0F40L/base_link:
           Value: false
+        X0F40L/base_link/camera_front:
+          Value: true
         X0F40L/base_link/front_laser:
           Value: false
-        X0F40L/base_link/front_realsense:
-          Value: true
-        X0F40L/base_link/front_realsense_optical:
-          Value: true
         X0F40L/base_link/imu_sensor:
           Value: false
-        X0F40L/base_link/left_realsense:
+        X0F40L/front_left_wheel:
           Value: true
-        X0F40L/base_link/left_realsense_optical:
-          Value: true
-        X0F40L/base_link/rear_realsense:
-          Value: true
-        X0F40L/base_link/rear_realsense_optical:
-          Value: true
-        X0F40L/base_link/right_realsense:
-          Value: true
-        X0F40L/base_link/right_realsense_optical:
-          Value: true
-        X0F40L/front_left_wheel_link:
-          Value: true
-        X0F40L/front_right_wheel_link:
+        X0F40L/front_right_wheel:
           Value: true
         X0F40L/odom:
           Value: true
-        X0F40L/rear_left_wheel_link:
+        X0F40L/rear_left_wheel:
           Value: true
-        X0F40L/rear_right_wheel_link:
+        X0F40L/rear_right_wheel:
           Value: true
         map:
           Value: true
@@ -130,29 +118,19 @@ Visualization Manager:
           X0F40L/odom:
             X0F40L:
               X0F40L/base_link:
+                X0F40L/base_link/camera_front:
+                  {}
                 X0F40L/base_link/front_laser:
                   {}
-                X0F40L/base_link/front_realsense:
-                  X0F40L/base_link/front_realsense_optical:
-                    {}
                 X0F40L/base_link/imu_sensor:
                   {}
-                X0F40L/base_link/left_realsense:
-                  X0F40L/base_link/left_realsense_optical:
-                    {}
-                X0F40L/base_link/rear_realsense:
-                  X0F40L/base_link/rear_realsense_optical:
-                    {}
-                X0F40L/base_link/right_realsense:
-                  X0F40L/base_link/right_realsense_optical:
-                    {}
-              X0F40L/front_left_wheel_link:
+              X0F40L/front_left_wheel:
                 {}
-              X0F40L/front_right_wheel_link:
+              X0F40L/front_right_wheel:
                 {}
-              X0F40L/rear_left_wheel_link:
+              X0F40L/rear_left_wheel:
                 {}
-              X0F40L/rear_right_wheel_link:
+              X0F40L/rear_right_wheel:
                 {}
       Update Interval: 0
       Value: true
@@ -291,7 +269,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 0
@@ -308,7 +286,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -406,7 +384,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.10000000149011612
       Style: Flat Squares
-      Topic: /map_scan
+      Topic: /X0F40L/map_scan
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -447,14 +425,14 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.4942030906677246
+      Pitch: 1.22079598903656
       Position:
-        X: 4.439606666564941
-        Y: 4.730853080749512
-        Z: 6.163127899169922
+        X: -1.1105152368545532
+        Y: -1.8911092281341553
+        Z: 20.949722290039062
       Target Frame: <Fixed Frame>
       Value: FPS (rviz)
-      Yaw: 0.38246801495552063
+      Yaw: 0.10246861726045609
     Saved: ~
 Window Geometry:
   Displays:
