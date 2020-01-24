@@ -10,8 +10,6 @@ def unpack_protobuf(data, depth=0, prefix=None):
         return
     if prefix is None:
         prefix = []
-    if depth > 0:
-        print('  ' * depth)
     pos = 0
     while pos < len(data):
         c = data[pos]
@@ -23,21 +21,27 @@ def unpack_protobuf(data, depth=0, prefix=None):
             while data[pos] & 0x80 == 0x80:
                 pos += 1
             pos += 1
-            print('Var', field_number, data[start:pos].hex())
+#            print('Var', field_number, data[start:pos].hex())
         elif wire_type == 1:  # 64bit
             d = struct.unpack('<d', data[pos:pos+8])[0]
 #            i = struct.unpack('<q', data[:8])[0]
-#            if prefix == [2, 4]:  # xyz
-            print('double', prefix, field_number, d)
+            if prefix == [2, 4]:  # xyz
+                print('double', prefix, field_number, d)
 #            print('int', prefix, field_number, i)
             pos += 8
         elif wire_type == 2:
             size = data[pos]
             pos += 1
-            print(field_number, wire_type, size, data[pos:pos + size])
+
+            name = data[pos:pos + size]
+            if name in [b'base_link', b'front_left_wheel', b'front_right_wheel', b'rear_left_wheel', b'rear_right_wheel']:
+#                print('terminated', name)
+                return
+            if prefix == [2] and field_number == 2:
+                print(prefix, field_number, wire_type, size, data[pos:pos + size])
             key = prefix + [field_number]
             if field_number in [2, 4, 5]:
-                print('Key', key)
+#                print('Key', key)
                 if key != [2, 2]:
                     unpack_protobuf(data[pos:pos + size], depth=depth+1, prefix=key)
             pos += size
@@ -69,7 +73,7 @@ def extract_poses(filename):
     for i, row in enumerate(cursor):
         index, time_ns, topic_id, data = row
         if topic_id == 2:  # '/world/urban_circuit_practice_03/dynamic_pose/info'
-            print(data[:100].hex())
+#            print(data[:100].hex())
             unpack_protobuf(data)
 #            print(index, data, len(data))
 #           print(index, len(data))
