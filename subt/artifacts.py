@@ -358,17 +358,52 @@ class ArtifactReporter(Node):
         print('report completed')
 
 
+def debug2dir(filename, out_dir):
+    from osgar.logger import LogReader, lookup_stream_names
+    from osgar.lib.serialize import deserialize
+
+    names = lookup_stream_names(filename)
+    assert 'detector.debug_artf' in names, names
+    assert 'detector.artf' in names, names
+    assert 'rosmsg.sim_time_sec' in names, names
+    image_id = names.index('detector.debug_artf') + 1
+    artf_id = names.index('detector.artf') + 1
+    sim_sec_id = names.index('rosmsg.sim_time_sec') + 1
+    sim_time_sec = 0
+    image = None
+    artf = None
+    for dt, channel, data in LogReader(filename, only_stream_id=[image_id, artf_id, sim_sec_id]):
+        data = deserialize(data)
+        if channel == sim_sec_id:
+            sim_time_sec = data
+        elif channel == image_id:
+            image = data
+            assert artf is not None
+            name = os.path.basename(filename)[:-4] + '-' + artf[0] + '-' + str(sim_time_sec) + '.jpg'
+            print(name)
+            with open(os.path.join(out_dir, name), 'wb') as f:
+                f.write(image)
+        elif channel == artf_id:
+            artf = data
+
+
 if __name__ == '__main__':
     from unittest.mock import MagicMock
     from queue import Queue
     import argparse
     import datetime
+    import sys
     from osgar.bus import Bus
 
     parser = argparse.ArgumentParser(description='Run artifact detection and classification for given JPEG image')
     parser.add_argument('filename', help='JPEG filename')
+    parser.add_argument('--debug2dir', help='dump clasified debug images into directory')
     parser.add_argument('-v', '--verbose', help='verbose mode', action='store_true')
     args = parser.parse_args()
+
+    if args.debug2dir is not None:
+        debug2dir(args.filename, args.debug2dir)
+        sys.exit()
 
     with open(args.filename, 'rb') as f:
         jpeg_data = f.read()
