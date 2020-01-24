@@ -2,6 +2,47 @@
   Extract robot positions from Ignition SQLite log file
 """
 import sqlite3
+import struct
+
+
+def unpack_protobuf(data, depth=0, prefix=None):
+    if depth >= 3:
+        return
+    if prefix is None:
+        prefix = []
+    if depth > 0:
+        print('  ' * depth)
+    pos = 0
+    while pos < len(data):
+        c = data[pos]
+        field_number = c >> 3
+        wire_type = c & 0x7
+        pos += 1
+        if wire_type == 0:  # variant
+            start = pos
+            while data[pos] & 0x80 == 0x80:
+                pos += 1
+            pos += 1
+            print('Var', field_number, data[start:pos].hex())
+        elif wire_type == 1:  # 64bit
+            d = struct.unpack('<d', data[pos:pos+8])[0]
+#            i = struct.unpack('<q', data[:8])[0]
+#            if prefix == [2, 4]:  # xyz
+            print('double', prefix, field_number, d)
+#            print('int', prefix, field_number, i)
+            pos += 8
+        elif wire_type == 2:
+            size = data[pos]
+            pos += 1
+            print(field_number, wire_type, size, data[pos:pos + size])
+            key = prefix + [field_number]
+            if field_number in [2, 4, 5]:
+                print('Key', key)
+                if key != [2, 2]:
+                    unpack_protobuf(data[pos:pos + size], depth=depth+1, prefix=key)
+            pos += size
+        else:
+            assert False, wire_type
 
 
 def extract_poses(filename):
@@ -28,7 +69,8 @@ def extract_poses(filename):
     for i, row in enumerate(cursor):
         index, time_ns, topic_id, data = row
         if topic_id == 2:  # '/world/urban_circuit_practice_03/dynamic_pose/info'
-            print(data[:10].hex())
+            print(data[:100].hex())
+            unpack_protobuf(data)
 #            print(index, data, len(data))
 #           print(index, len(data))
 #        if b'A60F900L' in data:  #i > 100:
@@ -48,7 +90,7 @@ def extract_poses(filename):
                 index += size
                 print(index, len(data))
                 """
-        if i > 100000:
+        if i > 100:
             break
 
 
