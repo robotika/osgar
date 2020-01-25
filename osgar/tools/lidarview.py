@@ -180,6 +180,33 @@ class Framer:
     def next(self):
         return self._step(1)
 
+    def seek(self, desired_timestamp):
+        print('Seek:', desired_timestamp)
+        timestamp, stream_id, data = self.log[self.current]
+        print('current', timestamp)
+        if timestamp > desired_timestamp:
+            return timestamp
+        start = self.current
+        end = len(self.log) - 1
+        timestamp, stream_id, data = self.log[end]
+        print('end', timestamp)
+        while timestamp < desired_timestamp:
+            self.log.grow()
+            end = len(self.log) - 1
+            timestamp, stream_id, data = self.log[end]
+            print('end', timestamp)
+        while start + 1 < end:
+            mid = (start + end)//2
+            timestamp, stream_id, data = self.log[mid]
+            if timestamp < desired_timestamp:
+                start = mid
+            else:
+                end = mid
+        print('selected', timestamp)
+        self.current = start
+
+
+
     def _step(self, direction):
         if (self.current + direction) >= len(self.log):
             self.log.grow()
@@ -269,7 +296,7 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
     wait_for_keyframe = False
 
     if jump is not None:
-        gen._step(jump)
+        gen.seek(timedelta(seconds=jump))
 
     while True:
         timestamp, pose, scan, image, image2, keyframe, title, eof = history.next()
@@ -460,7 +487,7 @@ def main():
     parser.add_argument('--deg', help='lidar field of view in degrees',
                         type=float, default=270)
 
-    parser.add_argument('--jump', '-j', help='jump to given frame', type=int)
+    parser.add_argument('--jump', '-j', help='jump to given time in seconds', type=int)
 
     parser.add_argument('--create-video', help='filename of output video')
 
