@@ -17,13 +17,14 @@ MAXX = 5.
 MAXY = 5.
 
 # Low-height stuff on the ground does not matter. (In meters.)
-MINZ = 0.08
+MINZ = 0.06
+MAXZ = 1.5
 
 # We compare pixels this far away from each other vertically. (In pixels.)
 OFFSET = 1
 
 # How close to the vertical does an obstacle need to be? (In radians.)
-VERTICAL_DIFF_LIMIT = np.radians(45)
+VERTICAL_DIFF_LIMIT = np.radians(60)
 
 
 # Which rows of the image do we consider "low".
@@ -67,7 +68,13 @@ def depth2danger(depth_mm):
         # It should not be something small on the ground.
         np.maximum(xyz[:-OFFSET,:,Z], xyz[OFFSET:,:,Z]) >= MINZ,
         # It has to be close to vertical.
-        np.abs(slope - np.radians(90)) <= VERTICAL_DIFF_LIMIT]))
+        np.abs(slope - np.radians(90)) <= VERTICAL_DIFF_LIMIT,
+        # It should not be too high above ground.
+        np.maximum(xyz[:-OFFSET, :, Z], xyz[OFFSET:, :, Z]) <= MAXZ]))
+
+    # Filter out noise.
+    danger = cv2.filter2D(danger.astype(np.float), -1, np.ones((3, 3))) > 7
+
     return danger
 
 
@@ -92,7 +99,12 @@ def depth2dist(depth_mm):
         # It should not be something small on the ground.
         np.maximum(xyz[:-OFFSET,:,Z], xyz[OFFSET:,:,Z]) >= MINZ,
         # It has to be close to vertical.
-        np.abs(slope - np.radians(90)) <= VERTICAL_DIFF_LIMIT]))
+        np.abs(slope - np.radians(90)) <= VERTICAL_DIFF_LIMIT,
+        # It should not be too high above ground.
+        np.maximum(xyz[:-OFFSET, :, Z], xyz[OFFSET:, :, Z]) <= MAXZ]))
+
+    # Filter out noise.
+    danger = cv2.filter2D(danger.astype(np.float), -1, np.ones((3, 3))) > 7
 
     dists = np.hypot(xyz[:,:,X], xyz[:,:,Y])
     FAR_AWAY = 1000.0
@@ -109,7 +121,7 @@ def depth2dist(depth_mm):
     below_ground = slopes < MAX_SLOPE
 
     # Let's calculate, where we should see ground.
-    q = CAMZ / (CAMZ - low_xyz[:,:,Z])
+    q = CAMZ / np.maximum(1e-6, (CAMZ - low_xyz[:,:,Z]))
     expected_ground = low_xyz * np.expand_dims(q, 2)
     ground_dists = np.hypot(expected_ground[:,:,X], expected_ground[:,:,Y])
     FAR_AWAY = 1000.
