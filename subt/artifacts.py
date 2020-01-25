@@ -29,6 +29,7 @@ GAS = 'TYPE_GAS'
 
 RED_THRESHOLD = 1000  # virtual QVGA=50, used to be 100, urban=1000
 YELLOW_THRESHOLD = 80
+YELLOW_MAX_THRESHOLD = 4000  # 2633 known example
 WHITE_THRESHOLD = 20000
 
 
@@ -126,7 +127,11 @@ def count_yellow(img):
     b = img[:,:,0]
     g = img[:,:,1]
     r = img[:,:,2]
-    mask = np.logical_and(r >= 60, np.logical_and(r/4 > b, g/4 > b))
+    mask = np.logical_and(r >= 60, np.logical_and(r/3 > b, g/3 > b))
+    # debug
+#    img2 = img.copy()
+#    img2[mask] = (0, 0, 255)
+#    cv2.imwrite('artf.jpg', img2)
     return count_mask(mask)
 
 
@@ -263,7 +268,7 @@ class ArtifactDetector(Node):
             print(self.time, img.shape, count, w, h, x_min, x_max, w/h, count/(w*h))
         if self.best_count > 0:
             self.best_count -= 1
-        if count > RED_THRESHOLD:
+        if count > RED_THRESHOLD or (yellow_used and count > YELLOW_THRESHOLD):
             if self.best is None or count > self.best:
                 self.best = count
                 self.best_count = 10
@@ -309,6 +314,14 @@ class ArtifactDetector(Node):
 #                    artf = EXTINGUISHER
                 artf = BACKPACK
             elif yellow_used:
+                if self.best > YELLOW_MAX_THRESHOLD:
+                    # too much yellow - barrel or yellow machine
+                    self.best = None
+                    self.best_count = 0
+                    self.best_img = None
+                    self.best_info = None
+                    self.best_scan = None
+                    return
                 artf = RESCUE_RANDY  # used to be RADIO
             self.stdout(self.time, 'Relative position:', self.best, deg_100th, dist_mm, artf)
 
