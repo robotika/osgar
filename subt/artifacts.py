@@ -28,7 +28,7 @@ GAS = 'TYPE_GAS'
 
 
 RED_THRESHOLD = 1000  # virtual QVGA=50, used to be 100, urban=1000
-YELLOW_THRESHOLD = 80
+YELLOW_THRESHOLD = 500  # was 80
 YELLOW_MAX_THRESHOLD = 4000  # 2633 known example
 WHITE_THRESHOLD = 20000
 
@@ -127,7 +127,7 @@ def count_yellow(img):
     b = img[:,:,0]
     g = img[:,:,1]
     r = img[:,:,2]
-    mask = np.logical_and(r >= 60, np.logical_and(r/3 > b, g/3 > b))
+    mask = np.logical_and(np.logical_and(r >= 60, g*0.95 > r), np.logical_and(r*0.33 > b, g*0.33 > b))
     # debug
 #    img2 = img.copy()
 #    img2[mask] = (0, 0, 255)
