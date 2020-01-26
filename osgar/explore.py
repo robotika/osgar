@@ -76,32 +76,36 @@ def follow_wall_angle(laser_data, radius, right_wall=False):
         # TODO: ideally, this would be stateful and we would spiral.
         return math.radians(20)
 
-    wall_end_idx = wall_start_idx + 1
-    sin_resolution = math.sin(math.radians(deg_resolution))
-    cos_resolution = math.cos(math.radians(deg_resolution))
-    for (i, dist) in enumerate(distances[wall_start_idx+1:], wall_start_idx+1):
-        prev_wall_distance = distances[i-1]
-        # How far is the currently observed point from the previous wall point?
-        gap = math.hypot(cos_resolution * dist - prev_wall_distance,
-                         sin_resolution * dist - 0)
-        wall_end_idx = i
-        # If there is enough of a gap between current wall point and the
-        # previous one, we can stop searching. We want to go somewhere between
-        # these two points.
-        if gap > radius and dist > r:
+    last_wall_idx = wall_start_idx
+    while True:
+        last_wall_distance = distances[last_wall_idx]
+        found_countinuation = False
+        for i in range(last_wall_idx + 1, size):
+            dist = distances[i]
+            rel_idx = i - last_wall_idx
+            sin_angle = math.sin(rel_idx * math.radians(deg_resolution))
+            cos_angle = math.cos(rel_idx * math.radians(deg_resolution))
+            # How far is the currently observed point from the previous wall point?
+            gap = math.hypot(cos_angle * dist - last_wall_distance,
+                             sin_angle * dist - 0)
+            if gap <= radius:
+                last_wall_idx = i
+                found_countinuation = True
+                break
+        if not found_countinuation:
             break
 
     # If we do not see the end of the wall because of occlusion, our desired
     # direction is just towards the last wall point we see. Only otherwise we
     # can keep a safe distance from the wall we follow.
-    last_wall_distance = distances[wall_end_idx - 1]
-    if wall_end_idx < size and distances[wall_end_idx] < last_wall_distance:
+    last_wall_distance = distances[last_wall_idx]
+    if last_wall_idx + 1 < size and distances[last_wall_idx + 1] < last_wall_distance:
         tangent_angle = 0.
     else:
         tangent_angle = tangent_circle(last_wall_distance, radius)
 
 
-    laser_angle = math.radians(-135 + (wall_end_idx - 1) * deg_resolution)
+    laser_angle = math.radians(-135 + last_wall_idx * deg_resolution)
     total_angle = laser_angle + tangent_angle
     if not right_wall:
         total_angle = -total_angle
