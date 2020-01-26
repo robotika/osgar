@@ -146,6 +146,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('ignfile', help='Ignition file from simulation (state.tlog)')
     parser.add_argument('--num', '-n', help='number of records', type=int)
+    parser.add_argument('--only-robot', help='name prefix of selected robot')
     parser.add_argument('-v', '--verbose', help='verbose mode', action='store_true')
     parser.add_argument('--out', help='optional image output (filename)')
     args = parser.parse_args()
@@ -157,7 +158,8 @@ if __name__ == "__main__":
         for r in robots.items():
             name, xyz = r
             x, y, z = xyz
-            pts.append((int(x * 1000), int(y * 1000)))  # TODO change to meters
+            if args.only_robot is  None or name.startswith(args.only_robot):
+                pts.append((int(x * 1000), int(y * 1000)))  # TODO change to meters
         if args.num is not None and i >= args.num:
             break
     print('Total:', i)
