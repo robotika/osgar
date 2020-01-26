@@ -156,9 +156,9 @@ class LocalPlannerOpt:
 
 
 class LocalPlanner:
-    def __init__(self):
-        self.opt = LocalPlannerOpt()
-        self.ref = LocalPlannerRef()
+    def __init__(self, *args, **kwargs):
+        self.opt = LocalPlannerOpt(*args, **kwargs)
+        self.ref = LocalPlannerRef(*args, **kwargs)
 
     def update(self, scan):
         self.opt.update(scan)
