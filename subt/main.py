@@ -225,7 +225,7 @@ class SubTChallenge:
 
     def go_safely(self, desired_direction):
         if self.local_planner is None:
-            safe_direction = desired_direction
+            safety, safe_direction = 1.0, desired_direction
         else:
             safety, safe_direction = self.local_planner.recommend(desired_direction)
         #desired_angular_speed = 1.2 * safe_direction
@@ -246,6 +246,7 @@ class SubTChallenge:
             self.send_speed_cmd(-desired_speed, desired_angular_speed)  # ??? angular too??!
         else:
             self.send_speed_cmd(desired_speed, desired_angular_speed)
+        return safety
 
     def turn(self, angle, with_stop=True, speed=0.0, timeout=None):
         print(self.time, "turn %.1f" % math.degrees(angle))
@@ -378,15 +379,28 @@ class SubTChallenge:
         HOME_THRESHOLD = 5.0
         SHORTCUT_RADIUS = 2.3
         MAX_TARGET_DISTANCE = 5.0
+        MIN_TARGET_DISTANCE = 2.0
         assert(MAX_TARGET_DISTANCE > SHORTCUT_RADIUS) # Because otherwise we could end up with a target point more distant from home than the robot.
         self.trace.prune(SHORTCUT_RADIUS)
         start_time = self.sim_time_sec
+        target_distance = MAX_TARGET_DISTANCE
+        count_down = 0
         while distance3D(self.xyz, (0, 0, 0)) > HOME_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
             if self.update() == 'scan':
-                target_x, target_y = self.trace.where_to(self.xyz, MAX_TARGET_DISTANCE)[:2]
+                target_x, target_y = self.trace.where_to(self.xyz, target_distance)[:2]
                 x, y = self.xyz[:2]
                 desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
-                self.go_safely(desired_direction)
+                safety = self.go_safely(desired_direction)
+                if safety < 0.2:
+                    print(self.time, "Safety low!", safety, desired_direction)
+                    target_distance = MIN_TARGET_DISTANCE
+                    count_down = 100
+                if count_down > 0:
+                    count_down -= 1
+                    if count_down == 0:
+                        target_distance = MAX_TARGET_DISTANCE
+                        print(self.time, "Recovery to original", target_distance)
+
         print('return_home: dist', distance3D(self.xyz, (0, 0, 0)), 'time(sec)', self.sim_time_sec - start_time)
 
     def follow_trace(self, trace, timeout, max_target_distance=5.0):
