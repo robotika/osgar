@@ -28,14 +28,11 @@ def tangent_circle(dist, radius):
     """
       return tangent angle to a circle placed at (dist, 0.0) with radius=radius
 
-      For non-existing tangent use 100 degrees
-          and too far (2 times radius) circle return None
+      For non-existing tangent use 100 degrees.
     """
-    if dist < 3 * radius:
-        if dist >= radius:
-            return math.asin(radius/float(dist))
-        return math.radians(100)
-    return None
+    if dist >= radius:
+        return math.asin(radius/float(dist))
+    return math.radians(100)
 
 
 def follow_wall_angle(laser_data, radius, right_wall=False):
@@ -49,21 +46,67 @@ def follow_wall_angle(laser_data, radius, right_wall=False):
     deg_resolution = 270 / (size - 1)  # SICK uses extra the first and the last, i.e. 271 rays for 1 degree resolution
     mask = (data <= 300)  # ignore internal reflections
     data[mask] = 20000
-    if right_wall:
-        index = np.argmin(data[:size//2])  # only right side
-    else:
-        index = size//2 + np.argmin(data[size//2:])  # only left side
-    dist = data[index]/1000.0
-    laser_angle = math.radians(-135 + index * deg_resolution)
-    angle = tangent_circle(dist, radius)
-    if angle is not None:
-        # print '(%d, %.3f) %.1f' % (index, dist, math.degrees(laser_angle + angle))
-        if right_wall:
-            return laser_angle + angle
+
+    # To make the code simpler, let's pretend we follow the right wall and flip
+    # the result in the end if we are actually following the left wall.
+    if not right_wall:
+        data = data[::-1]
+
+    distances = data / 1000.0
+
+    r = radius * 1  # TODO: Or some other first guess?
+    INCREMENT = 0.3  # In meters. TODO: Some other value, maybe?
+    found_wall = False
+    for attempt in range(50):
+        # Find where the wall we follow starts.
+        wall_start_idx = -1
+        # We only accept walls to the right of the robot.
+        for (i, distance) in enumerate(distances[:size//2]):
+            if distance <= r:
+                wall_start_idx = i
+                break
+        if wall_start_idx < 0:
+            r += INCREMENT
         else:
-            return laser_angle - angle
-    # If the desired wall is out of range, we need to slowly turn to the correct side.
-    return math.radians(-20 if right_wall else 20)
+            found_wall = True
+            break
+
+    if not found_wall:
+        # No wall found. Let's slowly circle.
+        # TODO: ideally, this would be stateful and we would spiral.
+        return math.radians(20)
+
+    wall_end_idx = wall_start_idx + 1
+    sin_resolution = math.sin(math.radians(deg_resolution))
+    cos_resolution = math.cos(math.radians(deg_resolution))
+    for (i, dist) in enumerate(distances[wall_start_idx+1:], wall_start_idx+1):
+        prev_wall_distance = distances[i-1]
+        # How far is the currently observed point from the previous wall point?
+        gap = math.hypot(cos_resolution * dist - prev_wall_distance,
+                         sin_resolution * dist - 0)
+        wall_end_idx = i
+        # If there is enough of a gap between current wall point and the
+        # previous one, we can stop searching. We want to go somewhere between
+        # these two points.
+        if gap > radius and dist > r:
+            break
+
+    # If we do not see the end of the wall because of occlusion, our desired
+    # direction is just towards the last wall point we see. Only otherwise we
+    # can keep a safe distance from the wall we follow.
+    last_wall_distance = distances[wall_end_idx - 1]
+    if wall_end_idx < size and distances[wall_end_idx] < last_wall_distance:
+        tangent_angle = 0.
+    else:
+        tangent_angle = tangent_circle(last_wall_distance, radius)
+
+
+    laser_angle = math.radians(-135 + (wall_end_idx - 1) * deg_resolution)
+    total_angle = laser_angle + tangent_angle
+    if not right_wall:
+        total_angle = -total_angle
+
+    return total_angle
 
 
 class FollowWall(Node):
