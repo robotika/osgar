@@ -121,7 +121,7 @@ def depth2dist(depth_mm):
     below_ground = slopes < MAX_SLOPE
 
     # Let's calculate, where we should see ground.
-    q = CAMZ / (CAMZ - low_xyz[:,:,Z])
+    q = CAMZ / np.maximum(1e-6, (CAMZ - low_xyz[:,:,Z]))
     expected_ground = low_xyz * np.expand_dims(q, 2)
     ground_dists = np.hypot(expected_ground[:,:,X], expected_ground[:,:,Y])
     FAR_AWAY = 1000.
