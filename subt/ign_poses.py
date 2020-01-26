@@ -76,7 +76,7 @@ def unpack_protobuf(data, depth=0, prefix=None, verbose=False):
     return None
 
 
-def extract_poses_gen(filename):
+def _extract_poses_gen(filename):
     con = sqlite3.connect(filename)
     cursor = con.cursor()
 
@@ -131,17 +131,38 @@ def extract_poses_gen(filename):
 #            break
 
 
+def extract_poses_gen(filename):
+    try:
+        for data in _extract_poses_gen(filename):
+            yield  data
+    except sqlite3.DatabaseError as e:
+        print(e)
+
+
 if __name__ == "__main__":
     import argparse
+    from osgar.tools.log2map import pts2image
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('ignfile', help='Ignition file from simulation (state.tlog)')
     parser.add_argument('--num', '-n', help='number of records', type=int)
+    parser.add_argument('-v', '--verbose', help='verbose mode', action='store_true')
+    parser.add_argument('--out', help='optional image output (filename)')
     args = parser.parse_args()
+
+    pts = []
     for i, robots in enumerate(extract_poses_gen(args.ignfile)):
-        print(i, robots)
+        if args.verbose:
+            print(i, robots)
+        for r in robots.items():
+            name, xyz = r
+            x, y, z = xyz
+            pts.append((int(x * 1000), int(y * 1000)))  # TODO change to meters
         if args.num is not None and i >= args.num:
             break
+    print('Total:', i)
 
+    if args.out is not None:
+        pts2image(pts, [], args.out)
 
 # vim: expandtab sw=4 ts=4
