@@ -45,11 +45,11 @@ class ExploreTest(unittest.TestCase):
         # move towards wall
         cmd = follow_wall_angle(scan, radius=0.7, right_wall=True)
         self.assertIsNotNone(cmd)
-        self.assertLess(math.degrees(cmd), -45)
+        self.assertLess(math.degrees(cmd), 0)  # used to be -45, now only slightly move right
 
         # move from wall
         cmd = follow_wall_angle(scan, radius=1.3, right_wall=True)
         self.assertIsNotNone(cmd)
-        self.assertGreater(math.degrees(cmd), 8.0)
+        self.assertGreater(math.degrees(cmd), 0)  # just move from the wall (used to be 8deg)
 
 # vim: expandtab sw=4 ts=4
