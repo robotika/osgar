@@ -5,16 +5,20 @@ import sqlite3
 import struct
 
 
-def unpack_protobuf(data, depth=0, prefix=None):
+def unpack_protobuf(data, depth=0, prefix=None, verbose=False):
     if depth >= 3:
         return
     if prefix is None:
         prefix = []
+    if verbose:
+        print(prefix, data[:100].hex())
     pos = 0
     while pos < len(data):
         c = data[pos]
         field_number = c >> 3
         wire_type = c & 0x7
+        if verbose:
+            print(pos, field_number, wire_type)
         pos += 1
         if wire_type == 0:  # variant
             start = pos
@@ -34,6 +38,8 @@ def unpack_protobuf(data, depth=0, prefix=None):
             pos += 1
 
             name = data[pos:pos + size]
+            if verbose:
+                print(name)
             if name in [b'base_link', b'front_left_wheel', b'front_right_wheel', b'rear_left_wheel', b'rear_right_wheel']:
 #                print('terminated', name)
                 return
@@ -58,8 +64,8 @@ def extract_poses(filename):
     tables = cursor.fetchall()
     for table in tables:
         cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' and name='%s';" % table)
-        print(cursor.fetchall()[0][0])
-        print()
+#        print(cursor.fetchall()[0][0])
+#        print()
 
     # start time?
     cursor.execute("SELECT * FROM migrations;")
@@ -69,10 +75,14 @@ def extract_poses(filename):
     topics = cursor.fetchall()
     print(topics)
 
+    cursor.execute(r"SELECT id FROM topics where name LIKE '%/dynamic_pose/info';")
+    result = cursor.fetchall()
+    dynamic_topic_id = result[0][0]
+
     cursor.execute("SELECT * FROM messages;")
     for i, row in enumerate(cursor):
         index, time_ns, topic_id, data = row
-        if topic_id == 2:  # '/world/urban_circuit_practice_03/dynamic_pose/info'
+        if topic_id == dynamic_topic_id:  # '/world/urban_circuit_practice_03/dynamic_pose/info'
 #            print(data[:100].hex())
             unpack_protobuf(data)
 #            print(index, data, len(data))
