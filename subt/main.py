@@ -505,7 +505,7 @@ class SubTChallenge:
                     self.ref_count = 0
                 else:
                     self.ref_count += 1
-                    if self.ref_count > 30:
+                    if self.ref_count > 300:
                         print('Robot is stuck!', self.ref_count)
                         if self.collision_detector_enabled:
                             self.collision_detector_enabled = False
