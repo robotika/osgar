@@ -4,8 +4,10 @@
 import sqlite3
 import struct
 
+g_robots = {}
 
 def unpack_protobuf(data, depth=0, prefix=None, verbose=False):
+    robot_name, robot_xyz = None, None
     if depth >= 3:
         return
     if prefix is None:
@@ -30,7 +32,15 @@ def unpack_protobuf(data, depth=0, prefix=None, verbose=False):
             d = struct.unpack('<d', data[pos:pos+8])[0]
 #            i = struct.unpack('<q', data[:8])[0]
             if prefix == [2, 4]:  # xyz
-                print('double', prefix, field_number, d)
+#                print('double', prefix, field_number, d)
+                if field_number == 2:
+                    x = d
+                elif field_number == 3:
+                    y = d
+                elif field_number == 4:
+                    z = d
+                    robot_xyz = (x, y, z)
+                    return robot_xyz
 #            print('int', prefix, field_number, i)
             pos += 8
         elif wire_type == 2:
@@ -44,18 +54,29 @@ def unpack_protobuf(data, depth=0, prefix=None, verbose=False):
 #                print('terminated', name)
                 return
             if prefix == [2] and field_number == 2:
-                print(prefix, field_number, wire_type, size, data[pos:pos + size])
+#                print(prefix, field_number, wire_type, size, data[pos:pos + size])
+                robot_name = data[pos:pos + size].decode('ascii')
             key = prefix + [field_number]
             if field_number in [2, 4, 5]:
 #                print('Key', key)
                 if key != [2, 2]:
-                    unpack_protobuf(data[pos:pos + size], depth=depth+1, prefix=key)
-            pos += size
+                    ret = unpack_protobuf(data[pos:pos + size], depth=depth+1, prefix=key)
+                    if ret is not None:
+#                        print('return', ret)
+                        if len(ret) == 3:
+                            robot_xyz = ret
+                pos += size
         else:
             assert False, wire_type
+    if robot_name is not None:
+        global g_robots
+        g_robots[robot_name] = robot_xyz
+#        print(robot_name, robot_xyz)
+        return robot_name, robot_xyz
+    return None
 
 
-def extract_poses(filename):
+def extract_poses_gen(filename):
     con = sqlite3.connect(filename)
     cursor = con.cursor()
 
@@ -85,6 +106,8 @@ def extract_poses(filename):
         if topic_id == dynamic_topic_id:  # '/world/urban_circuit_practice_03/dynamic_pose/info'
 #            print(data[:100].hex())
             unpack_protobuf(data)
+            if len(g_robots) > 0:
+                yield g_robots
 #            print(index, data, len(data))
 #           print(index, len(data))
 #        if b'A60F900L' in data:  #i > 100:
@@ -104,8 +127,8 @@ def extract_poses(filename):
                 index += size
                 print(index, len(data))
                 """
-        if i > 100:
-            break
+#        if i > 100:
+#            break
 
 
 if __name__ == "__main__":
@@ -113,8 +136,12 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('ignfile', help='Ignition file from simulation (state.tlog)')
+    parser.add_argument('--num', '-n', help='number of records', type=int)
     args = parser.parse_args()
-    extract_poses(args.ignfile)
+    for i, robots in enumerate(extract_poses_gen(args.ignfile)):
+        print(i, robots)
+        if args.num is not None and i >= args.num:
+            break
 
 
 # vim: expandtab sw=4 ts=4
