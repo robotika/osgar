@@ -31,7 +31,10 @@ wait ${ROBOT_PID}
 echo "Sleep and finish"
 sleep 30
 
-rosservice call '/subt/finish' true
+# DO NOT CALL /subt/finish for group of robots!
+# it terminates the run for everybody
+# https://bitbucket.org/osrf/subt/issues/336/handling-subt-finish-for-multiple-robots
+# rosservice call '/subt/finish' true
 
 # Take robot simulation down.
 kill ${ROS_PID}
