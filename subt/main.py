@@ -146,7 +146,6 @@ class SubTChallenge:
         self.walldist = config['walldist']
         self.timeout = timedelta(seconds=config['timeout'])
         self.symmetric = config['symmetric']  # is robot symmetric?
-        self.virtual_bumper_sec = config.get('virtual_bumper_sec')
         virtual_bumper_sec = config.get('virtual_bumper_sec')
         self.virtual_bumper = None
         if virtual_bumper_sec is not None:
