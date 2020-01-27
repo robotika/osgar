@@ -141,7 +141,8 @@ def count_orange_blue(img):  # for phone
     r = img[:,:,2]
     mask_blue = np.logical_and(b > 40, np.logical_and(b/1.5 > g, b/2 > r))
 
-    blue = count_mask(mask_blue)
+    # detect phone only in the lowest 1/4 of the image (the phone is lying on the ground)
+    blue = count_mask(mask_blue[90:,:])
     count, w, h, x_min, x_max = blue
     if count == 0 or w > 20 or h > 20:
         return 0, None, None, None, None
@@ -246,12 +247,15 @@ class ArtifactDetector(Node):
             self.width = img.shape[1]
         assert self.width == img.shape[1], (self.width, img.shape[1])
         phone_count, w, h, x_min, x_max = count_orange_blue(img)
-        if phone_count > 50:
+        if phone_count >= 25:
             print(self.time, 'phone', phone_count)
             artf = PHONE
             deg_100th, dist_mm = 0, 500  # in front of the robot
             self.publish('artf', [artf, deg_100th, dist_mm])
             self.publish('debug_artf', image)  # JPEG
+#            filename = 'artf_%s_%d.jpg' % (artf, self.time.total_seconds())
+#            with open(filename, 'wb') as f:
+#                f.write(image)
         rcount, w, h, x_min, x_max = count_red(img)
         yellow_used = False
         if self.is_virtual and rcount < 20:
