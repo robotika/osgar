@@ -8,6 +8,7 @@ import numpy as np
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 from osgar.lib.depth import depth2dist
+from osgar.lib.mathex import normalizeAnglePIPI
 
 
 frac = math.tan(math.radians(60))/360
@@ -68,6 +69,7 @@ class DepthToScan(Node):
         self.scan = None
         self.verbose = False
         self.scale = np.array([1/math.cos(math.radians(30*(i-80)/80)) for i in range(160)])
+        self.yaw, self.pitch, self.roll = None, None, None  # unknown values
 
     def update(self):
         channel = super().update()
@@ -80,7 +82,7 @@ class DepthToScan(Node):
             if self.depth is None:
                 self.publish('scan', self.scan)
                 return channel  # when no depth data are available ...
-            dist = depth2dist(self.depth)
+            dist = depth2dist(self.depth, pitch=self.pitch, roll=self.roll)
 
             # 60*720/270 = 160.0 ... i.e. 160 elements to be replaced
             # 640/160 = 4.0 ... i.e. downsample by 4
@@ -93,7 +95,7 @@ class DepthToScan(Node):
             assert len(new_scan) == 720, len(new_scan)
             self.publish('scan', new_scan)
         elif channel == 'rot':
-            pass
+            self.yaw, self.pitch, self.roll = [normalizeAnglePIPI(math.radians(x/100)) for x in self.rot]
         else:
             assert False, channel  # unsupported channel
 
