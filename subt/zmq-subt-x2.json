@@ -69,6 +69,7 @@
               ["rosmsg.cmd", "transmitter.raw"],
 
               ["rosmsg.rot", "app.rot"],
+              ["rosmsg.rot", "depth2scan.rot"],
               ["rosmsg.acc", "app.acc"],
 
               ["rosmsg.scan", "detector.scan"],
