@@ -71,7 +71,7 @@ class DepthToScan(Node):
 
     def update(self):
         channel = super().update()
-        assert channel in ["depth", "scan"], channel
+        assert channel in ["depth", "scan", "rot"], channel
 
         if channel == 'depth':
             assert self.depth.shape == (360, 640), self.depth.shape
@@ -92,6 +92,8 @@ class DepthToScan(Node):
             new_scan = self.scan[:720//2-80] + rev.tolist() + self.scan[720//2+80:]
             assert len(new_scan) == 720, len(new_scan)
             self.publish('scan', new_scan)
+        elif channel == 'rot':
+            pass
         else:
             assert False, channel  # unsupported channel
 
