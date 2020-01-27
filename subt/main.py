@@ -450,7 +450,10 @@ class SubTChallenge:
         self.last_send_time = self.bus.publish('pose2d', [round((x + x0) * 1000), round((y + y0) * 1000),
                                     round(math.degrees(self.yaw) * 100)])
         if self.virtual_bumper is not None:
-            self.virtual_bumper.update_pose(self.time, pose)  # sim time?!
+            if self.is_virtual:
+                self.virtual_bumper.update_pose(timedelta(seconds=self.sim_time_sec), pose)
+            else:
+                self.virtual_bumper.update_pose(self.time, pose)
         self.xyz = x, y, z
         self.trace.update_trace(self.xyz)
         # pose3d
@@ -745,6 +748,22 @@ class SubTChallenge:
             dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,  # was radius=0.9
                                 timeout=self.timeout, pitch_limit=LIMIT_PITCH, roll_limit=None)
             self.collision_detector_enabled = False
+            if reason == REASON_VIRTUAL_BUMPER:
+                assert self.virtual_bumper is not None
+                self.virtual_bumper.reset_counters()
+
+                # the robot ended in cycle probably
+                self.return_home(timedelta(seconds=10))
+
+                # try something crazy if you do not have other ideas ...
+                before_center = self.use_center
+                self.use_center = True
+                dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,  # was radius=0.9
+                                    timeout=timedelta(seconds=60), pitch_limit=LIMIT_PITCH, roll_limit=None)
+                self.use_center = before_center
+                if reason is None or reason != REASON_PITCH_LIMIT:
+                    continue
+
             if reason is None or reason != REASON_PITCH_LIMIT:
                 break
             self.stdout(self.time, "Microstep HOME %d %.3f" % (loop, dist), reason)
