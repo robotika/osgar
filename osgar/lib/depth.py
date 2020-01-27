@@ -73,7 +73,7 @@ def depth2danger(depth_mm):
         np.maximum(xyz[:-OFFSET, :, Z], xyz[OFFSET:, :, Z]) <= MAXZ]))
 
     # Filter out noise.
-    danger = cv2.filter2D(danger.astype(np.float), -1, np.ones((3, 3))) > 7
+    danger = cv2.filter2D(danger.astype(np.float), -1, np.ones((5, 5))) > 20
 
     return danger
 
@@ -104,7 +104,7 @@ def depth2dist(depth_mm):
         np.maximum(xyz[:-OFFSET, :, Z], xyz[OFFSET:, :, Z]) <= MAXZ]))
 
     # Filter out noise.
-    danger = cv2.filter2D(danger.astype(np.float), -1, np.ones((3, 3))) > 7
+    danger = cv2.filter2D(danger.astype(np.float), -1, np.ones((5, 5))) > 20
 
     dists = np.hypot(xyz[:,:,X], xyz[:,:,Y])
     FAR_AWAY = 1000.0
