@@ -78,8 +78,9 @@ def depth2danger(depth_mm):
     return danger
 
 
-def depth2dist(depth_mm):
+def depth2dist(depth_mm, pitch=None, roll=None):
     # return line in mm corresponding to scan
+    # optional pitch and roll angles are in radians
 
     depth = depth_mm * 0.001  # Converting to meters.
     # 3D coordinates of points detected by the depth camera, converted to
