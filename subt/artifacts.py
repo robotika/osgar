@@ -202,6 +202,7 @@ class ArtifactDetector(Node):
         self.best_info = None
         self.best_scan = None
         self.verbose = False
+        self.dump_dir = None  # optional debug ouput into directory
         self.scan = None  # should laster initialize super()
         self.depth = None  # more precise definiton of depth image
         self.width = None  # detect from incoming images
@@ -259,9 +260,10 @@ class ArtifactDetector(Node):
             deg_100th, dist_mm = 0, 500  # in front of the robot
             self.publish('artf', [artf, deg_100th, dist_mm])
             self.publish('debug_artf', image)  # JPEG
-#            filename = 'artf_%s_%d.jpg' % (artf, self.time.total_seconds())
-#            with open(filename, 'wb') as f:
-#                f.write(image)
+            if self.dump_dir is not None:
+                filename = 'artf_%s_%d.jpg' % (artf, self.time.total_seconds())
+                with open(os.path.join(self.dump_dir, filename), 'wb') as f:
+                    f.write(image)
         rcount, w, h, x_min, x_max = count_red(img)
         yellow_used = False
         if self.is_virtual and rcount < 20:
@@ -360,9 +362,10 @@ class ArtifactDetector(Node):
             # TODO if VALVE -> find it in scan
             self.publish('artf', [artf, deg_100th, dist_mm])
             self.publish('debug_artf', self.best_img)
-#            filename = 'artf_%s_%d.jpg' % (artf, self.time.total_seconds())
-#            with open(filename, 'wb') as f:
-#                f.write(self.best_img)
+            if self.dump_dir is not None:
+                filename = 'artf_%s_%d.jpg' % (artf, self.time.total_seconds())
+                with open(os.path.join(self.dump_dir, filename), 'wb') as f:
+                    f.write(self.best_img)
 
             # reset detector
             self.best = None
