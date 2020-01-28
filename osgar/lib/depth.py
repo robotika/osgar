@@ -31,7 +31,7 @@ VERTICAL_DIFF_LIMIT = np.radians(60)
 CAM_LOW = CAMH // 2 + 1
 
 # How much of a slope do we still consider "normal".
-MAX_SLOPE = np.radians(-15)
+MAX_SLOPE = np.radians(-23)
 
 
 # Indices of directions in a matrix with 3D points.
@@ -81,11 +81,33 @@ def depth2danger(depth_mm):
 def depth2dist(depth_mm, pitch=None, roll=None):
     # return line in mm corresponding to scan
     # optional pitch and roll angles are in radians
+    # warning: there is a bug (?) in either Osgar or in SubT and the angles
+    # are as if the robot was upside down.
+    pitch_rot = np.asmatrix(np.eye(3))
+    roll_rot = np.asmatrix(np.eye(3))
+    if pitch is not None:
+        inv_pitch = -(-pitch) # Opposite angle to pitch corrected for the
+                              # upside down bug.
+        pitch_rot = np.matrix(
+                [[np.cos(inv_pitch), 0.0, -np.sin(inv_pitch)],
+                 [0.0, 1.0, 0.0],
+                 [np.sin(inv_pitch), 1.0, np.cos(inv_pitch)]])
+    if roll is not None:
+        inv_roll = -(roll + np.pi) # Opposite angle to roll corrected for the
+                                   # upside down bug.
+        roll_rot = np.matrix(
+                [[1.0, 0.0, 0.0],
+                 [0.0, np.cos(inv_roll), -np.sin(inv_roll)],
+                 [0.0, np.sin(inv_roll), np.cos(inv_roll)]])
+    rot = roll_rot * pitch_rot
 
     depth = depth_mm * 0.001  # Converting to meters.
     # 3D coordinates of points detected by the depth camera, converted to
     # robot's coordinate system.
     xyz = ps * np.expand_dims(depth, axis=Z) + [[[CAMX, CAMY, CAMZ]]]
+    # Compensate for robot's pitch & roll.
+    xyz = np.asarray(
+        (rot * np.asmatrix(xyz.reshape((-1, 3)).T)).T).reshape((CAMH, CAMW, 3))
     # Relative positions of 3D points placed OFFSET pixels above each other.
     rel_xyz = xyz[:-OFFSET,:,:] - xyz[OFFSET:,:,:]
     # Slope of a line connecting two points in the vertical plane they
