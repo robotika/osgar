@@ -27,11 +27,12 @@ VENT = 'TYPE_VENT'
 GAS = 'TYPE_GAS'
 
 
-RED_THRESHOLD = 1000  # virtual QVGA=50, used to be 100, urban=1000
+RED_THRESHOLD = 350  # for close backpacks was good 1000  # virtual QVGA=50, used to be 100, urban=1000
 YELLOW_THRESHOLD = 500  # was 80
 YELLOW_MAX_THRESHOLD = 4000  # 2633 known example
 WHITE_THRESHOLD = 20000
 
+g_mask = None
 
 def old_count_red(img):
     count = 0
@@ -79,6 +80,8 @@ def count_red(img, filtered=False, stdout=None):
 #                    print(x, y)
     b = img2[:,:,0]
     mask = b == 255
+    global g_mask
+    g_mask = mask.copy()
     if filtered:
         # detect largest blob in img2
         kernel = np.ones((3,3), np.uint8)
@@ -128,6 +131,8 @@ def count_yellow(img):
     g = img[:,:,1]
     r = img[:,:,2]
     mask = np.logical_and(np.logical_and(r >= 60, g*0.95 > r), np.logical_and(r*0.33 > b, g*0.33 > b))
+    global g_mask
+    g_mask = mask.copy()
     # debug
 #    img2 = img.copy()
 #    img2[mask] = (0, 0, 255)
@@ -198,6 +203,7 @@ class ArtifactDetector(Node):
         self.best_scan = None
         self.verbose = False
         self.scan = None  # should laster initialize super()
+        self.depth = None  # more precise definiton of depth image
         self.width = None  # detect from incoming images
 
     def handle_gas_artifact(self, data):
@@ -298,7 +304,28 @@ class ArtifactDetector(Node):
                 self.stdout(rcount, w, h, x_min, x_max, w/h, count/(w*h))
 
             if red_used or yellow_used:
-                deg_100th, dist_mm = artf_in_scan(self.best_scan, self.width, x_min, x_max, verbose=True)
+                if self.depth is not None:
+                    global g_mask
+                    g_mask = None
+                    img = cv2.imdecode(np.fromstring(self.best_img, dtype=np.uint8), 1)
+                    if red_used:
+                        count_red(img)
+                    else:
+                        count_yellow(img)
+                    assert g_mask is not None  # intermediate results
+                    dist_mm = int(np.median(self.depth[g_mask]))
+                    mask2 = np.abs(self.depth - dist_mm) < 200
+                    mask = np.logical_and(g_mask, mask2)
+                    count, w, h, x_min, x_max = count_mask(mask)
+
+                    deg_100th = int(round(100 * 69.4 * (self.width/2 - (x_min + x_max)/2)/self.width))
+
+#                    img2 = img.copy()
+#                    img2[mask] = (0, 0, 255)
+#                    img2[np.logical_not(mask)] = (0, 0, 0)
+#                    cv2.imwrite('artfX.jpg', img2)
+                else:
+                    deg_100th, dist_mm = artf_in_scan(self.best_scan, self.width, x_min, x_max, verbose=True)
             else:
                 deg_100th, dist_mm = 0, 500  # in front of the robot
 
@@ -415,6 +442,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run artifact detection and classification for given JPEG image')
     parser.add_argument('filename', help='JPEG filename')
     parser.add_argument('--debug2dir', help='dump clasified debug images into directory')
+    parser.add_argument('--depth', help='filename of depth image for tested together with JPEG image')
     parser.add_argument('-v', '--verbose', help='verbose mode', action='store_true')
     args = parser.parse_args()
 
@@ -438,13 +466,18 @@ if __name__ == '__main__':
     detector = ArtifactDetector(config, bus.handle('detector'))
     detector.verbose = args.verbose
     tester = bus.handle('tester')
-    tester.register('scan', 'image', 'tick')
+    tester.register('scan', 'image', 'tick', 'depth')
     bus.connect('tester.scan', 'detector.scan')
+    bus.connect('tester.depth', 'detector.depth')
     bus.connect('tester.image', 'detector.image')
     bus.connect('detector.artf', 'tester.artf')
     bus.connect('tester.tick', 'tester.tick')
     bus.connect('detector.dropped', 'tester.dropped')
     tester.publish('scan', [2000]*270)  # pretend that everything is at 2 meters
+    if args.depth is not None:
+        with np.load(args.depth) as f:
+            depth = f['depth']
+            tester.publish('depth', depth)
     detector.start()
     for i in range(10 + 1):  # workaround for local minima
         a = tester.listen()
