@@ -27,11 +27,12 @@ VENT = 'TYPE_VENT'
 GAS = 'TYPE_GAS'
 
 
-RED_THRESHOLD = 1000  # virtual QVGA=50, used to be 100, urban=1000
+RED_THRESHOLD = 350  # for close backpacks was good 1000  # virtual QVGA=50, used to be 100, urban=1000
 YELLOW_THRESHOLD = 500  # was 80
 YELLOW_MAX_THRESHOLD = 4000  # 2633 known example
 WHITE_THRESHOLD = 20000
 
+g_mask = None
 
 def old_count_red(img):
     count = 0
@@ -79,6 +80,8 @@ def count_red(img, filtered=False, stdout=None):
 #                    print(x, y)
     b = img2[:,:,0]
     mask = b == 255
+    global g_mask
+    g_mask = mask.copy()
     if filtered:
         # detect largest blob in img2
         kernel = np.ones((3,3), np.uint8)
@@ -128,6 +131,8 @@ def count_yellow(img):
     g = img[:,:,1]
     r = img[:,:,2]
     mask = np.logical_and(np.logical_and(r >= 60, g*0.95 > r), np.logical_and(r*0.33 > b, g*0.33 > b))
+    global g_mask
+    g_mask = mask.copy()
     # debug
 #    img2 = img.copy()
 #    img2[mask] = (0, 0, 255)
@@ -196,8 +201,11 @@ class ArtifactDetector(Node):
         self.best_img = None
         self.best_info = None
         self.best_scan = None
+        self.best_depth = None
         self.verbose = False
+        self.dump_dir = None  # optional debug ouput into directory
         self.scan = None  # should laster initialize super()
+        self.depth = None  # more precise definiton of depth image
         self.width = None  # detect from incoming images
 
     def handle_gas_artifact(self, data):
@@ -253,9 +261,10 @@ class ArtifactDetector(Node):
             deg_100th, dist_mm = 0, 500  # in front of the robot
             self.publish('artf', [artf, deg_100th, dist_mm])
             self.publish('debug_artf', image)  # JPEG
-#            filename = 'artf_%s_%d.jpg' % (artf, self.time.total_seconds())
-#            with open(filename, 'wb') as f:
-#                f.write(image)
+            if self.dump_dir is not None:
+                filename = 'artf_%s_%d.jpg' % (artf, self.time.total_seconds())
+                with open(os.path.join(self.dump_dir, filename), 'wb') as f:
+                    f.write(image)
         rcount, w, h, x_min, x_max = count_red(img)
         yellow_used = False
         if self.is_virtual and rcount < 20:
@@ -279,6 +288,7 @@ class ArtifactDetector(Node):
                 self.best_img = self.image
                 self.best_info = w, h, x_min, x_max, (count == rcount), yellow_used  # RED used
                 self.best_scan = self.scan
+                self.best_depth = self.depth
 
         if self.best is not None and self.best_count == 0:
             w, h, x_min, x_max, red_used, yellow_used = self.best_info
@@ -294,11 +304,33 @@ class ArtifactDetector(Node):
                     self.best_img = None
                     self.best_info = None
                     self.best_scan = None
+                    self.best_depth = None
                     return
                 self.stdout(rcount, w, h, x_min, x_max, w/h, count/(w*h))
 
             if red_used or yellow_used:
-                deg_100th, dist_mm = artf_in_scan(self.best_scan, self.width, x_min, x_max, verbose=True)
+                if self.best_depth is not None:
+                    global g_mask
+                    g_mask = None
+                    img = cv2.imdecode(np.fromstring(self.best_img, dtype=np.uint8), 1)
+                    if red_used:
+                        count_red(img)
+                    else:
+                        count_yellow(img)
+                    assert g_mask is not None  # intermediate results
+                    dist_mm = int(np.median(self.best_depth[g_mask]))
+                    mask2 = np.abs(self.best_depth - dist_mm) < 200
+                    mask = np.logical_and(g_mask, mask2)
+                    count, w, h, x_min, x_max = count_mask(mask)
+
+                    deg_100th = int(round(100 * 69.4 * (self.width/2 - (x_min + x_max)/2)/self.width))
+
+#                    img2 = img.copy()
+#                    img2[mask] = (0, 0, 255)
+#                    img2[np.logical_not(mask)] = (0, 0, 0)
+#                    cv2.imwrite('artfX.jpg', img2)
+                else:
+                    deg_100th, dist_mm = artf_in_scan(self.best_scan, self.width, x_min, x_max, verbose=True)
             else:
                 deg_100th, dist_mm = 0, 500  # in front of the robot
 
@@ -325,6 +357,7 @@ class ArtifactDetector(Node):
                     self.best_img = None
                     self.best_info = None
                     self.best_scan = None
+                    self.best_depth = None
                     return
                 artf = RESCUE_RANDY  # used to be RADIO
             self.stdout(self.time, 'Relative position:', self.best, deg_100th, dist_mm, artf)
@@ -333,9 +366,13 @@ class ArtifactDetector(Node):
             # TODO if VALVE -> find it in scan
             self.publish('artf', [artf, deg_100th, dist_mm])
             self.publish('debug_artf', self.best_img)
-#            filename = 'artf_%s_%d.jpg' % (artf, self.time.total_seconds())
-#            with open(filename, 'wb') as f:
-#                f.write(self.best_img)
+            if self.dump_dir is not None:
+                filename = 'artf_%s_%d.jpg' % (artf, self.time.total_seconds())
+                with open(os.path.join(self.dump_dir, filename), 'wb') as f:
+                    f.write(self.best_img)
+                if self.best_depth is not None:
+                    filename = 'artf_%s_%d.npz' % (artf, self.time.total_seconds())
+                    np.savez_compressed(os.path.join(self.dump_dir, filename), depth=self.best_depth)
 
             # reset detector
             self.best = None
@@ -343,6 +380,7 @@ class ArtifactDetector(Node):
             self.best_img = None
             self.best_info = None
             self.best_scan = None
+            self.best_depth = None
 
 
 class ArtifactReporter(Node):
@@ -415,6 +453,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run artifact detection and classification for given JPEG image')
     parser.add_argument('filename', help='JPEG filename')
     parser.add_argument('--debug2dir', help='dump clasified debug images into directory')
+    parser.add_argument('--depth', help='filename of depth image for tested together with JPEG image')
     parser.add_argument('-v', '--verbose', help='verbose mode', action='store_true')
     args = parser.parse_args()
 
@@ -438,13 +477,18 @@ if __name__ == '__main__':
     detector = ArtifactDetector(config, bus.handle('detector'))
     detector.verbose = args.verbose
     tester = bus.handle('tester')
-    tester.register('scan', 'image', 'tick')
+    tester.register('scan', 'image', 'tick', 'depth')
     bus.connect('tester.scan', 'detector.scan')
+    bus.connect('tester.depth', 'detector.depth')
     bus.connect('tester.image', 'detector.image')
     bus.connect('detector.artf', 'tester.artf')
     bus.connect('tester.tick', 'tester.tick')
     bus.connect('detector.dropped', 'tester.dropped')
     tester.publish('scan', [2000]*270)  # pretend that everything is at 2 meters
+    if args.depth is not None:
+        with np.load(args.depth) as f:
+            depth = f['depth']
+            tester.publish('depth', depth)
     detector.start()
     for i in range(10 + 1):  # workaround for local minima
         a = tester.listen()
