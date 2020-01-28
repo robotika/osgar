@@ -201,6 +201,7 @@ class ArtifactDetector(Node):
         self.best_img = None
         self.best_info = None
         self.best_scan = None
+        self.best_depth = None
         self.verbose = False
         self.dump_dir = None  # optional debug ouput into directory
         self.scan = None  # should laster initialize super()
@@ -287,6 +288,7 @@ class ArtifactDetector(Node):
                 self.best_img = self.image
                 self.best_info = w, h, x_min, x_max, (count == rcount), yellow_used  # RED used
                 self.best_scan = self.scan
+                self.best_depth = self.depth
 
         if self.best is not None and self.best_count == 0:
             w, h, x_min, x_max, red_used, yellow_used = self.best_info
@@ -302,11 +304,12 @@ class ArtifactDetector(Node):
                     self.best_img = None
                     self.best_info = None
                     self.best_scan = None
+                    self.best_depth = None
                     return
                 self.stdout(rcount, w, h, x_min, x_max, w/h, count/(w*h))
 
             if red_used or yellow_used:
-                if self.depth is not None:
+                if self.best_depth is not None:
                     global g_mask
                     g_mask = None
                     img = cv2.imdecode(np.fromstring(self.best_img, dtype=np.uint8), 1)
@@ -315,8 +318,8 @@ class ArtifactDetector(Node):
                     else:
                         count_yellow(img)
                     assert g_mask is not None  # intermediate results
-                    dist_mm = int(np.median(self.depth[g_mask]))
-                    mask2 = np.abs(self.depth - dist_mm) < 200
+                    dist_mm = int(np.median(self.best_depth[g_mask]))
+                    mask2 = np.abs(self.best_depth - dist_mm) < 200
                     mask = np.logical_and(g_mask, mask2)
                     count, w, h, x_min, x_max = count_mask(mask)
 
@@ -354,6 +357,7 @@ class ArtifactDetector(Node):
                     self.best_img = None
                     self.best_info = None
                     self.best_scan = None
+                    self.best_depth = None
                     return
                 artf = RESCUE_RANDY  # used to be RADIO
             self.stdout(self.time, 'Relative position:', self.best, deg_100th, dist_mm, artf)
@@ -366,6 +370,9 @@ class ArtifactDetector(Node):
                 filename = 'artf_%s_%d.jpg' % (artf, self.time.total_seconds())
                 with open(os.path.join(self.dump_dir, filename), 'wb') as f:
                     f.write(self.best_img)
+                if self.best_depth is not None:
+                    filename = 'artf_%s_%d.npz' % (artf, self.time.total_seconds())
+                    np.savez_compressed(os.path.join(self.dump_dir, filename), depth=self.best_depth)
 
             # reset detector
             self.best = None
@@ -373,6 +380,7 @@ class ArtifactDetector(Node):
             self.best_img = None
             self.best_info = None
             self.best_scan = None
+            self.best_depth = None
 
 
 class ArtifactReporter(Node):
