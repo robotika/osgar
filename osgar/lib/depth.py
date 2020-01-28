@@ -91,7 +91,7 @@ def depth2dist(depth_mm, pitch=None, roll=None):
         pitch_rot = np.matrix(
                 [[np.cos(inv_pitch), 0.0, -np.sin(inv_pitch)],
                  [0.0, 1.0, 0.0],
-                 [np.sin(inv_pitch), 1.0, np.cos(inv_pitch)]])
+                 [np.sin(inv_pitch), 0.0, np.cos(inv_pitch)]])
     if roll is not None:
         inv_roll = -(roll + np.pi) # Opposite angle to roll corrected for the
                                    # upside down bug.
