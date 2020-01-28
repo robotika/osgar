@@ -82,6 +82,7 @@
 
               ["rosmsg.depth", "depth2scan.depth"],
               ["depth2scan.scan", "app.scan"],
+              ["rosmsg.depth", "detector.depth"],
 
               ["rosmsg.pose2d", "app.pose2d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
