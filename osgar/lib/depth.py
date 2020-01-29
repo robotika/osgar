@@ -13,11 +13,11 @@ CAMX, CAMY, CAMZ = 0.23, 0, (0.19 + 0.06256005)
 CAMW, CAMH = 640, 360
 
 # How far we care. (In meters.)
-MAXX = 5.
-MAXY = 5.
+MAXX = 16.
+MAXY = 16.
 
 # Low-height stuff on the ground does not matter. (In meters.)
-MINZ = 0.06
+MINZ = 0.08
 MAXZ = 1.5
 
 # We compare pixels this far away from each other vertically. (In pixels.)
@@ -31,7 +31,7 @@ VERTICAL_DIFF_LIMIT = np.radians(60)
 CAM_LOW = CAMH // 2 + 1
 
 # How much of a slope do we still consider "normal".
-MAX_SLOPE = np.radians(-23)
+MAX_SLOPE = np.radians(-30)
 
 
 # Indices of directions in a matrix with 3D points.
@@ -104,12 +104,12 @@ def depth2dist(depth_mm, pitch=None, roll=None):
     depth = depth_mm * 0.001  # Converting to meters.
     # 3D coordinates of points detected by the depth camera, converted to
     # robot's coordinate system.
-    xyz = ps * np.expand_dims(depth, axis=Z) + [[[CAMX, CAMY, CAMZ]]]
+    rxyz = ps * np.expand_dims(depth, axis=Z) + [[[CAMX, CAMY, CAMZ]]]
     # Compensate for robot's pitch & roll.
-    xyz = np.asarray(
-        (rot * np.asmatrix(xyz.reshape((-1, 3)).T)).T).reshape((CAMH, CAMW, 3))
+    gxyz = np.asarray(
+        (rot * np.asmatrix(rxyz.reshape((-1, 3)).T)).T).reshape((CAMH, CAMW, 3))
     # Relative positions of 3D points placed OFFSET pixels above each other.
-    rel_xyz = xyz[:-OFFSET,:,:] - xyz[OFFSET:,:,:]
+    rel_xyz = gxyz[:-OFFSET,:,:] - gxyz[OFFSET:,:,:]
     # Slope of a line connecting two points in the vertical plane they
     # define.
     slope = np.arctan2(
@@ -117,19 +117,19 @@ def depth2dist(depth_mm, pitch=None, roll=None):
 
     danger = np.logical_and.reduce(np.stack([
         # It has to be near.
-        np.minimum(xyz[:-OFFSET,:,X], xyz[OFFSET:,:,X]) <= MAXX,
-        np.minimum(xyz[:-OFFSET,:,Y], xyz[OFFSET:,:,Y]) <= MAXY,
+        np.minimum(rxyz[:-OFFSET,:,X], rxyz[OFFSET:,:,X]) <= MAXX,
+        np.minimum(rxyz[:-OFFSET,:,Y], rxyz[OFFSET:,:,Y]) <= MAXY,
         # It should not be something small on the ground.
-        np.maximum(xyz[:-OFFSET,:,Z], xyz[OFFSET:,:,Z]) >= MINZ,
+        np.maximum(rxyz[:-OFFSET,:,Z], rxyz[OFFSET:,:,Z]) >= MINZ,
         # It has to be close to vertical.
         np.abs(slope - np.radians(90)) <= VERTICAL_DIFF_LIMIT,
         # It should not be too high above ground.
-        np.maximum(xyz[:-OFFSET, :, Z], xyz[OFFSET:, :, Z]) <= MAXZ]))
+        np.maximum(rxyz[:-OFFSET, :, Z], rxyz[OFFSET:, :, Z]) <= MAXZ]))
 
     # Filter out noise.
     danger = cv2.filter2D(danger.astype(np.float), -1, np.ones((5, 5))) > 20
 
-    dists = np.hypot(xyz[:,:,X], xyz[:,:,Y])
+    dists = np.hypot(rxyz[:,:,X], rxyz[:,:,Y])
     FAR_AWAY = 1000.0
     dists = np.where(danger, dists[OFFSET:,:], FAR_AWAY)
     scan = np.min(dists, axis=0)
@@ -137,15 +137,15 @@ def depth2dist(depth_mm, pitch=None, roll=None):
     scan[mask] = 0
 
     # down drops
-    low_xyz = ps[CAM_LOW:,:] * np.expand_dims(
-            depth[CAM_LOW:,:], axis=Z) + [[[CAMX, CAMY, CAMZ]]]
-    dists = np.hypot(low_xyz[:,:,X], low_xyz[:,:,Y])
-    slopes = np.arctan2(low_xyz[:,:,Z], dists)
+    low_rxyz = rxyz[CAM_LOW:,:]
+    low_gxyz = gxyz[CAM_LOW:,:]
+    gdists = np.hypot(low_gxyz[:,:,X], low_gxyz[:,:,Y])
+    slopes = np.arctan2(low_gxyz[:,:,Z], gdists)
     below_ground = slopes < MAX_SLOPE
 
     # Let's calculate, where we should see ground.
-    q = CAMZ / np.maximum(1e-6, (CAMZ - low_xyz[:,:,Z]))
-    expected_ground = low_xyz * np.expand_dims(q, 2)
+    q = CAMZ / np.maximum(1e-6, (CAMZ - low_rxyz[:,:,Z]))
+    expected_ground = low_rxyz * np.expand_dims(q, 2)
     ground_dists = np.hypot(expected_ground[:,:,X], expected_ground[:,:,Y])
     FAR_AWAY = 1000.
     scan_down = np.min(
