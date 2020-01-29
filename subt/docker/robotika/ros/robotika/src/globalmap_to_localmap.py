@@ -13,7 +13,7 @@ import tf
 
 lastMap = None
 robotName = None
-SUBMAP_RADIUS = 50
+SUBMAP_RADIUS = 600
 lastPose = None
 
 def mapCallback(costmap):
