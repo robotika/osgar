@@ -378,7 +378,7 @@ class SubTChallenge:
         HOME_THRESHOLD = 5.0
         SHORTCUT_RADIUS = 2.3
         MAX_TARGET_DISTANCE = 5.0
-        MIN_TARGET_DISTANCE = 2.0
+        MIN_TARGET_DISTANCE = 1.0
         assert(MAX_TARGET_DISTANCE > SHORTCUT_RADIUS) # Because otherwise we could end up with a target point more distant from home than the robot.
         self.trace.prune(SHORTCUT_RADIUS)
         start_time = self.sim_time_sec
@@ -393,7 +393,7 @@ class SubTChallenge:
                 if safety < 0.2:
                     print(self.time, "Safety low!", safety, desired_direction)
                     target_distance = MIN_TARGET_DISTANCE
-                    count_down = 100
+                    count_down = 300
                 if count_down > 0:
                     count_down -= 1
                     if count_down == 0:
