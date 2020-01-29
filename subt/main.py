@@ -745,7 +745,7 @@ class SubTChallenge:
             self.stdout('Lost in tunnel:', self.origin_error, self.offset)
 
         start_time = self.sim_time_sec
-        for loop in range(3):
+        for loop in range(100):
             self.collision_detector_enabled = True
             if self.sim_time_sec - start_time > self.timeout.total_seconds():
                 print('Total Timeout Reached', self.timeout.total_seconds())
