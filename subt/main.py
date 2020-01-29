@@ -22,8 +22,8 @@ from subt.local_planner import LocalPlanner
 
 
 # safety limits for exploration and return home
-LIMIT_ROLL = math.radians(25)  # in Virtual Urban are ramps with 20deg slope
-LIMIT_PITCH = math.radians(25)
+LIMIT_ROLL = math.radians(28)  # in Virtual Urban are ramps with 25deg slope
+LIMIT_PITCH = math.radians(28)
 RETURN_LIMIT_ROLL = math.radians(35)
 RETURN_LIMIT_PITCH = math.radians(35)
 
@@ -228,12 +228,12 @@ class SubTChallenge:
         else:
             safety, safe_direction = self.local_planner.recommend(desired_direction)
         #desired_angular_speed = 1.2 * safe_direction
-        desired_angular_speed = 0.85 * safe_direction
+        desired_angular_speed = 1.0 * safe_direction
         size = len(self.scan)
         dist = min_dist(self.scan[size//3:2*size//3])
         if dist < 0.75:  # 2.0:
 #            desired_speed = self.max_speed * (1.2/2.0) * (dist - 0.4) / 1.6
-            desired_speed = self.max_speed * (dist - 0.4) / 0.55
+            desired_speed = self.max_speed * (dist - 0.4) / 0.35
         else:
             desired_speed = self.max_speed  # was 2.0
         '''
