@@ -743,10 +743,18 @@ class SubTChallenge:
         else:
             # lost in tunnel
             self.stdout('Lost in tunnel:', self.origin_error, self.offset)
+
+        start_time = self.sim_time_sec
         for loop in range(3):
             self.collision_detector_enabled = True
+            if self.sim_time_sec - start_time > self.timeout.total_seconds():
+                print('Total Timeout Reached', self.timeout.total_seconds())
+                break
+            timeout = timedelta(seconds=self.timeout.total_seconds() - (self.sim_time_sec - start_time))
+            print('Current timeout', timeout)
+
             dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,  # was radius=0.9
-                                timeout=self.timeout, pitch_limit=LIMIT_PITCH, roll_limit=None)
+                                timeout=timeout, pitch_limit=LIMIT_PITCH, roll_limit=None)
             self.collision_detector_enabled = False
             if reason == REASON_VIRTUAL_BUMPER:
                 assert self.virtual_bumper is not None
