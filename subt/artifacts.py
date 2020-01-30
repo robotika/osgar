@@ -27,7 +27,7 @@ VENT = 'TYPE_VENT'
 GAS = 'TYPE_GAS'
 
 
-RED_THRESHOLD = 300  # for close backpacks was good 1000  # virtual QVGA=50, used to be 100, urban=1000
+RED_THRESHOLD = 100 #300  # for close backpacks was good 1000  # virtual QVGA=50, used to be 100, urban=1000
 YELLOW_THRESHOLD = 100  #500  # was 80
 YELLOW_MAX_THRESHOLD = 4000  # 2633 known example
 RED_YELLOW_MIN_3D_THRESHOLD = 50  # number of colored pixels in given depth distance threshold
@@ -322,8 +322,17 @@ class ArtifactDetector(Node):
                     dist_mm = int(np.median(self.best_depth[g_mask]))
                     mask2 = np.abs(self.best_depth - dist_mm) < 200
                     mask = np.logical_and(g_mask, mask2)
+                    # debug
+                    #img2 = img.copy()
+                    #img2[:] = (0, 0, 0)
+                    #img2[g_mask] = (0, 0, 255)
+                    #img2[mask] = (0, 255, 0)
+                    #cv2.imwrite('artf.jpg', img2)
+
                     count, w, h, x_min, x_max = count_mask(mask)
-                    if dist_mm > 10000 or count < RED_YELLOW_MIN_3D_THRESHOLD:  # mix of infinity
+                    FX = 462.1  # Focal length.
+                    if (dist_mm > 10000 or count < RED_YELLOW_MIN_3D_THRESHOLD or # mix of infinity
+                            (red_used and dist_mm * h/FX < 210)):                 # robot
                         self.stdout('Invalid distance, ignore, count=', self.best, count, dist_mm)
                         # reset detector
                         self.best = None
@@ -472,7 +481,7 @@ if __name__ == '__main__':
         debug2dir(args.filename, args.debug2dir)
         sys.exit()
 
-    with open(args.filename, 'rb') as f:
+    with open(args.filename.replace('.npz', '.jpg'), 'rb') as f:
         jpeg_data = f.read()
 
     config = {'virtual_world': True}  # for now
@@ -496,8 +505,9 @@ if __name__ == '__main__':
     bus.connect('tester.tick', 'tester.tick')
     bus.connect('detector.dropped', 'tester.dropped')
     tester.publish('scan', [2000]*270)  # pretend that everything is at 2 meters
-    if args.depth is not None:
-        with np.load(args.depth) as f:
+    if args.depth is not None or args.filename.endswith('.npz'):
+        filename = args.depth if args.depth is not None else args.filename
+        with np.load(filename) as f:
             depth = f['depth']
             tester.publish('depth', depth)
     detector.start()
