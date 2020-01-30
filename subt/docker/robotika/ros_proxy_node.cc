@@ -61,6 +61,10 @@ int g_countGas = 0;
 int g_countDepth = 0;
 int g_countPoints = 0;
 
+int g_countUpdates = 0;
+int g_countReceives = 0;
+int g_countSendLog = 0;
+
 void *g_context;
 void *g_responder;
 
@@ -321,6 +325,11 @@ void Controller::CommClientCallback(const std::string &_srcAddress,
 /////////////////////////////////////////////////
 void Controller::Update(const ros::TimerEvent&)
 {
+  if(g_countUpdates % 100 == 0) {
+    ROS_INFO("update count %d", g_countUpdates);
+  }
+  g_countUpdates++;
+
   if (!this->started)
   {
     // Send start signal
@@ -423,6 +432,11 @@ not available.");
 
 void Controller::sendLogPart(const ros::TimerEvent&)
 {
+  if(g_countSendLog % 100 == 0) {
+    ROS_INFO("sendLogPart count %d", g_countSendLog);
+  }
+  g_countSendLog++;
+
    // the ROS logger availability is currently not known
    // see https://bitbucket.org/osrf/subt/issues/276/when-is-ros-bag-recorder-ready
   if (g_countClock < 1000)
@@ -540,6 +554,11 @@ bool Controller::parseArtf(char *input_str, subt::msgs::Artifact& artifact)
 /////////////////////////////////////////////////
 void Controller::receiveZmq(const ros::TimerEvent&)
 {
+  if(g_countReceives % 100 == 0) {
+    ROS_INFO("receiveZmq count %d", g_countReceives);
+  }
+  g_countReceives++;
+
   geometry_msgs::Twist msg;
   char buffer[10000];
   int size;
