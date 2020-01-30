@@ -27,9 +27,10 @@ VENT = 'TYPE_VENT'
 GAS = 'TYPE_GAS'
 
 
-RED_THRESHOLD = 350  # for close backpacks was good 1000  # virtual QVGA=50, used to be 100, urban=1000
-YELLOW_THRESHOLD = 500  # was 80
+RED_THRESHOLD = 300  # for close backpacks was good 1000  # virtual QVGA=50, used to be 100, urban=1000
+YELLOW_THRESHOLD = 100  #500  # was 80
 YELLOW_MAX_THRESHOLD = 4000  # 2633 known example
+RED_YELLOW_MIN_3D_THRESHOLD = 50  # number of colored pixels in given depth distance threshold
 WHITE_THRESHOLD = 20000
 
 g_mask = None
@@ -322,6 +323,16 @@ class ArtifactDetector(Node):
                     mask2 = np.abs(self.best_depth - dist_mm) < 200
                     mask = np.logical_and(g_mask, mask2)
                     count, w, h, x_min, x_max = count_mask(mask)
+                    if dist_mm > 10000 or count < RED_YELLOW_MIN_3D_THRESHOLD:  # mix of infinity
+                        self.stdout('Invalid distance, ignore, count=', self.best, count, dist_mm)
+                        # reset detector
+                        self.best = None
+                        self.best_count = 0
+                        self.best_img = None
+                        self.best_info = None
+                        self.best_scan = None
+                        self.best_depth = None
+                        return
 
                     deg_100th = int(round(100 * 69.4 * (self.width/2 - (x_min + x_max)/2)/self.width))
 
