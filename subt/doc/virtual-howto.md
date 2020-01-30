@@ -34,14 +34,14 @@ It is necessary to run also simulation and bridge in other two terminals:
 - terminal 1
 ```
 xhost +local:root
-./run.bash osrf/subt-virtual-testbed:cloudsim_sim_latest cloudsim_sim.ign circuit:=urban worldName:=urban_circuit_practice_01 robotName1:=X0F200L robotConfig1:=X2_SENSOR_CONFIG_3
+./run.bash osrf/subt-virtual-testbed:cloudsim_sim_latest cloudsim_sim.ign circuit:=urban worldName:=urban_circuit_practice_01 robotName1:=X0F200L robotConfig1:=ROBOTIKA_X2_SENSOR_CONFIG_1
 ```
 Note, that `xhost` workaround is not secure and it is current workaround how to start the process for the first time,
 open screen session and then use the simulator remotely via ssh.
 
 - terminal 2
 ```
-./run.bash osrf/subt-virtual-testbed:cloudsim_bridge_latest circuit:=urban worldName:=urban_circuit_practice_01 robotName1:=X0F200L robotConfig1:=X2_SENSOR_CONFIG_3
+./run.bash osrf/subt-virtual-testbed:cloudsim_bridge_latest circuit:=urban worldName:=urban_circuit_practice_01 robotName1:=X0F200L robotConfig1:=ROBOTIKA_X2_SENSOR_CONFIG_1
 ```
 
 Note, that configuration and robot name is variable. The command above with robot name X0F200L encodes waiting for 0 s,
