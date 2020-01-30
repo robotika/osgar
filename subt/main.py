@@ -238,7 +238,7 @@ class SubTChallenge:
             desired_speed = self.max_speed * (dist - 0.4) / 0.35
         else:
             desired_speed = self.max_speed  # was 2.0
-        #desired_speed = desired_speed * (1.0 - 0.8 * min(self.max_angular_speed, abs(desired_angular_speed)) / self.max_angular_speed)
+        desired_speed = desired_speed * (1.0 - 0.8 * min(self.max_angular_speed, abs(desired_angular_speed)) / self.max_angular_speed)
         if self.flipped:
             self.send_speed_cmd(-desired_speed, desired_angular_speed)  # ??? angular too??!
         else:
