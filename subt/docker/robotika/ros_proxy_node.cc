@@ -190,9 +190,7 @@ class Controller
   /// \param[in] _name Name of the robot.
   public: Controller(const std::string &_name);
 
-  /// \brief A function that will be called every loop of the ros spin
-  /// cycle.
-  public: void Update();
+  public: void Update(const ros::TimerEvent&);
 
   /// \brief Callback function for message from other comm clients.
   /// \param[in] _srcAddress The address of the robot who sent the packet.
@@ -204,7 +202,7 @@ class Controller
                                    const uint32_t _dstPort,
                                    const std::string &_data);
 
-  /// \brief ROS node handler.
+
   private: ros::NodeHandle n;
 
   /// \brief publisher to send cmd_vel
@@ -231,6 +229,15 @@ class Controller
   ros::Subscriber subGas;
   ros::Subscriber subDepth;
   ros::Subscriber subPoints;
+
+  /// \brief Timer that trigger the update function.
+  private: ros::Timer updateTimer;
+
+  /// \brief Timer to send log parts
+  private: ros::Timer logTimer;
+
+  /// \brief Timer receive zmq
+  private: ros::Timer zmqTimer;
 
   /// \brief True if robot has arrived at destination.
   public: bool arrived{false};
@@ -266,9 +273,9 @@ class Controller
     return true;
   }
 
-  public: bool getSpeedCmd(geometry_msgs::Twist& msg);
+  public: void receiveZmq(const ros::TimerEvent&);
   public: bool parseArtf(char *input_str, subt::msgs::Artifact& artifact);
-  public: void sendLogPart();
+  public: void sendLogPart(const ros::TimerEvent&);
 };
 
 /////////////////////////////////////////////////
@@ -288,6 +295,10 @@ Controller::Controller(const std::string &_name)
   // Waiting from some message related to robot so that we know the robot is already in the simulation
   ROS_INFO_STREAM("Waiting for " << this->name << "/imu/data");
   ros::topic::waitForMessage<sensor_msgs::Imu>(this->name + "/imu/data", this->n);
+
+  this->updateTimer = this->n.createTimer(ros::Duration(0.05), &Controller::Update, this);
+  this->logTimer = this->n.createTimer(ros::Duration(0.05), &Controller::sendLogPart, this);
+  this->zmqTimer = this->n.createTimer(ros::Duration(0.05), &Controller::receiveZmq, this);
 }
 
 /////////////////////////////////////////////////
@@ -308,7 +319,7 @@ void Controller::CommClientCallback(const std::string &_srcAddress,
 }
 
 /////////////////////////////////////////////////
-void Controller::Update()
+void Controller::Update(const ros::TimerEvent&)
 {
   if (!this->started)
   {
@@ -362,8 +373,10 @@ void Controller::Update()
       return;
   }
 
-  if (this->arrived)
+  if (this->arrived) {
+    this->updateTimer.stop();
     return;
+  }
 
   bool call = this->originClient.call(this->originSrv);
   // Query current robot position w.r.t. entrance
@@ -375,6 +388,7 @@ not available.");
 
     sendOriginError(this->name);
     this->arrived = true; // give up ... is it good idea?
+    this->updateTimer.stop();
 
     // Stop robot
     geometry_msgs::Twist msg;
@@ -386,13 +400,6 @@ not available.");
   // send position to Python3 code
   sendOrigin(this->name, pose.position.x, pose.position.y, pose.position.z,
              pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w);
-
-  // Simple example for robot to go to entrance
-  geometry_msgs::Twist msg;
-  while(this->getSpeedCmd(msg))
-  {
-    this->velPub.publish(msg);
-  }
 
   // Distance to goal
   double dist = pose.position.x * pose.position.x +
@@ -408,12 +415,13 @@ not available.");
   if (dist < 0.3 || pose.position.x >= -0.3)
   {
     this->arrived = true;
+    this->updateTimer.stop();
     ROS_INFO("Arrived at entrance!");
   }
 }
 
 
-void Controller::sendLogPart()
+void Controller::sendLogPart(const ros::TimerEvent&)
 {
    // the ROS logger availability is currently not known
    // see https://bitbucket.org/osrf/subt/issues/276/when-is-ros-bag-recorder-ready
@@ -530,8 +538,9 @@ bool Controller::parseArtf(char *input_str, subt::msgs::Artifact& artifact)
 }
 
 /////////////////////////////////////////////////
-bool Controller::getSpeedCmd(geometry_msgs::Twist& msg)
-{ 
+void Controller::receiveZmq(const ros::TimerEvent&)
+{
+  geometry_msgs::Twist msg;
   char buffer[10000];
   int size;
   while((size=zmq_recv(g_requester, buffer, 10000, ZMQ_DONTWAIT)) > 0)
@@ -544,6 +553,7 @@ bool Controller::getSpeedCmd(geometry_msgs::Twist& msg)
     else if(strncmp(buffer, "request_origin", 14) == 0)
     {
       this->arrived = false;  // re-enable origin query
+      this->updateTimer.start();
     }
     else if(strncmp(buffer, "artf ", 5) == 0)
     {
@@ -579,7 +589,7 @@ bool Controller::getSpeedCmd(geometry_msgs::Twist& msg)
       {
         msg.linear.x = speed;
         msg.angular.z = angular_speed;
-        return true;
+        this->velPub.publish(msg);
       }
       else
       {
@@ -588,7 +598,6 @@ bool Controller::getSpeedCmd(geometry_msgs::Twist& msg)
       }
     }
   }
-  return false;
 }
 
 /////////////////////////////////////////////////
@@ -632,35 +641,7 @@ int main(int argc, char** argv)
     name = argv[1];
   }
 
-  // Create the controller
   Controller controller(name);
-
-  // This sample code iteratively calls Controller::Update. This is just an
-  // example. You can write your controller using alternative methods.
-  // To get started with ROS visit: http://wiki.ros.org/ROS/Tutorials
-  ros::Rate loop_rate(20);
-  while (ros::ok())
-  {
-    while (ros::ok() && !controller.arrived)
-    {
-      controller.Update();
-      ros::spinOnce();
-      loop_rate.sleep();
-      controller.sendLogPart();
-    }
-
-    while (ros::ok() && controller.arrived)
-    {
-      geometry_msgs::Twist msg;
-      while(controller.getSpeedCmd(msg))
-      {
-        controller.velPub.publish(msg);
-      }
-      ros::spinOnce();
-      loop_rate.sleep();
-      controller.sendLogPart();
-    }
-  }
   ros::spin();
   return 0;
 }
