@@ -183,7 +183,9 @@ class SubTChallenge:
         self.origin_error = False
         self.robot_name = None  # received with origin
         if self.is_virtual:
-            self.local_planner = LocalPlanner()
+            self.local_planner = LocalPlanner(
+                    obstacle_influence=0.8,
+                    max_obstacle_distance=2.5)
         else:
             self.local_planner = None
         self.ref_scan = None
@@ -228,7 +230,7 @@ class SubTChallenge:
         else:
             safety, safe_direction = self.local_planner.recommend(desired_direction)
         #desired_angular_speed = 1.2 * safe_direction
-        desired_angular_speed = 1.0 * safe_direction
+        desired_angular_speed = 0.9 * safe_direction
         size = len(self.scan)
         dist = min_dist(self.scan[size//3:2*size//3])
         if dist < 0.75:  # 2.0:
@@ -236,11 +238,7 @@ class SubTChallenge:
             desired_speed = self.max_speed * (dist - 0.4) / 0.35
         else:
             desired_speed = self.max_speed  # was 2.0
-        '''
-        desired_angular_speed = 0.7 * safe_direction
-        T = math.pi / 2
-        desired_speed = 2.0 * (0.8 - min(T, abs(desired_angular_speed)) / T)
-        '''
+        #desired_speed = desired_speed * (1.0 - 0.8 * min(self.max_angular_speed, abs(desired_angular_speed)) / self.max_angular_speed)
         if self.flipped:
             self.send_speed_cmd(-desired_speed, desired_angular_speed)  # ??? angular too??!
         else:
