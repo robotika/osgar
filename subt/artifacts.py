@@ -332,8 +332,9 @@ class ArtifactDetector(Node):
                     count, w, h, x_min, x_max = count_mask(mask)
                     FX = 462.1  # Focal length.
                     if (dist_mm > 10000 or count < RED_YELLOW_MIN_3D_THRESHOLD or # mix of infinity
-                            (red_used and dist_mm * h/FX < 210)):                 # robot
-                        self.stdout('Invalid distance, ignore, count=', self.best, count, dist_mm)
+                            (red_used and dist_mm * h/FX < 210) or                # robot
+                            (yellow_used and dist_mm * h/FX > 850)):              # too high for survivor
+                        self.stdout('Invalid distance, ignore, count=', self.best, count, dist_mm, dist_mm * h/FX)
                         # reset detector
                         self.best = None
                         self.best_count = 0
