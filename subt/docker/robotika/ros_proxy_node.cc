@@ -274,15 +274,20 @@ class Controller
 /////////////////////////////////////////////////
 Controller::Controller(const std::string &_name)
 {
-  ROS_INFO("Waiting for /clock, /subt/start, and /subt/pose_from_artifact");
+  this->name = _name;
+  ROS_INFO("Using robot name[%s]\n", this->name.c_str());
+
+  ROS_INFO("Waiting for /clock, /subt/start, and /subt/pose_from_artifact_origin");
 
   ros::topic::waitForMessage<rosgraph_msgs::Clock>("/clock", this->n);
 
   // Wait for the start service to be ready.
   ros::service::waitForService("/subt/start", -1);
   ros::service::waitForService("/subt/pose_from_artifact_origin", -1);
-  this->name = _name;
-  ROS_INFO("Using robot name[%s]\n", this->name.c_str());
+
+  // Waiting from some message related to robot so that we know the robot is already in the simulation
+  ROS_INFO_STREAM("Waiting for " << this->name << "/imu/data");
+  ros::topic::waitForMessage<sensor_msgs::Imu>(this->name + "/imu/data", this->n);
 }
 
 /////////////////////////////////////////////////
