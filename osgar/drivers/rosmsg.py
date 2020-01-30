@@ -88,7 +88,7 @@ def parse_raw_image(data, dump_filename=None):
     # depth is array of floats, OSGAR uses uint16 in millimeters
     # cut min & max (-inf and inf are used for clipping)
     arr = np.frombuffer(data[pos:pos + image_arr_size], dtype=np.dtype('f'))*1000
-    arr = np.clip(arr, 0, 0xFFFF)
+    arr = np.clip(arr, 1, 0xFFFF)
     arr = np.ndarray.astype(arr, dtype=np.dtype('H'))
     if dump_filename is not None:
         with open(dump_filename, 'wb') as f:
