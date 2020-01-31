@@ -10,6 +10,12 @@ python3 -m subt run subt/zmq-subt-x2.json --side auto --walldist 0.9 --timeout 1
 ROBOT_PID=$!
 cd ..
 
+# get directory where this bash script lives
+samedir=$(dirname $(readlink -f "${BASH_SOURCE[0]}"))
+
+# enable ROS DEBUG output to see if messages are being dropped
+export ROSCONSOLE_CONFIG_FILE="${samedir}/rosconsole.config"
+
 # Run your solution and wait for ROS master
 # http://wiki.ros.org/roslaunch/Commandline%20Tools#line-45
 roslaunch subt_seed x1.launch --wait &
