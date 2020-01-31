@@ -801,7 +801,7 @@ class SubTChallenge:
         self.stdout("Dump END")
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver55!")
+        self.stdout("SubT Challenge Ver56!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
