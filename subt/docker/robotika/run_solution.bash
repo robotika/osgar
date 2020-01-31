@@ -6,7 +6,7 @@
 echo "Start robot solution"
 export OSGAR_LOGS=`pwd`
 cd osgar
-python3 -m subt run subt/zmq-subt-x2.json --side auto --walldist 0.8 --timeout 100 --speed 1.0 --note "try to visit artifact and return home" &
+taskset -ac 0 python3 -m subt run subt/zmq-subt-x2.json --side auto --walldist 0.8 --timeout 100 --speed 1.0 --note "try to visit artifact and return home" &
 ROBOT_PID=$!
 cd ..
 
@@ -18,7 +18,7 @@ export ROSCONSOLE_CONFIG_FILE="${samedir}/rosconsole.config"
 
 # Run your solution and wait for ROS master
 # http://wiki.ros.org/roslaunch/Commandline%20Tools#line-45
-roslaunch subt_seed x1.launch --wait &
+taskset -ac 0 nice -n 19 roslaunch subt_seed x1.launch --wait &
 ROS_PID=$!
 
 # Turn everything off in case of CTRL+C and friends.
