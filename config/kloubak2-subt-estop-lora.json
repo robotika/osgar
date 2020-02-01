@@ -140,6 +140,18 @@
           "init": {
             "sleep": 1.0
           }
+      },
+      "rs": {
+          "driver": "realsense",
+          "in": ["trigger"],
+          "out": ["pose2d"],
+          "init": {}
+      },
+      "timer": {
+          "driver": "timer",
+          "in": [],
+          "out": ["tick"],
+          "init": {"sleep": 0.1}
       }
     },
     "links": [["serial.raw", "can.slot_raw"],
@@ -168,7 +180,8 @@
               ["lora.raw", "lora_serial.raw"],
               ["app.pose2d", "lora.pose2d"],
               ["lora.cmd", "app.cmd"],
-              ["app.artf_xyz", "lora.artf"]
+              ["app.artf_xyz", "lora.artf"],
+              ["timer.tick", "rs.trigger"]
       ]
   }
 }
