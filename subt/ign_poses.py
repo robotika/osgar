@@ -141,7 +141,7 @@ def extract_poses_gen(filename):
 
 if __name__ == "__main__":
     import argparse
-    from osgar.tools.log2map import pts2image
+    from subt.log2map import pts2image
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('ignfile', help='Ignition file from simulation (state.tlog)')
