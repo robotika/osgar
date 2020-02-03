@@ -1,4 +1,5 @@
 import math
+import numpy as np
 import cProfile
 
 
@@ -36,7 +37,7 @@ class LocalPlannerRef:
             measurement_vector = math.cos(measurement_angle), math.sin(measurement_angle)
 
             # Converting from millimeters to meters.
-            obstacle_xy = [mv * measurement * 1e-3 for mv in measurement_vector]
+            obstacle_xy = [mv * (measurement * 1e-3) for mv in measurement_vector]
 
             obstacles.append(obstacle_xy)
 
@@ -154,21 +155,99 @@ class LocalPlannerOpt:
 
         return max((is_good(math.radians(direction)), math.radians(direction)) for direction in range(-180, 180, 3) if valid[direction + 180])
 
+class LocalPlannerNumpy:
+    def __init__(self, scan_right=math.radians(-135), scan_left=math.radians(135), direction_adherence=math.radians(90), max_obstacle_distance=1.5, obstacle_influence=1.2):
+        self.last_scan = None
+        self.scan_right = scan_right
+        self.scan_left = scan_left
+        self.direction_adherence = direction_adherence
+        self.max_obstacle_distance = max_obstacle_distance
+        self.obstacle_influence = obstacle_influence
+
+        self.considered_directions = np.radians(
+                np.linspace(
+                    -180, +180, 360//3, endpoint=False)).reshape((-1, 1))
+        self.considered_directions_cos = np.cos(self.considered_directions)
+        self.considered_directions_sin = np.sin(self.considered_directions)
+
+        # To be filled in later, once we know how many directions per scan we
+        # receive.
+        self.angles = None
+        self.angles_cos = None
+        self.angles_sin = None
+        self.scan = None
+
+    def update(self, scan):
+        self.scan = np.asarray(scan) * 1e-3
+
+        if self.angles is None or len(scan) != self.angles.shape[0]:
+            n = len(scan)
+            delta = (self.scan_left - self.scan_right) / (n - 1)
+            self.angles = np.linspace(
+                    self.scan_right,
+                    self.scan_left,
+                    n).reshape((1, -1))
+            self.angles_cos = np.cos(self.angles)
+            self.angles_sin = np.sin(self.angles)
+
+    def recommend(self, desired_dir):
+        if self.scan is None:
+            return 0.0, desired_dir
+        NO_MEASUREMENT = 0
+        is_valid = np.logical_and(
+                self.scan != NO_MEASUREMENT,
+                self.scan <= self.max_obstacle_distance)
+        valid_scan = self.scan[is_valid]
+        is_valid = is_valid.reshape((1, -1))
+        acoss = self.angles_cos[is_valid]
+        asins = self.angles_sin[is_valid]
+        x = acoss * valid_scan
+        y = asins * valid_scan
+
+        if x.shape[0] == 0:
+            return 1.0, normalize_angle(desired_dir)
+
+        num_considered_directions = self.considered_directions.shape[0]
+        xs = np.broadcast_to(x, (num_considered_directions, x.shape[0]))
+        ys = np.broadcast_to(y, (num_considered_directions, y.shape[0]))
+        dist_from_line = np.abs(xs * self.considered_directions_sin -
+                                ys * self.considered_directions_cos)
+        # Obstacles behind the robot from the perspective of the desired direction do not matter.
+        # The formula below computes cos(angle between the two vectors) * their_norms. Norms are positive, so a negative result implies abs(angle) > 90deg.
+        is_in_front = (xs * self.considered_directions_cos +
+                       ys * self.considered_directions_sin) >= 0
+        # Only valid points that can block the movement count.
+        dist_from_line = np.where(is_in_front, dist_from_line, float('inf'))
+        # In each direction, we only care about the nearest obstacle.
+        min_dist = np.min(dist_from_line, axis=1)
+        risky = np.exp(-(min_dist / self.obstacle_influence)**2)
+        safe = 1.0 - risky  # Fuzzy negation.
+
+        direction_delta = normalize_angle(self.considered_directions - desired_dir)
+        desired = np.exp(-(direction_delta/self.direction_adherence)**2).reshape((-1,))  # Fuzzy equality
+
+        good = np.minimum(safe, desired)  # Fuzzy and.
+        best = np.argmax(good)
+        return good[best], self.considered_directions[best][0]
+
 
 class LocalPlanner:
     def __init__(self, *args, **kwargs):
         self.opt = LocalPlannerOpt(*args, **kwargs)
         self.ref = LocalPlannerRef(*args, **kwargs)
+        self.nump = LocalPlannerNumpy(*args, **kwargs)
 
     def update(self, scan):
         self.opt.update(scan)
         self.ref.update(scan)
+        self.nump.update(scan)
 
     def recommend(self, desired_dir):
 #        global g_count
 #        g_count += 1
 #        g_pr.enable()
-        ret = self.opt.recommend(desired_dir)
+        ret = self.nump.recommend(desired_dir)
+#        ret = self.opt.recommend(desired_dir)
 #        ref = self.ref.recommend(desired_dir)
 #        g_pr.disable()
 #        if g_count % 100 == 0:
