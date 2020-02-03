@@ -133,14 +133,6 @@
           "out": ["raw"],
           "init": {"port": "/dev/lora", "speed": 115200}
       },
-      "wifi": {
-          "driver": "subt.wifisignal:WifiSignal",
-          "in": [],
-          "out": ["wifiscan"],
-          "init": {
-            "sleep": 1.0
-          }
-      },
       "rs": {
           "driver": "realsense",
           "in": ["trigger"],
