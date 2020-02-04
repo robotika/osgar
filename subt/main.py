@@ -372,8 +372,11 @@ class SubTChallenge:
         self.flipped = False
         return self.traveled_dist - start_dist, reason
 
-    def return_home(self, timeout):
-        HOME_THRESHOLD = 5.0
+    def return_home(self, timeout, home_threshold=None):
+        if home_threshold is None:
+            HOME_THRESHOLD = 5.0
+        else:
+            HOME_THRESHOLD = home_threshold
         SHORTCUT_RADIUS = 2.3
         MAX_TARGET_DISTANCE = 5.0
         MIN_TARGET_DISTANCE = 1.0
@@ -638,7 +641,7 @@ class SubTChallenge:
 
                 if self.local_planner is not None:
                     self.stdout(self.time, "Going HOME %.3f" % dist, reason)
-                    self.return_home(2 * self.timeout)
+                    self.return_home(2 * self.timeout, home_threshold=1.0)
                     self.send_speed_cmd(0, 0)
                 else:
                     print(self.time, "Going HOME", reason)
