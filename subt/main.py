@@ -636,12 +636,17 @@ class SubTChallenge:
                     if reason in [REASON_LORA,]:
                         break
 
-                print(self.time, "Going HOME", reason)
-                if not allow_virtual_flip:
-                    self.turn(math.radians(90), timeout=timedelta(seconds=20))
-                    self.turn(math.radians(90), timeout=timedelta(seconds=20))
-                self.follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=3*self.timeout, dist_limit=3*total_dist,
-                        flipped=allow_virtual_flip, pitch_limit=RETURN_LIMIT_PITCH, roll_limit=RETURN_LIMIT_ROLL)
+                if self.local_planner is not None:
+                    self.stdout(self.time, "Going HOME %.3f" % dist, reason)
+                    self.return_home(2 * self.timeout)
+                    self.send_speed_cmd(0, 0)
+                else:
+                    print(self.time, "Going HOME", reason)
+                    if not allow_virtual_flip:
+                        self.turn(math.radians(90), timeout=timedelta(seconds=20))
+                        self.turn(math.radians(90), timeout=timedelta(seconds=20))
+                    self.follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=3*self.timeout, dist_limit=3*total_dist,
+                            flipped=allow_virtual_flip, pitch_limit=RETURN_LIMIT_PITCH, roll_limit=RETURN_LIMIT_ROLL)
                 if self.artifacts:
                     self.bus.publish('artf_xyz', [[artifact_data, round(x*1000), round(y*1000), round(z*1000)]
                                               for artifact_data, (x, y, z) in self.artifacts])
