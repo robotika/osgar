@@ -72,7 +72,9 @@ class _BusHandler:
 
     def connect(self, output, receiver, input, modules):
         if output not in self.out:
-            raise RuntimeError(f"'{self.name}' does not have '{output}' as output.")
+            #raise RuntimeError(f"'{self.name}' does not have '{output}' as output.")
+            print(f"'{self.name}' does not have '{output}' as output.")
+            return  # TODO parametrize by -F (force) or --ignore-missing_inputs??
         if input.startswith('slot_'):
             assert modules is not None
             assert receiver.name in modules
