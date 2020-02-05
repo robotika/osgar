@@ -539,7 +539,7 @@ class SubTChallenge:
                     if len(data) == 8:
                         self.origin = data[1:4]
                         qx, qy, qz, qw = data[4:]
-                        self.origin_quat = qw, qx, qy, qz  # quaternion
+                        self.origin_quat = qx, qy, qz, qw  # quaternion
                     else:
                         self.stdout('Origin ERROR received')
                         self.origin_error = True
