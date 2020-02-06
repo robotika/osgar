@@ -4,6 +4,7 @@
 """
 from collections import namedtuple
 from functools import partial
+import math
 
 try:
     import pyrealsense2 as rs
@@ -14,6 +15,7 @@ except:
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
+from osgar.lib import quaternion
 
 
 attrs = [
@@ -28,6 +30,7 @@ attrs = [
     ]
 Pose = namedtuple('Pose', attrs)
 
+# https://github.com/IntelRealSense/librealsense/blob/master/doc/t265.md#sensor-origin-and-coordinate-system
 
 class RealSense(Node):
     def __init__(self, config, bus):
@@ -46,12 +49,14 @@ class RealSense(Node):
                 n = pose_frame.get_frame_number()
                 timestamp = pose_frame.get_timestamp()
                 p = Pose(*map(partial(getattr, pose), attrs))
-                orientation = [pose.rotation.x, pose.rotation.y, pose.rotation.z, pose.rotation.w]
+                orientation = [pose.rotation.z, -pose.rotation.x, pose.rotation.y, pose.rotation.w]
                 self.publish('orientation', orientation)
-                x = pose.translation.z
-                y = pose.translation.x  # not sure yet
-                self.publish('pose2d', [int(x*1000), int(y*1000), 0])  # TODO heading
-                self.publish('raw', [n, timestamp, 
+                x = -pose.translation.z
+                y = -pose.translation.x
+                z = pose.translation.y
+                yaw = quaternion.heading(orientation)
+                self.publish('pose2d', [int(x*1000), int(y*1000), int(math.degrees(yaw)*100)])
+                self.publish('raw', [n, timestamp,
                     [pose.translation.x, pose.translation.y, pose.translation.z],
                     [pose.rotation.x, pose.rotation.y, pose.rotation.z, pose.rotation.w],
                     [pose.velocity.x, pose.velocity.y, pose.velocity.z],
