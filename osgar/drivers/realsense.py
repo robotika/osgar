@@ -32,7 +32,7 @@ Pose = namedtuple('Pose', attrs)
 class RealSense(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('pose2d', 'raw')
+        bus.register('pose2d', 'raw', 'orientation')
         self.verbose = config.get('verbose', False)
         self.pipeline = None  # not initialized yet
 
@@ -46,12 +46,14 @@ class RealSense(Node):
                 n = pose_frame.get_frame_number()
                 timestamp = pose_frame.get_timestamp()
                 p = Pose(*map(partial(getattr, pose), attrs))
+                orientation = [pose.rotation.x, pose.rotation.y, pose.rotation.z, pose.rotation.w]
+                self.publish('orientation', orientation)
                 x = pose.translation.z
                 y = pose.translation.x  # not sure yet
                 self.publish('pose2d', [int(x*1000), int(y*1000), 0])  # TODO heading
                 self.publish('raw', [n, timestamp, 
                     [pose.translation.x, pose.translation.y, pose.translation.z],
-                    [pose.rotation.w, pose.rotation.x, pose.rotation.y, pose.rotation.z],
+                    [pose.rotation.x, pose.rotation.y, pose.rotation.z, pose.rotation.w],
                     [pose.velocity.x, pose.velocity.y, pose.velocity.z],
                     [pose.angular_velocity.x, pose.angular_velocity.y, pose.angular_velocity.z],
                     [pose.acceleration.x, pose.acceleration.y, pose.acceleration.z],
