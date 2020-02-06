@@ -174,14 +174,15 @@ class Cortexpilot(Node):
         # 4 byte AHRS_q2 (float)       62 - 
         # 4 byte AHRS_q3 (float)       66 - 
 
-        orientation = struct.unpack_from('<ffff', data, offset+54)
+        qw, qx, qy, qz = struct.unpack_from('<ffff', data, offset+54)
+        orientation = qx, qy, qz, qw
         # identity quat points to north, we need it to point to east
-        orientation = quaternion.multiply(orientation, [0.7071068, 0, 0, 0.7071068])
+        orientation = quaternion.multiply(orientation, [0, 0, 0.7071068, 0.7071068])
         # correct roll axis by 1.7 degrees
-        self.orientation = quaternion.multiply(orientation, [0.99989, 0.0148348, 0, 0,  ])
+        self.orientation = quaternion.multiply(orientation, [0.0148348, 0, 0, 0.99989])
         self.bus.publish('orientation', list(self.orientation))
 
-        q0, q1, q2, q3 = self.orientation  # quaternion
+        q1, q2, q3, q0 = self.orientation  # quaternion
         #print(self.time, "{:.4f} {:.4f} {:.4f} {:.4f}".format(q0, q1, q2, q3))
         ax =  math.atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2))
         ay =  math.asin(2*(q0*q2-q3*q1))
