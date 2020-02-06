@@ -5,7 +5,12 @@
 from collections import namedtuple
 from functools import partial
 
-import pyrealsense2 as rs
+try:
+    import pyrealsense2 as rs
+except:
+    print('RealSense not installed!')
+    from unittest.mock import MagicMock
+    rs = MagicMock()
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
