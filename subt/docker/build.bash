@@ -43,7 +43,8 @@ image_plus_tag=$image_name:$(date +%Y_%m_%d_%H%M)
 
 shift
 
-docker build --rm --no-cache -t $image_plus_tag --build-arg user_id=$user_id "$@" $DIR/$image_name
+
+docker build --rm -t $image_plus_tag -f $DIR/$image_name/Dockerfile $(git rev-parse --show-toplevel)
 docker tag $image_plus_tag $image_name:latest
 #docker tag $image_plus_tag $image_name:$hg_id
 

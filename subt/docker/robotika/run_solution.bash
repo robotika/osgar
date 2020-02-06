@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 
-. /opt/ros/melodic/setup.bash
-. ~/subt_solution/install/setup.sh
-
 echo "Start robot solution"
 export OSGAR_LOGS=`pwd`
 cd osgar

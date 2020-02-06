@@ -1,15 +1,13 @@
 FROM osrf/subt-virtual-testbed:subt_solution_latest
 
-RUN /usr/bin/python3 -m pip install --user --no-cache-dir msgpack pyserial "opencv-python>3.4.2,<4" pyzmq
-RUN git clone https://github.com/robotika/osgar.git osgar \
-  && cd osgar \
-  && git checkout feature/virtual-urban
+SHELL ["/bin/bash", "-c"]
 
-COPY run_solution.bash ./
+RUN /usr/bin/python3 -m pip install --user --no-cache-dir msgpack "opencv-python>3.4.2,<4" pyzmq
 
-COPY ros_proxy_node.cc ./src/subt_seed/src/subt_seed_node.cc
-COPY CMakeLists.txt ./src/subt_seed/CMakeLists.txt
-RUN /bin/bash -c 'source /opt/ros/melodic/setup.bash && catkin_make install'
+COPY --chown=developer:developer . ./osgar/
 
-ENTRYPOINT ["./run_solution.bash"]
+RUN source /opt/ros/melodic/setup.bash && ./osgar/subt/script/sync.sh
 
+ENTRYPOINT ["./osgar/subt/docker/robotika/entrypoint.bash"]
+
+CMD ["./osgar/subt/docker/robotika/run_solution.bash"]
