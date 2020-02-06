@@ -77,6 +77,11 @@ and you can call `run_solution.bash` when you are ready.
 A copy of `osgar` directory from the time of the build of the image is located
 at `/home/developer/subt_solution/osgar`. For local development it is advantageous
 to mount your `osgar` directory from the host over this directory in the container.
+
+```commandline
+DEVEL=1 ./subt/docker/run.bash robotika bash
+```
+
 When you do so, you can edit the files as you are used to and also log files
 from the runs are saved to the host and not to the container. To rebuild the ROS
 nodes call `./osgar/subt/script/sync.sh`, to run the solution call 

@@ -88,6 +88,12 @@ fi
 # E.g.:
 # -v "/opt/sublime_text:/opt/sublime_text" \
 
+if [ ! -z "$DEVEL" ]
+then
+  DIR=$(git rev-parse --show-toplevel)
+  DOCKER_OPTS="$DOCKER_OPTS -v ${DIR}:/home/developer/subt_solution/osgar"
+fi
+
 # Developer note: If you are running docker in cloudsim then make sure to add
 # -e IGN_PARTITION=subt to the following command.
 docker run -it \
