@@ -36,9 +36,10 @@ def t265_to_osgar_orientation(t265_orientation):
 class RealSense(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('pose2d', 'raw', 'orientation')
+        bus.register('pose2d', 'pose3d', 'raw', 'orientation')
         self.verbose = config.get('verbose', False)
         self.pipeline = None  # not initialized yet
+        self.pipeline_factory = rs.pipeline
 
     def update(self):
         channel = super().update()  # define self.time
@@ -54,6 +55,7 @@ class RealSense(Node):
                 x, y, z = t265_to_osgar_position(pose.translation)
                 yaw = quaternion.heading(orientation)
                 self.publish('pose2d', [int(x*1000), int(y*1000), int(math.degrees(yaw)*100)])
+                self.publish('pose3d', [[x, y, z], orientation])
                 self.publish('raw', [n, timestamp,
                     [pose.translation.x, pose.translation.y, pose.translation.z],
                     [pose.rotation.x, pose.rotation.y, pose.rotation.z, pose.rotation.w],

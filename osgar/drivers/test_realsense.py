@@ -185,4 +185,55 @@ class RealSenseTest(unittest.TestCase):
             c.join()
             return
 
+    def test_pose3d(self):
+        logger = MagicMock()
+        logger.write = MagicMock(return_value=datetime.timedelta(microseconds=9721))
+        bus = Bus(logger)
+        item = namedtuple('item', ['input', 'output'])
+        moves = [
+            # heading zero
+            [[Translation(0, 0, 0), Rotation(0, 0, 0, 1)], [[0, 0, 0], [0, 0, 0, 1]]],
+
+            # looking left 90 degrees, moving front 1m
+            # t265 turns around y axis +90, moving z -1
+            # osgar turns round z axis +90, moving x 1
+            [[Translation(0, 0, -1), Rotation(0, 0.7071068, 0, 0.7071068)], [[1, 0, 0], [0, 0, 0.7071068, 0.7071068]]],
+
+            # looking up 90 degrees, moving up 1m
+            # t265 turns around x axis +90, moving y 1
+            # osgar turns round y axis -90, moving z 1
+            [[Translation(0, 1, 0), Rotation(0.7071068, 0, 0, 0.7071068)], [[0, 0, 1], [0, -0.7071068, 0, 0.7071068]]]
+        ]
+        with patch('osgar.drivers.realsense.rs') as mock:
+            instance = mock.return_value
+            c = RealSense(bus=bus.handle('rs'), config={})
+            tester = bus.handle('tester')
+            tester.register('tick')
+            bus.connect('tester.tick', 'rs.trigger')
+            bus.connect('rs.pose3d', 'tester.pose3d')
+            c.start()
+            time.sleep(0.1)
+            frames = c.pipeline.wait_for_frames.return_value
+            pose_frame = frames.get_pose_frame.return_value
+            for input, output in moves:
+                pose_frame.get_pose_data.return_value = Pose(
+                    Acceleration(0, 0, 0),
+                    AngularAcceleration(0, 0, 0),
+                    AngularVelocity(0, 0, 0),
+                    0,
+                    input[1],
+                    0,
+                    input[0],
+                    Velocity(0, 0, 0))
+                pose_frame.get_timestamp.return_value = 0
+                pose_frame.get_frame_number.return_value = 0
+                tester.publish('tick', None)
+                dt, channel, pose3d = tester.listen()
+                self.assertEqual(channel, 'pose3d')
+                self.assertEqual(pose3d, output)
+            c.request_stop()
+            c.join()
+            return
+
+
 # vim: expandtab sw=4 ts=4
