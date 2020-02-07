@@ -4,15 +4,27 @@ import datetime
 import time
 from collections import namedtuple
 
-from osgar.drivers.realsense import RealSense, Pose
+from osgar.drivers.realsense import RealSense
 from osgar.bus import Bus
 
+
+Pose = namedtuple('Pose', [
+    'acceleration',
+    'angular_acceleration',
+    'angular_velocity',
+    'mapper_confidence',
+    'rotation',
+    'tracker_confidence',
+    'translation',
+    'velocity',
+    ])
 Rotation = namedtuple('Rotation', ['x', 'y', 'z', 'w'])
 Translation = namedtuple('Translation', ['x', 'y','z'])
 Velocity = namedtuple('Velocity', ['x', 'y','z'])
 AngularVelocity = namedtuple('AngularVelocity', ['x', 'y','z'])
 Acceleration = namedtuple('Acceleration', ['x', 'y','z'])
 AngularAcceleration = namedtuple('AngularAcceleration', ['x', 'y','z'])
+
 
 class RealSenseTest(unittest.TestCase):
     def test_spin_once(self):
@@ -63,7 +75,7 @@ class RealSenseTest(unittest.TestCase):
             time.sleep(0.1)
             frames = c.pipeline.wait_for_frames.return_value
             pose_frame = frames.get_pose_frame.return_value
-            for m in moves:
+            for input, output in moves:
                 pose_frame.get_pose_data.return_value = Pose(
                     Acceleration(0, 0, 0),
                     AngularAcceleration(0, 0, 0),
@@ -71,14 +83,14 @@ class RealSenseTest(unittest.TestCase):
                     0,
                     Rotation(0, 0, 0, 1),
                     0,
-                    m[0],
+                    input,
                     Velocity(0, 0, 0))
                 pose_frame.get_timestamp.return_value = 0
                 pose_frame.get_frame_number.return_value = 0
                 tester.publish('tick', None)
                 dt, channel, pose2d = tester.listen()
                 self.assertEqual(channel, 'pose2d')
-                self.assertEqual(pose2d, m[1])
+                self.assertEqual(pose2d, output)
             c.request_stop()
             c.join()
             return
@@ -112,13 +124,13 @@ class RealSenseTest(unittest.TestCase):
             time.sleep(0.1)
             frames = c.pipeline.wait_for_frames.return_value
             pose_frame = frames.get_pose_frame.return_value
-            for m in moves:
+            for input, output in moves:
                 pose_frame.get_pose_data.return_value = Pose(
                     Acceleration(0, 0, 0),
                     AngularAcceleration(0, 0, 0),
                     AngularVelocity(0, 0, 0),
                     0,
-                    m[0],
+                    input,
                     0,
                     Translation(0, 0, 0),
                     Velocity(0, 0, 0))
@@ -127,7 +139,7 @@ class RealSenseTest(unittest.TestCase):
                 tester.publish('tick', None)
                 dt, channel, orientation = tester.listen()
                 self.assertEqual(channel, 'orientation')
-                self.assertEqual(orientation, m[1])
+                self.assertEqual(orientation, output)
             c.request_stop()
             c.join()
             return
@@ -153,13 +165,13 @@ class RealSenseTest(unittest.TestCase):
             time.sleep(0.1)
             frames = c.pipeline.wait_for_frames.return_value
             pose_frame = frames.get_pose_frame.return_value
-            for m in moves:
+            for input, output in moves:
                 pose_frame.get_pose_data.return_value = Pose(
                     Acceleration(0, 0, 0),
                     AngularAcceleration(0, 0, 0),
                     AngularVelocity(0, 0, 0),
                     0,
-                    m[0],
+                    input,
                     0,
                     Translation(0, 0, 0),
                     Velocity(0, 0, 0))
@@ -168,7 +180,7 @@ class RealSenseTest(unittest.TestCase):
                 tester.publish('tick', None)
                 dt, channel, pose2d = tester.listen()
                 self.assertEqual(channel, 'pose2d')
-                self.assertEqual(pose2d, m[1])
+                self.assertEqual(pose2d, output)
             c.request_stop()
             c.join()
             return

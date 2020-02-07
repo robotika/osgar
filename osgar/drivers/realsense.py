@@ -2,8 +2,6 @@
   pyrealsense2 OSGAR wrapper
 
 """
-from collections import namedtuple
-from functools import partial
 import math
 
 try:
@@ -18,19 +16,22 @@ from osgar.bus import BusShutdownException
 from osgar.lib import quaternion
 
 
-attrs = [
-    'acceleration',
-    'angular_acceleration',
-    'angular_velocity',
-    'mapper_confidence',
-    'rotation',
-    'tracker_confidence',
-    'translation',
-    'velocity',
-    ]
-Pose = namedtuple('Pose', attrs)
-
 # https://github.com/IntelRealSense/librealsense/blob/master/doc/t265.md#sensor-origin-and-coordinate-system
+
+def t265_to_osgar_position(t265_position):
+    x = -t265_position.z
+    y = -t265_position.x
+    z = t265_position.y
+    return [x, y, z]
+
+
+def t265_to_osgar_orientation(t265_orientation):
+    x0 = t265_orientation.z
+    y0 = -t265_orientation.x
+    z0 = t265_orientation.y
+    w0 = t265_orientation.w
+    return [x0, y0, z0, w0]
+
 
 class RealSense(Node):
     def __init__(self, config, bus):
@@ -48,12 +49,9 @@ class RealSense(Node):
                 pose = pose_frame.get_pose_data()
                 n = pose_frame.get_frame_number()
                 timestamp = pose_frame.get_timestamp()
-                p = Pose(*map(partial(getattr, pose), attrs))
-                orientation = [pose.rotation.z, -pose.rotation.x, pose.rotation.y, pose.rotation.w]
+                orientation = t265_to_osgar_orientation(pose.rotation)
                 self.publish('orientation', orientation)
-                x = -pose.translation.z
-                y = -pose.translation.x
-                z = pose.translation.y
+                x, y, z = t265_to_osgar_position(pose.translation)
                 yaw = quaternion.heading(orientation)
                 self.publish('pose2d', [int(x*1000), int(y*1000), int(math.degrees(yaw)*100)])
                 self.publish('raw', [n, timestamp,
