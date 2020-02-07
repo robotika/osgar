@@ -137,6 +137,18 @@
           "in": ["raw"],
           "out": ["raw"],
           "init": {"port": "/dev/lora", "speed": 115200}
+      },
+      "rs": {
+          "driver": "realsense",
+          "in": ["trigger"],
+          "out": ["pose2d"],
+          "init": {}
+      },
+      "timer": {
+          "driver": "timer",
+          "in": [],
+          "out": ["tick"],
+          "init": {"sleep": 0.1}
       }
     },
     "links": [["serial.raw", "can.slot_raw"],
@@ -164,7 +176,8 @@
               ["lora_serial.raw", "lora.raw"],
               ["lora.raw", "lora_serial.raw"],
               ["app.pose2d", "lora.pose2d"],
-              ["lora.cmd", "app.cmd"]
+              ["lora.cmd", "app.cmd"],
+              ["timer.tick", "rs.trigger"]
       ]
   }
 }
