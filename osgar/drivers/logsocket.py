@@ -82,7 +82,11 @@ class LogTCPStaticIP(LogTCPBase):
     """
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        self.socket.connect(self.pair)
+        try:
+            self.socket.connect(self.pair)
+        except socket.timeout as e:
+            print('Timeout', self.pair)
+            raise
 
 
 class LogTCPDynamicIP(LogTCPBase):
