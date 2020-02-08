@@ -466,8 +466,9 @@ class RobotKloubak(Node):
                 self.publish('downdrops_front', list(self.downdrops_front))
                 self.publish('bumpers_front', get_downdrop_bumpers(self.downdrops_front))
 #                print(self.time, self.downdrops_front)
-                self.debug_downdrops_front.append(
-                        (self.time.total_seconds(), self.downdrops_front[0], self.downdrops_front[1]))
+                if self.verbose:
+                    self.debug_downdrops_front.append(
+                            (self.time.total_seconds(), self.downdrops_front[0], self.downdrops_front[1]))
             else:
                 self.can_errors += 1
         elif msg_id == CAN_ID_DOWNDROPS_REAR:
@@ -477,8 +478,9 @@ class RobotKloubak(Node):
                 self.publish('downdrops_rear', list(self.downdrops_rear))
                 self.publish('bumpers_rear', get_downdrop_bumpers(self.downdrops_rear))
 #                print(self.time, self.downdrops_rear)
-                self.debug_downdrops_rear.append(
-                        (self.time.total_seconds(), self.downdrops_rear[0], self.downdrops_rear[1]))
+                if self.verbose:
+                    self.debug_downdrops_rear.append(
+                            (self.time.total_seconds(), self.downdrops_rear[0], self.downdrops_rear[1]))
             else:
                 self.can_errors += 1
         if msg_id == CAN_ID_ENCODERS:
@@ -732,7 +734,7 @@ class RobotKloubak(Node):
 #        draw_enc_stat(self.count_arr)
 #        draw_enc_stat(self.debug_odo)
         draw_4wd( self.speed_debug_arr, self.join_debug_arr )
-        draw_enc_stat(self.debug_downdrops_front)
-        draw_enc_stat(self.debug_downdrops_rear)
+#        draw_enc_stat(self.debug_downdrops_front)
+#        draw_enc_stat(self.debug_downdrops_rear)
 
 # vim: expandtab sw=4 ts=4
