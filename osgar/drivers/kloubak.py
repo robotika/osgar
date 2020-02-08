@@ -145,6 +145,10 @@ def compute_desired_angle(desired_speed, desired_angular_speed):
     if abs(desired_angular_speed) < 0.000001:
         return 0.0
     radius = desired_speed/desired_angular_speed
+    if abs(radius) < 0.000001:
+        # this case is undefined, we can only for large angle
+        return math.copysign(MAX_JOIN_ANGLE, desired_angular_speed)
+
     desired_angle = 2 * math.atan(CENTER_AXLE_DISTANCE / radius)
     if abs(desired_angle) > MAX_JOIN_ANGLE:
         return math.copysign(MAX_JOIN_ANGLE, desired_angle)
