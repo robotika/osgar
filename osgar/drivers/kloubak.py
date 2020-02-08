@@ -383,10 +383,18 @@ class RobotKloubak(Node):
     def update_pose(self):
         diff = [e - prev for e, prev in zip(self.encoders, self.last_pose_encoders)]
         self.last_pose_encoders = self.encoders
-        if self.desired_speed >= 0:
-            ret, pose, motion = self.compute_pose(diff[INDEX_REAR_LEFT], diff[INDEX_REAR_RIGHT])
+        if self.num_axis == 2:
+            if self.desired_speed >= 0:
+                ret, pose, motion = self.compute_pose(diff[INDEX_REAR_LEFT], diff[INDEX_REAR_RIGHT])
+            else:
+                ret, pose, motion = self.compute_pose(diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT])
+        elif self.num_axis == 3:
+            if self.desired_speed >= 0:
+                ret, pose, motion = self.compute_pose(diff[INDEX_REAR_K3_L], diff[INDEX_REAR_K3_R])
+            else:
+                ret, pose, motion = self.compute_pose(diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT])
         else:
-            ret, pose, motion = self.compute_pose(diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT])
+            assert False, self.num_axis  # 2 or 3 are supported only
 
         if ret:
             self.pose = pose
