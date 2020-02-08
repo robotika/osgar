@@ -234,7 +234,7 @@ def get_downdrop_bumpers(downdrops):
 class RobotKloubak(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('pose2d', 'emergency_stop', 'encoders', 'can',
+        bus.register('pose2d', 'emergency_stop', 'encoders', 'can', 'joint_angle',
                      'bumpers_front', 'bumpers_rear',
                      'downdrops_front', 'downdrops_rear')
         setup_global_const(config)
@@ -446,11 +446,14 @@ class RobotKloubak(Node):
                     self.last_join_angle, self.last_join_angle2 = struct.unpack('>hh', payload)
     #                print(self.last_join_angle,payload)
 #                    print(self.last_join_angle, self.last_join_angle2)
+                    angle1, angle2 = joint_rad(self.last_join_angle), joint_rad(self.last_join_angle2, second_ang=True)
+                    self.publish('joint_angle', [round(math.degrees(angle1)*100), round(math.degrees(angle2)*100)])
                 else:
                     self.last_join_angle = struct.unpack('>i', payload)[0]
 #                    print(self.last_join_angle,payload)
 #                    print(self.last_join_angle)
-
+                    angle = joint_rad(self.last_join_angle)
+                    self.publish('joint_angle', [round(math.degrees(angle)*100)])
             else:
                 self.can_errors += 1
         elif msg_id == CAN_ID_VOLTAGE:
