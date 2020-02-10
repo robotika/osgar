@@ -182,12 +182,11 @@ class SubTChallenge:
         self.offset = (0, 0, 0)
         self.origin_error = False
         self.robot_name = None  # received with origin
-        if self.is_virtual:
-            self.local_planner = LocalPlanner(
-                    obstacle_influence=0.8,
-                    max_obstacle_distance=2.5)
-        else:
-            self.local_planner = None
+        scan_subsample = config.get('scan_subsample', 1)
+        self.local_planner = LocalPlanner(
+                obstacle_influence=0.8,
+                max_obstacle_distance=2.5,
+                scan_subsample=scan_subsample)
         self.ref_scan = None
         self.pause_start_time = None
         if config.get('start_paused', False):
