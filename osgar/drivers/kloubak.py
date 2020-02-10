@@ -492,9 +492,18 @@ class RobotKloubak(Node):
                 self.can_errors += 1
         if msg_id == CAN_ID_ENCODERS:
             diff = [e - prev for e, prev in zip(self.encoders, self.last_pose_encoders)]
-            self.publish('encoders',
-                    [diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT],
-                     diff[INDEX_REAR_LEFT], diff[INDEX_REAR_RIGHT]])
+            # note, that this craziness is necessary only because the motor indexes
+            # are assigned first right and then left
+            if len(diff) == 4:
+                self.publish('encoders',
+                        [diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT],
+                         diff[INDEX_REAR_LEFT], diff[INDEX_REAR_RIGHT]])
+            else:
+                assert len(diff) == 6, len(diff)  # Kloubak K3
+                self.publish('encoders',
+                        [diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT],
+                         diff[INDEX_REAR_LEFT], diff[INDEX_REAR_RIGHT],
+                         diff[INDEX_REAR_K3_LEFT], diff[INDEX_REAR_K3_RIGHT]])
             if self.update_pose():
                 self.send_pose()
 
