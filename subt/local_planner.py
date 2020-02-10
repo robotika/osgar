@@ -12,16 +12,18 @@ def normalize_angle(angle):
 
 
 class LocalPlannerRef:
-    def __init__(self, scan_right=math.radians(-135), scan_left=math.radians(135), direction_adherence=math.radians(90), max_obstacle_distance=1.5, obstacle_influence=1.2):
+    def __init__(self, scan_right=math.radians(-135), scan_left=math.radians(135), direction_adherence=math.radians(90),
+                 max_obstacle_distance=1.5, obstacle_influence=1.2, scan_subsample=1):
         self.last_scan = None
         self.scan_right = scan_right
         self.scan_left = scan_left
         self.direction_adherence = direction_adherence
         self.max_obstacle_distance = max_obstacle_distance
         self.obstacle_influence = obstacle_influence
+        self.scan_subsample = scan_subsample
 
     def update(self, scan):
-        self.last_scan = scan
+        self.last_scan = scan[::self.scan_subsample] if self.scan_subsample > 1 else scan
 
     def recommend(self, desired_dir):
         if self.last_scan is None:
@@ -85,16 +87,18 @@ class LocalPlannerOpt:
        and way into the obstacle will have high penalization cost.
     2) leave complex evaluation as the last step for already best direction
     """
-    def __init__(self, scan_right=math.radians(-135), scan_left=math.radians(135), direction_adherence=math.radians(90), max_obstacle_distance=1.5, obstacle_influence=1.2):
+    def __init__(self, scan_right=math.radians(-135), scan_left=math.radians(135), direction_adherence=math.radians(90),
+                 max_obstacle_distance=1.5, obstacle_influence=1.2, scan_subsample=1):
         self.last_scan = None
         self.scan_right = scan_right
         self.scan_left = scan_left
         self.direction_adherence = direction_adherence
         self.max_obstacle_distance = max_obstacle_distance
         self.obstacle_influence = obstacle_influence
+        self.scan_subsample = scan_subsample
 
     def update(self, scan):
-        self.last_scan = scan
+        self.last_scan = scan[::self.scan_subsample] if self.scan_subsample > 1 else scan
 
     def recommend(self, desired_dir):
         if self.last_scan is None:
@@ -156,7 +160,8 @@ class LocalPlannerOpt:
         return max((is_good(math.radians(direction)), math.radians(direction)) for direction in range(-180, 180, 3) if valid[direction + 180])
 
 class LocalPlannerNumpy:
-    def __init__(self, scan_right=math.radians(-135), scan_left=math.radians(135), direction_adherence=math.radians(90), max_obstacle_distance=1.5, obstacle_influence=1.2):
+    def __init__(self, scan_right=math.radians(-135), scan_left=math.radians(135), direction_adherence=math.radians(90),
+                 max_obstacle_distance=1.5, obstacle_influence=1.2, scan_subsample=1):
         self.last_scan = None
         self.scan_right = scan_right
         self.scan_left = scan_left
@@ -169,6 +174,7 @@ class LocalPlannerNumpy:
                     -180, +180, 360//3, endpoint=False)).reshape((-1, 1))
         self.considered_directions_cos = np.cos(self.considered_directions)
         self.considered_directions_sin = np.sin(self.considered_directions)
+        self.scan_subsample = scan_subsample
 
         # To be filled in later, once we know how many directions per scan we
         # receive.
@@ -178,10 +184,10 @@ class LocalPlannerNumpy:
         self.scan = None
 
     def update(self, scan):
-        self.scan = np.asarray(scan) * 1e-3
+        self.scan = np.asarray(scan[::self.scan_subsample] if self.scan_subsample > 1 else scan) * 1e-3
 
-        if self.angles is None or len(scan) != self.angles.shape[0]:
-            n = len(scan)
+        if self.angles is None or len(self.scan) != self.angles.shape[0]:
+            n = len(self.scan)
             delta = (self.scan_left - self.scan_right) / (n - 1)
             self.angles = np.linspace(
                     self.scan_right,
