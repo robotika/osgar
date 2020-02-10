@@ -49,8 +49,8 @@ INDEX_FRONT_LEFT = 1
 INDEX_FRONT_RIGHT = 0
 INDEX_REAR_LEFT = 3
 INDEX_REAR_RIGHT = 2
-INDEX_REAR_K3_L = 5
-INDEX_REAR_K3_R = 4
+INDEX_REAR_K3_LEFT = 5
+INDEX_REAR_K3_RIGHT = 4
 
 MIN_SPEED = 0.3
 
@@ -410,7 +410,7 @@ class RobotKloubak(Node):
                 ret, pose, motion = self.compute_pose(diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT])
         elif self.num_axis == 3:
             if self.desired_speed >= 0:
-                ret, pose, motion = self.compute_pose(diff[INDEX_REAR_K3_L], diff[INDEX_REAR_K3_R])
+                ret, pose, motion = self.compute_pose(diff[INDEX_REAR_K3_LEFT], diff[INDEX_REAR_K3_RIGHT])
             else:
                 ret, pose, motion = self.compute_pose(diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT])
         else:
