@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "gas_detector": {
+          "driver": "osgar.drivers.gas_detector:MeasureCO2",
+          "in": ["raw"],
+          "out": ["raw", "co2"],
+          "init": {
+            "sleep": 0.5
+          }
+      },
+      "serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "COM4", "speed": 115200}
+      }
+    },
+    "links": [
+              ["serial.raw", "gas_detector.raw"],
+              ["gas_detector.raw", "serial.raw"]
+    ]
+  }
+}
