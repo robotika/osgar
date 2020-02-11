@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 from osgar.drivers.kloubak import (compute_desired_erpm, compute_desired_angle,
         WHEEL_DISTANCE, compute_rear, CENTER_AXLE_DISTANCE, RobotKloubak,
-        get_downdrop_bumpers, MAX_JOIN_ANGLE)
+        get_downdrop_bumpers, MAX_JOIN_ANGLE, CAN_ID_ENCODERS)
 
 
 class KloubakTest(unittest.TestCase):
@@ -114,5 +114,23 @@ class KloubakTest(unittest.TestCase):
 
         self.assertAlmostEqual(compute_desired_angle(desired_speed=0.0, desired_angular_speed=-20.1),
                                -MAX_JOIN_ANGLE)
+
+    def test_publish_encoders(self):
+        config = {
+            'num_axis': 3
+        }
+        bus = MagicMock()
+        k3 = RobotKloubak(config, bus)
+
+        flags = 0
+        k3.process_packet([CAN_ID_ENCODERS, bytes([13, 1, 0, 0, 0, 0]), flags])
+        bus.publish.assert_not_called()
+        k3.process_packet([CAN_ID_ENCODERS, bytes([13, 2, 0, 0, 0, 0]), flags])
+        bus.publish.assert_not_called()
+        k3.process_packet([CAN_ID_ENCODERS, bytes([13, 3, 0, 0, 0, 0]), flags])
+        bus.publish.assert_not_called()
+
+        k3.process_packet([CAN_ID_ENCODERS, bytes([14, 1, 0, 1, 0, 2]), flags])
+        bus.publish.assert_called()
 
 # vim: expandtab sw=4 ts=4

@@ -349,7 +349,7 @@ class RobotKloubak(Node):
             self.last_encoders_time = self.time
             if self.verbose:
                 print(self.time, diff, self.encoders)
-            return
+            return encoders
         assert msg_id in [0x91, 0x92, 0x93, 0x94, 0x95, 0x96], hex(msg_id)
         # assert len(data) == 8, data
         if len(data) != 8:
@@ -436,8 +436,6 @@ class RobotKloubak(Node):
         msg_id, payload, flags = packet
         if msg_id == CAN_ID_BUTTONS:
             self.update_buttons(payload)
-        elif msg_id in [CAN_ID_ENCODERS, CAN_ID_VESC_FRONT_L, CAN_ID_VESC_FRONT_R, CAN_ID_VESC_REAR_L, CAN_ID_VESC_REAR_R, CAN_ID_VESC_REAR_K3_R, CAN_ID_VESC_REAR_K3_L]:
-            self.update_encoders(msg_id, payload)
         elif msg_id == CAN_ID_CURRENT:
             # expected 24bit integer miliAmps
             if len(payload) == 3:
@@ -491,29 +489,24 @@ class RobotKloubak(Node):
                             (self.time.total_seconds(), self.downdrops_rear[0], self.downdrops_rear[1]))
             else:
                 self.can_errors += 1
-        if msg_id == CAN_ID_ENCODERS:
-            diff = [e - prev for e, prev in zip(self.encoders, self.last_pose_encoders)]
-            # note, that this craziness is necessary only because the motor indexes
-            # are assigned first right and then left
-            if len(diff) == 4:
-                self.publish('encoders',
-                        [diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT],
-                         diff[INDEX_REAR_LEFT], diff[INDEX_REAR_RIGHT]])
-            else:
-                assert len(diff) == 6, len(diff)  # Kloubak K3
-                self.publish('encoders',
-                        [diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT],
-                         diff[INDEX_REAR_LEFT], diff[INDEX_REAR_RIGHT],
-                         diff[INDEX_REAR_K3_LEFT], diff[INDEX_REAR_K3_RIGHT]])
-            if self.update_pose():
-                self.send_pose()
-
-                # reset all encoder values to be sure that new reading were received
-#                self.last_encoders_front_left = None
-#                self.last_encoders_front_right = None
-#                self.last_encoders_rear_left = None
-#                self.last_encoders_rear_right = None
-            return True
+        elif msg_id in [CAN_ID_ENCODERS, CAN_ID_VESC_FRONT_L, CAN_ID_VESC_FRONT_R, CAN_ID_VESC_REAR_L, CAN_ID_VESC_REAR_R, CAN_ID_VESC_REAR_K3_R, CAN_ID_VESC_REAR_K3_L]:
+            if self.update_encoders(msg_id, payload) is not None:
+                diff = [e - prev for e, prev in zip(self.encoders, self.last_pose_encoders)]
+                # note, that this craziness is necessary only because the motor indexes
+                # are assigned first right and then left
+                if len(diff) == 4:
+                    self.publish('encoders',
+                            [diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT],
+                             diff[INDEX_REAR_LEFT], diff[INDEX_REAR_RIGHT]])
+                else:
+                    assert len(diff) == 6, len(diff)  # Kloubak K3
+                    self.publish('encoders',
+                            [diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT],
+                             diff[INDEX_REAR_LEFT], diff[INDEX_REAR_RIGHT],
+                             diff[INDEX_REAR_K3_LEFT], diff[INDEX_REAR_K3_RIGHT]])
+                if self.update_pose():
+                    self.send_pose()
+                return True
         return False
 
 
