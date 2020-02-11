@@ -42,7 +42,8 @@
             "center_axle_distance": 0.348,
             "ad_center": 419.7,
             "ad_calibration_deg": 45,
-            "ad_range": -182.5
+            "ad_range": -182.5,
+            "max_join_angle_deg": 68
           }
       },          
       "can": {

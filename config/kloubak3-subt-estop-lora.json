@@ -43,7 +43,7 @@
             "ad_range": 7862,
             "ad_center2": 22533,
             "ad_range2": -5840,
-            "max_join_angle": 0.785
+            "max_join_angle_deg": 45
           }
       },          
       "can": {

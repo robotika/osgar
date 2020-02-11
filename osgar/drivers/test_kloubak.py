@@ -70,7 +70,7 @@ class KloubakTest(unittest.TestCase):
 
         # another case "ValueError: math domain error"
         angle = compute_desired_angle(0.1, -1.0637781790905438)
-        self.assertAlmostEqual(angle, -1.3962634015954636)
+        self.assertAlmostEqual(angle, -1.1868238913561442)
 
     def test_invalid_can_message(self):
         # this message killed Kloubak K2 on DARPA SubT Tunnel Circuit, Day 2

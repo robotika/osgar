@@ -22,7 +22,8 @@ TURNING_ANGULAR_SPEED = math.pi/8
 AD_CENTER = 419.7 # K2, can be modified by config
 AD_CALIBRATION_DEG = 45  # K2, can be modified by config
 AD_RANGE = -182.5  # K2, can be modified by config
-MAX_JOIN_ANGLE = 80 * math.pi/180 # K2, can be modified by config
+MAX_JOIN_ANGLE_DEG = 68
+MAX_JOIN_ANGLE = math.radians(MAX_JOIN_ANGLE_DEG) # K2, can be modified by config
 AD_CENTER2 = None
 AD_RANGE2 = None
 
@@ -165,7 +166,7 @@ def calculate_wheels_speeds( desired_speed, desired_angular_speed, actual_angle 
         v_fr = v_rr = desired_speed / actual_radius * (actual_radius + WHEEL_DISTANCE / 2)
     if abs( desired_angle - actual_angle ) < 0.05: # in radians cca 2.9 deg
         return v_fl, v_fr, v_rl, v_rr
-    turning_angular_speed = abs( desired_angle - actual_angle ) * 1 + math.pi/8
+    turning_angular_speed = min(math.pi / 3, abs(desired_angle - actual_angle) * 1 + math.pi / 16)
 #    speed_correction = CENTER_AXLE_DISTANCE * TURNING_ANGULAR_SPEED * math.tan(actual_angle / 2)
     speed_correction = CENTER_AXLE_DISTANCE * turning_angular_speed * math.tan(actual_angle/2)  # positive for left, negative for right
     turning_wheel_speed = turning_angular_speed * WHEEL_DISTANCE / 2
@@ -226,7 +227,7 @@ def setup_global_const(config):
     AD_CALIBRATION_DEG = config.get("ad_calibration_deg", AD_CALIBRATION_DEG )
     AD_RANGE = config.get("ad_range", AD_RANGE )
     AD_RANGE2 = config.get("ad_range2")
-    MAX_JOIN_ANGLE = config.get("max_join_angle", MAX_JOIN_ANGLE)
+    MAX_JOIN_ANGLE = math.radians( config.get("max_join_angle_deg", MAX_JOIN_ANGLE_DEG) )
 #    TURNING_WHEEL_SPEED = TURNING_ANGULAR_SPEED * WHEEL_DISTANCE / 2
 
 
