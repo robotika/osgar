@@ -160,6 +160,7 @@ class SubTChallenge:
         self.is_moving = None  # unknown
         self.scan = None  # I should use class Node instead
         self.flipped = False  # by default use only front part
+        self.joint_angle_rad = []  # optinal angles, needed for articulated robots flip
         self.stat = defaultdict(int)
         self.voltage = []
         self.artifacts = []
@@ -386,10 +387,17 @@ class SubTChallenge:
         target_distance = MAX_TARGET_DISTANCE
         count_down = 0
         while distance3D(self.xyz, (0, 0, 0)) > HOME_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
-            if self.update() == 'scan':
+            channel = self.update()
+            if (channel == 'scan' and not self.flipped) or (channel == 'scan_back' and self.flipped) or (channel == 'scan360'):
                 target_x, target_y = self.trace.where_to(self.xyz, target_distance)[:2]
+#                print(self.time, self.xyz, (target_x, target_y), math.degrees(self.yaw))
                 x, y = self.xyz[:2]
                 desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
+                if self.flipped:
+                    desired_direction += math.pi  # symmetry
+                    for angle in self.joint_angle_rad:
+                        desired_direction -= angle
+
                 safety = self.go_safely(desired_direction)
                 if safety < 0.2:
                     print(self.time, "Safety low!", safety, desired_direction)
@@ -496,6 +504,10 @@ class SubTChallenge:
         else:
             if self.maybe_remember_artifact(artifact_data, (ax, ay, az)):
                 self.bus.publish('artf_xyz', [[artifact_data, round(ax*1000), round(ay*1000), round(az*1000)]])
+
+    def on_joint_angle(self, timestamp, data):
+        # angles for articulated robot in 1/100th of degree
+        self.joint_angle_rad = [math.radians(a/100) for a in data]
 
     def update(self):
         packet = self.bus.listen()
@@ -640,6 +652,9 @@ class SubTChallenge:
 
                 if self.local_planner is not None:
                     self.stdout(self.time, "Going HOME %.3f" % dist, reason)
+                    if allow_virtual_flip:
+                        self.flipped = True  # return home backwards
+                        self.scan = None
                     self.return_home(2 * self.timeout, home_threshold=1.0)
                     self.send_speed_cmd(0, 0)
                 else:
