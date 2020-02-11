@@ -6,6 +6,10 @@ import math
 
 try:
     import pyrealsense2 as rs
+    import pkg_resources
+    rs_version = pkg_resources.get_distribution("pyrealsense2").version
+    if rs_version.startswith('2.32'):
+        print(f"RealSense version {rs_version} does not support T265 multicam!")
 except:
     print('RealSense not installed!')
     from unittest.mock import MagicMock
@@ -36,15 +40,14 @@ def t265_to_osgar_orientation(t265_orientation):
 class RealSense(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('pose2d', 'pose3d', 'raw', 'orientation')
+        bus.register('pose2d', 'pose3d', 'raw', 'orientation', 'depth')
         self.verbose = config.get('verbose', False)
-        self.pipeline = None  # not initialized yet
-        self.pipeline_factory = rs.pipeline
+        self.pose_pipeline = None  # not initialized yet
 
     def update(self):
         channel = super().update()  # define self.time
         if channel == 'trigger':
-            frames = self.pipeline.wait_for_frames()
+            frames = self.pose_pipeline.wait_for_frames()
             pose_frame = frames.get_pose_frame()
             if pose_frame:
                 pose = pose_frame.get_pose_data()
@@ -68,16 +71,16 @@ class RealSense(Node):
         return channel
 
     def run(self):
-        self.pipeline = rs.pipeline()
+        self.pose_pipeline = rs.pipeline()
         cfg = rs.config()
         cfg.enable_stream(rs.stream.pose)
-        self.pipeline.start(cfg)
+        self.pose_pipeline.start(cfg)
         try:
             while True:
                 self.update()
         except BusShutdownException:
             pass
-        self.pipeline.stop()
+        self.pose_pipeline.stop()
 
 
 # vim: expandtab sw=4 ts=4
