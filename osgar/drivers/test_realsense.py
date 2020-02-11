@@ -39,7 +39,7 @@ class RealSenseTest(unittest.TestCase):
             bus.connect('tester.tick', 'rs.trigger')
             c.start()
             time.sleep(0.1)
-            frames = c.pose_pipeline.wait_for_frames.return_value
+            frames = c.pose_pipeline.poll_for_frames.return_value
             pose_frame = frames.get_pose_frame.return_value
             pose_frame.get_pose_data.return_value = Pose(
                 Acceleration(0, 0, 0),
@@ -73,7 +73,7 @@ class RealSenseTest(unittest.TestCase):
             bus.connect('rs.pose2d', 'tester.pose2d')
             c.start()
             time.sleep(0.1)
-            frames = c.pose_pipeline.wait_for_frames.return_value
+            frames = c.pose_pipeline.poll_for_frames.return_value
             pose_frame = frames.get_pose_frame.return_value
             for input, output in moves:
                 pose_frame.get_pose_data.return_value = Pose(
@@ -122,7 +122,7 @@ class RealSenseTest(unittest.TestCase):
             bus.connect('rs.orientation', 'tester.orientation')
             c.start()
             time.sleep(0.1)
-            frames = c.pose_pipeline.wait_for_frames.return_value
+            frames = c.pose_pipeline.poll_for_frames.return_value
             pose_frame = frames.get_pose_frame.return_value
             for input, output in moves:
                 pose_frame.get_pose_data.return_value = Pose(
@@ -163,7 +163,7 @@ class RealSenseTest(unittest.TestCase):
             bus.connect('rs.pose2d', 'tester.pose2d')
             c.start()
             time.sleep(0.1)
-            frames = c.pose_pipeline.wait_for_frames.return_value
+            frames = c.pose_pipeline.poll_for_frames.return_value
             pose_frame = frames.get_pose_frame.return_value
             for input, output in moves:
                 pose_frame.get_pose_data.return_value = Pose(
@@ -213,7 +213,7 @@ class RealSenseTest(unittest.TestCase):
             bus.connect('rs.pose3d', 'tester.pose3d')
             c.start()
             time.sleep(0.1)
-            frames = c.pose_pipeline.wait_for_frames.return_value
+            frames = c.pose_pipeline.poll_for_frames.return_value
             pose_frame = frames.get_pose_frame.return_value
             for input, output in moves:
                 pose_frame.get_pose_data.return_value = Pose(
