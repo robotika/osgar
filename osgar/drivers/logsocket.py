@@ -184,7 +184,9 @@ class LogHTTP:
     def run_input(self):
         while self.bus.is_alive():
             try:
-                with urllib.request.urlopen(self.url) as f:
+                # https://github.com/mesonbuild/meson/issues/4087
+                # without timeout the call can hang the process forever
+                with urllib.request.urlopen(self.url, timeout=0.5) as f:
                     data = f.read()
                 if len(data) > 0:
                     self.bus.publish('raw', data)
