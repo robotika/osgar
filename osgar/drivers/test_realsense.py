@@ -1,8 +1,9 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import datetime
-import time
 from collections import namedtuple
+
+import numpy as np
 
 from osgar.drivers.realsense import RealSense
 from osgar.bus import Bus
@@ -216,5 +217,26 @@ class RealSenseTest(unittest.TestCase):
             self.assertEqual(channel, 'pose3d')
             self.assertEqual(pose3d, output)
 
+    def test_depth(self):
+        logger = MagicMock()
+        logger.write = MagicMock(return_value=datetime.timedelta(microseconds=9721))
+        bus = Bus(logger)
+        c = RealSense(bus=bus.handle('rs'), config={})
+        tester = bus.handle('tester')
+        bus.connect('rs.depth', 'tester.depth')
+        frameset = MagicMock()
+        frameset.is_frameset.return_value = True
+        frame = frameset.as_frameset.return_value.get_depth_frame.return_value
+        frame.get_timestamp.return_value = 0
+        frame.get_frame_number.return_value = 0
+        frame.is_depth_frame.return_value = True
+        frame.as_depth_frame.return_value.get_data.return_value = [1,2]
+        c.depth_callback(frameset)
+        dt, channel, depth = tester.listen()
+        depth_expected = np.asanyarray([1,2])
+        self.assertEqual(channel, 'depth')
+        self.assertEqual(depth.shape, depth_expected.shape)
+        self.assertEqual(depth.dtype, depth_expected.dtype)
+        self.assertTrue(np.array_equal(depth, depth_expected))
 
 # vim: expandtab sw=4 ts=4
