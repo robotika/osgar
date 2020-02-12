@@ -16,9 +16,7 @@ def verify_checksum(packet):
         ch1 += b
         ch2 += ch1
     ret = ((ch1 << 8) & 0xFF00) + (ch2 & 0xFF)
-    assert packet[-2] == (ch1 & 0xFF), (hex(packet[-2]), hex(ch1 & 0xFF))
-    assert packet[-1] == (ch2 & 0xFF), (hex(packet[-1]), hex(ch2 & 0xFF))
-    return ret
+    return packet[-2] == (ch1 & 0xFF) and packet[-1] == (ch2 & 0xFF)
 
 
 def get_packet(buf):
@@ -33,7 +31,9 @@ def get_packet(buf):
     except IndexError:
         return None, buf
     packet = buf[i:i + packet_size]
-    verify_checksum(packet)
+    if not verify_checksum(packet):
+        print('LORD Checksum error:', packet.hex())
+        packet = None
     return packet, buf[i + packet_size:]
 
 

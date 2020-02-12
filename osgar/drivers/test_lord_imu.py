@@ -66,4 +66,13 @@ IndexError: index out of range
         self.assertIsNone(packet)
         self.assertEqual(buf, b'ue')
 
+    def test_invalid_checksum(self):
+        raw_data = bytes.fromhex('75658252100d3d3302803c68b2e03cee54000001100e3bb32f1f3b0ed8403a637b3e00010e14000000000'
+                                 '00000000001000214033c7a802ebf4e2607bf17b2a78ae04161ef4e0001100ebd08efc83ebe409a3cb8df380001')
+        self.assertFalse(verify_checksum(raw_data))
+
+        packet, new_buf = get_packet(raw_data + bytes.fromhex('1234'))
+        self.assertIsNone(packet)
+        self.assertEqual(new_buf, bytes.fromhex('1234'))
+
 # vim: expandtab sw=4 ts=4
