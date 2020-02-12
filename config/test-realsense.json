@@ -4,7 +4,10 @@
     "modules": {
       "app": {
           "driver": "realsense",
-          "init": {}
+          "init": {
+            "depth_subsample": 3,
+            "pose_subsample": 20
+          }
       }
     },
     "links": []

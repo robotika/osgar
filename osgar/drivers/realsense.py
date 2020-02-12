@@ -41,15 +41,18 @@ class RealSense(Node):
         super().__init__(config, bus)
         bus.register('pose2d', 'pose3d', 'pose_raw', 'orientation', 'depth')
         self.verbose = config.get('verbose', False)
+        self.depth_subsample = config.get("depth_subsample", 3)
+        self.pose_subsample = config.get("pose_subsample", 20)
         self.pose_pipeline = None  # not initialized yet
         self.depth_pipeline = None
         self.finished = None
 
     def pose_callback(self, frame):
-        # TODO: add decimation based on config from 200Hz to desired value
         try:
             pose = frame.as_pose_frame().get_pose_data()
             n = frame.get_frame_number()
+            if n % self.pose_subsample != 0:
+                return
             timestamp = frame.get_timestamp()
         except Exception as e:
             print(e)
@@ -73,10 +76,12 @@ class RealSense(Node):
                              ])  # raw RealSense2 Pose data
 
     def depth_callback(self, frameset):
-        # TODO: add decimation based on config from 200Hz to desired value
         try:
             assert frameset.is_frameset()
             frame = frameset.as_frameset().get_depth_frame()
+            n = frame.get_frame_number()
+            if n % self.depth_subsample != 0:
+                return
             assert frame.is_depth_frame()
             depth_image = np.asanyarray(frame.as_depth_frame().get_data())
         except Exception as e:
