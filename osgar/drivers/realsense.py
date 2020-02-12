@@ -3,6 +3,7 @@
 
 """
 import math
+import threading
 import numpy as np
 
 try:
@@ -42,6 +43,7 @@ class RealSense(Node):
         self.verbose = config.get('verbose', False)
         self.pose_pipeline = None  # not initialized yet
         self.depth_pipeline = None
+        self.finished = None
 
     def pose_callback(self, frame):
         # TODO: add decimation based on config from 200Hz to desired value
@@ -71,10 +73,12 @@ class RealSense(Node):
         self.publish('depth', depth_image)
 
     def start(self):
+        self.finished = threading.Event()
         ctx = rs.context()
         device_list = ctx.query_devices()
         if len(device_list) == 0:
             print("No RealSense devices detected!")
+            self.finished.set()
             return
 
         enable_pose, enable_depth = False, False
@@ -104,15 +108,19 @@ class RealSense(Node):
             depth_cfg.enable_stream(rs.stream.depth, 640, 360, rs.format.z16, 30)
             self.depth_pipeline.start(depth_cfg, self.depth_callback)
 
+        if not enable_pose and not enable_depth:
+            self.finished.set()
+
     def request_stop(self):
         if self.pose_pipeline is not None:
             self.pose_pipeline.stop()
         if self.depth_pipeline is not None:
             self.depth_pipeline.stop()
         super().request_stop()
+        self.finished.set()
 
-    def join(self):
-        pass
+    def join(self, timeout_sec=None):
+        self.finished.wait(timeout_sec)
 
 
 # vim: expandtab sw=4 ts=4
