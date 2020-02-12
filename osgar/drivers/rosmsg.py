@@ -82,14 +82,21 @@ def parse_raw_image(data, dump_filename=None):
     encoding = data[pos:pos+encoding_size]
     pos += encoding_size
 #    print(height, width, encoding)
-    assert encoding == b'32FC1', encoding
     is_bigendian, step, image_arr_size = struct.unpack_from('<BII', data, pos)
     pos += 1 + 4 + 4
-    # depth is array of floats, OSGAR uses uint16 in millimeters
-    # cut min & max (-inf and inf are used for clipping)
-    arr = np.frombuffer(data[pos:pos + image_arr_size], dtype=np.dtype('f'))*1000
-    arr = np.clip(arr, 1, 0xFFFF)
-    arr = np.ndarray.astype(arr, dtype=np.dtype('H'))
+
+    if encoding == b'32FC1':
+        # depth is array of floats, OSGAR uses uint16 in millimeters
+        # cut min & max (-inf and inf are used for clipping)
+        arr = np.frombuffer(data[pos:pos + image_arr_size], dtype=np.dtype('f'))*1000
+        arr = np.clip(arr, 1, 0xFFFF)
+        arr = np.ndarray.astype(arr, dtype=np.dtype('H'))
+    elif encoding == b'16UC1':
+        # depth is array as uint16, similar to OSGAR
+        arr = np.frombuffer(data[pos:pos + image_arr_size], dtype=np.dtype('H'))
+    else:
+        assert False, encoding  # unsuported encoding
+
     if dump_filename is not None:
         with open(dump_filename, 'wb') as f:
             # RGB color format (PPM - Portable PixMap)
