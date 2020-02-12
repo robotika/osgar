@@ -533,8 +533,7 @@ class SubTChallenge:
                         self.ref_count = 0
 
                 if self.local_planner is not None:
-                    if self.last_send_time is not None and self.last_send_time - self.time < timedelta(seconds=0.1):
-                        self.local_planner.update(data)
+                    self.local_planner.update(data)
             elif channel == 'scan_back' and self.flipped:
                 self.scan = data
                 if self.local_planner is not None:
