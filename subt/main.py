@@ -151,6 +151,9 @@ class SubTChallenge:
         self.walldist = config['walldist']
         self.timeout = timedelta(seconds=config['timeout'])
         self.symmetric = config['symmetric']  # is robot symmetric?
+        self.dangerous_dist = config.get('dangerous_dist', 0.4)
+        self.min_safe_dist = config.get('min_safe_dist', 0.75)
+        self.safety_turning_coeff = config.get('safety_turning_coeff', 0.8)
         virtual_bumper_sec = config.get('virtual_bumper_sec')
         self.virtual_bumper = None
         if virtual_bumper_sec is not None:
@@ -240,12 +243,12 @@ class SubTChallenge:
         desired_angular_speed = 0.9 * safe_direction
         size = len(self.scan)
         dist = min_dist(self.scan[size//3:2*size//3])
-        if dist < 0.75:  # 2.0:
+        if dist < self.min_safe_dist:  # 2.0:
 #            desired_speed = self.max_speed * (1.2/2.0) * (dist - 0.4) / 1.6
-            desired_speed = self.max_speed * (dist - 0.4) / 0.35
+            desired_speed = self.max_speed * (dist - self.dangerous_dist) / (self.min_safe_dist - self.dangerous_dist)
         else:
             desired_speed = self.max_speed  # was 2.0
-        desired_speed = desired_speed * (1.0 - 0.8 * min(self.max_angular_speed, abs(desired_angular_speed)) / self.max_angular_speed)
+        desired_speed = desired_speed * (1.0 - self.safety_turning_coeff * min(self.max_angular_speed, abs(desired_angular_speed)) / self.max_angular_speed)
         if self.flipped:
             self.send_speed_cmd(-desired_speed, desired_angular_speed)  # ??? angular too??!
         else:

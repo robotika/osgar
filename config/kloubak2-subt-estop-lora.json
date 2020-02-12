@@ -13,7 +13,8 @@
             "max_speed": 0.5,
             "virtual_bumper_sec": 10.0,
             "virtual_bumper_radius": 0.5,
-            "scan_subsample": 3
+            "scan_subsample": 3,
+            "safety_turning_coeff": 0.6
           }
       },
       "detector": {
