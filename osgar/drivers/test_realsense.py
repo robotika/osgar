@@ -27,32 +27,47 @@ AngularAcceleration = namedtuple('AngularAcceleration', ['x', 'y','z'])
 
 
 class RealSenseTest(unittest.TestCase):
-    def test_spin_once(self):
-        logger = MagicMock()
-        logger.write = MagicMock(return_value=datetime.timedelta(microseconds=9721))
-        bus = Bus(logger)
-        with patch('osgar.drivers.realsense.rs') as mock:
-            instance = mock.return_value
+    def test_detect_pose(self):
+        bus = MagicMock()
+        with patch('osgar.drivers.realsense.rs') as rs:
+            ctx = rs.context.return_value
+            device = MagicMock()
+            device.get_info.return_value = "T200"
+            ctx.query_devices.return_value = [device]
             c = RealSense(bus=bus.handle('rs'), config={})
-            tester = bus.handle('tester')
-            tester.register('tick')
-            bus.connect('tester.tick', 'rs.trigger')
             c.start()
-            time.sleep(0.1)
-            frames = c.pose_pipeline.poll_for_frames.return_value
-            pose_frame = frames.get_pose_frame.return_value
-            pose_frame.get_pose_data.return_value = Pose(
-                Acceleration(0, 0, 0),
-                AngularAcceleration(0, 0, 0),
-                AngularVelocity(0, 0, 0),
-                0,
-                Rotation(0, 0, 0, 1),
-                0,
-                Translation(0, 0, 0),
-                Velocity(0, 0, 0))
-            pose_frame.get_timestamp.return_value = 0
-            pose_frame.get_frame_number.return_value = 0
-            tester.publish('tick', None)
+            self.assertTrue(c.pose_pipeline.start.called)
+            self.assertEqual(c.depth_pipeline, None)
+            c.request_stop()
+            c.join()
+
+    def test_detect_depth(self):
+        bus = MagicMock()
+        with patch('osgar.drivers.realsense.rs') as rs:
+            ctx = rs.context.return_value
+            device = MagicMock()
+            device.get_info.return_value = "D400"
+            ctx.query_devices.return_value = [device]
+            c = RealSense(bus=bus.handle('rs'), config={})
+            c.start()
+            self.assertTrue(c.depth_pipeline.start.called)
+            self.assertEqual(c.pose_pipeline, None)
+            c.request_stop()
+            c.join()
+
+    def test_detect_pose_depth(self):
+        bus = MagicMock()
+        with patch('osgar.drivers.realsense.rs') as rs:
+            ctx = rs.context.return_value
+            pose_device = MagicMock()
+            pose_device.get_info.return_value = "T200"
+            depth_device = MagicMock()
+            depth_device.get_info.return_value = "D400"
+            ctx.query_devices.return_value = [pose_device, depth_device]
+            c = RealSense(bus=bus.handle('rs'), config={})
+            c.start()
+            self.assertTrue(c.pose_pipeline.start.called)
+            self.assertTrue(c.depth_pipeline.start.called)
             c.request_stop()
             c.join()
 
@@ -64,36 +79,30 @@ class RealSenseTest(unittest.TestCase):
             [Translation(0, 0, -1), [1000, 0, 0]], # forward
             [Translation(-1, 0, 0), [0, 1000, 0]], # left
         ]
-        with patch('osgar.drivers.realsense.rs') as mock:
-            instance = mock.return_value
-            c = RealSense(bus=bus.handle('rs'), config={})
-            tester = bus.handle('tester')
-            tester.register('tick')
-            bus.connect('tester.tick', 'rs.trigger')
-            bus.connect('rs.pose2d', 'tester.pose2d')
-            c.start()
-            time.sleep(0.1)
-            frames = c.pose_pipeline.poll_for_frames.return_value
-            pose_frame = frames.get_pose_frame.return_value
-            for input, output in moves:
-                pose_frame.get_pose_data.return_value = Pose(
-                    Acceleration(0, 0, 0),
-                    AngularAcceleration(0, 0, 0),
-                    AngularVelocity(0, 0, 0),
-                    0,
-                    Rotation(0, 0, 0, 1),
-                    0,
-                    input,
-                    Velocity(0, 0, 0))
-                pose_frame.get_timestamp.return_value = 0
-                pose_frame.get_frame_number.return_value = 0
-                tester.publish('tick', None)
-                dt, channel, pose2d = tester.listen()
-                self.assertEqual(channel, 'pose2d')
-                self.assertEqual(pose2d, output)
-            c.request_stop()
-            c.join()
-            return
+        c = RealSense(bus=bus.handle('rs'), config={})
+        tester = bus.handle('tester')
+        bus.connect('rs.pose2d', 'tester.pose2d')
+
+        for input, output in moves:
+            frame = MagicMock()
+            frame.get_frame_number.return_value = 1
+            frame.get_timestamp.return_value = 1
+            pose_frame = frame.as_pose_frame.return_value
+            pose_frame.get_pose_data.return_value = Pose(
+                Acceleration(0, 0, 0),
+                AngularAcceleration(0, 0, 0),
+                AngularVelocity(0, 0, 0),
+                0,
+                Rotation(0, 0, 0, 1),
+                0,
+                input,
+                Velocity(0, 0, 0))
+            frame.get_timestamp.return_value = 0
+            frame.get_frame_number.return_value = 0
+            c.pose_callback(frame)
+            dt, channel, pose2d = tester.listen()
+            self.assertEqual(channel, 'pose2d')
+            self.assertEqual(pose2d, output)
 
     def test_orientation(self):
         logger = MagicMock()
@@ -113,36 +122,27 @@ class RealSenseTest(unittest.TestCase):
             # osgar turns round y axis -90
             [Rotation(0.7071068, 0, 0, 0.7071068), [0, -0.7071068, 0, 0.7071068]]
         ]
-        with patch('osgar.drivers.realsense.rs') as mock:
-            instance = mock.return_value
-            c = RealSense(bus=bus.handle('rs'), config={})
-            tester = bus.handle('tester')
-            tester.register('tick')
-            bus.connect('tester.tick', 'rs.trigger')
-            bus.connect('rs.orientation', 'tester.orientation')
-            c.start()
-            time.sleep(0.1)
-            frames = c.pose_pipeline.poll_for_frames.return_value
-            pose_frame = frames.get_pose_frame.return_value
-            for input, output in moves:
-                pose_frame.get_pose_data.return_value = Pose(
-                    Acceleration(0, 0, 0),
-                    AngularAcceleration(0, 0, 0),
-                    AngularVelocity(0, 0, 0),
-                    0,
-                    input,
-                    0,
-                    Translation(0, 0, 0),
-                    Velocity(0, 0, 0))
-                pose_frame.get_timestamp.return_value = 0
-                pose_frame.get_frame_number.return_value = 0
-                tester.publish('tick', None)
-                dt, channel, orientation = tester.listen()
-                self.assertEqual(channel, 'orientation')
-                self.assertEqual(orientation, output)
-            c.request_stop()
-            c.join()
-            return
+        c = RealSense(bus=bus.handle('rs'), config={})
+        tester = bus.handle('tester')
+        bus.connect('rs.orientation', 'tester.orientation')
+        for input, output in moves:
+            frame = MagicMock()
+            pose_frame = frame.as_pose_frame.return_value
+            pose_frame.get_pose_data.return_value = Pose(
+                Acceleration(0, 0, 0),
+                AngularAcceleration(0, 0, 0),
+                AngularVelocity(0, 0, 0),
+                0,
+                input,
+                0,
+                Translation(0, 0, 0),
+                Velocity(0, 0, 0))
+            frame.get_timestamp.return_value = 0
+            frame.get_frame_number.return_value = 0
+            c.pose_callback(frame)
+            dt, channel, orientation = tester.listen()
+            self.assertEqual(channel, 'orientation')
+            self.assertEqual(orientation, output)
 
     def test_pose2d_heading(self):
         logger = MagicMock()
@@ -154,42 +154,32 @@ class RealSenseTest(unittest.TestCase):
             [Rotation(0, -0.7071068, 0, 0.7071068), [0, 0, -90*100]], # facing right
             [Rotation(0, -0.9999619, 0, 0.0087265), [0, 0, -179*100]],  # facing backwards
         ]
-        with patch('osgar.drivers.realsense.rs') as mock:
-            instance = mock.return_value
-            c = RealSense(bus=bus.handle('rs'), config={})
-            tester = bus.handle('tester')
-            tester.register('tick')
-            bus.connect('tester.tick', 'rs.trigger')
-            bus.connect('rs.pose2d', 'tester.pose2d')
-            c.start()
-            time.sleep(0.1)
-            frames = c.pose_pipeline.poll_for_frames.return_value
-            pose_frame = frames.get_pose_frame.return_value
-            for input, output in moves:
-                pose_frame.get_pose_data.return_value = Pose(
-                    Acceleration(0, 0, 0),
-                    AngularAcceleration(0, 0, 0),
-                    AngularVelocity(0, 0, 0),
-                    0,
-                    input,
-                    0,
-                    Translation(0, 0, 0),
-                    Velocity(0, 0, 0))
-                pose_frame.get_timestamp.return_value = 0
-                pose_frame.get_frame_number.return_value = 0
-                tester.publish('tick', None)
-                dt, channel, pose2d = tester.listen()
-                self.assertEqual(channel, 'pose2d')
-                self.assertEqual(pose2d, output)
-            c.request_stop()
-            c.join()
-            return
+        c = RealSense(bus=bus.handle('rs'), config={})
+        tester = bus.handle('tester')
+        bus.connect('rs.pose2d', 'tester.pose2d')
+        for input, output in moves:
+            frame = MagicMock()
+            pose_frame = frame.as_pose_frame.return_value
+            pose_frame.get_pose_data.return_value = Pose(
+                Acceleration(0, 0, 0),
+                AngularAcceleration(0, 0, 0),
+                AngularVelocity(0, 0, 0),
+                0,
+                input,
+                0,
+                Translation(0, 0, 0),
+                Velocity(0, 0, 0))
+            frame.get_timestamp.return_value = 0
+            frame.get_frame_number.return_value = 0
+            c.pose_callback(frame)
+            dt, channel, pose2d = tester.listen()
+            self.assertEqual(channel, 'pose2d')
+            self.assertEqual(pose2d, output)
 
     def test_pose3d(self):
         logger = MagicMock()
         logger.write = MagicMock(return_value=datetime.timedelta(microseconds=9721))
         bus = Bus(logger)
-        item = namedtuple('item', ['input', 'output'])
         moves = [
             # heading zero
             [[Translation(0, 0, 0), Rotation(0, 0, 0, 1)], [[0, 0, 0], [0, 0, 0, 1]]],
@@ -204,36 +194,27 @@ class RealSenseTest(unittest.TestCase):
             # osgar turns round y axis -90, moving z 1
             [[Translation(0, 1, 0), Rotation(0.7071068, 0, 0, 0.7071068)], [[0, 0, 1], [0, -0.7071068, 0, 0.7071068]]]
         ]
-        with patch('osgar.drivers.realsense.rs') as mock:
-            instance = mock.return_value
-            c = RealSense(bus=bus.handle('rs'), config={})
-            tester = bus.handle('tester')
-            tester.register('tick')
-            bus.connect('tester.tick', 'rs.trigger')
-            bus.connect('rs.pose3d', 'tester.pose3d')
-            c.start()
-            time.sleep(0.1)
-            frames = c.pose_pipeline.poll_for_frames.return_value
-            pose_frame = frames.get_pose_frame.return_value
-            for input, output in moves:
-                pose_frame.get_pose_data.return_value = Pose(
-                    Acceleration(0, 0, 0),
-                    AngularAcceleration(0, 0, 0),
-                    AngularVelocity(0, 0, 0),
-                    0,
-                    input[1],
-                    0,
-                    input[0],
-                    Velocity(0, 0, 0))
-                pose_frame.get_timestamp.return_value = 0
-                pose_frame.get_frame_number.return_value = 0
-                tester.publish('tick', None)
-                dt, channel, pose3d = tester.listen()
-                self.assertEqual(channel, 'pose3d')
-                self.assertEqual(pose3d, output)
-            c.request_stop()
-            c.join()
-            return
+        c = RealSense(bus=bus.handle('rs'), config={})
+        tester = bus.handle('tester')
+        bus.connect('rs.pose3d', 'tester.pose3d')
+        for input, output in moves:
+            frame = MagicMock()
+            pose_frame = frame.as_pose_frame.return_value
+            pose_frame.get_pose_data.return_value = Pose(
+                Acceleration(0, 0, 0),
+                AngularAcceleration(0, 0, 0),
+                AngularVelocity(0, 0, 0),
+                0,
+                input[1],
+                0,
+                input[0],
+                Velocity(0, 0, 0))
+            frame.get_timestamp.return_value = 0
+            frame.get_frame_number.return_value = 0
+            c.pose_callback(frame)
+            dt, channel, pose3d = tester.listen()
+            self.assertEqual(channel, 'pose3d')
+            self.assertEqual(pose3d, output)
 
 
 # vim: expandtab sw=4 ts=4
