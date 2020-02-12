@@ -47,9 +47,14 @@ class RealSense(Node):
 
     def pose_callback(self, frame):
         # TODO: add decimation based on config from 200Hz to desired value
-        pose = frame.as_pose_frame().get_pose_data()
-        n = frame.get_frame_number()
-        timestamp = frame.get_timestamp()
+        try:
+            pose = frame.as_pose_frame().get_pose_data()
+            n = frame.get_frame_number()
+            timestamp = frame.get_timestamp()
+        except Exception as e:
+            print(e)
+            self.finished.set()
+            return
         orientation = t265_to_osgar_orientation(pose.rotation)
         self.publish('orientation', orientation)
         x, y, z = t265_to_osgar_position(pose.translation)
@@ -67,9 +72,17 @@ class RealSense(Node):
                              [pose.mapper_confidence, pose.tracker_confidence],
                              ])  # raw RealSense2 Pose data
 
-    def depth_callback(self, frame):
+    def depth_callback(self, frameset):
         # TODO: add decimation based on config from 200Hz to desired value
-        depth_image = np.asanyarray(frame.as_depth_frame().get_data())
+        try:
+            assert frameset.is_frameset()
+            frame = frameset.as_frameset().get_depth_frame()
+            assert frame.is_depth_frame()
+            depth_image = np.asanyarray(frame.as_depth_frame().get_data())
+        except Exception as e:
+            print(e)
+            self.finished.set()
+            return
         self.publish('depth', depth_image)
 
     def start(self):
