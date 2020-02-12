@@ -3,15 +3,18 @@
 
 """
 import math
+import logging
 import threading
 import numpy as np
+
+g_logger = logging.getLogger(__name__)
 
 try:
     import pyrealsense2 as rs
     if rs.pyrealsense2.__version__.startswith('2.32'):
-        print(f"RealSense version {rs.pyrealsense2.__version__} is broken in several ways!")
+        g_logger.error(f"RealSense version {rs.pyrealsense2.__version__} is broken in several ways!")
 except:
-    print('RealSense not installed!')
+    g_logger.info('RealSense not installed!')
     from unittest.mock import MagicMock
     rs = MagicMock()
 
@@ -95,7 +98,7 @@ class RealSense(Node):
         ctx = rs.context()
         device_list = ctx.query_devices()
         if len(device_list) == 0:
-            print("No RealSense devices detected!")
+            g_logger.warning("No RealSense devices detected!")
             self.finished.set()
             return
 
@@ -103,16 +106,16 @@ class RealSense(Node):
         for device in device_list:
             name = device.get_info(rs.camera_info.name)
             serial_number = device.get_info(rs.camera_info.serial_number)
-            print(f"Found {name} (S/N: {serial_number}):", end=' ')
+            intro = f"Found {name} (S/N: {serial_number}): "
             product_line = device.get_info(rs.camera_info.product_line)
             if product_line == "D400":
-                print("Enabling depth stream")
+                g_logger.info(intro + "Enabling depth stream")
                 enable_depth = True
             elif product_line == "T200":
                 enable_pose = True
-                print("Enabling pose stream")
+                g_logger.info(intro + "Enabling pose stream")
             else:
-                print("Unknown type")
+                g_logger.warning(f"Unknown type: {product_line}")
 
         if enable_pose:
             self.pose_pipeline = rs.pipeline(ctx)
