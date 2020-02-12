@@ -13,7 +13,7 @@ def normalize_angle(angle):
 
 class LocalPlannerRef:
     def __init__(self, scan_right=math.radians(-135), scan_left=math.radians(135), direction_adherence=math.radians(90),
-                 max_obstacle_distance=1.5, obstacle_influence=1.2, scan_subsample=1):
+                 max_obstacle_distance=1.5, obstacle_influence=1.2, scan_subsample=1, max_considered_obstacles=None):
         self.last_scan = None
         self.scan_right = scan_right
         self.scan_left = scan_left
@@ -88,7 +88,7 @@ class LocalPlannerOpt:
     2) leave complex evaluation as the last step for already best direction
     """
     def __init__(self, scan_right=math.radians(-135), scan_left=math.radians(135), direction_adherence=math.radians(90),
-                 max_obstacle_distance=1.5, obstacle_influence=1.2, scan_subsample=1):
+                 max_obstacle_distance=1.5, obstacle_influence=1.2, scan_subsample=1, max_considered_obstacles=None):
         self.last_scan = None
         self.scan_right = scan_right
         self.scan_left = scan_left
@@ -161,7 +161,7 @@ class LocalPlannerOpt:
 
 class LocalPlannerNumpy:
     def __init__(self, scan_right=math.radians(-135), scan_left=math.radians(135), direction_adherence=math.radians(90),
-                 max_obstacle_distance=1.5, obstacle_influence=1.2, scan_subsample=1):
+                 max_obstacle_distance=1.5, obstacle_influence=1.2, scan_subsample=1, max_considered_obstacles=None):
         self.last_scan = None
         self.scan_right = scan_right
         self.scan_left = scan_left
@@ -182,6 +182,7 @@ class LocalPlannerNumpy:
         self.angles_cos = None
         self.angles_sin = None
         self.scan = None
+        self.max_considered_obstacles = max_considered_obstacles
 
     def update(self, scan):
         self.scan = np.asarray(scan[::self.scan_subsample] if self.scan_subsample > 1 else scan) * 1e-3
@@ -212,6 +213,11 @@ class LocalPlannerNumpy:
 
         if x.shape[0] == 0:
             return 1.0, normalize_angle(desired_dir)
+
+        if self.max_considered_obstacles is not None and x.shape[0] > self.max_considered_obstacles:
+            nth = math.ceil(x.shape[0] / self.max_considered_obstacles)
+            x = x[::nth]
+            y = y[::nth]
 
         num_considered_directions = self.considered_directions.shape[0]
         xs = np.broadcast_to(x, (num_considered_directions, x.shape[0]))
