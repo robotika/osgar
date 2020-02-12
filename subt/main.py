@@ -186,7 +186,8 @@ class SubTChallenge:
         self.local_planner = LocalPlanner(
                 obstacle_influence=0.8,
                 max_obstacle_distance=2.5,
-                scan_subsample=scan_subsample)
+                scan_subsample=scan_subsample,
+                max_considered_obstacles=100)
         self.ref_scan = None
         self.pause_start_time = None
         if config.get('start_paused', False):
