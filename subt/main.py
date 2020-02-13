@@ -384,7 +384,12 @@ class SubTChallenge:
         MAX_TARGET_DISTANCE = 5.0
         MIN_TARGET_DISTANCE = 1.0
         assert(MAX_TARGET_DISTANCE > SHORTCUT_RADIUS) # Because otherwise we could end up with a target point more distant from home than the robot.
+        print('Wait and get ready for return')
+        self.send_speed_cmd(0, 0)
+        self.wait(dt=timedelta(seconds=3.0))
         self.trace.prune(SHORTCUT_RADIUS)
+        self.wait(dt=timedelta(seconds=2.0))
+        print('done.')
         start_time = self.sim_time_sec
         target_distance = MAX_TARGET_DISTANCE
         count_down = 0
