@@ -72,8 +72,8 @@ class DummyRobot:
     def request_stop(self):
         self.bus.shutdown()
 
-    def join(self):
-        self.thread.join()
+    def join(self, timeout=None):
+        self.thread.join(timeout)
 
     def run(self):
         x, y = self.x, self.y
@@ -192,8 +192,8 @@ class OsgarControlCenter:
     def request_stop(self):
         self.bus.shutdown()
 
-    def join(self):
-        self.thread.join()
+    def join(self, timeout=None):
+        self.thread.join(timeout)
 
     def run(self):
         while True:

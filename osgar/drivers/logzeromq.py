@@ -38,7 +38,7 @@ class LogZeroMQ:
             assert False, mode  # unknown/unsupported mode
 
         self.socket.connect(endpoint)
-
+        self.thread.name = bus.name
         self.bus = bus
 
     def start(self):

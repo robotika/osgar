@@ -269,8 +269,8 @@ class SICKRobot2018:
     def request_stop(self):
         self.bus.shutdown()
 
-    def join(self):
-        self.thread.join()
+    def join(self, timeout=None):
+        self.thread.join(timeout)
 
 
 if __name__ == "__main__":

@@ -15,6 +15,7 @@ class LogZeroMQTest(unittest.TestCase):
         }
         bus = MagicMock()
         bus.is_alive = MagicMock(return_value=True)
+        bus.name = "test_recv_timeout"
         node = LogZeroMQ(config, bus)
         node.start()
         time.sleep(0.01)  # give it a chance to start

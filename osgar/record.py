@@ -36,7 +36,12 @@ class Recorder:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.request_stop()
         for module in self.modules.values():
-            module.join()
+            module.join(1)
+        for t in threading.enumerate():
+            if t != threading.current_thread():
+                print(f'ERROR: thread {repr(t.name)} still running!')
+                print(f'ERROR:     class: {t.__class__.__module__}.{t.__class__.__name__}')
+                print(f'ERROR:     target: {t._target}')
 
     def request_stop(self, signum=None, frame=None): # pylint: disable=unused-argument
         if self.stop_requested.is_set():

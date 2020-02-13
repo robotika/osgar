@@ -111,8 +111,8 @@ class RoboOrienteering2018:
     def request_stop(self):
         self.bus.shutdown()
 
-    def join(self):
-        self.thread.join()
+    def join(self, timeout=None):
+        self.thread.join(timeout)
 
     def register(self, callback):
         self.monitors.append(callback)
