@@ -33,7 +33,10 @@
       "kloubak": {
           "driver": "kloubak",
           "in": ["slot_can", "slot_desired_speed"],
-          "out": ["can", "encoders", "emergency_stop", "pose2d"],
+          "out": ["can", "encoders", "emergency_stop", "pose2d",
+                  "bumpers_front", "bumpers_rear",
+                  "downdrops_front", "downdrops_rear",
+                  "joint_angle"],
           "init": {
             "num_axis": 3,
             "wheel_distance": 0.492,
@@ -178,7 +181,10 @@
               ["lora.raw", "lora_serial.raw"],
               ["app.pose2d", "lora.pose2d"],
               ["lora.cmd", "app.cmd"],
-              ["timer.tick", "rs.trigger"]
+              ["timer.tick", "rs.trigger"],
+              ["kloubak.bumpers_front", "app.bumpers_front"],
+              ["kloubak.bumpers_rear", "app.bumpers_rear"],
+              ["kloubak.joint_angle", "app.joint_angle"]
       ]
   }
 }
