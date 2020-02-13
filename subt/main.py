@@ -125,6 +125,11 @@ class EmergencyStopMonitor:
         if robot.emergency_stop:
             raise EmergencyStopException()
 
+        # handle STOP independently of current subroutine
+        if robot.lora_cmd == LORA_STOP_CMD:
+            print(robot.time, 'LoRa cmd - Stop')
+            raise EmergencyStopException()
+
     # context manager functions
     def __enter__(self):
         self.callback = self.robot.register(self.update)
@@ -328,10 +333,7 @@ class SubTChallenge:
                         self.lora_cmd = None
                         reason = REASON_LORA
                         break
-                    if self.lora_cmd == LORA_STOP_CMD:
-                        print(self.time, 'LoRa cmd - Stop')
-                        raise EmergencyStopException()
-                    elif self.lora_cmd == LORA_PAUSE_CMD:
+                    if self.lora_cmd == LORA_PAUSE_CMD:
                         print(self.time, 'LoRa cmd - Pause')
                         self.send_speed_cmd(0, 0)
                         if self.pause_start_time is None:
@@ -580,8 +582,10 @@ class SubTChallenge:
                 self.voltage = data
             elif channel == 'emergency_stop':
                 self.emergency_stop = data
+
             elif channel == 'cmd':
                 self.lora_cmd = data
+
             for m in self.monitors:
                 m(self)
             return channel
