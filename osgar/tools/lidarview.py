@@ -32,6 +32,8 @@ g_scale = 30
 g_rotation_offset_rad = 0.0  # set by --rotation (deg)
 g_lidar_fov_deg = 270  # controlled by --deg (deg)
 
+CENTER_AXLE_DISTANCE = 0.348  # K2 distance specific
+
 
 def scr(x, y):
     global g_scale
@@ -61,6 +63,31 @@ def filter_pts(pts):
         if grid[k] < 10:
             ret.append((x, y))
     return ret
+
+
+def draw_scan(foreground, pose, scan, color, joint=None):
+    __, __, heading = pose
+    X, Y = 0, 0  # front lidar is in the image center
+
+    if joint is not None:
+        # correct for joint angle
+        dist = CENTER_AXLE_DISTANCE
+        heading += math.pi
+        dx, dy = dist * math.cos(heading), dist * math.sin(heading)
+        X += dx
+        Y += dy
+        heading -= math.radians(joint[0] / 100.0)
+        dx, dy = dist * math.cos(heading), dist * math.sin(heading)
+        X += dx
+        Y += dy
+
+    for i, i_dist in enumerate(scan):
+        if i_dist == 0 or i_dist >= 10000:
+            continue
+        angle = math.radians(g_lidar_fov_deg * (i / len(scan)) - g_lidar_fov_deg/2) + heading
+        dist = i_dist/1000.0
+        x, y = dist * math.cos(angle), dist * math.sin(angle)
+        pygame.draw.circle(foreground, color, scr(X + x, Y + y), 3)
 
 
 def draw(foreground, pose, scan, poses=[], image=None, callback=None, acc_pts=None):
@@ -115,8 +142,6 @@ def draw(foreground, pose, scan, poses=[], image=None, callback=None, acc_pts=No
 def draw_robot(foreground, pose, joint):
 
     if joint is not None:
-        CENTER_AXLE_DISTANCE = 0.348  # K2 distance specific
-
         color = (255, 0, 0)
         __, __, heading = pose
 
@@ -162,7 +187,7 @@ def get_image(data):
 
 class Framer:
     """Creates frames from log entries. Packs together closest scan, pose and camera picture."""
-    def __init__(self, filepath, lidar_name=None, pose2d_name=None, pose3d_name=None, camera_name=None,
+    def __init__(self, filepath, lidar_name=None, lidar2_name=None, pose2d_name=None, pose3d_name=None, camera_name=None,
                  camera2_name=None, joint_name=None, keyframes_name=None, title_name=None):
         self.log = LogIndexedReader(filepath)
         self.current = 0
@@ -170,12 +195,14 @@ class Framer:
         self.pose2d = [0, 0, 0]
         self.pose3d = [[0, 0, 0],[1, 0, 0, 0]]
         self.scan = []
+        self.scan2 = []
         self.image = None
         self.image2 = None
         self.joint = None
         self.keyframe = None
         self.title = None
         self.lidar_id, self.pose2d_id, self.pose3d_id, self.camera_id = None, None, None, None
+        self.lidar2_id = None
         self.camera2_id = None
         self.joint_id = None
         self.keyframes_id = None
@@ -183,6 +210,8 @@ class Framer:
         names = lookup_stream_names(filepath)
         if lidar_name is not None:
             self.lidar_id = names.index(lidar_name) + 1
+        if lidar2_name is not None:
+            self.lidar2_id = names.index(lidar2_name) + 1
         if pose2d_name is not None:
             self.pose2d_id = names.index(pose2d_name) + 1
         if pose3d_name is not None:
@@ -252,13 +281,15 @@ class Framer:
                 self.scan = deserialize(data)
                 keyframe = self.keyframe
                 self.keyframe = False
-                return timestamp, self.pose, self.scan, self.image, self.image2, self.joint, keyframe, self.title, False
+                return timestamp, self.pose, self.scan, self.scan2, self.image, self.image2, self.joint, keyframe, self.title, False
+            if stream_id == self.lidar2_id:
+                self.scan2 = deserialize(data)
             elif stream_id == self.camera_id:
                 self.image = get_image(deserialize(data))
                 if self.lidar_id is None:
                     keyframe = self.keyframe
                     self.keyframe = False
-                    return timestamp, self.pose, self.scan, self.image, self.image2, self.joint, keyframe, self.title, False
+                    return timestamp, self.pose, self.scan, self.scan2, self.image, self.image2, self.joint, keyframe, self.title, False
             elif stream_id == self.camera2_id:
                 self.image2 = get_image(deserialize(data))
             elif stream_id == self.joint_id:
@@ -280,8 +311,8 @@ class Framer:
                 if self.lidar_id is None and self.camera_id is None:
                     keyframe = self.keyframe
                     self.keyframe = False
-                    return timestamp, self.pose, self.scan, self.image, self.image2, self.joint, keyframe, self.title, False
-        return timedelta(), self.pose, self.scan, self.image, self.image2, self.joint, self.keyframe, self.title, True
+                    return timestamp, self.pose, self.scan, self.scan2, self.image, self.image2, self.joint, keyframe, self.title, False
+        return timedelta(), self.pose, self.scan, self.scan2, self.image, self.image2, self.joint, self.keyframe, self.title, True
 
 
 def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
@@ -332,7 +363,7 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
         gen.seek(timedelta(seconds=jump))
 
     while True:
-        timestamp, pose, scan, image, image2, joint, keyframe, title, eof = history.next()
+        timestamp, pose, scan, scan2, image, image2, joint, keyframe, title, eof = history.next()
 
         if max_timestamp is None or max_timestamp < timestamp:
             # build map only for new data
@@ -377,6 +408,7 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
             foreground.fill((0, 0, 0))
             img = image2 if use_image2 else image
             draw_robot(foreground, pose, joint)
+            draw_scan(foreground, pose, scan2, color=(128, 128, 0), joint=joint)
             draw(foreground, pose, scan, poses=poses,
                  image=img if camera_on else None,
                  acc_pts=acc_pts if map_on else None,
@@ -502,6 +534,7 @@ def main():
     parser.add_argument('logfile', help='recorded log file')
 
     parser.add_argument('--lidar', help='stream ID')
+    parser.add_argument('--lidar2', help='stream ID of second lidar (back or slope)')
 
     pose = parser.add_mutually_exclusive_group()
     pose.add_argument('--pose2d', help='stream ID for pose2d messages')
@@ -541,7 +574,7 @@ def main():
     filename = os.path.basename(args.logfile)
     g_rotation_offset_rad = math.radians(args.rotate)
     g_lidar_fov_deg = args.deg
-    with Framer(args.logfile, lidar_name=args.lidar, pose2d_name=args.pose2d, pose3d_name=args.pose3d,
+    with Framer(args.logfile, lidar_name=args.lidar, lidar2_name=args.lidar2, pose2d_name=args.pose2d, pose3d_name=args.pose3d,
                 camera_name=args.camera, camera2_name=args.camera2, joint_name=args.joint, keyframes_name=args.keyframes,
                 title_name=args.title) as framer:
         lidarview(framer, caption_filename=filename, callback=callback, out_video=args.create_video, jump=args.jump)
