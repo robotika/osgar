@@ -4,6 +4,7 @@ import threading
 from threading import Thread
 import os
 from xmlrpc.server import SimpleXMLRPCServer
+from xmlrpc.client import ServerProxy
 
 from osgar.drivers.rosproxy import ROSProxy, prefix4BytesLen
 from osgar.bus import Bus
@@ -68,10 +69,22 @@ class DummyROSMaster(Thread):
 
         # fake calls for "real" ROS node
         self.server.register_function(requestTopic, 'requestTopic')
+        self.server.register_function(lambda: '', 'request_shutdown')
+        self.quit = False
+        self.host_port_addr = host_port_addr
         self.start()
 
     def run( self ):
-        self.server.serve_forever()
+        while not self.quit:
+            self.server.handle_request()
+
+    def shutdown(self):
+        self.quit = True
+        url = "http://{}:{}".format(*self.host_port_addr)
+        s = ServerProxy(url)
+        s.request_shutdown()
+        self.join()
+        self.server.server_close()
 
 
 class ROSProxyTest(unittest.TestCase):
@@ -96,6 +109,7 @@ class ROSProxyTest(unittest.TestCase):
             proxy.start()
             proxy.request_stop()
             proxy.join()
+        master.shutdown()
 
     def test_prefix4BytesLen(self):
         self.assertEqual(prefix4BytesLen('ahoj'), bytes([4, 0, 0, 0]) + b'ahoj')

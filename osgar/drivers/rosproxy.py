@@ -53,14 +53,26 @@ class MyXMLRPCServer(Thread):
     def __init__(self, nodeAddrHostPort):
         Thread.__init__(self)
         self.setDaemon(True)
+        self.quit = False
+        self.nodeAddrHostPort = nodeAddrHostPort
         self.server = SimpleXMLRPCServer( nodeAddrHostPort )
         print("Listening on port %d ..." % nodeAddrHostPort[1])
         self.server.register_function(publisherUpdate, "publisherUpdate")
         self.server.register_function(requestTopic, "requestTopic")
+        self.server.register_function(lambda: "", 'request_shutdown')
         self.start()
 
     def run(self):
-        self.server.serve_forever()
+        while not self.quit:
+            self.server.handle_request()
+
+    def shutdown(self):
+        self.quit = True
+        url = "http://{}:{}".format(*self.nodeAddrHostPort)
+        s = ServerProxy(url)
+        s.request_shutdown()
+        self.join()
+        self.server.server_close()
 
 
 class ROSProxy(Thread):
@@ -157,6 +169,8 @@ class ROSProxy(Thread):
                     self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
         except BusShutdownException:
             pass
+
+        self.server.shutdown()
 
     def request_stop(self):
         self.bus.shutdown()
