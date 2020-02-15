@@ -159,6 +159,13 @@ def draw_robot(foreground, pose, joint):
         dx, dy = dist*math.cos(angle), dist*math.sin(angle)
         pygame.draw.line(foreground, color, scr(x, y), scr(x + dx, y + dy), 3)
 
+        if len(joint) > 1:
+            # K3 specific
+            pygame.draw.circle(foreground, color, scr(x + dx, y + dy), 3)
+            angle -= math.radians(joint[1]/100.0)
+            dx2, dy2 = dist*math.cos(angle), dist*math.sin(angle)
+            pygame.draw.line(foreground, color, scr(x + dx, y + dy), scr(x + dx + dx2, y + dy + dy2), 3)
+
 
 g_depth = None
 g_danger_binary_image = False
