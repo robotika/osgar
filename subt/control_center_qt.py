@@ -413,6 +413,8 @@ class View(QWidget):
     def _drawGrid(self, painter, transform):
         painter.setPen(QColor(Qt.white).darker().darker())
         meter = QLineF(transform.map(QPointF(1, 0)), transform.map(QPointF(0, 0))).length()
+        limits = [(1.5, 50), (4, 20), (10, 10), (35, 5), (100000, 1)]
+        unit = [unit for px,unit in limits if meter < px][0]
         t, ok = transform.inverted()
         r = self.rect()
         x, y = [], []
@@ -422,10 +424,10 @@ class View(QWidget):
             y.append(p.y())
         minx, maxx = min(x), max(x)
         miny, maxy = min(y), max(y)
-        for i in range(math.ceil(minx), math.ceil(maxx)):
-            painter.drawLine(transform.map(QPointF(i, maxy)), transform.map(QPointF(i, miny)))
-        for j in range(math.ceil(miny), math.ceil(maxy)):
-            painter.drawLine(transform.map(QPointF(maxx, j)), transform.map(QPointF(minx, j)))
+        for i in range(math.ceil(minx/unit), math.ceil(maxx/unit)):
+            painter.drawLine(transform.map(QPointF(i * unit, maxy)), transform.map(QPointF(i * unit, miny)))
+        for j in range(math.ceil(miny/unit), math.ceil(maxy/unit)):
+            painter.drawLine(transform.map(QPointF(maxx, j * unit)), transform.map(QPointF(minx, j * unit)))
 
     def _drawRobotPath(self, painter, transform, base_color, statuses):
         # just orientation
