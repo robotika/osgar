@@ -76,10 +76,11 @@ def draw_scan(foreground, pose, scan, color, joint=None):
         dx, dy = dist * math.cos(heading), dist * math.sin(heading)
         X += dx
         Y += dy
-        heading -= math.radians(joint[0] / 100.0)
-        dx, dy = dist * math.cos(heading), dist * math.sin(heading)
-        X += dx
-        Y += dy
+        for j in joint:
+            heading -= math.radians(j / 100.0)
+            dx, dy = dist * math.cos(heading), dist * math.sin(heading)
+            X += dx
+            Y += dy
 
     for i, i_dist in enumerate(scan):
         if i_dist == 0 or i_dist >= 10000:
