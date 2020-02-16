@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "gas_detector": {
+          "driver": "osgar.drivers.winsen_gas_detector:WinsenCO2",
+          "in": ["raw", "trigger"],
+          "out": ["raw", "co2"],
+          "init": {}
+      },
+      "serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/mh_z19", "speed": 9600}
+      },
+      "timer": {
+          "driver": "timer",
+          "in": [],
+          "out": ["tick"],
+          "init": {"sleep": 1.0}
+      }
+    },
+    "links": [
+              ["serial.raw", "gas_detector.raw"],
+              ["gas_detector.raw", "serial.raw"],
+              ["timer.tick", "gas_detector.trigger"]
+    ]
+  }
+}
+
