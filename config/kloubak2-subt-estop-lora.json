@@ -39,6 +39,7 @@
                   "downdrops_front", "downdrops_rear",
                   "joint_angle"],
           "init": {
+            "drive_mode": "FRONT",
             "wheel_distance": 0.496,
             "center_axle_distance": 0.348,
             "ad_center": 419.7,

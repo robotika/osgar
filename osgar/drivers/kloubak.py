@@ -248,7 +248,7 @@ class RobotKloubak(Node):
         self.desired_speed = 0.0  # m/s
         self.desired_angular_speed = 0.0
         self.v_fl = self.v_fr = self.v_rl = self.v_rr = 0  # values in m/s
-        self.drive_mode = DriveMode.ALL
+        self.drive_mode = DriveMode[config.get("drive_mode", "FRONT")]
         self.num_axis = config.get("num_axis", 2)
 
         # status
