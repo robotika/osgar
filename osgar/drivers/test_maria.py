@@ -2,18 +2,18 @@ import unittest
 import datetime
 from unittest.mock import MagicMock
 
-from osgar.drivers.tankmaria import RobotTankMaria, SpeedControl, MAX_PWM
+from osgar.drivers.maria import RobotMaria, SpeedControl, MAX_PWM
 
 
 class RobotTankMariaTest(unittest.TestCase):
 
     def test_parse_packet(self):
-        r = RobotTankMaria({}, MagicMock())
+        r = RobotMaria({}, MagicMock())
         self.assertEqual((None, b''), r.get_packet(b''))
         self.assertEqual((b'2897 3219', b''), r.get_packet(b'2897 3219\r\n'))
 
     def test_invalid_packet(self):
-        r = RobotTankMaria({}, MagicMock())
+        r = RobotMaria({}, MagicMock())
         self.assertEqual((None, b'\xfe'), r.get_packet(b'\xfe'))
         self.assertEqual((b'\xfe51 0 0', b''), r.get_packet(b'\xfe51 0 0\r\n'))
 

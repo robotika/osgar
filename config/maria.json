@@ -10,8 +10,8 @@
             "max_speed": 0.75
           }
       },
-      "robot": {
-          "driver": "tankmaria",
+      "maria": {
+          "driver": "maria",
           "in": ["desired_speed", "raw"],
           "out": ["emergency_stop", "pose2d", "raw", "encoders"],
           "init": {}
@@ -23,10 +23,10 @@
           "init": {"port": "/dev/arduino-motor", "speed": 115200}
       }
     },
-    "links": [["app.desired_speed", "robot.desired_speed"],
-              ["robot.emergency_stop", "app.emergency_stop"],
-              ["robot.pose2d", "app.pose2d"],
-              ["serial.raw", "robot.raw"],
-              ["robot.raw", "serial.raw"]]
+    "links": [["app.desired_speed", "maria.desired_speed"],
+              ["maria.emergency_stop", "app.emergency_stop"],
+              ["maria.pose2d", "app.pose2d"],
+              ["serial.raw", "maria.raw"],
+              ["maria.raw", "serial.raw"]]
   }
 }

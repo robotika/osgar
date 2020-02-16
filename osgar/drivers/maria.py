@@ -73,7 +73,7 @@ class SpeedControl:
         return pwm
 
 
-class RobotTankMaria(Node):
+class RobotMaria(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('pose2d', 'emergency_stop', 'encoders', 'raw')
