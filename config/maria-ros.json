@@ -1,0 +1,88 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["emergency_stop", "pose2d", "scan", "rot", "artf",
+                 "sim_time_sec", "acc", "origin"],
+          "out": ["desired_speed"],
+          "init": {
+            "max_speed": 0.5,
+            "symmetric": false,
+            "virtual_world": false
+          }
+      },
+      "receiver": {
+          "driver": "zeromq",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+            "mode": "PULL",
+	    "timeout": 0.5,
+            "endpoint": "tcp://localhost:5555"
+          }
+      },
+      "rosmsg": {
+          "driver": "rosmsg",
+          "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
+          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin"],
+          "init": {
+            "downsample": 1
+          }
+      },
+      "estop": {
+	  "driver": "subt.estop:EStop",
+	  "in": ["raw"],
+	  "out": ["raw", "emergency_stop"],
+	  "init": {}
+      },
+      "estop_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/estop", "speed": 9600}
+      },	
+    
+    "lora": {
+          "driver": "lora",
+          "in": ["raw", "pose2d"],
+          "out": ["raw", "cmd"],
+          "init": {}
+      },
+      "lora_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/lora", "speed": 115200}
+      },
+      "maria": {
+          "driver": "maria",
+          "in": ["desired_speed", "raw"],
+          "out": ["emergency_stop", "pose2d", "raw", "encoders"],
+          "init": {}
+      },
+      "maria_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/arduino-motor", "speed": 115200}
+      }
+    },
+    "links": [["estop_serial.raw", "estop.raw"],
+	      ["estop.raw", "estop_serial.raw"],
+	      ["estop.emergency_stop", "app.emergency_stop"],
+              ["rosmsg.scan", "app.scan"],
+              ["receiver.raw", "rosmsg.slot_raw"],
+    	      ["lora_serial.raw", "lora.raw"],
+              ["lora.raw", "lora_serial.raw"],
+              ["app.pose2d", "lora.pose2d"],
+              ["lora.cmd", "app.cmd"],
+              ["app.artf_xyz", "lora.artf"],
+              ["app.desired_speed", "maria.desired_speed"],
+              ["maria.emergency_stop", "app.emergency_stop"],
+              ["maria.pose2d", "app.pose2d"],
+              ["maria_serial.raw", "maria.raw"],
+              ["maria.raw", "maria_serial.raw"]]
+  }
+}

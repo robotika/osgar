@@ -35,7 +35,7 @@ from osgar.node import Node
 from osgar.bus import BusShutdownException
 
 ALIVE_MESSAGE = b'alive'
-ALLOWED_DEVICE_IDS = [1, 2, 3, 4, 5]
+ALLOWED_DEVICE_IDS = [1, 2, 3, 4, 5, 6]
 
 
 def parse_lora_packet(packet):

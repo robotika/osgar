@@ -62,11 +62,11 @@ class LoRaTest(unittest.TestCase):
         self.assertIsNone(parse_lora_packet(b'dhcps: send_off')[0])
 
         self.assertIsNone(parse_lora_packet(b'0|data')[0])
-        self.assertIsNone(parse_lora_packet(b'6|data')[0])
+        self.assertIsNone(parse_lora_packet(b'7|data')[0])
         self.assertIsNone(parse_lora_packet(b'42|data')[0])
 
         # validate all addresses in chain
-        self.assertIsNone(parse_lora_packet(b'4|6|data')[0])
+        self.assertIsNone(parse_lora_packet(b'4|7|data')[0])
 
     def test_parse_cmd(self):
         self.assertEqual(parse_my_cmd(4, b'4:GoHome:14151'), b'GoHome')

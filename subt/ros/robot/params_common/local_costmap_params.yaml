@@ -1,0 +1,34 @@
+local_costmap:
+  plugins:
+    - {name: obstacles,        type: "costmap_2d::ObstacleLayer"}
+    - {name: staticlayer, type: "nav_layer_from_points::NavLayerFromPoints"}
+      # assuming receiving a cloud from rtabmap_ros/obstacles_detection node
+
+
+  global_frame: odom
+  robot_base_frame: base_link
+  update_frequency: 30.0
+  publish_frequency: 30.0
+  static_map: false
+  rolling_window: true
+  always_send_full_costmap: true
+  width: 10.0
+  height: 10.0
+  resolution: 0.05
+  origin_x: -5.0
+  origin_y: -5.0
+  track_unknown_space: false
+  obstacles:
+    publish_voxel_map: false
+    observation_sources: laser_scan_sensor
+
+    laser_scan_sensor: {
+      sensor_frame: camera_link,
+      data_type: LaserScan,
+      topic: "/scan",
+      expected_update_rate: 0.5,
+      marking: true,
+      clearing: true,
+      inf_is_valid: false,  #this must be false for depth_nav_tools
+      min_obstacle_height: -99999.0,
+      max_obstacle_height: 99999.0}

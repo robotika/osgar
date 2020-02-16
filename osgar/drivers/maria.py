@@ -161,8 +161,8 @@ class RobotMaria(Node):
 
     def slot_desired_speed(self, timestamp, data):
         self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
-        left = self.desired_speed - self.desired_angular_speed/WHEEL_DISTANCE/2
-        right = self.desired_speed + self.desired_angular_speed/WHEEL_DISTANCE/2
+        left = self.desired_speed - self.desired_angular_speed * WHEEL_DISTANCE/2
+        right = self.desired_speed + self.desired_angular_speed * WHEEL_DISTANCE/2
         self.sc_left.set_desired_ticks(left/ENC_SCALE/UPDATE_RATE)
         self.sc_right.set_desired_ticks(right/ENC_SCALE/UPDATE_RATE)
 
