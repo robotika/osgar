@@ -11,8 +11,11 @@ g_logger = logging.getLogger(__name__)
 
 try:
     import pyrealsense2 as rs
-    if rs.pyrealsense2.__version__.startswith('2.32'):
-        g_logger.error(f"RealSense version {rs.pyrealsense2.__version__} is broken in several ways!")
+    try:
+        if rs.pyrealsense2.__version__.startswith('2.32'):
+            g_logger.error(f"RealSense version {rs.pyrealsense2.__version__} is broken in several ways!")
+    except Exception as e:
+        g_logger.error('pyrealsense2 version not found due to: ' + str(e))
 except:
     g_logger.info('RealSense not installed!')
     from unittest.mock import MagicMock
