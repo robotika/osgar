@@ -151,6 +151,13 @@ class SubTChallenge:
         self.walldist = config['walldist']
         self.timeout = timedelta(seconds=config['timeout'])
         self.symmetric = config['symmetric']  # is robot symmetric?
+
+        self.flip_joint_rad = None
+        if 'flip_joint_deg' in config:
+            # optional positive limit in degrees to flip based on joint angle
+            self.flip_joint_rad = math.radians(config.get('flip_joint_deg'))
+        self.flip_right_wall = None  # not defined yet
+
         virtual_bumper_sec = config.get('virtual_bumper_sec')
         self.virtual_bumper = None
         if virtual_bumper_sec is not None:
@@ -288,6 +295,7 @@ class SubTChallenge:
         if flipped:
             self.scan = None
             self.flipped = True
+        self.flip_right_wall = right_wall  # can be externally flipped
 
         reason = None  # termination reason is not defined yet
         start_dist = self.traveled_dist
@@ -303,7 +311,7 @@ class SubTChallenge:
                         if self.use_center:
                             desired_direction = 0
                         else:
-                            desired_direction = follow_wall_angle(self.scan, radius=radius, right_wall=right_wall)
+                            desired_direction = follow_wall_angle(self.scan, radius=radius, right_wall=self.flip_right_wall)
                         self.go_safely(desired_direction)
                 if dist_limit is not None:
                     if dist_limit < abs(self.traveled_dist - start_dist):  # robot can return backward -> abs()
@@ -360,7 +368,7 @@ class SubTChallenge:
                 self.xyz = before_stop
                 self.go_straight(-1)
                 self.stop()
-                if right_wall:
+                if self.flip_right_wall:
                     turn_angle = math.pi / 2
                 else:
                     turn_angle = -math.pi / 2
@@ -373,6 +381,7 @@ class SubTChallenge:
                 self.collision_detector_enabled = True
         self.scan = None
         self.flipped = False
+        self.flip_right_wall = None
         return self.traveled_dist - start_dist, reason
 
     def return_home(self, timeout, home_threshold=None):
@@ -515,6 +524,13 @@ class SubTChallenge:
     def on_joint_angle(self, timestamp, data):
         # angles for articulated robot in 1/100th of degree
         self.joint_angle_rad = [math.radians(a/100) for a in data]
+        if self.flip_joint_rad is not None and self.flip_right_wall is not None:
+            # test only the first joint angle
+            if ((self.joint_angle_rad[0] > self.flip_joint_rad and self.flip_right_wall) or
+                (self.joint_angle_rad[0] < -self.flip_joint_rad and not self.flip_right_wall)):
+                self.send_speed_cmd(0, 0)
+                self.flip_right_wall = not self.flip_right_wall
+                self.flipped = not self.flipped
 
     def update(self):
         packet = self.bus.listen()
