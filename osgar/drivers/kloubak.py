@@ -668,31 +668,23 @@ class RobotKloubak(Node):
                     self.publish('can', CAN_triplet(0x31, list(struct.pack('>i', limit_r))))
                 if self.last_encoders_front_left is not None:
                     self.publish('can', CAN_triplet(0x32, list(struct.pack('>i', limit_l))))
-                self.publish('can', CAN_triplet(0x13, stop))  # right rear/mid
-                self.publish('can', CAN_triplet(0x14, stop))  # left rear/mid
-                
-                self.publish('can', CAN_triplet(0x15, stop))  # back right
-                self.publish('can', CAN_triplet(0x16, stop))  # back left
+                self.publish('can', CAN_triplet(0x13, stop))  # rear right
+                self.publish('can', CAN_triplet(0x14, stop))  # rear left
 
             elif self.desired_speed < 0:
                 if self.last_encoders_rear_right is not None:
-                    self.publish('can', CAN_triplet(0x35, list(struct.pack('>i', limit_r))))  # self.publish('can', CAN_triplet(0x33, list(struct.pack('>i', limit_r))))
+                    self.publish('can', CAN_triplet(0x33, list(struct.pack('>i', limit_r))))
                 if self.last_encoders_rear_left is not None:
-                    self.publish('can', CAN_triplet(0x36, list(struct.pack('>i', limit_l))))  # self.publish('can', CAN_triplet(0x34, list(struct.pack('>i', limit_l))))
+                    self.publish('can', CAN_triplet(0x34, list(struct.pack('>i', limit_l))))
                 self.publish('can', CAN_triplet(0x11, stop))  # right front
-                self.publish('can', CAN_triplet(0x12, stop))  # left front 
-                
-                self.publish('can', CAN_triplet(0x13, stop))  # rear right/mid
-                self.publish('can', CAN_triplet(0x14, stop))  # rear left/mid 
+                self.publish('can', CAN_triplet(0x12, stop))  # left front
 
             else:
                 self.publish('can', CAN_triplet(0x11, stop))  # right front
                 self.publish('can', CAN_triplet(0x12, stop))  # left front
-                self.publish('can', CAN_triplet(0x13, stop))  # right rear/mid
-                self.publish('can', CAN_triplet(0x14, stop))  # left rear/mid
-                
-                self.publish('can', CAN_triplet(0x15, stop))  # back right
-                self.publish('can', CAN_triplet(0x16, stop))  # back left
+                self.publish('can', CAN_triplet(0x13, stop))  # right rear
+                self.publish('can', CAN_triplet(0x14, stop))  # left rear
+
 
     def slot_can(self, timestamp, data):
         self.time = timestamp
