@@ -19,9 +19,9 @@ SPEED_ENC_SCALE = (33/25)*0.25 * math.pi / (4 * 3 * 60 * VESC_REPORT_FREQ)  # sc
 ENC_SCALE = (33/25)*8.0/950  # TODO proper calibration (scale for large 33" wheels, old were 25")
 TURNING_ANGULAR_SPEED = math.pi/8
 
-AD_CENTER = 416.5 # K2, can be modified by config
+AD_CENTER = 531 # K2, can be modified by config
 AD_CALIBRATION_DEG = 45  # K2, can be modified by config
-AD_RANGE = -182.5  # K2, can be modified by config
+AD_RANGE = -178  # K2, can be modified by config
 MAX_JOIN_ANGLE_DEG = 68
 MAX_JOIN_ANGLE = math.radians(MAX_JOIN_ANGLE_DEG) # K2, can be modified by config
 AD_CENTER2 = None
