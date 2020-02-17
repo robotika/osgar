@@ -58,7 +58,7 @@
           "driver": "tcp",
           "in": ["raw"],
           "out": ["raw"],
-          "init": {"host": "192.168.1.52", "port": 2111, "timeout": 3.0}
+          "init": {"host": "192.168.1.52", "port": 2111, "timeout": 0.5}
       },
       "slope_lidar": {
           "driver": "lidar",
@@ -70,7 +70,7 @@
           "driver": "tcp",
           "in": ["raw"],
           "out": ["raw"],
-          "init": {"host": "192.168.2.71", "port": 2111, "timeout": 3.0}
+          "init": {"host": "192.168.2.71", "port": 2111, "timeout": 0.5}
       },
       "camera": {
           "driver": "http",
