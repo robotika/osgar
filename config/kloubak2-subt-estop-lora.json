@@ -42,9 +42,9 @@
             "drive_mode": "FRONT",
             "wheel_distance": 0.496,
             "center_axle_distance": 0.348,
-            "ad_center": 419.7,
+            "ad_center": 531,
             "ad_calibration_deg": 45,
-            "ad_range": -182.5,
+            "ad_range": -178,
             "max_join_angle_deg": 68
           }
       },          
