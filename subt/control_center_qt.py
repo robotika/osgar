@@ -269,9 +269,15 @@ class MainWindow(QMainWindow):
         self.view_menu = self.menu.addMenu("&View")
 
         zoomin_action = QAction("Zoom in", self)
+        # allow multiple shortcuts
+        # see https://www.qtcentre.org/threads/1616-Multiple-shortuts-for-the-action
+        zoomin_action2 = QAction(zoomin_action)
         zoomin_action.setShortcut(Qt.Key_Plus)
+        zoomin_action2.setShortcut(Qt.Key_Equal)
         zoomin_action.triggered.connect(self.zoom_in)
+        zoomin_action2.triggered.connect(self.zoom_in)
         self.view_menu.addAction(zoomin_action)
+        self.view_menu.addAction(zoomin_action2)
 
         zoomreset_action = QAction("Zoom reset", self)
         zoomreset_action.setShortcut(Qt.Key_0)
