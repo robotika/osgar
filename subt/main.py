@@ -257,6 +257,7 @@ class SubTChallenge:
             safety, safe_direction = 1.0, desired_direction
         else:
             safety, safe_direction = self.local_planner.recommend(desired_direction)
+        #print(self.time,"safety:%f    desired:%f  safe_direction:%f"%(safety, desired_direction, safe_direction))
         #desired_angular_speed = 1.2 * safe_direction
         desired_angular_speed = 0.9 * safe_direction
         size = len(self.scan)
