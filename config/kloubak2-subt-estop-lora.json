@@ -9,7 +9,7 @@
           "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d"],
           "init": {
             "symmetric": true,
-            "flip_joint_deg": 45.0,
+            "flip_joint_deg": 60.0,
             "max_speed": 0.5,
             "virtual_bumper_sec": 10.0,
             "virtual_bumper_radius": 0.5,
