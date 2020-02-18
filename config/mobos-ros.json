@@ -78,6 +78,7 @@
               ["lora.raw", "lora_serial.raw"],
               ["app.pose2d", "lora.pose2d"],
               ["lora.cmd", "app.cmd"],
+	      ["rosmsg.t265_rot", "app.rot"],
               ["app.artf_xyz", "lora.artf"]]
   }
 }
