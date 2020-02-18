@@ -188,7 +188,11 @@ class SubTChallenge:
         self.last_send_time = None
         self.origin = None  # unknown initial position
         self.origin_quat = quaternion.identity()
+
         self.offset = (0, 0, 0)
+        if 'init_offset' in config:
+            x, y, z = [d/1000.0 for d in config['init_offset']]
+            self.offset = (x, y, z)
         self.origin_error = False
         self.robot_name = None  # received with origin
         scan_subsample = config.get('scan_subsample', 1)
@@ -426,6 +430,7 @@ class SubTChallenge:
         print('Follow trace')
         END_THRESHOLD = 2.0
         start_time = self.sim_time_sec
+        print('MD', self.xyz, distance3D(self.xyz, trace.trace[0]), trace.trace)
         while distance3D(self.xyz, trace.trace[0]) > END_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
             if self.update() == 'scan':
                 target_x, target_y = trace.where_to(self.xyz, max_target_distance)[:2]
@@ -620,11 +625,24 @@ class SubTChallenge:
         print(contents)
 
 #############################################
+    def system_nav_trace(self, goal):
+        """
+        Navigate along line
+        """
+        dx, dy, __ = self.offset
+        trace = Trace()
+        trace.add_line_to((goal[0] - dx, goal[1] - dy, 0))
+        trace.reverse()
+        self.follow_trace(trace, timeout=timedelta(seconds=120), max_target_distance=2.5, safety_limit=0.2)
+
     def play_system_track(self):
         print("SubT Challenge Ver1!")
         try:
             with EmergencyStopMonitor(self):
                 allow_virtual_flip = self.symmetric
+                if distance(self.offset, (0, 0)) > 0.1:
+                    self.system_nav_trace((0, 0, 0))
+
 #                self.go_straight(2.5)  # go to the tunnel entrance - commented our for testing
                 walldist = self.walldist
                 total_dist = 0.0
@@ -903,6 +921,7 @@ def main():
     parser_run.add_argument('--speed', help='maximum speed (default: from config)', type=float)
     parser_run.add_argument('--timeout', help='seconds of exploring before going home (default: %(default)s)',
                             type=int, default=10*60)
+    parser_run.add_argument('--init-offset', help='inital 3D offset accepted as a string of comma separated values (meters)')
     parser_run.add_argument('--start-paused', dest='start_paused', action='store_true',
                             help='start robota Paused and wait for LoRa Contine command')
 
@@ -935,6 +954,10 @@ def main():
         else:
             cfg['robot']['modules']['app']['init']['right_wall'] = args.side == 'right'
         cfg['robot']['modules']['app']['init']['timeout'] = args.timeout
+        if args.init_offset is not None:
+            x, y, z = [float(x) for x in args.init_offset.split(',')]
+            cfg['robot']['modules']['app']['init']['init_offset'] = [int(x*1000), int(y*1000), int(z*1000)]
+
         if args.speed is not None:
             cfg['robot']['modules']['app']['init']['max_speed'] = args.speed
 
