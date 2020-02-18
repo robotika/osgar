@@ -14,7 +14,7 @@ from PyQt5.QtCore import pyqtSignal, QSize, Qt, QPointF, QLineF
 from PyQt5.QtGui import QPalette, QKeySequence, QPainter, QColor, QFont, QTransform, QIcon, QPolygonF
 from PyQt5.QtWidgets import ( QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout,
                               QMessageBox, QMainWindow, QAction, QToolBar, QMenuBar, QCheckBox,
-                              QDockWidget)
+                              QDockWidget, QComboBox)
 
 import osgar.record
 import osgar.replay
@@ -184,6 +184,7 @@ class OsgarControlCenter:
         bus.register('cmd')
         self.view = None # will be set from outside by record
         self.thread = None
+        self.robot_id = 0  # ALL by default
 
     def start(self):
         self.thread = threading.Thread(target=self.run)
@@ -211,16 +212,19 @@ class OsgarControlCenter:
                 # TODO draw it into map (x, y)
 
     def pause_mission(self):
-        self.bus.publish('cmd', [0, b'Pause'])
+        self.bus.publish('cmd', [self.robot_id, b'Pause'])
 
     def continue_mission(self):
-        self.bus.publish('cmd', [0, b'Continue'])
+        self.bus.publish('cmd', [self.robot_id, b'Continue'])
 
     def stop_mission(self):
-        self.bus.publish('cmd', [0, b'Stop'])
+        self.bus.publish('cmd', [self.robot_id, b'Stop'])
 
     def go_home(self):
-        self.bus.publish('cmd', [0, b'GoHome'])
+        self.bus.publish('cmd', [self.robot_id, b'GoHome'])
+
+    def set_robot_id(self, i):
+        self.robot_id = i
 
 
 class MainWindow(QMainWindow):
@@ -301,6 +305,18 @@ class MainWindow(QMainWindow):
         w = QWidget()
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignTop)
+
+        self.cb = QComboBox()
+        self.cb.addItem("#0 - ALL")
+        self.cb.addItem("-----------------")  # 1 is reserved for the Control Center LoRa
+        self.cb.addItem("#2 - Eduro")
+        self.cb.addItem("#3 - Kloubak K3")
+        self.cb.addItem("#4 - MOBoS")
+        self.cb.addItem("#5 - Kloubak K2")
+        self.cb.addItem("#6 - Maria")
+        self.cb.currentIndexChanged.connect(self.selectionchange)
+        layout.addWidget(self.cb)
+
         layout.addWidget(QPushButton("&Pause Mission", clicked=self.on_pause_mission))
         layout.addWidget(QPushButton("&Continue Mission", clicked=self.on_continue_mission))
         layout.addWidget(QPushButton("&Stop Mission", clicked=self.on_stop_mission))
@@ -332,20 +348,24 @@ class MainWindow(QMainWindow):
         self.centralWidget().close()
 
     def on_pause_mission(self):
-        print("pause mission")
+        print("pause mission", self.cb.currentText())
         self.cc.pause_mission()
 
     def on_continue_mission(self):
-        print('continue mission')
+        print('continue mission', self.cb.currentText())
         self.cc.continue_mission()
 
     def on_stop_mission(self):
-        print("stop mission")
+        print("stop mission", self.cb.currentText())
         self.cc.stop_mission()
 
     def on_go_home(self):
-        print("go home")
+        print("go home", self.cb.currentText())
         self.cc.go_home()
+
+    def selectionchange(self, i):
+        print("Current index", i, "selection changed ", self.cb.currentText())
+        self.cc.set_robot_id(i)
 
 
 def record(view, cfg):
