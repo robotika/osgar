@@ -16,6 +16,7 @@ CAN_ID_ENCODERS_RIGHT = 0x182
 CAM_SYSTEM_STATUS = 0x8A  # including emergency STOP button
 CAN_ID_BUTTONS = 0x28A
 CAN_ID_VOLTAGE = 0x18B
+CAN_ID_CO2 = 0x630
 
 UPDATE_TIME_FREQUENCY = 20.0  # Hz
 WHEEL_DIAMETER_LEFT = 427.0 / 445.0 * 0.26/4.0 + 0.00015
@@ -39,6 +40,7 @@ class Eduro(Thread):
 
         self.bus = bus
         self.time = None
+        self.sync_count = 0
 
         self.desired_speed = 0.0  # m/s
         self.desired_angular_speed = 0.0
@@ -170,6 +172,12 @@ class Eduro(Thread):
             left&0xff, (left>>8)&0xff,
             right&0xff, (right>>8)&0xff]))
 
+    def cmd_read_gas_ppm(self):
+        pass
+    
+    def update_gas_ppm(self, data):
+        pass
+
     def check_restarted_modules(self, module_id, status):
         if module_id in [1, 2]:  # motors
             if status != 5:
@@ -199,6 +207,11 @@ class Eduro(Thread):
             x, y, heading = self.pose
             self.bus.publish('pose2d', [round(x*1000), round(y*1000), round(math.degrees(heading)*100)])
             self.send_speed()
+            self.sync_count += 1
+            if self.sync_count % 20 == 0:
+                self.cmd_read_gas_ppm()
+        elif msg_id == CAN_ID_CO2:
+            self.update_gas_ppm(payload)
         elif msg_id & 0xFF0 == 0x700:  # heart beat message
             assert len(payload) == 1, len(payload)
             self.check_restarted_modules(msg_id & 0xF, payload[0])
