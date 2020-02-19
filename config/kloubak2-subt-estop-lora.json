@@ -152,6 +152,28 @@
           "in": [],
           "out": ["tick"],
           "init": {"sleep": 0.1}
+      },
+      "wifi": {
+          "driver": "subt.wifisignal:WifiSignal",
+          "in": [],
+          "out": ["wifiscan"],
+          "init": {
+            "sleep": 1.0
+          }
+      },
+      "gas_detector": {
+          "driver": "osgar.drivers.gas_detector:MeasureCO2",
+          "in": ["raw"],
+          "out": ["raw", "co2"],
+          "init": {
+            "sleep": 0.5
+          }
+      },
+      "gas_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/gas_detector", "speed": 115200}
       }
     },
     "links": [["serial.raw", "can.slot_raw"],
@@ -184,7 +206,9 @@
               ["timer.tick", "rs.trigger"],
               ["kloubak.bumpers_front", "app.bumpers_front"],
               ["kloubak.bumpers_rear", "app.bumpers_rear"],
-              ["kloubak.joint_angle", "app.joint_angle"]
+              ["kloubak.joint_angle", "app.joint_angle"],
+              ["gas_serial.raw", "gas_detector.raw"],
+              ["gas_detector.raw", "gas_serial.raw"]
       ]
   }
 }
