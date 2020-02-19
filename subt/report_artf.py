@@ -1,6 +1,7 @@
 """
    Report artifact for STIX in Colorado April 2019
          reused for Pittsburgh August 2019
+     and reused again in Elma/Olympia February 2020
 """
 import requests
 import time
@@ -9,8 +10,8 @@ import json
 
 
 #URL_BASE = "http://localhost:8000"  # demo
-URL_BASE = "http://10.100.1.200:8000"  # Safety Research (was Army) Tunnel
-#URL_BASE = "http://10.100.2.200:8000"  # Experimental (was Miami) Tunnel
+URL_BASE = "http://10.100.1.200:8000"  # Alpha (was Army and Safety Research) Tunnel
+#URL_BASE = "http://10.100.2.200:8000"  # Beta (was Miami and Experimental) Tunnel
 
 ARTF_TYPES = ['Survivor', 'Backpack', 'Cell Phone',  # common
               'Drill', 'Fire Extinguisher',          # tunnel extra
@@ -33,6 +34,7 @@ def get_status():
     assert response.status_code == 200, response.status_code
     print(response.content)
     print("-------------------")
+    return response.content
 
 
 def report_artf(artf_type, x, y, z):
@@ -84,8 +86,8 @@ if __name__ == '__main__':
     parser.add_argument('x', help='X coordinate in meters', type=float)
     parser.add_argument('y', help='Y coordinate in meters', type=float)
     parser.add_argument('z', help='Z coordinate in meters', type=float)
-    parser.add_argument('--only-one', '-1', help='only one exact shot',
-                        action='store_true')
+#    parser.add_argument('--only-one', '-1', help='only one exact shot',
+#                        action='store_true')
     args = parser.parse_args()
 
     artf_type = args.artf_type
@@ -93,7 +95,7 @@ if __name__ == '__main__':
         artf_type = ARTF_TYPES[ARTF_TYPES_SHORT.index(artf_type)]
 
     print('Reporting:', artf_type)
-    if args.only_one:
+    if True:  # args.only_one:
         print(score(artf_type, args.x, args.y, args.z))
     else:
         for x, y, z in triple(args.x, args.y, args.z):
