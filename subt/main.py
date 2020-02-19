@@ -529,7 +529,6 @@ class SubTChallenge:
             if ((self.joint_angle_rad[0] > self.flip_joint_rad and self.flip_right_wall) or
                 (self.joint_angle_rad[0] < -self.flip_joint_rad and not self.flip_right_wall)):
                 self.send_speed_cmd(0, 0)
-                self.flip_right_wall = not self.flip_right_wall
                 self.flipped = not self.flipped
 
     def update(self):
