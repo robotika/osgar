@@ -29,6 +29,7 @@
           "out": ["raw"],
           "init": {
             "mode": "PULL",
+	    "timeout":0.5,
             "endpoint": "tcp://localhost:5555"
           }
       },

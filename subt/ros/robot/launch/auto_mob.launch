@@ -160,6 +160,12 @@
   		<arg name="depth_fps"           value="15"/>
   		<arg name="color_fps"           value="15"/>
 	</include>
+	<node name="$(anon dynparam)" pkg="dynamic_reconfigure" type="dynparam" args="set_from_parameters /camera/stereo_module/auto_exposure_roi">
+    		<param name="left" type="double" value="200" />
+    		<param name="right" type="double" value="648" />
+		<param name="top" type="double" value="330" />
+                <param name="bottom" type="double" value="479" />
+  	</node>
 	<include file="$(find realsense2_camera)/launch/rs_t265.launch" if="$(arg record_sensors)"/>
 	
 	<node name="laserscan_kinect" pkg="laserscan_kinect" type="laserscan_kinect" >
