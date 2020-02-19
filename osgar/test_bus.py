@@ -1,4 +1,7 @@
 import unittest
+import threading
+import time
+
 from unittest.mock import MagicMock
 from datetime import timedelta
 
@@ -164,5 +167,30 @@ class BusHandlerTest(unittest.TestCase):
             ))
         self.assertFalse(almost_equal([1.23], []))
         self.assertFalse(almost_equal([-0.27], [0.42]))
+
+    def test_sleep(self):
+        bus = Bus(MagicMock())
+        handle = bus.handle('test')
+        interval = 0.5
+        def sleep():
+            handle.sleep(interval)
+        t = threading.Thread(target=sleep, daemon=True)
+        start = time.monotonic()
+        t.start()
+        t.join(10)
+        end = time.monotonic()
+        self.assertFalse(t.is_alive())
+        self.assertGreater(end-interval, start)
+
+    def test_interruptible_sleep(self):
+        bus = Bus(MagicMock())
+        handle = bus.handle('test')
+        def sleep():
+            handle.sleep(10)
+        t = threading.Thread(target=sleep, daemon=True)
+        t.start()
+        handle.shutdown()
+        t.join(0.01)
+        self.assertFalse(t.is_alive())
 
 # vim: expandtab sw=4 ts=4

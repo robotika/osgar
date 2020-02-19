@@ -1,7 +1,8 @@
 """
   Internal bus for communication among modules
 """
-import time
+import threading  # Event
+
 from queue import Queue
 from datetime import timedelta
 from collections import deque
@@ -52,7 +53,7 @@ class _BusHandler:
         self.out = {}
         self.slots = {}
         self.stream_id = {}
-        self._is_alive = True
+        self.finished = threading.Event()
         self.no_output = set()
         self.compressed_output = set()
 
@@ -105,13 +106,13 @@ class _BusHandler:
         return timestamp, channel, data
 
     def sleep(self, secs):
-        time.sleep(secs)
+        self.finished.wait(secs)
 
     def is_alive(self):
-        return self._is_alive
+        return not self.finished.is_set()
 
     def shutdown(self):
-        self._is_alive = False
+        self.finished.set()
         self.queue.put(None)
 
     def report_error(self, err):
