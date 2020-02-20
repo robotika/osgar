@@ -73,7 +73,7 @@
 	<node name="laserscan_kinect" pkg="laserscan_kinect" type="laserscan_kinect" >
                 <remap from="image" to="/camera/depth/image_rect_raw"/>
                 <remap from="camera_info" to="/camera/depth/camera_info"/>
-      		<rosparam command="load" file="$(find robot)/params_common/depth_scan_params.yaml" />
+      		<rosparam command="load" file="$(find robot)/params_maria/depth_scan_params.yaml" />
         	<remap from="scan" to="/scan"/>
 	</node>
 	<!--node pkg="depthimage_to_laserscan" type="depthimage_to_laserscan" name="depthimage_to_laserscan" >
@@ -87,9 +87,10 @@
         <node name="cliff_detector" pkg="cliff_detector" type="cliff_detector" output="screen" >
                 <remap from="image" to="/camera/depth/image_rect_raw"/>
                 <remap from="camera_info" to="/camera/depth/camera_info"/>
-                <rosparam command="load" file="$(find robot)/params_common/cliff_detector_params.yaml" />
+                <rosparam command="load" file="$(find robot)/params_maria/cliff_detector_params.yaml" />
         </node>
         <!-- TF transformations x y z yaw pitch roll -->
-        <node if="$(arg record_sensors)" pkg="tf" type="static_transform_publisher" name="realsense" args="0.06 0 0.17 0 0 0 /base_link /camera_link 100"/> 
+        <node if="$(arg record_sensors)" pkg="tf" type="static_transform_publisher" name="realsense" args="0.0 0.085 0.19 0 0 0 /base_link /camera_link 100"/>
+	<node if="$(arg record_sensors)" pkg="tf" type="static_transform_publisher" name="t265_mounting" args="0.0 0.085 0.19 0 0 0 /base_link /rs_t265_link 100"/> 
 </launch>
 
