@@ -8,6 +8,7 @@
           "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d"],
           "init": {
             "symmetric": true,
+            "use_return_trace": false,
             "max_speed": 0.5,
             "virtual_bumper_sec": 10.0,
             "virtual_bumper_radius": 0.5,
