@@ -194,6 +194,10 @@ class SubTChallenge:
         if 'init_offset' in config:
             x, y, z = [d/1000.0 for d in config['init_offset']]
             self.offset = (x, y, z)
+        self.init_path = None
+        if 'init_path' in config:
+            pts_s = [s.split(',') for s in config['init_path'].split(';')]
+            self.init_path = [(float(x), float(y)) for x, y in pts_s]
         self.origin_error = False
         self.robot_name = None  # received with origin
         scan_subsample = config.get('scan_subsample', 1)
@@ -630,13 +634,16 @@ class SubTChallenge:
         print(contents)
 
 #############################################
-    def system_nav_trace(self, goal):
+    def system_nav_trace(self, path=None):
         """
         Navigate along line
         """
         dx, dy, __ = self.offset
         trace = Trace()
-        trace.add_line_to((goal[0] - dx, goal[1] - dy, 0))
+        trace.add_line_to((-dx, -dy, 0))
+        if path is not None:
+            for x, y in path:
+                trace.add_line_to((x - dx, y - dy, 0))
         trace.reverse()
         self.follow_trace(trace, timeout=timedelta(seconds=120), max_target_distance=2.5, safety_limit=0.2)
 
@@ -645,8 +652,8 @@ class SubTChallenge:
         try:
             with EmergencyStopMonitor(self):
                 allow_virtual_flip = self.symmetric
-                if distance(self.offset, (0, 0)) > 0.1:
-                    self.system_nav_trace((0, 0, 0))
+                if distance(self.offset, (0, 0)) > 0.1 or self.init_path is not None:
+                    self.system_nav_trace(self.init_path)
 
 #                self.go_straight(2.5)  # go to the tunnel entrance - commented our for testing
                 walldist = self.walldist
@@ -927,6 +934,7 @@ def main():
     parser_run.add_argument('--timeout', help='seconds of exploring before going home (default: %(default)s)',
                             type=int, default=10*60)
     parser_run.add_argument('--init-offset', help='inital 3D offset accepted as a string of comma separated values (meters)')
+    parser_run.add_argument('--init-path', help='inital path to be followed from (0, 0). 2D coordinates are separated by ;')
     parser_run.add_argument('--start-paused', dest='start_paused', action='store_true',
                             help='start robota Paused and wait for LoRa Contine command')
 
@@ -962,6 +970,8 @@ def main():
         if args.init_offset is not None:
             x, y, z = [float(x) for x in args.init_offset.split(',')]
             cfg['robot']['modules']['app']['init']['init_offset'] = [int(x*1000), int(y*1000), int(z*1000)]
+        if args.init_path is not None:
+            cfg['robot']['modules']['app']['init']['init_path'] = args.init_path
 
         if args.speed is not None:
             cfg['robot']['modules']['app']['init']['max_speed'] = args.speed
