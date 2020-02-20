@@ -41,6 +41,8 @@ REASON_PITCH_LIMIT = 'pitch_limit'
 REASON_ROLL_LIMIT = 'roll_limit'
 REASON_VIRTUAL_BUMPER = 'virtual_bumper'
 REASON_LORA = 'lora'
+REASON_FRONT_BUMPER = 'front_bumper'
+REASON_REAR_BUMPER = 'rear_bumper'
 
 
 def min_dist(laser_data):
@@ -185,6 +187,9 @@ class SubTChallenge:
         self.use_right_wall = config['right_wall']
         self.use_center = False  # navigate into center area (controlled by name ending by 'C')
         self.is_virtual = config.get('virtual_world', False)  # workaround to handle tunnel differences
+
+        self.front_bumper = False
+        self.rear_bumper = False
 
         self.last_send_time = None
         self.origin = None  # unknown initial position
@@ -337,6 +342,18 @@ class SubTChallenge:
                     print(self.time, "VIRTUAL BUMPER - collision")
                     self.go_straight(-0.3, timeout=timedelta(seconds=10))
                     reason = REASON_VIRTUAL_BUMPER
+                    break
+
+                if self.front_bumper and not flipped:
+                    print(self.time, "FRONT BUMPER - collision")
+                    self.go_straight(-0.3, timeout=timedelta(seconds=10))
+                    reason = REASON_FRONT_BUMPER
+                    break
+
+                if self.rear_bumper and flipped:
+                    print(self.time, "REAR BUMPER - collision")
+                    self.go_straight(-0.3, timeout=timedelta(seconds=10))
+                    reason = REASON_REAR_BUMPER
                     break
 
                 if self.lora_cmd is not None:
@@ -529,6 +546,12 @@ class SubTChallenge:
     def on_joint_angle(self, timestamp, data):
         # angles for articulated robot in 1/100th of degree
         self.joint_angle_rad = [math.radians(a/100) for a in data]
+
+    def on_bumpers_front(self, timestamp, data):
+        self.front_bumper = max(data)  # array of boolean values where True means collision
+
+    def on_bumpers_rear(self, timestamp, data):
+        self.rear_bumper = max(data)  # array of boolean values where True means collision
 
     def update(self):
         packet = self.bus.listen()
