@@ -285,6 +285,8 @@ class RobotKloubak(Node):
         self.debug_odo = []
         self.debug_downdrops_front = []
         self.debug_downdrops_rear = []
+        self.bumpers_front = None  # unknown, report difference
+        self.bumpers_rear = None
         print('Kloubak mode:', self.drive_mode, 'num_axis:', self.num_axis)
 
     def send_pose(self):
@@ -470,7 +472,10 @@ class RobotKloubak(Node):
             if len(payload) == 4:
                 self.downdrops_front = struct.unpack_from('>HH', payload)
                 self.publish('downdrops_front', list(self.downdrops_front))
-                self.publish('bumpers_front', get_downdrop_bumpers(self.downdrops_front))
+                prev = self.bumpers_front
+                self.bumpers_front = get_downdrop_bumpers(self.downdrops_front)
+                if prev != self.bumpers_front:
+                    self.publish('bumpers_front', self.bumpers_front)
 #                print(self.time, self.downdrops_front)
                 if self.verbose:
                     self.debug_downdrops_front.append(
@@ -482,7 +487,10 @@ class RobotKloubak(Node):
             if len(payload) == 4:
                 self.downdrops_rear = struct.unpack_from('>HH', payload)
                 self.publish('downdrops_rear', list(self.downdrops_rear))
-                self.publish('bumpers_rear', get_downdrop_bumpers(self.downdrops_rear))
+                prev = self.bumpers_rear
+                self.bumpers_rear = get_downdrop_bumpers(self.downdrops_rear)
+                if prev != self.bumpers_rear:
+                    self.publish('bumpers_rear', self.bumpers_rear)
 #                print(self.time, self.downdrops_rear)
                 if self.verbose:
                     self.debug_downdrops_rear.append(
