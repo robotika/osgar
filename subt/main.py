@@ -660,7 +660,13 @@ class SubTChallenge:
                 total_dist = 0.0
                 start_time = self.sim_time_sec
                 while self.sim_time_sec - start_time < self.timeout.total_seconds():
-                    dist, reason = self.follow_wall(radius=walldist, right_wall=self.use_right_wall, timeout=self.timeout,
+                    if self.sim_time_sec - start_time > self.timeout.total_seconds():
+                        print('Total Timeout Reached', self.timeout.total_seconds())
+                        break
+                    timeout = timedelta(seconds=self.timeout.total_seconds() - (self.sim_time_sec - start_time))
+                    print('Current timeout', timeout)
+
+                    dist, reason = self.follow_wall(radius=walldist, right_wall=self.use_right_wall, timeout=timeout,
                                             pitch_limit=LIMIT_PITCH, roll_limit=LIMIT_ROLL)
                     total_dist += dist
                     if reason is None or reason in [REASON_LORA,]:
