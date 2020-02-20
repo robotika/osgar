@@ -533,7 +533,7 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
         writer.release()
 
 
-def main():
+def main(args_in):
     import argparse
     import os.path
     global g_rotation_offset_rad, g_lidar_fov_deg
@@ -568,7 +568,7 @@ def main():
 
     parser.add_argument('--create-video', help='filename of output video')
 
-    args = parser.parse_args()
+    args = parser.parse_args(args_in)
     if not any([args.lidar, args.pose2d, args.pose3d, args.camera]):
         print("Available streams:")
         for stream in lookup_stream_names(args.logfile):
@@ -588,6 +588,7 @@ def main():
         lidarview(framer, caption_filename=filename, callback=callback, out_video=args.create_video, jump=args.jump)
 
 if __name__ == "__main__":
-    main()
+    import sys
+    main(sys.argv)
 
 # vim: expandtab sw=4 ts=4 
