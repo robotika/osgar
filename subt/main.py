@@ -194,6 +194,7 @@ class SubTChallenge:
                 max_obstacle_distance=2.5,
                 scan_subsample=scan_subsample,
                 max_considered_obstacles=100)
+        self.use_return_trace = config.get('use_return_trace', True)
         self.ref_scan = None
         self.pause_start_time = None
         if config.get('start_paused', False):
@@ -659,7 +660,7 @@ class SubTChallenge:
                     if reason in [REASON_LORA,]:
                         break
 
-                if self.local_planner is not None:
+                if self.use_return_trace and self.local_planner is not None:
                     self.stdout(self.time, "Going HOME %.3f" % dist, reason)
                     if allow_virtual_flip:
                         self.flipped = True  # return home backwards
