@@ -165,6 +165,7 @@ class SubTChallenge:
         self.xyz_quat = [0, 0, 0]
         self.orientation = quaternion.identity()
         self.yaw, self.pitch, self.roll = 0, 0, 0
+        self.yaw_offset = None  # not defined, use first IMU reading
         self.is_moving = None  # unknown
         self.scan = None  # I should use class Node instead
         self.flipped = False  # by default use only front part
@@ -577,7 +578,11 @@ class SubTChallenge:
                 if self.local_planner is not None:
                     self.local_planner.update(data)
             elif channel == 'rot':
-                self.yaw, self.pitch, self.roll = [normalizeAnglePIPI(math.radians(x/100)) for x in data]
+                temp_yaw, self.pitch, self.roll = [normalizeAnglePIPI(math.radians(x/100)) for x in data]
+                if self.yaw_offset is None:
+                    self.yaw_offset = -temp_yaw
+                self.yaw = temp_yaw + self.yaw_offset
+
             elif channel == 'orientation':
                 self.orientation = data
             elif channel == 'sim_time_sec':
