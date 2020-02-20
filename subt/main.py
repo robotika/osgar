@@ -5,6 +5,7 @@ import gc
 import os.path
 import math
 import threading
+import copy
 
 from datetime import timedelta
 from collections import defaultdict
@@ -420,6 +421,7 @@ class SubTChallenge:
         print('Wait and get ready for return')
         self.send_speed_cmd(0, 0)
         self.wait(dt=timedelta(seconds=3.0))
+        original_trace = copy.deepcopy(self.trace)
         self.trace.prune(SHORTCUT_RADIUS)
         self.wait(dt=timedelta(seconds=2.0))
         print('done.')
@@ -429,7 +431,10 @@ class SubTChallenge:
         while distance3D(self.xyz, (0, 0, 0)) > HOME_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
             channel = self.update()
             if (channel == 'scan' and not self.flipped) or (channel == 'scan_back' and self.flipped) or (channel == 'scan360'):
-                target_x, target_y = self.trace.where_to(self.xyz, target_distance)[:2]
+                if target_distance == MIN_TARGET_DISTANCE:
+                    target_x, target_y = original_trace.where_to(self.xyz, target_distance)[:2]
+                else:
+                    target_x, target_y = self.trace.where_to(self.xyz, target_distance)[:2]
 #                print(self.time, self.xyz, (target_x, target_y), math.degrees(self.yaw))
                 x, y = self.xyz[:2]
                 desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
