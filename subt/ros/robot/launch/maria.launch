@@ -44,7 +44,8 @@
 		<arg name="serial_no" value="922612070851"/>
 		<arg name="enable_fisheye"      value="false"/>
 
-  		<arg name="depth_width"         value="848"/>
+  		<arg name="json_file_path"      value="$(find robot)/params_common/d435i.json"/>
+		<arg name="depth_width"         value="848"/>
   		<arg name="depth_height"        value="480"/>
   		<arg name="enable_depth"        value="true"/>
 
@@ -58,6 +59,12 @@
   		<arg name="depth_fps"           value="15"/>
   		<arg name="color_fps"           value="15"/>
 	</include>
+	<node name="dynparamROI" pkg="dynamic_reconfigure" type="dynparam" args="set_from_parameters /camera/stereo_module/auto_exposure_roi">
+                <param name="left" type="double" value="200" />
+                <param name="right" type="double" value="648" />
+                <param name="top" type="double" value="330" />
+                <param name="bottom" type="double" value="479" />
+        </node>
 	<include file="$(find realsense2_camera)/launch/rs_t265.launch" if="$(arg record_sensors)">
 		<arg name="camera"                value="rs_t265"/>
 		<arg name="serial_no" 		value="929122111466"/>
