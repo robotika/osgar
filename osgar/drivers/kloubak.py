@@ -29,6 +29,7 @@ AD_RANGE2 = None
 
 DOWNDROP_TOO_LONG_RAW = 700  # in millimeters, trigger for downdrop/hole
 DOWNDROP_TOO_SHORT_RAW = 350  # in millimeters, trigger for low obstacle, probably not visible by 2D lidar
+DOWNDROP_STABLE_COUNT = 2  # if within the limits for given number of cycles report as bumper True/False
 
 CAN_ID_BUTTONS = 0x1
 CAN_ID_VESC_FRONT_R = 0x91
@@ -286,7 +287,9 @@ class RobotKloubak(Node):
         self.debug_downdrops_front = []
         self.debug_downdrops_rear = []
         self.bumpers_front = None  # unknown, report difference
+        self.bumpers_front_counter = 0  # how many cycles is the True/False value stable
         self.bumpers_rear = None
+        self.bumpers_rear_counter = 0
         print('Kloubak mode:', self.drive_mode, 'num_axis:', self.num_axis)
 
     def send_pose(self):
@@ -475,6 +478,9 @@ class RobotKloubak(Node):
                 prev = self.bumpers_front
                 self.bumpers_front = get_downdrop_bumpers(self.downdrops_front)
                 if prev != self.bumpers_front:
+                    self.bumpers_front_counter = 0  # reset on change
+                self.bumpers_front_counter += 1
+                if self.bumpers_front_counter == DOWNDROP_STABLE_COUNT:  # report only "slightly stable" values
                     self.publish('bumpers_front', self.bumpers_front)
 #                print(self.time, self.downdrops_front)
                 if self.verbose:
@@ -490,6 +496,9 @@ class RobotKloubak(Node):
                 prev = self.bumpers_rear
                 self.bumpers_rear = get_downdrop_bumpers(self.downdrops_rear)
                 if prev != self.bumpers_rear:
+                    self.bumpers_rear_counter = 0  # reset on change
+                self.bumpers_rear_counter += 1
+                if self.bumpers_rear_counter == DOWNDROP_STABLE_COUNT:  # report only "slightly stable" values
                     self.publish('bumpers_rear', self.bumpers_rear)
 #                print(self.time, self.downdrops_rear)
                 if self.verbose:
