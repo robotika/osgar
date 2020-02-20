@@ -1,10 +1,4 @@
 #!/bin/bash
 
-python -m osgar.record config/test-vesc.json &
-VESC_PID=$!
-
-python -m subt run config/kloubak2-subt-estop-lora.json --side right --speed 0.7 --timeout 20
-
-kill ${VESC_PID}
-wait
-
+python -m subt run config/kloubak2-subt-estop-lora.json --side left --speed 0.7 --timeout 1200
+python -m osgar.record config/test-lora.json
