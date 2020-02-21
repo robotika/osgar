@@ -533,7 +533,7 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
         writer.release()
 
 
-def main(args_in):
+def main(args_in=None):
     import argparse
     import os.path
     global g_rotation_offset_rad, g_lidar_fov_deg
@@ -588,7 +588,6 @@ def main(args_in):
         lidarview(framer, caption_filename=filename, callback=callback, out_video=args.create_video, jump=args.jump)
 
 if __name__ == "__main__":
-    import sys
-    main(sys.argv)
+    main()
 
 # vim: expandtab sw=4 ts=4 
