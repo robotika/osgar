@@ -8,4 +8,4 @@ if __name__ == "__main__":
         "--camera", "camera.raw",
         "--keyframes", "detector.artf"
     ] + sys.argv[1:]
-    lidarview.main(args)
+    lidarview.main(args, "eduro")

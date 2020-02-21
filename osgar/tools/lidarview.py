@@ -534,7 +534,7 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
         writer.release()
 
 
-def main(args_in=None):
+def main(args_in=None, startswith=None):
     import argparse
     import os.path
     global g_rotation_offset_rad, g_lidar_fov_deg
@@ -573,7 +573,11 @@ def main(args_in=None):
 
     p = pathlib.Path(args.logfile)
     if p.is_dir():
-        args.logfile = max(p.iterdir(), key=lambda a: a.stat().st_mtime)
+        if startswith is not None:
+            g = iter(child for child in p.iterdir() if child.name.startswith(startswith))
+        else:
+            g = p.iterdir()
+        args.logfile = max(g, key=lambda a: a.stat().st_mtime)
         print(args.logfile)
 
     if not any([args.lidar, args.pose2d, args.pose3d, args.camera]):

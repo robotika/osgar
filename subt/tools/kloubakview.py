@@ -11,4 +11,4 @@ if __name__ == "__main__":
         "--keyframes", "detector.artf",
         "--joint", "kloubak.joint_angle",
     ] + sys.argv[1:]
-    lidarview.main(args)
+    lidarview.main(args, "kloubak")

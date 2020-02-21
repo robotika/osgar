@@ -8,5 +8,5 @@ if __name__ == "__main__":
         "--camera", "rosmsg.image",
         "--camera2", "rosmsg.depth",
     ] + sys.argv[1:]
-    lidarview.main(args, "mobos")
+    lidarview.main(args, "maria")
 
