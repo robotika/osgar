@@ -32,6 +32,7 @@ setuptools.setup(
             'logger = osgar.logger:main',
             'record = osgar.record:main',
             'subt = subt.main:main',
+            'allsync = subt.tools.allsync:main',
         ],
     },
     classifiers=[
