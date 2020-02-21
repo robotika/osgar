@@ -9,6 +9,7 @@ import math
 import numpy as np
 
 from osgar.bus import BusShutdownException
+from osgar.lib.quaternion import euler_zyx
 
 ROS_MESSAGE_TYPES = {
     'std_msgs/String': '992ce8a1687cec8c8bd883ec73ca41d1',
@@ -147,16 +148,26 @@ def parse_laser(data):
 #    print(params)
     pos += 7*4
     ranges_size = struct.unpack_from('<I', data, pos)[0]
-    assert ranges_size == 720, ranges_size
+    # assert ranges_size == 720, ranges_size
     pos += 4
     scan = struct.unpack_from('<' + 'f' * ranges_size, data, pos)
     pos += 4 * ranges_size
     intensities_size = struct.unpack_from('<I', data, pos)[0]
-    assert intensities_size == 720, intensities_size
+    # assert intensities_size == 720, intensities_size
     intensities = struct.unpack_from('<' + 'f' * intensities_size, data, pos)
 
     # conversion to int and millimeters
     scan = [int(x*1000) if x < 65.0 else 0 for x in scan]
+    #scan = [0] * 640 + scan + [0] * 640
+    to_cut = int(len(scan) / 360 * 45)  #original scan is 360deg
+    scan = scan[to_cut:len(scan)-to_cut]
+
+
+    #reduced_scan = []
+    #for index,value in enumerate(scan):
+    #    if index % 10 == 1:
+    #        reduced_scan.append(value)
+
     return scan
 
 
@@ -195,11 +206,11 @@ def parse_odom(data):
     pos += 36 * 8
     assert pos == len(data), (pos, len(data))
 
-    q0, q1, q2, q3 = ori  # quaternion
-    ax =  math.atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2))
-    ay =  math.asin(2*(q0*q2-q3*q1))
-    az =  math.atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3))
-    return timestamp_sec, (x, y, ax)
+    #q0, q1, q2, q3 = ori  # quaternion
+    #ax =  math.atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2))
+    #ay =  math.asin(2*(q0*q2-q3*q1))
+    #az =  math.atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3))
+    return timestamp_sec, (x, y),euler_zyx(ori)
 
 
 def parse_points(data):
@@ -287,7 +298,7 @@ class ROSMsgParser(Thread):
     def __init__(self, config, bus):
         Thread.__init__(self)
         self.setDaemon(True)
-        bus.register("rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin", "gas_detected", "depth:gz")
+        bus.register("rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin", "gas_detected", "depth:gz", "t265_rot")
 
         self.bus = bus
         self._buf = b''
@@ -310,7 +321,7 @@ class ROSMsgParser(Thread):
         if len(data) < 4:
             return None
         size = struct.unpack_from('<I', data, 0)[0]
-#        print(size, len(self._buf))
+        print(size, len(self._buf))
         assert size > 0, size
         size += 4  # the length prefix
         if len(data) < size:
@@ -346,19 +357,28 @@ class ROSMsgParser(Thread):
         frame_id = get_frame_id(data)
  #       print(frame_id)
         # TODO parse properly header "frame ID"
-        if frame_id.endswith(b'/base_link/camera_front'):  #self.topic_type == 'sensor_msgs/CompressedImage':
+        #if frame_id.endswith(b'camera_depth_frame'):
+        #    import pdb
+        #    pdb.set_trace()
+        if frame_id.endswith(b'camera_color_optical_frame'):  #self.topic_type == 'sensor_msgs/CompressedImage':
             self.bus.publish('image', parse_jpeg_image(packet))
-        elif frame_id.endswith(b'/base_link/front_laser'):  #self.topic_type == 'sensor_msgs/LaserScan':
-#            parse_points(packet)  # test
+        elif frame_id.endswith(b'base_link/front_laser'):  #self.topic_type == 'sensor_msgs/LaserScan':
             self.count += 1
             if self.count % self.downsample != 0:
                 return
             self.bus.publish('scan', parse_laser(packet))
-        elif frame_id.endswith(b'/odom'):  #self.topic_type == 'nav_msgs/Odometry':
-            __, (x, y, heading) = parse_odom(packet)
+        elif frame_id.endswith(b'odom'):  #self.topic_type == 'nav_msgs/Odometry':
+            __, (x, y),rot = parse_odom(packet)
             self.bus.publish('pose2d', [round(x*1000),
                                         round(y*1000),
-                                        round(math.degrees(heading)*100)])
+                                        round(math.degrees(rot[0])*100)])
+            self.bus.publish('t265_rot', [round(math.degrees(angle)*100)
+                                     for angle in rot])
+
+            #workaround for not existing /clock on MOBoS
+            cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
+            self.bus.publish('cmd', cmd) 
+
         elif frame_id.endswith(b'/base_link/imu_sensor'):  # self.topic_type == 'std_msgs/Imu':
             acc, rot = parse_imu(packet)
             self.bus.publish('rot', [round(math.degrees(angle)*100) 
