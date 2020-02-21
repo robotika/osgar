@@ -3,6 +3,7 @@
 """
 import math
 import io
+import pathlib
 from datetime import timedelta
 from collections import defaultdict
 
@@ -569,6 +570,12 @@ def main(args_in=None):
     parser.add_argument('--create-video', help='filename of output video')
 
     args = parser.parse_args(args_in)
+
+    p = pathlib.Path(args.logfile)
+    if p.is_dir():
+        args.logfile = max(p.iterdir(), key=lambda a: a.stat().st_mtime)
+        print(args.logfile)
+
     if not any([args.lidar, args.pose2d, args.pose3d, args.camera]):
         print("Available streams:")
         for stream in lookup_stream_names(args.logfile):
