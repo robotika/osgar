@@ -208,7 +208,7 @@ class OsgarControlCenter:
                 self.view.robot_status.emit(robot_id, pose2d, status)
             elif channel == "artf":
                 robot_id, (artf, x, y, z) = data
-                print(robot_id, artf, (x, y, z))
+                print(dt, robot_id, artf, (x, y, z))
                 # TODO draw it into map (x, y)
 
     def pause_mission(self):
