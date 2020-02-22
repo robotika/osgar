@@ -67,6 +67,28 @@
           "in": ["raw"],
           "out": ["raw"],
           "init": {"port": "/dev/lora", "speed": 115200}
+      },
+      "wifi": {
+          "driver": "subt.wifisignal:WifiSignal",
+          "in": [],
+          "out": ["wifiscan"],
+          "init": {
+            "sleep": 1.0
+          }
+      },
+      "gas_detector": {
+          "driver": "osgar.drivers.gas_detector:MeasureCO2",
+          "in": ["raw"],
+          "out": ["raw", "co2"],
+          "init": {
+            "sleep": 0.5
+          }
+      },
+      "gas_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/gas_detector", "speed": 115200}
       }
     },
     "links": [["app.desired_speed", "rosmsg.desired_speed"],
@@ -82,6 +104,8 @@
               ["app.pose2d", "lora.pose2d"],
               ["lora.cmd", "app.cmd"],
 	      ["rosmsg.t265_rot", "app.rot"],
-              ["app.artf_xyz", "lora.artf"]]
+              ["app.artf_xyz", "lora.artf"],
+              ["gas_serial.raw", "gas_detector.raw"],
+              ["gas_detector.raw", "gas_serial.raw"]]
   }
 }
