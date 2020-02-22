@@ -262,9 +262,9 @@ class SubTChallenge:
         desired_angular_speed = 0.9 * safe_direction
         size = len(self.scan)
         dist = min_dist(self.scan[size//3:2*size//3])
+        safety_factor = 2.0
         if dist < self.min_safe_dist:  # 2.0:
-#            desired_speed = self.max_speed * (1.2/2.0) * (dist - 0.4) / 1.6
-            desired_speed = self.max_speed * (dist - self.dangerous_dist) / (self.min_safe_dist - self.dangerous_dist)
+            desired_speed = self.max_speed * min(safety * safety_factor, 1.0) 
         else:
             desired_speed = self.max_speed  # was 2.0
         desired_speed = desired_speed * (1.0 - self.safety_turning_coeff * min(self.max_angular_speed, abs(desired_angular_speed)) / self.max_angular_speed)
