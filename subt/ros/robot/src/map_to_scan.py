@@ -11,8 +11,10 @@ import numpy as np
 import math
 import tf
 
+isFirstMessage = True
+
 def mapCallback(costmap):
-    global scan_pub, transformListener
+    global scan_pub, transformListener, isFirstMessage
     #pdb.set_trace()
     mapArray = np.reshape(np.array(costmap.data,dtype = np.uint8),(-1,200))
     polar = cv2.linearPolar(mapArray,(mapArray.shape[1]/2,mapArray.shape[0]/2), mapArray.shape[0],cv2.WARP_FILL_OUTLIERS)
@@ -34,7 +36,9 @@ def mapCallback(costmap):
     scan.ranges = np.argmax(polar > 0,axis=1) * costmap.info.resolution
     scan.intensities = []
     scan_pub.publish(scan)
-
+    if isFirstMessage:
+        print("=====================ROS SCAN IS UP AND RUNNING :-)!========================")
+        isFirstMessage = False
     #cv2.imshow('Polar',cv2.resize(polar,(300,300)))
     #cv2.waitKey(1)
 

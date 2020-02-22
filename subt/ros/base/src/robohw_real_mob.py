@@ -74,9 +74,9 @@ class RoboHWRealMob:
         if self.isFirstRun:
             self.isFirstRun = False
             #wait for AVR reboot bytes
-            print("Waiting for AVR:")
+            #print("Waiting for AVR:")
             while True:
-                print(".", end=' ')
+                #print(".", end=' ')
                 byte = self.waitForByte()
                 if byte == chr(AVR_REBOOT_CHAR):
                     break

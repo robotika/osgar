@@ -15,7 +15,7 @@
 	<node name="map_to_scan" pkg="robot" type="map_to_scan.py"  output="screen"/>
 
 	<!-- NAVIGATION -->
-        <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+        <node pkg="move_base" type="move_base" respawn="false" name="move_base" >
 	        <rosparam file="$(find robot)/params_common/costmap_common_params.yaml" command="load" ns="global_costmap" />
 	        <rosparam file="$(find robot)/params_common/costmap_common_params.yaml" command="load" ns="local_costmap" />
 		<rosparam file="$(find robot)/params_common/move_base_params.yaml" command="load" />
@@ -30,12 +30,12 @@
         </node>
 
 	<!-- OSGAR /-->
-        <node pkg="robot" type="rospy_zmq.py" name="osgar" output="screen">
+        <node pkg="robot" type="rospy_zmq.py" name="osgar">
 		<remap from="odom" to="/rs_t265/odom/sample"/>
 		<remap from="image" to="/camera/color/image_raw/compressed"/>
 		<remap from="depth_image" to="/camera/depth/image_rect_raw"/>
 	</node>	
-	<node pkg="gmapping" type="slam_gmapping" name="gmapping_node" output="screen" >
+	<node pkg="gmapping" type="slam_gmapping" name="gmapping_node">
         </node>
 
 	<!-- REAL SENSE /-->	
@@ -84,7 +84,7 @@
                 <remap from="camera_info" to="camera/depth/camera_info" />
         </node-->
 	<node if="$(arg record_sensors)" pkg="tf" type="static_transform_publisher" name="laserscan" args="0 0 0 0 0 0 camera_link base_link/front_laser 100"/>
-        <node name="cliff_detector" pkg="cliff_detector" type="cliff_detector" output="screen" >
+        <node name="cliff_detector" pkg="cliff_detector" type="cliff_detector">
                 <remap from="image" to="/camera/depth/image_rect_raw"/>
                 <remap from="camera_info" to="/camera/depth/camera_info"/>
                 <rosparam command="load" file="$(find robot)/params_maria/cliff_detector_params.yaml" />

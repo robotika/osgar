@@ -48,7 +48,7 @@
 	</node-->
 
 	<!-- NAVIGATION -->
-        <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+        <node pkg="move_base" type="move_base" respawn="false" name="move_base">
 	        <rosparam file="$(find robot)/params_mob/costmap_common_params.yaml" command="load" ns="global_costmap" />
 	        <rosparam file="$(find robot)/params_mob/costmap_common_params.yaml" command="load" ns="local_costmap" />
 		<rosparam file="$(find robot)/params_mob/move_base_params.yaml" command="load" />
@@ -81,7 +81,7 @@
 	<!--node pkg="robot_localization" type="ekf_localization_node" name="ekf_se_map" clear_params="true">
     		<remap from="odometry/filtered" to="odometry/filtered_map"/>
   	</node-->
-	<node pkg="gmapping" type="slam_gmapping" name="gmapping_node" output="screen" >
+	<node pkg="gmapping" type="slam_gmapping" name="gmapping_node">
         	<param name="map_frame"  value="odom"/>
 		<param name="transform_publish_period"  value="0"/>
 	</node>
@@ -186,7 +186,7 @@
 	<node if="$(arg record_sensors)" pkg="tf" type="static_transform_publisher" name="laserscan" args="0 0 0 0 0 0 camera_link base_link/front_laser 100"/>
         <!--node pkg="tf" type="static_transform_publisher" name="dept_camera_for_replay" args="1 0 0 0 0 0  base_link/front_laser camera_depth_optical_frame 100"/-->
 	<!--node pkg="tf" type="static_transform_publisher" name="map" args="0 0 0 0 0 0 map odom 100"/-->
-        <node name="cliff_detector" pkg="cliff_detector" type="cliff_detector" output="screen" >
+        <node name="cliff_detector" pkg="cliff_detector" type="cliff_detector">
                 <remap from="image" to="/camera/depth/image_rect_raw"/>
                 <remap from="camera_info" to="/camera/depth/camera_info"/>
                 <rosparam command="load" file="$(find robot)/params_mob/cliff_detector_params.yaml" />
