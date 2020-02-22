@@ -326,12 +326,10 @@ def main():
     parser.add_argument('logfile', help='filename of stored file')
     parser.add_argument('--stream', help='stream ID or name', default=None, nargs='*')
     parser.add_argument('--list-names', '-l', help='list stream names', action='store_true')
-    parser.add_argument('--times', help='display timestamps', action='store_true')
     parser.add_argument('--sec', help='display timestamps in seconds', action='store_true')
     parser.add_argument('--format', help='use python format - available fields sec, timestamp, stream_id, data')
     parser.add_argument('--all', help='dump all messages', action='store_true')
-    parser.add_argument('--raw', help='skip data deserialization',
-                        action='store_true')
+    parser.add_argument('--raw', help='dump raw data', action='store_true')
     args = parser.parse_args()
 
     if args.list_names:
@@ -359,11 +357,9 @@ def main():
 
     with LogReader(args.logfile, only_stream_id=only_stream) as log:
         for timestamp, stream_id, data in log:
-            if not args.raw and stream_id != 0:
+            if stream_id != 0:
                 data = deserialize(data)
-            if args.times:
-                print(timestamp, stream_id, data)
-            elif args.sec:
+            if args.sec:
                 print(timestamp.total_seconds(), stream_id, data)
             elif args.format:
                 kw = dict(sec=timestamp.total_seconds(),
@@ -372,8 +368,10 @@ def main():
                           data=data,
                           )
                 print(eval(f"f'{args.format}'", kw))
-            else:
+            elif args.raw:
                 sys.stdout.buffer.write(data)
+            else:
+                print(timestamp, stream_id, data)
 
 if __name__ == "__main__":
     main()
