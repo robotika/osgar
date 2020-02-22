@@ -329,7 +329,7 @@ def main():
     parser.add_argument('--times', help='display timestamps', action='store_true')
     parser.add_argument('--sec', help='display timestamps in seconds', action='store_true')
     parser.add_argument('--format', help='use python format - available fields sec, timestamp, stream_id, data')
-    parser.add_argument('--stat', help='output only message statistics', action='store_true')
+    parser.add_argument('--all', help='dump all messages', action='store_true')
     parser.add_argument('--raw', help='skip data deserialization',
                         action='store_true')
     args = parser.parse_args()
@@ -338,7 +338,7 @@ def main():
         print(lookup_stream_names(args.logfile))
         sys.exit()
 
-    if args.stat:
+    if args.stream is None and not args.all:
         stat, count, timestamp = calculate_stat(args.logfile)
         seconds = timestamp.total_seconds()
         names = ['sys'] + lookup_stream_names(args.logfile)
