@@ -208,8 +208,8 @@ class OsgarControlCenter:
                 self.view.robot_status.emit(robot_id, pose2d, status)
             elif channel == "artf":
                 robot_id, (artf, x, y, z) = data
-                print(dt, robot_id, artf, (x, y, z))
-                # TODO draw it into map (x, y)
+                print(dt, robot_id, artf, (x/1000, y/1000, z/1000))
+                self.view.artf_xyz.emit(artf, (x/1000, y/1000, z/1000))
 
     def pause_mission(self):
         self.bus.publish('cmd', [self.robot_id, b'Pause'])
@@ -394,6 +394,7 @@ def replay(view, filename):
 class View(QWidget):
 
     robot_status = pyqtSignal(int, list, bytes)
+    artf_xyz = pyqtSignal(str, tuple)
     show_message = pyqtSignal(str, int)
     colors = [QColor(Qt.white), QColor(Qt.green), QColor(Qt.blue), QColor(Qt.red),
               QColor(Qt.cyan), QColor(Qt.magenta), QColor(Qt.yellow)]
@@ -401,6 +402,7 @@ class View(QWidget):
     def __init__(self):
         super().__init__()
         self.robot_status.connect(self.on_robot_status)
+        self.artf_xyz.connect(self.on_artf_xyz)
         self.setAutoFillBackground(True)
         p = self.palette()
         p.setColor(self.backgroundRole(), Qt.black)
@@ -412,11 +414,16 @@ class View(QWidget):
         self.grab_start = None
         self.grab_diff = QPointF(0, 0)
         self.robot_statuses = {}
+        self.artifacts = []
 
     def on_robot_status(self, robot, pose2d, status):
         #self.show_message.emit(f"robot {robot}: pose2d {pose2d}, status {status}", 3000)
         self.robot_statuses.setdefault(robot, []).append((pose2d, status))
         self.update()
+
+    def on_artf_xyz(self, artf_type, xyz):
+        print(artf_type, xyz)
+        self.artifacts.append((artf_type, xyz))
 
     def _transform(self):
         t = QTransform() # world transform
@@ -432,6 +439,7 @@ class View(QWidget):
             self._drawGrid(painter, transform)
             self._drawCenterCross(painter, transform)
             self._drawScale(painter, transform)
+            self._drawArtf(painter, transform)
             for robot, statuses in self.robot_statuses.items():
                 base_color = self.colors[robot%len(self.colors)]
                 self._drawRobotPath(painter, transform, base_color, statuses)
@@ -490,6 +498,13 @@ class View(QWidget):
         painter.drawLine(20, self.height() - 20, 20 + meter, self.height() - 20)
         painter.drawLine(20, self.height() - 25, 20, self.height() - 15)
         painter.drawLine(20 + meter, self.height() - 25, 20 + meter, self.height() - 15)
+
+    def _drawArtf(self, painter, transform):
+        painter.setPen(Qt.red)
+        for name, xyz in self.artifacts:
+            x, y, z = xyz
+            pt = transform.map(QPointF(x, y))
+            painter.drawEllipse(pt, 10, 10)
 
     def sizeHint(self):
         return QSize(800, 600)
