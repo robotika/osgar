@@ -14,17 +14,29 @@ from PyQt5.QtCore import pyqtSignal, QSize, Qt, QPointF, QLineF
 from PyQt5.QtGui import QPalette, QKeySequence, QPainter, QColor, QFont, QTransform, QIcon, QPolygonF
 from PyQt5.QtWidgets import ( QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout,
                               QMessageBox, QMainWindow, QAction, QToolBar, QMenuBar, QCheckBox,
-                              QDockWidget, QComboBox)
+                              QDockWidget, QComboBox, QMenu)
 
 import osgar.record
 import osgar.replay
 import osgar.logger
 import osgar.bus
 import osgar.node
+from subt.artifacts import BACKPACK, RESCUE_RANDY, PHONE, VENT, GAS
 
+
+DEFAULT_ARTF_Z_COORD = 1.0  # when reporting artifacts manually from View
 
 g_filename = None  # filename for replay log
 
+####################################################################################
+g_artf_colors = {
+        BACKPACK : Qt.red,
+        RESCUE_RANDY : Qt.yellow,
+        PHONE : Qt.blue,
+        VENT : Qt.white,
+        GAS : Qt.darkYellow
+    }
+ARTF_TYPES = g_artf_colors.keys()
 
 ####################################################################################
 CFG_LORA = {
@@ -367,7 +379,6 @@ class MainWindow(QMainWindow):
         print("Current index", i, "selection changed ", self.cb.currentText())
         self.cc.set_robot_id(i)
 
-
 def record(view, cfg):
     with osgar.logger.LogWriter(prefix='control-center-', note=str(sys.argv)) as log:
         log.write(0, bytes(str(cfg), 'ascii'))
@@ -415,6 +426,7 @@ class View(QWidget):
         self.grab_diff = QPointF(0, 0)
         self.robot_statuses = {}
         self.artifacts = []
+        self.reported_artifacts = []
 
     def on_robot_status(self, robot, pose2d, status):
         #self.show_message.emit(f"robot {robot}: pose2d {pose2d}, status {status}", 3000)
@@ -440,6 +452,7 @@ class View(QWidget):
             self._drawCenterCross(painter, transform)
             self._drawScale(painter, transform)
             self._drawArtf(painter, transform)
+            self._drawReportedArtf(painter, transform)
             for robot, statuses in self.robot_statuses.items():
                 base_color = self.colors[robot%len(self.colors)]
                 self._drawRobotPath(painter, transform, base_color, statuses)
@@ -506,6 +519,15 @@ class View(QWidget):
             pt = transform.map(QPointF(x, y))
             painter.drawEllipse(pt, 10, 10)
 
+    def _drawReportedArtf(self, painter, transform):
+        painter.setPen(Qt.red)
+        for name, xyz in self.reported_artifacts:
+            x, y, z = xyz
+            pt = transform.map(QPointF(x, y))
+            radius = transform.map(QPointF(5, 0)).x() - transform.map(QPointF(0, 0)).x()
+            painter.setPen(g_artf_colors[name])
+            painter.drawEllipse(pt, radius, radius)
+
     def sizeHint(self):
         return QSize(800, 600)
 
@@ -513,6 +535,16 @@ class View(QWidget):
         if e.buttons() == Qt.LeftButton:
             self.setCursor(Qt.ClosedHandCursor)
             self.grab_start = e.globalPos()
+        elif e.buttons() == Qt.RightButton:
+            contextMenu = QMenu(self)
+            listAct = [contextMenu.addAction(a) for a in ARTF_TYPES]
+            action = contextMenu.exec_(self.mapToGlobal(e.pos()))
+            if action in listAct:
+                t = self._transform()
+                t, ok = t.inverted()
+                pt = t.map(QPointF(e.pos()))  # we need float resolution
+                self.reported_artifacts.append((action.text(), (pt.x(), pt.y(), DEFAULT_ARTF_Z_COORD)))
+                self.update()
 
     def mouseReleaseEvent(self, e):
         cursor = self.cursor().shape()
