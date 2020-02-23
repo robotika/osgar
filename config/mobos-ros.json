@@ -10,7 +10,9 @@
           "init": {
             "max_speed": 0.5,
             "symmetric": false,
-            "virtual_world": false
+            "virtual_world": false,
+            "direction_adherence": 22,
+            "obstacle_influence": 0.3
           }
       },
       "transmitter": {

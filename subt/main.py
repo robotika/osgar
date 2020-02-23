@@ -206,8 +206,11 @@ class SubTChallenge:
         self.origin_error = False
         self.robot_name = None  # received with origin
         scan_subsample = config.get('scan_subsample', 1)
+        obstacle_influence = config.get('obstacle_influence', 0.8)
+        direction_adherence = math.radians(config.get('direction_adherence', 90))
         self.local_planner = LocalPlanner(
-                obstacle_influence=0.8,
+                obstacle_influence=obstacle_influence,
+                direction_adherence=direction_adherence,
                 max_obstacle_distance=2.5,
                 scan_subsample=scan_subsample,
                 max_considered_obstacles=100)
