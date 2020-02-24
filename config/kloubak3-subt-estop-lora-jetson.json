@@ -193,7 +193,7 @@
               ["lidar_back.scan", "app.scan_back"],
               ["kloubak.emergency_stop", "app.emergency_stop"],
               ["imu_serial.raw", "imu.raw"],
-              ["imu.rotation", "app.rot"],
+              ["rosmsg.rot", "app.rot"],
               ["estop_serial.raw", "estop.raw"],
               ["estop.raw", "estop_serial.raw"],
               ["estop.emergency_stop", "app.emergency_stop"],
@@ -208,9 +208,9 @@
               ["app.artf_xyz", "lora.artf"],
               ["kloubak.bumpers_rear", "app.bumpers_rear"],
               ["kloubak.joint_angle", "app.joint_angle"],
-	      ["receiver.raw", "rosmsg.slot_raw"],
-	      ["rosmsg.scan", "scan_mixer.rs_scan"],
-	      ["lidar.scan", "scan_mixer.scan"]
+              ["receiver.raw", "rosmsg.slot_raw"],
+              ["rosmsg.scan", "scan_mixer.rs_scan"],
+              ["lidar.scan", "scan_mixer.scan"]
 
       ]
   }
