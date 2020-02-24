@@ -434,7 +434,6 @@ class View(QWidget):
         self.update()
 
     def on_artf_xyz(self, artf_type, xyz):
-        print(artf_type, xyz)
         self.artifacts.append((artf_type, xyz))
 
     def _transform(self):
@@ -545,7 +544,7 @@ class View(QWidget):
             if action in listAct:
                 t = self._transform()
                 t, ok = t.inverted()
-                pt = t.map(QPointF(e.pos()))  # we need float resolution
+                pt = t.map(e.localPos())
                 self.reported_artifacts.append((action.text(), (pt.x(), pt.y(), DEFAULT_ARTF_Z_COORD)))
                 self.update()
 
