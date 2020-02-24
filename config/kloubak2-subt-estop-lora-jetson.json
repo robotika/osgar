@@ -218,14 +218,13 @@
               ["app.pose2d", "lora.pose2d"],
               ["lora.cmd", "app.cmd"],
               ["app.artf_xyz", "lora.artf"],
-              ["kloubak.bumpers_front", "app.bumpers_front"],
               ["kloubak.bumpers_rear", "app.bumpers_rear"],
               ["kloubak.joint_angle", "app.joint_angle"],
               ["gas_serial.raw", "gas_detector.raw"],
               ["gas_detector.raw", "gas_serial.raw"],
-	      ["receiver.raw", "rosmsg.slot_raw"],
-	      ["rosmsg.scan", "scan_mixer.rs_scan"],
-	      ["lidar.scan", "scan_mixer.scan"]
+              ["receiver.raw", "rosmsg.slot_raw"],
+              ["rosmsg.scan", "scan_mixer.rs_scan"],
+              ["lidar.scan", "scan_mixer.scan"]
 
       ]
   }
