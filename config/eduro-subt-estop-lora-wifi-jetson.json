@@ -1,0 +1,173 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["encoders", "scan", "emergency_stop", "pose2d", "buttons", "voltage"],
+          "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d"],
+          "init": {
+            "max_speed": 0.5,
+            "symmetric": false,
+            "virtual_bumper_sec": 10.0,
+            "laser_pose2d": [0.13, 0.055, 0]
+          }
+      },
+      "detector": {
+          "driver": "subt.artifacts:ArtifactDetector",
+          "in": ["image", "scan"],
+          "out": ["artf", "dropped"],
+          "init": {
+            "virtual_world": false
+          }
+      },
+      "reporter": {
+          "driver": "subt.artifacts:ArtifactReporter",
+          "in": ["artf_xyz"],
+          "out": [],
+          "init": {
+            "path": "call_base_x2l.txt"
+          }
+      },
+      "eduro": {
+          "driver": "eduro",
+          "in": ["slot_can", "slot_desired_speed"],
+          "out": ["can", "encoders", "emergency_stop", "pose2d", "buttons", "voltage"],
+          "init": {}
+      },
+      "can": {
+          "driver": "can",
+          "in": ["slot_raw", "slot_can"],
+          "out": ["can", "raw"],
+          "init": {"speed": "250k", "canopen":true}
+      },
+      "serial": {
+          "driver": "serial",
+          "in": ["slot_raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyS0", "speed": 115200,
+                   "rtscts":true, "reset":true}
+      },
+      "lidar": {
+          "driver": "lidar",
+          "in": ["raw"],
+          "out": ["raw", "scan"],
+          "init": {"sleep": 0.1, "mask": [15, -15], "blind_zone": 10}
+      },
+      "lidar_tcp": {
+          "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"host": "192.168.1.52", "port": 2111, "timeout": 0.5}
+      },
+      "camera": {
+          "driver": "http",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+              "url": "http://192.168.0.99/img.jpg",
+              "sleep": 0.2,
+              "timeout": 1.0
+          }
+      },
+      "imu": {
+          "driver": "imu",
+          "in": ["raw"],
+          "out": ["orientation", "rotation"],
+          "init": {}
+      },
+      "imu_serial": {
+          "driver": "serial",
+          "in": [],
+          "out": ["raw"],
+          "init": {"port": "/dev/vectornav-imu", "speed": 115200}
+      },
+      "estop": {
+          "driver": "subt.estop:EStop",
+          "in": ["raw"],
+          "out": ["raw", "emergency_stop"],
+          "init": {}
+      },
+      "estop_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/estop", "speed": 9600}
+      },
+      "lora": {
+          "driver": "lora",
+          "in": ["raw", "pose2d"],
+          "out": ["raw", "cmd"],
+          "init": {}
+      },
+      "lora_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/lora", "speed": 115200}
+      },
+      "wifi": {
+          "driver": "subt.wifisignal:WifiSignal",
+          "in": [],
+          "out": ["wifiscan"],
+          "init": {
+            "sleep": 1.0
+          }
+      },
+      "receiver": {
+          "driver": "zeromq",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+            "mode": "PULL",
+            "timeout":0.5,
+            "endpoint": "tcp://edurojetson.local:5555"
+          }
+      },
+      "rosmsg": {
+          "driver": "rosmsg",
+          "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
+          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin"],
+          "init": {
+            "downsample": 1
+          }
+      },
+      "scan_mixer": {
+              "driver": "subt.scan_mixer:ScanMixer",
+              "in": ["scan", "rs_scan", "slope_scan"],
+              "out": ["scan"],
+              "init":{}
+      }
+    },
+    "links": [["serial.raw", "can.slot_raw"], 
+              ["can.raw", "serial.slot_raw"],
+              ["eduro.can", "can.slot_can"],
+              ["can.can", "eduro.slot_can"],
+              ["eduro.encoders", "app.encoders"],
+              ["app.desired_speed", "eduro.slot_desired_speed"],
+              ["lidar_tcp.raw", "lidar.raw"], 
+              ["lidar.raw", "lidar_tcp.raw"],
+              ["lidar.scan", "app.scan"],
+              ["eduro.emergency_stop", "app.emergency_stop"],
+              ["eduro.pose2d", "app.pose2d"],
+              ["eduro.buttons", "app.buttons"],
+              ["imu_serial.raw", "imu.raw"],
+              ["imu.rotation", "app.rot"],
+              ["eduro.voltage", "app.voltage"],
+              ["camera.raw", "detector.image"],
+              ["lidar.scan", "detector.scan"],
+              ["detector.artf", "app.artf"],
+              ["app.artf_xyz", "reporter.artf_xyz"],
+              ["estop_serial.raw", "estop.raw"],
+              ["estop.raw", "estop_serial.raw"],
+              ["estop.emergency_stop", "app.emergency_stop"],
+              ["lora_serial.raw", "lora.raw"],
+              ["lora.raw", "lora_serial.raw"],
+              ["app.pose2d", "lora.pose2d"],
+              ["lora.cmd", "app.cmd"],
+              ["app.artf_xyz", "lora.artf"],
+              ["receiver.raw", "rosmsg.slot_raw"],
+              ["rosmsg.scan", "scan_mixer.rs_scan"],
+              ["lidar.scan", "scan_mixer.scan"]]
+  }
+}
