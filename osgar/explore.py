@@ -47,6 +47,9 @@ def follow_wall_angle(laser_data, radius, right_wall=False):
     mask = (data <= 300)  # ignore internal reflections
     data[mask] = 20000
 
+    mask = (data >= 4000)  # ignore obstacles beyond 4m
+    data[mask] = 20000
+
     # To make the code simpler, let's pretend we follow the right wall and flip
     # the result in the end if we are actually following the left wall.
     if not right_wall:
