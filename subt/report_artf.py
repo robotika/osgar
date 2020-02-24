@@ -52,6 +52,7 @@ def report_artf(artf_type, x, y, z):
     print(response.content)
     assert response.status_code == 201, response.status_code
     print("-------------------")
+    return response.content
 
 
 def triple(x, y, z):
