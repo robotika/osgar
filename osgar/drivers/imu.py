@@ -37,6 +37,8 @@ class IMU(Thread):
         Thread.__init__(self)
         self.setDaemon(True)
 
+        self.offset = config.get("offset", [0, 0, 0])  # rotation offset in 1/100th of degree
+
         self.bus = bus
         self.buf = b''
 
@@ -83,7 +85,9 @@ class IMU(Thread):
                         yaw += 360
                     if yaw > 180:
                         yaw -= 360
-                    self.bus.publish('rotation', [int(round(x * 100)) for x in [yaw, pitch, roll]])
+                    angles = [int(round(x * 100)) for x in [yaw, pitch, roll]]
+                    angles = [a + b for a, b in zip(angles, self.offset)]  # correct for offset
+                    self.bus.publish('rotation', angles)
         except BusShutdownException:
             pass
 
