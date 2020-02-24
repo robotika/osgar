@@ -26,7 +26,8 @@ from osgar.bus import BusShutdownException
 ENC_SCALE = 0.00052
 WHEEL_DISTANCE = 0.4  # 50cm long, 40cm wide
 UPDATE_RATE = 20.0  # Hz
-MAX_PWM = 220  # limit motor driver PWM output (255 is HW limit)
+MIN_PWM = 10
+MAX_PWM = 60
 
 GREEN_LED = 1
 RED_LED = 2
@@ -34,9 +35,9 @@ RED_LED = 2
 
 class SpeedControl:
     def __init__(self):
-        self.min_pwm = 100
+        self.min_pwm = MIN_PWM
         self.max_pwm = MAX_PWM
-        self.step_pwm = 10
+        self.step_pwm = 2
         self.tolerance = 5  # do not change PWM output if it is in +/- tolerance
 
         self.desired_ticks = 0

@@ -22,25 +22,25 @@ class RobotTankMariaTest(unittest.TestCase):
         self.assertEqual(sc.update(0), 0)
 
         sc.set_desired_ticks(50)
-        self.assertEqual(sc.update(0), 100)
-        self.assertEqual(sc.update(0), 110)
-        self.assertEqual(sc.update(50), 110)
-        self.assertEqual(sc.update(70), 100)
+        self.assertEqual(sc.update(0), 10)  # return MIN_PWM
+        self.assertEqual(sc.update(0), 12)  # speed up by step
+        self.assertEqual(sc.update(50), 12) # keep last pwm
+        self.assertEqual(sc.update(70), 10) # slow down by step
 
         # change polarity
         sc.set_desired_ticks(-50)
         self.assertEqual(sc.update(50), 0)  # wait until it is not moving wrong direction
-        self.assertEqual(sc.update(3), -100)
-        self.assertEqual(sc.update(-30), -110)
-        self.assertEqual(sc.update(-51), -110)
-        self.assertEqual(sc.update(-66), -100)
+        self.assertEqual(sc.update(3), -10) # -MIN_PWM
+        self.assertEqual(sc.update(-30), -12)  # -(MIN_PWM + step)
+        self.assertEqual(sc.update(-51), -12)  # last_pwm (encoders is within tolerance)
+        self.assertEqual(sc.update(-66), -10)  # last_pwm - step
 
         for __ in range(20):
             self.assertGreaterEqual(sc.update(-10), -MAX_PWM)
 
         sc.set_desired_ticks(50)
         self.assertEqual(sc.update(-70), 0)
-        self.assertEqual(sc.update(-2), 100)
-        self.assertEqual(sc.update(-2), 110)
+        self.assertEqual(sc.update(-2), 10)
+        self.assertEqual(sc.update(-2), 12)
 
 # vim: expandtab sw=4 ts=4
