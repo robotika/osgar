@@ -154,7 +154,7 @@ class SubTChallenge:
         self.walldist = config['walldist']
         self.timeout = timedelta(seconds=config['timeout'])
         self.symmetric = config['symmetric']  # is robot symmetric?
-        self.dangerous_dist = config.get('dangerous_dist', 0.4)
+        self.dangerous_dist = config.get('dangerous_dist', 0.3)
         self.min_safe_dist = config.get('min_safe_dist', 0.75)
         self.safety_turning_coeff = config.get('safety_turning_coeff', 0.8)
         virtual_bumper_sec = config.get('virtual_bumper_sec')
