@@ -27,9 +27,9 @@ MAX_JOIN_ANGLE = math.radians(MAX_JOIN_ANGLE_DEG) # K2, can be modified by confi
 AD_CENTER2 = None
 AD_RANGE2 = None
 
-DOWNDROP_TOO_LONG_RAW = 800  # in millimeters, trigger for downdrop/hole
-DOWNDROP_TOO_SHORT_RAW = 250  # in millimeters, trigger for low obstacle, probably not visible by 2D lidar
-DOWNDROP_STABLE_COUNT = 2  # if within the limits for given number of cycles report as bumper True/False
+DOWNDROP_TOO_LONG_RAW = 1000  # in millimeters, trigger for downdrop/hole
+DOWNDROP_TOO_SHORT_RAW = 200  # in millimeters, trigger for low obstacle, probably not visible by 2D lidar
+DOWNDROP_STABLE_COUNT = 3  # if within the limits for given number of cycles report as bumper True/False
 
 CAN_ID_BUTTONS = 0x1
 CAN_ID_VESC_FRONT_R = 0x91

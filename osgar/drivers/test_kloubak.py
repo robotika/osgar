@@ -106,7 +106,7 @@ class KloubakTest(unittest.TestCase):
 
     def test_downdrops(self):
         self.assertEqual(get_downdrop_bumpers([500, 500]), [False, False])
-        self.assertEqual(get_downdrop_bumpers([850, 250]), [True, True])
+        self.assertEqual(get_downdrop_bumpers([1000, 200]), [True, True])
 
     def test_compute_desired_angle_division_by_zero(self):
         self.assertAlmostEqual(compute_desired_angle(desired_speed=0.0, desired_angular_speed=0.1),
