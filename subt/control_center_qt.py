@@ -7,6 +7,7 @@ import math
 import random
 import sys
 import platform
+import json
 from datetime import timedelta
 from contextlib import suppress
 
@@ -22,11 +23,20 @@ import osgar.logger
 import osgar.bus
 import osgar.node
 from subt.artifacts import BACKPACK, RESCUE_RANDY, PHONE, VENT, GAS
-
+from subt.report_artf import get_status, report_artf
 
 DEFAULT_ARTF_Z_COORD = 1.0  # when reporting artifacts manually from View
 
 g_filename = None  # filename for replay log
+
+####################################################################################
+# dummy functions for testing
+def Xget_status():
+    return b'{"score":1,"remaining_reports":26,"current_team":"robotika","run_clock":3571.8}'
+
+
+def Xreport_artf(artf_type, x, y, z):
+    return b'{"url":"http://10.100.2.200:8000/api/reports/14/","id":14,"x":68.0,"y":5.0,"z":1.0,"type":"Cell Phone","submitted_datetime":"2020-02-21T19:59:29.520412+00:00","run_clock":3569.5,"team":"robotika","run":"1.5.2","report_status":"scored","score_change":0}'
 
 ####################################################################################
 g_artf_colors = {
@@ -56,14 +66,49 @@ CFG_LORA = {
           "init": {"port": "/dev/lora" if platform.system() == 'Linux' else 'COM35',
                    "speed": 115200}
       },
+      "darpa": {
+          "driver": "subt.control_center_qt:DARPAReporter",
+          "init": {}
+      }
     },
     "links": [["lora_serial.raw", "lora.raw"],
               ["lora.raw", "lora_serial.raw"],
               ["lora.robot_status", "cc.robot_status"],
               ["lora.artf", "cc.artf"],
-              ["cc.cmd", "lora.cmd"]]
+              ["cc.cmd", "lora.cmd"],
+              ["cc.artf_xyz", "darpa.artf_xyz"]]
   }
 }
+
+
+class DARPAReporter(osgar.node.Node):
+    def __init__(self, config, bus):
+        super().__init__(config, bus)
+        bus.register('get_status', 'report_artf', 'scored')
+
+    def update(self):
+        channel = super().update()  # define self.time
+        assert channel == 'artf_xyz', channel  # identical to Virtual and LoRa reports
+
+        name, xyz = self.artf_xyz
+        x, y, z = [a/1000.0 for a in xyz]
+
+        name2darpa = {RESCUE_RANDY: 'Survivor', BACKPACK: 'Backpack', PHONE: 'Cell Phone',
+                      GAS: 'Gas', VENT: 'Vent'}
+        artf_type = name2darpa[name]
+
+        before = json.loads(bytes.decode(get_status()))
+        self.publish('get_status', before)
+        self.sleep(2)
+        result = report_artf(artf_type, x, y, z)
+        self.publish('report_artf', result)
+        self.sleep(2)
+        after = json.loads(bytes.decode(get_status()))
+        self.publish('get_status', after)
+        scored = before['score'] < after['score']
+        self.publish('scored', scored)
+        self.sleep(2)
+        return channel
 
 
 ####################################################################################
@@ -193,7 +238,7 @@ class OsgarControlCenter:
 
     def __init__(self, init, bus):
         self.bus = bus
-        bus.register('cmd')
+        bus.register('cmd', 'artf_xyz')
         self.view = None # will be set from outside by record
         self.thread = None
         self.robot_id = 0  # ALL by default
@@ -238,6 +283,9 @@ class OsgarControlCenter:
     def set_robot_id(self, i):
         self.robot_id = i
 
+    def report_artf(self, artf, xyz):
+        self.bus.publish('artf_xyz', [artf, [int(a * 1000) for a in xyz]])
+
 
 class MainWindow(QMainWindow):
 
@@ -259,6 +307,7 @@ class MainWindow(QMainWindow):
         self.zoom_reset.connect(self.centralWidget().on_zoom_reset)
         self.zoom_in.connect(self.centralWidget().on_zoom_in)
         self.zoom_out.connect(self.centralWidget().on_zoom_out)
+        self.centralWidget().manual_artf.connect(self.on_manual_artf)
         if "--replay" in arguments:
             self.cfg = None
             print(arguments)
@@ -379,6 +428,11 @@ class MainWindow(QMainWindow):
         print("Current index", i, "selection changed ", self.cb.currentText())
         self.cc.set_robot_id(i)
 
+    def on_manual_artf(self, artf, xyz):
+        print(artf, xyz)
+        self.cc.report_artf(artf, xyz)
+
+
 def record(view, cfg):
     with osgar.logger.LogWriter(prefix='control-center-', note=str(sys.argv)) as log:
         log.write(0, bytes(str(cfg), 'ascii'))
@@ -407,6 +461,7 @@ class View(QWidget):
     robot_status = pyqtSignal(int, list, bytes)
     artf_xyz = pyqtSignal(str, tuple)
     show_message = pyqtSignal(str, int)
+    manual_artf = pyqtSignal(str, tuple)
     colors = [QColor(Qt.white), QColor(Qt.green), QColor(Qt.blue), QColor(Qt.red),
               QColor(Qt.cyan), QColor(Qt.magenta), QColor(Qt.yellow)]
 
@@ -547,6 +602,7 @@ class View(QWidget):
                 pt = t.map(e.localPos())
                 self.reported_artifacts.append((action.text(), (pt.x(), pt.y(), DEFAULT_ARTF_Z_COORD)))
                 self.update()
+                self.manual_artf.emit(*self.reported_artifacts[-1])
 
     def mouseReleaseEvent(self, e):
         cursor = self.cursor().shape()
