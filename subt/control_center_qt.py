@@ -513,8 +513,11 @@ class View(QWidget):
         painter.drawLine(20 + meter, self.height() - 25, 20 + meter, self.height() - 15)
 
     def _drawArtf(self, painter, transform):
-        painter.setPen(Qt.red)
         for name, xyz in self.artifacts:
+            if name in g_artf_colors:
+                painter.setPen(g_artf_colors[name])
+            else:
+                painter.setPen(Qt.gray)
             x, y, z = xyz
             pt = transform.map(QPointF(x, y))
             painter.drawEllipse(pt, 10, 10)
