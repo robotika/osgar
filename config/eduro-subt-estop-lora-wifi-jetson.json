@@ -74,7 +74,9 @@
           "driver": "imu",
           "in": ["raw"],
           "out": ["orientation", "rotation"],
-          "init": {}
+          "init": {
+              "offset": [0, -420, 23]
+          }
       },
       "imu_serial": {
           "driver": "serial",
@@ -147,7 +149,6 @@
               ["app.desired_speed", "eduro.slot_desired_speed"],
               ["lidar_tcp.raw", "lidar.raw"], 
               ["lidar.raw", "lidar_tcp.raw"],
-              ["lidar.scan", "app.scan"],
               ["eduro.emergency_stop", "app.emergency_stop"],
               ["eduro.pose2d", "app.pose2d"],
               ["eduro.buttons", "app.buttons"],
@@ -169,6 +170,7 @@
               ["receiver.raw", "rosmsg.slot_raw"],
               ["rosmsg.scan", "scan_mixer.rs_scan"],
               ["lidar.scan", "scan_mixer.scan"],
+              ["scan_mixer.scan", "app.scan"],
               ["wifi.wifiscan", "detector.wifiscan"]]
   }
 }
