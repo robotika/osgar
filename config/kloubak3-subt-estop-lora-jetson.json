@@ -193,7 +193,7 @@
               ["lidar_back.scan", "app.scan_back"],
               ["kloubak.emergency_stop", "app.emergency_stop"],
               ["imu_serial.raw", "imu.raw"],
-              ["rosmsg.rot", "app.rot"],
+              ["rosmsg.t265_rot", "app.rot"],
               ["estop_serial.raw", "estop.raw"],
               ["estop.raw", "estop_serial.raw"],
               ["estop.emergency_stop", "app.emergency_stop"],
