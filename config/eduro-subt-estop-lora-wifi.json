@@ -143,6 +143,7 @@
               ["lora.raw", "lora_serial.raw"],
               ["app.pose2d", "lora.pose2d"],
               ["lora.cmd", "app.cmd"],
-              ["app.artf_xyz", "lora.artf"]]
+              ["app.artf_xyz", "lora.artf"],
+              ["wifi.wifiscan", "detector.wifiscan"]]
   }
 }
