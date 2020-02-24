@@ -168,6 +168,7 @@
               ["app.artf_xyz", "lora.artf"],
               ["receiver.raw", "rosmsg.slot_raw"],
               ["rosmsg.scan", "scan_mixer.rs_scan"],
-              ["lidar.scan", "scan_mixer.scan"]]
+              ["lidar.scan", "scan_mixer.scan"],
+              ["wifi.wifiscan", "detector.wifiscan"]]
   }
 }
