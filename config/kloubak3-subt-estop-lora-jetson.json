@@ -160,7 +160,7 @@
           "init": {
             "mode": "PULL",
             "timeout":0.5,
-            "endpoint": "tcp://k2jetson.local:5555"
+            "endpoint": "tcp://k3jetson.local:5555"
           }
       },
       "rosmsg": {
