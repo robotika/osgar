@@ -34,6 +34,9 @@ RED_YELLOW_MIN_3D_THRESHOLD = 50  # number of colored pixels in given depth dist
 WHITE_THRESHOLD = 20000
 
 CO2_REPORT_LIMIT = 800
+PHONE_PREFIX = "PhoneArtifact"
+PHONE_SIGNAL_LIMIT = -50
+
 
 g_mask = None
 
@@ -241,6 +244,11 @@ class ArtifactDetector(Node):
 
                 if self.gas_best_count > 0:
                     self.gas_best_count -= 1
+            elif channel == "wifiscan":
+               for name, signal in data:
+                    if name.startswith(PHONE_PREFIX) and signal > PHONE_SIGNAL_LIMIT:
+                        deg_100th, dist_mm = 0, 0  # approximation
+                        self.publish('artf', [PHONE, deg_100th, dist_mm])
 
         return self.time
 
