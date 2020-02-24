@@ -7,13 +7,24 @@ from blessings import Terminal
 
 
 def main():
-    robots = {
+
+    all_robots = {
         "eduro":"/home/robot/git/osgar/logs/",
         "k2": "/home/robot/git/osgar/logs/",
         "k3": "/home/robot/git/osgar/logs/",
         "mobos": "~/logs/",
         "maria":"~/logs/",
     }
+
+    import argparse
+    parser = argparse.ArgumentParser(description='rsync logs from robots')
+    parser.add_argument('robots', nargs='*', choices=list(all_robots.keys()) + [[]], default=[])
+    args = parser.parse_args()
+
+    if args.robots == []:
+        robots = all_robots
+    else:
+        robots = {k: all_robots[k] for k in args.robots}
 
     home = str(Path.home())
     t = Terminal()
