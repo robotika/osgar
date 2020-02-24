@@ -60,18 +60,6 @@
           "out": ["raw"],
           "init": {"host": "192.168.1.52", "port": 2111, "timeout": 0.5}
       },
-      "slope_lidar": {
-          "driver": "lidar",
-          "in": ["raw"],
-          "out": ["raw", "scan"],
-          "init": {"sleep": 0.1, "mask": [30, -30], "blind_zone": 10}
-      },
-      "slope_lidar_tcp": {
-          "driver": "tcp",
-          "in": ["raw"],
-          "out": ["raw"],
-          "init": {"host": "192.168.2.71", "port": 2111, "timeout": 0.5}
-      },
       "camera": {
           "driver": "http",
           "in": [],
@@ -135,8 +123,6 @@
               ["app.desired_speed", "eduro.slot_desired_speed"],
               ["lidar_tcp.raw", "lidar.raw"], 
               ["lidar.raw", "lidar_tcp.raw"],
-              ["slope_lidar_tcp.raw", "slope_lidar.raw"], 
-              ["slope_lidar.raw", "slope_lidar_tcp.raw"],
               ["lidar.scan", "app.scan"],
               ["eduro.emergency_stop", "app.emergency_stop"],
               ["eduro.pose2d", "app.pose2d"],
