@@ -33,6 +33,8 @@ YELLOW_MAX_THRESHOLD = 4000  # 2633 known example
 RED_YELLOW_MIN_3D_THRESHOLD = 50  # number of colored pixels in given depth distance threshold
 WHITE_THRESHOLD = 20000
 
+CO2_REPORT_LIMIT = 800
+
 g_mask = None
 
 def old_count_red(img):
@@ -209,6 +211,9 @@ class ArtifactDetector(Node):
         self.depth = None  # more precise definiton of depth image
         self.width = None  # detect from incoming images
 
+        self.gas_best = None
+        self.gas_best_count = 0
+
     def handle_gas_artifact(self, data):
         print(self.time, 'Gas detected', data)
         if data:  # in virtual world only Boolean is used and transition is reported
@@ -224,6 +229,19 @@ class ArtifactDetector(Node):
             # handling special artifact "gas", which is not requiring image
             if channel == "gas_detected":
                 self.handle_gas_artifact(data)
+            elif channel == "co2":
+                if self.gas_best is None or self.gas_best < data:
+                    self.gas_best = data
+                    self.gas_best_count = 10
+                    print(self.time, 'GAS CO2 value', self.gas_best)
+
+                if self.gas_best > CO2_REPORT_LIMIT and self.gas_best_count == 0:
+                    self.handle_gas_artifact(True)
+                    self.gas_best = None
+
+                if self.gas_best_count > 0:
+                    self.gas_best_count -= 1
+
         return self.time
 
     def stdout(self, *args, **kwargs):
