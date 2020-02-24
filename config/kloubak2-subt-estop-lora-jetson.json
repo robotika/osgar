@@ -224,8 +224,9 @@
               ["gas_detector.raw", "gas_serial.raw"],
               ["receiver.raw", "rosmsg.slot_raw"],
               ["rosmsg.scan", "scan_mixer.rs_scan"],
-              ["lidar.scan", "scan_mixer.scan"]
-
+              ["lidar.scan", "scan_mixer.scan"],
+              ["wifi.wifiscan", "detector.wifiscan"],
+              ["gas_detector.co2", "detector.co2"]
       ]
   }
 }
