@@ -86,7 +86,9 @@
           "driver": "imu",
           "in": ["raw"],
           "out": ["orientation", "rotation"],
-          "init": {}
+          "init": {
+              "offset": [0, -420, 23]
+          }
       },
       "imu_serial": {
           "driver": "serial",
