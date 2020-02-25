@@ -38,12 +38,36 @@ from threading import RLock
 from ast import literal_eval
 import mmap
 
+g_logger = logging.getLogger(__name__)
 
 INFO_STREAM_ID = 0
 ENV_OSGAR_LOGS = 'OSGAR_LOGS'
 
 TIMESTAMP_OVERFLOW_STEP = (1 << 32)  # in microseconds resolution
 TIMESTAMP_MASK = TIMESTAMP_OVERFLOW_STEP - 1
+
+
+def format_header(start_time):
+    t = start_time
+    ret = []
+    ret.append(b'Pyr\x00')
+    ret.append(struct.pack('HBBBBBI', t.year, t.month, t.day, t.hour, t.minute, t.second, t.microsecond))
+    return ret
+
+
+def format_packet(stream_id, data, dt):
+    ret = []
+    assert dt.days == 0, dt  # multiple days not supported yet
+    time_frac = (dt.seconds * 1000000 + dt.microseconds) & TIMESTAMP_MASK
+    index = 0
+    while index + 0xFFFF <= len(data):
+        ret.append(struct.pack('IHH', time_frac, stream_id, 0xFFFF))  # header
+        ret.append(data[index:index + 0xFFFF]) # partial data
+        index += 0xFFFF
+    ret.append(struct.pack('IHH', time_frac, stream_id, len(data) - index))  # header
+    ret.append(data[index:])
+    return ret
+
 
 class LogWriter:
     def __init__(self, prefix='', note='', filename=None, start_time=None):
@@ -62,11 +86,8 @@ class LogWriter:
         else:
             logging.warning('Environment variable %s is not set - using working directory' % ENV_OSGAR_LOGS)
         self.f = open(self.filename, 'wb')
-        self.f.write(b'Pyr\x00')
 
-        t = self.start_time
-        self.f.write(struct.pack('HBBBBBI', t.year, t.month, t.day,
-                t.hour, t.minute, t.second, t.microsecond))
+        self.f.write(b"".join(format_header(self.start_time)))
         self.f.flush()
         if len(note) > 0:
             self.write(stream_id=INFO_STREAM_ID, data=bytes(note, encoding='utf-8'))
@@ -84,18 +105,8 @@ class LogWriter:
             if dt is None:
                 # by defaut generate timestamps automatically
                 dt = datetime.datetime.utcnow() - self.start_time
-            bytes_data = data
-            assert dt.days == 0, dt  # multiple days not supported yet
-            time_frac = (dt.seconds * 1000000 + dt.microseconds) & TIMESTAMP_MASK
-            index = 0
-            while index + 0xFFFF <= len(bytes_data):
-                self.f.write(struct.pack('IHH', time_frac,
-                             stream_id, 0xFFFF))
-                self.f.write(bytes_data[index:index + 0xFFFF])
-                index += 0xFFFF
-            self.f.write(struct.pack('IHH', time_frac,
-                         stream_id, len(bytes_data) - index))
-            self.f.write(bytes_data[index:])
+            packet = format_packet(stream_id, data, dt)
+            self.f.write(b"".join(packet))
             self.f.flush()
         return dt
 
@@ -146,6 +157,7 @@ class LogReader:
     def _read_gen(self, only_stream_id=None):
         "packed generator - yields (time, stream, data)"
         while True:
+            start = self.f.tell()
             header = self._read(8)
             if len(header) < 8:
                 break
@@ -156,14 +168,17 @@ class LogReader:
             microseconds += self.us_offset
             dt = datetime.timedelta(microseconds=microseconds)
             data = self._read(size)
-            assert len(data) == size, (len(data), size)
+            if len(data) != size:
+                g_logger.error(f"Incomplete log file {self.f.name} from position {start}")
+                return
             while size == 0xFFFF:
                 header = self._read(8)
                 if len(header) < 8:
                     break
                 ref_microseconds, ref_stream_id, size = struct.unpack('IHH', header)
-                assert microseconds & TIMESTAMP_MASK == ref_microseconds, (microseconds & TIMESTAMP_MASK, ref_microseconds)
-                assert stream_id == ref_stream_id, (stream_id, ref_stream_id)
+                if not (microseconds & TIMESTAMP_MASK == ref_microseconds) or not (stream_id == ref_stream_id):
+                    g_logger.error(f"Corrupted log file {self.f.name} from position {start}")
+                    return
                 part = self._read(size)
                 assert len(part) == size, (len(part), size)
                 data += part
@@ -221,17 +236,18 @@ def _create_index(data, pos, start_time=datetime.timedelta()):
             us_offset += TIMESTAMP_OVERFLOW_STEP
         prev_micros = micros
         dt = datetime.timedelta(microseconds=micros+us_offset)
+        index.append((start, dt))
         pos += 8 + size
         while size == 0xFFFF and pos + 8 <= end:
             header = data[pos:pos+8]
-            micros_, channel, size = struct.unpack('IHH', header)
-            assert micros == micros_
+            micros_, channel_, size = struct.unpack('IHH', header)
+            if micros_ != micros_ or channel_ != channel:
+                g_logger.error(f"Corrupted log file from position {start}")
+                return index  # packet invalid
             pos += 8 + size
         if pos > end: # current packet is not complete
-            index.append((start, dt))
             return index
-        index.append((start, dt))
-    index.append((pos, dt))
+    index.append((pos, dt))  # eof marker - index of nonexisting packet
     return index
 
 

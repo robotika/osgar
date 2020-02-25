@@ -1,5 +1,6 @@
 import unittest
 import os
+import tempfile
 import time
 import logging
 from threading import Timer
@@ -11,7 +12,6 @@ import osgar.logger  # needed for patching the osgar.logger.datetime.datetime
 from osgar.logger import (LogWriter, LogReader, LogAsserter, INFO_STREAM_ID,
                           lookup_stream_id, LogIndexedReader)
 
-logging.getLogger().setLevel(logging.ERROR)
 
 
 class TimeStandsStill:
@@ -38,18 +38,17 @@ class LoggerStreamingTest(unittest.TestCase):
 
     def setUp(self):
         ref = os.environ.get('OSGAR_LOGS')
-        if ref is not None:
-            del os.environ['OSGAR_LOGS']
+        if ref is None:
+            os.environ['OSGAR_LOGS'] = "."
 
     def test_writer_prefix(self):
         log = LogWriter(prefix='tmp')
-        self.assertTrue(log.filename.startswith('tmp'))
+        self.assertTrue(log.filename.startswith('./tmp'))
         log.close()
         os.remove(log.filename)
 
     def test_context_manager(self):
         with LogWriter(prefix='tmpp', note='1st test') as log:
-            self.assertTrue(log.filename.startswith('tmpp'))
             filename = log.filename
             start_time = log.start_time
             t1 = log.write(10, b'\x01\x02\x02\x04')
@@ -168,7 +167,7 @@ class LoggerStreamingTest(unittest.TestCase):
 
     def test_environ(self):
         with LogWriter(prefix='tmp5', note='test_filename_before') as log:
-            self.assertTrue(log.filename.startswith('tmp5'))
+            self.assertTrue(log.filename.startswith('./tmp5'))
         os.remove(log.filename)
 
         os.environ['OSGAR_LOGS'] = 'tmp_dir'
@@ -177,8 +176,9 @@ class LoggerStreamingTest(unittest.TestCase):
         os.remove(log.filename)
 
         del os.environ['OSGAR_LOGS']
-        with LogWriter(prefix='tmp7', note='test_filename_after2') as log:
-            self.assertTrue(log.filename.startswith('tmp7'))
+        with self.assertLogs(level=logging.WARNING):
+            with LogWriter(prefix='tmp7', note='test_filename_after2') as log:
+                self.assertTrue(log.filename.startswith('tmp7'))
         os.remove(log.filename)
 
     def test_time_overflow(self):
@@ -265,8 +265,9 @@ class LoggerStreamingTest(unittest.TestCase):
                 f_out.write(f_in.read(100))
         
         with LogReader(partial, only_stream_id=1) as log:
-            with self.assertRaises(AssertionError):
-                dt, channel, data = next(log)
+            with self.assertLogs(osgar.logger.__name__, logging.ERROR):
+                with self.assertRaises(StopIteration):
+                    dt, channel, data = next(log)
 
         proc = Timer(0.1, delayed_copy, [filename, partial, 100])
         proc.start()
@@ -307,13 +308,42 @@ class LoggerStreamingTest(unittest.TestCase):
             self.assertEqual(data, b'\x02')
         os.remove(filename)
 
+    def test_large_invalid(self):
+        header = osgar.logger.format_header(datetime(2019, 1, 1, 1))
+        packet = osgar.logger.format_packet(1, b"\x00"*(2**16), timedelta())
+        invalid = b"\xFF"*len(packet[-2])
+        self.assertNotEqual(packet[-2], invalid)
+        packet[-2] = invalid
+        logdata = b"".join(header + packet)
+
+        with tempfile.NamedTemporaryFile(dir=".") as f:
+            f.write(logdata)
+            f.flush()
+            with LogReader(f.name) as l:
+                with self.assertRaises(StopIteration),\
+                     self.assertLogs(logger=osgar.logger.__name__, level=logging.ERROR):
+                    next(l)
+
+    def test_incomplete(self):
+        header = osgar.logger.format_header(datetime(2019, 1, 1, 1))
+        packet = osgar.logger.format_packet(1, b"\x00"*10, timedelta())
+        logdata = b"".join(header + packet)
+
+        with tempfile.NamedTemporaryFile(dir=".") as f:
+            f.write(logdata[:-1])
+            f.flush()
+            with LogReader(f.name) as l:
+                with self.assertLogs(osgar.logger.__name__, logging.ERROR):
+                    with self.assertRaises(StopIteration):
+                        next(l)
+
 
 class LoggerIndexedTest(unittest.TestCase):
 
     def setUp(self):
         ref = os.environ.get('OSGAR_LOGS')
-        if ref is not None:
-            del os.environ['OSGAR_LOGS']
+        if ref is None:
+            os.environ['OSGAR_LOGS'] = "."
 
     def test_indexed_reader(self):
         note = 'test_indexed_reader'
@@ -509,6 +539,34 @@ class LoggerIndexedTest(unittest.TestCase):
 
                     dt, channel, data = log[2]
                     self.assertEqual(dt, timedelta(hours=2))
+
+    def test_large_invalid(self):
+        header = osgar.logger.format_header(datetime(2019, 1, 1, 1))
+        packet = osgar.logger.format_packet(1, b"\x00"*(2**16), timedelta())
+        invalid = b"\xFF"*len(packet[-2])
+        self.assertNotEqual(packet[-2], invalid)
+        packet[-2] = invalid
+        logdata = b"".join(header + packet)
+
+        with tempfile.NamedTemporaryFile(dir=".") as f:
+            f.write(logdata)
+            f.flush()
+            with self.assertLogs(logger=osgar.logger.__name__, level=logging.ERROR) as log:
+                with LogIndexedReader(f.name) as l:
+                    with self.assertRaises(IndexError):
+                        l[0]
+
+    def test_incomplete(self):
+        header = osgar.logger.format_header(datetime(2019, 1, 1, 1))
+        packet = osgar.logger.format_packet(1, b"\x00"*10, timedelta())
+        logdata = b"".join(header + packet)
+
+        with tempfile.NamedTemporaryFile(dir=".") as f:
+            f.write(logdata[:-1])
+            f.flush()
+            with LogIndexedReader(f.name) as l:
+                with self.assertRaises(IndexError):
+                    l[0]
 
 
 # vim: expandtab sw=4 ts=4
