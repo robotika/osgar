@@ -224,8 +224,9 @@ def _create_index(data, pos, start_time=datetime.timedelta()):
         pos += 8 + size
         while size == 0xFFFF and pos + 8 <= end:
             header = data[pos:pos+8]
-            micros_, channel, size = struct.unpack('IHH', header)
-            assert micros == micros_
+            micros_, channel_, size = struct.unpack('IHH', header)
+            assert micros == micros_, start
+            assert channel == channel_, start
             pos += 8 + size
         if pos > end: # current packet is not complete
             index.append((start, dt))
