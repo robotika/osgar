@@ -481,6 +481,7 @@ def debug2dir(filename, out_dir):
         elif channel == image_id:
             image = data
             assert artf is not None
+            sim_time_sec = int(dt.total_seconds())  # TODO conditional Virtual/System
             name = os.path.basename(filename)[:-4] + '-' + artf[0] + '-' + str(sim_time_sec) + '.jpg'
             print(name)
             with open(os.path.join(out_dir, name), 'wb') as f:
