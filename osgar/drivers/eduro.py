@@ -34,7 +34,7 @@ def CAN_triplet(msg_id, data):
 
 class Eduro(Thread):
     def __init__(self, config, bus):
-        bus.register('can', 'buttons', 'voltage', 'emergency_stop', 'encoders', 'pose2d')
+        bus.register('can', 'buttons', 'voltage', 'emergency_stop', 'encoders', 'pose2d', 'co2')
         Thread.__init__(self)
         self.setDaemon(True)
 
@@ -51,10 +51,11 @@ class Eduro(Thread):
         self.dist_left_diff = 0
         self.dist_right_diff = 0
 
-
         self.emergency_stop = None  # uknown state
         self.pose = (0.0, 0.0, 0.0)  # x, y in meters, heading in radians (not corrected to 2PI)
         self.buttons = None  # unknown
+
+        self.gas_co2_initialized = False
 
     def update_encoders(self, msg_id, data):
         assert len(data) == 4, data
@@ -173,7 +174,14 @@ class Eduro(Thread):
             right&0xff, (right>>8)&0xff]))
 
     def cmd_read_gas_ppm(self):
-        pass
+        if not self.gas_co2_initialized:
+            self.bus.publish('can', CAN_triplet(CAN_ID_CO2, [0x2F, 0x10, 0x21, 0, 8, 0, 0, 0]))  # power on 5V
+            self.bus.publish('can', CAN_triplet(CAN_ID_CO2, [0x2F, 0x01, 0x21, 0, 0x15, 0, 0, 0]))  # addr T6713
+            self.bus.publish('can', CAN_triplet(CAN_ID_CO2, [0x2B, 0x02, 0x21, 0, 4, 0, 0, 0]))  # read 4 bytes
+            self.gas_co2_initialized = True
+        self.bus.publish('can', CAN_triplet(CAN_ID_CO2, [0x21, 0x00, 0x21, 0, 5, 0, 0, 0]))  # cmd read gas ppm
+        self.bus.publish('can', CAN_triplet(CAN_ID_CO2, [5, 4, 0x13, 0x8B, 0, 1, 0, 0]))
+        self.bus.publish('can', CAN_triplet(CAN_ID_CO2, [0x40, 0, 0x21, 0, 0, 0, 0, 0]))
     
     def update_gas_ppm(self, data):
         pass
