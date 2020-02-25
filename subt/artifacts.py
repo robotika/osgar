@@ -471,7 +471,7 @@ def debug2dir(filename, out_dir):
     image_id = names.index('detector.debug_artf') + 1
     artf_id = names.index('detector.artf') + 1
     sim_sec_id = names.index('rosmsg.sim_time_sec') + 1
-    sim_time_sec = 0
+    sim_time_sec = None
     image = None
     artf = None
     for dt, channel, data in LogReader(filename, only_stream_id=[image_id, artf_id, sim_sec_id]):
@@ -481,7 +481,8 @@ def debug2dir(filename, out_dir):
         elif channel == image_id:
             image = data
             assert artf is not None
-            name = os.path.basename(filename)[:-4] + '-' + artf[0] + '-' + str(sim_time_sec) + '.jpg'
+            time_sec = sim_time_sec if sim_time_sec is not None else int(dt.total_seconds())
+            name = os.path.basename(filename)[:-4] + '-' + artf[0] + '-' + str(time_sec) + '.jpg'
             print(name)
             with open(os.path.join(out_dir, name), 'wb') as f:
                 f.write(image)
