@@ -28,7 +28,7 @@ GAS = 'TYPE_GAS'
 
 
 RED_THRESHOLD = 100 #300  # for close backpacks was good 1000  # virtual QVGA=50, used to be 100, urban=1000
-YELLOW_THRESHOLD = 100  #500  # was 80
+YELLOW_THRESHOLD = 200  #500  # was 80
 YELLOW_MAX_THRESHOLD = 4000  # 2633 known example
 RED_YELLOW_MIN_3D_THRESHOLD = 50  # number of colored pixels in given depth distance threshold
 WHITE_THRESHOLD = 20000
@@ -136,7 +136,7 @@ def count_yellow(img):
     b = img[:,:,0]
     g = img[:,:,1]
     r = img[:,:,2]
-    mask = np.logical_and(np.logical_and(r >= 60, g*0.95 > r), np.logical_and(r*0.33 > b, g*0.33 > b))
+    mask = np.logical_and(np.logical_and(r >= 60, g*0.95 > r), np.logical_and(r*0.5 > b, g*0.5 > b))
     global g_mask
     g_mask = mask.copy()
     # debug
@@ -294,7 +294,7 @@ class ArtifactDetector(Node):
                     f.write(image)
         rcount, w, h, x_min, x_max = count_red(img)
         yellow_used = False
-        if self.is_virtual and rcount < 20:
+        if True and rcount < 20:
             ycount, w, h, x_min, x_max = count_yellow(img)
             if ycount > YELLOW_THRESHOLD:
                 yellow_used = True
