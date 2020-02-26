@@ -1,0 +1,64 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "kloubak": {
+          "driver": "kloubak",
+          "in": ["slot_can", "slot_desired_speed"],
+          "out": ["can", "encoders", "emergency_stop", "pose2d",
+                  "bumpers_front", "bumpers_rear",
+                  "downdrops_front", "downdrops_rear",
+                  "joint_angle"],
+          "init": {
+            "drive_mode": "FRONT",
+            "wheel_distance": 0.496,
+            "center_axle_distance": 0.348,
+            "ad_center": 531,
+            "ad_calibration_deg": 45,
+            "ad_range": -178,
+            "max_join_angle_deg": 68
+          }
+      },          
+      "can": {
+          "driver": "can",
+          "in": ["slot_raw", "slot_can"],
+          "out": ["can", "raw"],
+          "init": {"speed": "500k", "canopen":false}
+      },
+      "serial": {
+          "driver": "serial",
+          "in": ["slot_raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyS0", "speed": 115200,
+                   "rtscts":true, "reset":true}
+      },
+      "receiver": {
+          "driver": "zeromq",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+            "mode": "PULL",
+            "timeout":0.5,
+            "endpoint": "tcp://k2jetson.local:5555"
+          }
+      },
+      "rosmsg": {
+          "driver": "rosmsg",
+          "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
+          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin"],
+          "init": {
+            "downsample": 1
+          }
+      }
+	      
+    },
+    "links": [["serial.raw", "can.slot_raw"],
+              ["can.raw", "serial.slot_raw"],
+              ["kloubak.can", "can.slot_can"],
+              ["can.can", "kloubak.slot_can"],
+              ["rosmsg.desired_speed", "kloubak.slot_desired_speed"],
+              ["receiver.raw", "rosmsg.slot_raw"]
+      ]
+  }
+}
+
