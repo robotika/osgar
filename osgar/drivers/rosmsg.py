@@ -361,7 +361,7 @@ class ROSMsgParser(Thread):
             return
         if data.startswith(b'cmdvel'):
             fwd, ang = parse_cmdvel(data)
-            self.bus.publish('desired_speed', [round(fwd * 1000),round(math.degrees(ang)*100])
+            self.bus.publish('desired_speed', [round(fwd * 1000),round(math.degrees(ang)*100)])
             return
         frame_id = get_frame_id(data)
  #       print(frame_id)
