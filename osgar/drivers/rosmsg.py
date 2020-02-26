@@ -293,6 +293,11 @@ def get_frame_id(data):
     frame_id = data[pos:pos+frame_id_size]
     return frame_id
 
+def parse_cmdvel(data):
+    data = data[6:] #remove cmdvel string
+    size = struct.unpack_from('<I', data)[0]
+    fwd,_,_,_,_,ang = struct.unpack_from('<dddddd', data, 4)
+    return fwd, ang
 
 class ROSMsgParser(Thread):
     def __init__(self, config, bus):
@@ -355,8 +360,9 @@ class ROSMsgParser(Thread):
         if data.startswith(b'points'):
             return
         if data.startswith(b'cmdvel'):
-            import pdb
-            pdb.set_trace()
+            fwd, ang = parse_cmdvel(data)
+            self.bus.publish('desired_speed', [round(fwd * 1000),round(math.degrees(ang)*100])
+            return
         frame_id = get_frame_id(data)
  #       print(frame_id)
         # TODO parse properly header "frame ID"
