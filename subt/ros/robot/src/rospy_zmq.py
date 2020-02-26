@@ -105,6 +105,20 @@ def callback_depth(data):
     else:
         g_depth_counter += 1
 
+def callback_cmdvel(data):
+    global g_socket
+    assert g_socket is not None
+
+    # rospy.loginfo(rospy.get_caller_id() + "I heard cmdvel data")
+    # print(rospy.get_caller_id(), data)
+
+    # https://answers.ros.org/question/303115/serialize-ros-message-and-pass-it/
+    s1 = BytesIO()
+    data.serialize(s1)
+    to_send = s1.getvalue()
+    header = struct.pack('<I', len(to_send))
+    g_socket.send("cmdvel" + header + to_send)
+
 def callback_camera(data):
     global g_socket, g_camera_counter
     assert g_socket is not None
@@ -154,7 +168,7 @@ def odom2zmq():
     rospy.Subscriber('/depth_image', Image, callback_depth)
     rospy.Subscriber('/image', CompressedImage, callback_camera)
     rospy.Subscriber('/clock', Clock, callback_clock)
-    
+    rospy.Subscriber('/cmd_vel', Twist, callback_cmdvel) 
     
     velocity_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
     vel_msg = Twist()

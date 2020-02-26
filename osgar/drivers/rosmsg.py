@@ -354,6 +354,9 @@ class ROSMsgParser(Thread):
             return
         if data.startswith(b'points'):
             return
+        if data.startswith(b'cmdvel'):
+            import pdb
+            pdb.set_trace()
         frame_id = get_frame_id(data)
  #       print(frame_id)
         # TODO parse properly header "frame ID"
