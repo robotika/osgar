@@ -63,7 +63,7 @@ def replay(args, application=None):
     return module_instance
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description='Replay module from log')
     parser.add_argument('logfile', help='recorded log file')
     parser.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
@@ -85,5 +85,9 @@ if __name__ == "__main__":
 
     if args.draw:
         module_instance.draw()
+
+
+if __name__ == "__main__":
+    main()
 
 # vim: expandtab sw=4 ts=4

@@ -31,6 +31,7 @@ setuptools.setup(
             'log2pcap = osgar.tools.log2pcap:main [tools]',
             'logger = osgar.logger:main',
             'record = osgar.record:main',
+            'replay = osgar.replay:main',
             'subt = subt.main:main',
             'allsync = subt.tools.allsync:main',
         ],
