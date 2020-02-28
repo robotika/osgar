@@ -11,6 +11,8 @@ from osgar.logger import LogReader
 from osgar.lib.config import config_load, get_class_by_name
 from osgar.bus import LogBusHandler, LogBusHandlerInputsOnly
 
+g_logger = logging.getLogger(__name__)
+
 
 def replay(args, application=None):
     log = LogReader(args.logfile, only_stream_id=0)
@@ -34,7 +36,7 @@ def replay(args, application=None):
     for edge_from, edge_to in config['robot']['links']:
         if edge_to.split('.')[0] == module:
             if edge_from not in names:
-                logging.warning('Missing name: %s' % edge_from)
+                g_logger.warning('Missing name: %s' % edge_from)
                 names.append(edge_from)
             inputs[1 + names.index(edge_from)] = edge_to.split('.')[1]
 
@@ -64,6 +66,11 @@ def replay(args, application=None):
 
 
 def main():
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(name)-12s %(levelname)-8s %(message)s',
+        #datefmt='%Y-%m-%d %H:%M',
+    )
     parser = argparse.ArgumentParser(description='Replay module from log')
     parser.add_argument('logfile', help='recorded log file')
     parser.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
