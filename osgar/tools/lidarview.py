@@ -480,7 +480,8 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
                     frames_step = 90
                     sleep_time = 10
                 if event.key == K_s:
-                    pygame.image.save(image, "saveX-{:04}.jpg".format(save_counter))
+                    save_image = image2 if use_image2 else image
+                    pygame.image.save(save_image, "saveX-{:04}.jpg".format(save_counter))
                     save_counter += 1
                 if event.key == K_b:  # swap binary danger image on/off
                     global g_danger_binary_image
