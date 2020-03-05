@@ -146,6 +146,7 @@ def parse_laser(data):
     # angle_min, angle_max, angle_increment, time_increment, scan_time
     # range_min, range_max
 #    print(params)
+    angle_range_deg = int(round(math.degrees(params[1] - params[0])))
     pos += 7*4
     ranges_size = struct.unpack_from('<I', data, pos)[0]
     # assert ranges_size == 720, ranges_size
@@ -158,16 +159,14 @@ def parse_laser(data):
 
     # conversion to int and millimeters
     scan = [int(x*1000) if x < 65.0 else 0 for x in scan]
-    #scan = [0] * 640 + scan + [0] * 640
-    to_cut = int(len(scan) / 360 * 45)  #original scan is 360deg
+
+    if angle_range_deg == 270:
+        # SubT Virtual World
+        return scan
+
+    # scan from map for MOBoS, Maria, K2, ...
+    to_cut = int(len(scan) / 360 * 45)  # original scan is 360deg
     scan = scan[to_cut:len(scan)-to_cut]
-
-
-    #reduced_scan = []
-    #for index,value in enumerate(scan):
-    #    if index % 10 == 1:
-    #        reduced_scan.append(value)
-
     return scan
 
 
