@@ -1,0 +1,21 @@
+# https://docs.docker.com/engine/reference/builder/#dockerignore-file
+
+# Byte-compiled / optimized / DLL files
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+
+# pycharm dir
+.idea
+
+# all log files anywhere
+**/*.log
+**/*.bag
+**/*.bag.active
+
+# created when using `pip install -e .`
+osgar.egg-info/
+
+# other
+_deprecated
+
