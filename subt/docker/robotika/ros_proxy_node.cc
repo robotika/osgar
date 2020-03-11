@@ -21,6 +21,9 @@
 //   - redirect IMU, Odom, Scan and Image messages to Python3 (via ZeroMQ?)
 
 #include <chrono>
+#include <thread>
+#include <fstream>
+
 #include <geometry_msgs/Twist.h>
 #include <rosgraph_msgs/Clock.h>
 #include <sensor_msgs/Imu.h>
@@ -255,9 +258,6 @@ class Controller
   /// \brief Name of this robot.
   private: std::string name;
 
-  private: std::string logFilename;
-  long int log_offset{-1};
-
   private: double prev_dist2{0.0};
 
   public: bool ReportArtifact(subt::msgs::Artifact& artifact)
@@ -279,7 +279,10 @@ class Controller
 
   public: void receiveZmq(const ros::TimerEvent&);
   public: bool parseArtf(char *input_str, subt::msgs::Artifact& artifact);
-  public: void sendLogPart(const ros::TimerEvent&);
+
+  std::thread m_logSending;
+
+  static void logSendingThread(Controller * self, std::string logFilename);
 };
 
 /////////////////////////////////////////////////
@@ -301,7 +304,6 @@ Controller::Controller(const std::string &_name)
   ros::topic::waitForMessage<sensor_msgs::Imu>(this->name + "/imu/data", this->n);
 
   this->updateTimer = this->n.createTimer(ros::Duration(0.05), &Controller::Update, this);
-  this->logTimer = this->n.createTimer(ros::Duration(0.05), &Controller::sendLogPart, this);
   this->zmqTimer = this->n.createTimer(ros::Duration(0.05), &Controller::receiveZmq, this);
 }
 
@@ -429,51 +431,49 @@ not available.");
   }
 }
 
+/////////////////////////////////////////////////
+void Controller::logSendingThread(Controller * self, std::string logFilename) {
 
-void Controller::sendLogPart(const ros::TimerEvent&)
-{
-  if(g_countSendLog % 100 == 0) {
-    ROS_INFO("sendLogPart count %d", g_countSendLog);
-  }
-  g_countSendLog++;
-
-   // the ROS logger availability is currently not known
-   // see https://bitbucket.org/osrf/subt/issues/276/when-is-ros-bag-recorder-ready
-  if (g_countClock < 1000)
-    return;
-
-  // Test empty log
-  // based on Nate example:
-  //   https://bitbucket.org/osrf/subt_seed/branch/log_sensor_msgs#diff
-  std_msgs::String log;
-  std::ostringstream stream;
-  ros::Time currentTime = ros::Time::now();
-  stream << currentTime.sec + currentTime.nsec*1e-9 << ": Hello " << this->name;
-  log.data = stream.str().c_str();
-  this->robotDataPub.publish(log);
-
-  if (this->log_offset >= 0 && this->log_offset < ROSBAG_SIZE_LIMIT)
-  {
-    FILE *fd = fopen(this->logFilename.c_str(), "rb");
-    if(fd != NULL)
-    {
-      char buf[1000000];
-      fseek(fd, this->log_offset, SEEK_SET);
-      size_t size = fread(buf, 1, 1000000, fd);
-      fclose(fd);
-      this->log_offset += size;
-      std::string s;
-      size_t i;
-      for(i = 0; i < size; i++)
-        s += buf[i];
-      log.data = s;
-      this->robotDataPub.publish(log);
+    ROS_INFO_STREAM("waiting for at least one subscriber at 'robotDataPub'");
+    while (self->robotDataPub.getNumSubscribers() == 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        if (!ros::ok()) {
+            return;
+        }
     }
-    else
-    {
-      ROS_INFO_STREAM("Error opening: " << this->logFilename);
+
+    // open the log file
+    ROS_INFO_STREAM("opening log " << logFilename);
+    std::ifstream log_file(logFilename, std::ios_base::in|std::ios_base::binary);
+    if (!log_file.is_open()) {
+        ROS_WARN("opening log for reading failed");
+        return;
     }
-  }
+
+    // spin sending log parts
+    while (ros::ok()) {
+
+        // heartbeat
+        if(g_countSendLog % 100 == 0) {
+            ROS_INFO_STREAM("sendLogPart count " << g_countSendLog);
+        }
+        g_countSendLog++;
+
+        // send current ROS time
+        std_msgs::String msg;
+        std::ostringstream stream;
+        ros::Time currentTime = ros::Time::now();
+        stream << currentTime.sec + currentTime.nsec*1e-9 << ": Hello " << self->name;
+        msg.data = stream.str();
+        self->robotDataPub.publish(msg);
+
+        // send log data
+        std::string buffer(std::istreambuf_iterator<char>(log_file), {});
+        msg.data = buffer;
+        self->robotDataPub.publish(msg);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
 }
 
 /////////////////////////////////////////////////
@@ -596,9 +596,8 @@ void Controller::receiveZmq(const ros::TimerEvent&)
     else if(strncmp(buffer, "file ", 5) == 0)
     {
       buffer[size] = 0;
-      ROS_INFO("FILE: %s", buffer);
-      this->logFilename = buffer + 5;
-      this->log_offset = 0;
+      ROS_INFO("FILE: %s", buffer + 5);
+      this->m_logSending = std::thread(Controller::logSendingThread, this, std::string(buffer + 5));
     }
     else
     {
