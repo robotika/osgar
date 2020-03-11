@@ -375,7 +375,7 @@ void Controller::Update(const ros::TimerEvent&)
 
       // Create a cmd_vel publisher to control a vehicle.
       this->originClient = this->n.serviceClient<subt_msgs::PoseFromArtifact>(
-          "/subt/pose_from_artifact_origin");
+          "/subt/pose_from_artifact_origin", true);
       this->originSrv.request.robot_name.data = this->name;
     }
     else
