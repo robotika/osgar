@@ -213,6 +213,10 @@ CFG_DEMO = {
               "x": -1,
               "y": 1,
           }
+      },
+      "darpa": {
+          "driver": "subt.control_center_qt:DARPAReporter",
+          "init": {}
       }
     },
     "links": [
@@ -228,6 +232,7 @@ CFG_DEMO = {
         ["cc.cmd", "robot2.cmd"],
         ["cc.cmd", "robot3.cmd"],
         ["cc.cmd", "robot4.cmd"],
+        ["cc.artf_xyz", "darpa.artf_xyz"],
     ]
   }
 }
