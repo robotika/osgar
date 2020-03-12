@@ -9,8 +9,8 @@ import math
 import json
 
 
-#URL_BASE = "http://localhost:8000"  # demo
-URL_BASE = "http://10.100.1.200:8000"  # Alpha (was Army and Safety Research) Tunnel
+URL_BASE = "http://localhost:8888"  # local Robotika test/demo
+#URL_BASE = "http://10.100.1.200:8000"  # Alpha (was Army and Safety Research) Tunnel
 #URL_BASE = "http://10.100.2.200:8000"  # Beta (was Miami and Experimental) Tunnel
 
 ARTF_TYPES = ['Survivor', 'Backpack', 'Cell Phone',  # common
