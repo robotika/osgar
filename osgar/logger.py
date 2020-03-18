@@ -37,6 +37,7 @@ import time
 from threading import RLock
 from ast import literal_eval
 import mmap
+import pathlib
 
 g_logger = logging.getLogger(__name__)
 
@@ -85,6 +86,7 @@ class LogWriter:
             self.filename = os.path.join(os.environ[ENV_OSGAR_LOGS], self.filename)
         else:
             logging.warning('Environment variable %s is not set - using working directory' % ENV_OSGAR_LOGS)
+        self.filename = str(pathlib.Path(self.filename).absolute())
         self.f = open(self.filename, 'wb')
 
         self.f.write(b"".join(format_header(self.start_time)))

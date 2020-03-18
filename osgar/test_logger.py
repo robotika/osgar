@@ -44,9 +44,8 @@ class LoggerStreamingTest(unittest.TestCase):
             os.environ['OSGAR_LOGS'] = "."
 
     def test_writer_prefix(self):
-        log = LogWriter(prefix='tmp')
-        self.assertTrue(log.filename.startswith('./tmp'))
-        log.close()
+        with LogWriter(prefix='tmp') as log:
+            self.assertTrue(Path(log.filename).name.startswith('tmp'))
         os.remove(log.filename)
 
     def test_context_manager(self):
@@ -169,18 +168,18 @@ class LoggerStreamingTest(unittest.TestCase):
 
     def test_environ(self):
         with LogWriter(prefix='tmp5', note='test_filename_before') as log:
-            self.assertTrue(log.filename.startswith('./tmp5'))
+            self.assertTrue(Path(log.filename).name.startswith('tmp5'))
         os.remove(log.filename)
 
         os.environ['OSGAR_LOGS'] = 'tmp_dir'
         with LogWriter(prefix='tmp6', note='test_filename_after') as log:
-            self.assertTrue(log.filename.startswith('tmp_dir'))
+            self.assertEqual(Path(log.filename).parent.name, 'tmp_dir')
         os.remove(log.filename)
 
         del os.environ['OSGAR_LOGS']
         with self.assertLogs(level=logging.WARNING):
             with LogWriter(prefix='tmp7', note='test_filename_after2') as log:
-                self.assertTrue(log.filename.startswith('tmp7'))
+                self.assertTrue(Path(log.filename).name.startswith('tmp7'))
         os.remove(log.filename)
 
     def test_time_overflow(self):
