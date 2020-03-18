@@ -2,8 +2,30 @@ import unittest
 from unittest.mock import patch, MagicMock
 import json
 import os
+import threading
+import signal
+import subprocess
+import tempfile
+import sys
 
 from osgar.record import Recorder
+
+
+class Sleeper:
+
+    def __init__(self, cfg, bus):
+        pass
+
+    def start(self):
+        self.e = threading.Event()
+        self.t = threading.Thread(target=self.e.wait, args=(5,))
+        self.t.start()
+
+    def join(self, timeout=None):
+        self.t.join(timeout)
+
+    def request_stop(self):
+        self.e.set()
 
 
 class RecorderTest(unittest.TestCase):
@@ -60,6 +82,48 @@ class RecorderTest(unittest.TestCase):
                                    filename)) as f:
                     config = json.loads(f.read())
                 recorder = Recorder(config=config['robot'], logger=logger)
+
+    @unittest.skipIf(os.name != "posix", "requires posix shell")
+    def test_sigint_shell(self):
+        config = {
+            'version': 2,
+            'robot': {
+                'modules': {
+                    "app": {
+                        "driver": "osgar.test_record:Sleeper",
+                        "init": {}
+                    },
+                }, 'links':[]
+            }
+        }
+        with tempfile.NamedTemporaryFile() as cfg:
+            cfg.write(json.dumps(config).encode('ascii'))
+            cfg.flush()
+            env = os.environ.copy()
+            env['OSGAR_LOGS'] = '.'
+            with subprocess.Popen(
+                    f"echo starting; {sys.executable} -m osgar.record {cfg.name}; echo should not get here",
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    start_new_session=True,
+                    env=env,
+            ) as proc:
+                import time
+                time.sleep(0.3)
+                grp_id = os.getpgid(proc.pid)
+                os.killpg(grp_id, signal.SIGINT)
+                stdout, stderr = proc.communicate()
+                stdout = stdout.splitlines()
+                stderr = stderr.splitlines()
+                self.assertEqual(stdout[0], b"starting")
+                log_line = stderr[0].split()
+                log_filename = log_line[-1]
+                self.assertTrue(log_filename.endswith(b".log"), stderr)
+                self.assertEqual(len(stdout), 1, stdout)
+                self.assertEqual(len(stderr), 3, stderr)
+                self.assertTrue(b"committing suicide by SIGINT" in stderr[-1])
+            os.unlink(log_filename)
 
 
 # vim: expandtab sw=4 ts=4

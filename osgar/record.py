@@ -7,15 +7,18 @@ import sys
 import os
 import signal
 import threading
+import logging
 
 from osgar.logger import LogWriter
 from osgar.lib.config import config_load, get_class_by_name
 from osgar.bus import Bus
 
+g_logger = logging.getLogger(__name__)
 
 class Recorder:
     def __init__(self, config, logger):
         self.stop_requested = threading.Event()
+        self.sigint_received = False
         self.modules = {}
 
         bus = Bus(logger)
@@ -39,11 +42,18 @@ class Recorder:
             module.join(1)
         for t in threading.enumerate():
             if t != threading.current_thread():
-                print(f'ERROR: thread {repr(t.name)} still running!')
-                print(f'ERROR:     class: {t.__class__.__module__}.{t.__class__.__name__}')
-                print(f'ERROR:     target: {t._target}')
+                g_logger.error(f'thread {repr(t.name)} still running!')
+                g_logger.error(f'    class: {t.__class__.__module__}.{t.__class__.__name__}')
+                g_logger.error(f'    target: {t._target}')
+        if self.sigint_received:
+            g_logger.info("committing suicide by SIGINT")
+            signal.signal(signal.SIGINT, signal.SIG_DFL)
+            os.kill(os.getpid(), signal.SIGINT)
 
     def request_stop(self, signum=None, frame=None): # pylint: disable=unused-argument
+        if signum == signal.SIGINT:
+            self.sigint_received = True
+            g_logger.info("SIGINT received")
         if self.stop_requested.is_set():
             return
         for module in self.modules.values():
@@ -54,7 +64,7 @@ class Recorder:
 def record(config, log_prefix, duration_sec=None):
     with LogWriter(prefix=log_prefix, note=str(sys.argv)) as log:
         log.write(0, bytes(str(config), 'ascii'))
-        print(log.filename)
+        g_logger.info(log.filename)
         with Recorder(config=config['robot'], logger=log) as recorder:
             if 'app' in recorder.modules:
                 app = recorder.modules['app']
