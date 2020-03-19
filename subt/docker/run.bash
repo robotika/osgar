@@ -54,9 +54,16 @@ fi
 
 DOCKER_OPTS=
 
-# Get the current version of docker-ce
+# Get the current version of docker.io (Debian) or docker-ce (otherwise).
 # Strip leading stuff before the version number so it can be compared
-DOCKER_VER=$(dpkg-query -f='${Version}' --show docker-ce | sed 's/[0-9]://')
+DISTRIBUTOR=$(lsb_release -is)
+if [ "$DISTRIBUTOR" = "Debian" ]
+then
+  DOCKER_NAME=docker.io
+else
+  DOCKER_NAME=docker-ce
+fi
+DOCKER_VER=$(dpkg-query -f='${Version}' --show "$DOCKER_NAME" | sed 's/[0-9]://')
 if dpkg --compare-versions 19.03 gt "$DOCKER_VER"
 then
     echo "Docker version is less than 19.03, using nvidia-docker2 runtime"
