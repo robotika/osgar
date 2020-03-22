@@ -3,10 +3,12 @@ import os
 import tempfile
 import time
 import logging
+
 from threading import Timer
 from datetime import datetime, timedelta
 from unittest.mock import patch
 from contextlib import ExitStack
+from pathlib import Path
 
 import osgar.logger  # needed for patching the osgar.logger.datetime.datetime
 from osgar.logger import (LogWriter, LogReader, LogAsserter, INFO_STREAM_ID,
@@ -316,10 +318,11 @@ class LoggerStreamingTest(unittest.TestCase):
         packet[-2] = invalid
         logdata = b"".join(header + packet)
 
-        with tempfile.NamedTemporaryFile(dir=".") as f:
-            f.write(logdata)
-            f.flush()
-            with LogReader(f.name) as l:
+        with tempfile.TemporaryDirectory(dir=".") as d:
+            filename = Path(".") / d / "log"
+            with open(filename, "wb") as f:
+                f.write(logdata[:-1])
+            with LogReader(filename) as l:
                 with self.assertRaises(StopIteration),\
                      self.assertLogs(logger=osgar.logger.__name__, level=logging.ERROR):
                     next(l)
@@ -329,10 +332,11 @@ class LoggerStreamingTest(unittest.TestCase):
         packet = osgar.logger.format_packet(1, b"\x00"*10, timedelta())
         logdata = b"".join(header + packet)
 
-        with tempfile.NamedTemporaryFile(dir=".") as f:
-            f.write(logdata[:-1])
-            f.flush()
-            with LogReader(f.name) as l:
+        with tempfile.TemporaryDirectory(dir=".") as d:
+            filename = Path(".") / d / "log"
+            with open(filename, "wb") as f:
+                f.write(logdata[:-1])
+            with LogReader(filename) as l:
                 with self.assertLogs(osgar.logger.__name__, logging.ERROR):
                     with self.assertRaises(StopIteration):
                         next(l)
@@ -548,11 +552,12 @@ class LoggerIndexedTest(unittest.TestCase):
         packet[-2] = invalid
         logdata = b"".join(header + packet)
 
-        with tempfile.NamedTemporaryFile(dir=".") as f:
-            f.write(logdata)
-            f.flush()
+        with tempfile.TemporaryDirectory(dir=".") as d:
+            filename = Path(".") / d / "log"
+            with open(filename, "wb") as f:
+                f.write(logdata[:-1])
             with self.assertLogs(logger=osgar.logger.__name__, level=logging.ERROR) as log:
-                with LogIndexedReader(f.name) as l:
+                with LogIndexedReader(filename) as l:
                     with self.assertRaises(IndexError):
                         l[0]
 
@@ -561,10 +566,11 @@ class LoggerIndexedTest(unittest.TestCase):
         packet = osgar.logger.format_packet(1, b"\x00"*10, timedelta())
         logdata = b"".join(header + packet)
 
-        with tempfile.NamedTemporaryFile(dir=".") as f:
-            f.write(logdata[:-1])
-            f.flush()
-            with LogIndexedReader(f.name) as l:
+        with tempfile.TemporaryDirectory(dir=".") as d:
+            filename = Path(".") / d / "log"
+            with open(filename, "wb") as f:
+                f.write(logdata[:-1])
+            with LogIndexedReader(filename) as l:
                 with self.assertRaises(IndexError):
                     l[0]
 
