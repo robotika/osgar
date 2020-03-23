@@ -11,7 +11,7 @@ from osgar.bus import BusShutdownException
 
 class LogZeroMQ:
     def __init__(self, config, bus):
-        bus.register('raw:null')
+        bus.register('raw:gz' if config.get('save_data', False) else 'raw:null')
         mode = config['mode']
         self.endpoint = config['endpoint']
         self.timeout = config.get('timeout', 1) # default recv timeout 1s
