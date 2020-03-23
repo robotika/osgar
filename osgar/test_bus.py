@@ -180,7 +180,7 @@ class BusHandlerTest(unittest.TestCase):
         t.join(10)
         end = time.monotonic()
         self.assertFalse(t.is_alive())
-        self.assertGreater(end-interval, start)
+        self.assertGreaterEqual(end-interval, start)
 
     def test_interruptible_sleep(self):
         bus = Bus(MagicMock())
