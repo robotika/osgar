@@ -4,8 +4,7 @@ python:
     - "3.6"
     - "3.7"
 script:
-    - python -m unittest discover --top-level-directory . --start-directory subt
-    - python -m unittest discover --top-level-directory . --start-directory osgar
+    - ./test.py
 branches:
   only:
     - master
