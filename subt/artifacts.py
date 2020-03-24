@@ -97,8 +97,9 @@ def count_red(img, filtered=False, stdout=None):
         mask = b == 255
         reddish = b.astype(np.uint8)
         __, bin_img = cv2.threshold(reddish, 160, 255, cv2.THRESH_BINARY)
-        
-        im2, contours, hierarchy = cv2.findContours(bin_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+        # cv2.findCountours for opencv == 3 returns 3 values while for opencv == 4 returns just 2
+        contours, hierarchy = cv2.findContours(bin_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2:]
         best_cnt = None
         best_area = None
         for cnt in contours:
