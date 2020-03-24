@@ -11,6 +11,9 @@ import numpy as np
 from osgar.bus import BusShutdownException
 from osgar.lib.quaternion import euler_zyx
 
+MAX_TOPIC_NAME_LENGTH = 256
+
+
 ROS_MESSAGE_TYPES = {
     'std_msgs/String': '992ce8a1687cec8c8bd883ec73ca41d1',
     'geometry_msgs/Twist': '9f195f881246fdfa2798d1d3eebca84a',
@@ -95,6 +98,13 @@ def parse_raw_image(data, dump_filename=None):
     elif encoding == b'16UC1':
         # depth is array as uint16, similar to OSGAR
         arr = np.frombuffer(data[pos:pos + image_arr_size], dtype=np.dtype('H'))
+
+    elif encoding == b'rgb8':
+        # not compressed image data
+        img = np.frombuffer(data[pos:pos+image_arr_size], dtype=np.dtype('B'))
+        img = np.reshape(img, (height, width, 3))
+        return img
+
     else:
         assert False, encoding  # unsuported encoding
 
@@ -163,6 +173,13 @@ def parse_laser(data):
     if angle_range_deg == 270:
         # SubT Virtual World
         return scan
+
+    if angle_range_deg == 149:
+        # NASA moon
+        size = len(scan)
+        assert size == 100, size  # by single sample
+        ret = [0]*40 + scan + [0]*40
+        return ret
 
     # scan from map for MOBoS, Maria, K2, ...
     to_cut = int(len(scan) / 360 * 45)  # original scan is 360deg
@@ -277,6 +294,52 @@ def parse_bool(data):
     return val != 0
 
 
+def parse_joint_state(data):
+    # sensor_msgs/JointState.msg
+    # Header
+    # string[] name
+    # float64[] position
+    # float64[] velocity
+    # float64[] effort
+    size = struct.unpack_from('<I', data)[0]
+    pos = 4
+    seq, timestamp_sec, timestamp_nsec, frame_id_size = struct.unpack_from('<IIII', data, pos)
+    pos += 4 + 4 + 4 + 4
+    frame_id = data[pos:pos+frame_id_size]
+    pos += frame_id_size
+    assert frame_id == b'', frame_id  # i.e. not filled
+    if seq//2 % 50 == 0:
+        print(seq)
+    size = struct.unpack_from('<I', data, pos)[0]  # number of joints
+    pos += 4
+    name = []
+    for i in range(size):
+        str_len = struct.unpack_from('<I', data, pos)[0]
+        pos += 4
+        name.append(data[pos:pos+str_len])
+        pos += str_len
+
+    tmp = struct.unpack_from('<I', data, pos)[0]
+    pos += 4
+    assert size == tmp, (size, tmp)  # number of joints
+    position = struct.unpack_from('<' + 'd'*size, data, pos)
+    pos += 8*size
+
+    tmp = struct.unpack_from('<I', data, pos)[0]
+    pos += 4
+    assert size == tmp, (size, tmp)  # number of joints
+    velocity = struct.unpack_from('<' + 'd'*size, data, pos)
+    pos += 8*size
+
+    tmp = struct.unpack_from('<I', data, pos)[0]
+    pos += 4
+    assert size == tmp, (size, tmp)  # number of joints
+    effort = struct.unpack_from('<' + 'd'*size, data, pos)
+    pos += 8*size
+
+    return name, position, velocity, effort
+
+
 def get_frame_id(data):
     size = struct.unpack_from('<I', data)[0]
     pos = 4
@@ -293,12 +356,87 @@ def get_frame_id(data):
     return frame_id
 
 
+def parse_volatile(data):
+    # NASA Space Robotics Challenge 2
+    # __slots__ = ['header','vol_type','vol_index','shadowed_state','distance_to']
+    # _slot_types = ['std_msgs/Header','string','int32','bool','float32']
+    size = struct.unpack_from('<I', data)[0]
+    pos = 4
+    assert size + 4 == len(data), (size, len(data))  # it is going to be variable -> remove the assert
+    seq, timestamp_sec, timestamp_nsec, frame_id_size = struct.unpack_from('<IIII', data, pos)
+    pos += 4 + 4 + 4 + 4
+    frame_id = data[pos:pos+frame_id_size]  # b'scout_1/volatile_sensor'
+    pos += frame_id_size
+    size = struct.unpack_from('<I', data, pos)[0]
+    pos += 4
+    vol_type = data[pos:pos+size]  # b'methanol'
+    pos += size
+    vol_index, shadowed_state, distance_to = struct.unpack_from('<iBf', data, pos)
+    return [vol_type.decode('ascii'), distance_to, vol_index]
+
+def parse_bucket(data):
+    # NASA Space Robotics Challenge 2
+    # __slots__ = ['vol_type','vol_index','mass_in_bucket']
+    # _slot_types = ['string','int32','float32']
+    size = struct.unpack_from('<I', data)[0]
+    pos = 4
+    assert size + 4 == len(data), (size, len(data))  # it is going to be variable -> remove the assert
+    vol_type_size = struct.unpack_from('<I', data, pos)[0]
+    vol_type = data[pos:pos+vol_type_size]  # b'methanol'
+    pos += vol_type_size
+    vol_index, mass_in_bucket = struct.unpack_from('<if', data, pos)
+    return [vol_type.decode('ascii'), vol_index, mass_in_bucket]
+
+def parse_topic(topic_type, data):
+    """parse general topic"""
+    if topic_type == 'srcp2_msgs/Qual1ScoringMsg':
+        assert len(data) == 44, (len(data), data)
+        size = struct.unpack_from('<I', data)[0]
+        pos = 4
+        assert size == 40, size
+        # __slots__ = ['score','calls','total_of_types']
+        # _slot_types = ['int32','int32','int32[8]']        
+        return struct.unpack_from('<II', data, pos)  # only score and calls
+    elif topic_type == 'srcp2_msgs/Qual2ScoringMsg':
+        assert len(data) == 139, (len(data), data)
+        # __slots__ = ['vol_type', 'points_per_type', 'num_of_dumps', 'total_score']
+        # _slot_types = ['string[8]', 'int32[8]', 'int32', 'float32']
+        # let's ignore names of volatile types
+        record = struct.unpack_from('<IIIIIIIIIf', data, len(data) - 10*4)
+        # print(record)
+        return sum(record[:8]), record[8]  # score and attempts
+    elif topic_type == 'srcp2_msgs/Qual3ScoringMsg':
+        assert len(data) == 12, (len(data), data)
+        size = struct.unpack_from('<I', data)[0]
+        pos = 4
+        assert size == 8, size
+        # __slots__ = ['score','calls']
+        # _slot_types = ['int32','int32']
+        return struct.unpack_from('<II', data, pos)  # score and calls
+    elif topic_type == 'srcp2_msgs/ExcavatorMsg':
+        return parse_bucket(data)
+    elif topic_type == 'sensor_msgs/JointState':
+        return parse_joint_state(data)
+    elif topic_type == 'srcp2_msgs/VolSensorMsg':
+        return parse_volatile(data)
+    elif topic_type == 'sensor_msgs/CompressedImage':
+        image = parse_jpeg_image(data)  # , dump_filename='nasa.jpg')
+        return image
+    else:
+        assert False, topic_type
+
+
 class ROSMsgParser(Thread):
     def __init__(self, config, bus):
         Thread.__init__(self)
         self.setDaemon(True)
-        bus.register("rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin", "gas_detected",
-                     "depth:gz", "t265_rot", "orientation")
+        outputs = ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin", "gas_detected",
+                   "depth:gz", "t265_rot", "orientation",
+                    "joint_name", "joint_position", "joint_velocity", "joint_effort"]
+        self.topics = config.get('topics', [])
+        for topic_name, topic_type in self.topics:
+            outputs.append(topic_name)
+        bus.register(*outputs)
 
         self.bus = bus
         self._buf = b''
@@ -315,6 +453,8 @@ class ROSMsgParser(Thread):
         self.desired_speed = 0.0  # m/s
         self.desired_angular_speed = 0.0
         self.gas_detected = None  # this SubT Virtual specific :-(
+
+        self.joint_name = None  # unknown
 
     def get_packet(self):
         data = self._buf
@@ -363,7 +503,7 @@ class ROSMsgParser(Thread):
         if frame_id.endswith(b'/base_link/camera_front') or frame_id.endswith(b'camera_color_optical_frame'):
             # used to be self.topic_type == 'sensor_msgs/CompressedImage'
             self.bus.publish('image', parse_jpeg_image(packet))
-        elif frame_id.endswith(b'base_link/front_laser'):  #self.topic_type == 'sensor_msgs/LaserScan':
+        elif frame_id.endswith(b'base_link/front_laser') or frame_id.endswith(b'hokuyo_link'):  #self.topic_type == 'sensor_msgs/LaserScan':
             self.count += 1
             if self.count % self.downsample != 0:
                 return
@@ -380,7 +520,7 @@ class ROSMsgParser(Thread):
             cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
             self.bus.publish('cmd', cmd) 
 
-        elif frame_id.endswith(b'/base_link/imu_sensor'):  # self.topic_type == 'std_msgs/Imu':
+        elif frame_id.endswith(b'/base_link/imu_sensor') or frame_id.endswith(b'imu_link'):  # self.topic_type == 'std_msgs/Imu':
             acc, rot, orientation = parse_imu(packet)
             self.bus.publish('rot', [round(math.degrees(angle)*100) 
                                      for angle in rot])
@@ -401,6 +541,25 @@ class ROSMsgParser(Thread):
             if self.gas_detected != parse_bool(packet):
                 self.gas_detected = parse_bool(packet)
                 self.bus.publish('gas_detected', self.gas_detected)
+
+        elif b'\0' in packet[:MAX_TOPIC_NAME_LENGTH]:
+            name = packet[:packet.index(b'\0')].decode('ascii')
+            for n, t in self.topics:
+                if name == n:
+                    result = parse_topic(t, packet[len(name) + 1:])
+                    if t == 'sensor_msgs/JointState':
+                        name, position, velocity, effort = result
+
+                        # publish names only on change
+                        if self.joint_name != name:
+                            self.bus.publish('joint_name', list(name))
+                            self.joint_name = name
+
+                        self.bus.publish('joint_position', list(position))
+                        self.bus.publish('joint_velocity', list(velocity))
+                        self.bus.publish('joint_effort', list(effort))
+                    else:
+                        self.bus.publish(name, result)
 
     def slot_desired_speed(self, timestamp, data):
         self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
