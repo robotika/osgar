@@ -9,3 +9,6 @@ __pycache__/
 
 # created when using `pip install -e .`
 osgar.egg-info/
+
+# ignition simulation logs
+ign-logs/

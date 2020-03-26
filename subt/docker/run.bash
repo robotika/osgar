@@ -52,7 +52,6 @@ then
     chmod a+r $XAUTH
 fi
 
-DOCKER_OPTS=
 
 # Get the current version of docker.io (Debian) or docker-ce (otherwise).
 # Strip leading stuff before the version number so it can be compared
