@@ -28,6 +28,7 @@ RUN sudo apt install -y ros-melodic-image-geometry \
 			ros-melodic-move-base \
 			ros-melodic-dwa-local-planner \
 			ros-melodic-robot-localization \
+			ros-melodic-depthimage-to-laserscan \
 			mc
 
 RUN /bin/bash -c 'source /opt/ros/melodic/setup.bash && catkin_make install'

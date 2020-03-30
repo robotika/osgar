@@ -22,7 +22,7 @@ local_costmap:
     laser_scan_sensor: {
       sensor_frame: base_link/front_laser,
       data_type: LaserScan,
-      topic: "/front_scan",
+      topic: "/scan",
       expected_update_rate: 0.5,
       marking: true,
       clearing: true,
