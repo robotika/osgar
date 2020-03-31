@@ -8,6 +8,8 @@ ROS uses quaternions to track and apply rotations. A quaternion has 4
 components (x,y,z,w). That's right, 'w' is last (but beware: some libraries
 like Eigen put w as the first number!). The commonly-used unit quaternion that
 yields no rotation about the x/y/z axes is (0,0,0,1)
+
+https://www.andre-gaschler.com/rotationconverter/
 """
 import math
 
@@ -28,10 +30,10 @@ def identity():
     return [0, 0, 0, 1]
 
 def rotate_vector(vector, quaternion):
-    qvector = [0] + vector
+    qvector = vector + [0]
     con = conjugate(quaternion)
     part1 = multiply(quaternion, qvector)
-    return multiply(part1, con)[1:]
+    return multiply(part1, con)[:-1]
 
 def euler_zyx(quaternion):
     x0, y0, z0, w0 = quaternion
