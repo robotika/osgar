@@ -58,7 +58,7 @@ def parse_imu( data ):
     z =  math.atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3))
 #    print('%d\t%f' % (stamp, math.degrees(y)))
 
-    return linearAcceleration, (x, y, z)  # maybe later use orientation
+    return linearAcceleration, (x, y, z), orientation
 
 
 def Xparse_image( data ):
@@ -297,7 +297,8 @@ class ROSMsgParser(Thread):
     def __init__(self, config, bus):
         Thread.__init__(self)
         self.setDaemon(True)
-        bus.register("rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin", "gas_detected", "depth:gz", "t265_rot")
+        bus.register("rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin", "gas_detected",
+                     "depth:gz", "t265_rot", "orientation")
 
         self.bus = bus
         self._buf = b''
@@ -380,10 +381,11 @@ class ROSMsgParser(Thread):
             self.bus.publish('cmd', cmd) 
 
         elif frame_id.endswith(b'/base_link/imu_sensor'):  # self.topic_type == 'std_msgs/Imu':
-            acc, rot = parse_imu(packet)
+            acc, rot, orientation = parse_imu(packet)
             self.bus.publish('rot', [round(math.degrees(angle)*100) 
                                      for angle in rot])
             self.bus.publish('acc', [round(x * 1000) for x in acc])
+            self.bus.publish('orientation', orientation)
         elif frame_id.endswith(b'/clock'):
             prev = self.timestamp_sec
             self.timestamp_sec, self.timestamp_nsec = parse_clock(packet)

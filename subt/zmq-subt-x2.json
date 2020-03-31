@@ -50,7 +50,7 @@
       "rosmsg": {
           "driver": "rosmsg",
           "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
-          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin", "gas_detected"],
+          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin", "gas_detected", "orientation"],
           "init": {
             "downsample": 2
           }
@@ -73,6 +73,7 @@
               ["rosmsg.rot", "app.rot"],
               ["rosmsg.rot", "depth2scan.rot"],
               ["rosmsg.acc", "app.acc"],
+              ["rosmsg.orientation", "app.orientation"],
 
               ["rosmsg.scan", "detector.scan"],
               ["rosmsg.scan", "depth2scan.scan"],
