@@ -75,11 +75,20 @@ def main():
     parser.add_argument('logfile', help='recorded log file')
     parser.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
     parser.add_argument('--config', nargs='+', help='force alternative configuration file')
-    parser.add_argument('--module', help='module name for analysis', required=True)  # TODO default "all"
+    parser.add_argument('--module', help='module name for analysis')  # TODO default "all"
     parser.add_argument('--verbose', '-v', help="verbose mode", action='store_true')
     parser.add_argument('--draw', help="draw debug results", action='store_true')
     parser.add_argument('--debug', help="print debug info about I/O streams", action='store_true')
     args = parser.parse_args()
+
+    if args.module is None:
+        modules = set()
+        for s in logger.lookup_stream_names(args.logfile):
+            modules.add(s.split('.')[0])
+        print("Modules available for replay with `--module`:")
+        for m in modules:
+            print(" ", m)
+        return
 
     module_instance = replay(args)
     module_instance.verbose = args.verbose
