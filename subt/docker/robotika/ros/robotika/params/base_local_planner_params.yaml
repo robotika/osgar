@@ -1,6 +1,6 @@
 DWAPlannerROS:
   odom_topic: /odom
-  map_frame: map
+  map_frame: odom
   global_frame_id: odom
 
   # Robot Configuration Parameters - Kobuki

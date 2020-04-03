@@ -10,6 +10,7 @@ Panels:
         - /OdometryFiltered1
         - /Odometry1/Shape1
         - /Image1
+        - /LaserScan2
       Splitter Ratio: 0.5
     Tree Height: 415
   - Class: rviz/Selection
@@ -30,7 +31,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: LaserScan
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -60,19 +61,19 @@ Visualization Manager:
       Class: rviz/Map
       Color Scheme: map
       Draw Behind: false
-      Enabled: true
+      Enabled: false
       Name: GlobalMap
       Topic: /rtabmap/grid_prob_map
       Unreliable: false
       Use Timestamp: false
-      Value: true
+      Value: false
     - Alpha: 0.699999988079071
       Class: rviz/Map
       Color Scheme: map
       Draw Behind: false
       Enabled: true
       Name: LocalMap
-      Topic: /X0F40L/local_map
+      Topic: /move_base/local_costmap/costmap
       Unreliable: false
       Use Timestamp: false
       Value: true
@@ -85,28 +86,34 @@ Visualization Manager:
           Value: true
         X0F40L/base_link:
           Value: false
+        X0F40L/base_link/air_pressure:
+          Value: true
+        X0F40L/base_link/bottom_laser:
+          Value: true
         X0F40L/base_link/camera_front:
           Value: true
         X0F40L/base_link/camera_front_optical:
           Value: true
-        X0F40L/base_link/front_laser:
-          Value: false
         X0F40L/base_link/imu_sensor:
           Value: false
-        X0F40L/front_left_wheel:
+        X0F40L/base_link/magnetometer:
           Value: true
-        X0F40L/front_right_wheel:
+        X0F40L/base_link/top_laser:
           Value: true
         X0F40L/odom:
           Value: true
-        X0F40L/rear_left_wheel:
+        X0F40L/rotor_0:
           Value: true
-        X0F40L/rear_right_wheel:
+        X0F40L/rotor_1:
+          Value: true
+        X0F40L/rotor_2:
+          Value: true
+        X0F40L/rotor_3:
           Value: true
         map:
           Value: true
-        urban_qual:
-          Value: false
+        simple_cave_01:
+          Value: true
         world:
           Value: false
       Marker Scale: 1
@@ -118,20 +125,26 @@ Visualization Manager:
         X0F40L/odom:
           X0F40L:
             X0F40L/base_link:
+              X0F40L/base_link/air_pressure:
+                {}
+              X0F40L/base_link/bottom_laser:
+                {}
               X0F40L/base_link/camera_front:
                 X0F40L/base_link/camera_front_optical:
                   {}
-              X0F40L/base_link/front_laser:
-                {}
               X0F40L/base_link/imu_sensor:
                 {}
-            X0F40L/front_left_wheel:
+              X0F40L/base_link/magnetometer:
+                {}
+              X0F40L/base_link/top_laser:
+                {}
+            X0F40L/rotor_0:
               {}
-            X0F40L/front_right_wheel:
+            X0F40L/rotor_1:
               {}
-            X0F40L/rear_left_wheel:
+            X0F40L/rotor_2:
               {}
-            X0F40L/rear_right_wheel:
+            X0F40L/rotor_3:
               {}
         map:
           {}
@@ -387,7 +400,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.10000000149011612
       Style: Flat Squares
-      Topic: /X0F40L/map_scan
+      Topic: /map_scan
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true

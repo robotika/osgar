@@ -889,7 +889,7 @@ class SubTChallenge:
             heading = quaternion.heading(self.origin_quat)
             self.stdout('heading', math.degrees(heading), 'angle', math.degrees(math.atan2(-y, -x)), 'dist', math.hypot(x, y))
 
-            self.test_nav_trace()  # hacking - experiment
+#            self.test_nav_trace()  # hacking - experiment
 #            self.turn(normalizeAnglePIPI(math.atan2(-y, -x) - heading))
 #            self.go_straight(math.hypot(x, y))  # go to the tunnel entrance
         else:

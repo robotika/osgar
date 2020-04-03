@@ -166,9 +166,10 @@ class DepthToScan(Node):
         assert channel in ["depth", "scan", "rot"], channel
 
         if channel == 'depth':
-            assert self.depth.shape == (360, 640), self.depth.shape
+            #assert self.depth.shape == (360, 640), self.depth.shape
+            pass
         elif channel == 'scan':
-            assert len(self.scan) == 720, len(self.scan)
+            #assert len(self.scan) == 720, len(self.scan)
             if self.depth is None:
                 self.publish('scan', self.scan)
                 return channel  # when no depth data are available ...

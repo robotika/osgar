@@ -110,6 +110,8 @@ docker run -it \
   -v "/tmp/.X11-unix:/tmp/.X11-unix" \
   -v "/etc/localtime:/etc/localtime:ro" \
   -v "/dev/input:/dev/input" \
+  -v "/home/pavliik/develop/osgar/subt/docker/robotika/ros:/home/developer/subt_solution/src" \
+  -v "/home/pavliik/develop/osgar:/home/developer/subt_solution/osgar" \
   --network host \
   --rm \
   --privileged \

@@ -14,19 +14,19 @@ import tf
 isFirstMessage = True
 
 def mapCallback(costmap):
-    global scan_pub, transformListener, isFirstMessage
+    global scan_pub, transformListener, isFirstMessage, baseFrame, scanFrame
     #pdb.set_trace()
     mapArray = np.reshape(np.array(costmap.data,dtype = np.uint8),(-1,200))
     polar = cv2.linearPolar(mapArray,(mapArray.shape[1]/2,mapArray.shape[0]/2), mapArray.shape[0],cv2.WARP_FILL_OUTLIERS)
     #get rotation between local map and robot base
-    (trans, rot) = transformListener.lookupTransform(costmap.header.frame_id, "base_link", rospy.Time(0))
+    (trans, rot) = transformListener.lookupTransform(costmap.header.frame_id, baseFrame, rospy.Time(0))
     rotationAngle =  tf.transformations.euler_from_quaternion(rot)[2]
     
     polar = np.roll(polar,-int(polar.shape[0]/2 + rotationAngle * polar.shape[0]/(2*math.pi)),0) 
     #cv2.imshow('Map',cv2.resize(mapArray,(300,300))) 
     scan = LaserScan()
     scan.header.stamp = rospy.Time.now()
-    scan.header.frame_id = "base_link/camera_front"
+    scan.header.frame_id = scanFrame
     scan.angle_min = -math.pi #* 3/4
     scan.angle_max = math.pi #* 3/4
     scan.angle_increment = 2 * math.pi / polar.shape[0]   #should be multiplied by 3/2?
@@ -45,6 +45,8 @@ def mapCallback(costmap):
 if __name__ == '__main__':
     try:
         rospy.init_node('map_to_scan', anonymous=True)
+        baseFrame = rospy.get_param('~base_frame')
+        scanFrame = rospy.get_param('~scan_frame')
         scan_pub = rospy.Publisher('/map_scan', LaserScan,queue_size=10)
         rospy.Subscriber('/move_base/local_costmap/costmap',OccupancyGrid, mapCallback)
         transformListener = tf.TransformListener()

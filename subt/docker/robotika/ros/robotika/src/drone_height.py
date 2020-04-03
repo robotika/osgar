@@ -19,8 +19,8 @@ def scan_callback(scan):
 
 def twist_callback(cmd_vel):
     global HEIGHT, lastScan
-
-    if lastScan > HEIGHT:
+    
+    if lastScan.ranges[0] > HEIGHT:
         cmd_vel.linear.z = -0.1
     else:
         cmd_vel.linear.z = 0.1
@@ -32,6 +32,5 @@ lastTime = rospy.Time.now()
 subscriberTwist = rospy.Subscriber("/cmd_vel", Twist, twist_callback, queue_size=15)
 subscriberOdom = rospy.Subscriber("/scan", LaserScan, scan_callback, queue_size=15)
 publisherTwist = rospy.Publisher("/cmd_vel_drone", Twist, queue_size=50)
-
 rospy.spin()
 
