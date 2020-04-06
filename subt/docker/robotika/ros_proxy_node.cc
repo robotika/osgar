@@ -469,6 +469,10 @@ void Controller::logSendingThread(Controller * self, std::string logFilename) {
 
         // send log data
         std::string buffer(std::istreambuf_iterator<char>(log_file), {});
+        if (log_file.tellg() >= ROSBAG_SIZE_LIMIT) {
+            ROS_WARN_STREAM("ROSBAG_SIZE_LIMIT reached, exiting log sending thread");
+            return;
+        }
         msg.data = buffer;
         self->robotDataPub.publish(msg);
 
