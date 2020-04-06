@@ -289,7 +289,6 @@ class Controller
 Controller::Controller(const std::string &_name)
 {
   this->name = _name;
-  ROS_INFO("Using robot name[%s]\n", this->name.c_str());
 
   ROS_INFO("Waiting for /clock, /subt/start, and /subt/pose_from_artifact_origin");
 
@@ -302,6 +301,9 @@ Controller::Controller(const std::string &_name)
   // Waiting from some message related to robot so that we know the robot is already in the simulation
   ROS_INFO_STREAM("Waiting for " << this->name << "/imu/data");
   ros::topic::waitForMessage<sensor_msgs::Imu>(this->name + "/imu/data", this->n);
+
+  ROS_INFO_STREAM("Waiting for " << this->name << "/front/depth");
+  ros::topic::waitForMessage<sensor_msgs::Image>(this->name + "/front/depth", this->n);
 
   this->updateTimer = this->n.createTimer(ros::Duration(0.05), &Controller::Update, this);
   this->zmqTimer = this->n.createTimer(ros::Duration(0.05), &Controller::receiveZmq, this);
@@ -625,45 +627,21 @@ void Controller::receiveZmq(const ros::TimerEvent&)
 /////////////////////////////////////////////////
 int main(int argc, char** argv)
 {
+  if (argc < 2 || std::strlen(argv[1]) == 0) {
+    std::cerr << "Need robot name argument." << std::endl;
+    return -1;
+  }
+
   // init ROS proxy server
   initZeroMQ();
 
   // Initialize ros
-  ros::init(argc, argv, argv[1]);
+  std::string robot_name = argv[1];
+  ros::init(argc, argv, robot_name);
 
-  ROS_INFO("Starting seed competitor\n");
-  std::string name;
+  ROS_INFO_STREAM("Starting robotika solution for robot " << robot_name);
 
-  // Get the name of the robot based on the name of the "cmd_vel" topic if
-  // the name was not passed in as an argument.
-  if (argc < 2 || std::strlen(argv[1]) == 0)
-  {
-    while (name.empty())
-    {
-      ros::master::V_TopicInfo masterTopics;
-      ros::master::getTopics(masterTopics);
-
-      for (ros::master::V_TopicInfo::iterator it = masterTopics.begin();
-          it != masterTopics.end(); ++it)
-      {
-        const ros::master::TopicInfo &info = *it;
-        if (info.name.find("battery_state") != std::string::npos)
-        {
-          int rpos = info.name.rfind("/");
-          name = info.name.substr(1, rpos - 1);
-        }
-      }
-      if (name.empty())
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-  }
-  // Otherwise use the name provided as an argument.
-  else
-  {
-    name = argv[1];
-  }
-
-  Controller controller(name);
+  Controller controller(robot_name);
   ros::spin();
   return 0;
 }

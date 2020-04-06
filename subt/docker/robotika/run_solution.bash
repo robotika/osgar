@@ -8,14 +8,21 @@ ROBOT_PID=$!
 cd ..
 
 # get directory where this bash script lives
-samedir=$(dirname $(readlink -f "${BASH_SOURCE[0]}"))
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # enable ROS DEBUG output to see if messages are being dropped
-export ROSCONSOLE_CONFIG_FILE="${samedir}/rosconsole.config"
+export ROSCONSOLE_CONFIG_FILE="${DIR}/rosconsole.config"
+
+echo "Waiting for robot name"
+while [ -z "$ROBOT_NAME" ]; do
+    ROBOT_NAME=$(rosparam get /robot_names)
+    sleep 0.5
+done
+echo "Robot name is '$ROBOT_NAME'"
 
 # Run your solution and wait for ROS master
 # http://wiki.ros.org/roslaunch/Commandline%20Tools#line-45
-roslaunch subt_seed x1.launch --wait &
+roslaunch subt_seed x1.launch --wait robot_name:=$ROBOT_NAME &
 ROS_PID=$!
 
 # Turn everything off in case of CTRL+C and friends.
