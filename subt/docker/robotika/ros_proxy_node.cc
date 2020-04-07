@@ -71,20 +71,11 @@ int g_countSendLog = 0;
 void *g_context;
 void *g_responder;
 
-void *g_contextIn;
-void *g_requester;
-
 void initZeroMQ()
 {
   g_context = zmq_ctx_new ();
   g_responder = zmq_socket (g_context, ZMQ_PUSH);  // use "Pipeline pattern" to send all data to Python3
   int rc = zmq_bind (g_responder, "tcp://*:5555");
-  assert (rc == 0);
-
-  // received
-  g_contextIn = zmq_ctx_new ();
-  g_requester = zmq_socket (g_contextIn, ZMQ_PULL);  // use "Pipeline pattern" to receive all data to Python3
-  rc = zmq_bind (g_requester, "tcp://*:5556");
   assert (rc == 0);
 }
 
@@ -240,12 +231,6 @@ class Controller
   /// \brief Timer that trigger the update function.
   private: ros::Timer updateTimer;
 
-  /// \brief Timer to send log parts
-  private: ros::Timer logTimer;
-
-  /// \brief Timer receive zmq
-  private: ros::Timer zmqTimer;
-
   /// \brief True if robot has arrived at destination.
   public: bool arrived{false};
 
@@ -277,12 +262,11 @@ class Controller
     return true;
   }
 
-  public: void receiveZmq(const ros::TimerEvent&);
-  public: bool parseArtf(char *input_str, subt::msgs::Artifact& artifact);
-
   std::thread m_logSending;
+  std::thread m_receiveZmq;
 
   static void logSendingThread(Controller * self, std::string logFilename);
+  static void receiveZmqThread(Controller * self);
 };
 
 /////////////////////////////////////////////////
@@ -306,7 +290,7 @@ Controller::Controller(const std::string &_name)
   ros::topic::waitForMessage<sensor_msgs::Image>(this->name + "/front/depth", this->n);
 
   this->updateTimer = this->n.createTimer(ros::Duration(0.05), &Controller::Update, this);
-  this->zmqTimer = this->n.createTimer(ros::Duration(0.05), &Controller::receiveZmq, this);
+  this->m_receiveZmq = std::thread(Controller::receiveZmqThread, this);
 }
 
 /////////////////////////////////////////////////
@@ -483,7 +467,7 @@ void Controller::logSendingThread(Controller * self, std::string logFilename) {
 }
 
 /////////////////////////////////////////////////
-bool Controller::parseArtf(char *input_str, subt::msgs::Artifact& artifact)
+bool parseArtf(char *input_str, subt::msgs::Artifact& artifact)
 {
   double x, y, z;
   char buf[256];
@@ -558,36 +542,56 @@ bool Controller::parseArtf(char *input_str, subt::msgs::Artifact& artifact)
 }
 
 /////////////////////////////////////////////////
-void Controller::receiveZmq(const ros::TimerEvent&)
+void Controller::receiveZmqThread(Controller * self)
 {
-  if(g_countReceives % 100 == 0) {
-    ROS_INFO("receiveZmq count %d", g_countReceives);
+  void * contextIn = zmq_ctx_new ();
+  void * requester = zmq_socket (contextIn, ZMQ_PULL);  // use "Pipeline pattern" to receive all data from Python3
+  int recv_timeout_ms = 300;
+  int linger_timeout_ms = 100;
+  zmq_setsockopt(requester, ZMQ_RCVTIMEO, &recv_timeout_ms, sizeof(recv_timeout_ms));
+  zmq_setsockopt(requester, ZMQ_LINGER, &linger_timeout_ms, sizeof(linger_timeout_ms));
+  int rc = zmq_bind (requester, "tcp://*:5556");
+  if (rc != 0) {
+    ROS_ERROR("zmq_bind for receiver failed, exiting receiver thread");
+    return;
   }
-  g_countReceives++;
+
+  ROS_INFO("zmq receive thread started");
 
   geometry_msgs::Twist msg;
   char buffer[10000];
   int size;
-  while((size=zmq_recv(g_requester, buffer, 10000, ZMQ_DONTWAIT)) > 0)
-  {
+
+  while (ros::ok()) {
+    size = zmq_recv(requester, buffer, sizeof(buffer)-1, 0);
+
+    if (size < 0) {
+      continue;
+    }
+
+    buffer[size] = 0;
+
+    if(g_countReceives % 100 == 0) {
+        ROS_INFO("receiveZmq count %d", g_countReceives);
+    }
+    g_countReceives++;
+
     if(strncmp(buffer, "stdout ", 7) == 0)
     {
-      buffer[size] = 0;
       ROS_INFO("Python3: %s", buffer);
     }
     else if(strncmp(buffer, "request_origin", 14) == 0)
     {
-      this->arrived = false;  // re-enable origin query
-      this->updateTimer.start();
+      self->arrived = false;  // re-enable origin query
+      self->updateTimer.start();
     }
     else if(strncmp(buffer, "artf ", 5) == 0)
     {
       subt::msgs::Artifact artifact;
-      buffer[size] = 0;
       ROS_INFO("artf: %s", buffer);
       if(parseArtf(buffer + 5, artifact)) // skip initial prefix "artf "
       {
-        if(this->ReportArtifact(artifact))
+        if(self->ReportArtifact(artifact))
         {
           ROS_INFO("MD SUCCESS\n");
         }
@@ -601,9 +605,8 @@ void Controller::receiveZmq(const ros::TimerEvent&)
     }
     else if(strncmp(buffer, "file ", 5) == 0)
     {
-      buffer[size] = 0;
       ROS_INFO("FILE: %s", buffer + 5);
-      this->m_logSending = std::thread(Controller::logSendingThread, this, std::string(buffer + 5));
+      self->m_logSending = std::thread(Controller::logSendingThread, self, std::string(buffer + 5));
     }
     else
     {
@@ -613,7 +616,7 @@ void Controller::receiveZmq(const ros::TimerEvent&)
       {
         msg.linear.x = speed;
         msg.angular.z = angular_speed;
-        this->velPub.publish(msg);
+        self->velPub.publish(msg);
       }
       else
       {
@@ -622,6 +625,9 @@ void Controller::receiveZmq(const ros::TimerEvent&)
       }
     }
   }
+  ROS_INFO("zmq receive thread finished");
+  zmq_close(requester);
+  zmq_term(contextIn);
 }
 
 /////////////////////////////////////////////////
