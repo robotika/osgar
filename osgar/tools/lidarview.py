@@ -182,7 +182,7 @@ def get_image(data):
             img = np.array(depth2danger(data) * 255, dtype=np.uint8)
             im_color = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
         else:
-            img = np.array(data/40, dtype=np.uint8)
+            img = np.array(np.minimum(255*40, data)/40, dtype=np.uint8)
             im_color = cv2.applyColorMap(img, cv2.COLORMAP_JET)
 
         # https://stackoverflow.com/questions/19306211/opencv-cv2-image-to-pygame-image
