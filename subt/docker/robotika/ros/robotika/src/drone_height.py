@@ -11,6 +11,7 @@ import pdb
 import robomath
     
 HEIGHT = 1.0
+MAX_ANGULAR = 0.7
 lastScan = 0.0
 
 def scan_callback(scan):
@@ -21,9 +22,15 @@ def twist_callback(cmd_vel):
     global HEIGHT, lastScan
     
     if lastScan.ranges[0] > HEIGHT:
-        cmd_vel.linear.z = -0.1
+        cmd_vel.linear.z = -0.5
     else:
-        cmd_vel.linear.z = 0.1
+        cmd_vel.linear.z = 0.5
+    
+    #this is because drone can't handle too aggressive rotation
+    if cmd_vel.angular.z > MAX_ANGULAR: 
+        cmd_vel.angular.z = MAX_ANGULAR
+    elif cmd_vel.angular.z < -MAX_ANGULAR:
+        cmd_vel.angular.z = -MAX_ANGULAR
     
     publisherTwist.publish(cmd_vel)
 
