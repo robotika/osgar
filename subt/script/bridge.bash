@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-ROBOT="${ROBOT:-X0F200L}"
+ROBOT="${ROBOT:-X0F100L}"
 WORLD="${WORLD:-urban_circuit_practice_01}"
 
 cd $(git rev-parse --show-toplevel)
