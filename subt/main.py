@@ -146,6 +146,7 @@ class SubTChallenge:
     def __init__(self, config, bus):
         self.bus = bus
         bus.register("desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout", "request_origin")
+        self.verbose = False
         self.start_pose = None
         self.traveled_dist = 0.0
         self.time = None
@@ -257,7 +258,11 @@ class SubTChallenge:
             safety, safe_direction = 1.0, desired_direction
         else:
             safety, safe_direction = self.local_planner.recommend(desired_direction)
-        #print(self.time,"safety:%f    desired:%f  safe_direction:%f"%(safety, desired_direction, safe_direction))
+        if self.verbose:
+            heading = math.degrees(quaternion.heading(self.orientation))
+            desired_deg = math.degrees(desired_direction)
+            safe_deg = math.degrees(safe_direction)
+            print(self.time, self.sim_time_sec, f"safety:{safety:.2f}    desired:{desired_deg:.2f}°  safe_direction: {safe_deg:.2f}°")
         #desired_angular_speed = 1.2 * safe_direction
         desired_angular_speed = 0.9 * safe_direction
         size = len(self.scan)
@@ -326,7 +331,8 @@ class SubTChallenge:
                         if self.use_center:
                             desired_direction = 0
                         else:
-                            desired_direction = follow_wall_angle(self.scan, radius=radius, right_wall=right_wall)
+                            debug_callback = debug_follow_wall if self.verbose else None
+                            desired_direction = follow_wall_angle(self.scan, radius=radius, right_wall=right_wall, debug_callback=debug_callback)
                         self.go_safely(desired_direction)
                 if dist_limit is not None:
                     if dist_limit < abs(self.traveled_dist - start_dist):  # robot can return backward -> abs()
@@ -1004,6 +1010,36 @@ class SubTChallenge:
 
     def join(self, timeout=None):
         self.thread.join(timeout)
+
+
+def debug_follow_wall(laser_data, max_obstacle_distance_m, start_rad, last_rad, total_rad):
+    from osgar.lib.drawscan import draw_scan
+    import cv2
+
+    img = draw_scan(laser_data, max_obstacle_distance=max_obstacle_distance_m)
+    width_px, height_px = img.shape[1], img.shape[0]
+    scale = 300
+    dest_x = math.cos(start_rad)
+    dest_y = math.sin(start_rad)
+    point = (width_px//2 - int(dest_y*scale), height_px//2 - int(dest_x*scale))
+    cv2.line(img, (width_px//2, height_px//2), point, color=(255,255,255))
+
+    dest_x = math.cos(last_rad)
+    dest_y = math.sin(last_rad)
+    point = (width_px//2 - int(dest_y*scale), height_px//2 - int(dest_x*scale))
+    cv2.line(img, (width_px//2, height_px//2), point, color=(120,255,255))
+
+    dest_x = math.cos(total_rad)
+    dest_y = math.sin(total_rad)
+    point = (width_px//2 - int(dest_y*scale), height_px//2 - int(dest_x*scale))
+    cv2.line(img, (width_px//2, height_px//2), point, color=(120,120,255))
+
+    point = (width_px//2, height_px//4)
+    cv2.line(img, (width_px//2, height_px//2), point, color=(120,120,120))
+
+    #print(f"start {math.degrees(start_rad):.2f}°", f"last wall {math.degrees(last_rad):.2f}°" , f"desired {math.degrees(total_rad):.2f}°")
+    cv2.imshow("follow_wall_angle", img)
+    cv2.waitKey()
 
 
 def main():
