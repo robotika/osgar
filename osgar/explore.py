@@ -35,7 +35,7 @@ def tangent_circle(dist, radius):
     return math.radians(100)
 
 
-def follow_wall_angle(laser_data, radius, right_wall=False):
+def follow_wall_angle(laser_data, radius, right_wall=False, max_obstacle_distance=4.0, debug_callback=None):
     """
         Find the angle to the closest point in laser scan (either on the left or right side).
         Then calculate an angle to a free space as tangent to circle of given radius.
@@ -47,7 +47,7 @@ def follow_wall_angle(laser_data, radius, right_wall=False):
     mask = (data <= 300)  # ignore internal reflections
     data[mask] = 20000
 
-    mask = (data >= 4000)  # ignore obstacles beyond 4m
+    mask = (data >= max_obstacle_distance * 1000)  # ignore obstacles beyond 4m
     data[mask] = 20000
 
     # To make the code simpler, let's pretend we follow the right wall and flip
@@ -107,11 +107,21 @@ def follow_wall_angle(laser_data, radius, right_wall=False):
     else:
         tangent_angle = tangent_circle(last_wall_distance, radius)
 
-
     laser_angle = math.radians(-135 + last_wall_idx * deg_resolution)
     total_angle = laser_angle + tangent_angle
     if not right_wall:
         total_angle = -total_angle
+
+    if debug_callback is not None:
+
+        def deg(index):
+            ret = -135 + index * deg_resolution
+            return ret if right_wall else -ret
+
+        def rad(index):
+            return math.radians(deg(index))
+
+        debug_callback(laser_data, max_obstacle_distance, rad(wall_start_idx), rad(last_wall_idx), total_angle)
 
     return total_angle
 
