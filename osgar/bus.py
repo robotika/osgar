@@ -129,6 +129,7 @@ class LogBusHandler:
         self.buffer_queue = deque()
         self.max_delay = timedelta()
         self.max_delay_timestamp = timedelta()
+        self.finished = threading.Event()
 
     def register(self, *outputs):
         for o in outputs:
@@ -137,6 +138,8 @@ class LogBusHandler:
 
     def listen(self):
         while True:
+            if self.finished.is_set():
+                raise BusShutdownException
             if len(self.buffer_queue) == 0:
                 dt, stream_id, bytes_data = next(self.reader)
             else:
@@ -178,17 +181,26 @@ class LogBusHandler:
     def sleep(self, secs):
         pass
 
+    def is_alive(self):
+        return not self.finished.is_set()
+
+    def shutdown(self):
+        self.finished.set()
+
 
 class LogBusHandlerInputsOnly:
     def __init__(self, log, inputs):
         self.reader = log
         self.inputs = inputs
         self.time = timedelta(0)
+        self.finished = threading.Event()
 
     def register(self, *outputs):
         pass
 
     def listen(self):
+        if self.finished.is_set():
+            raise BusShutdownException
         dt, stream_id, bytes_data = next(self.reader)
         self.time = dt
         channel = self.inputs[stream_id]
@@ -202,6 +214,12 @@ class LogBusHandlerInputsOnly:
 
     def sleep(self, secs):
         pass
+
+    def is_alive(self):
+        return not self.finished.is_set()
+
+    def shutdown(self):
+        self.finished.set()
 
 
 if __name__ == "__main__":
