@@ -805,54 +805,6 @@ class SubTChallenge:
         self.wait(timedelta(seconds=3))
 #############################################
 
-    def test_nav_trace0(self):
-        """
-        Navigate to the station platform
-        """
-        trace = Trace()
-        trace.add_line_to((3, -5, 0))
-        trace.add_line_to((15, -5, 0))
-        trace.add_line_to((15, 10, 0))
-        trace.add_line_to((-23, 12, -3.267))
-        trace.add_line_to((-25.656, 6.839, -3.267))
-        trace.add_line_to((-36.762, 7.108, -3.267))
-        trace.add_line_to((-37.582, -22.426, -4.505))
-        trace.add_line_to((-27.098, -23.95, -4.505))  # TODO properly define z-value
-        trace.add_line_to((-27.69, -31.209, -6.297))
-        trace.add_line_to((-28.685, -32.144, -6.297))
-        trace.add_line_to((-30, -32.144, -5.795))
-        trace.add_line_to((-32, -32.144, -5.795))
-        trace.add_line_to((-34, -32.144, -5.795))
-        trace.reverse()
-        self.follow_trace(trace, timeout=timedelta(seconds=180))
-
-    def test_nav_trace1(self):
-        """
-        Navigate to rails
-        """
-        __, dy, __ = self.offset
-        dy -= 5.000014
-        trace = Trace()
-        trace.add_line_to((3, -5 - dy, 0))  # before tunnel
-        trace.add_line_to((15, -5 - dy, 0))  # inside tunnel
-        trace.add_line_to((15, 10 - dy, 0))
-        trace.add_line_to((-23, 12 - dy, -3.267))
-        trace.add_line_to((-25.656, 6.839 - dy, -3.267))
-        trace.add_line_to((-36.762, 7.108 - dy, -3.267))
-        trace.add_line_to((-37.582, -22.426 - dy, -4.505))
-        trace.add_line_to((-25.084, -26.688 - dy, -6.297))
-        trace.add_line_to((-24.981, -36.925 - dy, -6.297))
-        trace.add_line_to((-23, -36.925 - dy, -6.297))
-        trace.add_line_to((-21, -36.925 - dy, -6.297))
-        trace.add_line_to((-19, -39 - dy, -6.297))  # rails?
-
-        # follow railway to the left
-        trace.add_line_to((-18.303, -39.863 - dy, -6.297))
-        trace.add_line_to((-1018.303, -39.863 - dy, -6.297))
-
-        trace.reverse()
-        self.follow_trace(trace, timeout=timedelta(seconds=300), max_target_distance=2.5)
-
     def test_nav_trace(self):
         """
         Navigate to the base station tile end
@@ -862,15 +814,9 @@ class SubTChallenge:
         dy -= 5.000014
         trace = Trace()
         trace.add_line_to((3 - dx, -5 - dy, 0))  # before tunnel
-        trace.add_line_to((15 - dx, -5 - dy, 0))  # inside tunnel
-        trace.add_line_to((15 - dx, 10 - dy, 0))
-        trace.add_line_to((-23 - dx, 12 - dy, -3.267))
-        trace.add_line_to((-25.656 - dx, 6.839 - dy, -3.267))
-        trace.add_line_to((-36.762 - dx, 7.108 - dy, -3.267))
-        trace.add_line_to((-37.582 - dx, -22.426 - dy, -4.505))
-        trace.add_line_to((-25.084 - dx, -26.688 - dy, -6.297))
+        trace.add_line_to((10 - dx, -5 - dy, 0))  # 2.5m inside tunnel
         trace.reverse()
-        self.follow_trace(trace, timeout=timedelta(seconds=120), max_target_distance=2.5, safety_limit=0.2)
+        self.follow_trace(trace, timeout=timedelta(seconds=30), max_target_distance=2.5, safety_limit=0.2)
 
     def play_virtual_part(self):
         self.stdout("Waiting for origin ...")
