@@ -240,6 +240,8 @@ class Controller
   /// \brief True if started.
   private: bool started{false};
 
+  bool m_shouldCallFinish{false};
+
   /// \brief Last time a comms message to another robot was sent.
   private: std::chrono::time_point<std::chrono::system_clock> lastMsgSentTime;
 
@@ -346,6 +348,7 @@ void Controller::Update(const ros::TimerEvent&)
       // Create subt communication client
       this->client.reset(new subt::CommsClient(this->name));
       this->client->Bind(&Controller::CommClientCallback, this);
+      this->client->StartBeaconInterval(ros::Duration(5));
 
       // Create a cmd_vel publisher to control a vehicle.
       this->velPub = this->n.advertise<geometry_msgs::Twist>(
@@ -422,6 +425,11 @@ not available.");
     this->arrived = true;
     this->updateTimer.stop();
     ROS_INFO("Arrived at entrance!");
+    ROS_INFO("Neighbors found on start:");
+    for (auto n : this->client->Neighbors()) {
+        ROS_INFO_STREAM("name: " << n.first << ", sim_time_sec: " << n.second.first << ", rssi: " << n.second.second);
+    }
+    this->m_shouldCallFinish = this->client->Neighbors().size() == 1;
   }
 }
 
@@ -641,9 +649,20 @@ void Controller::receiveZmqThread(Controller * self)
       }
     }
   }
-  ROS_INFO("zmq receive thread finished");
   zmq_close(requester);
   zmq_term(contextIn);
+
+  if (ros::ok()) {
+      if (self->m_shouldCallFinish) {
+        ROS_INFO_NAMED("zmq", "calling /subt/finish");
+        std_srvs::SetBool::Request req;
+        std_srvs::SetBool::Response res;
+        req.data = true;
+        ros::service::call("/subt/finish", req, res);
+      }
+      ROS_INFO_NAMED("zmq", "receive thread finished");
+      ros::shutdown();
+  }
 }
 
 /////////////////////////////////////////////////
