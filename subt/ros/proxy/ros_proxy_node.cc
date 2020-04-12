@@ -272,6 +272,11 @@ class Controller
 
   static void logSendingThread(Controller * self, std::string logFilename);
   static void receiveZmqThread(Controller * self);
+
+  void join() {
+    m_receiveZmq.join();
+    m_logSending.join();
+  }
 };
 
 /////////////////////////////////////////////////
@@ -694,5 +699,6 @@ int main(int argc, char** argv)
 
   Controller controller(robot_name);
   ros::spin();
+  controller.join();
   return 0;
 }
