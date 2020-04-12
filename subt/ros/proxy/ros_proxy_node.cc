@@ -76,7 +76,10 @@ void initZeroMQ()
   g_context = zmq_ctx_new ();
   g_responder = zmq_socket (g_context, ZMQ_PUSH);  // use "Pipeline pattern" to send all data to Python3
   int rc = zmq_bind (g_responder, "tcp://*:5555");
-  assert (rc == 0);
+  if (rc != 0) {
+    ROS_ERROR("zmq_bind failed");
+    exit(1);
+  }
 }
 
 void clockCallback(const rosgraph_msgs::Clock::ConstPtr& msg)
@@ -650,14 +653,13 @@ int main(int argc, char** argv)
     return -1;
   }
 
-  // init ROS proxy server
-  initZeroMQ();
-
   // Initialize ros
   std::string robot_name = argv[1];
   ros::init(argc, argv, robot_name);
 
   ROS_INFO_STREAM("Starting robotika solution for robot " << robot_name);
+
+  initZeroMQ();
 
   Controller controller(robot_name);
   ros::spin();
