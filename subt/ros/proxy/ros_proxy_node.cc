@@ -585,13 +585,24 @@ void Controller::receiveZmqThread(Controller * self)
   geometry_msgs::Twist msg;
   char buffer[10000];
   int size;
+  using clock = std::chrono::steady_clock;
+
+  clock::time_point last_message_received;
 
   while (ros::ok()) {
     size = zmq_recv(requester, buffer, sizeof(buffer)-1, 0);
 
     if (size < 0) {
+      if (zmq_errno() == EAGAIN) {
+        if (clock::now() - last_message_received > std::chrono::seconds(15)) {
+          ROS_WARN_NAMED("zmq", "15 seconds without any message received.");
+          break;
+        }
+      }
       continue;
     }
+
+    last_message_received = std::chrono::steady_clock::now();
 
     buffer[size] = 0;
 
