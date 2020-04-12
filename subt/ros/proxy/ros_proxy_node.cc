@@ -382,6 +382,7 @@ void Controller::Update(const ros::TimerEvent&)
     return;
   }
 
+  ROS_DEBUG_STREAM("calling " << "/subt/pose_from_artifact_origin");
   bool call = this->originClient.call(this->originSrv);
   // Query current robot position w.r.t. entrance
   if (!call || !this->originSrv.response.success)
@@ -427,7 +428,7 @@ not available.");
 /////////////////////////////////////////////////
 void Controller::logSendingThread(Controller * self, std::string logFilename) {
 
-    ROS_INFO_STREAM("waiting for at least one subscriber at 'robotDataPub'");
+    ROS_INFO_STREAM_NAMED("log", "waiting for at least one subscriber at 'robotDataPub'");
     while (self->robotDataPub.getNumSubscribers() == 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         if (!ros::ok()) {
@@ -436,10 +437,10 @@ void Controller::logSendingThread(Controller * self, std::string logFilename) {
     }
 
     // open the log file
-    ROS_INFO_STREAM("opening log " << logFilename);
+    ROS_INFO_STREAM_NAMED("log", "opening log " << logFilename);
     std::ifstream log_file(logFilename, std::ios_base::in|std::ios_base::binary);
     if (!log_file.is_open()) {
-        ROS_WARN("opening log for reading failed");
+        ROS_WARN_NAMED("log", "opening log for reading failed");
         return;
     }
 
@@ -448,7 +449,7 @@ void Controller::logSendingThread(Controller * self, std::string logFilename) {
 
         // heartbeat
         if(g_countSendLog % 100 == 0) {
-            ROS_INFO_STREAM("sendLogPart count " << g_countSendLog);
+            ROS_INFO_STREAM_NAMED("log", "sendLogPart count " << g_countSendLog);
         }
         g_countSendLog++;
 
@@ -463,7 +464,7 @@ void Controller::logSendingThread(Controller * self, std::string logFilename) {
         // send log data
         std::string buffer(std::istreambuf_iterator<char>(log_file), {});
         if (log_file.tellg() >= ROSBAG_SIZE_LIMIT) {
-            ROS_WARN_STREAM("ROSBAG_SIZE_LIMIT reached, exiting log sending thread");
+            ROS_WARN_STREAM_NAMED("log", "ROSBAG_SIZE_LIMIT reached, exiting log sending thread");
             return;
         }
         msg.data = buffer;
@@ -567,11 +568,11 @@ void Controller::receiveZmqThread(Controller * self)
   zmq_setsockopt(requester, ZMQ_LINGER, &linger_timeout_ms, sizeof(linger_timeout_ms));
   int rc = zmq_bind (requester, "tcp://*:5556");
   if (rc != 0) {
-    ROS_ERROR("zmq_bind for receiver failed, exiting receiver thread");
+    ROS_ERROR_NAMED("zmq", "zmq_bind for receiver failed, exiting receiver thread");
     return;
   }
 
-  ROS_INFO("zmq receive thread started");
+  ROS_INFO_NAMED("zmq", "receive thread started");
 
   geometry_msgs::Twist msg;
   char buffer[10000];
@@ -587,13 +588,13 @@ void Controller::receiveZmqThread(Controller * self)
     buffer[size] = 0;
 
     if(g_countReceives % 100 == 0) {
-        ROS_INFO("receiveZmq count %d", g_countReceives);
+        ROS_INFO_NAMED("zmq", "receiveZmq count %d", g_countReceives);
     }
     g_countReceives++;
 
     if(strncmp(buffer, "stdout ", 7) == 0)
     {
-      ROS_INFO("Python3: %s", buffer);
+      ROS_INFO_NAMED("zmq", "Python3: %s", buffer);
     }
     else if(strncmp(buffer, "request_origin", 14) == 0)
     {
@@ -603,24 +604,24 @@ void Controller::receiveZmqThread(Controller * self)
     else if(strncmp(buffer, "artf ", 5) == 0)
     {
       subt::msgs::Artifact artifact;
-      ROS_INFO("artf: %s", buffer);
+      ROS_INFO_NAMED("zmq", "artf: %s", buffer);
       if(parseArtf(buffer + 5, artifact)) // skip initial prefix "artf "
       {
         if(self->ReportArtifact(artifact))
         {
-          ROS_INFO("MD SUCCESS\n");
+          ROS_INFO_NAMED("zmq", "MD SUCCESS\n");
         }
         else
-          ROS_INFO("MD FAILURE\n");
+          ROS_INFO_NAMED("zmq", "MD FAILURE\n");
       }
       else
       {
-        ROS_INFO("ERROR! - failed to parse received artifact info");
+        ROS_INFO_NAMED("zmq", "ERROR! - failed to parse received artifact info");
       }
     }
     else if(strncmp(buffer, "file ", 5) == 0)
     {
-      ROS_INFO("FILE: %s", buffer + 5);
+      ROS_INFO_NAMED("zmq", "FILE: %s", buffer + 5);
       self->m_logSending = std::thread(Controller::logSendingThread, self, std::string(buffer + 5));
     }
     else
@@ -635,7 +636,7 @@ void Controller::receiveZmqThread(Controller * self)
       }
       else
       {
-        ROS_INFO_STREAM("MD bad parsing" << c << " " << buffer);
+        ROS_INFO_STREAM_NAMED("zmq", "MD bad parsing" << c << " " << buffer);
         break;
       }
     }
