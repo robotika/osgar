@@ -656,7 +656,7 @@ void Controller::receiveZmqThread(Controller * self)
       else
       {
         ROS_INFO_STREAM_NAMED("zmq", "MD bad parsing" << c << " " << buffer);
-        break;
+        continue;
       }
     }
   }
