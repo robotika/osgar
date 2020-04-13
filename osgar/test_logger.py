@@ -5,7 +5,7 @@ import time
 import logging
 
 from threading import Timer
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 from contextlib import ExitStack
 from pathlib import Path
@@ -20,9 +20,10 @@ class TimeStandsStill:
     # inspired by
     # https://marcusahnve.org/blog/2017/mocking-datetime-in-python/
     def __init__(self, datetime):
-        self.datetime = datetime
+        self.datetime = datetime.replace(tzinfo=timezone.utc)
 
-    def utcnow(self):
+    def now(self, tzinfo):
+        assert tzinfo == timezone.utc
         return self.datetime
 
 
@@ -184,7 +185,7 @@ class LoggerStreamingTest(unittest.TestCase):
 
     def test_time_overflow(self):
         with LogWriter(prefix='tmp8', note='test_time_overflow') as log:
-            log.start_time = datetime.utcnow() - timedelta(hours=1, minutes=30)
+            log.start_time = datetime.now(timezone.utc) - timedelta(hours=1, minutes=30)
             t1 = log.write(1, b'\x01\x02')
             self.assertGreater(t1, timedelta(hours=1))
             filename = log.filename

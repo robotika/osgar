@@ -74,7 +74,7 @@ class LogWriter:
     def __init__(self, prefix='', note='', filename=None, start_time=None):
         self.lock = RLock()
         if start_time is None:
-            self.start_time = datetime.datetime.utcnow()
+            self.start_time = datetime.datetime.now(datetime.timezone.utc)
         else:
             self.start_time = start_time
         if filename is None:
@@ -106,7 +106,7 @@ class LogWriter:
         with self.lock:
             if dt is None:
                 # by defaut generate timestamps automatically
-                dt = datetime.datetime.utcnow() - self.start_time
+                dt = datetime.datetime.now(datetime.timezone.utc) - self.start_time
             packet = format_packet(stream_id, data, dt)
             self.f.write(b"".join(packet))
             self.f.flush()
@@ -134,7 +134,7 @@ class LogReader:
         assert data == b'Pyr\x00', data
 
         data = self._read(12)
-        self.start_time = datetime.datetime(*struct.unpack('HBBBBBI', data))
+        self.start_time = datetime.datetime(*struct.unpack('HBBBBBI', data), datetime.timezone.utc)
         self.us_offset = 0  # increase after overflow
         self.prev_microseconds = 0
 
@@ -382,6 +382,7 @@ def main():
             elif args.format:
                 kw = dict(sec=timestamp.total_seconds(),
                           timestamp=timestamp,
+                          walltime=log.start_time+timestamp,
                           stream_id=stream_id,
                           data=data,
                           )
