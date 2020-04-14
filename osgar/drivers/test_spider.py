@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import MagicMock
+from datetime import timedelta
 
 from osgar.drivers.spider import Spider, CAN_packet
 from osgar.bus import Bus
@@ -26,7 +27,7 @@ class SpiderTest(unittest.TestCase):
 
     def test_publish_status(self):
         logger=MagicMock()
-        logger.write = MagicMock(return_value=135)
+        logger.write = MagicMock(return_value=timedelta(seconds=135))
         bus = Bus(logger=logger)
         tester = bus.handle('tester')
         tester.register('raw')
@@ -41,7 +42,7 @@ class SpiderTest(unittest.TestCase):
         dt, stream, data = tester.listen()
         spider.request_stop()
         spider.join()
-        self.assertEqual(dt, 135)
+        self.assertEqual(dt, timedelta(seconds=135))
         self.assertEqual(stream, 'status')
         self.assertEqual(data, ([0x8000, None]))
 

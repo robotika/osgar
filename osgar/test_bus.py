@@ -134,8 +134,9 @@ class BusHandlerTest(unittest.TestCase):
         log = MagicMock()
         bus = Bus(log)
         handle = bus.handle('test')
-        handle.report_error(KeyError(123))
-        log.write.assert_called_once_with(0, b"{'error': '123'}")
+        handle.report_error(error=KeyError(123))
+        expected = bytes(str(dict(name='test', error=KeyError(123))), 'ascii')
+        log.write.assert_called_once_with(0, expected)
 
     def test_publish_time(self):
         logger = MagicMock()

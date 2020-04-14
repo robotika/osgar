@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
+from datetime import timedelta
 import json
 import os
 import threading
@@ -55,7 +56,7 @@ class RecorderTest(unittest.TestCase):
                     },
                     'links': [('serial_gps.raw', 'gps.raw')]
             }
-            logger = MagicMock()
+            logger = MagicMock(write = MagicMock(return_value=timedelta(seconds=135)))
             with Recorder(config=config, logger=logger) as recorder:
                 self.assertEqual(len(recorder.modules), 2)
                 self.assertEqual(sum([sum([len(q) for q in module.bus.out.values()])

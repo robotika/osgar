@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import MagicMock
+from datetime import timedelta
 
 from osgar.drivers.imu import parse_line, IMU
 from osgar.bus import Bus
@@ -26,7 +27,7 @@ class IMUTest(unittest.TestCase):
     def test_processing(self):
         config = {}
         logger = MagicMock()
-        logger.write = MagicMock(return_value=135)
+        logger.write = MagicMock(return_value=timedelta(135))
         bus = Bus(logger)
         #robot_bus = BusHandler(logger, out={}, name='robot')
         #bus = BusHandler(logger,
@@ -42,6 +43,6 @@ class IMUTest(unittest.TestCase):
         imu.request_stop()
         imu.join()
         tester.shutdown()
-        self.assertEqual(tester.listen(), (135, 'orientation', self.orientation))
+        self.assertEqual(tester.listen(), (timedelta(135), 'orientation', self.orientation))
 
 # vim: expandtab sw=4 ts=4
