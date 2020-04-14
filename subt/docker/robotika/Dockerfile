@@ -8,6 +8,8 @@ RUN /usr/bin/python3 -m pip install --user --no-cache-dir \
   "opencv-python==4.2.0.32" \
   "pyzmq==19.0.0"
 
+RUN cd /home/developer/ && head -n -2 .bashrc > .bashrc.new && mv .bashrc.new .bashrc
+
 COPY --chown=developer:developer . ./osgar/
 
 RUN source /opt/ros/melodic/setup.bash && ./osgar/subt/script/sync.sh

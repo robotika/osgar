@@ -9,5 +9,5 @@ if [ "$sum1" != "$sum2" ]; then
     cp osgar/subt/docker/robotika/CMakeLists.txt src/subt_seed/CMakeLists.txt
 fi
 
-catkin_make install -DCMAKE_BUILD_TYPE=Release
+catkin_make -DCMAKE_BUILD_TYPE=Release
 
