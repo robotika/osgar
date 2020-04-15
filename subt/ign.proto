@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+message Time {
+  int64 sec = 1;
+  int32 nsec = 2;
+}
+
+message Header {
+  message Map {
+    string key = 1;
+    repeated string value = 2;
+  }
+  Time stamp = 1;
+  repeated Map data = 2;
+}
+
+message Vector3d {
+  Header header = 1;
+  double x = 2;
+  double y = 3;
+  double z = 4;
+}
+
+message Quaternion {
+  Header header = 1;
+  double x = 2;
+  double y = 3;
+  double z = 4;
+  double w = 5;
+}
+
+message Pose {
+  Header header          = 1;
+  string name            = 2;
+  uint32 id              = 3;
+  Vector3d position      = 4;
+  Quaternion orientation = 5;
+}
+
+message Pose_V {
+  Header header = 1;
+  repeated Pose pose = 2;
+}
+
