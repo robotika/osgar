@@ -180,8 +180,11 @@ class BusHandlerTest(unittest.TestCase):
         t.start()
         t.join(10)
         end = time.monotonic()
+        # add extra epsilon time to avoid rounding error:
+        # AssertionError: 255.85899999999998 not greater than or equal to 255.859
+        eps = 0.000001  # 1us
         self.assertFalse(t.is_alive())
-        self.assertGreaterEqual(end-interval, start)
+        self.assertGreaterEqual(end-interval+eps, start)
 
     def test_interruptible_sleep(self):
         bus = Bus(MagicMock())
