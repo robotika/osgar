@@ -6,6 +6,7 @@ import io
 import pathlib
 from datetime import timedelta
 from collections import defaultdict
+import time
 
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "1"
@@ -14,8 +15,12 @@ from pygame.locals import *
 import cv2  # for video output
 import numpy as np  # faster depth data processing
 
+import zlib
+import zstandard as zstd
+cctx = zstd.ZstdCompressor(level=12)
+
 from osgar.logger import LogIndexedReader, lookup_stream_names
-from osgar.lib.serialize import deserialize
+from osgar.lib.serialize import deserialize, serialize
 from osgar.lib.config import get_class_by_name
 from osgar.lib import quaternion
 try:
@@ -425,7 +430,19 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
                  callback=callback)
             screen.blit(background, (0, 0))
             screen.blit(foreground, (0, 0))
-            pygame.display.flip() 
+            pygame.display.flip()
+
+            raw_data = serialize(g_depth)
+            times = [time.perf_counter()]
+            zlib_size = len(zlib.compress(raw_data))
+            times.append(time.perf_counter())
+            zstd_size = len(cctx.compress(raw_data))
+            times.append(time.perf_counter())
+            zlib_time = times[1] - times[0]
+            zstd_time = times[2] - times[1]
+            print( zlib_size, zstd_size, f"size: {zstd_size / float(zlib_size) * 100:.0f}%", f"time: {zstd_time/zlib_time * 100:.0f}%")
+            #if aaa > 10_000:
+            #    print(aaa)
 
             if out_video is not None:
                 # https://stackoverflow.com/questions/53101698/how-to-convert-a-pygame-image-to-open-cv-image/53108946#53108946
@@ -492,6 +509,8 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
                     print(scan)
                     if g_depth is not None:
                         np.savez_compressed('depth.npz', depth=g_depth)
+                        cv2.imwrite('depth.png', g_depth)
+                        print(len(serialize(g_depth, compress=True)))
                 if event.key == K_p:  # print position
                     print(pose)
                     x, y, heading = pose
