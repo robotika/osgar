@@ -177,6 +177,7 @@ if __name__ == "__main__":
         letter = s[-1][0]
         out_name = os.path.join(os.path.dirname(args.filename), name)
         robot_data_0_processed = False
+        robot_data_1_processed = False
         with tarfile.open(args.filename, "r") as tar:
             for member in tar.getmembers():
                 if member.name.startswith('robot_data_0.bag'):
@@ -190,6 +191,16 @@ if __name__ == "__main__":
                         continue
                     print(member.name, "->", name)
                     assert robot_data_0_processed
+                    f = tar.extractfile(member)
+                    extract_log(read_rosbag_fd_gen(f, verbose=args.verbose), out_name, append=True, verbose=args.verbose)
+                    robot_data_1_processed = True
+                elif member.name.startswith('robot_data_2.bag'):
+                    if not args.all:
+                        print(member.name, "->", "SKIPPED")
+                        continue
+                    print(member.name, "->", name)
+                    assert robot_data_0_processed
+                    assert robot_data_1_processed
                     f = tar.extractfile(member)
                     extract_log(read_rosbag_fd_gen(f, verbose=args.verbose), out_name, append=True, verbose=args.verbose)
                 elif member.name.endswith('rosout.log'):
