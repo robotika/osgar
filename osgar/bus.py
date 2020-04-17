@@ -161,7 +161,11 @@ class LogBusHandler:
             if self.finished.is_set():
                 raise BusShutdownException
             if len(self.buffer_queue) == 0:
-                dt, stream_id, bytes_data = next(self.reader)
+                try:
+                    dt, stream_id, bytes_data = next(self.reader)
+                except Exception:
+                    self.finished.set()
+                    raise
             else:
                 dt, stream_id, bytes_data = self.buffer_queue.popleft()
             if stream_id not in self.inputs:
