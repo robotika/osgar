@@ -37,6 +37,7 @@
 #include <ros/ros.h>
 #include <std_srvs/SetBool.h>
 #include <rosgraph_msgs/Clock.h>
+#include <rosgraph_msgs/Log.h>
 #include <std_msgs/String.h>
 #include <std_msgs/Bool.h>
 
@@ -284,9 +285,19 @@ Controller::Controller(const std::string &_name)
 {
   this->name = _name;
 
+  ros::Publisher rosout = n.advertise<rosgraph_msgs::Log>("/rosout", 1);
+  while (rosout.getNumSubscribers() == 0) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    if (!ros::ok()) {
+      return;
+    }
+  }
+
+  ROS_INFO_STREAM("Starting robotika solution for robot " << this->name);
+
   ROS_INFO("Waiting for /clock, /subt/start, and /subt/pose_from_artifact_origin");
 
-  ros::topic::waitForMessage<rosgraph_msgs::Clock>("/clock", this->n);
+  ros::Duration(0.01).sleep();
 
   // Wait for the start service to be ready.
   ros::service::waitForService("/subt/start", -1);
@@ -692,8 +703,6 @@ int main(int argc, char** argv)
   // Initialize ros
   std::string robot_name = argv[1];
   ros::init(argc, argv, robot_name);
-
-  ROS_INFO_STREAM("Starting robotika solution for robot " << robot_name);
 
   initZeroMQ();
 
