@@ -325,14 +325,15 @@ def lookup_stream_id(filename, stream_name):
     return names.index(stream_name) + 1
 
 def calculate_stat(filename):
-    from collections import defaultdict
-    stat = defaultdict(int)
-    count = defaultdict(int)
+    names = ['sys'] + lookup_stream_names(filename)
+    sizes = [0] * len(names)
+    counts = [0] * len(names)
     with LogReader(filename) as log:
         for timestamp, stream_id, data in log:
-            stat[stream_id] += len(data)
-            count[stream_id] += 1
-    return stat, count, timestamp
+            sizes[stream_id] += len(data)
+            counts[stream_id] += 1
+    return names, sizes, counts, timestamp
+
 
 def main():
     import argparse
@@ -355,14 +356,19 @@ def main():
         sys.exit()
 
     if args.stream is None and not args.all:
-        stat, count, timestamp = calculate_stat(args.logfile)
+        names, sizes, counts, timestamp = calculate_stat(args.logfile)
         seconds = timestamp.total_seconds()
-        names = ['sys'] + lookup_stream_names(args.logfile)
-        column_width = max([len(x) for x in names])
-        for k, name in enumerate(names):
-            print('%2d' % k, name.rjust(column_width),
-                  '%10d | %5d | %5.1fHz' % (stat.get(k, 0), count[k],
-                      count[k]/seconds))
+        sizes_s = [str(v) for v in sizes]
+        counts_s = [str(v) for v in counts]
+        name_w = max([len(v) for v in names])
+        sizes_w = max([len(v) for v in sizes_s])
+        counts_w = max([len(v) for v in counts_s])
+
+        header = f' k {"name":>{name_w}} {"bytes":>{sizes_w}} | {"count":>{counts_w}} | {"freq"} Hz'
+        print(header)
+        print('-' * len(header))
+        for k in range(len(names)):
+            print(f'{k:2d} {names[k]:>{name_w}} {sizes_s[k]:>{sizes_w}} | {counts_s[k]:>{counts_w}} | {counts[k]/seconds:5.1f}Hz')
         print('\nTotal time', timestamp)
         sys.exit()
 
