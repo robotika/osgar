@@ -52,7 +52,7 @@
 #include <assert.h>
 
 
-#define ROSBAG_SIZE_LIMIT 2000000000L  // 2GB
+#define ROSBAG_SIZE_LIMIT 3000000000L  // 3GB
 
 
 int g_countClock = 0;
