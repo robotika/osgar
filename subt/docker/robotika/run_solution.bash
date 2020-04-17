@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# disable crazy threading behavior inside openblas
+# https://github.com/xianyi/OpenBLAS#setting-the-number-of-threads-using-environment-variables
+export OMP_NUM_THREADS=1
+
 echo "Start robot solution"
 export OSGAR_LOGS=`pwd`
 cd osgar
