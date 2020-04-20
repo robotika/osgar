@@ -67,7 +67,7 @@
               ["app.request_origin", "rosmsg.request_origin"],
               ["rosmsg.origin", "app.origin"],
 
-              ["receiver.raw", "rosmsg.slot_raw"],
+              ["receiver.raw", "rosmsg.raw"],
               ["rosmsg.cmd", "transmitter.raw"],
 
               ["rosmsg.rot", "app.rot"],

@@ -7,11 +7,10 @@ setuptools.setup(
     name="osgar",
     version="0.2.0",
     install_requires=[
-          'pyserial',
-          'msgpack>=0.5.0',
+          'msgpack>=1.0.0',
       ],
     extras_require={
-        'tools': ['opencv-python>=3,<4', 'Pygame'],
+        'tools': ['opencv-python>=3', 'Pygame'],
     },
     author="Robotika.cz",
     author_email="osgar@robotika.cz",

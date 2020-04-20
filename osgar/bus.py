@@ -1,6 +1,7 @@
 """
   Internal bus for communication among modules
 """
+import inspect
 import threading  # Event
 
 from queue import Queue
@@ -44,6 +45,11 @@ class Bus:
         receiver, input = receiver.split('.')
         self.handles[sender].connect(output, self.handles[receiver], input, modules)
 
+    def delays(self):
+        for name, handle in self.handles.items():
+            if handle.max_delay > ASSERT_QUEUE_DELAY:
+                yield name, handle.max_delay, handle.max_delay_timestamp
+
 
 class _BusHandler:
     def __init__(self, logger, name):
@@ -56,6 +62,9 @@ class _BusHandler:
         self.finished = threading.Event()
         self.no_output = set()
         self.compressed_output = set()
+        self._time = None
+        self.max_delay = timedelta()
+        self.max_delay_timestamp = timedelta()
 
     def register(self, *outputs):
         for name_and_type in outputs:
@@ -92,6 +101,15 @@ class _BusHandler:
                 to_write = serialize(data, compress=(stream_id in self.compressed_output))
             timestamp = self.logger.write(stream_id, to_write)
 
+            if self._time is not None:
+                delay = timestamp - self._time
+                if delay > self.max_delay:
+                    self.max_delay = delay
+                    self.max_delay_timestamp = timestamp
+                if delay > ASSERT_QUEUE_DELAY:
+                    caller = inspect.currentframe().f_back.f_code.co_name
+                    self.report_error(delay=delay.total_seconds(), channel=channel, caller=caller)
+
             for queue, input_channel in self.out[channel]:
                 queue.put((timestamp, input_channel, data))
             for slot in self.slots.get(channel, []):
@@ -102,8 +120,8 @@ class _BusHandler:
         packet = self.queue.get()
         if packet is None:
             raise BusShutdownException()
-        timestamp, channel, data = packet
-        return timestamp, channel, data
+        self._time, channel, data = packet
+        return self._time, channel, data
 
     def sleep(self, secs):
         self.finished.wait(secs)
@@ -115,10 +133,12 @@ class _BusHandler:
         self.finished.set()
         self.queue.put(None)
 
-    def report_error(self, err):
+    def report_error(self, **err):
         with self.logger.lock:
-            self.logger.write(0, bytes(str({'error': str(err)}),
-                                       encoding='ascii'))
+            data = dict(name=self.name)
+            err.pop('name', None)
+            data.update(err)
+            self.logger.write(0, bytes(str(data), encoding='ascii'))
 
 
 class LogBusHandler:
@@ -129,6 +149,7 @@ class LogBusHandler:
         self.buffer_queue = deque()
         self.max_delay = timedelta()
         self.max_delay_timestamp = timedelta()
+        self.finished = threading.Event()
 
     def register(self, *outputs):
         for o in outputs:
@@ -137,6 +158,8 @@ class LogBusHandler:
 
     def listen(self):
         while True:
+            if self.finished.is_set():
+                raise BusShutdownException
             if len(self.buffer_queue) == 0:
                 dt, stream_id, bytes_data = next(self.reader)
             else:
@@ -178,17 +201,28 @@ class LogBusHandler:
     def sleep(self, secs):
         pass
 
+    def is_alive(self):
+        return not self.finished.is_set()
+
+    def shutdown(self):
+        self.finished.set()
+
+    def report_error(self, err):
+        print(self.time, err)
 
 class LogBusHandlerInputsOnly:
     def __init__(self, log, inputs):
         self.reader = log
         self.inputs = inputs
         self.time = timedelta(0)
+        self.finished = threading.Event()
 
     def register(self, *outputs):
         pass
 
     def listen(self):
+        if self.finished.is_set():
+            raise BusShutdownException
         dt, stream_id, bytes_data = next(self.reader)
         self.time = dt
         channel = self.inputs[stream_id]
@@ -203,6 +237,14 @@ class LogBusHandlerInputsOnly:
     def sleep(self, secs):
         pass
 
+    def is_alive(self):
+        return not self.finished.is_set()
+
+    def shutdown(self):
+        self.finished.set()
+
+    def report_error(self, err):
+        print(self.time, err)
 
 if __name__ == "__main__":
     pass

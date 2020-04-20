@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import MagicMock
+from datetime import timedelta
 
 from osgar.drivers.eduro import Eduro, sint32_diff, CAN_triplet
 from osgar.bus import Bus
@@ -9,7 +10,7 @@ class EduroTest(unittest.TestCase):
 
     def test_sync(self):
         logger = MagicMock()
-        logger.write = MagicMock(return_value=135)
+        logger.write = MagicMock(return_value=timedelta(135))
         bus = Bus(logger)
         eduro = Eduro(config={}, bus=bus.handle('eduro'))
         tester = bus.handle('tester')
@@ -21,11 +22,11 @@ class EduroTest(unittest.TestCase):
         eduro.request_stop()
         eduro.run()
         tester.shutdown()
-        self.assertEqual(tester.listen(), (135, 'pose2d', [0, 0, 0]))
+        self.assertEqual(tester.listen(), (timedelta(135), 'pose2d', [0, 0, 0]))
 
     def test_buttons(self):
         logger = MagicMock()
-        logger.write = MagicMock(return_value=42)
+        logger.write = MagicMock(return_value=timedelta(42))
         bus = Bus(logger)
         eduro = Eduro(config={}, bus=bus.handle('eduro'))
         tester = bus.handle('tester')
@@ -36,11 +37,11 @@ class EduroTest(unittest.TestCase):
         eduro.request_stop()
         eduro.run()
         tester.shutdown()
-        self.assertEqual(tester.listen(), (42, 'buttons', {'blue_selected': True, 'cable_in': False}))
+        self.assertEqual(tester.listen(), (timedelta(42), 'buttons', {'blue_selected': True, 'cable_in': False}))
 
     def test_encoders_overflow(self):
         logger = MagicMock()
-        logger.write = MagicMock(return_value=22)
+        logger.write = MagicMock(return_value=timedelta(22))
         bus = Bus(logger)
         eduro = Eduro(config={}, bus=bus.handle('eduro'))
         tester = bus.handle('tester')
@@ -60,8 +61,8 @@ class EduroTest(unittest.TestCase):
         eduro.request_stop()
         eduro.run()
         tester.shutdown()
-        self.assertEqual(tester.listen(), (22, 'encoders', [0, 0]))
-        self.assertEqual(tester.listen(), (22, 'encoders', [2, 0]))
+        self.assertEqual(tester.listen(), (timedelta(22), 'encoders', [0, 0]))
+        self.assertEqual(tester.listen(), (timedelta(22), 'encoders', [2, 0]))
 
     def test_sint32_diff(self):
         self.assertEqual(sint32_diff(-5, 7), -12)

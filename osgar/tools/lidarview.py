@@ -24,10 +24,11 @@ except:
     pass  # workaround to merge lib/depth.py
 
 
-#WINDOW_SIZE = 1200, 660
-WINDOW_SIZE = 1600, 1000
+WINDOW_SIZE = 1600, 1000  # controlled by --window-size
 TAIL_MIN_STEP = 0.1  # in meters
 HISTORY_SIZE = 100
+
+MAX_SCAN_LIMIT = 10000  # set by --lidar-limit
 
 g_scale = 30
 g_rotation_offset_rad = 0.0  # set by --rotation (deg)
@@ -45,7 +46,7 @@ def scan2xy(pose, scan):
     X, Y, heading = pose
     pts = []
     for i, i_dist in enumerate(scan):
-        if i_dist == 0 or i_dist >= 10000:
+        if i_dist == 0 or i_dist >= MAX_SCAN_LIMIT:
             continue
         angle = math.radians(g_lidar_fov_deg * (i / len(scan)) - g_lidar_fov_deg/2) + heading
         dist = i_dist/1000.0
@@ -84,7 +85,7 @@ def draw_scan(foreground, pose, scan, color, joint=None):
             Y += dy
 
     for i, i_dist in enumerate(scan):
-        if i_dist == 0 or i_dist >= 10000:
+        if i_dist == 0 or i_dist >= MAX_SCAN_LIMIT:
             continue
         angle = math.radians(g_lidar_fov_deg * (i / len(scan)) - g_lidar_fov_deg/2) + heading
         dist = i_dist/1000.0
@@ -96,7 +97,7 @@ def draw(foreground, pose, scan, poses=[], image=None, callback=None, acc_pts=No
     color = (0, 255, 0)
     X, Y, heading = pose
     for i, i_dist in enumerate(scan):
-        if i_dist == 0 or i_dist >= 10000:
+        if i_dist == 0 or i_dist >= MAX_SCAN_LIMIT:
             continue
         angle = math.radians(g_lidar_fov_deg * (i / len(scan)) - g_lidar_fov_deg/2) + heading
         dist = i_dist/1000.0
@@ -538,14 +539,15 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
 def main(args_in=None, startswith=None):
     import argparse
     import os.path
-    global g_rotation_offset_rad, g_lidar_fov_deg
+    global g_rotation_offset_rad, g_lidar_fov_deg, MAX_SCAN_LIMIT, WINDOW_SIZE
 
     parser = argparse.ArgumentParser(description='View lidar scans')
     parser.add_argument('logfile', help='recorded log file')
 
     parser.add_argument('--lidar', help='stream ID')
     parser.add_argument('--lidar2', help='stream ID of second lidar (back or slope)')
-
+    parser.add_argument('--lidar-limit', help='display scan limit in millimeters',
+                        type=int, default=MAX_SCAN_LIMIT)
     pose = parser.add_mutually_exclusive_group()
     pose.add_argument('--pose2d', help='stream ID for pose2d messages')
     pose.add_argument('--pose3d', help='stream ID for pose3d messages')
@@ -557,6 +559,8 @@ def main(args_in=None, startswith=None):
 
     parser.add_argument('--keyframes', help='stream ID typically for artifacts detection')
     parser.add_argument('--title', help='stream ID of data to be displayed in title')
+
+    parser.add_argument('--window-size', help='set window size in pixels', type=int, nargs=2)
 
     parser.add_argument('--callback', help='callback function for lidar scans')
 
@@ -590,6 +594,11 @@ def main(args_in=None, startswith=None):
     callback = None
     if args.callback is not None:
         callback = get_class_by_name(args.callback)
+
+    if args.lidar_limit is not None:
+        MAX_SCAN_LIMIT = args.lidar_limit
+    if args.window_size is not None:
+        WINDOW_SIZE = args.window_size
 
     filename = os.path.basename(args.logfile)
     g_rotation_offset_rad = math.radians(args.rotate)

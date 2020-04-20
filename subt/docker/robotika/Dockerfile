@@ -2,7 +2,13 @@ FROM osrf/subt-virtual-testbed:subt_solution_latest
 
 SHELL ["/bin/bash", "-c"]
 
-RUN /usr/bin/python3 -m pip install --user --no-cache-dir msgpack "opencv-python>3.4.2,<4" pyzmq
+RUN /usr/bin/python3 -m pip install --user --no-cache-dir \
+  "msgpack==1.0.0" \
+  "numpy==1.18.2" \
+  "opencv-python==4.2.0.32" \
+  "pyzmq==19.0.0"
+
+RUN cd /home/developer/ && head -n -2 .bashrc > .bashrc.new && mv .bashrc.new .bashrc
 
 COPY --chown=developer:developer . ./osgar/
 

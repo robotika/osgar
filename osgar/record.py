@@ -21,13 +21,13 @@ class Recorder:
         self.sigint_received = False
         self.modules = {}
 
-        bus = Bus(logger)
+        self.bus = Bus(logger)
         for module_name, module_config in config['modules'].items():
             klass = get_class_by_name(module_config['driver'])
-            self.modules[module_name] = klass(module_config['init'], bus=bus.handle(module_name))
+            self.modules[module_name] = klass(module_config['init'], bus=self.bus.handle(module_name))
 
         for sender, receiver in config['links']:
-            bus.connect(sender, receiver, self.modules)
+            self.bus.connect(sender, receiver, self.modules)
 
         signal.signal(signal.SIGINT, self.request_stop)
 
@@ -40,6 +40,8 @@ class Recorder:
         self.request_stop()
         for module in self.modules.values():
             module.join(1)
+        for name, max_delay, timestamp in self.bus.delays():
+            g_logger.error(f"{name:>12}: maximum delay of {max_delay} at {timestamp}")
         for t in threading.enumerate():
             if t != threading.current_thread():
                 g_logger.error(f'thread {repr(t.name)} still running!')
