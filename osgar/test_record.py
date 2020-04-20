@@ -122,7 +122,7 @@ class RecorderTest(unittest.TestCase):
                 log_filename = log_line[-1]
                 self.assertTrue(log_filename.endswith(b".log"), stderr)
                 self.assertEqual(len(stdout), 1, stdout)
-                self.assertEqual(len(stderr), 3, stderr)
+                self.assertEqual(len(stderr), 2, stderr)
                 self.assertTrue(b"committing suicide by SIGINT" in stderr[-1])
             os.unlink(log_filename)
 
