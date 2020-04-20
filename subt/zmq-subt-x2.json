@@ -12,7 +12,8 @@
             "symmetric": false,
             "virtual_bumper_sec": 60,
             "virtual_bumper_radius": 10.0,
-            "virtual_world": true
+            "virtual_world": true,
+            "dangerous_dist": 0.4
           }
       },
       "detector": {
