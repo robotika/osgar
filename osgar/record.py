@@ -55,7 +55,6 @@ class Recorder:
     def request_stop(self, signum=None, frame=None): # pylint: disable=unused-argument
         if signum == signal.SIGINT:
             self.sigint_received = True
-            g_logger.info("SIGINT received")
         if self.stop_requested.is_set():
             return
         for module in self.modules.values():
