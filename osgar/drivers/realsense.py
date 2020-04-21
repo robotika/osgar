@@ -46,12 +46,14 @@ def t265_to_osgar_orientation(t265_orientation):
 class RealSense(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('pose2d', 'pose3d', 'pose_raw', 'orientation', 'depth:gz')
+        bus.register('pose2d', 'pose3d', 'pose_raw', 'orientation', 'depth', 'depth_rgb')
         self.verbose = config.get('verbose', False)
         self.depth_subsample = config.get("depth_subsample", 3)
         self.pose_subsample = config.get("pose_subsample", 20)
+        self.depth_rgb_subsample = config.get("image_subsample", 3)
         self.pose_pipeline = None  # not initialized yet
         self.depth_pipeline = None
+        self.depth_rgb_pipeline = None
         self.finished = None
 
     def pose_callback(self, frame):
@@ -97,6 +99,22 @@ class RealSense(Node):
             return
         self.publish('depth', depth_image)
 
+    def depth_rgb_callback(self, frameset):
+        try:
+            assert frameset.is_frameset()
+            frame = frameset.as_frameset().get_color_frame()
+            n = frame.get_frame_number()
+            if n % self.depth_rgb_subsample != 0:
+                return
+            #assert frame.is_color_frame()
+            depth_rgb = np.asanyarray(frame.as_depth_frame().get_data())
+        except Exception as e:
+            print(e)
+            self.finished.set()
+            return
+        self.publish('depth_rgb', depth_rgb)
+
+
     def start(self):
         self.finished = threading.Event()
         ctx = rs.context()
@@ -106,7 +124,7 @@ class RealSense(Node):
             self.finished.set()
             return
 
-        enable_pose, enable_depth = False, False
+        enable_pose, enable_depth, enable_depth_rgb = False, False, False
         for device in device_list:
             name = device.get_info(rs.camera_info.name)
             serial_number = device.get_info(rs.camera_info.serial_number)
@@ -115,6 +133,7 @@ class RealSense(Node):
             if product_line == "D400":
                 g_logger.info(intro + "Enabling depth stream")
                 enable_depth = True
+                enable_depth_rgb = True
             elif product_line == "T200":
                 enable_pose = True
                 g_logger.info(intro + "Enabling pose stream")
@@ -132,6 +151,12 @@ class RealSense(Node):
             depth_cfg = rs.config()
             depth_cfg.enable_stream(rs.stream.depth, 640, 360, rs.format.z16, 30)
             self.depth_pipeline.start(depth_cfg, self.depth_callback)
+
+        if enable_depth_rgb:
+            self.depth_rgb_pipeline = rs.pipeline(ctx)
+            depth_rgb_cfg = rs.config()
+            depth_rgb_cfg.enable_stream(rs.stream.color, 640, 360, rs.format.bgr8, 30)
+            self.depth_rgb_pipeline.start(depth_rgb_cfg, self.depth_rgb_callback)
 
         if not enable_pose and not enable_depth:
             self.finished.set()
