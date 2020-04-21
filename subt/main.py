@@ -999,6 +999,9 @@ class SubTChallenge:
         self.thread = threading.Thread(target=self.play)
         self.thread.start()
 
+    def is_alive(self):
+        return self.thread.is_alive()
+
     def request_stop(self):
         self.bus.shutdown()
 
