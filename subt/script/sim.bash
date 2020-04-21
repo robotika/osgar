@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+termtitle() { printf "\033]0;$*\007"; }
+
 ROBOT="${ROBOT:-X0F200L}"
 WORLD="${WORLD:-urban_circuit_practice_01}"
 HEADLESS="${HEADLESS:-false}"
@@ -15,6 +17,8 @@ trap 'echo; echo $LOG_DIR; echo $ROBOT; echo $WORLD; echo;' EXIT
 
 DOCKER_OPTS="--volume ${LOG_DIR}:/tmp/ign/logs"
 export DOCKER_OPTS
+
+termtitle "sim $ROBOT $WORLD"
 
 ./subt/docker/run.bash osrf/subt-virtual-testbed:cloudsim_sim_latest \
   cloudsim_sim.ign \
