@@ -114,6 +114,7 @@ class ROSProxyTest(unittest.TestCase):
             proxy.request_stop()
             proxy.join(timeout=1)
             self.assertFalse(proxy.is_alive())
+            
         master.shutdown()
 
     def test_prefix4BytesLen(self):
