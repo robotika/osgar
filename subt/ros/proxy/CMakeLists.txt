@@ -13,7 +13,6 @@ set (SUBT_VERSION_FULL
 
 find_package(catkin REQUIRED
   COMPONENTS
-#    message_generation
     subt_ign
     roscpp
 )
@@ -36,12 +35,7 @@ catkin_package(
 
 include_directories(
   ${catkin_INCLUDE_DIRS}
-#  ${GAZEBO_INCLUDE_DIRS}
 )
-
-#link_directories(
-#  ${GAZEBO_LIBRARY_DIRS}
-#)
 
 ## Declare a C++ executable
 add_executable(ros_proxy ros_proxy_node.cc)
