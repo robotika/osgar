@@ -4,12 +4,8 @@
 # https://github.com/xianyi/OpenBLAS#setting-the-number-of-threads-using-environment-variables
 export OMP_NUM_THREADS=1
 
-echo "Start robot solution"
-export OSGAR_LOGS=`pwd`
-cd osgar
-python3 -m subt run subt/zmq-subt-x2.json --side auto --walldist 0.8 --timeout 100 --speed 1.0 --note "try to visit artifact and return home" &
-ROBOT_PID=$!
-cd ..
+# adjust so that local logs look similar to cloudsim logs
+export ROSCONSOLE_FORMAT='${time} ${severity} ${node} ${logger}: ${message}'
 
 # get directory where this bash script lives
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -24,9 +20,14 @@ while [ -z "$ROBOT_NAME" ]; do
 done
 echo "Robot name is '$ROBOT_NAME'"
 
+echo "Start robot solution"
+export OSGAR_LOGS=/osgar-ws/logs
+/osgar-ws/env/bin/python3 -m subt run /osgar-ws/src/subt/zmq-subt-x2.json --side auto --walldist 0.8 --timeout 100 --speed 1.0 --note "run_solution.bash" &
+ROBOT_PID=$!
+
 # Run your solution and wait for ROS master
 # http://wiki.ros.org/roslaunch/Commandline%20Tools#line-45
-roslaunch subt_seed x1.launch --wait robot_name:=$ROBOT_NAME &
+roslaunch proxy sim.launch --wait robot_name:=$ROBOT_NAME &
 ROS_PID=$!
 
 # Turn everything off in case of CTRL+C and friends.

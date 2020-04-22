@@ -34,18 +34,27 @@ then
   exit 2
 fi
 
-user_id=$(id -u)
 image_name=$(basename $1)
-image_plus_tag=$image_name:$(date +%Y_%m_%d_%H%M)
-# mercurial adds a + symbol if there are uncomitted changes in the repo
-# that will break docker tag syntax
-#hg_id=$(hg id -i | tr -d '+')
+datetime_tag=$(date +%Y-%m-%d-%H%M)
+date_tag=$(date +%Y-%m-%d)
+image_plus_tag=$image_name:$datetime_tag
 
 shift
 
-
 docker build --rm -t $image_plus_tag -f $DIR/$image_name/Dockerfile $(git rev-parse --show-toplevel)
 docker tag $image_plus_tag $image_name:latest
-#docker tag $image_plus_tag $image_name:$hg_id
 
+echo
 echo "Built $image_plus_tag and tagged as $image_name:latest" # and $image_name:$hg_id"
+echo
+
+if [ -f "$DIR/${image_name}/tags" ] ; then
+  echo "Additional tags:"
+  while read A ; do
+    echo " - $A:latest"
+    docker tag $image_plus_tag $A:latest
+    echo " - $A:$date_tag"
+    docker tag $image_plus_tag $A:$date_tag
+  done < "$DIR/$image_name/tags"
+  echo
+fi

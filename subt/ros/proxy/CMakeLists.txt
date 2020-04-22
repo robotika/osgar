@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5.1)
-project(subt_seed)
+project(proxy)
 
 if(NOT WIN32)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wextra")
@@ -13,7 +13,7 @@ set (SUBT_VERSION_FULL
 
 find_package(catkin REQUIRED
   COMPONENTS
-    message_generation
+#    message_generation
     subt_ign
     roscpp
 )
@@ -21,7 +21,7 @@ find_package(catkin REQUIRED
 ### find_package(gazebo REQUIRED)
 
 catkin_package(
-  CATKIN_DEPENDS message_runtime
+  CATKIN_DEPENDS roscpp
 )
 
 ########################
@@ -36,17 +36,17 @@ catkin_package(
 
 include_directories(
   ${catkin_INCLUDE_DIRS}
-  ${GAZEBO_INCLUDE_DIRS}
+#  ${GAZEBO_INCLUDE_DIRS}
 )
 
-link_directories(
-  ${GAZEBO_LIBRARY_DIRS}
-)
+#link_directories(
+#  ${GAZEBO_LIBRARY_DIRS}
+#)
 
 ## Declare a C++ executable
-add_executable(subt_seed_node src/subt_seed_node.cc)
-add_dependencies(subt_seed_node ${catkin_EXPORTED_TARGETS})
-target_link_libraries(subt_seed_node ${catkin_LIBRARIES} -lzmq)
+add_executable(ros_proxy ros_proxy_node.cc)
+add_dependencies(ros_proxy ${catkin_EXPORTED_TARGETS})
+target_link_libraries(ros_proxy ${catkin_LIBRARIES} -lzmq)
 
 ###########
 ## Tests ##
@@ -62,7 +62,7 @@ install(DIRECTORY launch/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
 
 # Mark executables and/or libraries for installation
-install(TARGETS subt_seed_node
+install(TARGETS ros_proxy
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

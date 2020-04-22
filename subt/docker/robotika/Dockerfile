@@ -1,19 +1,16 @@
-FROM osrf/subt-virtual-testbed:subt_solution_latest
+FROM robotika/subt-base:2020-04-21
 
-SHELL ["/bin/bash", "-c"]
+ENTRYPOINT ["./src/subt/docker/robotika/entrypoint.bash"]
 
-RUN /usr/bin/python3 -m pip install --user --no-cache-dir \
-  "msgpack==1.0.0" \
-  "numpy==1.18.2" \
-  "opencv-python==4.2.0.32" \
-  "pyzmq==19.0.0"
+CMD ["./src/subt/docker/robotika/run_solution.bash"]
 
-RUN cd /home/developer/ && head -n -2 .bashrc > .bashrc.new && mv .bashrc.new .bashrc
+# support `docker exec -it <container> bash
+RUN echo "source /osgar-ws/devel/setup.sh" >> ~/.bashrc
 
-COPY --chown=developer:developer . ./osgar/
+COPY --chown=root:root . ./src/
 
-RUN source /opt/ros/melodic/setup.bash && ./osgar/subt/script/sync.sh
+RUN /osgar-ws/env/bin/pip install -e src/
 
-ENTRYPOINT ["./osgar/subt/docker/robotika/entrypoint.bash"]
+RUN source /opt/subt/setup.bash && catkin_make -DCMAKE_BUILD_TYPE=Release
 
-CMD ["./osgar/subt/docker/robotika/run_solution.bash"]
+

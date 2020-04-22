@@ -1,5 +1,5 @@
 #!/bin/bash
 
-source ~/subt_solution/devel/setup.sh
+source /osgar-ws/devel/setup.sh
 
 exec "$@"
