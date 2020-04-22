@@ -94,6 +94,8 @@ def draw_scan(foreground, pose, scan, color, joint=None):
 
 
 def draw(foreground, pose, scan, poses=[], image=None, callback=None, acc_pts=None):
+    foreground.lock()
+
     color = (0, 255, 0)
     X, Y, heading = pose
     for i, i_dist in enumerate(scan):
@@ -123,6 +125,8 @@ def draw(foreground, pose, scan, poses=[], image=None, callback=None, acc_pts=No
     if acc_pts is not None:
         for x, y in acc_pts:
             pygame.draw.circle(foreground, (0, 127, 0), scr(x - X, y - Y), 2)
+
+    foreground.unlock()
 
     if image is not None:
         width, height = image.get_size()
