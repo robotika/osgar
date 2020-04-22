@@ -26,7 +26,7 @@ echo "Robot name is '$ROBOT_NAME'"
 
 # Run your solution and wait for ROS master
 # http://wiki.ros.org/roslaunch/Commandline%20Tools#line-45
-roslaunch subt_seed x1.launch --wait robot_name:=$ROBOT_NAME &
+roslaunch robotika robot.launch --wait robot_name:=$ROBOT_NAME &
 ROS_PID=$!
 
 # Turn everything off in case of CTRL+C and friends.
