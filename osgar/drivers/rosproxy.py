@@ -156,6 +156,7 @@ class ROSProxy(Thread):
             ready = False
             while True:
                 timestamp, channel, data = self.bus.listen()
+                print(timestamp, channel, data)
                 if channel != 'tick' and self.verbose:
                     print(timestamp, channel)
                 if channel == 'cmd_vel':
