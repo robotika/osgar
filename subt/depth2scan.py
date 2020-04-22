@@ -12,14 +12,14 @@ from osgar.lib.depth import depth2dist, FX, CAMW
 from osgar.lib.mathex import normalizeAnglePIPI
 
 
-frac = math.tan(math.radians(60))/360
+FRAC = math.tan(math.radians(60)) / 360
 
 
 def vertical_scan(depth, column):
     # return two arrays x and y
     arr = np.array(depth[:, column], np.int32)
     x = arr
-    a = frac * (np.arange(len(arr), 0, -1) - 180)
+    a = FRAC * (np.arange(len(arr), 0, -1) - 180)
     y = x * a + 560
     return x, y
 
@@ -60,6 +60,95 @@ def vertical_step(depth, column=320):
     return ret * 10  # return back readings in mm
 
 
+def is_on_line(a, b, c, z=300):
+    "Is point C at most `z` milimeters far from a line defined by points A and B?"
+    ax, ay = a
+    bx, by = b
+    cx, cy = c
+    p = -(by - ay)
+    q = bx - ax
+    r = -(p * ax + q * ay)
+    d = (p * cx + q * cy + r) / np.hypot(p, q)
+    return abs(d) < z
+
+
+def adjust_scan(scan, depth_scan):
+
+    # Lidar scan starts with right-most direction. Let's make the
+    # virtual scan based on depth camera do the same.
+    depth_scan = np.asarray(depth_scan[::-1])
+
+    lidar_scan = np.asarray(scan)
+
+    CAMERA_FOV = 2 * np.arctan2(CAMW / 2.0, FX)
+    LIDAR_FOV = np.radians(270)
+
+    depth_density = depth_scan.shape[0] / CAMERA_FOV
+    lidar_density = lidar_scan.shape[0] / LIDAR_FOV
+    assert depth_density > lidar_density
+    depth_scan = cv2.resize(
+        depth_scan.reshape((1, -1)),
+        (int(CAMERA_FOV * lidar_density), 1),
+        interpolation=cv2.INTER_NEAREST).reshape((-1,))
+    alignment_start = (lidar_scan.shape[0] - depth_scan.shape[0]) // 2
+    alignment_tail = lidar_scan.shape[0] - depth_scan.shape[0] - alignment_start
+
+    # Part of the lidar scan that overlaps with depth camera.
+    lidar_overlap = lidar_scan[alignment_start:-alignment_tail]
+
+    DISAGREEMENT_MM_LIMIT = 600
+    LIDAR_NO_MEASUREMENT = 0
+    DEPTH_NO_MEASUREMENT = 0
+    # TODO: Get rid of unnecessary computation. We only want to check
+    #       disagreements at the beginning and end of the overlap.
+    disagreement = np.logical_and(
+        lidar_overlap != LIDAR_NO_MEASUREMENT,
+        np.logical_or(
+            depth_scan == DEPTH_NO_MEASUREMENT,
+            depth_scan - lidar_overlap > DISAGREEMENT_MM_LIMIT))
+    # We check multiple consecutive directions to reduce noise.
+    disagreement_right = disagreement[0] and disagreement[1] and disagreement[2]
+    disagreement_left = disagreement[-1] and disagreement[-2] and disagreement[-3]
+
+    if disagreement_right:
+        # Taking measurements 2 indices away to lower impact of noise.
+        d0, d1 = lidar_scan[alignment_start], lidar_scan[alignment_start + 2]
+        phi0 = -LIDAR_FOV / 2 + alignment_start / lidar_density
+        phi1 = phi0 + 2 / lidar_density
+        a = d0 * np.cos(phi0), d0 * np.sin(phi0)
+        b = d1 * np.cos(phi1), d1 * np.sin(phi1)
+        for i in range(alignment_start):
+            d2 = lidar_scan[i]
+            if d2 == LIDAR_NO_MEASUREMENT:
+                continue
+            phi2 = -LIDAR_FOV / 2 + i / lidar_density
+            c = d2 * np.cos(phi2), d2 * np.sin(phi2)
+            if is_on_line(a, b, c):
+                lidar_scan[i] = LIDAR_NO_MEASUREMENT
+    if disagreement_left:
+        # Taking measurements 2 indices away to lower impact of noise.
+        aidx = -alignment_tail - 1
+        bidx = -alignment_tail - 1 - 2
+        d0, d1 = lidar_scan[aidx], lidar_scan[bidx]
+        phi0 = LIDAR_FOV / 2 + aidx / lidar_density
+        phi1 = phi0 - 2 / lidar_density
+        a = d0 * np.cos(phi0), d0 * np.sin(phi0)
+        b = d1 * np.cos(phi1), d1 * np.sin(phi1)
+        lidar_len = lidar_scan.shape[0]
+        for i in range(lidar_len - alignment_tail, lidar_len):
+            d2 = lidar_scan[i]
+            if d2 == LIDAR_NO_MEASUREMENT:
+                continue
+            phi2 = -LIDAR_FOV / 2 + i / lidar_density
+            c = d2 * np.cos(phi2), d2 * np.sin(phi2)
+            if is_on_line(a, b, c):
+                lidar_scan[i] = LIDAR_NO_MEASUREMENT
+
+    depth_scan[depth_scan == DEPTH_NO_MEASUREMENT] = LIDAR_NO_MEASUREMENT
+    new_scan = lidar_scan
+    new_scan[alignment_start:-alignment_tail] = depth_scan
+    return new_scan
+
 class DepthToScan(Node):
     deg30 = int(30*720/270)
 
@@ -83,92 +172,8 @@ class DepthToScan(Node):
             if self.depth is None:
                 self.publish('scan', self.scan)
                 return channel  # when no depth data are available ...
-            depth_scan = depth2dist(self.depth, pitch=self.pitch, roll=self.roll)
-
-            # Lidar scan starts with right-most direction. Let's make the
-            # virtual scan based on depth camera do the same.
-            depth_scan = np.asarray(depth_scan[::-1])
-
-            lidar_scan = np.asarray(self.scan)
-
-            CAMERA_FOV = 2 * np.arctan2(CAMW / 2.0, FX)
-            LIDAR_FOV = np.radians(270)
-
-            depth_density = depth_scan.shape[0] / CAMERA_FOV
-            lidar_density = lidar_scan.shape[0] / LIDAR_FOV
-            assert depth_density > lidar_density
-            depth_scan = cv2.resize(
-                    depth_scan.reshape((1, -1)),
-                    (int(CAMERA_FOV * lidar_density), 1),
-                    interpolation=cv2.INTER_NEAREST).reshape((-1,))
-            alignment_start = (lidar_scan.shape[0] - depth_scan.shape[0]) // 2
-            alignment_tail = lidar_scan.shape[0] - depth_scan.shape[0] - alignment_start
-
-            # Part of the lidar scan that overlaps with depth camera.
-            lidar_overlap = lidar_scan[alignment_start:-alignment_tail]
-
-            DISAGREEMENT_MM_LIMIT = 600
-            LIDAR_NO_MEASUREMENT = 0
-            DEPTH_NO_MEASUREMENT = 0
-            # TODO: Get rid of unnecessary computation. We only want to check
-            #       disagreements at the beginning and end of the overlap.
-            disagreement = np.logical_and(
-                    lidar_overlap != LIDAR_NO_MEASUREMENT,
-                    np.logical_or(
-                        depth_scan == DEPTH_NO_MEASUREMENT,
-                        depth_scan - lidar_overlap > DISAGREEMENT_MM_LIMIT))
-            # We check multiple consecutive directions to reduce noise.
-            disagreement_right = disagreement[0] and disagreement[1] and disagreement[2]
-            disagreement_left = disagreement[-1] and disagreement[-2] and disagreement[-3]
-
-            def is_on_line(a, b, c, z=300):
-                # Is point C at most `z` milimeters far from a line defined
-                # by points A and B?
-                ax, ay = a
-                bx, by = b
-                cx, cy = c
-                p = -(by - ay)
-                q = bx - ax
-                r = -(p * ax + q * ay)
-                d  = (p * cx + q * cy + r) / np.hypot(p, q)
-                return abs(d) < z
-            if disagreement_right:
-                # Taking measurements 2 indices away to lower impact of noise.
-                d0, d1 = lidar_scan[alignment_start], lidar_scan[alignment_start + 2]
-                phi0 = -LIDAR_FOV / 2 + alignment_start / lidar_density
-                phi1 = phi0 + 2 / lidar_density
-                a = d0 * np.cos(phi0), d0 * np.sin(phi0)
-                b = d1 * np.cos(phi1), d1 * np.sin(phi1)
-                for i in range(alignment_start):
-                    d2 = lidar_scan[i]
-                    if d2 == LIDAR_NO_MEASUREMENT:
-                        continue
-                    phi2 = -LIDAR_FOV / 2 + i / lidar_density
-                    c = d2 * np.cos(phi2), d2 * np.sin(phi2)
-                    if is_on_line(a, b, c):
-                        lidar_scan[i] = LIDAR_NO_MEASUREMENT
-            if disagreement_left:
-                # Taking measurements 2 indices away to lower impact of noise.
-                aidx = -alignment_tail - 1
-                bidx = -alignment_tail - 1 - 2
-                d0, d1 = lidar_scan[aidx], lidar_scan[bidx]
-                phi0 = LIDAR_FOV / 2 + aidx / lidar_density
-                phi1 = phi0 - 2 / lidar_density
-                a = d0 * np.cos(phi0), d0 * np.sin(phi0)
-                b = d1 * np.cos(phi1), d1 * np.sin(phi1)
-                lidar_len = lidar_scan.shape[0]
-                for i in range(lidar_len - alignment_tail, lidar_len):
-                    d2 = lidar_scan[i]
-                    if d2 == LIDAR_NO_MEASUREMENT:
-                        continue
-                    phi2 = -LIDAR_FOV / 2 + i / lidar_density
-                    c = d2 * np.cos(phi2), d2 * np.sin(phi2)
-                    if is_on_line(a, b, c):
-                        lidar_scan[i] = LIDAR_NO_MEASUREMENT
-
-            depth_scan[depth_scan == DEPTH_NO_MEASUREMENT] = LIDAR_NO_MEASUREMENT
-            new_scan = lidar_scan
-            new_scan[alignment_start:-alignment_tail] = depth_scan
+            depth_scan = depth2dist(self.depth, self.pitch, self.roll)
+            new_scan = adjust_scan(self.scan, depth_scan)
             self.publish('scan', new_scan.tolist())
         elif channel == 'rot':
             self.yaw, self.pitch, self.roll = [normalizeAnglePIPI(math.radians(x/100)) for x in self.rot]
@@ -176,6 +181,8 @@ class DepthToScan(Node):
             assert False, channel  # unsupported channel
 
         return channel
+
+
 
 if __name__ == '__main__':
     import argparse
