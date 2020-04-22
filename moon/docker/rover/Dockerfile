@@ -7,10 +7,10 @@ RUN python -m pip install pyzmq
 
 RUN /usr/bin/python3 -m pip install --user --no-cache-dir msgpack "opencv-python>3.4.2,<4" pyzmq
 
-COPY . ./srcp2-competitors/
-COPY . ./osgar/
+COPY ./srcp2-competitors ./srcp2-competitors
+COPY ./osgar ./osgar
 
-RUN source ./srcp2-competitors/ros_workspace/install/setup.bash
+RUN echo "source /srcp2-competitors/ros_workspace/install/setup.bash" >> /root/.bashrc
 
 ENTRYPOINT ["./osgar/moon/docker/rover/entrypoint.bash"]
 
