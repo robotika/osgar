@@ -73,21 +73,26 @@ class DummyROSMaster(Thread):
 
         # fake calls for "real" ROS node
         self.server.register_function(requestTopic, 'requestTopic')
-        self.server.register_function(lambda: '', 'request_shutdown')
+        self.server.register_function(self.request_shutdown, 'request_shutdown')
         self.quit = False
         self.host_port_addr = host_port_addr
         self.start()
+
+    def request_shutdown(self):
+        self.quit = True
+        return True
 
     def run( self ):
         while not self.quit:
             self.server.handle_request()
 
     def shutdown(self):
-        self.quit = True
         url = "http://{}:{}".format(*self.host_port_addr)
         s = ServerProxy(url)
         s.request_shutdown()
-        self.join()
+        self.join(timeout=1)
+        if self.is_alive():
+            raise RuntimeError("DummyROSMaster failed to shutdown.")
         self.server.server_close()
 
 
@@ -112,7 +117,8 @@ class ROSProxyTest(unittest.TestCase):
         with GlobalExceptionWatcher():
             proxy.start()
             proxy.request_stop()
-            proxy.join()
+            proxy.join(timeout=1)
+            self.assertFalse(proxy.is_alive())
         master.shutdown()
 
     def test_prefix4BytesLen(self):
