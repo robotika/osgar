@@ -2,12 +2,14 @@
 
 termtitle() { printf "\033]0;$*\007"; }
 
+( while true; do termtitle "bridge $ROBOT $WORLD"; sleep 5; done ) &
+
+trap "kill %1" EXIT
+
 ROBOT="${ROBOT:-X0F200L}"
 WORLD="${WORLD:-urban_circuit_practice_01}"
 
 cd $(git rev-parse --show-toplevel)
-
-termtitle "bridge $ROBOT $WORLD"
 
 ./subt/docker/run.bash osrf/subt-virtual-testbed:cloudsim_bridge_latest \
   circuit:=urban \
