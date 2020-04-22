@@ -4,13 +4,12 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /Global Options1
         - /Status1
-        - /LocalMap1
         - /TF1/Frames1
-        - /OdometryFiltered1
         - /Odometry1/Shape1
-        - /Image1
         - /LaserScan2
+        - /PoseWithCovariance1
       Splitter Ratio: 0.5
     Tree Height: 415
   - Class: rviz/Selection
@@ -31,7 +30,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: Image
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -61,12 +60,12 @@ Visualization Manager:
       Class: rviz/Map
       Color Scheme: map
       Draw Behind: false
-      Enabled: false
+      Enabled: true
       Name: GlobalMap
       Topic: /rtabmap/grid_prob_map
       Unreliable: false
       Use Timestamp: false
-      Value: false
+      Value: true
     - Alpha: 0.699999988079071
       Class: rviz/Map
       Color Scheme: map
@@ -82,33 +81,35 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        X0F40L:
+        X0F300L:
           Value: true
-        X0F40L/base_link:
-          Value: false
-        X0F40L/base_link/air_pressure:
+        X0F300L/base_link:
           Value: true
-        X0F40L/base_link/bottom_laser:
+        X0F300L/base_link/air_pressure:
           Value: true
-        X0F40L/base_link/camera_front:
+        X0F300L/base_link/bottom_laser:
           Value: true
-        X0F40L/base_link/camera_front_optical:
+        X0F300L/base_link/camera_front:
           Value: true
-        X0F40L/base_link/imu_sensor:
-          Value: false
-        X0F40L/base_link/magnetometer:
+        X0F300L/base_link/camera_front_optical:
           Value: true
-        X0F40L/base_link/top_laser:
+        X0F300L/base_link/imu_sensor:
           Value: true
-        X0F40L/odom:
+        X0F300L/base_link/magnetometer:
           Value: true
-        X0F40L/rotor_0:
+        X0F300L/base_link/top_laser:
           Value: true
-        X0F40L/rotor_1:
+        X0F300L/odom:
           Value: true
-        X0F40L/rotor_2:
+        X0F300L/rotor_0:
           Value: true
-        X0F40L/rotor_3:
+        X0F300L/rotor_1:
+          Value: true
+        X0F300L/rotor_2:
+          Value: true
+        X0F300L/rotor_3:
+          Value: true
+        base_link/front_laser:
           Value: true
         map:
           Value: true
@@ -122,29 +123,31 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        X0F40L/odom:
-          X0F40L:
-            X0F40L/base_link:
-              X0F40L/base_link/air_pressure:
+        X0F300L/odom:
+          X0F300L:
+            X0F300L/base_link:
+              X0F300L/base_link/air_pressure:
                 {}
-              X0F40L/base_link/bottom_laser:
+              X0F300L/base_link/bottom_laser:
                 {}
-              X0F40L/base_link/camera_front:
-                X0F40L/base_link/camera_front_optical:
+              X0F300L/base_link/camera_front:
+                X0F300L/base_link/camera_front_optical:
                   {}
-              X0F40L/base_link/imu_sensor:
+                base_link/front_laser:
+                  {}
+              X0F300L/base_link/imu_sensor:
                 {}
-              X0F40L/base_link/magnetometer:
+              X0F300L/base_link/magnetometer:
                 {}
-              X0F40L/base_link/top_laser:
+              X0F300L/base_link/top_laser:
                 {}
-            X0F40L/rotor_0:
+            X0F300L/rotor_0:
               {}
-            X0F40L/rotor_1:
+            X0F300L/rotor_1:
               {}
-            X0F40L/rotor_2:
+            X0F300L/rotor_2:
               {}
-            X0F40L/rotor_3:
+            X0F300L/rotor_3:
               {}
         map:
           {}
@@ -365,7 +368,7 @@ Visualization Manager:
       Value: false
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /X0F40L/front_rgbd/image_raw
+      Image Topic: /X0F300L/front/image_raw
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -413,11 +416,71 @@ Visualization Manager:
         {}
       Queue Size: 100
       Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/LaserScan
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: LaserScan
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.009999999776482582
+      Style: Flat Squares
+      Topic: /scan
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+    - Alpha: 1
+      Axes Length: 1
+      Axes Radius: 0.10000000149011612
+      Class: rviz/PoseWithCovariance
+      Color: 255; 25; 0
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: true
+      Enabled: true
+      Head Length: 1
+      Head Radius: 0.10000000149011612
+      Name: PoseWithCovariance
+      Shaft Length: 1
+      Shaft Radius: 0.10000000149011612
+      Shape: Arrow
+      Topic: /rtabmap/localization_pose
+      Unreliable: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: X0F40L/odom
+    Fixed Frame: X0F300L/odom
     Frame Rate: 30
   Name: root
   Tools:
@@ -449,14 +512,14 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.4507964849472046
+      Pitch: 1.200316309928894
       Position:
-        X: 1.2464483976364136
-        Y: 2.7550857067108154
-        Z: 14.344834327697754
+        X: -6.165022850036621
+        Y: 9.007282257080078
+        Z: 32.713340759277344
       Target Frame: <Fixed Frame>
       Value: FPS (rviz)
-      Yaw: 0.04747000336647034
+      Yaw: 6.126994609832764
     Saved: ~
 Window Geometry:
   Displays:

@@ -23,7 +23,7 @@ def mapCallback(costmap):
     rotationAngle =  tf.transformations.euler_from_quaternion(rot)[2]
     
     polar = np.roll(polar,-int(polar.shape[0]/2 + rotationAngle * polar.shape[0]/(2*math.pi)),0) 
-    #cv2.imshow('Map',cv2.resize(mapArray,(300,300))) 
+    cv2.imshow('Map',cv2.resize(mapArray,(300,300))) 
     scan = LaserScan()
     scan.header.stamp = rospy.Time.now()
     scan.header.frame_id = scanFrame
@@ -39,8 +39,8 @@ def mapCallback(costmap):
     if isFirstMessage:
         print("=====================ROS SCAN IS UP AND RUNNING :-)!========================")
         isFirstMessage = False
-    #cv2.imshow('Polar',cv2.resize(polar,(300,300)))
-    #cv2.waitKey(1)
+    cv2.imshow('Polar',cv2.resize(polar,(300,300)))
+    cv2.waitKey(1)
 
 if __name__ == '__main__':
     try:

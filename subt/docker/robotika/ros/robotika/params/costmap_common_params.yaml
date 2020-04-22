@@ -9,4 +9,5 @@ footprint_padding: 0.01
 transform_tolerance: 1
 
 controller_patience: 2.0
-
+max_obstacle_height: 10.0
+obstacle_range: 6.0
