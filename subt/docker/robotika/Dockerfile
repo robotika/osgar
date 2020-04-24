@@ -9,18 +9,12 @@ RUN /usr/bin/python3 -m pip install --user --no-cache-dir \
   "pyzmq==19.0.0"
 
 RUN cd /home/developer/ && head -n -2 .bashrc > .bashrc.new && mv .bashrc.new .bashrc
-RUN sudo apt update
 
-COPY --chown=developer:developer . ./osgar/
+COPY --chown=developer:developer . ./src/osgar/
 
-RUN source /opt/ros/melodic/setup.bash && ./osgar/subt/script/sync.sh
+RUN source /opt/ros/melodic/setup.bash && ./src/osgar/subt/script/sync.sh
 
-#COPY subt_seed_node.cc ./src/subt_seed/src/subt_seed_node.cc
-#COPY CMakeLists.txt ./src/subt_seed/CMakeLists.txt
-
-ADD ./subt/docker/robotika/ros ./src
-
-RUN sudo apt install -y ros-melodic-image-geometry \
+RUN sudo apt-get update && sudo apt install -y ros-melodic-image-geometry \
 			ros-melodic-pcl-ros \
 			ros-melodic-costmap-2d \
 			libdxflib-dev \
@@ -32,8 +26,6 @@ RUN sudo apt install -y ros-melodic-image-geometry \
 			ros-melodic-depthimage-to-laserscan \
 			mc
 
-RUN /bin/bash -c 'source /opt/ros/melodic/setup.bash && catkin_make install'
+ENTRYPOINT ["./src/osgar/subt/docker/robotika/entrypoint.bash"]
 
-ENTRYPOINT ["./osgar/subt/docker/robotika/entrypoint.bash"]
-
-CMD ["./osgar/subt/docker/robotika/run_solution.bash"]
+CMD ["./src/osgar/subt/docker/robotika/run_solution.bash"]
