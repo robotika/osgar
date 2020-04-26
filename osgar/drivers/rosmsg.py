@@ -307,9 +307,6 @@ def parse_joint_state(data):
     pos += 4 + 4 + 4 + 4
     frame_id = data[pos:pos+frame_id_size]
     pos += frame_id_size
-    assert frame_id == b'', frame_id  # i.e. not filled
-    if seq//2 % 50 == 0:
-        print(seq)
     size = struct.unpack_from('<I', data, pos)[0]  # number of joints
     pos += 4
     name = []
