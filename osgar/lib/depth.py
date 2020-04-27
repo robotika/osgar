@@ -31,7 +31,7 @@ VERTICAL_DIFF_LIMIT = np.radians(60)
 CAM_LOW = CAMH // 2 + 1
 
 # How much of a slope do we still consider "normal".
-MAX_SLOPE = np.radians(-16)
+MAX_SLOPE = np.radians(-14)
 
 
 # Indices of directions in a matrix with 3D points.
