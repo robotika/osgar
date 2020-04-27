@@ -59,19 +59,24 @@ class MyXMLRPCServer(Thread):
         print("Listening on port %d ..." % nodeAddrHostPort[1])
         self.server.register_function(publisherUpdate, "publisherUpdate")
         self.server.register_function(requestTopic, "requestTopic")
-        self.server.register_function(lambda: "", 'request_shutdown')
+        self.server.register_function(self.request_shutdown, 'request_shutdown')
         self.start()
+
+    def request_shutdown(self):
+        self.quit = True
+        return True
 
     def run(self):
         while not self.quit:
             self.server.handle_request()
 
     def shutdown(self):
-        self.quit = True
         url = "http://{}:{}".format(*self.nodeAddrHostPort)
         s = ServerProxy(url)
         s.request_shutdown()
-        self.join()
+        self.join(timeout=1)
+        if self.is_alive():
+            raise RuntimeError("MyXMLRPCServer failed to shutdown.")
         self.server.server_close()
 
 
