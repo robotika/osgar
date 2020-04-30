@@ -79,7 +79,7 @@ def read_artifacts(filename):
             world = message
             break
     root = ET.fromstring(world[4:])
-    type_re = re.compile('^(backpack|rescue_randy|gas|vent|phone|artifact_origin)')
+    type_re = re.compile('^(backpack|rescue_randy|gas|vent|phone|artifact_origin|rope|helmet)')
     for model in root.iterfind("./world/model"):
         name = model.get('name')
         match = type_re.match(name)
