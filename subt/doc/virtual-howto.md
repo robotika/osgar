@@ -85,7 +85,7 @@ to mount your `osgar` directory from the host over this directory in the contain
 ```
 
 When you do so, you can edit the files as you are used to. To rebuild the ROS
-nodes from within the running container, switch to `/osgar-ws/devel/` directory
+nodes from within the running container, switch to `/osgar-ws/build/` directory
 and call `make`. After that running
 `./osgar/subt/docker/robotika/run_solution.bash` will run the rebuilt version.
 
