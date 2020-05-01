@@ -16,11 +16,10 @@ cd osgar
 ## Download official docker images
 The currently available images are listed at:
   https://hub.docker.com/r/osrf/subt-virtual-testbed/tags
-Note, that you will need cloudsim_sim_latest, cloudsim_bridge_latest and subt_solution_latest
+Note, that you will need cloudsim_sim_latest and cloudsim_bridge_latest.
 ```
 docker pull osrf/subt-virtual-testbed:cloudsim_sim_latest
 docker pull osrf/subt-virtual-testbed:cloudsim_bridge_latest
-docker pull osrf/subt-virtual-testbed:subt_solution_latest
 ```
 
 ## Build and run locally simple unittest image
@@ -58,7 +57,10 @@ solution not covered by this HOWTO.
 ## Working with the main "robotika" image
 
 ### Build
+Ensure you have the correct robotika/subt-base image available localy (as
+referenced in `subt/docker/robotika/Dockerfile`).
 ```
+docker pull robotika/subt-base:<tag>
 ./subt/docker/build.bash robotika
 ```
 
@@ -79,22 +81,21 @@ at `/home/developer/subt_solution/osgar`. For local development it is advantageo
 to mount your `osgar` directory from the host over this directory in the container.
 
 ```commandline
-DEVEL=1 ./subt/docker/run.bash robotika bash
+./subt/scripts/devel.bash
 ```
 
-When you do so, you can edit the files as you are used to and also log files
-from the runs are saved to the host and not to the container. To rebuild the ROS
-nodes call `./osgar/subt/script/sync.sh`, to run the solution call 
-`./osgar/subt/docker/robotika/run_solution.bash`. Both calls should be
-executed inside of the running container.
+When you do so, you can edit the files as you are used to. To rebuild the ROS
+nodes from within the running container, switch to `/osgar-ws/build/` directory
+and call `make`. After that running
+`./osgar/subt/docker/robotika/run_solution.bash` will run the rebuilt version.
 
 At this moment you should see waiting for ROS master, debug count outputs of received messages
 (similarly as in unittest) and Python3 outputs of robot navigating towards the gate. The exploration reports
 number and type of received messages by OSGAR.
 
-There is a logfile available when the robot finishes. It is in the current directory with name zmq*.log
-In case you didn't mount volume over the `osgar` directory, 
-it is necessary to upload the logfile (for example via `docker cp`) to the host for further analysis, otherwise
+There is a logfile available when the robot finishes. It is in the current
+directory with name zmq*.log. It is necessary to upload the logfile (for example
+via `docker cp`) to the host for further analysis, otherwise
 it will be lost with the termination of the container.
 
 
