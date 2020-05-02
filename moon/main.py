@@ -43,8 +43,8 @@ class LidarCollisionMonitor:
     def update(self, robot, channel):
         if channel == 'scan':
             size = len(robot.scan)
-            # measure distance only in 1/3 of 270deg = 90deg
-            if min_dist(robot.scan[size//3:2*size//3]) < 1.0:
+            # measure distance in front of the rover = 180deg of 270deg
+            if min_dist(robot.scan[size//6:-size//6]) < 1.0:
                 raise LidarCollisionException()
 
     # context manager functions
