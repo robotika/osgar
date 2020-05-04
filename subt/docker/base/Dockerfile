@@ -1,5 +1,5 @@
 # Ubuntu 18.04 with nvidia-docker2 beta opengl support
-FROM nvidia/opengl:1.0-glvnd-devel-ubuntu18.04 as stage1
+FROM nvidia/cuda:10.2-cudnn7-devel-ubuntu18.04 as stage1
 
 RUN apt-get update -qq \
  && apt-get install -y -qq \
@@ -84,7 +84,9 @@ WORKDIR /osgar-ws
 
 RUN /usr/bin/python3 -m venv env && \
   /osgar-ws/env/bin/pip install --no-cache-dir \
+  "http://osgar.robotika.cz/subt/pip/tensorflow/tensorflow-2.2.0rc3-cp36-cp36m-linux_x86_64.whl" \
   "msgpack==1.0.0" \
   "numpy==1.18.2" \
   "opencv-python==4.2.0.32" \
-  "pyzmq==19.0.0"
+  "pyzmq==19.0.0" \
+  "torch==1.4.0" \
