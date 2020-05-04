@@ -1,8 +1,7 @@
-# Ubuntu 18.04 with nvidia-docker2 beta opengl support
-FROM nvidia/cuda:10.2-cudnn7-devel-ubuntu18.04 as stage1
+FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04 as stage1
 
-RUN apt-get update -qq \
- && apt-get install -y -qq \
+RUN apt-get update \
+ && apt-get install -y \
         apt-utils \
         bash-completion \
         build-essential \
@@ -21,21 +20,21 @@ RUN apt-get update -qq \
         sudo \
         vim \
         wget \
- && apt-get clean -qq
+ && apt-get clean
 
 # set default timezone
 RUN export DEBIAN_FRONTEND=noninteractive \
- && apt-get update -qq \
- && apt-get install -y -qq \
+ && apt-get update \
+ && apt-get install -y \
     tzdata \
  && ln -fs /usr/share/zoneinfo/Europe/Prague /etc/localtime \
  && dpkg-reconfigure --frontend noninteractive tzdata \
- && apt-get clean -qq
+ && apt-get clean
 
 # install ROS and required packages
 RUN /bin/sh -c 'echo "deb [trusted=yes] http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list' \
- && apt-get update -qq \
- && apt-get install -y -qq \
+ && apt-get update \
+ && apt-get install -y \
     python-catkin-tools \
     python-rosdep \
     python-rosinstall \
@@ -49,7 +48,7 @@ RUN /bin/sh -c 'echo "deb [trusted=yes] http://packages.ros.org/ros/ubuntu $(lsb
     ros-melodic-tf2-sensor-msgs \
     ros-melodic-twist-mux \
  && rosdep init \
- && apt-get clean -qq
+ && apt-get clean
 
 # sdformat8-sdf conflicts with sdformat-sdf installed from gazebo
 # so we need to workaround this using a force overwrite
@@ -59,11 +58,11 @@ RUN /bin/sh -c 'echo "deb [trusted=yes] http://packages.osrfoundation.org/gazebo
  && /bin/sh -c 'apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654'
 
 # install ign-blueprint
-RUN apt-get update -qq \
-&&  apt-get install -y -qq \
+RUN apt-get update \
+&&  apt-get install -y \
     ignition-blueprint \
     ros-melodic-ros-ign \
- && apt-get clean -qq
+ && apt-get clean
 
 SHELL ["/bin/bash", "-c"]
 
@@ -82,11 +81,16 @@ COPY --from=build /tmp/subt-ws/src/.git/refs/heads/master /opt/subt/HEAD
 
 WORKDIR /osgar-ws
 
-RUN /usr/bin/python3 -m venv env && \
-  /osgar-ws/env/bin/pip install --no-cache-dir \
-  "http://osgar.robotika.cz/subt/pip/tensorflow/tensorflow-2.2.0rc3-cp36-cp36m-linux_x86_64.whl" \
+RUN /usr/bin/python3 -m venv env
+
+RUN ./env/bin/pip install --no-cache-dir \
   "msgpack==1.0.0" \
   "numpy==1.18.2" \
   "opencv-python==4.2.0.32" \
-  "pyzmq==19.0.0" \
-  "torch==1.4.0" \
+  "pyzmq==19.0.0"
+
+RUN ./env/bin/pip install --no-cache-dir \
+  "http://osgar.robotika.cz/subt/pip/tensorflow/tensorflow-2.2.0rc3-cp36-cp36m-linux_x86_64.whl"
+
+RUN ./env/bin/pip install --no-cache-dir \
+  "torch==1.5.0+cu101" -f https://download.pytorch.org/whl/torch_stable.html
