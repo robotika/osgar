@@ -32,10 +32,35 @@ def min_dist(laser_data):
     return 0
 
 
+class LidarCollisionException(Exception):
+    pass
+
+
+class LidarCollisionMonitor:
+    def __init__(self, robot):
+        self.robot = robot
+
+    def update(self, robot, channel):
+        if channel == 'scan':
+            size = len(robot.scan)
+            # measure distance in front of the rover = 180deg of 270deg
+            if min_dist(robot.scan[size//6:-size//6]) < 1.0:
+                raise LidarCollisionException()
+
+    # context manager functions
+    def __enter__(self):
+        self.callback = self.robot.register(self.update)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.robot.unregister(self.callback)
+
+
 class SpaceRoboticsChallenge(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("desired_speed", "artf_cmd", "pose2d", "pose3d", "request_origin")
+        self.monitors = []
         self.last_position = None
         self.max_speed = 1.0  # oficial max speed is 1.5m/s
         self.max_angular_speed = math.radians(60)
@@ -67,6 +92,14 @@ class SpaceRoboticsChallenge(Node):
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_desired_speed(speed, angular_speed)
         self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
+
+    def register(self, callback):
+        self.monitors.append(callback)
+        return callback
+
+    def unregister(self, callback):
+        assert callback in self.monitors
+        self.monitors.remove(callback)
 
     def on_pose2d(self):
         x, y, heading = self.pose2d
@@ -176,6 +209,8 @@ class SpaceRoboticsChallenge(Node):
         handler = getattr(self, "on_" + channel, None)
         if handler is not None:
             handler()
+        for m in self.monitors:
+            m(self, channel)
         return channel
 
     def go_straight(self, how_far, timeout=None):
@@ -236,9 +271,10 @@ class SpaceRoboticsChallenge(Node):
             while self.time - start_time < timedelta(minutes=40):
                 try:
                     self.virtual_bumper = VirtualBumper(timedelta(seconds=2), 0.1)
-                    self.go_straight(100.0, timeout=timedelta(minutes=2))
-                except VirtualBumperException:
-                    print(self.time, "Virtual Bumper!")
+                    with LidarCollisionMonitor(self):
+                        self.go_straight(100.0, timeout=timedelta(minutes=2))
+                except (VirtualBumperException, LidarCollisionException) as e:
+                    print(self.time, repr(e))
                     self.virtual_bumper = None
                     self.go_straight(-1.0, timeout=timedelta(seconds=10))
                     self.inException = False
