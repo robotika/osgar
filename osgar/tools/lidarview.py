@@ -195,10 +195,18 @@ def get_image(data):
     return image
 
 
+def draw_bbox(image, bbox):
+    assert len(bbox) == 5, bbox
+    name, x, y, width, height = bbox
+    color = (255, 0, 0)
+    rect = pygame.Rect(x, y, width, height)
+    pygame.draw.rect(image, color, rect, 2)
+
+
 class Framer:
     """Creates frames from log entries. Packs together closest scan, pose and camera picture."""
     def __init__(self, filepath, lidar_name=None, lidar2_name=None, pose2d_name=None, pose3d_name=None, camera_name=None,
-                 camera2_name=None, joint_name=None, keyframes_name=None, title_name=None):
+                 camera2_name=None, bbox_name=None, joint_name=None, keyframes_name=None, title_name=None):
         self.log = LogIndexedReader(filepath)
         self.current = 0
         self.pose = [0, 0, 0]
@@ -208,12 +216,14 @@ class Framer:
         self.scan2 = []
         self.image = None
         self.image2 = None
+        self.bbox = None
         self.joint = None
         self.keyframe = None
         self.title = None
         self.lidar_id, self.pose2d_id, self.pose3d_id, self.camera_id = None, None, None, None
         self.lidar2_id = None
         self.camera2_id = None
+        self.bbox_id = None
         self.joint_id = None
         self.keyframes_id = None
         self.title_id = None
@@ -230,6 +240,8 @@ class Framer:
             self.camera_id = names.index(camera_name) + 1
         if camera2_name is not None:
             self.camera2_id = names.index(camera2_name) + 1
+        if bbox_name is not None:
+            self.bbox_id = names.index(bbox_name) + 1
         if joint_name is not None:
             self.joint_id = names.index(joint_name) + 1
         if keyframes_name is not None:
@@ -302,6 +314,10 @@ class Framer:
                     return timestamp, self.pose, self.scan, self.scan2, self.image, self.image2, self.joint, keyframe, self.title, False
             elif stream_id == self.camera2_id:
                 self.image2 = get_image(deserialize(data))
+            elif stream_id == self.bbox_id:
+                self.bbox = deserialize(data)
+                if self.image is not None:
+                    draw_bbox(self.image, self.bbox)
             elif stream_id == self.joint_id:
                 self.joint = deserialize(data)
             elif stream_id == self.pose3d_id:
@@ -554,6 +570,7 @@ def main(args_in=None, startswith=None):
 
     parser.add_argument('--camera', help='stream ID for JPEG images')
     parser.add_argument('--camera2', help='stream ID for 2nd JPEG images')
+    parser.add_argument('--bbox', help='stream ID for detection bounding box')
 
     parser.add_argument('--joint', help='stream ID joint angle for articulated robots (Kloubak)')
 
@@ -604,8 +621,8 @@ def main(args_in=None, startswith=None):
     g_rotation_offset_rad = math.radians(args.rotate)
     g_lidar_fov_deg = args.deg
     with Framer(args.logfile, lidar_name=args.lidar, lidar2_name=args.lidar2, pose2d_name=args.pose2d, pose3d_name=args.pose3d,
-                camera_name=args.camera, camera2_name=args.camera2, joint_name=args.joint, keyframes_name=args.keyframes,
-                title_name=args.title) as framer:
+                camera_name=args.camera, camera2_name=args.camera2, bbox_name=args.bbox, joint_name=args.joint,
+                keyframes_name=args.keyframes, title_name=args.title) as framer:
         lidarview(framer, caption_filename=filename, callback=callback, out_video=args.create_video, jump=args.jump)
 
 if __name__ == "__main__":
