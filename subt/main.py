@@ -805,16 +805,14 @@ class SubTChallenge:
         self.wait(timedelta(seconds=3))
 #############################################
 
-    def test_nav_trace(self):
+    def go_to_entrance(self):
         """
         Navigate to the base station tile end
         """
         dx, dy, __ = self.offset
-        dx -= -7.500005
-        dy -= 5.000014
-        trace = Trace()
-        trace.add_line_to((3 - dx, -5 - dy, 0))  # before tunnel
-        trace.add_line_to((10 - dx, -5 - dy, 0))  # 2.5m inside tunnel
+        trace = Trace()  # starts by default at (0, 0, 0) and the robots are placed X = -7.5m (variable Y)
+        trace.add_line_to((-4.5 - dx, -dy, 0))  # in front of the tunnel/entrance
+        trace.add_line_to((2.5 - dx, -dy, 0))  # 2.5m inside
         trace.reverse()
         self.follow_trace(trace, timeout=timedelta(seconds=30), max_target_distance=2.5, safety_limit=0.2)
 
@@ -835,9 +833,7 @@ class SubTChallenge:
             heading = quaternion.heading(self.origin_quat)
             self.stdout('heading', math.degrees(heading), 'angle', math.degrees(math.atan2(-y, -x)), 'dist', math.hypot(x, y))
 
-            self.test_nav_trace()  # hacking - experiment
-#            self.turn(normalizeAnglePIPI(math.atan2(-y, -x) - heading))
-#            self.go_straight(math.hypot(x, y))  # go to the tunnel entrance
+            self.go_to_entrance()
         else:
             # lost in tunnel
             self.stdout('Lost in tunnel:', self.origin_error, self.offset)
