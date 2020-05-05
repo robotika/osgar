@@ -18,7 +18,7 @@ class LoRaTest(unittest.TestCase):
 
     def test_autodetect(self):
         SAMPLE_DATA = b'1|cmd=home\n'
-        logger = MagicMock()
+        logger = MagicMock(write=MagicMock(return_value=datetime.timedelta()))
         bus = Bus(logger)
         c = LoRa(bus=bus.handle('lora'), config={'device_id': 4})
         tester = bus.handle('tester')

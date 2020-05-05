@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
+from datetime import timedelta
 import json
 import os
 import threading
@@ -55,7 +56,7 @@ class RecorderTest(unittest.TestCase):
                     },
                     'links': [('serial_gps.raw', 'gps.raw')]
             }
-            logger = MagicMock()
+            logger = MagicMock(write = MagicMock(return_value=timedelta(seconds=135)))
             with Recorder(config=config, logger=logger) as recorder:
                 self.assertEqual(len(recorder.modules), 2)
                 self.assertEqual(sum([sum([len(q) for q in module.bus.out.values()])
@@ -121,7 +122,7 @@ class RecorderTest(unittest.TestCase):
                 log_filename = log_line[-1]
                 self.assertTrue(log_filename.endswith(b".log"), stderr)
                 self.assertEqual(len(stdout), 1, stdout)
-                self.assertEqual(len(stderr), 3, stderr)
+                self.assertEqual(len(stderr), 2, stderr)
                 self.assertTrue(b"committing suicide by SIGINT" in stderr[-1])
             os.unlink(log_filename)
 

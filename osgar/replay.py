@@ -66,6 +66,7 @@ def replay(args, application=None):
 
 
 def main():
+    import signal
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(name)-12s %(levelname)-8s %(message)s',
@@ -93,9 +94,12 @@ def main():
     module_instance = replay(args)
     module_instance.verbose = args.verbose
 
+    signal.signal(signal.SIGINT, lambda signum, frame: module_instance.request_stop())
     module_instance.start()
     # now wait until the module is alive
-    module_instance.join()
+    while module_instance.is_alive():
+        module_instance.join(0.2)
+
     if not args.force:
         print("maximum delay:", module_instance.bus.max_delay)
 

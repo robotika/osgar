@@ -52,7 +52,7 @@
 #include <assert.h>
 
 
-#define ROSBAG_SIZE_LIMIT 2000000000L  // 2GB
+#define ROSBAG_SIZE_LIMIT 3000000000L  // 3GB
 
 
 int g_countClock = 0;
@@ -288,6 +288,10 @@ Controller::Controller(const std::string &_name)
 
   ROS_INFO_STREAM("Waiting for " << this->name << "/front/depth");
   ros::topic::waitForMessage<sensor_msgs::Image>(this->name + "/front/depth", this->n);
+
+  ROS_INFO_STREAM("Sleeping 1 simulated second to let simulation start up");
+  ros::Duration(1).sleep();
+  ROS_INFO_STREAM("Simulation hopefully up and running");
 
   this->updateTimer = this->n.createTimer(ros::Duration(0.05), &Controller::Update, this);
   this->m_receiveZmq = std::thread(Controller::receiveZmqThread, this);

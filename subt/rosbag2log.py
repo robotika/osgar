@@ -62,7 +62,7 @@ def handle_message_data(index_header_dict, data):
     return header_dict, data[4+header_size:4+header_size+4+size]
 
 
-def read_rosbag_fd_gen(f):
+def read_rosbag_fd_gen(f, verbose=False):
     """Read ROS Bag with already opened file descriptor f"""
     header = f.read(13)
     assert header == b'#ROSBAG V2.0\n', header
@@ -75,7 +75,7 @@ def read_rosbag_fd_gen(f):
         header = f.read(size)
         assert len(header) == size, (len(header), size)
         header_dict = parse_header(header)
-        if 'topic' in header_dict:
+        if 'topic' in header_dict and verbose:
             print('topic', header_dict['conn'], header_dict['topic'])
 
         data_len = f.read(4)
@@ -145,7 +145,7 @@ def parse_string(data, dump_filename=None):
     return data[pos:]
 
 
-def extract_log(gen, out_name, append=False):
+def extract_log(gen, out_name, append=False, verbose=False):
     with open(out_name, 'ab' if append else 'wb') as f:
         for header_dict, data in gen:
             op = header_dict['op']
@@ -155,7 +155,7 @@ def extract_log(gen, out_name, append=False):
                     d = parse_string(data)
                     if b'Hello' not in d:
                         f.write(d)
-                    else:
+                    elif verbose:
                         print(d, len(d))
 
 
@@ -177,19 +177,35 @@ if __name__ == "__main__":
         letter = s[-1][0]
         out_name = os.path.join(os.path.dirname(args.filename), name)
         robot_data_0_processed = False
+        robot_data_1_processed = False
         with tarfile.open(args.filename, "r") as tar:
             for member in tar.getmembers():
                 if member.name.startswith('robot_data_0.bag'):
+                    print(member.name, "->", name)
                     f = tar.extractfile(member)
-                    extract_log(read_rosbag_fd_gen(f), out_name)
+                    extract_log(read_rosbag_fd_gen(f, verbose=args.verbose), out_name, verbose=args.verbose)
                     robot_data_0_processed = True
-                elif member.name.startswith('robot_data_1.bag') and args.all:
+                elif member.name.startswith('robot_data_1.bag'):
+                    if not args.all:
+                        print(member.name, "->", "SKIPPED")
+                        continue
+                    print(member.name, "->", name)
                     assert robot_data_0_processed
                     f = tar.extractfile(member)
-                    extract_log(read_rosbag_fd_gen(f), out_name, append=True)
+                    extract_log(read_rosbag_fd_gen(f, verbose=args.verbose), out_name, append=True, verbose=args.verbose)
+                    robot_data_1_processed = True
+                elif member.name.startswith('robot_data_2.bag'):
+                    if not args.all:
+                        print(member.name, "->", "SKIPPED")
+                        continue
+                    print(member.name, "->", name)
+                    assert robot_data_0_processed
+                    assert robot_data_1_processed
+                    f = tar.extractfile(member)
+                    extract_log(read_rosbag_fd_gen(f, verbose=args.verbose), out_name, append=True, verbose=args.verbose)
                 elif member.name.endswith('rosout.log'):
                     rosout_name = letter + '-rosout.log'
-                    print(member.name)
+                    print(member.name, "->", rosout_name)
                     with open(os.path.join(os.path.dirname(args.filename), rosout_name), 'wb') as f:
                         f.write(tar.extractfile(member).read())
                 elif (member.name in ['score.yml', 'server_console.log'] or member.name.startswith('subt_urban_') or
@@ -199,7 +215,7 @@ if __name__ == "__main__":
                         f.write(tar.extractfile(member).read())
     else:
         out_name = os.path.join(os.path.dirname(args.filename), 'tmp.log')
-        extract_log(read_rosbag_gen(args.filename), out_name)
+        extract_log(read_rosbag_gen(args.filename), out_name, verbose=args.verbose)
 
 # vim: expandtab sw=4 ts=4 
 

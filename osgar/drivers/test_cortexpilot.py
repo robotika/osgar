@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import MagicMock
+from datetime import timedelta
 
 from osgar.drivers.cortexpilot import Cortexpilot
 from osgar.bus import Bus
@@ -28,7 +29,7 @@ class CortextpilotTest(unittest.TestCase):
 
     def test_usage(self):
         logger = MagicMock()
-        logger.write = MagicMock(return_value=135)
+        logger.write = MagicMock(return_value=timedelta(seconds=135))
         bus = Bus(logger)
         handle = bus.handle('cortexpilot')
         tester = bus.handle('tester')
@@ -38,25 +39,24 @@ class CortextpilotTest(unittest.TestCase):
         robot.request_stop()
         robot.join()
         tester.shutdown()
-        self.assertEqual(tester.listen(), (135, 'raw', b'\x00\x00\x03\x01\x01\xfb'))
+        self.assertEqual(tester.listen(), (timedelta(seconds=135), 'raw', b'\x00\x00\x03\x01\x01\xfb'))
 
     def test_2nd_loop(self):
-        q = MagicMock()
         logger = MagicMock()
-        logger.write = MagicMock(return_value=135)
+        logger.write = MagicMock(return_value=timedelta(seconds=135))
         bus = Bus(logger)
         handle = bus.handle('cortexpilot')
         tester = bus.handle('tester')
         robot = Cortexpilot(config={}, bus=handle)
         bus.connect('cortexpilot.raw', 'tester.raw')
-        handle.queue.put((123, 'raw', b'\x00\x00\x10\x01\x01Robik V4.0.2\x00\x8f'))
+        handle.queue.put((timedelta(seconds=123), 'raw', b'\x00\x00\x10\x01\x01Robik V4.0.2\x00\x8f'))
         robot.start()
         robot.request_stop()
         robot.join()
         tester.shutdown() # so that listen() does not block
 
-        self.assertEqual(tester.listen(), (135, 'raw', b'\x00\x00\x03\x01\x01\xfb')) # request version
-        self.assertEqual(tester.listen(), (135, 'raw', bytes.fromhex('00000f010d000000000000000040010000a2'))) # cmd
+        self.assertEqual(tester.listen(), (timedelta(seconds=135), 'raw', b'\x00\x00\x03\x01\x01\xfb')) # request version
+        self.assertEqual(tester.listen(), (timedelta(seconds=135), 'raw', bytes.fromhex('00000f010d000000000000000040010000a2'))) # cmd
 
 
     def test_create_packet(self):

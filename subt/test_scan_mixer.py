@@ -10,7 +10,7 @@ from subt.scan_mixer import ScanMixer
 class ScanMixerTest(unittest.TestCase):
 
     def test_usage(self):
-        bus = Bus(MagicMock())
+        bus = Bus(MagicMock(write=MagicMock(return_value=timedelta())))
         tester = bus.handle('tester')
         tester.register("scan", "rs_scan")
         mixer = ScanMixer(config={}, bus=bus.handle('mixer'))

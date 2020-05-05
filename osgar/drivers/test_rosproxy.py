@@ -12,7 +12,11 @@ from osgar.bus import Bus
 
 # TODO refactor into common testing code
 # https://stackoverflow.com/questions/12484175/make-python-unittest-fail-on-exception-from-any-thread
-class GlobalExceptionWatcher(object):
+class GlobalExceptionWatcher:
+
+    def __init__(self):
+        self._excepthook_name = 'excepthook' if getattr(threading, 'excepthook', None) is not None else '_format_exc'
+
     def _store_excepthook(self):
         '''
         Uses as an exception handlers which stores any uncaught exceptions.
@@ -26,14 +30,14 @@ class GlobalExceptionWatcher(object):
         Register us to the hook.
         '''
         self._exceptions = []
-        self.__org_hook = threading._format_exc
-        threading._format_exc = self._store_excepthook
+        self.__org_hook = getattr(threading, self._excepthook_name)
+        setattr(threading, self._excepthook_name, self._store_excepthook)
 
     def __exit__(self, type, value, traceback):
         '''
         Remove us from the hook, assure no exception were thrown.
         '''
-        threading._format_exc = self.__org_hook
+        setattr(threading, self._excepthook_name, self.__org_hook)
         if len(self._exceptions) != 0:
             tracebacks = os.linesep.join(self._exceptions)
             raise Exception('Exceptions in other threads: %s' % tracebacks)
@@ -69,21 +73,26 @@ class DummyROSMaster(Thread):
 
         # fake calls for "real" ROS node
         self.server.register_function(requestTopic, 'requestTopic')
-        self.server.register_function(lambda: '', 'request_shutdown')
+        self.server.register_function(self.request_shutdown, 'request_shutdown')
         self.quit = False
         self.host_port_addr = host_port_addr
         self.start()
+
+    def request_shutdown(self):
+        self.quit = True
+        return True
 
     def run( self ):
         while not self.quit:
             self.server.handle_request()
 
     def shutdown(self):
-        self.quit = True
         url = "http://{}:{}".format(*self.host_port_addr)
         s = ServerProxy(url)
         s.request_shutdown()
-        self.join()
+        self.join(timeout=1)
+        if self.is_alive():
+            raise RuntimeError("DummyROSMaster failed to shutdown.")
         self.server.server_close()
 
 
@@ -108,7 +117,8 @@ class ROSProxyTest(unittest.TestCase):
         with GlobalExceptionWatcher():
             proxy.start()
             proxy.request_stop()
-            proxy.join()
+            proxy.join(timeout=1)
+            self.assertFalse(proxy.is_alive())
         master.shutdown()
 
     def test_prefix4BytesLen(self):
