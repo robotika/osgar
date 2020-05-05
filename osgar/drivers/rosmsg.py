@@ -428,7 +428,7 @@ class ROSMsgParser(Thread):
         Thread.__init__(self)
         self.setDaemon(True)
         outputs = ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin", "gas_detected",
-                   "depth:gz", "t265_rot", "orientation",
+                   "depth:gz", "t265_rot", "orientation", "debug",
                     "joint_name", "joint_position", "joint_velocity", "joint_effort"]
         self.topics = config.get('topics', [])
         for topic_name, topic_type in self.topics:
@@ -490,6 +490,9 @@ class ROSMsgParser(Thread):
             self.bus.publish('depth', depth)
             return
         if data.startswith(b'points'):
+            return
+        if data.startswith(b'debug'):
+            self.bus.publish('debug', data[6:])  # with space
             return
         frame_id = get_frame_id(data)
  #       print(frame_id)
