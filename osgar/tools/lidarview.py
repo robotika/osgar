@@ -198,7 +198,7 @@ def get_image(data):
 def draw_bbox(image, bbox):
     assert len(bbox) == 5, bbox
     name, x, y, width, height = bbox
-    color = (255, 0, 0)
+    color = (0, 255, 0)
     rect = pygame.Rect(x, y, width, height)
     pygame.draw.rect(image, color, rect, 2)
 
