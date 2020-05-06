@@ -1,4 +1,4 @@
-FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04 as stage1
+FROM nvidia/cuda:10.1-cudnn7-runtime-ubuntu18.04 as stage1
 
 RUN apt-get update \
  && apt-get install -y \
