@@ -536,6 +536,14 @@ bool parseArtf(char *input_str, subt::msgs::Artifact& artifact)
         {
           type = subt::ArtifactType::TYPE_GAS;
         }
+        if(strcmp(buf, "TYPE_HELMET") == 0)
+        {
+          type = subt::ArtifactType::TYPE_HELMET;
+        }
+        if(strcmp(buf, "TYPE_ROPE") == 0)
+        {
+          type = subt::ArtifactType::TYPE_ROPE;
+        }
 
         artifact.set_type(static_cast<uint32_t>(type));
 
