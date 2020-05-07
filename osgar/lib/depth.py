@@ -4,13 +4,14 @@
 
 import cv2
 import numpy as np
-import sys
 
 FX = 462.1  # Focal length.
 # Placement of the camera with rspect to the center of the robot.
 CAMX, CAMY, CAMZ = 0.23, 0, (0.19 + 0.06256005)
 # Image dimensions.
 CAMW, CAMH = 640, 360
+# Principal point, position of optical axis
+RX, RY = CAMW / 2. + 0.5, CAMH / 2. + 0.5
 
 # How far we care. (In meters.)
 MAXX = 16.
@@ -39,8 +40,8 @@ X, Y, Z = 0, 1, 2
 
 # Pixel coordinates relative to the center of the image, with positive
 # directions to the left and up.
-pxs = CAMW / 2. + 0.5 - np.repeat(np.arange(CAMW).reshape((1, CAMW)), CAMH, axis=0)
-pys = CAMH / 2. + 0.5 - np.repeat(np.arange(CAMH).reshape((CAMH, 1)), CAMW, axis=1)
+pxs = RX - np.repeat(np.arange(CAMW).reshape((1, CAMW)), CAMH, axis=0)
+pys = RY - np.repeat(np.arange(CAMH).reshape((CAMH, 1)), CAMW, axis=1)
 pzs = np.ones((CAMH, CAMW), dtype=np.float)
 # For each pixel in the image, a vector representing its corresponding direction
 # in the scene with a unit forward axis.
