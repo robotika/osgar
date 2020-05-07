@@ -93,7 +93,7 @@ def draw_scan(foreground, pose, scan, color, joint=None):
         pygame.draw.circle(foreground, color, scr(X + x, Y + y), 3)
 
 
-def draw(foreground, pose, scan, poses=[], image=None, callback=None, acc_pts=None):
+def draw(foreground, pose, scan, poses=[], image=None, bbox=None, callback=None, acc_pts=None):
     color = (0, 255, 0)
     X, Y, heading = pose
     for i, i_dist in enumerate(scan):
@@ -129,9 +129,16 @@ def draw(foreground, pose, scan, poses=[], image=None, callback=None, acc_pts=No
         if width > WINDOW_SIZE[0] or height > WINDOW_SIZE[1]:
             width, height = (512, 384)
         cameraView = pygame.transform.scale(image, (width, height))
+
         foreground.blit(cameraView, (0, 0))
 
-
+        if bbox is not None:
+            assert len(bbox) == 5, bbox
+            name, x, y, width, height = bbox
+            color = (0, 255, 0)
+            rect = pygame.Rect(x, y, width, height)
+            pygame.draw.rect(image, color, rect, 2)
+        
     if callback is not None:
         debug_poly = []
         callback(scan, debug_poly)
@@ -193,15 +200,6 @@ def get_image(data):
     else:
         image = pygame.image.load(io.BytesIO(data), 'JPG').convert()
     return image
-
-
-def draw_bbox(image, bbox):
-    assert len(bbox) == 5, bbox
-    name, x, y, width, height = bbox
-    color = (0, 255, 0)
-    rect = pygame.Rect(x, y, width, height)
-    pygame.draw.rect(image, color, rect, 2)
-
 
 class Framer:
     """Creates frames from log entries. Packs together closest scan, pose and camera picture."""
@@ -290,6 +288,7 @@ class Framer:
 
 
     def _step(self, direction):
+        self.bbox = None
         if (self.current + direction) >= len(self.log):
             self.log.grow()
         while self.current + direction >= 0 and self.current + direction < len(self.log):
@@ -299,11 +298,13 @@ class Framer:
                 self.keyframe = True
             if stream_id == self.title_id:
                 self.title = deserialize(data)
+            if stream_id == self.bbox_id:
+                self.bbox = deserialize(data)
             if stream_id == self.lidar_id:
                 self.scan = deserialize(data)
                 keyframe = self.keyframe
                 self.keyframe = False
-                return timestamp, self.pose, self.scan, self.scan2, self.image, self.image2, self.joint, keyframe, self.title, False
+                return timestamp, self.pose, self.scan, self.scan2, self.image, self.image2, self.bbox, self.joint, keyframe, self.title, False
             if stream_id == self.lidar2_id:
                 self.scan2 = deserialize(data)
             elif stream_id == self.camera_id:
@@ -311,13 +312,9 @@ class Framer:
                 if self.lidar_id is None:
                     keyframe = self.keyframe
                     self.keyframe = False
-                    return timestamp, self.pose, self.scan, self.scan2, self.image, self.image2, self.joint, keyframe, self.title, False
+                    return timestamp, self.pose, self.scan, self.scan2, self.image, self.image2, self.bbox, self.joint, keyframe, self.title, False
             elif stream_id == self.camera2_id:
                 self.image2 = get_image(deserialize(data))
-            elif stream_id == self.bbox_id:
-                self.bbox = deserialize(data)
-                if self.image is not None:
-                    draw_bbox(self.image, self.bbox)
             elif stream_id == self.joint_id:
                 self.joint = deserialize(data)
             elif stream_id == self.pose3d_id:
@@ -337,8 +334,8 @@ class Framer:
                 if self.lidar_id is None and self.camera_id is None:
                     keyframe = self.keyframe
                     self.keyframe = False
-                    return timestamp, self.pose, self.scan, self.scan2, self.image, self.image2, self.joint, keyframe, self.title, False
-        return timedelta(), self.pose, self.scan, self.scan2, self.image, self.image2, self.joint, self.keyframe, self.title, True
+                    return timestamp, self.pose, self.scan, self.scan2, self.image, self.image2, self.bbox, self.joint, keyframe, self.title, False
+        return timedelta(), self.pose, self.scan, self.scan2, self.image, self.image2, self.bbox, self.joint, self.keyframe, self.title, True
 
 
 def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
@@ -389,7 +386,7 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
         gen.seek(timedelta(seconds=jump))
 
     while True:
-        timestamp, pose, scan, scan2, image, image2, joint, keyframe, title, eof = history.next()
+        timestamp, pose, scan, scan2, image, image2, bbox, joint, keyframe, title, eof = history.next()
 
         if max_timestamp is None or max_timestamp < timestamp:
             # build map only for new data
@@ -436,7 +433,7 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
             draw_robot(foreground, pose, joint)
             draw_scan(foreground, pose, scan2, color=(128, 128, 0), joint=joint)
             draw(foreground, pose, scan, poses=poses,
-                 image=img if camera_on else None,
+                 image=img if camera_on else None, bbox=bbox,
                  acc_pts=acc_pts if map_on else None,
                  callback=callback)
             screen.blit(background, (0, 0))
