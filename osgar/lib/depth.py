@@ -39,8 +39,8 @@ X, Y, Z = 0, 1, 2
 
 # Pixel coordinates relative to the center of the image, with positive
 # directions to the left and up.
-pxs = CAMW / 2. - np.repeat(np.arange(CAMW).reshape((1, CAMW)), CAMH, axis=0)
-pys = CAMH / 2. - np.repeat(np.arange(CAMH).reshape((CAMH, 1)), CAMW, axis=1)
+pxs = CAMW / 2. + 0.5 - np.repeat(np.arange(CAMW).reshape((1, CAMW)), CAMH, axis=0)
+pys = CAMH / 2. + 0.5 - np.repeat(np.arange(CAMH).reshape((CAMH, 1)), CAMW, axis=1)
 pzs = np.ones((CAMH, CAMW), dtype=np.float)
 # For each pixel in the image, a vector representing its corresponding direction
 # in the scene with a unit forward axis.
