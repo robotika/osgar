@@ -85,6 +85,7 @@ def read_artifacts(filename):
             break
     root = ET.fromstring(world[4:])
     type_re = re.compile('^(backpack|rescue_randy|gas|vent|phone|artifact_origin|rope|helmet)')
+    world = root.find("./world").attrib["name"]
     for model in root.iterfind("./world/model"):
         name = model.get('name')
         match = type_re.match(name)
@@ -92,7 +93,7 @@ def read_artifacts(filename):
             kind = match.group(1)
             x, y, z = [float(a) for a in model.find('./pose').text.split()[:3]]
             ret.append([kind, [x,y,z]])
-    return ret
+    return world, ret
 
 
 def draw(poses, artifacts):
@@ -160,7 +161,8 @@ def main():
     args = parser.parse_args()
 
     if args.artifacts:
-        artifacts = read_artifacts(args.filename)
+        world, artifacts = read_artifacts(args.filename)
+        print(f"world: {world}")
         origin = next(filter(lambda a: a[0] == 'artifact_origin', artifacts))[1]
         for kind, p in artifacts:
             corrected = ", ".join(f"{aa-oo:.2f}".rstrip('0').rstrip('.') for aa, oo in zip(p, origin))
@@ -168,7 +170,8 @@ def main():
         return
 
     p = read_poses(args.filename, args.s)
-    a = read_artifacts(args.filename)
+    world, a = read_artifacts(args.filename)
+    print(f"world: {world}")
     img = draw(p, a)
     cv2.imwrite(args.filename+'.png', img)
 
