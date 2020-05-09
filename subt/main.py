@@ -10,6 +10,7 @@ import copy
 from datetime import timedelta
 from collections import defaultdict
 from io import StringIO
+from random import Random
 
 import numpy as np
 
@@ -146,6 +147,7 @@ class SubTChallenge:
     def __init__(self, config, bus):
         self.bus = bus
         bus.register("desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout", "request_origin")
+        self.random = Random(0)
         self.start_pose = None
         self.traveled_dist = 0.0
         self.time = None
