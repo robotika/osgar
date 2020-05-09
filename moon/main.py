@@ -123,9 +123,10 @@ class SpaceRoboticsChallenge(Node):
         self.xyz = x, y, z
 
         # pose3d
-        dist3d = quaternion.rotate_vector([dist, 0, 0], self.orientation)
-        self.xyz_quat = [a + b for a, b in zip(self.xyz_quat, dist3d)]
-        self.bus.publish('pose3d', [self.xyz_quat, self.orientation])
+        if self.orientation is not None:
+            dist3d = quaternion.rotate_vector([dist, 0, 0], self.orientation)
+            self.xyz_quat = [a + b for a, b in zip(self.xyz_quat, dist3d)]
+            self.bus.publish('pose3d', [self.xyz_quat, self.orientation])
 
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_pose(self.time, pose)
