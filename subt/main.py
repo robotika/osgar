@@ -964,6 +964,7 @@ def main():
     parser_run.add_argument('--speed', help='maximum speed (default: from config)', type=float)
     parser_run.add_argument('--timeout', help='seconds of exploring before going home (default: %(default)s)',
                             type=int, default=10*60)
+    parser_run.add_argument('--log', nargs='?', help='record log filename')
     parser_run.add_argument('--init-offset', help='inital 3D offset accepted as a string of comma separated values (meters)')
     parser_run.add_argument('--init-path', help='inital path to be followed from (0, 0). 2D coordinates are separated by ;')
     parser_run.add_argument('--start-paused', dest='start_paused', action='store_true',
@@ -987,8 +988,6 @@ def main():
         # Disabled garbage collection needs to be paired with gc.collect() at place(s) that are not time sensitive.
         gc.disable()
 
-        # support simultaneously multiple platforms
-        prefix = os.path.basename(args.config[0]).split('.')[0] + '-'
         cfg = config_load(*args.config, application=SubTChallenge)
 
         # apply overrides from command line
@@ -1009,7 +1008,8 @@ def main():
 
         cfg['robot']['modules']['app']['init']['start_paused'] = args.start_paused
 
-        record(cfg, prefix)
+        prefix = os.path.basename(args.config[0]).split('.')[0] + '-'
+        record(cfg, prefix, args.log)
 
 
 if __name__ == "__main__":
