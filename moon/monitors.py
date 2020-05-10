@@ -1,6 +1,8 @@
 """
   Moon Monitors for easier strategy coding
 """
+import math
+
 
 def min_dist(laser_data):
     if len(laser_data) > 0:
@@ -18,7 +20,7 @@ class LidarCollisionMonitor:
     def __init__(self, robot):
         self.robot = robot
 
-    def update(self, robot, channel):
+    def update(self, robot, channel, data):
         if channel == 'scan':
             size = len(robot.scan)
             # measure distance in front of the rover = 180deg of 270deg
@@ -33,5 +35,34 @@ class LidarCollisionMonitor:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.robot.unregister(self.callback)
 
+
+class VirtualBumperException(Exception):
+    pass
+
+
+class VirtualBumperMonitor:
+    def __init__(self, robot, virtual_bumper):
+        self.robot = robot
+        self.virtual_bumper = virtual_bumper
+
+    def update(self, robot, channel, data):
+        if channel == 'desired_speed':
+            assert len(data) == 2, data
+            speed, angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
+            self.virtual_bumper.update_desired_speed(speed, angular_speed)
+        elif channel == 'pose2d':
+            x, y, heading = data
+            pose = (x / 1000.0, y / 1000.0, math.radians(heading / 100.0))
+            self.virtual_bumper.update_pose(robot.time, pose)  # hmm, the time here is not nice
+            if self.virtual_bumper.collision():
+                raise VirtualBumperException()
+
+    # context manager functions
+    def __enter__(self):
+        self.callback = self.robot.register(self.update)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.robot.unregister(self.callback)
 
 # vim: expandtab sw=4 ts=4

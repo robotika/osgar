@@ -12,14 +12,11 @@ from osgar.lib import quaternion
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.lib.virtual_bumper import VirtualBumper
 
-from moon.monitors import LidarCollisionException, LidarCollisionMonitor
+from moon.monitors import (LidarCollisionException, LidarCollisionMonitor,
+                           VirtualBumperException, VirtualBumperMonitor)
 
 
 PRINT_STATUS_PERIOD = timedelta(seconds=10)
-
-
-class VirtualBumperException(Exception):
-    pass
 
 
 def distance(pose1, pose2):
@@ -54,14 +51,11 @@ class SpaceRoboticsChallenge(Node):
 
         self.last_status_timestamp = None
         
-        self.virtual_bumper = None
         self.rand = Random(0)
         self.verbose = False
 
     def send_speed_cmd(self, speed, angular_speed):
-        if self.virtual_bumper is not None:
-            self.virtual_bumper.update_desired_speed(speed, angular_speed)
-        self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
+        self.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
 
     def register(self, callback):
         self.monitors.append(callback)
@@ -88,7 +82,7 @@ class SpaceRoboticsChallenge(Node):
         y += math.cos(self.pitch) * math.sin(self.yaw) * dist
         z += math.sin(self.pitch) * dist
         x0, y0, z0 = self.offset
-        self.last_send_time = self.bus.publish('pose2d', [round((x + x0) * 1000), round((y + y0) * 1000),
+        self.last_send_time = self.publish('pose2d', [round((x + x0) * 1000), round((y + y0) * 1000),
                                     round(math.degrees(self.yaw) * 100)])
         self.xyz = x, y, z
 
@@ -96,13 +90,7 @@ class SpaceRoboticsChallenge(Node):
         if self.orientation is not None:
             dist3d = quaternion.rotate_vector([dist, 0, 0], self.orientation)
             self.xyz_quat = [a + b for a, b in zip(self.xyz_quat, dist3d)]
-            self.bus.publish('pose3d', [self.xyz_quat, self.orientation])
-
-        if self.virtual_bumper is not None:
-            self.virtual_bumper.update_pose(self.time, pose)
-            if not self.inException and self.virtual_bumper.collision():
-                self.inException = True
-                raise VirtualBumperException()
+            self.publish('pose3d', [self.xyz_quat, self.orientation])
 
     def on_artf(self):
         data = self.artf
@@ -115,7 +103,7 @@ class SpaceRoboticsChallenge(Node):
             return
 
         if self.last_artf is None:
-            self.bus.publish('request_origin', True)
+            self.publish('request_origin', True)
         self.last_artf = artifact_type
         
         distance_to = data[1]
@@ -165,6 +153,12 @@ class SpaceRoboticsChallenge(Node):
             self.inException = True
             raise VirtualBumperException()
 
+    def publish(self, channel, data):
+        # should exception be thrown before actual publish?
+        for m in self.monitors:
+            m(self, channel, data)
+        return super().publish(channel, data)
+
     def update(self):
         if self.time is not None:
             if self.last_status_timestamp is None:
@@ -180,8 +174,9 @@ class SpaceRoboticsChallenge(Node):
         handler = getattr(self, "on_" + channel, None)
         if handler is not None:
             handler()
+        data = getattr(self, channel)
         for m in self.monitors:
-            m(self, channel)
+            m(self, channel, data)
         return channel
 
     def go_straight(self, how_far, timeout=None):
@@ -241,12 +236,11 @@ class SpaceRoboticsChallenge(Node):
             start_time = self.time
             while self.time - start_time < timedelta(minutes=40):
                 try:
-                    self.virtual_bumper = VirtualBumper(timedelta(seconds=2), 0.1)
-                    with LidarCollisionMonitor(self):
+                    virtual_bumper = VirtualBumper(timedelta(seconds=2), 0.1)
+                    with LidarCollisionMonitor(self), VirtualBumperMonitor(self, virtual_bumper):
                         self.go_straight(100.0, timeout=timedelta(minutes=2))
                 except (VirtualBumperException, LidarCollisionException) as e:
                     print(self.time, repr(e))
-                    self.virtual_bumper = None
                     self.go_straight(-1.0, timeout=timedelta(seconds=10))
                     self.inException = False
 
@@ -255,11 +249,11 @@ class SpaceRoboticsChallenge(Node):
                 if deg_sign:
                     deg_angle = -deg_angle
                 try:
-                    self.virtual_bumper = VirtualBumper(timedelta(seconds=2), 0.1)
-                    self.turn(math.radians(deg_angle), timeout=timedelta(seconds=30))
+                    virtual_bumper = VirtualBumper(timedelta(seconds=2), 0.1)
+                    with VirtualBumperMonitor(self, virtual_bumper):
+                        self.turn(math.radians(deg_angle), timeout=timedelta(seconds=30))
                 except VirtualBumperException:
                     print(self.time, "Turn Virtual Bumper!")
-                    self.virtual_bumper = None
                     self.turn(math.radians(-deg_angle), timeout=timedelta(seconds=30))
                     self.inException = False
 
