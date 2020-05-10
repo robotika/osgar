@@ -2,7 +2,8 @@ import unittest
 from unittest.mock import MagicMock
 
 from moon.monitors import (LidarCollisionException, LidarCollisionMonitor,
-                           VirtualBumperMonitor)
+                           VirtualBumperMonitor,
+                           PitchRollException, PitchRollMonitor)
 
 
 class MonitorTester:
@@ -39,6 +40,17 @@ class MoonMonitorsTest(unittest.TestCase):
         robot = MonitorTester()
         with VirtualBumperMonitor(robot, virtual_bumper=MagicMock()):
             robot.publish('desired_speed', [0, 0])
+
+    def test_roll_pitch_monitor(self):
+        robot = MonitorTester()
+        with PitchRollMonitor(robot):
+            robot.rot = [0, 0, 0]
+            robot.update('rot')
+
+        with self.assertRaises(PitchRollException) as err:
+            with PitchRollMonitor(robot):
+                robot.rot = [0, 5000, 0]
+                robot.update('rot')
 
 # vim: expandtab sw=4 ts=4
 

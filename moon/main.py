@@ -13,7 +13,8 @@ from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.lib.virtual_bumper import VirtualBumper
 
 from moon.monitors import (LidarCollisionException, LidarCollisionMonitor,
-                           VirtualBumperException, VirtualBumperMonitor)
+                           VirtualBumperException, VirtualBumperMonitor,
+                           PitchRollException, PitchRollMonitor)
 
 
 PRINT_STATUS_PERIOD = timedelta(seconds=10)
@@ -43,8 +44,6 @@ class SpaceRoboticsChallenge(Node):
         self.orientation = None  # channel data
 
         self.last_artf = None
-        
-        self.inException = False
         
         self.last_volatile_distance = None
         self.last_vol_index = None
@@ -149,9 +148,6 @@ class SpaceRoboticsChallenge(Node):
         if self.yaw_offset is None:
             self.yaw_offset = -temp_yaw
         self.yaw = temp_yaw + self.yaw_offset
-        if not self.inException and self.pitch > 0.5:
-            self.inException = True
-            raise VirtualBumperException()
 
     def publish(self, channel, data):
         # should exception be thrown before actual publish?
@@ -237,12 +233,13 @@ class SpaceRoboticsChallenge(Node):
             while self.time - start_time < timedelta(minutes=40):
                 try:
                     virtual_bumper = VirtualBumper(timedelta(seconds=2), 0.1)
-                    with LidarCollisionMonitor(self), VirtualBumperMonitor(self, virtual_bumper):
+                    with LidarCollisionMonitor(self), VirtualBumperMonitor(self, virtual_bumper), \
+                            PitchRollMonitor(self):
                         self.go_straight(100.0, timeout=timedelta(minutes=2))
-                except (VirtualBumperException, LidarCollisionException) as e:
+                except (VirtualBumperException, LidarCollisionException,
+                        PitchRollException) as e:
                     print(self.time, repr(e))
                     self.go_straight(-1.0, timeout=timedelta(seconds=10))
-                    self.inException = False
 
                 deg_angle = self.rand.randrange(90, 180)
                 deg_sign = self.rand.randint(0,1)
@@ -255,7 +252,6 @@ class SpaceRoboticsChallenge(Node):
                 except VirtualBumperException:
                     print(self.time, "Turn Virtual Bumper!")
                     self.turn(math.radians(-deg_angle), timeout=timedelta(seconds=30))
-                    self.inException = False
 
             self.wait(timedelta(seconds=10))
         except BusShutdownException:

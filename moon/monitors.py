@@ -3,6 +3,8 @@
 """
 import math
 
+from osgar.lib.mathex import normalizeAnglePIPI
+
 
 def min_dist(laser_data):
     if len(laser_data) > 0:
@@ -56,6 +58,30 @@ class VirtualBumperMonitor:
             self.virtual_bumper.update_pose(robot.time, pose)  # hmm, the time here is not nice
             if self.virtual_bumper.collision():
                 raise VirtualBumperException()
+
+    # context manager functions
+    def __enter__(self):
+        self.callback = self.robot.register(self.update)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.robot.unregister(self.callback)
+
+
+class PitchRollException(Exception):
+    pass
+
+
+class PitchRollMonitor:
+    def __init__(self, robot):
+        self.robot = robot
+
+    def update(self, robot, channel, data):
+        # TODO use orientation with quaternion instead
+        if channel == 'rot':
+            yaw, pitch, roll = [normalizeAnglePIPI(math.radians(x/100)) for x in data]
+            if pitch > 0.5:
+                raise PitchRollException()
 
     # context manager functions
     def __enter__(self):
