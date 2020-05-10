@@ -12,6 +12,8 @@ from osgar.lib import quaternion
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.lib.virtual_bumper import VirtualBumper
 
+from moon.monitors import LidarCollisionException, LidarCollisionMonitor
+
 
 PRINT_STATUS_PERIOD = timedelta(seconds=10)
 
@@ -22,38 +24,6 @@ class VirtualBumperException(Exception):
 
 def distance(pose1, pose2):
     return math.hypot(pose1[0] - pose2[0], pose1[1] - pose2[1])
-
-
-def min_dist(laser_data):
-    if len(laser_data) > 0:
-        # remove ultra near reflections and unlimited values == 0
-        laser_data = [x if x > 10 else 10000 for x in laser_data]
-        return min(laser_data)/1000.0
-    return 0
-
-
-class LidarCollisionException(Exception):
-    pass
-
-
-class LidarCollisionMonitor:
-    def __init__(self, robot):
-        self.robot = robot
-
-    def update(self, robot, channel):
-        if channel == 'scan':
-            size = len(robot.scan)
-            # measure distance in front of the rover = 180deg of 270deg
-            if min_dist(robot.scan[size//6:-size//6]) < 1.0:
-                raise LidarCollisionException()
-
-    # context manager functions
-    def __enter__(self):
-        self.callback = self.robot.register(self.update)
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.robot.unregister(self.callback)
 
 
 class SpaceRoboticsChallenge(Node):
