@@ -1,4 +1,4 @@
-""""
+"""
   Extract robot positions from Ignition SQLite log file
 """
 import cv2
@@ -26,9 +26,14 @@ BORDER_PX = 10  # extra border
 MARKERS = {
     'backpack': (cv2.MARKER_SQUARE, 3),
     'rescue_randy': (cv2.MARKER_DIAMOND, 2),
-    'gas': (cv2.MARKER_TRIANGLE_UP, 1),
-    'vent': (cv2.MARKER_STAR, 4),
     'phone': (cv2.MARKER_TILTED_CROSS, 5),
+
+    'gas': (cv2.MARKER_TRIANGLE_UP, 1),  # Urban
+    'vent': (cv2.MARKER_STAR, 4),
+
+    'helmet': (cv2.MARKER_TRIANGLE_UP, 1),  # Cave
+    'rope': (cv2.MARKER_STAR, 4),
+
     'artifact_origin': (cv2.MARKER_CROSS, 6),
 }
 
@@ -148,8 +153,10 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('filename', help='Ignition file from simulation (state.tlog)')
-    parser.add_argument('-s', default=3700, type=float)
-    parser.add_argument('-a', '--artifacts', action='store_true', default=False)
+    parser.add_argument('-s', default=3700, type=float,
+                        help='Limit duration time')
+    parser.add_argument('-a', '--artifacts', action='store_true', default=False,
+                        help='Display list of artifacts with positions')
     args = parser.parse_args()
 
     if args.artifacts:
