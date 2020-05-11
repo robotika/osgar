@@ -16,7 +16,7 @@ class MyTimer(Node):
 
     def run(self):
         try:
-            while self.is_alive():
+            while self.is_bus_alive():
                 self.publish('tick', None)
                 self.sleep(self.sleep_time)
 

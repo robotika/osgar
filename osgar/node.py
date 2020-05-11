@@ -25,7 +25,7 @@ class Node(Thread):
     def sleep(self, secs):
         self.bus.sleep(secs)
 
-    def is_alive(self):
+    def is_bus_alive(self):
         return self.bus.is_alive()
 
     def update(self):
