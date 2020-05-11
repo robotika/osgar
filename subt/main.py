@@ -459,7 +459,8 @@ class SubTChallenge:
         # pose3d
         dist3d = quaternion.rotate_vector([dist, 0, 0], self.orientation)
         self.xyz_quat = [a + b for a, b in zip(self.xyz_quat, dist3d)]
-        self.bus.publish('pose3d', [self.xyz_quat, self.orientation])
+        xyz_quat = [p+o for p, o in zip(self.xyz_quat, self.offset)]
+        self.bus.publish('pose3d', [xyz_quat, self.orientation])
 
     def on_acc(self, timestamp, data):
         acc = [x / 1000.0 for x in data]
