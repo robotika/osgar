@@ -47,4 +47,12 @@ def heading(quaternion):
     az =  math.atan2(2*(w0*z0+x0*y0), 1-2*(y0*y0+z0*z0))
     return az
 
+def from_axis_angle(axis, angle):
+    ax, ay, az = axis
+    qx = ax * math.sin(angle / 2)
+    qy = ay * math.sin(angle / 2)
+    qz = az * math.sin(angle / 2)
+    qw = math.cos(angle / 2)
+    return [qx, qy, qz, qw]
+
 # vim: expandtab sw=4 ts=4
