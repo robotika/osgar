@@ -3,7 +3,8 @@ from unittest.mock import MagicMock
 
 from moon.monitors import (LidarCollisionException, LidarCollisionMonitor,
                            VirtualBumperMonitor,
-                           PitchRollException, PitchRollMonitor)
+                           PitchRollException, PitchRollMonitor,
+                           min_dist)
 
 
 class MonitorTester:
@@ -29,6 +30,11 @@ class MonitorTester:
 
 
 class MoonMonitorsTest(unittest.TestCase):
+
+    def test_min_dist(self):
+        self.assertAlmostEqual(min_dist([1000, 2000, 3000]), 1.0)
+        self.assertAlmostEqual(min_dist([]), 0.0)
+        self.assertAlmostEqual(min_dist([0]), 10.0)
 
     def test_lidar_monitor(self):
         robot = MonitorTester()
