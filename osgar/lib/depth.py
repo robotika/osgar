@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 FX = 462.1  # Focal length.
-# Placement of the camera with rspect to the center of the robot.
+# Placement of the camera with respect to the center of the robot.
 CAMX, CAMY, CAMZ = 0.23, 0, (0.19 + 0.06256005)
 # Image dimensions.
 CAMW, CAMH = 640, 360
