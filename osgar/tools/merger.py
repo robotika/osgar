@@ -1,6 +1,7 @@
 """
   Multiple Logfile Merger
 """
+from datetime import timedelta
 from osgar.logger import LogReader, LogWriter, lookup_stream_id, lookup_stream_names
 
 
@@ -11,10 +12,19 @@ def merge_logfiles(logfile, outfile):
     only_stream1 = lookup_stream_id(logfile[1], 'rosmsg.image')
     with LogReader(logfile[0], only_stream_id=only_stream0) as log0, \
          LogReader(logfile[1], only_stream_id=only_stream1) as log1:
-        print(log0.start_time, log1.start_time)
-        assert False
-        with LogWriter(filename=outfile, start_time=log.start_time) as out:
-            for timestamp, stream_id, data in log:
+        print(log0.start_time, log1.start_time, log0.start_time - log1.start_time)
+        with LogWriter(filename=outfile, start_time=log0.start_time) as out:  # TODO min log0/log1
+            timestamp = timedelta()
+            out.write(stream_id=0, data=b"{'names': ['log0.image', 'log1.image']}", dt=timestamp)
+            timestamp0, stream_id0, data0 = next(log0)
+            timestamp1, stream_id1, data1 = next(log1)
+            while True:
+                if timestamp0 <= timestamp1:
+                    timestamp, stream_id, data = timestamp0, 1, data0
+                    timestamp0, stream_id0, data0 = next(log0)
+                else:
+                    timestamp, stream_id, data = timestamp1, 2, data1
+                    timestamp1, stream_id1, data1 = next(log1)
                 out.write(stream_id=stream_id, data=data, dt=timestamp)
 
 
