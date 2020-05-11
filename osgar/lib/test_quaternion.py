@@ -1,3 +1,4 @@
+import math
 import unittest
 
 from . import quaternion
@@ -29,6 +30,13 @@ class QuaternionTest(unittest.TestCase):
 
         actual = quaternion.rotate_vector(expected, q)
         expected = [-1, 0, 0]
+        self.assertAlmostEqual(expected[0], actual[0], places=6)
+        self.assertAlmostEqual(expected[1], actual[1], places=6)
+        self.assertAlmostEqual(expected[2], actual[2], places=6)
+
+    def test_from_axis_angle(self):
+        actual = quaternion.from_axis_angle((0,0,1), math.radians(90))
+        expected = [0, 0, 0.7071068, 0.7071068]
         self.assertAlmostEqual(expected[0], actual[0], places=6)
         self.assertAlmostEqual(expected[1], actual[1], places=6)
         self.assertAlmostEqual(expected[2], actual[2], places=6)
