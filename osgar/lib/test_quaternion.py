@@ -40,6 +40,7 @@ class QuaternionTest(unittest.TestCase):
         self.assertAlmostEqual(expected[0], actual[0], places=6)
         self.assertAlmostEqual(expected[1], actual[1], places=6)
         self.assertAlmostEqual(expected[2], actual[2], places=6)
+        self.assertAlmostEqual(expected[3], actual[3], places=6)
 
 
 # vim: expandtab sw=4 ts=4
