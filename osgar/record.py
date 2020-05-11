@@ -62,8 +62,8 @@ class Recorder:
         self.stop_requested.set()
 
 
-def record(config, log_prefix, duration_sec=None):
-    with LogWriter(prefix=log_prefix, note=str(sys.argv)) as log:
+def record(config, log_prefix, log_filename=None, duration_sec=None):
+    with LogWriter(prefix=log_prefix, filename=log_filename, note=str(sys.argv)) as log:
         log.write(0, bytes(str(config), 'ascii'))
         g_logger.info(log.filename)
         with Recorder(config=config['robot'], logger=log) as recorder:
