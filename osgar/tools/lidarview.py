@@ -357,7 +357,6 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
     pygame.display.flip()
 
     pygame.key.set_repeat(200, 20)
-    sleep_time = 0
 
     paused = False
     camera_on = True
@@ -445,8 +444,6 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
                 event = pygame.event.wait()
             else:
                 event = pygame.event.poll()
-            if event.type == pygame.NOEVENT:
-                pygame.time.wait(sleep_time)
             if event.type == QUIT:
                 return
             if event.type == KEYDOWN:
@@ -468,23 +465,16 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
                     map_on = not map_on
                 if event.key == K_0:
                     frames_step = 0
-                    sleep_time = 100
                 if event.key == K_1:
                     frames_step = 10
-                    sleep_time = 10
                 if event.key == K_2:
                     frames_step = 20
-                    sleep_time = 10
                 if event.key == K_3:
                     frames_step = 30
-                    sleep_time = 10
                 if event.key == K_4:
                     frames_step = 40
-                    sleep_time = 10
                 if event.key == K_9:
                     frames_step = 90
-                    sleep_time = 10
-                sleep_time = 0
                 if event.key == K_s:
                     save_image = image2 if use_image2 else image
                     pygame.image.save(save_image, "saveX-{:04}.jpg".format(save_counter))
