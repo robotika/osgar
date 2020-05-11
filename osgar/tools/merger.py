@@ -13,18 +13,27 @@ def merge_logfiles(logfile, outfile):
     with LogReader(logfile[0], only_stream_id=only_stream0) as log0, \
          LogReader(logfile[1], only_stream_id=only_stream1) as log1:
         print(log0.start_time, log1.start_time, log0.start_time - log1.start_time)
-        with LogWriter(filename=outfile, start_time=log0.start_time) as out:  # TODO min log0/log1
+        delta = log0.start_time - log1.start_time
+        with LogWriter(filename=outfile, start_time=log1.start_time) as out:  # TODO min log0/log1
             timestamp = timedelta()
             out.write(stream_id=0, data=b"{'names': ['log0.image', 'log1.image']}", dt=timestamp)
             timestamp0, stream_id0, data0 = next(log0)
             timestamp1, stream_id1, data1 = next(log1)
-            while True:
-                if timestamp0 <= timestamp1:
+            timestamp0 += delta
+            while timestamp0 is not None or timestamp1 is not None:
+                if timestamp0 is not None and (timestamp1 is None or timestamp0 <= timestamp1):
                     timestamp, stream_id, data = timestamp0, 1, data0
-                    timestamp0, stream_id0, data0 = next(log0)
+                    try:
+                        timestamp0, stream_id0, data0 = next(log0)
+                        timestamp0 += delta
+                    except StopIteration:
+                        timestamp0 = None
                 else:
                     timestamp, stream_id, data = timestamp1, 2, data1
-                    timestamp1, stream_id1, data1 = next(log1)
+                    try:
+                        timestamp1, stream_id1, data1 = next(log1)
+                    except StopIteration:
+                        timestamp1 = None
                 out.write(stream_id=stream_id, data=data, dt=timestamp)
 
 
