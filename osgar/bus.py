@@ -201,28 +201,20 @@ class LogBusHandler:
     def sleep(self, secs):
         pass
 
-    def is_alive(self):
-        return not self.finished.is_set()
-
-    def shutdown(self):
-        self.finished.set()
-
     def report_error(self, err):
         print(self.time, err)
+
 
 class LogBusHandlerInputsOnly:
     def __init__(self, log, inputs):
         self.reader = log
         self.inputs = inputs
         self.time = timedelta(0)
-        self.finished = threading.Event()
 
     def register(self, *outputs):
         pass
 
     def listen(self):
-        if self.finished.is_set():
-            raise BusShutdownException
         dt, stream_id, bytes_data = next(self.reader)
         self.time = dt
         channel = self.inputs[stream_id]
@@ -237,14 +229,9 @@ class LogBusHandlerInputsOnly:
     def sleep(self, secs):
         pass
 
-    def is_alive(self):
-        return not self.finished.is_set()
-
-    def shutdown(self):
-        self.finished.set()
-
     def report_error(self, err):
         print(self.time, err)
+
 
 if __name__ == "__main__":
     pass
