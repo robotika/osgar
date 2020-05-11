@@ -25,7 +25,7 @@ class WifiSignal(Node):
         # search SSID
 
     def run(self):
-        while self.is_alive():
+        while self.is_bus_alive():
             wifi_list = wifi_scan()
             now = self.publish("wifiscan", wifi_list)
             self.sleep(self.sleep_time)
