@@ -27,3 +27,5 @@ jobs:
     - name: Run tests
       run: |
         python -u test.py -v
+      env:
+        PYTHONIOENCODING: utf-8
