@@ -10,7 +10,6 @@ from subt import simulation
 
 
 import sys
-print(sys.argv, '-v' in sys.argv)
 if '-v' not in sys.argv and '--verbose' not in sys.argv:
     simulation.verbose(False)
     def print(*args):
