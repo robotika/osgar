@@ -18,16 +18,20 @@ class LidarCollisionException(Exception):
     pass
 
 
-class LidarCollisionMonitor:
+class VirtualBumperException(Exception):
+    pass
+
+
+class PitchRollException(Exception):
+    pass
+
+
+class BaseMonitor:
     def __init__(self, robot):
         self.robot = robot
 
     def update(self, robot, channel, data):
-        if channel == 'scan':
-            size = len(robot.scan)
-            # measure distance in front of the rover = 180deg of 270deg
-            if min_dist(robot.scan[size//6:-size//6]) < 1.0:
-                raise LidarCollisionException()
+        pass
 
     # context manager functions
     def __enter__(self):
@@ -38,13 +42,18 @@ class LidarCollisionMonitor:
         self.robot.unregister(self.callback)
 
 
-class VirtualBumperException(Exception):
-    pass
+class LidarCollisionMonitor(BaseMonitor):
+    def update(self, robot, channel, data):
+        if channel == 'scan':
+            size = len(robot.scan)
+            # measure distance in front of the rover = 180deg of 270deg
+            if min_dist(robot.scan[size//6:-size//6]) < 1.0:
+                raise LidarCollisionException()
 
 
-class VirtualBumperMonitor:
+class VirtualBumperMonitor(BaseMonitor):
     def __init__(self, robot, virtual_bumper):
-        self.robot = robot
+        super().__init__(robot)
         self.virtual_bumper = virtual_bumper
 
     def update(self, robot, channel, data):
@@ -59,36 +68,13 @@ class VirtualBumperMonitor:
             if self.virtual_bumper.collision():
                 raise VirtualBumperException()
 
-    # context manager functions
-    def __enter__(self):
-        self.callback = self.robot.register(self.update)
-        return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.robot.unregister(self.callback)
-
-
-class PitchRollException(Exception):
-    pass
-
-
-class PitchRollMonitor:
-    def __init__(self, robot):
-        self.robot = robot
-
+class PitchRollMonitor(BaseMonitor):
     def update(self, robot, channel, data):
         # TODO use orientation with quaternion instead
         if channel == 'rot':
             yaw, pitch, roll = [normalizeAnglePIPI(math.radians(x/100)) for x in data]
             if pitch > 0.5:
                 raise PitchRollException()
-
-    # context manager functions
-    def __enter__(self):
-        self.callback = self.robot.register(self.update)
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.robot.unregister(self.callback)
 
 # vim: expandtab sw=4 ts=4
