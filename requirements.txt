@@ -7,3 +7,4 @@ pyzmq==19.0.0
 pyrealsense2==2.31.0.1235; python_version < '3.8'
 numpy==1.18.2
 protobuf==3.11.3
+Shapely==1.7.0
