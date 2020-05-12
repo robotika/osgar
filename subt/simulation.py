@@ -143,19 +143,16 @@ class Simulation:
         log("current", f"forward {self.speed_forward:.2f} m/s", f"angular {self.speed_angular:.2f} deg/s")
         dtime = 0.1
         dist = dtime * self.speed_forward
-        heading = quaternion.heading(self.orientation)
-        x, y, z = self.xyz
-        x += dist * math.cos(heading)
-        y += dist * math.sin(heading)
-        self.xyz = (x, y, z)
+        dist3d = quaternion.rotate_vector([dist, 0, 0], self.orientation)
+        self.xyz = [a + b for a, b in zip(self.xyz, dist3d)]
         turn = quaternion.from_axis_angle((0,0,1), math.radians(dtime * self.speed_angular))
-        #print(self.time, turn)
         self.orientation = quaternion.multiply(self.orientation, turn)
         self.time += datetime.timedelta(seconds=dtime)
-
+        heading_centidegrees = round(math.degrees(quaternion.heading(self.orientation))*100)
+        x_mm, y_mm, z_mm = [round(c*1000) for c in self.xyz]
         self.bus.publish('orientation', self.orientation)
-        self.bus.publish('rot', [round(math.degrees(heading)*100), 0, 0])
-        self.bus.publish('pose2d', [round(x*1000), round(y*1000), round(math.degrees(heading)*100)])
+        self.bus.publish('rot', [heading_centidegrees, 0, 0])
+        self.bus.publish('pose2d', [x_mm, y_mm, heading_centidegrees])
         self.bus.publish('sim_time_sec', self.time.total_seconds())
         self.bus.publish('scan', [0] * 100)
 
