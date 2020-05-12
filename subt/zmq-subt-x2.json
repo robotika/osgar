@@ -16,11 +16,10 @@
           }
       },
       "detector": {
-          "driver": "subt.artifacts:ArtifactDetector",
+          "driver": "subt.artf_node:ArtifactDetectorDNN",
           "in": ["image", "scan"],
           "out": ["artf", "dropped", "debug_artf", "stdout"],
           "init": {
-            "virtual_world": true
           }
       },
       "reporter": {

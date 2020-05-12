@@ -25,7 +25,8 @@ DRILL = 'TYPE_DRILL'
 RESCUE_RANDY = 'TYPE_RESCUE_RANDY'
 VENT = 'TYPE_VENT'
 GAS = 'TYPE_GAS'
-
+HELMET = 'TYPE_HELMET'
+ROPE = 'TYPE_ROPE'
 
 RED_THRESHOLD = 100 #300  # for close backpacks was good 1000  # virtual QVGA=50, used to be 100, urban=1000
 YELLOW_THRESHOLD = 200  #500  # was 80
