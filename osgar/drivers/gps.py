@@ -24,7 +24,10 @@ def str2ms(s):
     if s == b'':  # unknown position
         return None
     dm, frac = (b'0000' + s).split(b'.')
-    return round((int(dm[:-2]) * 60 + float(dm[-2:] + b'.' + frac)) * 60000)
+    try:
+        return round((int(dm[:-2]) * 60 + float(dm[-2:] + b'.' + frac)) * 60000)
+    except:
+        return None
 
 
 def parse_line(line):
