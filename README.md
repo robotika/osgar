@@ -32,6 +32,18 @@ you setup PYTHONPATH to the root of this project.
 The example configurations are stored in `config` folder. JSON files are
 used.
 
+## LFS
+
+The repository is now using [LFS](https://git-lfs.github.com/) (Large File Storage), so please
+make sure you have git-lfs installed:
+```
+git lfs install
+```
+Based on OS you may need to also install it into system, for example on Ubuntu:
+```
+sudo apt install git-lfs
+```
+
 ## Examples
 
 ### Collect data from sensor(s)
