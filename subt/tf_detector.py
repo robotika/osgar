@@ -5,8 +5,6 @@ import cv2
 
 
 MODEL_DIR = "tf_models"
-PATH_TO_LABELS = "tf_models/subt_label_map.pbtxt"
-
 
 class Tf_detector:
     def __init__(self):
@@ -14,6 +12,8 @@ class Tf_detector:
         self.model = model.signatures['serving_default']
 #        print(self.model.inputs)
         self.model.output_dtypes
+        self.artf_names = np.array(["backpack", "survivor", "phone"])
+
 
     def detect(self, img):
         rows = img.shape[0]
@@ -22,40 +22,34 @@ class Tf_detector:
         input_tensor = tf.convert_to_tensor(img)
         input_tensor = input_tensor[tf.newaxis, ...]
         raw_dict = self.model(input_tensor)
-        print(raw_dict)
 
         num_detections = int(raw_dict['num_detections'])
-        print(num_detections)
-#        output_dict = {key: value[0, :num_detections].numpy()
-#                       for key, value in output_dict.items()}
-        bboxes = raw_dict['detection_boxes'][0,:num_detections, :]
-        print(bboxes)
-        classes = raw_dict['detection_classes'][:num_detections]
-        scores = raw_dict['detection_scores'][:num_detections]
-        sys.exit()
+        if num_detections > 0:
+            print(num_detections)
+            bboxes = raw_dict['detection_boxes'][0,:num_detections].numpy()
+            bboxes = bboxes*np.array([rows, cols, rows, cols])
+            bboxes = bboxes.astype('int32')
+            classes = raw_dict['detection_classes'][0, :num_detections].numpy() - 1
+            classes = classes.astype('int32')
+            scores = raw_dict['detection_scores'][0, :num_detections].numpy()
+            classes_names = self.artf_names[classes]
 
-        print(output_dict)
-#TODO...
-        output_dict['num_detections'] = num_detections
-        print(output_dict)
-        output_dict['detection_classes'] = output_dict['detection_classes'].astype(np.int64)
-        print(output_dict)
-
-        if len(output_dict["detection_boxes"]) > 0:
-            bbox = output_dict["detection_boxes"][0]
-            x = bbox[1] * cols
-            y = bbox[0] * rows
-            w = bbox[3] * cols
-            h = bbox[2] * rows
-            return [x, y, w, h]
+            return { 'bboxes': bboxes, 'classes_names': classes_names, 'scores': scores, 'num_detections': num_detections }
 
         return None
 
-    def show_result(self, img, bbox):
-        x, y, w, h = bbox
-        cv2.rectangle(img, (int(x), int(y)), (int(w), int(h)), (125, 255, 51), thickness=2)
+    def show_result(self, img, detection):
+        num_detections = detection['num_detections']
+        for ii in range(num_detections):
+            y, x, h, w = detection['bboxes'][ii]
+            score = detection['scores'][ii]
+            name = detection['classes_names'][ii]
+            cv2.rectangle(img, (x, y), (w, h), (255, 0, 0), thickness=2)
+            print(x, y)
+            cv2.putText(img, name+' '+str(score), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
+
         cv2.imshow('img', img)
-        cv2.waitKey(100)
+        cv2.waitKey(0)
 
 if __name__ == "__main__":
     detector = Tf_detector()
@@ -70,7 +64,8 @@ if __name__ == "__main__":
 
     img = cv2.imread(sys.argv[1])
     if img is not None:
-        bbox = detector.detect(img)
-        detector.show_result(img, bbox)
+        detection = detector.detect(img)
+        if detection is not None:
+            detector.show_result(img, detection)
     else:
         print("no image")
