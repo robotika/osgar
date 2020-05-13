@@ -133,8 +133,8 @@ def draw(foreground, pose, scan, poses=[], image=None, bbox=None, callback=None,
         foreground.blit(cameraView, (0, 0))
 
         if bbox is not None:
-            assert len(bbox) == 5, bbox
-            name, x, y, width, height = bbox
+            assert len(bbox) > 5, bbox
+            name, x, y, width, height = bbox[:5]
             color = (0, 255, 0)
             rect = pygame.Rect(x, y, width, height)
             pygame.draw.rect(image, color, rect, 2)
