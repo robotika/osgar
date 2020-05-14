@@ -84,7 +84,8 @@ class Simulation:
 
     def on_request_origin(self, dt, channel, data):
         log(dt, channel, data)
-        # start sending origin data until robot arrives within 0.3m from (0,0,0)
+        # ros_proxy_node.cc keeps sending origin data until robot arrives within 0.3m from (0,0,0)
+        # we send it only once
         corrected = [rr - oo for rr, oo in zip(self.xyz, self.origin)]
         self.bus.publish('origin', [b'X0F100L', *corrected, *self.orientation])
         self.bus.publish('scan', [0] * 100)
