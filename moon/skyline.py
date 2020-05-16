@@ -7,7 +7,8 @@ import numpy as np
 
 
 def skyline(image):
-    pass
+    arr = np.zeros(image.shape[1])
+    return arr
 
 
 # vim: expandtab sw=4 ts=4
