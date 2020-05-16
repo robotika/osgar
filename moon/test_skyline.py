@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import cv2
 import numpy as np
 
-from moon.skyline import skyline
+from moon.skyline import skyline, draw_skyline
 
 
 class SkylineTest(unittest.TestCase):
@@ -15,6 +15,10 @@ class SkylineTest(unittest.TestCase):
 
         s = skyline(img)
         self.assertEqual(len(s), 640)
+        img2 = draw_skyline(img, s)
+#        cv2.imshow('debug', img2)
+#        cv2.waitKey(0)
+#        cv2.imwrite('debug.jpg', img2)
 
     def test_horizon(self):
         img = np.zeros((480, 640, 3), dtype=np.uint8)
