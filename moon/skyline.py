@@ -6,9 +6,12 @@ import math
 import numpy as np
 
 
-def skyline(image):
-    arr = np.zeros(image.shape[1])
-    return arr
+def skyline(img):
+    b = img[:,:,0]
+    g = img[:,:,1]
+    r = img[:,:,2]
+    mask = r > 50
+    return mask.argmax(axis=0)
 
 
 # vim: expandtab sw=4 ts=4
