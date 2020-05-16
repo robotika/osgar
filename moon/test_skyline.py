@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import MagicMock
 
 import cv2
+import numpy as np
 
 from moon.skyline import skyline
 
@@ -14,6 +15,16 @@ class SkylineTest(unittest.TestCase):
 
         s = skyline(img)
         self.assertEqual(len(s), 640)
+
+    def test_horizon(self):
+        img = np.zeros((480, 640, 3), dtype=np.uint8)
+        s = skyline(img)
+        self.assertEqual(len(s), 640)
+        self.assertEqual(s[42], 0)
+
+        img[100:,:,:] = 120
+        s = skyline(img)
+        self.assertEqual(s[42], 100)
 
 # vim: expandtab sw=4 ts=4
 
