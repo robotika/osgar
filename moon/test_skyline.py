@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import cv2
 import numpy as np
 
-from moon.skyline import skyline, draw_skyline
+from moon.skyline import skyline, draw_skyline, find_peaks
 
 
 class SkylineTest(unittest.TestCase):
@@ -29,6 +29,15 @@ class SkylineTest(unittest.TestCase):
         img[100:,:,:] = 120
         s = skyline(img)
         self.assertEqual(s[42], 100)
+
+    def test_find_peaks(self):
+        s = np.zeros(640, dtype=np.uint16)
+        self.assertEqual(find_peaks(s), [])
+
+        s[:] = 100
+        s[13] = 40
+        self.assertEqual(find_peaks(s), [(13, 40)])
+
 
 # vim: expandtab sw=4 ts=4
 
