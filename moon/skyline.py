@@ -46,20 +46,31 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('logfile')
     parser.add_argument('--stream', help='stream name with JPEG images', required=True)
+    parser.add_argument('--stream2', help='2nd stream name with JPEG images')
     args = parser.parse_args()
 
     only_stream = lookup_stream_id(args.logfile, args.stream)
+    if args.stream2 is not None:
+        only_stream = [only_stream, lookup_stream_id(args.logfile, args.stream2)]
+    peaks = {}
     with LogReader(args.logfile, only_stream_id=only_stream) as log:
         for timestamp, stream_id, data in log:
             buf = deserialize(data)
             img = cv2.imdecode(np.fromstring(buf, dtype=np.uint8), 1)
             s = skyline(img)
+            peaks[stream_id] = find_peaks(s)
             img2 = draw_skyline(img, s)
-            cv2.imshow('skyline', img2)
+            cv2.imshow('skyline' + str(stream_id), img2)
             KEY_Q = ord('q')
+            KEY_SPACE = ord(' ')
             key = cv2.waitKey(1) & 0xFF
             if key == KEY_Q:
                 break
+            if key == KEY_SPACE:
+                print(peaks)
+                key = cv2.waitKey(0) & 0xFF
+                if key == KEY_Q:
+                    break
 
 
 if __name__ == "__main__":
