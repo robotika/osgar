@@ -28,4 +28,4 @@ termtitle "sim $ROBOT $WORLD"
   circuit:=$CIRCUIT \
   worldName:=$WORLD \
   robotName1:=$ROBOT \
-  robotConfig1:=ROBOTIKA_X2_SENSOR_CONFIG_1
+  robotConfig1:=SSCI_X4_SENSOR_CONFIG_2

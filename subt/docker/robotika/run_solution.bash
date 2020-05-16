@@ -28,13 +28,13 @@ done
 echo "Robot name is '$ROBOT_NAME'"
 
 echo "Starting ros<->osgar proxy"
-# Wait for ROS master, then start proxy
+# Wait for ROS master, then start ros nodes
 # http://wiki.ros.org/roslaunch/Commandline%20Tools#line-45
-roslaunch proxy sim.launch --wait robot_name:=$ROBOT_NAME &
+roslaunch robotika robot.launch --wait robot_name:=$ROBOT_NAME &
 
 echo "Starting osgar"
 export OSGAR_LOGS=/osgar-ws/logs
-/osgar-ws/env/bin/python3 -m subt run /osgar-ws/src/osgar/subt/zmq-subt-x2.json --side auto --walldist 0.8 --timeout 100 --speed 1.0 --note "run_solution.bash"
+/osgar-ws/env/bin/python3 -m subt run /osgar-ws/src/osgar/subt/zmq-subt-x4.json --side auto --walldist 0.8 --timeout 100 --speed 1.0 --note "run_solution.bash"
 
 echo "Sleep and finish"
 sleep 30
