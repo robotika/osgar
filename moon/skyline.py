@@ -21,6 +21,27 @@ def find_peaks(arr):
     ret = []
     if x > 0:
         ret.append((x, y))
+
+        # try to remove the single peak
+        # TODO numpy optimize
+        i = x
+        while i > 0 and arr[i - 1] >= arr[i]:
+            i -= 1
+        min_i = i
+
+        i = x
+        while i + 1 < len(arr) and arr[i] <= arr[i + 1]:
+            i += 1
+        max_i = i
+
+        arr2 = arr.copy()
+        arr2[min_i:max_i+1] = arr.max()
+
+        x = arr2.argmin()
+        y = arr2[x]
+        if x > 0:
+            ret.append((x, y))
+
     return ret
 
 

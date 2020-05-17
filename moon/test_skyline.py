@@ -38,6 +38,17 @@ class SkylineTest(unittest.TestCase):
         s[13] = 40
         self.assertEqual(find_peaks(s), [(13, 40)])
 
+    def test_2nd_peak(self):
+        s = np.zeros(640, dtype=np.uint16)
+        self.assertEqual(find_peaks(s), [])
+
+        s[:] = 100
+        s[13] = 40
+        s[14] = 42
+        self.assertEqual(find_peaks(s), [(13, 40)])
+
+        s[115] = 42
+        self.assertEqual(find_peaks(s), [(13, 40), (115, 42)])
 
 # vim: expandtab sw=4 ts=4
 
