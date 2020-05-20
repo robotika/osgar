@@ -1,4 +1,4 @@
-FROM robotika/subt-base:2020-05-06
+FROM robotika/subt-base:2020-05-18
 
 ENTRYPOINT ["./src/osgar/subt/docker/robotika/entrypoint.bash"]
 

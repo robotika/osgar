@@ -12,11 +12,11 @@ def normalize_angle(angle):
 
 
 class LocalPlannerRef:
-    def __init__(self, scan_right=math.radians(-135), scan_left=math.radians(135), direction_adherence=math.radians(90),
+    def __init__(self, scan_start=math.radians(-135), scan_end=math.radians(135), direction_adherence=math.radians(90),
                  max_obstacle_distance=1.5, obstacle_influence=1.2, scan_subsample=1, max_considered_obstacles=None):
         self.last_scan = None
-        self.scan_right = scan_right
-        self.scan_left = scan_left
+        self.scan_start = scan_start
+        self.scan_end = scan_end
         self.direction_adherence = direction_adherence
         self.max_obstacle_distance = max_obstacle_distance
         self.obstacle_influence = obstacle_influence
@@ -35,7 +35,7 @@ class LocalPlannerRef:
                 continue
             if measurement * 1e-3 > self.max_obstacle_distance:
                 continue
-            measurement_angle = self.scan_right + (self.scan_left - self.scan_right) * i / float(len(self.last_scan) - 1)
+            measurement_angle = self.scan_start + (self.scan_end - self.scan_start) * i / float(len(self.last_scan) - 1)
             measurement_vector = math.cos(measurement_angle), math.sin(measurement_angle)
 
             # Converting from millimeters to meters.
@@ -87,11 +87,11 @@ class LocalPlannerOpt:
        and way into the obstacle will have high penalization cost.
     2) leave complex evaluation as the last step for already best direction
     """
-    def __init__(self, scan_right=math.radians(-135), scan_left=math.radians(135), direction_adherence=math.radians(90),
+    def __init__(self, scan_start=math.radians(-135), scan_end=math.radians(135), direction_adherence=math.radians(90),
                  max_obstacle_distance=1.5, obstacle_influence=1.2, scan_subsample=1, max_considered_obstacles=None):
         self.last_scan = None
-        self.scan_right = scan_right
-        self.scan_left = scan_left
+        self.scan_start = scan_start
+        self.scan_end = scan_end
         self.direction_adherence = direction_adherence
         self.max_obstacle_distance = max_obstacle_distance
         self.obstacle_influence = obstacle_influence
@@ -113,7 +113,7 @@ class LocalPlannerOpt:
                 continue
             if measurement * 1e-3 > self.max_obstacle_distance:
                 continue
-            measurement_angle = self.scan_right + (self.scan_left - self.scan_right) * i / float(len(self.last_scan) - 1)
+            measurement_angle = self.scan_start + (self.scan_end - self.scan_start) * i / float(len(self.last_scan) - 1)
             measurement_vector = math.cos(measurement_angle), math.sin(measurement_angle)
 
             # Converting from millimeters to meters.
@@ -160,11 +160,11 @@ class LocalPlannerOpt:
         return max((is_good(math.radians(direction)), math.radians(direction)) for direction in range(-180, 180, 3) if valid[direction + 180])
 
 class LocalPlannerNumpy:
-    def __init__(self, scan_right=math.radians(-135), scan_left=math.radians(135), direction_adherence=math.radians(90),
+    def __init__(self, scan_start=math.radians(-135), scan_end=math.radians(135), direction_adherence=math.radians(90),
                  max_obstacle_distance=1.5, obstacle_influence=1.2, scan_subsample=1, max_considered_obstacles=None):
         self.last_scan = None
-        self.scan_right = scan_right
-        self.scan_left = scan_left
+        self.scan_start = scan_start
+        self.scan_end = scan_end
         self.direction_adherence = direction_adherence
         self.max_obstacle_distance = max_obstacle_distance
         self.obstacle_influence = obstacle_influence
@@ -189,10 +189,10 @@ class LocalPlannerNumpy:
 
         if self.angles is None or len(self.scan) != self.angles.shape[0]:
             n = len(self.scan)
-            delta = (self.scan_left - self.scan_right) / (n - 1)
+            delta = (self.scan_end - self.scan_start) / (n - 1)
             self.angles = np.linspace(
-                    self.scan_right,
-                    self.scan_left,
+                    self.scan_start,
+                    self.scan_end,
                     n).reshape((1, -1))
             self.angles_cos = np.cos(self.angles)
             self.angles_sin = np.sin(self.angles)
