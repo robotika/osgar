@@ -153,12 +153,12 @@ class Simulation:
             if cross.is_empty:
                 continue
             if cross.geom_type == 'Point':
-                ret[i] = math.sqrt(sum(c**2 for c in cross.coords[0]))
+                ret[i] = math.hypot(*cross.coords)
             elif cross.geom_type == 'MultiPoint':
                 # find closest intersection
                 ret[i] = max_dist_m
                 for item in cross:
-                    dist = math.sqrt(sum(c ** 2 for c in item.coords[0]))
+                    dist = math.hypot(*cross.coords)
                     if ret[i] > dist:
                         ret[i] = dist
             else:
