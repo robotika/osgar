@@ -11,6 +11,8 @@ import pdb
     
 HEIGHT = 1.5
 MAX_ANGULAR = 0.7
+MAX_VERTICAL = 0.5
+PID_P = 10.0
 lastScanDown = 0.0
 lastScanUp = 0.0
 lastOdom = None
@@ -27,11 +29,11 @@ def scan_up_callback(scan):
 def twist_callback(cmd_vel):
     global HEIGHT, lastScanDown, lastScanUp
     
-    
+    desiredVel = min(PID_P * abs(HEIGHT - lastScanDown.ranges[0]), MAX_VERTICAL)
     if lastScanDown.ranges[0] > HEIGHT:
-        cmd_vel.linear.z = -0.1
+        cmd_vel.linear.z = -desiredVel
     else:
-        cmd_vel.linear.z = 0.1
+        cmd_vel.linear.z = desiredVel
     """
     if lastScanDown.ranges[0] < lastScanUp.ranges[0]:
         cmd_vel.linear.z = 0.1
