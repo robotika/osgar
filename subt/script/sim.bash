@@ -6,6 +6,7 @@ ROBOT="${ROBOT:-X0F200L}"
 WORLD="${WORLD:-urban_circuit_practice_01}"
 CIRCUIT="${CIRCUIT:-urban}"
 HEADLESS="${HEADLESS:-false}"
+CONFIG="${CONFIG:-ROBOTIKA_X2_SENSOR_CONFIG_1}"
 
 cd "$(git rev-parse --show-toplevel)" || exit
 
@@ -28,4 +29,4 @@ termtitle "sim $ROBOT $WORLD"
   circuit:=$CIRCUIT \
   worldName:=$WORLD \
   robotName1:=$ROBOT \
-  robotConfig1:=SSCI_X4_SENSOR_CONFIG_2
+  robotConfig1:=$CONFIG

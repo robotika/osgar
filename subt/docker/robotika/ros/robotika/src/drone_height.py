@@ -54,7 +54,7 @@ def twist_callback(cmd_vel):
 
 def odom_callback(odom):
     global lastOdom, publisherOdom, validOdom
-    if lastOdom <> None and odom.pose.pose.position.x == 0 and odom.pose.pose.position.y == 0:
+    if lastOdom is not None and odom.pose.pose.position.x == 0 and odom.pose.pose.position.y == 0:
         #visual odometry error -> don't return empty odometry
         publisherOdom.publish(lastOdom)
         validOdom = False
