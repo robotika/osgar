@@ -94,3 +94,6 @@ RUN ./env/bin/pip install --no-cache-dir \
 
 RUN ./env/bin/pip install --no-cache-dir \
   "torch==1.5.0+cu101" -f https://download.pytorch.org/whl/torch_stable.html
+
+ENV NVIDIA_VISIBLE_DEVICES ${NVIDIA_VISIBLE_DEVICES:-all}
+ENV NVIDIA_DRIVER_CAPABILITIES ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics,compat32,utility
