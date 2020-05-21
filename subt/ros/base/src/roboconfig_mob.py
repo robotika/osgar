@@ -8,6 +8,7 @@ from nav_msgs.msg import Odometry
 import struct
 
 TICK_DELAY = 0.05 #0.1 #how many seconds lasts one synchronization cycle
+TICK_DELAY = 2.0
 TIMER_TICKS_PER_SECOND = 500
 ANGULAR_FACTOR = 130
 FORWARD_FACTOR = 100

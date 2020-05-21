@@ -46,11 +46,26 @@ class RoboHWRealMob:
         self.currentIter = 0
         self.reboot = False
         self.servo = 0
+        self.robot = "Mobos2"
 
     def connectArduino(self):
         port = rospy.get_param('/base/port')
         try:
-            self.port = serial.Serial(port,baudrate=38400,timeout=0.05)
+            #arduino micro is reset by opening port at 1200baud
+            ser = serial.Serial(
+                port,
+                baudrate=1200,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE,
+                bytesize=serial.EIGHTBITS
+            )
+            ser.isOpen()
+            ser.close()
+            time.sleep(10.0)
+            print("Initialize communication with Arduino")
+            self.port = serial.Serial(port,baudrate=38400,timeout=0.05, parity=serial.PARITY_NONE,
+                        stopbits=serial.STOPBITS_ONE,
+                        bytesize=serial.EIGHTBITS)
         except:
             print("_____________________________")
             print("Robot port ",port," can't be found!")
@@ -70,13 +85,13 @@ class RoboHWRealMob:
     def synchronize(self,executeAt, speeds,watchdog = 255):
         servos = [0,0,0,0]
         digitalOutputs = 0
-        
+        #pdb.set_trace()
         if self.isFirstRun:
             self.isFirstRun = False
             #wait for AVR reboot bytes
-            #print("Waiting for AVR:")
+            print("Waiting for AVR:")
             while True:
-                #print(".", end=' ')
+                print(".", end=' ')
                 byte = self.waitForByte()
                 if byte == chr(AVR_REBOOT_CHAR):
                     break
@@ -239,6 +254,7 @@ class RoboHWRealMob:
         
         #-------------------------------
         """
+        print("Timer=",timer)
         return timer,[R_encoder0,R_encoder1,R_encoder2,R_encoder3],redSwitch
 
 
@@ -273,6 +289,7 @@ class RoboHWRealMob:
         
     def sendByte(self,byte):
         byte = struct.pack("B",byte)
+        #rospy.logdebug("Sending:%02x(%s) " % (ord(byte),byte))
         self.port.write(byte)
         #rospy.logdebug(">%02x(%s) " % (ord(byte),byte))
 

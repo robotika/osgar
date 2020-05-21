@@ -106,7 +106,7 @@ lastVelMsgTime = rospy.Time.now()
 #diagnostic_publisher = rospy.Publisher('/diagnostics', Twist, queue_size=10)
 #subscriber_tank = rospy.Subscriber("/cmd_vel_tank", rover_drive.msg.Tank, on_new_tank, queue_size=15)
 #rospy.spin()
-r = rospy.Rate(10) # 5hz
+r = rospy.Rate(10)
 while not rospy.is_shutdown():
     updateBase(vel_msg)
     r.sleep()
