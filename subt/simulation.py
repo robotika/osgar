@@ -4,9 +4,10 @@ import inspect
 import logging
 import math
 
-import numpy as np
-
 from threading import Thread, RLock
+
+import numpy as np
+from shapely.geometry import LineString, MultiLineString
 
 from osgar.lib import quaternion
 
@@ -40,10 +41,11 @@ class SimLogger:
 
 class Simulation:
 
-    def __init__(self, bus, end_condition):
+    def __init__(self, bus, end_condition, world=None):
         bus.register('scan', 'rot', 'orientation', 'sim_time_sec', 'origin', 'pose2d', 'acc', 'artf')
         self.bus = bus
         self.end_condition = end_condition
+        self.world = world if world is not None else MultiLineString()
         self._handlers = collections.defaultdict(lambda: self.on_default)
         self.set_handler('request_origin', self.on_request_origin)
         self.set_handler('desired_speed', self.on_desired_speed)
@@ -88,7 +90,7 @@ class Simulation:
         # we send it only once
         corrected = [rr - oo for rr, oo in zip(self.xyz, self.origin)]
         self.bus.publish('origin', [b'X0F100L', *corrected, *self.orientation])
-        self.bus.publish('scan', [0] * 100)
+        self.bus.publish('scan', self.scan())
 
     def on_pose(self, dt, channel, data):
         if channel == 'pose2d':
@@ -123,5 +125,53 @@ class Simulation:
         self.bus.publish('rot', [heading_centidegrees, 0, 0])
         self.bus.publish('pose2d', [x_mm, y_mm, heading_centidegrees])
         self.bus.publish('sim_time_sec', self.time.total_seconds())
-        self.bus.publish('scan', [0] * 100)
+        self.bus.publish('scan', self.scan())
 
+        #log("++++", x, y, math.degrees(heading))
+
+    def scan(self):
+        from shapely.affinity import translate, rotate
+        "270 degrees -> np.linspace(-135, 135, 271)"
+        ret = np.zeros((271,))
+
+        # create lidar lines
+        angles = np.linspace(math.radians(-135), math.radians(135), 271)
+        acos = np.cos(angles)
+        asin = np.sin(angles)
+        max_dist_m = 10.0
+        x = acos * max_dist_m
+        y = asin * max_dist_m
+
+        # transform world to robot coordinates
+        world = self.world
+        world = translate(world, *[-c for c in self.xyz])
+        world = rotate(world, -quaternion.heading(self.orientation), origin=(0,0), use_radians=True)
+
+        # intersect each lidar line with the world
+        for i, point in enumerate(zip(x, y)):
+            cross = world.intersection(LineString([(0,0), point]))
+            if cross.is_empty:
+                continue
+            if cross.geom_type == 'Point':
+                ret[i] = math.hypot(*cross.coords)
+            elif cross.geom_type == 'MultiPoint':
+                # find closest intersection
+                ret[i] = max_dist_m
+                for item in cross:
+                    dist = math.hypot(*cross.coords)
+                    if ret[i] > dist:
+                        ret[i] = dist
+            else:
+                assert False
+        return ret
+
+if __name__ == "__main__":
+    from unittest.mock import MagicMock
+    from shapely.geometry import MultiLineString
+    bus = MagicMock()
+    world = MultiLineString([[(1,-1), (1,1)], [(2,-1), (2,1)]])
+    sim = Simulation(bus, lambda sim: False, world=world)
+    sim.xyz = [-1.0, 0.0, 0.0]
+    sim.orientation = quaternion.from_axis_angle((0, 0, 1), math.radians(90))
+    scan = sim.scan()
+    print(scan)
