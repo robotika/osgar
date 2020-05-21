@@ -1,9 +1,13 @@
 <?xml version="1.0"?>
 <launch>
-  <!-- Arguments -->
+	<!-- Read me
+	This launch file is prepared for remote operation of drone by keyboard. Because of limitations of docker in terminal emulation, the node teleop_twist_keyboard can't be run directly from this launch file, but from outside. To run it do the following:
+Join the solution docker in another terminal window. Change teh robot name (X0F400L) to your robot name and execute:
+/opt/ros/melodic/lib/teleop_twist_keyboard/teleop_twist_keyboard.py cmd_vel:=/X0F400L/cmd_vel_osgar __name:=keyboard
+        	-->
   <arg name="robot_name" default="" />
   <param name="robot_name" value="$(arg robot_name)"/>
-  <env name="ROSCONSOLE_CONFIG_FILE"  value="$(find robotika)/../custom_rosconsole.conf"/>
+  <env name="ROSCONSOLE_CONFIG_FILE"  value="$(find robot)/custom_rosconsole.conf"/>
 
   <!-- Launch your controller nodes -->
   <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)" output="screen">
@@ -14,11 +18,12 @@
   </node>
 
 
-  <node name="drone_height" pkg="robotika" type="drone_height.py">
+  <node name="drone_height" pkg="robot" type="drone_height.py">
 	<remap from="scan_down" to="$(arg robot_name)/bottom_scan" />
 	<remap from="scan_up" to="$(arg robot_name)/top_scan" />
 	<remap from="cmd_vel_drone" to="$(arg robot_name)/cmd_vel" />
 	<remap from="cmd_vel" to="$(arg robot_name)/cmd_vel_osgar"/>
 	<remap from="odom" to="$(arg robot_name)/odom" />
   </node> 
+
 </launch>

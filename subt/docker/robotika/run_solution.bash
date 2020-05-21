@@ -31,7 +31,7 @@ grep -q ssci_x4_sensor_config <<< $ROBOT_DESCRIPTION && IS_X4=true || IS_X4=fals
 if $IS_X4
 then
     echo "Robot is X4 drone"    
-    LAUNCH_FILE="robotika robot.launch"
+    LAUNCH_FILE="robot drone_keyboard.launch"
     CONFIG_FILE="zmq-subt-x4.json"
 else
     echo "Robot is X2 wheeled robot"
