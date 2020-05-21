@@ -77,7 +77,7 @@ def main():
     with LogReader(args.logfile, only_stream_id=only_stream) as log:
         for timestamp, stream_id, data in log:
             buf = deserialize(data)
-            img = cv2.imdecode(np.fromstring(buf, dtype=np.uint8), 1)
+            img = cv2.imdecode(np.fromstring(buf, dtype=np.uint8), cv2.IMREAD_COLOR)
             s = skyline(img)
             peaks[stream_id] = find_peaks(s)
             img2 = draw_skyline(img, s)
