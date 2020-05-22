@@ -58,6 +58,7 @@ class DroneHeightListener:
             self.lastOdom = odom
         
 
-rospy.init_node("drone_height",log_level=rospy.DEBUG)
-droneHeightListener = DroneHeightListener()
-rospy.spin()
+if __name__ == "__main__":
+    rospy.init_node("drone_height", log_level=rospy.DEBUG)
+    droneHeightListener = DroneHeightListener()
+    rospy.spin()
