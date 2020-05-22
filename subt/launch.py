@@ -1,4 +1,5 @@
 import logging
+import platform
 import signal
 import subprocess
 
@@ -15,7 +16,8 @@ class Launch:
 
     def request_stop(self):
         self.bus.shutdown()
-        self.running.send_signal(signal.SIGINT)
+        signum = signal.CTRL_C_EVENT if platform.system() == "Windows" else signal.SIGINT
+        self.running.send_signal(signum)
 
     def join(self, timeout=None):
         try:
