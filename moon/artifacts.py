@@ -71,14 +71,14 @@ class ArtifactDetector(Node):
         self.cascade = [
             {
                 'artefact_name': 'cubesat',
-                'classifier': cv2.CascadeClassifier('/osgar/moon/cubesat.xml'),
+                'classifier': cv2.CascadeClassifier('/osgar/moon/xml/cubesat.xml'),
                 'min_size': 5,
                 'max_size': 110,
                 'subsequent_detects': 0
                 },
             {
                 'artefact_name': 'homebase',
-                'classifier': cv2.CascadeClassifier('/osgar/moon/homebase.xml'),
+                'classifier': cv2.CascadeClassifier('/osgar/moon/xml/homebase.xml'),
                 'min_size': 50,
                 'max_size': 300,
                 'subsequent_detects': 0
