@@ -172,16 +172,17 @@ class RoboHWRealCar:
     def sendByte(self,byte):
         byte = struct.pack("B",byte)
         self.port.write(byte)
-        #rospy.logdebug(">%02x(%s) " % (ord(byte),byte))
+        rospy.logdebug(">%02x(%s) " % (ord(byte),byte))
 
         
     def waitForByte(self):
+        rospy.logdebug("waitForByte"))
         byte = self.port.read()
         if byte == b"":
             rospy.logdebug("Comm timeout")
             return "\xff"
         #print("<%02x(%s) " % (ord(byte),byte))
-        #rospy.logdebug("<%02x(%s) " % (ord(byte),byte))
+        rospy.logdebug("<%02x(%s) " % (ord(byte),byte))
         return byte
 
     def getReboot(self):

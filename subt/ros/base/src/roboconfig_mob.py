@@ -25,7 +25,7 @@ class RoboconfigMob:
     def __init__(self):
         self.wheelBase = 0.24
         self.encDist1000MM = 6586
-        self.lastEncoders = [0,0,0,0]
+        self.lastEncoders = [0,0,0,0,0,0]
         self.hardware = RoboHWRealMob()
         self.motorController = MotorController(self.wheelBase,NUMBER_OF_MOTORS)
         self.lastTimer = 0
@@ -68,7 +68,7 @@ class RoboconfigMob:
 
         
     def convertSpeedFromRobot(self,encoders,lastEncoders,time):
-        encDiff = [0,0,0,0]
+        encDiff = [0,0,0,0,0,0]
         
         #print "Encoders=",encoders
         for i in range(0,len(encoders)):
@@ -91,11 +91,24 @@ class RoboconfigMob:
         
     def convertSpeedToRobot(self,speed):        
         speeds = Object
+        """
         speeds.frontRight = int(max(0, min(64 - speed.frontRight * 64,128)))
         speeds.frontLeft = int(max(128, min(192 - speed.frontLeft * 64,255)))
         speeds.rearLeft = int(max(0, min(64 - speed.rearRight * 64,128)))
         speeds.rearRight = int(max(128, min(192 - speed.rearLeft * 64,255)))
-        
+        speeds.centerLeft = int(max(0, min(64 - speed.centerRight * 64,128)))
+        speeds.centerRight = int(max(128, min(192 - speed.centerLeft * 64,255)))
+        """
+        MIN = 0
+        MAX = 255
+        MID = 128
+        DIFF = MID - MIN
+        speeds.frontRight = int(max(MIN, min(MID - speed.frontRight * DIFF,MAX)))
+        speeds.frontLeft = int(max(MIN, min(MID - speed.frontLeft * DIFF,MAX)))
+        speeds.rearLeft = int(max(MIN, min(MID - speed.rearRight * DIFF,MAX)))
+        speeds.rearRight = int(max(MIN, min(MID - speed.rearLeft * DIFF,MAX)))
+        speeds.centerLeft = int(max(MIN, min(MID - speed.centerRight * DIFF,MAX)))
+        speeds.centerRight = int(max(MIN, min(MID - speed.centerLeft * DIFF,MAX)))
         return speeds
    
     

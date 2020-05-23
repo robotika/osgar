@@ -91,7 +91,7 @@ class RoboHWRealMob:
             #wait for AVR reboot bytes
             print("Waiting for AVR:")
             while True:
-                print(".", end=' ')
+                print("y.", end=' ')
                 byte = self.waitForByte()
                 if byte == chr(AVR_REBOOT_CHAR):
                     break
@@ -113,10 +113,11 @@ class RoboHWRealMob:
             self.sendByte(speeds.frontRight)
             self.sendByte(speeds.rearLeft)
             self.sendByte(speeds.rearRight)
-
+            self.sendByte(speeds.centerRight)
+            self.sendByte(speeds.centerLeft)
             self.sendByte(watchdog)
             self.sendByte(digitalOutputs)
-            self.sendByte((executeAtByte0 + executeAtByte1 + speeds.rearLeft + speeds.rearRight + speeds.frontLeft + speeds.frontRight + watchdog + digitalOutputs) & 0xFF)
+            self.sendByte((executeAtByte0 + executeAtByte1 + speeds.rearLeft + speeds.rearRight + speeds.frontLeft + speeds.frontRight + speeds.centerLeft + speeds.centerRight + watchdog + digitalOutputs) & 0xFF)
 
             tmp = self.waitForByte()
             while tmp == chr(PACKET_DEBUG_START):
@@ -138,7 +139,7 @@ class RoboHWRealMob:
         timer += 256 * ord(bytes[1])
         
         bytes = []
-        for i in range(0,8):
+        for i in range(0,12):
             bytes.append(self.waitForByte())
         
         R_encoder0 = ord(bytes[0])
@@ -149,6 +150,11 @@ class RoboHWRealMob:
         R_encoder2 += 256 * ord(bytes[5])
         R_encoder3 = ord(bytes[6])
         R_encoder3 += 256 * ord(bytes[7])
+        R_encoder4 = ord(bytes[8])
+        R_encoder4 += 256 * ord(bytes[9])
+        R_encoder5 = ord(bytes[10])
+        R_encoder5 += 256 * ord(bytes[11])
+
             
         #print "Bytes:",bytes
         
@@ -254,8 +260,7 @@ class RoboHWRealMob:
         
         #-------------------------------
         """
-        print("Timer=",timer)
-        return timer,[R_encoder0,R_encoder1,R_encoder2,R_encoder3],redSwitch
+        return timer,[R_encoder0,R_encoder1,R_encoder2,R_encoder3,R_encoder4,R_encoder5],redSwitch
 
 
 
@@ -281,7 +286,7 @@ class RoboHWRealMob:
                     
                     
                 
-            print(".", end=' ')
+            print("x.", end=' ')
             
         while self.waitForByte() != -1:
             pass
@@ -289,18 +294,18 @@ class RoboHWRealMob:
         
     def sendByte(self,byte):
         byte = struct.pack("B",byte)
-        #rospy.logdebug("Sending:%02x(%s) " % (ord(byte),byte))
+        rospy.logdebug("Sending:%02x(%s) " % (ord(byte),byte))
         self.port.write(byte)
-        #rospy.logdebug(">%02x(%s) " % (ord(byte),byte))
-
+        rospy.logdebug(">%02x(%s) " % (ord(byte),byte))
+        print(">%02x(%s) " % (ord(byte),byte))
         
     def waitForByte(self):
         byte = self.port.read()
         if byte == b"":
             rospy.logdebug("Comm timeout")
             return -1
-        #print("<%02x(%s) " % (ord(byte),byte))
-        #rospy.logdebug("<%02x(%s) " % (ord(byte),byte))
+        print("<%02x(%s) " % (ord(byte),byte))
+        rospy.logdebug("<%02x(%s) " % (ord(byte),byte))
         return byte
 
     def getReboot(self):
