@@ -79,6 +79,7 @@ class LogZeroMQ:
     def run_reqrep(self):
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
+        socket.connect(self.endpoint)
         try:
             while True:
                 dt, __, data = self.bus.listen()
