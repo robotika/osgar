@@ -41,7 +41,7 @@ export OSGAR_LOGS=`pwd`
 cd osgar
 for s in ${JSONFILES[@]}; do
     echo "starting recording of $s"
-    python3 -m osgar.record --duration 2700 moon/$s --note "collect some ROS data" &
+    python3 -m osgar.record --duration 2700 moon/config/$s --note "collect some ROS data" &
     ROBOT_PIDS+=($!)
 done
 
