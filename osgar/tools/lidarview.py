@@ -19,7 +19,7 @@ from osgar.lib.serialize import deserialize
 from osgar.lib.config import get_class_by_name
 from osgar.lib import quaternion
 try:
-    from osgar.lib.depth import depth2danger
+    from osgar.lib.depth import depth2danger, DepthParams
 except:
     pass  # workaround to merge lib/depth.py
 
@@ -188,9 +188,10 @@ def get_image(data):
     # https://stackoverflow.com/questions/12569452/how-to-identify-numpy-types-in-python
     if isinstance(data, np.ndarray):
         # depth data for ROBOTIKA_X2_SENSOR_CONFIG_1 (640 x 360)
+        depth_params = DepthParams()
         # https://www.learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
         if g_danger_binary_image:
-            img = np.array(depth2danger(data) * 255, dtype=np.uint8)
+            img = np.array(depth2danger(data, depth_params) * 255, dtype=np.uint8)
             im_color = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
         else:
             img = np.array(np.minimum(255*40, data)/40, dtype=np.uint8)

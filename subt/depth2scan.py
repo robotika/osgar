@@ -8,7 +8,7 @@ import numpy as np
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
-from osgar.lib.depth import depth2dist, FX, CAMW
+from osgar.lib.depth import depth2dist, DepthParams
 from osgar.lib.mathex import normalizeAnglePIPI
 
 
@@ -72,7 +72,7 @@ def is_on_line(a, b, c, z=300):
     return abs(d) < z
 
 
-def adjust_scan(scan, depth_scan):
+def adjust_scan(scan, depth_scan, depth_params):
 
     # Lidar scan starts with right-most direction. Let's make the
     # virtual scan based on depth camera do the same.
@@ -80,7 +80,7 @@ def adjust_scan(scan, depth_scan):
 
     lidar_scan = np.asarray(scan)
 
-    CAMERA_FOV = 2 * np.arctan2(CAMW / 2.0, FX)
+    CAMERA_FOV = 2 * np.arctan2(depth_params.camw / 2.0, depth_params.fx)
     LIDAR_FOV = np.radians(270)
 
     depth_density = depth_scan.shape[0] / CAMERA_FOV
@@ -152,7 +152,7 @@ def adjust_scan(scan, depth_scan):
 class DepthToScan(Node):
     deg30 = int(30*720/270)
 
-    def __init__(self, config, bus):
+    def __init__(self, config, bus, depth_params=DepthParams()):
         super().__init__(config, bus)
         bus.register("scan")
         self.depth = None  # initialize inputs
@@ -160,6 +160,7 @@ class DepthToScan(Node):
         self.verbose = False
         self.scale = np.array([1/math.cos(math.radians(30*(i-80)/80)) for i in range(160)])
         self.yaw, self.pitch, self.roll = None, None, None  # unknown values
+        self.depth_params = depth_params
 
     def update(self):
         channel = super().update()
@@ -172,8 +173,8 @@ class DepthToScan(Node):
             if self.depth is None:
                 self.publish('scan', self.scan)
                 return channel  # when no depth data are available ...
-            depth_scan = depth2dist(self.depth, self.pitch, self.roll)
-            new_scan = adjust_scan(self.scan, depth_scan)
+            depth_scan = depth2dist(self.depth, self.pitch, self.roll, self.depth_params)
+            new_scan = adjust_scan(self.scan, depth_scan, self.depth_params)
             self.publish('scan', new_scan.tolist())
         elif channel == 'rot':
             self.yaw, self.pitch, self.roll = [normalizeAnglePIPI(math.radians(x/100)) for x in self.rot]
