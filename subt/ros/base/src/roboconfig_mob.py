@@ -99,8 +99,8 @@ class RoboconfigMob:
         speeds.centerLeft = int(max(0, min(64 - speed.centerRight * 64,128)))
         speeds.centerRight = int(max(128, min(192 - speed.centerLeft * 64,255)))
         """
-        MIN = 0
-        MAX = 255
+        MIN = 78
+        MAX = 178
         MID = 128
         DIFF = MID - MIN
         speeds.frontRight = int(max(MIN, min(MID - speed.frontRight * DIFF,MAX)))
