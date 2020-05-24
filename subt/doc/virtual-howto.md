@@ -57,10 +57,7 @@ solution not covered by this HOWTO.
 ## Working with the main "robotika" image
 
 ### Build
-Ensure you have the correct robotika/subt-base image available localy (as
-referenced in `subt/docker/robotika/Dockerfile`).
 ```
-docker pull robotika/subt-base:<tag>
 ./subt/docker/build.bash robotika
 ```
 
@@ -69,7 +66,7 @@ docker pull robotika/subt-base:<tag>
 ```commandline
 ./subt/docker/run.bash robotika
 ```
-which by default runs `./osgar/subt/docker/robotika/run_solution.bash` inside the container.
+which by default runs `./src/osgar/subt/docker/robotika/run_solution.bash` inside the container.
 To get a shell inside the docker instead, run
 ```commandline
 ./subt/docker/run.bash robotika bash
@@ -81,13 +78,13 @@ at `/home/developer/subt_solution/osgar`. For local development it is advantageo
 to mount your `osgar` directory from the host over this directory in the container.
 
 ```commandline
-./subt/scripts/devel.bash
+./subt/script/devel.bash
 ```
 
 When you do so, you can edit the files as you are used to. To rebuild the ROS
 nodes from within the running container, switch to `/osgar-ws/build/` directory
 and call `make`. After that running
-`./osgar/subt/docker/robotika/run_solution.bash` will run the rebuilt version.
+`./src/osgar/subt/docker/robotika/run_solution.bash` will run the rebuilt version.
 
 At this moment you should see waiting for ROS master, debug count outputs of received messages
 (similarly as in unittest) and Python3 outputs of robot navigating towards the gate. The exploration reports
