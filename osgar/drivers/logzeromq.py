@@ -79,12 +79,17 @@ class LogZeroMQ:
     def run_reqrep(self):
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
+        socket.RCVTIMEO = int(self.timeout * 1000)  # convert to milliseconds
         socket.connect(self.endpoint)
         try:
             while True:
                 dt, __, data = self.bus.listen()
                 socket.send_string(data)
-                self.bus.publish('response', socket.recv())
+                while self.bus.is_alive():
+                    try:
+                        self.bus.publish('response', socket.recv())
+                    except zmq.error.Again:
+                        self.bus.sleep(0.1)
         except BusShutdownException:
             pass
         socket.close()
