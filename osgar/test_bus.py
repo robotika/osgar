@@ -169,6 +169,14 @@ class BusHandlerTest(unittest.TestCase):
         self.assertFalse(almost_equal([1.23], []))
         self.assertFalse(almost_equal([-0.27], [0.42]))
 
+    def test_almost_equal_inf(self):
+        # bug detected in Moon project
+        inf = float('inf')
+        self.assertTrue(almost_equal(inf, inf))
+        self.assertTrue(almost_equal([inf, 0, 10], [inf, 0, 10]))
+        self.assertFalse(almost_equal(-inf, inf))
+        self.assertFalse(almost_equal(inf, 42))
+
     def test_sleep(self):
         bus = Bus(MagicMock())
         handle = bus.handle('test')
