@@ -16,6 +16,16 @@ def evaluate_poses(poses, gt_poses):
     pass
 
 
+def ign2arr(ign_poses, robot_name):
+    """Convert Ignition state poses into array"""
+    arr = []
+    for timestamp, data in ign_poses:
+        if robot_name in data:
+            pos = data[robot_name]
+            arr.append((timestamp.total_seconds(), pos.x, pos.y, pos.z))
+    return arr
+
+
 def read_pose3d(filename, pose3d_name, seconds=MAX_SIMULATION_DURATION):
     stream_id = lookup_stream_id(filename, pose3d_name)
     sim_time_id = lookup_stream_id(filename, SIM_TIME_STREAM)
