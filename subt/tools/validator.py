@@ -15,12 +15,14 @@ SIM_TIME_STREAM = 'rosmsg.sim_time_sec'
 
 
 def evaluate_poses(poses, gt_poses, time_step_sec=1.0):
+    if len(poses) == 0 or len(gt_poses) == 0:
+        return []
     time_limit = max(poses[0][0], gt_poses[0][0])
     end_time = min(poses[-1][0], gt_poses[-1][0])
 
     i, j = 0, 0
     arr = []
-    while time_limit < end_time:
+    while time_limit <= end_time:
         while poses[i][0] < time_limit:
             i += 1
         while gt_poses[j][0] < time_limit:

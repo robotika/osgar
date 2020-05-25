@@ -8,15 +8,18 @@ from subt.ign_pb2 import Vector3d
 class ValidatorTest(unittest.TestCase):
 
     def test_evaluate_poses(self):
-        self.assertIsNone(evaluate_poses([], []))
+        self.assertEqual(evaluate_poses([], []), [])
 
-        vec = Vector3d()
-        vec.x = 1
-        vec.y = 2
-        vec.z = 0.5
-        gt = [(datetime.timedelta(0, 1, 548000), {'A60F300L': vec})]
-        poses = [(datetime.timedelta(0, 55), [[0.0, 0.0, 0.0], [1, 0, 0, 0]])]
-        self.assertIsNone(evaluate_poses(poses, gt))
+        gt = [(1.548, 1, 2, 0.5)]
+        poses = [(55.0, 0.0, 0.0, 0.0)]
+        self.assertEqual(evaluate_poses(poses, gt), [])  # no time overlap
+
+        gt = [(0, 0, 0, 0), (1, 1, 0, 0), (2, 3, 4, 5)]
+        poses = [(1, 2, 0, 0)]
+        self.assertEqual(evaluate_poses(poses, gt), [1.0])
+
+        poses = [(1, 2, 0, 0), (1, 2.2, 0, 0)]  # duplicate sim_time
+        self.assertEqual(evaluate_poses(poses, gt), [1.0])
 
     def test_ign2arr(self):
         vec = Vector3d()
