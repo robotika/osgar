@@ -1,7 +1,7 @@
 import unittest
 import datetime
 
-from subt.tools.validator import evaluate_poses, ign2arr
+from subt.tools.validator import evaluate_poses, ign2arr, osgar2arr
 from subt.ign_pb2 import Vector3d
 
 
@@ -30,5 +30,9 @@ class ValidatorTest(unittest.TestCase):
         arr2 = ign2arr(gt, robot_name='B90F300R')
         self.assertEqual(arr2, [])
 
+    def test_osgar2arr(self):
+        poses = [(datetime.timedelta(0, 55), [[0.0, 0.0, 42.0], [1, 0, 0, 0]])]
+        arr = osgar2arr(poses)
+        self.assertEqual(arr, [(55.0, 0.0, 0.0, 42.0)])
 
 # vim: expandtab sw=4 ts=4

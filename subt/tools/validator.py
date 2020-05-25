@@ -26,6 +26,13 @@ def ign2arr(ign_poses, robot_name):
     return arr
 
 
+def osgar2arr(poses):
+    arr = []
+    for timestamp, data in poses:
+        arr.append((timestamp.total_seconds(), *data[0]))
+    return arr
+
+
 def read_pose3d(filename, pose3d_name, seconds=MAX_SIMULATION_DURATION):
     stream_id = lookup_stream_id(filename, pose3d_name)
     sim_time_id = lookup_stream_id(filename, SIM_TIME_STREAM)
