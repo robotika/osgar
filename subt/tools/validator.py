@@ -73,6 +73,7 @@ def main():
     parser.add_argument('--name', help='Robot name, default is autodetect')
     parser.add_argument('--sec', help='duration of the analyzed part (seconds)',
                         type=float, default=MAX_SIMULATION_DURATION)
+    parser.add_argument('--draw', help="draw debug results", action='store_true')
     args = parser.parse_args()
 
     ground_truth = ign.read_poses(args.ign, seconds=args.sec)
@@ -83,6 +84,13 @@ def main():
 
     arr = evaluate_poses(osgar2arr(pose3d), ign2arr(ground_truth, robot_name=args.name))
     print(min(arr), max(arr))
+
+    if args.draw:
+        import matplotlib.pyplot as plt
+
+        plt.plot(arr, 'o-', linewidth=2)
+        plt.show()
+
     return arr
 
 
