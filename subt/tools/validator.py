@@ -6,14 +6,29 @@ import datetime
 from osgar.logger import LogReader, lookup_stream_id
 from osgar.lib.serialize import deserialize
 import subt.tools.ignstate as ign
+from subt.trace import distance3D
+
 
 MAX_SIMULATION_DURATION = 3700  # 1hour with a small buffer
 
 SIM_TIME_STREAM = 'rosmsg.sim_time_sec'
 
 
-def evaluate_poses(poses, gt_poses):
-    pass
+def evaluate_poses(poses, gt_poses, time_step_sec=1.0):
+    time_limit = max(poses[0][0], gt_poses[0][0])
+    end_time = min(poses[-1][0], gt_poses[-1][0])
+
+    i, j = 0, 0
+    arr = []
+    while time_limit < end_time:
+        while poses[i][0] < time_limit:
+            i += 1
+        while gt_poses[j][0] < time_limit:
+            j += 1
+        dist = distance3D(poses[i][1:], gt_poses[j][1:])
+        arr.append(dist)
+        time_limit += time_step_sec
+    return arr
 
 
 def ign2arr(ign_poses, robot_name):
@@ -61,16 +76,14 @@ def main():
     args = parser.parse_args()
 
     ground_truth = ign.read_poses(args.ign, seconds=args.sec)
-    print(len(ground_truth))
-    print(ground_truth[0])
+    print('GT count:', len(ground_truth))
 
     pose3d = read_pose3d(args.logfile, args.pose3d, seconds=args.sec)
-    print(len(pose3d))
-    print(pose3d[0])
+    print('Trace count:', len(pose3d))
 
-    ret = evaluate_poses(pose3d, ground_truth)
-    print(ret)
-    return ret
+    arr = evaluate_poses(osgar2arr(pose3d), ign2arr(ground_truth, robot_name=args.name))
+    print(min(arr), max(arr))
+    return arr
 
 
 if __name__ == "__main__":
