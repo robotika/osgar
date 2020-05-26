@@ -15,7 +15,7 @@ import math
 from osgar.lib.mathex import normalizeAnglePIPI
 
 from osgar.node import Node
-from moon.rover import Rover
+from moon.vehicles.rover import Rover
 
 class Scout(Rover):
     def __init__(self, config, bus):
