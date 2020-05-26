@@ -16,6 +16,8 @@ ASSERT_QUEUE_DELAY = timedelta(seconds=.1)
 
 def almost_equal(data, ref_data):
     if isinstance(data, float) and isinstance(ref_data, float):
+        if data == ref_data:
+            return True  # handling float('inf')
         return abs(data - ref_data) < 1e-6
     if isinstance(data, list) and isinstance(ref_data, list):
         if len(data) != len(ref_data):
