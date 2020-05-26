@@ -11,15 +11,17 @@ from osgar.bus import BusShutdownException
 
 class LogZeroMQ:
     def __init__(self, config, bus):
-        bus.register('raw:gz' if config.get('save_data', False) else 'raw:null')
+        bus.register('raw:gz' if config.get('save_data', False) else 'raw:null', 'response', 'timeout')
         mode = config['mode']
         self.endpoint = config['endpoint']
-        self.timeout = config.get('timeout', 1) # default recv timeout 1s
+        self.timeout = config.get('timeout', 1)  # default recv timeout 1s
 
         if mode == 'PULL':
             self.thread = Thread(target=self.run_input)
         elif mode == 'PUSH':
             self.thread = Thread(target=self.run_output)
+        elif mode == 'REQ':
+            self.thread = Thread(target=self.run_reqrep)
         else:
             assert False, mode  # unknown/unsupported mode
 
@@ -69,6 +71,24 @@ class LogZeroMQ:
                         break
                     except zmq.error.Again:
                         self.bus.sleep(0.1)
+        except BusShutdownException:
+            pass
+        socket.close()
+        context.term()
+
+    def run_reqrep(self):
+        context = zmq.Context()
+        socket = context.socket(zmq.REQ)
+        socket.RCVTIMEO = int(self.timeout * 1000)  # convert to milliseconds
+        socket.connect(self.endpoint)
+        try:
+            while True:
+                dt, __, data = self.bus.listen()
+                socket.send_string(data)
+                try:
+                    self.bus.publish('response', socket.recv())
+                except zmq.error.Again:
+                    self.bus.publish('timeout', True)
         except BusShutdownException:
             pass
         socket.close()
