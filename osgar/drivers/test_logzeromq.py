@@ -66,5 +66,6 @@ class LogZeroMQTest(unittest.TestCase):
         msg = socket.recv()
         node.join()
         self.assertEqual(msg, b'set_brakes on\n')
+        bus.publish.assert_called_with('timeout', True)
 
 # vim: expandtab sw=4 ts=4
