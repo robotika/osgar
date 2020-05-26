@@ -1,10 +1,9 @@
 """
   Space Robotics Challenge 2
 """
-import zmq
-
 from osgar.lib import quaternion
 from moon.controller import SpaceRoboticsChallenge
+
 
 class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
     def __init__(self, config, bus):

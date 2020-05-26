@@ -1,9 +1,8 @@
 """
   Space Robotics Challenge 2
 """
-import zmq
-
 from moon.controller import SpaceRoboticsChallenge
+
 
 class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
     def __init__(self, config, bus):

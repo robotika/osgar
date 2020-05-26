@@ -1,8 +1,6 @@
 """
   Space Robotics Challenge 2
 """
-import zmq
-
 import math
 from statistics import median
 from datetime import timedelta

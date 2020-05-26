@@ -1,8 +1,6 @@
 """
   Space Robotics Challenge 2
 """
-import zmq
-
 import math
 from random import Random
 from datetime import timedelta
@@ -14,6 +12,7 @@ from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.lib.virtual_bumper import VirtualBumper
 
 from subt.local_planner import LocalPlanner
+
 
 class ChangeDriverException(Exception):
     pass
