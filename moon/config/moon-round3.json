@@ -51,7 +51,7 @@
           }
       },
       "scout": {
-          "driver": "moon.scout:Scout",
+          "driver": "moon.vehicles.scout:Scout",
           "in": [],
           "out": [],
           "init": {

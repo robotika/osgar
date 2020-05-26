@@ -53,7 +53,7 @@
           }
       },
       "hauler": {
-          "driver": "moon.hauler:Hauler",
+          "driver": "moon.vehicles.hauler:Hauler",
           "in": [],
           "out": [],
           "init": {

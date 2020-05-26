@@ -52,7 +52,7 @@
           }
       },
       "excavator": {
-          "driver": "moon.excavator:Excavator",
+          "driver": "moon.vehicles.excavator:Excavator",
           "in": [],
           "out": [],
           "init": {
