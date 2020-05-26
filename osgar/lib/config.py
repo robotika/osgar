@@ -64,4 +64,20 @@ def merge_dict(dict1, dict2):
             ret[key] = dict2[key]
     return ret
 
+
+def expand(cfg, data):
+    if isinstance(cfg, dict):
+        ret = {}
+        for k,v in cfg.items():
+            ret[eval(f"f'{k}'", data)] = expand(v, data)
+        return ret
+    if isinstance(cfg, list):
+        ret = []
+        for v in cfg:
+            ret.append(expand(v, data))
+        return ret
+    if isinstance(cfg, str):
+        return eval(f"f'{cfg}'", data)
+    return cfg
+
 # vim: expandtab sw=4 ts=4

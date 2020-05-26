@@ -1,6 +1,6 @@
 import os
 import unittest
-from osgar.lib.config import config_load, merge_dict, MergeConflictError, get_class_by_name
+from osgar.lib.config import config_load, merge_dict, MergeConflictError, get_class_by_name, expand
 from osgar.drivers.logsocket import LogTCPStaticIP as LogTCP
 
 def test_data(filename, test_dir='test_data'):
@@ -61,6 +61,23 @@ class ConfigTest(unittest.TestCase):
         self.assertTrue(conf['robot']['modules']['app']['driver'].endswith('lib.test_config:MyTestRobot'))
         conf = config_load(filename, application='osgar.lib.test_config:MyTestRobot')
         self.assertTrue(conf['robot']['modules']['app']['driver'].endswith('lib.test_config:MyTestRobot'))
+
+    def test_expand(self):
+        a = expand('{application}', dict(application="subt"))
+        self.assertEqual(a, 'subt')
+        a = expand('before{application}after', dict(application="subt"))
+        self.assertEqual(a, 'beforesubtafter')
+        a = expand(['{application}'], dict(application="subt"))
+        self.assertEqual(a, ['subt'])
+        a = expand({'{application}': []}, dict(application="subt"))
+        self.assertEqual(a, {'subt': []})
+        a = expand({'{application}': ['{item}']}, dict(application="subt", item='first'))
+        self.assertEqual(a, {'subt': ['first']})
+
+        a = expand('{speed if speed is not None else 0.5}', dict(speed=1))
+        self.assertEqual(a, '1')
+        a = expand('{speed if speed is not None else 0.5}', dict(speed=None))
+        self.assertEqual(a, '0.5')
 
 # vim: expandtab sw=4 ts=4
 

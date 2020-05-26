@@ -8,6 +8,10 @@
                  "sim_time_sec", "acc", "origin"],
           "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout", "request_origin"],
           "init": {
+            "walldist": "{walldist}",
+            "side": "{side}",
+            "speed": "{speed}",
+            "timeout": "{timeout}",
             "max_speed": 0.5,
             "symmetric": false,
             "virtual_bumper_sec": 60,

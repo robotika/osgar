@@ -93,10 +93,10 @@ class SubTChallenge:
         self.start_pose = None
         self.traveled_dist = 0.0
         self.time = None
-        self.max_speed = config['max_speed']
+        self.max_speed = float(config['speed']) if config.get('speed', "") != "" else config['max_speed']
         self.max_angular_speed = math.radians(60)
-        self.walldist = config['walldist']
-        self.timeout = timedelta(seconds=config['timeout'])
+        self.walldist = float(config['walldist'])
+        self.timeout = timedelta(seconds=float(config['timeout']))
         self.symmetric = config['symmetric']  # is robot symmetric?
         self.dangerous_dist = config.get('dangerous_dist', 0.3)
         self.min_safe_dist = config.get('min_safe_dist', 0.75)
@@ -129,7 +129,7 @@ class SubTChallenge:
         self.emergency_stop = None
         self.monitors = []  # for Emergency Stop Exception
 
-        self.use_right_wall = config['right_wall']
+        self.use_right_wall = 'auto' if config.get('side') == 'auto' else config.get('side') == 'right'
         self.use_center = False  # navigate into center area (controlled by name ending by 'C')
         self.is_virtual = config.get('virtual_world', False)  # workaround to handle tunnel differences
 
@@ -898,7 +898,7 @@ class SubTChallenge:
 
 def main():
     import argparse
-    from osgar.lib.config import config_load
+    from osgar.lib.config import config_load, expand as config_expand
     from osgar.record import record
 
     parser = argparse.ArgumentParser(description='SubT Challenge')
@@ -909,7 +909,7 @@ def main():
     parser_run.add_argument('--note', help='add description')
     parser_run.add_argument('--walldist', help='distance for wall following (default: %(default)sm)', default=1.0, type=float)
     parser_run.add_argument('--side', help='which side to follow', choices=['left', 'right', 'auto'], required=True)
-    parser_run.add_argument('--speed', help='maximum speed (default: from config)', type=float)
+    parser_run.add_argument('--speed', help='maximum speed (default: from config)', type=float, default="")
     parser_run.add_argument('--timeout', help='seconds of exploring before going home (default: %(default)s)',
                             type=int, default=10*60)
     parser_run.add_argument('--log', nargs='?', help='record log filename')
@@ -939,20 +939,19 @@ def main():
         cfg = config_load(*args.config, application=SubTChallenge)
 
         # apply overrides from command line
-        cfg['robot']['modules']['app']['init']['walldist'] = args.walldist
-        if args.side == 'auto':
-            cfg['robot']['modules']['app']['init']['right_wall'] = 'auto'
-        else:
-            cfg['robot']['modules']['app']['init']['right_wall'] = args.side == 'right'
-        cfg['robot']['modules']['app']['init']['timeout'] = args.timeout
+        overrides = {
+            "walldist": args.walldist,
+            "side": args.side,
+            "timeout": args.timeout,
+            "speed": args.speed,
+        }
+        cfg = config_expand(cfg, overrides)
+
         if args.init_offset is not None:
             x, y, z = [float(x) for x in args.init_offset.split(',')]
             cfg['robot']['modules']['app']['init']['init_offset'] = [int(x*1000), int(y*1000), int(z*1000)]
         if args.init_path is not None:
             cfg['robot']['modules']['app']['init']['init_path'] = args.init_path
-
-        if args.speed is not None:
-            cfg['robot']['modules']['app']['init']['max_speed'] = args.speed
 
         cfg['robot']['modules']['app']['init']['start_paused'] = args.start_paused
 
