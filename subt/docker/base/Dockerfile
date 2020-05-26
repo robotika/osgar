@@ -97,3 +97,10 @@ RUN ./env/bin/pip install --no-cache-dir \
 
 ENV NVIDIA_VISIBLE_DEVICES ${NVIDIA_VISIBLE_DEVICES:-all}
 ENV NVIDIA_DRIVER_CAPABILITIES ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics,compat32,utility
+
+RUN apt-get update \
+  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python-pip python-wheel \
+  && apt-get clean \
+  && pip2 install --no-cache-dir --user \
+    "msgpack==1.0.0" \
+    "pyzmq==19.0.0"
