@@ -59,6 +59,12 @@
           "in": ["depth", "scan"],
           "out": ["scan"],
           "init": {}
+      },
+      "pull": {
+          "driver": "subt.pull:Pull",
+	      "init": {
+	        "outputs": ["imu"]
+	      }
       }
     },
     "links": [["app.desired_speed", "rosmsg.desired_speed"],
