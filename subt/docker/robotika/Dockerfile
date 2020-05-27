@@ -1,5 +1,7 @@
 FROM robotika/subt-base:2020-05-18
 
+RUN sudo apt-get update && sudo apt install -y ros-melodic-teleop-twist-keyboard
+
 ENTRYPOINT ["./src/osgar/subt/docker/robotika/entrypoint.bash"]
 
 CMD ["./src/osgar/subt/docker/robotika/run_solution.bash"]
