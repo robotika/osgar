@@ -7,6 +7,7 @@ trap "kill %1" EXIT
 ROBOT="${ROBOT:-X0F200L}"
 WORLD="${WORLD:-urban_circuit_practice_01}"
 CIRCUIT="${CIRCUIT:-urban}"
+CONFIG="${CONFIG:-ROBOTIKA_X2_SENSOR_CONFIG_1}"
 
 ( while true; do termtitle "bridge $ROBOT $WORLD"; sleep 5; done ) &
 
@@ -16,5 +17,5 @@ cd $(git rev-parse --show-toplevel)
   circuit:=$CIRCUIT \
   worldName:=$WORLD \
   robotName1:=$ROBOT \
-  robotConfig1:=ROBOTIKA_X2_SENSOR_CONFIG_1
+  robotConfig1:=$CONFIG
 
