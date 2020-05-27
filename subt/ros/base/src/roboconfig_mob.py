@@ -80,7 +80,7 @@ class RoboconfigMob:
         encDiffR = -(encDiff[3] + encDiff[2]) / 2
         self.wheelSpeeds = Object
         self.wheelSpeeds.rearLeft = encDiff[1] / self.encDist1000MM / time
-        self.wheelSpeeds.frontLeft = encDiff[0] / self.encDist1000MM / time
+        self.wheelSpeeds.frontLeft = -encDiff[0] / self.encDist1000MM / time
         self.wheelSpeeds.rearRight = -encDiff[3] / self.encDist1000MM / time
         self.wheelSpeeds.frontRight = -encDiff[2] / self.encDist1000MM / time
 
@@ -103,12 +103,12 @@ class RoboconfigMob:
         MAX = 178
         MID = 128
         DIFF = MID - MIN
-        speeds.frontRight = int(max(MIN, min(MID - speed.frontRight * DIFF,MAX)))
-        speeds.frontLeft = int(max(MIN, min(MID - speed.frontLeft * DIFF,MAX)))
-        speeds.rearLeft = int(max(MIN, min(MID - speed.rearRight * DIFF,MAX)))
-        speeds.rearRight = int(max(MIN, min(MID - speed.rearLeft * DIFF,MAX)))
-        speeds.centerLeft = int(max(MIN, min(MID - speed.centerRight * DIFF,MAX)))
-        speeds.centerRight = int(max(MIN, min(MID - speed.centerLeft * DIFF,MAX)))
+        speeds.frontRight = int(max(MIN, min(MID + speed.frontRight * DIFF,MAX)))
+        speeds.frontLeft = int(max(MIN, min(MID + speed.frontLeft * DIFF,MAX)))
+        speeds.rearLeft = int(max(MIN, min(MID + speed.rearRight * DIFF,MAX)))
+        speeds.rearRight = int(max(MIN, min(MID + speed.rearLeft * DIFF,MAX)))
+        speeds.centerLeft = int(max(MIN, min(MID + speed.centerRight * DIFF,MAX)))
+        speeds.centerRight = int(max(MIN, min(MID + speed.centerLeft * DIFF,MAX)))
         return speeds
    
     

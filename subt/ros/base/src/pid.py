@@ -16,7 +16,8 @@ class PID:
         self.PID_D = PID_D
         self.PID_I = PID_I        
         self.integrator = 0
-        
+        self.doubleClickState = "INIT"
+
     def update(self,desiredWheelSpeed,actualWheelSpeed):
         
         actualDifference = desiredWheelSpeed - actualWheelSpeed
@@ -34,15 +35,23 @@ class PID:
         
         newSpeed = self.prevSpeed + newSpeedIncrement
         
-        self.prevSpeed = newSpeed
-        
         if newSpeed > self.MAX_FORCE:
             newSpeed = self.MAX_FORCE
         elif newSpeed < -self.MAX_FORCE:
             newSpeed = -self.MAX_FORCE  
 
-        
-        self.prevSpeed = newSpeed
+        #this is the implementation of a double backwards click for a RC controller with F-B-R running mode 
+        if newSpeed < 0 and self.prevSpeed >= 0 and self.doubleClickState == "INIT":
+            self.doubleClickState = "FIRST_BACK"
+            self.prevSpeed = newSpeed
+            newSpeed = -self.MAX_FORCE/2
+        elif self.doubleClickState == "FIRST_BACK":
+            self.doubleClickState = "FIRST_STOP"
+            newSpeed = 0
+        elif self.doubleClickState == "FIRST_STOP" or self.doubleClickState == "INIT":
+            self.doubleClickState = "INIT"
+            self.prevSpeed = newSpeed
+        print("doubleClickState=%s\tprev=%f\tnew=%f"%(self.doubleClickState, self.prevSpeed, newSpeed))
         return newSpeed
 
     def stop(self):
