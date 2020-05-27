@@ -1,0 +1,80 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "moon.controller_hauler_round2:SpaceRoboticsChallengeHaulerRound2",
+          "in": ["pose2d"],
+          "out": ["desired_speed", "artf_xyz", "artf_cmd", "pose3d", "request_origin"],
+          "init": {}
+      },
+      "transmitter": {
+          "driver": "zeromq",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+            "mode": "PUSH",
+            "endpoint": "tcp://localhost:6556"
+          }
+      },
+      "receiver": {
+          "driver": "zeromq",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+            "mode": "PULL",
+            "endpoint": "tcp://localhost:6555",
+            "save_data": true
+          }
+      },
+      "rpc": {
+          "driver": "zeromq",
+          "in": ["request"],
+          "out": ["response"],
+          "init": {
+            "mode": "REQ",
+            "endpoint": "tcp://localhost:6557",
+            "save_data": true
+          }
+      },
+      "rosmsg": {
+          "driver": "rosmsg",
+          "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
+          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin"],
+          "init": {
+            "downsample": 2,
+            "topics": [
+              ["/hauler_1/bin_info", "srcp2_msgs/HaulerMsg"],
+              ["/hauler_1/joint_states", "sensor_msgs/JointState"],
+              ["/qual_2_score", "srcp2_msgs/Qual2ScoringMsg"],
+              ["/hauler_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage"],
+              ["/hauler_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage"]
+            ]
+          }
+      },
+      "hauler": {
+          "driver": "moon.vehicles.hauler:Hauler",
+          "in": [],
+          "out": [],
+          "init": {
+          }
+      }
+    },
+    "links": [["receiver.raw", "rosmsg.raw"],
+              ["rosmsg.cmd", "transmitter.raw"],
+              ["rosmsg.rot", "app.rot"],
+              ["rosmsg.scan", "app.scan"],
+              ["rosmsg./qual_2_score", "app.score"],
+              ["rosmsg.joint_name", "hauler.joint_name"],
+              ["rosmsg.joint_position", "hauler.joint_position"],
+              ["rosmsg.joint_velocity", "hauler.joint_velocity"],
+              ["rosmsg.joint_effort", "hauler.joint_effort"],
+              ["rosmsg.rot", "hauler.rot"],
+              ["app.desired_speed", "hauler.desired_speed"],
+              ["app.request", "rpc.request"],
+              ["rpc.response", "app.response"],
+              ["hauler.cmd", "transmitter.raw"],
+              ["hauler.pose2d", "app.pose2d"]
+    ]
+  }
+}
