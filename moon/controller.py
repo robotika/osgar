@@ -13,6 +13,7 @@ from osgar.lib.virtual_bumper import VirtualBumper
 
 from subt.local_planner import LocalPlanner
 
+import secrets
 
 class ChangeDriverException(Exception):
     pass
@@ -120,12 +121,20 @@ class SpaceRoboticsChallenge(Node):
 
     def send_request(self, cmd):
         """Send ROS Service Request form a single place"""
-        self.publish('request', cmd)
-        while True:
+        token = secrets.token_hex(5)
+        request_sent = self.time
+        self.publish('request', [token, cmd])
+        while self.time - request_sent < timedelta(seconds=5):
             dt, channel, data = self.listen()
+            print(dt, "controller:send_request: channel=%s, data=%s" %(channel, data))
             if channel == 'response':
-                return data
-            print(dt, 'ignoring', channel)
+                intoken, response = data
+                if intoken == token:
+                    return response
+                else:
+                    print(dt, 'controller: ignoring response with token %s, waiting for token %s' % (intoken, token))
+            print(dt, 'ignoring channel %s' % channel)
+        print(self.time, "controller: send_request timed out: %s", cmd)
 
     def set_cam_angle(self, angle):
         self.send_request('set_cam_angle %f\n' % angle)

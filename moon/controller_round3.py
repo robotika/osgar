@@ -154,7 +154,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         if object_type == "homebase": # upon handover, robot should be moving straight
             if self.cubesat_success:
                 if not self.homebase_arrival_success:
-                    response = self.send_request('artf homebase\n').decode("ascii") 
+                    response = self.send_request('artf homebase')
                     print(self.time, "app: Homebase response: %s" % response)
 
                     if response == 'ok' or SKIP_HOMEBASE_SUCCESS:
@@ -180,7 +180,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
 
         elif object_type == 'basemarker':
             print (self.time, "app: Reporting alignment to server")
-            response = self.send_request('artf homebase_alignment\n').decode("ascii") 
+            response = self.send_request('artf homebase_alignment')
             print(self.time, "app: Alignment response: %s" % response)
             if response == 'ok':
                 # all done, exiting
@@ -289,7 +289,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                             self.objects_to_follow.remove('homebase') # do not immediately follow homebase if it was secondary to give main a chance to report cubesat
 
                         message = self.send_request('request_origin') # response to this is required, if none, rover will be stopped forever
-                        if message.split()[0] == b'origin':
+                        if message.split()[0] == 'origin':
                             origin = [float(x) for x in message.split()[1:]]
                             self.xyz = origin[:3]
                             qx, qy, qz, qw = origin[3:]
@@ -342,7 +342,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                             print (self.time, "app: Reporting estimated object location at: [%f,%f,%f]" % (x+ox, y+oy, z+oz))
 
                             s = '%s %.2f %.2f %.2f\n' % (artifact_type, x+ox, y+oy, z+oz)
-                            response = self.send_request('artf ' + s).decode("ascii") 
+                            response = self.send_request('artf ' + s)
 
                             if response == 'ok':
                                 print("app: Apriori object reported correctly")    
