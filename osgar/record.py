@@ -88,7 +88,7 @@ def main():
     parser.add_argument("-h", "--help", help="show this help message and exit", action="store_true")
     parser.add_argument('--note', help='add description')
     parser.add_argument('--duration', help='recording duration (sec), default infinite', type=float)
-    parser.add_argument('--log', nargs=1, help='record log filename')
+    parser.add_argument('--log', help='record log filename')
     args, unknown = parser.parse_known_args()
 
     if len(args.config) > 0:
@@ -114,7 +114,7 @@ def main():
 
     args = parser.parse_args()
     cfg_args = { k: getattr(args, k.replace('-','_')) for k in cfg['robot'].get('arguments', {})}
-    record(cfg, log_prefix=prefix, duration_sec=args.duration, args=cfg_args)
+    record(cfg, log_prefix=prefix, log_filename=args.log, duration_sec=args.duration, args=cfg_args)
 
 if __name__ == "__main__":
     main()
