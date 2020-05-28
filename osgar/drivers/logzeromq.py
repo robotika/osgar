@@ -76,22 +76,56 @@ class LogZeroMQ:
         socket.close()
         context.term()
 
+    
+    class ReqRepWorker(Thread):
+        def __init__(self, context, rossocket, bus):
+            Thread.__init__ (self)
+            self.context = context
+            self.rossocket = rossocket
+            self.bus = bus
+
+        def run(self):
+            worker = self.context.socket(zmq.REQ)
+            worker.connect('inproc://reqrepbackend')
+            while True:
+                worker.send(b"ready")
+                data = worker.recv()
+                ident, msg = data.decode('ascii').split('|')
+                self.rossocket.send_string(msg)
+                rsp = self.rossocket.recv().decode('ascii')
+                self.bus.publish('response', [ident, rsp])
+
+            worker.close()
+        
     def run_reqrep(self):
         context = zmq.Context()
-        socket = context.socket(zmq.REQ)
-        socket.RCVTIMEO = int(self.timeout * 1000)  # convert to milliseconds
-        socket.connect(self.endpoint)
+
+        rossocket = context.socket(zmq.REQ)
+        rossocket.RCVTIMEO = int(self.timeout * 1000)  # convert to milliseconds
+        rossocket.connect(self.endpoint)
+
+        backend = context.socket(zmq.ROUTER)
+        backend.bind('inproc://reqrepbackend')
+
+        workers = []
+        for i in range(5):
+            worker = self.ReqRepWorker(context, rossocket, self.bus)
+            worker.start()
+            workers.append(worker)
+
         try:
             while True:
                 dt, __, data = self.bus.listen()
-                socket.send_string(data)
-                try:
-                    self.bus.publish('response', socket.recv())
-                except zmq.error.Again:
-                    self.bus.publish('timeout', True)
+                # data is [<ident>, <ROS request payload>]
+                ident, payload = data
+                address, empty, ready = backend.recv_multipart()                
+                backend.send_multipart([address, b'', (ident + '|' + payload).encode('ascii')])
+
         except BusShutdownException:
             pass
-        socket.close()
+
+        backend.close()
+        rossocket.close()
         context.term()
 
     def request_stop(self):
