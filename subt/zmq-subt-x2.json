@@ -1,9 +1,42 @@
 {
   "version": 2,
   "robot": {
+    "arguments": {
+      "walldist": {
+        "help": "distance for wall following (default: %(default)sm)",
+        "default": 1.0,
+        "type": "float"
+      },
+      "side": {
+        "help": "which side to follow",
+        "choices": ["left", "right", "auto"],
+        "required": true
+      },
+      "speed": {
+        "help": "maximum speed (%(default)sm)",
+        "default": 1.0,
+        "type": "float"
+      },
+      "timeout": {
+        "help": "seconds of exploring before going home (default: %(default)ss)",
+        "default": 600,
+        "type": "int"
+      },
+      "init-offset": {
+        "help": "inital 3D offset accepted as a string of comma separated values (meters)"
+      },
+      "init-path": {
+        "help": "inital path to be followed from (0, 0). 2D coordinates are separated by ;"
+      },
+      "start-paused": {
+        "dest": "start_paused",
+        "action": "store_true",
+        "help": "start robot Paused and wait for LoRa Contine command"
+      }
+    },
     "modules": {
       "app": {
-          "driver": "application",
+          "driver": "subt.main:SubTChallenge",
           "in": ["emergency_stop", "pose2d", "scan", "rot", "artf",
                  "sim_time_sec", "acc", "origin"],
           "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout", "request_origin"],
@@ -12,7 +45,6 @@
             "side": "{side}",
             "speed": "{speed}",
             "timeout": "{timeout}",
-            "max_speed": 0.5,
             "symmetric": false,
             "virtual_bumper_sec": 60,
             "virtual_bumper_radius": 10.0,

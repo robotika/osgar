@@ -10,7 +10,7 @@ import threading
 import logging
 
 from osgar.logger import LogWriter
-from osgar.lib.config import config_load, get_class_by_name
+from osgar.lib.config import config_load, get_class_by_name, config_expand
 from osgar.bus import Bus
 
 g_logger = logging.getLogger(__name__)
@@ -62,7 +62,9 @@ class Recorder:
         self.stop_requested.set()
 
 
-def record(config, log_prefix, log_filename=None, duration_sec=None):
+def record(config, log_prefix, log_filename=None, duration_sec=None, args={}):
+    if len(args) > 0:
+        config['robot']['modules'] = config_expand(config['robot']['modules'], args)
     with LogWriter(prefix=log_prefix, filename=log_filename, note=str(sys.argv)) as log:
         log.write(0, bytes(str(config), 'ascii'))
         g_logger.info(log.filename)
@@ -81,16 +83,38 @@ def main():
         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
         datefmt='%Y-%m-%d %H:%M',
     )
-    parser = argparse.ArgumentParser(description='Record run on real HW with given configuration')
-    parser.add_argument('config', nargs='+', help='configuration file')
+    parser = argparse.ArgumentParser(description='Record run given configuration', add_help=False)
+    config_arg = parser.add_argument('config', nargs='*', help='configuration file')
+    parser.add_argument("-h", "--help", help="show this help message and exit", action="store_true")
     parser.add_argument('--note', help='add description')
     parser.add_argument('--duration', help='recording duration (sec), default infinite', type=float)
-    parser.add_argument('--application', help='import string to application', default=None)
-    args = parser.parse_args()
+    parser.add_argument('--log', nargs=1, help='record log filename')
+    args, unknown = parser.parse_known_args()
 
-    prefix = os.path.basename(args.config[0]).split('.')[0] + '-'
-    cfg = config_load(*args.config, application=args.application)
-    record(cfg, log_prefix=prefix, duration_sec=args.duration)
+    if len(args.config) > 0:
+        prefix = os.path.basename(args.config[0]).split('.')[0] + '-'
+        cfg = config_load(*args.config)
+        types = {
+            "float": float,
+            "int": int
+        }
+        for k, v in cfg['robot'].get('arguments', {}).items():
+            if "type" in v:
+                v["type"] = types[v["type"]]
+            parser.add_argument("--" + k, **v)
+
+    config_arg.nargs = "+"
+    if args.help:
+        parser.print_help()
+        parser.exit()
+
+    if len(args.config) == 0:
+        parser.error("the following arguments are required: config")
+        parser.exit()
+
+    args = parser.parse_args()
+    cfg_args = { k: getattr(args, k.replace('-','_')) for k in cfg['robot'].get('arguments', {})}
+    record(cfg, log_prefix=prefix, duration_sec=args.duration, args=cfg_args)
 
 if __name__ == "__main__":
     main()
