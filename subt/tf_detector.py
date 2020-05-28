@@ -14,6 +14,7 @@ class Tf_detector:
 #        print(self.model.inputs)
         self.model.output_dtypes
         self.artf_names = np.array(["backpack", "survivor", "phone", "rope", "helmet"])
+        self.min_scores = np.array([0.2, 0.8, 0.2, 0.8, 0.2])
 
 
     def detect(self, img):
@@ -24,16 +25,18 @@ class Tf_detector:
         raw_dict = self.model(input_tensor)
 
         scores = raw_dict['detection_scores'][0, :].numpy()
+        classes = raw_dict['detection_classes'][0, :].numpy() - 1
+        classes = classes.astype('int32')
+        mask = self.min_scores[classes] < scores
+
 #        print("scores: ", scores)
-        mask = scores > 0.1
         num_detections = np.count_nonzero(mask)
         if num_detections > 0:
             scores = scores[mask]
+            classes = classes[mask]
             bboxes = raw_dict['detection_boxes'][0, :].numpy()[mask]
             bboxes = bboxes*np.array([rows, cols, rows, cols])
             bboxes = bboxes.astype('int32')
-            classes = raw_dict['detection_classes'][0, :].numpy()[mask] - 1
-            classes = classes.astype('int32')
             classes_names = self.artf_names[classes]
 
             return { 'bboxes': bboxes, 'classes_names': classes_names, 'scores': scores, 'num_detections': num_detections }
@@ -83,6 +86,8 @@ if __name__ == "__main__":
     elif path.endswith(".log"):
         from osgar.logger import LogReader, lookup_stream_id
         from osgar.lib.serialize import deserialize
+        import time
+        proc_time = []
 
         if len(sys.argv) == 3:
             stream_name = sys.argv[2]
@@ -91,13 +96,19 @@ if __name__ == "__main__":
 
         only_stream = lookup_stream_id(path, stream_name)
         with LogReader(path, only_stream_id=only_stream) as log:
+            ii = 0
             for timestamp, stream_id, data_raw in log:
                 buf_color = deserialize(data_raw)
                 img = cv2.imdecode(np.fromstring(buf_color, dtype=np.uint8), 1)
+                t0 = time.time()
                 detection = detector.detect(img)
+                proc_time.append(time.time() - t0)
                 if detection:
                     print(detection)
+#                    cv2.imwrite("tmp/im%05d.png" %ii, img)
                 detector.show_result(img, detection)
+                ii += 1
+            print("Average processing time: ", np.mean(proc_time))
 
     else:
         img = cv2.imread(path)
