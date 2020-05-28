@@ -87,14 +87,16 @@ class LogZeroMQ:
         def run(self):
             worker = self.context.socket(zmq.REQ)
             worker.connect('inproc://reqrepbackend')
-            while True:
-                worker.send(b"ready")
-                data = worker.recv()
-                ident, msg = data.decode('ascii').split('|')
-                self.rossocket.send_string(msg)
-                rsp = self.rossocket.recv().decode('ascii')
-                self.bus.publish('response', [ident, rsp])
-
+            try:
+                while True:
+                    worker.send(b"ready")
+                    data = worker.recv()
+                    ident, msg = data.decode('ascii').split('|')
+                    self.rossocket.send_string(msg)
+                    rsp = self.rossocket.recv().decode('ascii')
+                    self.bus.publish('response', [ident, rsp])
+            except Exception:
+                pass
             worker.close()
         
     def run_reqrep(self):
