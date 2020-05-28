@@ -93,10 +93,10 @@ class SubTChallenge:
         self.start_pose = None
         self.traveled_dist = 0.0
         self.time = None
-        self.max_speed = float(config['speed']) if config.get('speed', "") != "" else config['max_speed']
+        self.max_speed = config['speed']
         self.max_angular_speed = math.radians(60)
-        self.walldist = float(config['walldist'])
-        self.timeout = timedelta(seconds=float(config['timeout']))
+        self.walldist = config['walldist']
+        self.timeout = timedelta(seconds=config['timeout'])
         self.symmetric = config['symmetric']  # is robot symmetric?
         self.dangerous_dist = config.get('dangerous_dist', 0.3)
         self.min_safe_dist = config.get('min_safe_dist', 0.75)
