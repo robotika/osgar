@@ -9,8 +9,8 @@ MODEL_DIR = "subt/tf_models"
 
 class Tf_detector:
     def __init__(self):
-        model = tf.saved_model.load(MODEL_DIR)
-        self.model = model.signatures['serving_default']
+        self.model = tf.saved_model.load(MODEL_DIR)
+        self.model = self.model.signatures['serving_default']
 #        print(self.model.inputs)
         self.model.output_dtypes
         self.artf_names = np.array(["backpack", "survivor", "phone", "rope", "helmet"])
@@ -75,6 +75,25 @@ if __name__ == "__main__":
             im_path = os.path.join(path, im_file)
             img = cv2.imread(im_path)
             if img is not None:
+                detection = detector.detect(img)
+                if detection:
+                    print(detection)
+                detector.show_result(img, detection)
+
+    elif path.endswith(".log"):
+        from osgar.logger import LogReader, lookup_stream_id
+        from osgar.lib.serialize import deserialize
+
+        if len(sys.argv) == 3:
+            stream_name = sys.argv[2]
+        else:
+            stream_name = "camera.raw"
+
+        only_stream = lookup_stream_id(path, stream_name)
+        with LogReader(path, only_stream_id=only_stream) as log:
+            for timestamp, stream_id, data_raw in log:
+                buf_color = deserialize(data_raw)
+                img = cv2.imdecode(np.fromstring(buf_color, dtype=np.uint8), 1)
                 detection = detector.detect(img)
                 if detection:
                     print(detection)
