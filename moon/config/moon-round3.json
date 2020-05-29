@@ -23,7 +23,8 @@
           "out": ["raw"],
           "init": {
             "mode": "PULL",
-            "endpoint": "tcp://localhost:5555"
+            "endpoint": "tcp://localhost:5555",
+	    "save_data": true
           }
       },
       "rpc": {
@@ -80,6 +81,9 @@
               ["detector.artf", "app.artf"],
               ["app.desired_movement", "scout.desired_movement"],
               ["app.desired_speed", "scout.desired_speed"],
+              ["app.driving_recovery", "scout.driving_recovery"],
+              ["app.driving_recovery", "scout.driving_recovery"],
+              ["app.driving_recovery", "app.driving_recovery"],
               ["app.request", "rpc.request"],
               ["rpc.response", "app.response"],
               ["scout.cmd", "transmitter.raw"],

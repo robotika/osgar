@@ -99,6 +99,7 @@ class SpaceRoboticsChallenge(Node):
         self.current_driver = None
         
         self.inException = False
+        self.in_driving_recovery = False
 
         self.last_status_timestamp = None
         
@@ -138,7 +139,11 @@ class SpaceRoboticsChallenge(Node):
         self.brakes_on = on
         self.send_request('set_brakes %s\n' % ('on' if on else 'off'))
         print (self.time, "app: Brakes set to: %s" % on)
-            
+
+    def on_driving_recovery(self, data):
+        self.in_driving_recovery = data
+        print (self.time, "Driving recovery changed to: %r" % data)
+
     def on_pose2d(self, timestamp, data):
         x, y, heading = data
         pose = (x / 1000.0, y / 1000.0, math.radians(heading / 100.0))

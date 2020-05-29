@@ -84,7 +84,11 @@ class Rover(Node):
         self.pitch = 0.0
         self.yaw = 0.0
         self.yaw_offset = None
+        self.in_driving_recovery = False
 
+    def on_driving_recovery(self, data):
+        self.in_driving_recovery = data
+        
     def on_desired_speed(self, data):
         # self.desired_linear_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
         linear, angular = data # legacy: mutually exclusive, either linear goes straigth or angular turns in place; both 0 is stop
@@ -237,16 +241,17 @@ class Rover(Node):
                             effort = [e, -e, e, -e]
 
 
-                # steer against slope proportionately to the steepness of the slope
-                fl -= self.roll
-                fr -= self.roll
-                rl -= self.roll
-                rr -= self.roll
+                if self.drive_camera_angle == 0:
+                    # during normal driving, steer against slope proportionately to the steepness of the slope
+                    fl -= self.roll
+                    fr -= self.roll
+                    rl -= self.roll
+                    rr -= self.roll
 
                 steering = [fl, fr, rl, rr]
 
                 # stay put while joint angles are catching up
-                if camera_angle != 0 and self.prev_position is not None:
+                if self.drive_camera_angle != 0 and self.prev_position is not None and not self.in_driving_recovery:
                     if (
                             abs(self.prev_position[self.joint_name.index(b'bl_steering_arm_joint')] - rl) > 0.2 or
                             abs(self.prev_position[self.joint_name.index(b'br_steering_arm_joint')] - rr) > 0.2 or
