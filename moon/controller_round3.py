@@ -71,10 +71,6 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         self.basemarker_whole_scan_history = []
         self.basemarker_radius = None
 
-        
-        self.homebase_final_approach_distance = float("inf")
-        self.homebase_increase_count = 0 # if distance increases X times in a row, we are truly farther and need to restart
-
         self.last_attempt_timestamp = None
         
         self.currently_following_object = {
@@ -113,13 +109,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         self.last_artefact_time = None
         self.last_tracked_artefact = None
         
-        self.in_driving_recovery = False
         self.objects_to_follow = []
 
-
-    def on_driving_recovery(self, data):
-        self.in_driving_recovery = data
-        print (self.time, "Driving recovery changed to: %r" % data)
 
     def follow_object(self, data):
         self.objects_to_follow = data
@@ -165,6 +156,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
 
                     else:
                         # homebase arrival not accepted, keep trying after a delay
+                        self.follow_object(['homebase'])
                         self.last_attempt_timestamp = self.time
                         self.on_driving_control(self.time, None) # do this last as it raises exception
                         
@@ -231,7 +223,6 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
     # used to follow objects (cubesat, processing plant, other robots, etc)
     def on_artf(self, timestamp, data):
 
-
         if self.last_attempt_timestamp is not None and self.time - self.last_attempt_timestamp < ATTEMPT_DELAY:
             return
 
@@ -245,6 +236,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         img_x, img_y, img_w, img_h = data[1:5]
         nr_of_black = data[4]
 
+#        print ("Artf: %s %d %d %d %d %d" % (artifact_type, img_x, img_y, img_w, img_h, nr_of_black))
+        
         # TODO if detection during turning on the spot, instead of driving straight steering a little, turn back to the direction where the detection happened first
         
         if (
@@ -379,26 +372,13 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                         self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
 
                         
-                elif math.isinf(self.homebase_final_approach_distance) and self.currently_following_object['object_type'] == 'homebase':
-                    if bbox_size > 200:
-                        if center_x >= 300 and center_x <= 340:
-                            # object reached visually, keep moving forward
-                            self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
-                            print(self.time, "app: homebase final frame x=%d y=%d w=%d h=%d" % (data[1], data[2], data[3], data[4]))
-                            self.homebase_final_approach_distance = 30.0
-                            self.on_driving_control(timestamp, "homebase-final")
-                            
-                        elif center_x < 300: # close but wrong angle, turn in place left
-                            self.publish("desired_movement", [0, 0, SPEED_ON])
-                        elif center_x > 340: # close but wrong angle, turn in place right
-                            self.publish("desired_movement", [0, 0, -SPEED_ON])
-                    else:
-                        if center_x < 300: # if homebase to the left, steer left
-                            self.publish("desired_movement", [TURN_ON, 0, SPEED_ON])
-                        elif center_x > 340:
-                            self.publish("desired_movement", [-TURN_ON, 0, SPEED_ON])
-                        else: # if within angle but object too small, keep going straight
-                            self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
+                elif self.currently_following_object['object_type'] == 'homebase':
+                    if center_x < 300: # if homebase to the left, steer left
+                        self.publish("desired_movement", [TURN_ON, 0, SPEED_ON])
+                    elif center_x > 340:
+                        self.publish("desired_movement", [-TURN_ON, 0, SPEED_ON])
+                    else: # if within angle but object too small, keep going straight
+                        self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
 
                 elif self.currently_following_object['object_type'] == 'basemarker':
                     print(self.time, "app: basemarker identified")
@@ -423,15 +403,14 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         # if was following an artefact but it disappeared, just go straight until another driver takes over
         if (
                 self.currently_following_object['timestamp'] is not None and
-                self.time - self.currently_following_object['timestamp'] > self.object_timeouts[self.currently_following_object['object_type']] and
-                self.current_driver != "homebase-final" # if in final homebase step, we are not expected to be tracking homebase visually
+                self.currently_following_object['object_type'] is not None and
+                self.time - self.currently_following_object['timestamp'] > self.object_timeouts[self.currently_following_object['object_type']]
                 
         ):
             self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
             print (self.time, "No longer tracking %s" % self.currently_following_object['object_type'])
             self.currently_following_object['timestamp'] = None
             self.currently_following_object['object_type'] = None
-            self.homebase_final_approach_distance = float("inf")
             self.basemarker_centered = False
             if self.current_driver != "basemarker": # do not change drivers when basemarker gets out of view because going around will bring it again
                 self.on_driving_control(timestamp, None) # do this last as it raises exception
@@ -447,35 +426,17 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
             # 10 degrees left and right is 6-7 samples before and after the array midpoint
             straight_ahead_dist = min_dist(data[midindex-15:midindex+15])
 
-            if 'homebase' in self.objects_to_follow and not math.isinf(self.homebase_final_approach_distance):
-                print ("current distance: %f, min distance so far: %f" % (straight_ahead_dist , self.homebase_final_approach_distance))
-                if straight_ahead_dist > self.homebase_final_approach_distance:
-                    if self.homebase_increase_count < MAX_NR_OF_FARTHER_SCANS:
-                        self.homebase_increase_count += 1
-                    else:
-                        self.homebase_increase_count = 0
-                        # missed it, back to main driving loop in order to try again
-                        print (self.time, "No longer tracking %s, distance increased" % self.currently_following_object['object_type'])
-                        self.currently_following_object['timestamp'] = None
-                        self.currently_following_object['object_type'] = None
-                        self.homebase_final_approach_distance = float("inf")
-                        self.basemarker_centered = False
-                        self.on_driving_control(timestamp, None) # do this last as it possibly raises exception
+            if self.currently_following_object['object_type'] == 'homebase':
+                print (self.time, "controller_round3: homebase current distance: %f" % (straight_ahead_dist))
+
+                if straight_ahead_dist < HOMEBASE_KEEP_DISTANCE:
+                    self.publish("desired_movement", [0, 0, 0])
+
+                    print ("app: final homebase distance %f: " % straight_ahead_dist)
+                    self.object_reached('homebase')
                 else:
-                    self.homebase_increase_count = 0
-                    self.homebase_final_approach_distance = straight_ahead_dist
-
-                    if straight_ahead_dist < HOMEBASE_KEEP_DISTANCE:
-                        self.publish("desired_movement", [0, 0, 0])
-
-                        print ("app: final homebase distance %f: " % straight_ahead_dist)
-                        self.homebase_final_approach_distance = float("inf")
-                        self.object_reached('homebase')
-                    else:
-                        # keep going straight; for now this means do nothing, keep speed from previous step
-                        self.currently_following_object['timestamp'] = self.time # freshen up timer as we are still following homebase
-
-            # we expect that lidar bounces off of homebase as if it was a big cylinder, not taking into consideration legs, etc.
+                    # keep going straight; for now this means do nothing, keep speed from previous step
+                    self.currently_following_object['timestamp'] = self.time # freshen up timer as we are still following homebase
 
             if 'basemarker' in self.objects_to_follow:
 
@@ -500,7 +461,6 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     print (self.time, "app: No longer going around homebase, distances inconsistent", self.basemarker_whole_scan_history)
                     self.currently_following_object['timestamp'] = None
                     self.currently_following_object['object_type'] = None
-                    self.homebase_final_approach_distance = float("inf")
                     self.basemarker_centered = False
                     self.basemarker_right_history = self.basemarker_left_history = []
                     self.follow_object(['homebase'])
