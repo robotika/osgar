@@ -12,3 +12,13 @@ osgar.egg-info/
 
 # ignition simulation logs
 ign-logs/
+
+# -*- mode: gitignore; -*-
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
