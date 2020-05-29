@@ -80,7 +80,6 @@ class main:
         rospy.loginfo_throttle(10, "imu callback: {}".format(self.imu_count))
         acc = [msg.linear_acceleration.x, msg.linear_acceleration.y, msg.linear_acceleration.z]
         orientation = [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w]
-        angular_velocity = [msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z]
 
         # copy & paste from rosmsg
         q0, q1, q2, q3 = orientation  # quaternion
@@ -90,16 +89,18 @@ class main:
         rot = [x, y, z]
         # end of copy & paste from rosmsg
 
-        data = [
-            msg.header.stamp.to_nsec()/1000000, # time in milliseconds
-            orientation,
-            angular_velocity,
-            acc,
-        ]
         self.bus.publish('rot', [py3round(math.degrees(angle) * 100) for angle in rot])
         self.bus.publish('acc', [py3round(x * 1000) for x in acc])
         self.bus.publish('orientation', orientation)
-        self.bus.publish('imu', data)
+        # preliminary suggestion for combined message
+        #angular_velocity = [msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z]
+        #data = [
+        #    msg.header.stamp.to_nsec()/1000000, # time in milliseconds
+        #    orientation,
+        #    angular_velocity,
+        #    acc,
+        #]
+        #self.bus.publish('imu', data)
 
 
 if __name__ == '__main__':
