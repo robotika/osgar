@@ -57,7 +57,8 @@ def parse_imu( data ):
 
     q0, q1, q2, q3 = orientation  # quaternion
     x =  math.atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2))
-    y =  math.asin(2*(q0*q2-q3*q1))
+    tmp = min(1.0, max(-1.0, 2*(q0*q2-q3*q1)))
+    y =  math.asin(tmp)
     z =  math.atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3))
 #    print('%d\t%f' % (stamp, math.degrees(y)))
 
