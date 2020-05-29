@@ -93,7 +93,7 @@ class SubTChallenge:
         self.start_pose = None
         self.traveled_dist = 0.0
         self.time = None
-        self.max_speed = config['speed']
+        self.max_speed = config.get('speed') or config.get('max_speed')
         self.max_angular_speed = math.radians(60)
         self.walldist = config['walldist']
         self.timeout = timedelta(seconds=config['timeout'])
