@@ -49,7 +49,7 @@ class LogZeroMQTest(unittest.TestCase):
             'timeout': 0.1
         }
         bus = MagicMock()
-        bus.listen = MagicMock(return_value=(1, 2, 'set_brakes on\n'))
+        bus.listen = MagicMock(return_value=(1, 2, ['abcdef', 'set_brakes on']))
         bus.is_alive = MagicMock(return_value=True)
         node = LogZeroMQ(config, bus)
         node.start()
@@ -65,7 +65,7 @@ class LogZeroMQTest(unittest.TestCase):
         socket.bind('tcp://127.0.0.1:5557')
         msg = socket.recv()
         node.join()
-        self.assertEqual(msg, b'set_brakes on\n')
+        self.assertEqual(msg, b'set_brakes on')
         bus.publish.assert_called_with('timeout', True)
 
 # vim: expandtab sw=4 ts=4
