@@ -11,80 +11,48 @@ import numpy as np
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 
-g_mask = None
-MIN_CYAN_COUNT = 300
-
-def count_mask(mask):
-    """Count statistics and bounding box for given image mask"""
-    count = int(mask.sum())
-    if count == 0:
-        return count, None, None, None, None
-
-    # argmax for mask finds the first True value
-    x_min = (mask.argmax(axis=0) != 0).argmax()
-    x_max = mask.shape[1] - np.flip((mask.argmax(axis=0) != 0), axis=0).argmax() - 1
-    w = (mask.shape[1] - np.flip((mask.argmax(axis=0) != 0), axis=0).argmax()
-            - (mask.argmax(axis=0) != 0).argmax())
-    h = (mask.shape[0] - np.flip((mask.argmax(axis=1) != 0), axis=0).argmax()
-            - (mask.argmax(axis=1) != 0).argmax())
-    return count, w, h, x_min, x_max
-
-def count_cyan(img, filtered=False, stdout=None):
-    # NASA SRC logo color is #007DBD or (0,125,189)
-    # assume valid colors are between that and lighter #E5F2F8 (229, 242, 248) (given the illumination)
-    # valid rgb: ratios for r,g,b must be similar, ie for any given pixel, each r,g,b must in the same place between both end rgb values
-    
-#    r ratio = (r - 0) / (229 - 0)
-#    g ratio = (g - 125) / (242 - 125)
-#    b ratio = (b - 189) / (248 - 189)
-    
-    b = img[:,:,0]
-    g = img[:,:,1]
-    r = img[:,:,2]
-    
-    mask = np.logical_and((r - 0) / (229 - 0) < 1, np.logical_and(abs(((r - 0) / (229 - 0)) - ((g - 125) / (242 - 125))) < 0.2 , abs(((b - 189) / (248 - 189)) - ((g - 125) / (242 - 125))) < 0.2))
-    not_mask = np.logical_not(mask)
-    img2 = img.copy()
-    img2[mask] = (255, 255, 255)
-    img2[not_mask] = (0, 0, 0)
-
-    global g_mask
-    g_mask = mask.copy()
-    return count_mask(mask)
-
 
 class ArtifactDetector(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register("artf", "dropped", "debug_artf")
-        self.best = None
-        self.best_count = 0
-        self.best_img = None
-        self.best_info = None
-        self.best_scan = None
-        self.best_depth = None
+        bus.register("artf", "dropped")
         self.verbose = False
         self.dump_dir = None  # optional debug ouput into directory
         self.scan = None  # should laster initialize super()
         self.depth = None  # more precise definiton of depth image
         self.width = None  # detect from incoming images
-        self.cascade = [
+        self.detectors = [
             {
                 'artefact_name': 'cubesat',
+                'detector_type': 'classifier',
                 'classifier': cv2.CascadeClassifier('/osgar/moon/xml/cubesat.xml'),
                 'min_size': 5,
                 'max_size': 110,
-                'subsequent_detects': 0
+                'subsequent_detects_required': 3
                 },
             {
-                'artefact_name': 'homebase',
-                'classifier': cv2.CascadeClassifier('/osgar/moon/xml/homebase.xml'),
+                'artefact_name': 'basemarker',
+                'detector_type': 'colormatch',
                 'min_size': 50,
-                'max_size': 300,
-                'subsequent_detects': 0
+                'max_size': 500,
+                'pixel_count_threshold': 1000,
+                'hue_max_difference': 20,
+                'hue_match': 100, # from RGB 007DBD
+                'subsequent_detects_required': 3  # noise will add some of this color, wait for a consistent sequence
+            },
+            {
+                'artefact_name': 'homebase',
+                'detector_type': 'colormatch',
+                'min_size': 20,
+                'max_size': 700,
+                'pixel_count_threshold': 1500,
+                'hue_max_difference': 10,
+                'hue_match': 19, # from RGB FFA616
+                'subsequent_detects_required': 3
             }
         ]
-
+        self.detect_sequences = {}
+        
     def stdout(self, *args, **kwargs):
         # maybe refactor to Node?
         output = StringIO()
@@ -122,44 +90,61 @@ class ArtifactDetector(Node):
         limg = cv2.imdecode(np.fromstring(left_image, dtype=np.uint8), 1)
         rimg = cv2.imdecode(np.fromstring(right_image, dtype=np.uint8), 1)
 
-
         if self.width is None:
             self.stdout('Image resolution', limg.shape)
             self.width = limg.shape[1]
         assert self.width == limg.shape[1], (self.width, limg.shape[1])
 
-
-        ccount, w, h, x_min, x_max = count_cyan(limg[0:480,300:340])
-        if ccount > MIN_CYAN_COUNT: 
-            self.publish('artf', ['basemarker', 300, 0, 60, 480, ccount])
-        
         limg_rgb = cv2.cvtColor(limg, cv2.COLOR_BGR2RGB) 
         rimg_rgb = cv2.cvtColor(rimg, cv2.COLOR_BGR2RGB) 
+        hsv = cv2.cvtColor(limg, cv2.COLOR_BGR2HSV)
+        hsv_blurred = cv2.medianBlur(hsv,5) # some frames have noise, need to blur otherwise threshold doesn't work
 
-        for c in self.cascade:
-            lfound = c['classifier'].detectMultiScale(limg_rgb, minSize =(c['min_size'], c['min_size']),  maxSize =(c['max_size'], c['max_size'])) 
-            rfound = c['classifier'].detectMultiScale(rimg_rgb, minSize =(c['min_size'], c['min_size']),  maxSize =(c['max_size'], c['max_size'])) 
+        for c in self.detectors:
+            if c['artefact_name'] not in self.detect_sequences:
+                self.detect_sequences[c['artefact_name']] = 0
 
-            if len(lfound) > 0 and len(rfound) > 0: # only report if both cameras see it
-                if c['subsequent_detects'] < 3: # do not act until you have at least 3 detections in a row
-                    c['subsequent_detects'] += 1
+            if c['detector_type'] == 'colormatch':
+                lower_hue = np.array([c['hue_match'] - c['hue_max_difference'],50,50])
+                upper_hue = np.array([c['hue_match'] + c['hue_max_difference'],255,255])
+                # Threshold the HSV image to get only the matching colors
+                mask = cv2.inRange(hsv_blurred, lower_hue, upper_hue)
+                coords = cv2.findNonZero(mask)
+                x, y, w, h = cv2.boundingRect(coords)
+                match_count = cv2.countNonZero(mask)
+#                print ("%s match count: %d; [%d %d %d %d]" % (c['artefact_name'], match_count, x, y, w, h))
+                if (match_count > c['pixel_count_threshold']):
+                    if self.detect_sequences[c['artefact_name']] < c['subsequent_detects_required']: # do not act until you have detections in a row
+                        self.detect_sequences[c['artefact_name']] += 1
+                    elif w >= c['min_size'] and h >= c['min_size'] and w <= c['max_size'] and h <= c['max_size']:
+                        self.publish('artf', [c['artefact_name'], int(x), int(y), int(w), int(h), int(match_count)])
                 else:
+                    self.detect_sequences[c['artefact_name']] = 0
+                    
 
-                    # TODO: tweak the filtering (blur and threshold), sometimes not all background is filtered out and the bbox looks bigger than it should be
-                    x,y,width,height = lfound[0]
-#                    print(self.time, "Pre: %d %d %d %d" % (x,y,width,height))
-                    gray = cv2.cvtColor(limg_rgb[y:y+height, x:x+width], cv2.COLOR_BGR2GRAY)
-                    blur = cv2.medianBlur(gray,3) # some frames have noise, need to blur otherwise threshold doesn't work
-                    th, threshed = cv2.threshold(blur, 30, 255, cv2.THRESH_BINARY)
-                    coords = cv2.findNonZero(threshed)
-                    nonzerocount = cv2.countNonZero(threshed)
-                    nx, ny, nw, nh = cv2.boundingRect(coords)
-#                    print(self.time, "Post: %d %d %d %d" % (x+nx,y+ny,nw,nh))
+            if c['detector_type'] == 'classifier':
+                lfound = c['classifier'].detectMultiScale(limg_rgb, minSize =(c['min_size'], c['min_size']),  maxSize =(c['max_size'], c['max_size'])) 
+                rfound = c['classifier'].detectMultiScale(rimg_rgb, minSize =(c['min_size'], c['min_size']),  maxSize =(c['max_size'], c['max_size'])) 
 
-                    self.publish('artf', [c['artefact_name'], int(x+nx), int(y+ny), int(nw), int(nh), int(nonzerocount)])
-                        
-            else:
-                c['subsequent_detects'] = 0
+                if len(lfound) > 0 and len(rfound) > 0: # only report if both cameras see it
+                    if self.detect_sequences[c['artefact_name']] < c['subsequent_detects_required']: # do not act until you have detections in a row
+                        self.detect_sequences[c['artefact_name']] += 1
+                    else:
+
+                        # TODO: tweak the filtering (blur and threshold), sometimes not all background is filtered out and the bbox looks bigger than it should be
+                        x,y,width,height = lfound[0]
+    #                    print(self.time, "Pre: %d %d %d %d" % (x,y,width,height))
+                        gray = cv2.cvtColor(limg_rgb[y:y+height, x:x+width], cv2.COLOR_BGR2GRAY)
+                        blur = cv2.medianBlur(gray,3) # some frames have noise, need to blur otherwise threshold doesn't work
+                        th, threshed = cv2.threshold(blur, 30, 255, cv2.THRESH_BINARY)
+                        coords = cv2.findNonZero(threshed)
+                        nonzerocount = cv2.countNonZero(threshed)
+                        nx, ny, nw, nh = cv2.boundingRect(coords)
+    #                    print(self.time, "Post: %d %d %d %d" % (x+nx,y+ny,nw,nh))
+
+                        self.publish('artf', [c['artefact_name'], int(x+nx), int(y+ny), int(nw), int(nh), int(nonzerocount)])
+                else:
+                    self.detect_sequences[c['artefact_name']] = 0
 
 def debug2dir(filename, out_dir):
     from osgar.logger import LogReader, lookup_stream_names
