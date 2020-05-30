@@ -140,7 +140,7 @@ class SpaceRoboticsChallenge(Node):
         self.send_request('set_brakes %s\n' % ('on' if on else 'off'))
         print (self.time, "app: Brakes set to: %s" % on)
 
-    def on_driving_recovery(self, data):
+    def on_driving_recovery(self, timestamp, data):
         self.in_driving_recovery = data
         print (self.time, "Driving recovery changed to: %r" % data)
 
@@ -205,6 +205,8 @@ class SpaceRoboticsChallenge(Node):
             self.on_score(self.time, self.score)
         elif channel == 'driving_control':
             self.on_driving_control(self.time, self.driving_control)
+        elif channel == 'driving_recovery':
+            self.on_driving_recovery(self.time, self.driving_recovery)
         elif channel == 'object_reached':
             self.on_object_reached(self.time, self.object_reached)
         elif channel == 'scan':

@@ -4,7 +4,7 @@
     "modules": {
       "app": {
           "driver": "moon.controller_round3:SpaceRoboticsChallengeRound3",
-          "in": ["pose2d", "driving_control"],
+          "in": ["pose2d", "driving_control", "driving_recovery"],
           "out": ["desired_speed", "artf_xyz", "artf_cmd", "pose3d", "driving_recovery"],
           "init": {}
       },
@@ -81,7 +81,6 @@
               ["detector.artf", "app.artf"],
               ["app.desired_movement", "scout.desired_movement"],
               ["app.desired_speed", "scout.desired_speed"],
-              ["app.driving_recovery", "scout.driving_recovery"],
               ["app.driving_recovery", "scout.driving_recovery"],
               ["app.driving_recovery", "app.driving_recovery"],
               ["app.request", "rpc.request"],
