@@ -132,7 +132,7 @@ class SpaceRoboticsChallenge(Node):
 
     def poll_responses(self, token, callback):
         while self.time is None:
-            time.sleep(0.1)
+            self.sleep(0.1)
         request_sent = self.time
         while self.time - request_sent < timedelta(seconds=5):
             for i in self.requests:
@@ -143,7 +143,7 @@ class SpaceRoboticsChallenge(Node):
                     if callback is not None:
                         callback(response)
                     return
-            time.sleep(0.1)
+            self.sleep(0.1)
         print(self.time, "controller: send_request timed out: token: %s" % token)
 
         
