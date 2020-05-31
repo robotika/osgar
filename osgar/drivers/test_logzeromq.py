@@ -44,7 +44,7 @@ class LogZeroMQTest(unittest.TestCase):
         node.join()
 
 
-    class test_ROS_server(Thread):
+    class DummyROSServer(Thread):
         def __init__(self):
             super().__init__()
             self.msg = b''
@@ -79,7 +79,7 @@ class LogZeroMQTest(unittest.TestCase):
         bus.is_alive = MagicMock(return_value=True)
         node = LogZeroMQ(config, bus)
 
-        t = self.test_ROS_server()
+        t = self.DummyROSServer()
         t.start()
         node.start()
         time.sleep(0.1)  # give it a chance to start
