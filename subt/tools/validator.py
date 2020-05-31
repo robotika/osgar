@@ -12,6 +12,7 @@ from subt.trace import distance3D
 MAX_SIMULATION_DURATION = 3700  # 1hour with a small buffer
 
 SIM_TIME_STREAM = 'rosmsg.sim_time_sec'
+ORIGIN_STREAM = 'rosmsg.origin'
 
 
 def evaluate_poses(poses, gt_poses, time_step_sec=1.0):
@@ -66,6 +67,15 @@ def read_pose3d(filename, pose3d_name, seconds=MAX_SIMULATION_DURATION):
     return poses
 
 
+def autodetect_name(logfile):
+    stream_id = lookup_stream_id(logfile, ORIGIN_STREAM)
+    for dt, channel, data in LogReader(logfile, only_stream_id=stream_id):
+        arr = deserialize(data)
+        robot_name = arr[0].decode('ascii')
+        return robot_name
+    assert False, "Robot name autodetection failed!"
+
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(__doc__)
@@ -78,14 +88,28 @@ def main():
     parser.add_argument('--draw', help="draw debug results", action='store_true')
     args = parser.parse_args()
 
+    robot_name = args.name
+    if robot_name is None:
+        robot_name = autodetect_name(args.logfile)
+        print('Autodetected name:', robot_name)
+
     ground_truth = ign.read_poses(args.ign, seconds=args.sec)
     print('GT count:', len(ground_truth))
 
     pose3d = read_pose3d(args.logfile, args.pose3d, seconds=args.sec)
     print('Trace count:', len(pose3d))
 
-    arr = evaluate_poses(osgar2arr(pose3d), ign2arr(ground_truth, robot_name=args.name))
-    print(min(arr), max(arr))
+    tmp_poses = osgar2arr(pose3d)
+    tmp_gt = ign2arr(ground_truth, robot_name=robot_name)
+    arr = evaluate_poses(tmp_poses, tmp_gt)
+    if len(arr) == 0:
+        print('EMPTY OVERLAP!')
+        if len(tmp_poses) > 0:
+            print('poses:', tmp_poses[0][0], tmp_poses[-1][0])
+        if len(tmp_gt) > 0:
+            print('gt   :', tmp_gt[0][0], tmp_gt[-1][0])
+    else:
+        print(min(arr), max(arr))
 
     if args.draw:
         import matplotlib.pyplot as plt
