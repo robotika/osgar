@@ -110,7 +110,8 @@ def main():
         if len(tmp_gt) > 0:
             print('gt   :', tmp_gt[0][0], tmp_gt[-1][0])
     else:
-        print(min(arr), max(arr))
+        print(max(arr))
+        assert min(arr) < 0.1  # the minimum should be almost zero for correct evaluation
 
     if args.draw:
         import matplotlib.pyplot as plt
