@@ -10,8 +10,10 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
     def run(self):
 
-        vol_list = self.send_request('get_volatile_locations').decode('ascii')
-        print (self.time, "main-excavator-round2: Volatiles: %s" % vol_list)
+        def process_volatiles(vol_list):
+            print (self.time, "main-excavator-round2: Volatiles: %s" % vol_list)
+            
+        self.send_request('get_volatile_locations', process_volatiles)
 
         super().run()
 

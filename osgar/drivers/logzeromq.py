@@ -78,40 +78,56 @@ class LogZeroMQ:
 
     
     class ReqRepWorker(Thread):
-        def __init__(self, context, rossocket, bus):
+        def __init__(self, context, bus, endpoint):
             Thread.__init__ (self)
             self.context = context
-            self.rossocket = rossocket
             self.bus = bus
 
+            self.rossocket = context.socket(zmq.REQ)
+            self.rossocket.RCVTIMEO = int(2000)
+            self.rossocket.connect(endpoint)
+            self.stop_requested = False
+            
+        def stop(self):
+            self.stop_requested = True
+            
         def run(self):
             worker = self.context.socket(zmq.REQ)
+            worker.setsockopt(zmq.LINGER, 0)
+            worker.RCVTIMEO = 1000 
             worker.connect('inproc://reqrepbackend')
-            try:
-                while True:
-                    worker.send(b"ready")
-                    data = worker.recv()
-                    ident, msg = data.decode('ascii').split('|')
-                    self.rossocket.send_string(msg)
-                    rsp = self.rossocket.recv().decode('ascii')
-                    self.bus.publish('response', [ident, rsp])
-            except Exception:
-                pass
+
+            def run_loop():
+                while not self.stop_requested:
+                    try:
+                        worker.send(b"ready")
+                        while True:
+                            try:
+                                data = worker.recv()
+                                break
+                            except zmq.Again:
+                                if self.stop_requested:
+                                    return
+
+                        ident, msg = data.decode('ascii').split('|')
+                        self.rossocket.send_string(msg)
+                        rsp = self.rossocket.recv().decode('ascii')
+                        self.bus.publish('response', [ident, rsp])
+                    except Exception as e:
+                        print("logzeromq thread: %s" % str(e))
+
+            run_loop()
             worker.close()
-        
+            self.rossocket.close()
+            
     def run_reqrep(self):
         context = zmq.Context()
-
-        rossocket = context.socket(zmq.REQ)
-        rossocket.RCVTIMEO = int(self.timeout * 1000)  # convert to milliseconds
-        rossocket.connect(self.endpoint)
-
         backend = context.socket(zmq.ROUTER)
         backend.bind('inproc://reqrepbackend')
 
         workers = []
         for i in range(5):
-            worker = self.ReqRepWorker(context, rossocket, self.bus)
+            worker = self.ReqRepWorker(context, self.bus, self.endpoint)
             worker.start()
             workers.append(worker)
 
@@ -124,10 +140,11 @@ class LogZeroMQ:
                 backend.send_multipart([address, b'', (ident + '|' + payload).encode('ascii')])
 
         except BusShutdownException:
-            pass
+            for w in workers:
+                w.stop()
+                w.join()
 
         backend.close()
-        rossocket.close()
         context.term()
 
     def request_stop(self):

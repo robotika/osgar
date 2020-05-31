@@ -73,8 +73,6 @@
               ["app.desired_speed", "scout.desired_speed"],
               ["app.request", "rpc.request"],
               ["rpc.response", "app.response"],
-              ["app.request", "rpc.request"],
-              ["rpc.response", "app.response"],
               ["scout.cmd", "transmitter.raw"],
               ["scout.object_reached", "app.object_reached"],
               ["scout.pose2d", "app.pose2d"]

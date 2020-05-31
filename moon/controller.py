@@ -5,6 +5,9 @@ import math
 from random import Random
 from datetime import timedelta
 
+from threading import Thread
+import time
+
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 from osgar.lib import quaternion
@@ -106,6 +109,8 @@ class SpaceRoboticsChallenge(Node):
         self.virtual_bumper = None
         self.rand = Random(0)
 
+        self.requests = {}
+
     def register(self, callback):
         self.monitors.append(callback)
         return callback
@@ -119,22 +124,38 @@ class SpaceRoboticsChallenge(Node):
             self.virtual_bumper.update_desired_speed(speed, angular_speed)
         self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
 
-    def send_request(self, cmd):
-        """Send ROS Service Request form a single place"""
-        token = secrets.token_hex(5)
+    def on_response(self, timestamp, data):
+        intoken, response = data
+        self.requests[intoken] = {
+            "response": response
+            }
+
+    def poll_responses(self, token, callback):
+        while self.time is None:
+            time.sleep(0.1)
         request_sent = self.time
-        self.publish('request', [token, cmd])
         while self.time - request_sent < timedelta(seconds=5):
-            dt, channel, data = self.listen()
-            print(dt, "controller:send_request: channel=%s, data=%s" %(channel, data))
-            if channel == 'response':
-                intoken, response = data
-                if intoken == token:
-                    return response
-                else:
-                    print(dt, 'controller: ignoring response with token %s, waiting for token %s' % (intoken, token))
-            print(dt, 'ignoring channel %s' % channel)
-        print(self.time, "controller: send_request timed out: %s", cmd)
+            for i in self.requests:
+                if self.requests[token]["response"] is not None:
+                    response = self.requests[token]["response"]
+                    print(self.time, "controller:response received: token=%s, response=%s" % (token, response))
+                    self.requests.pop(token)
+                    if callback is not None:
+                        callback(response)
+                    return
+            time.sleep(0.1)
+        print(self.time, "controller: send_request timed out: token: %s" % token)
+
+        
+    def send_request(self, cmd, callback=None):
+        """Send ROS Service Request from a single place"""
+        token = secrets.token_hex(5)
+        self.requests[token] = {
+            "response": None
+        }
+        print(self.time, "controller:send_request:token: %s, command: %s" % (token, cmd))
+        self.publish('request', [token, cmd])
+        Thread(target=self.poll_responses, args=(token, callback, )).start()
 
     def set_cam_angle(self, angle):
         self.send_request('set_cam_angle %f\n' % angle)
@@ -195,7 +216,7 @@ class SpaceRoboticsChallenge(Node):
             elif self.time - self.last_status_timestamp > timedelta(seconds=8):
                 self.last_status_timestamp = self.time
                 x, y, z = self.xyz
-                print (self.time, "Loc: [%f %f %f] [%f %f %f]; Driver: %s; Score: %d" % (x, y, z, self.roll, self.pitch, self.yaw, self.current_driver, self.score))
+                print (self.time, "Loc: [%f %f %f] [%f %f %f]; Driver: %s; Score: %d, Que: %d" % (x, y, z, self.roll, self.pitch, self.yaw, self.current_driver, self.score, len(self.requests)))
 
         channel = super().update()
 #        handler = getattr(self, "on_" + channel, None)
@@ -207,6 +228,8 @@ class SpaceRoboticsChallenge(Node):
             self.on_artf(self.time, self.artf)
         elif channel == 'score':
             self.on_score(self.time, self.score)
+        elif channel == 'response':
+            self.on_response(self.time, self.response)
         elif channel == 'driving_control':
             self.on_driving_control(self.time, self.driving_control)
         elif channel == 'object_reached':
