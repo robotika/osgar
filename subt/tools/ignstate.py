@@ -95,6 +95,12 @@ def read_artifacts(filename):
     return ret
 
 
+def get_origin(filename):
+    artifacts = read_artifacts(filename)
+    origin = next(filter(lambda a: a[0] == 'artifact_origin', artifacts))[1]
+    return origin
+
+
 def draw(poses, artifacts):
     min_x, min_y = 10_000, 10_000
     max_x, max_y = -10_000, -10_000

@@ -34,13 +34,13 @@ def evaluate_poses(poses, gt_poses, time_step_sec=1.0):
     return arr
 
 
-def ign2arr(ign_poses, robot_name):
+def ign2arr(ign_poses, robot_name, origin):
     """Convert Ignition state poses into array"""
     arr = []
     for timestamp, data in ign_poses:
         if robot_name in data:
             pos = data[robot_name]
-            arr.append((timestamp.total_seconds(), pos.x, pos.y, pos.z))
+            arr.append((timestamp.total_seconds(), pos.x - origin[0], pos.y - origin[1], pos.z - origin[2]))
     return arr
 
 
@@ -94,13 +94,14 @@ def main():
         print('Autodetected name:', robot_name)
 
     ground_truth = ign.read_poses(args.ign, seconds=args.sec)
+    gt_origin = ign.get_origin(args.ign)
     print('GT count:', len(ground_truth))
 
     pose3d = read_pose3d(args.logfile, args.pose3d, seconds=args.sec)
     print('Trace count:', len(pose3d))
 
     tmp_poses = osgar2arr(pose3d)
-    tmp_gt = ign2arr(ground_truth, robot_name=robot_name)
+    tmp_gt = ign2arr(ground_truth, robot_name=robot_name, origin=gt_origin)
     arr = evaluate_poses(tmp_poses, tmp_gt)
     if len(arr) == 0:
         print('EMPTY OVERLAP!')
