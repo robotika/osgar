@@ -16,8 +16,6 @@ from osgar.lib.virtual_bumper import VirtualBumper
 
 from subt.local_planner import LocalPlanner
 
-import secrets
-
 class ChangeDriverException(Exception):
     pass
 
@@ -149,7 +147,7 @@ class SpaceRoboticsChallenge(Node):
         
     def send_request(self, cmd, callback=None):
         """Send ROS Service Request from a single place"""
-        token = secrets.token_hex(5)
+        token = hex(self.rand.getrandbits(128))
         self.requests[token] = {
             "response": None
         }
