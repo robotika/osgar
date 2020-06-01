@@ -27,10 +27,10 @@ class ValidatorTest(unittest.TestCase):
         vec.y = 2
         vec.z = 0.5
         gt = [(datetime.timedelta(0, 1, 548000), {'A60F300L': vec})]
-        arr = ign2arr(gt, robot_name='A60F300L', origin=[0, 0, 0])
+        arr = ign2arr(gt, robot_name='A60F300L')
         self.assertEqual(arr, [(1.548, 1, 2, 0.5)])
 
-        arr2 = ign2arr(gt, robot_name='B90F300R', origin=[0, 0, 0])
+        arr2 = ign2arr(gt, robot_name='B90F300R')
         self.assertEqual(arr2, [])
 
     def test_osgar2arr(self):

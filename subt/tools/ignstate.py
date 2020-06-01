@@ -39,6 +39,7 @@ MARKERS = {
 
 
 def read_poses(filename, seconds=3700):
+    offset = [-x for x in get_origin(filename)]
     ret = []
 
     con = sqlite3.connect(filename)
@@ -62,6 +63,9 @@ def read_poses(filename, seconds=3700):
             for pose in poses.pose:
                 if "_" in pose.name:
                     continue
+                pose.position.x += offset[0]
+                pose.position.y += offset[1]
+                pose.position.z += offset[2]
                 current[pose.name] = pose.position
             if len(current) > 0:
                 ret.append((timestamp, current))
