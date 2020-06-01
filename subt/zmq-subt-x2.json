@@ -63,7 +63,7 @@
       "rospy": {
           "driver": "subt.pull:Pull",
 	      "init": {
-	        "outputs": ["imu", "rot", "acc", "orientation"]
+	        "outputs": ["rot", "acc", "orientation"]
 	      }
       }
     },
