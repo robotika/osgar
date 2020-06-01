@@ -71,7 +71,7 @@ class main:
 
         # start
         self.bus = Bus()
-        self.bus.register('imu', 'rot', 'acc', 'orientation')
+        self.bus.register('rot', 'acc', 'orientation')
         rospy.Subscriber(imu_name, Imu, self.imu)
         rospy.spin()
 
