@@ -1,4 +1,4 @@
-FROM robotika/subt-base:2020-05-18
+FROM robotika/subt-base:2020-05-26
 
 RUN sudo apt-get update && sudo apt install -y ros-melodic-teleop-twist-keyboard
 
