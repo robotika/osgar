@@ -71,6 +71,7 @@ class MotorController:
             newWheelSpeed.centerRight = self.pidControllerCenterRight.update(desiredSpeed.centerRight,actualWheelSpeed.centerRight)
             
             
+            
             print "FL:\tdesired=%lf;\tactual=%lf;\tnew=%lf" % (desiredSpeed.frontLeft,actualWheelSpeed.frontLeft,newWheelSpeed.frontLeft)
             print "FR:\tdesired=%lf;\tactual=%lf;\tnew=%lf" % (desiredSpeed.frontRight,actualWheelSpeed.frontRight,newWheelSpeed.frontRight)
             print "RL:\tdesired=%lf;\tactual=%lf;\tnew=%lf" % (desiredSpeed.rearLeft,actualWheelSpeed.rearLeft,newWheelSpeed.rearLeft)

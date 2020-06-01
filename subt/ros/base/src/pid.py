@@ -51,7 +51,7 @@ class PID:
         elif self.doubleClickState == "FIRST_STOP" or self.doubleClickState == "INIT":
             self.doubleClickState = "INIT"
             self.prevSpeed = newSpeed
-        print("doubleClickState=%s\tprev=%f\tnew=%f"%(self.doubleClickState, self.prevSpeed, newSpeed))
+        #print("doubleClickState=%s\tprev=%f\tnew=%f"%(self.doubleClickState, self.prevSpeed, newSpeed))
         return newSpeed
 
     def stop(self):
