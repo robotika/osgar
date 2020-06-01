@@ -29,7 +29,8 @@ def evaluate_poses(poses, gt_poses, time_step_sec=1.0):
         while gt_poses[j][0] < time_limit:
             j += 1
         dist = distance3D(poses[i][1:], gt_poses[j][1:])
-        arr.append(dist)
+        diff = [a - b for a, b in zip(poses[i][1:], gt_poses[j][1:])]
+        arr.append((time_limit, dist, *diff))
         time_limit += time_step_sec
     return arr
 
@@ -110,13 +111,23 @@ def main():
         if len(tmp_gt) > 0:
             print('gt   :', tmp_gt[0][0], tmp_gt[-1][0])
     else:
-        print(max(arr))
-        assert min(arr) < 0.1  # the minimum should be almost zero for correct evaluation
+        dist3d = [a[1] for a in arr]
+        print(max(dist3d))
+        assert min(dist3d) < 0.1  # the minimum should be almost zero for correct evaluation
 
     if args.draw:
         import matplotlib.pyplot as plt
 
-        plt.plot(arr, 'o-', linewidth=2)
+        fig, ax1 = plt.subplots()
+        ax1.set_ylabel('distance (m)')
+        ax1.set_title(robot_name)
+
+        x = [a[0] for a in arr]
+        for index, label in enumerate(['dist3d', 'x', 'y', 'z']):
+            y = [a[index + 1] for a in arr]
+            ax1.plot(x, y, '-', linewidth=2, label=label)
+        ax1.set_xlabel('sim time (s)')
+        plt.legend()
         plt.show()
 
     return arr
