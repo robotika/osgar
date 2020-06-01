@@ -59,6 +59,32 @@ class LidarCollisionMonitor:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.robot.unregister(self.callback)
 
+class ResponsePoller(Thread):
+    def __init__(self, robot, token, callback):
+        super().__init__()
+        self.token = token
+        self.callback = callback
+        self.robot = robot
+        self.stop_request = False
+
+    def request_stop(self):
+        self.stop_request = True
+
+    def run(self):
+        request_sent = self.robot.time
+        while not self.stop_request and self.robot.time - request_sent < timedelta(seconds=5):
+            if self.robot.requests[self.token]["response"] is not None:
+                response = self.robot.requests[self.token]["response"]
+                print(self.robot.time, "controller:response received: token=%s, response=%s" % (self.token, response))
+                self.robot.requests.pop(self.token)
+                if self.callback is not None:
+                    self.callback(response)
+                return
+            self.robot.sleep(0.1)
+        print(self.robot.time, "controller: send_request timed out: token: %s" % self.token)
+        self.robot.requests[self.token]["thread"] = None
+
+        
 
 class SpaceRoboticsChallenge(Node):
     def __init__(self, config, bus):
@@ -116,6 +142,13 @@ class SpaceRoboticsChallenge(Node):
     def unregister(self, callback):
         assert callback in self.monitors
         self.monitors.remove(callback)
+
+    def request_stop(self):
+        for r in self.requests:
+            if self.requests[token]["thread"] is not None:
+                self.requests[token]["thread"].request_stop()
+                self.requests[token]["thread"].join()
+        super().request_stop()
         
     def send_speed_cmd(self, speed, angular_speed):
         if self.virtual_bumper is not None:
@@ -123,37 +156,19 @@ class SpaceRoboticsChallenge(Node):
         self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
 
     def on_response(self, timestamp, data):
-        intoken, response = data
-        self.requests[intoken] = {
-            "response": response
-            }
-
-    def poll_responses(self, token, callback):
-        while self.time is None:
-            self.sleep(0.1)
-        request_sent = self.time
-        while self.time - request_sent < timedelta(seconds=5):
-            for i in self.requests:
-                if self.requests[token]["response"] is not None:
-                    response = self.requests[token]["response"]
-                    print(self.time, "controller:response received: token=%s, response=%s" % (token, response))
-                    self.requests.pop(token)
-                    if callback is not None:
-                        callback(response)
-                    return
-            self.sleep(0.1)
-        print(self.time, "controller: send_request timed out: token: %s" % token)
-
+        token, response = data
+        self.requests[token]["response"] = response
         
     def send_request(self, cmd, callback=None):
         """Send ROS Service Request from a single place"""
         token = hex(self.rand.getrandbits(128))
         self.requests[token] = {
-            "response": None
+            "response": None,
+            "thread": ResponsePoller(self, token, callback)
         }
         print(self.time, "controller:send_request:token: %s, command: %s" % (token, cmd))
         self.publish('request', [token, cmd])
-        Thread(target=self.poll_responses, args=(token, callback, )).start()
+        self.requests[token]["thread"].start()
 
     def set_cam_angle(self, angle):
         self.send_request('set_cam_angle %f\n' % angle)
@@ -335,15 +350,19 @@ class SpaceRoboticsChallenge(Node):
         
         self.go_straight(3.0, timeout=timedelta(seconds=20))
         self.turn(math.radians(-90), timeout=timedelta(seconds=10))
-        
-    def run(self):
+
+    def wait_for_init(self):
         try:
             print('Wait for definition of last_position and yaw')
             while self.last_position is None or self.yaw is None:
                 self.update()  # define self.time
             print('done at', self.time)
+        except BusShutdownException:
+            pass
 
-            
+        
+    def run(self):
+        try:
             last_walk_start = 0.0
             start_time = self.time
             while self.time - start_time < timedelta(minutes=40):

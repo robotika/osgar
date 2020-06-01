@@ -548,12 +548,9 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         
 
     def run(self):
-        try:
-            print('Wait for definition of last_position and yaw')
-            while self.last_position is None or self.yaw is None:
-                self.update()  # define self.time
-            print('done at', self.time)
+        self.wait_for_init()
 
+        try:
             self.set_brakes(False)
             # some random manual starting moves to choose from
 #            self.go_straight(-0.1, timeout=timedelta(seconds=20))
