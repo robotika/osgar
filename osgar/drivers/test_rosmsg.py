@@ -110,7 +110,7 @@ class ROSMsgParserTest(unittest.TestCase):
                b'hydrogen_sul\n\x00\x00\x00sulfur_dio\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' + \
                b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' + \
                b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-        self.assertEqual(parse_topic('srcp2_msgs/Qual2ScoringMsg', data), (0, 0))
+        self.assertEqual(parse_topic('srcp2_msgs/Qual2ScoringMsg', data), [0, 0])
 
     def test_imu_math_domain_error(self):
         data = b'J\x01\x00\x00\x0c\x18\x01\x00\x05\t\x00\x00\x80\xc0\r\x16\x12\x00\x00\x00scout' + \
