@@ -32,33 +32,42 @@ def main():
 
 
 def record(config, log_prefix, log_filename=None, duration_sec=None):
-    router = Router()
-    modules = {}
-    for module_name, module_config in config['robot']['modules'].items():
-        module_config['name'] = module_name
-        modules[module_name] = subprocess.Popen([sys.executable, __file__, str(module_config)])
+    with Router() as router:
+        modules = {}
+        for module_name, module_config in config['robot']['modules'].items():
+            module_config['name'] = module_name
+            modules[module_name] = subprocess.Popen([sys.executable, __file__, str(module_config)])
 
-    router.connect(len(modules), config['robot']['links'])
-    pprint(router.subscriptions)
-    router.run()
+        router.connect(len(modules), config['robot']['links'])
+        #pprint(router.subscriptions)
+        router.run()
 
-    for module in modules.values():
-        module.wait() # TODO terminate rogue modules
+        for module in modules.values():
+            module.wait() # TODO terminate rogue modules
 
 
 class Router:
     def __init__(self):
         self.start_time = datetime.datetime.now(datetime.timezone.utc)
-        context = zmq.Context.instance()
-        self.s = context.socket(zmq.ROUTER)
-        self.s.bind("tcp://127.0.0.1:8881")
+        self._context = zmq.Context()
+        self.s = self._context.socket(zmq.ROUTER)
         self.nodes = dict()
         self.subscriptions = dict()
         self.listening = set()
         self.stopping = datetime.timedelta()
+
+    def __enter__(self):
+        self.s.bind("tcp://127.0.0.1:8881")
         signal.signal(signal.SIGINT, self.sigint)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.s.close()
+        self._context.term()
 
     def sigint(self, signum, frame):
+        # TODO send message to myself telling me to stop?
+        # use Event? what is ok to do from a signal handler?
         self.request_stop(b'ctrl-c')
 
     def connect(self, num, links):
