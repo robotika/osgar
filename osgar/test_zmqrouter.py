@@ -34,5 +34,13 @@ def node_publisher(name, channel):
         print("  published", i, dt)
     bus.request_stop()
 
+
 if __name__ == "__main__":
+    import logging, sys
+    logging.basicConfig(
+        stream=sys.stderr,
+        level=logging.DEBUG,
+        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+        datefmt='%Y-%m-%d %H:%M',
+    )
     main()

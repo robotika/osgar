@@ -10,23 +10,23 @@ import sys
 
 
 from pprint import pprint
-from threading import Thread
 
 import zmq
 
 import osgar.lib.serialize
 import osgar.lib.config
 
+g_logger = logging.getLogger(__name__)
+
 
 def main():
     signal.signal(signal.SIGINT,signal.SIG_IGN)
     module_config = ast.literal_eval(sys.argv[1])
-    #pprint(module_config)
     klass = osgar.lib.config.get_class_by_name(module_config['driver'])
     bus = Bus(module_config['name'])
     instance = klass(config=module_config['init'], bus=bus)
     instance.start()
-    print(module_config['name'], "running")
+    g_logger.info(f"{module_config['name']} running")
     instance.join()
     bus.request_stop()
 
@@ -117,7 +117,7 @@ class Router:
     def request_stop(self, sender):
         if self.stopping:
             return
-        print(sender.decode('ascii'), "requested stop")
+        g_logger.info(f"{sender.decode('ascii')} requested stop")
         self.stopping = self._now()
         for node_name in self.nodes:
             self.send(node_name, b"quit")
@@ -192,10 +192,16 @@ class Bus:
 
     def _quit(self):
         self.quit = True
-        print(f"{self.name} received quit")
+        g_logger.info(f"{self.name} received quit")
         return SystemExit()
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        stream=sys.stderr,
+        level=logging.DEBUG,
+        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+        datefmt='%Y-%m-%d %H:%M',
+    )
     main()
 
