@@ -41,6 +41,7 @@ def euler_zyx(quaternion):
     x0, y0, z0, w0 = quaternion
     sqr_size = x0*x0 + y0*y0 + z0*z0 + w0*w0
     if abs(sqr_size - 1.0) > 0.00001:
+        # the assumption is broken, so normalize it
         k = math.sqrt(sqr_size)
         x0, y0, z0, w0 = x0/k, y0/k, z0/k, w0/k
     ax =  math.atan2(2*(w0*x0+y0*z0), 1-2*(x0*x0+y0*y0))
