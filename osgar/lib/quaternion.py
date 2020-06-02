@@ -45,8 +45,7 @@ def euler_zyx(quaternion):
         k = math.sqrt(sqr_size)
         x0, y0, z0, w0 = x0/k, y0/k, z0/k, w0/k
     ax =  math.atan2(2*(w0*x0+y0*z0), 1-2*(x0*x0+y0*y0))
-    v = min(1.0, max(-1.0, 2*(w0*y0-z0*x0)))
-    ay =  math.asin(v)
+    ay =  math.asin(2*(w0*y0-z0*x0))
     az =  math.atan2(2*(w0*z0+x0*y0), 1-2*(y0*y0+z0*z0))
     return [az, ay, ax]
 
