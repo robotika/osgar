@@ -35,8 +35,8 @@ class ArtifactDetector(Node):
                 'detector_type': 'colormatch',
                 'min_size': 50,
                 'max_size': 500,
-                'pixel_count_threshold': 1000,
-                'hue_max_difference': 20,
+                'pixel_count_threshold': 100,
+                'hue_max_difference': 10,
                 'hue_match': 100, # from RGB 007DBD
                 'subsequent_detects_required': 3  # noise will add some of this color, wait for a consistent sequence
             },
@@ -45,7 +45,7 @@ class ArtifactDetector(Node):
                 'detector_type': 'colormatch',
                 'min_size': 20,
                 'max_size': 700,
-                'pixel_count_threshold': 1500,
+                'pixel_count_threshold': 400,
                 'hue_max_difference': 10,
                 'hue_match': 19, # from RGB FFA616
                 'subsequent_detects_required': 3
@@ -95,6 +95,10 @@ class ArtifactDetector(Node):
             self.width = limg.shape[1]
         assert self.width == limg.shape[1], (self.width, limg.shape[1])
 
+
+        def box_area(b):
+            return b[2]*b[3]
+        
         limg_rgb = cv2.cvtColor(limg, cv2.COLOR_BGR2RGB) 
         rimg_rgb = cv2.cvtColor(rimg, cv2.COLOR_BGR2RGB) 
         hsv = cv2.cvtColor(limg, cv2.COLOR_BGR2HSV)
@@ -109,15 +113,26 @@ class ArtifactDetector(Node):
                 upper_hue = np.array([c['hue_match'] + c['hue_max_difference'],255,255])
                 # Threshold the HSV image to get only the matching colors
                 mask = cv2.inRange(hsv_blurred, lower_hue, upper_hue)
-                coords = cv2.findNonZero(mask)
-                x, y, w, h = cv2.boundingRect(coords)
-                match_count = cv2.countNonZero(mask)
-#                print ("%s match count: %d; [%d %d %d %d]" % (c['artefact_name'], match_count, x, y, w, h))
-                if (match_count > c['pixel_count_threshold']):
-                    if self.detect_sequences[c['artefact_name']] < c['subsequent_detects_required']: # do not act until you have detections in a row
-                        self.detect_sequences[c['artefact_name']] += 1
-                    elif w >= c['min_size'] and h >= c['min_size'] and w <= c['max_size'] and h <= c['max_size']:
-                        self.publish('artf', [c['artefact_name'], int(x), int(y), int(w), int(h), int(match_count)])
+                mser = cv2.MSER_create(_min_area=c['pixel_count_threshold'])
+
+                _, bboxes = mser.detectRegions(mask)
+                if len(bboxes) > 0:
+                    sb = sorted(bboxes, key = box_area, reverse = True)[:1]
+                    x, y, w, h = sb[0]
+                    match_count = cv2.countNonZero(mask[y:y+h,x:x+w])
+                    if (
+                            match_count > c['pixel_count_threshold'] and
+                            w >= c['min_size'] and h >= c['min_size'] and
+                            w <= c['max_size'] and h <= c['max_size']
+                    ):
+    #                print ("%s match count: %d; [%d %d %d %d]" % (c['artefact_name'], match_count, x, y, w, h))
+                        if self.detect_sequences[c['artefact_name']] < c['subsequent_detects_required']:
+                            # do not act until you have detections in a row
+                            self.detect_sequences[c['artefact_name']] += 1
+                        else:
+                            self.publish('artf', [c['artefact_name'], int(x), int(y), int(w), int(h), int(match_count)])
+                    else:
+                        self.detect_sequences[c['artefact_name']] = 0
                 else:
                     self.detect_sequences[c['artefact_name']] = 0
                     
