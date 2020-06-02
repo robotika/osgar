@@ -55,9 +55,9 @@ def parse_imu( data ):
     data = data[3*8+9*8:] # skip velocity covariance
     assert len(data) == 0, len(data)
 
-    x, y, z = euler_zyx(orientation)  # quaternion
+    az, ay, ax = euler_zyx(orientation)  # quaternion, rotations along axis: yaw, pitch, roll
 
-    return linearAcceleration, (x, y, z), orientation
+    return linearAcceleration, (az, ay, ax), orientation
 
 
 def Xparse_image( data ):
