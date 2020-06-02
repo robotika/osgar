@@ -2,6 +2,7 @@ import math
 import unittest
 
 from . import quaternion
+from osgar.bus import almost_equal
 
 
 class QuaternionTest(unittest.TestCase):
@@ -42,5 +43,9 @@ class QuaternionTest(unittest.TestCase):
         self.assertAlmostEqual(expected[2], actual[2], places=6)
         self.assertAlmostEqual(expected[3], actual[3], places=6)
 
+    def test_asin_domain(self):
+        q = (0.02089575225593203, -0.6597655110187111, 0.381406681115162, -0.7726979260818011)
+        angles = quaternion.euler_zyx(q)  # should not raise ValueError: math domain error
+        self.assertTrue(almost_equal(angles, [-1.5436762, 1.0194396, -1.0505728]))
 
 # vim: expandtab sw=4 ts=4
