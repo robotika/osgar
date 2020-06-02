@@ -26,7 +26,8 @@ def str2ms(s):
     dm, frac = (b'0000' + s).split(b'.')
     try:
         return round((int(dm[:-2]) * 60 + float(dm[-2:] + b'.' + frac)) * 60000)
-    except:
+    except Exception as e:
+        print(e)
         return None
 
 
