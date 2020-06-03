@@ -91,7 +91,7 @@ class Router:
             self.nodes[sender] = collections.deque()
             for o in outputs:
                 link_from = sender + b"." + o
-                idx = self.logger.register(link_from.decode('ascii'))
+                idx = self.logger.register(str(link_from, 'ascii'))
                 self.stream_id[link_from] = idx
 
     def connect(self, link_from, link_to):
@@ -107,7 +107,7 @@ class Router:
 
         for packet in self.receive():
             sender, action, *args = packet
-            getattr(self, action.decode('ascii'))(sender, *args)
+            getattr(self, str(action, 'ascii'))(sender, *args)
 
     def receive(self, hz=10):
         socket = self.socket
@@ -143,7 +143,7 @@ class Router:
     def request_stop(self, sender):
         if self.stopping:
             return
-        g_logger.info(f"{sender.decode('ascii')} requested stop")
+        g_logger.info(f"{str(sender, 'ascii')} requested stop")
         self.stopping = self._now()
         for node_name in self.nodes:
             self.send(node_name, b"quit")
@@ -178,7 +178,7 @@ class Bus:
         self.sock.connect("tcp://127.0.0.1:8881")
 
     def register(self, *outputs):
-        bytes_outputs = list(o.encode('ascii') for o in outputs)
+        bytes_outputs = list(bytes(o, 'ascii') for o in outputs)
         self.sock.send_multipart([b"register", *bytes_outputs])
         resp = self.sock.recv()
         assert resp == b'start'
@@ -191,13 +191,13 @@ class Bus:
         assert resp[0] == b"listen"
         microseconds = struct.unpack('I', resp[1])[0]
         dt = datetime.timedelta(microseconds=microseconds)
-        channel = resp[2].decode('ascii')
+        channel = str(resp[2], 'ascii')
         data = osgar.lib.serialize.deserialize(resp[3])
         return dt, channel, data
 
     def publish(self, channel, data):
         raw = osgar.lib.serialize.serialize(data)
-        self.sock.send_multipart([b"publish", channel.encode('ascii'), raw])
+        self.sock.send_multipart([b"publish", bytes(channel, 'ascii'), raw])
         resp, timestamp = self.sock.recv_multipart()
         assert resp == b"publish"
         microseconds = struct.unpack('I', timestamp)[0]
