@@ -47,6 +47,7 @@ class LidarCollisionMonitor:
             # NASA Lidar 150degrees wide, 50 samples
             # robot is ~2.21m wide (~1.2m x 2 with wiggle room), with 150 angle need to have 1.2m clearance (x = 1.2 / sin(150/2))
             if min_dist(robot.scan[60:210]) < 1.2 and not robot.inException:
+                robot.publish('driving_recovery', True)
                 raise LidarCollisionException()
 
     # context manager functions
