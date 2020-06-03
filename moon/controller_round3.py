@@ -5,6 +5,8 @@ import math
 from statistics import median
 from datetime import timedelta
 
+import numpy as np
+
 import moon.controller
 from osgar.bus import BusShutdownException
 
@@ -78,27 +80,6 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
             'timestamp': None
             }
 
-        self.trackable_objects = [
-            {
-                "homebase": {
-                    "timeout": timedelta(seconds=5),
-                    "reached": False
-                }
-            },
-            {
-                "cubesat": {
-                    "timeout": timedelta(seconds=5),
-                    "reached": False
-                }
-            },
-            {
-                "basemarker": {
-                    "timeout": timedelta(milliseconds=200),
-                    "reached": False
-                }
-            }
-        ]
-        
         self.object_timeouts = {
             'homebase': timedelta(seconds=5), # tracking homebase based on visual
             'cubesat': timedelta(seconds=5),
@@ -110,6 +91,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         self.last_tracked_artefact = None
         
         self.objects_to_follow = []
+        self.objects_in_view = {}
 
 
     def follow_object(self, data):
@@ -128,8 +110,6 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
             if self.current_driver == "cubesat":
                 self.set_cam_angle(CAMERA_ANGLE_LOOKING)
             elif self.current_driver == "homebase":
-                self.set_cam_angle(CAMERA_ANGLE_DRIVING)
-            elif self.current_driver == "homebase-final":
                 self.set_cam_angle(CAMERA_ANGLE_DRIVING)
             else:
                 self.set_cam_angle(CAMERA_ANGLE_DRIVING)
@@ -178,8 +158,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 # all done, exiting
                 exit
             else:
-                # do nothing, ie keep going around and try to match the view
-                pass
+                self.follow_object(['basemarker'])
 
 
     def interpolate_distance(self, pixels):
@@ -222,13 +201,17 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     
     # used to follow objects (cubesat, processing plant, other robots, etc)
     def on_artf(self, timestamp, data):
-
-        if self.last_attempt_timestamp is not None and self.time - self.last_attempt_timestamp < ATTEMPT_DELAY:
-            return
-
         # vol_type, x, y, w, h
         # coordinates are pixels of bounding box
         artifact_type = data[0]
+
+        self.objects_in_view[artifact_type] = {
+            "expiration": self.time + timedelta(milliseconds=200)
+            }
+        
+        if self.last_attempt_timestamp is not None and self.time - self.last_attempt_timestamp < ATTEMPT_DELAY:
+            return
+
 
         center_x = data[1] + data[3] / 2
         center_y = data[2] + data[4] / 2
@@ -381,13 +364,12 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                         self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
 
                 elif self.currently_following_object['object_type'] == 'basemarker':
-                    print(self.time, "app: basemarker identified")
-
-                    if center_x < 300: # if marker to the left
+                    if center_x < (CAMERA_WIDTH/2 - 5): # if marker to the left
                         self.basemarker_centered = False
-                    elif center_x > 340:
+                    elif center_x > (CAMERA_WIDTH/2 + 5):
                         self.basemarker_centered = False
                     else:
+                        print(self.time, "app: basemarker centered")
                         self.basemarker_centered = True
                         
                         
@@ -396,6 +378,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         assert len(data) == 180
         super().on_scan(timestamp, data)
 
+        delete_in_view = [artf for artf in self.objects_in_view if self.objects_in_view[artf]['expiration'] < self.time]
+        for artf in delete_in_view: del self.objects_in_view[artf]
 
         if self.last_attempt_timestamp is not None and self.time - self.last_attempt_timestamp < ATTEMPT_DELAY:
             return
@@ -416,8 +400,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 self.on_driving_control(timestamp, None) # do this last as it raises exception
 
            
-        # NASA sends 100 samples over 150 degrees
-        # OSGAR sends 180 points, first and last 40 are zeros
+        # NASA sends 100 samples over 2.6rad (~150 degrees) (each increment is 0.0262626260519rad (~15 degrees))
+        # OSGAR pads in in front and in back to 180 samples, first and last 40 are zeros
 
 # TODO: if too far from anything, revert to looking for homebase
         if not self.in_driving_recovery:
@@ -427,19 +411,80 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
             straight_ahead_dist = min_dist(data[midindex-15:midindex+15])
 
             if self.currently_following_object['object_type'] == 'homebase':
-                print (self.time, "controller_round3: homebase current distance: %f" % (straight_ahead_dist))
+#                print (self.time, "controller_round3: homebase current distance: %f" % (straight_ahead_dist))
 
                 if straight_ahead_dist < HOMEBASE_KEEP_DISTANCE:
                     self.publish("desired_movement", [0, 0, 0])
 
                     print ("app: final homebase distance %f: " % straight_ahead_dist)
                     self.object_reached('homebase')
-                else:
-                    # keep going straight; for now this means do nothing, keep speed from previous step
-                    self.currently_following_object['timestamp'] = self.time # freshen up timer as we are still following homebase
 
             if 'basemarker' in self.objects_to_follow:
 
+                # find min_index where distance < 5 and max_index where distance < 5
+                # find circle passing through these points (defined in polar coordinates as [index*6 degrees, distance]
+                min_index = max_index = -1
+                for i in range(0,180):
+                    if data[i]> 10 and data[i] < 5000:
+                        min_index = i
+                        break
+                for i in range(180, 0, -1):
+                    if data[i-1]> 10 and data[i-1] < 5000:
+                        max_index = i
+                        break
+
+                if min_index < 0 or max_index < 0:
+                    return
+                
+                def pol2cart(rho, phi):
+                    x = rho * math.cos(phi)
+                    y = rho * math.sin(phi)
+                    return(x, y)
+
+                # Best Fit Circle https://goodcalculators.com/best-fit-circle-least-squares-calculator/
+                x_l=[]
+                y_l=[]
+                for i in range(min_index, max_index):
+                    x,y = pol2cart(data[i] / 1000.0, -1.29999995232 + (i - 40) * 0.0262626260519)
+                    x_l.append(x)
+                    y_l.append(y)
+
+                nop = len(x_l)       
+                x = np.array(x_l)
+                y = np.array(y_l)
+
+                x_y = np.multiply(x,y)
+                x_2 = np.square(x)
+                y_2 = np.square(y)
+
+                x_2_plus_y_2 = np.add(x_2,y_2)
+                x__x_2_plus_y_2 = np.multiply(x,x_2_plus_y_2)
+                y__x_2_plus_y_2 = np.multiply(y,x_2_plus_y_2)
+
+                sum_x = x.sum(dtype=float)
+                sum_y = y.sum(dtype=float)
+                sum_x_2 = x_2.sum(dtype=float)
+                sum_y_2 = y_2.sum(dtype=float)
+                sum_x_y = x_y.sum(dtype=float)
+                sum_x_2_plus_y_2 = x_2_plus_y_2.sum(dtype=float)
+                sum_x__x_2_plus_y_2 = x__x_2_plus_y_2.sum(dtype=float)
+                sum_y__x_2_plus_y_2 = y__x_2_plus_y_2.sum(dtype=float)
+
+                m3b3 = np.array([[sum_x_2,sum_x_y,sum_x],
+                        [sum_x_y,sum_y_2,sum_y],
+                        [sum_x,sum_y,nop]])
+                invm3b3 = np.linalg.inv(m3b3)
+                m3b1 = np.array([sum_x__x_2_plus_y_2,sum_y__x_2_plus_y_2,sum_x_2_plus_y_2])
+                A=np.dot(invm3b3,m3b1)[0]
+                B=np.dot(invm3b3,m3b1)[1]
+                C=np.dot(invm3b3,m3b1)[2]
+                homebase_cx = A/2
+                homebase_cy = B/2
+                homebase_radius = np.sqrt(4*C+A**2+B**2)/2
+                print ("Center: [%f,%f], radius: %f" % (homebase_cx, homebase_cy, homebase_radius))
+
+
+                
                 right_dist = median_dist(data[midindex-8:midindex-6])
                 left_dist = median_dist(data[midindex+6:midindex+8])
                 self.basemarker_left_history.append(left_dist)
@@ -456,9 +501,9 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 
                 print (self.time, "app: Min dist front: %f, dist left=%f, right=%f" % (straight_ahead_dist, left_dist, right_dist))
 
-                if len(self.basemarker_left_history) > 5 and left_dist > MAX_BASEMARKER_DISTANCE and right_dist > MAX_BASEMARKER_DISTANCE:
+                if 'homebase' not in self.objects_in_view.keys():
                     # lost contact with homebase, try approach again
-                    print (self.time, "app: No longer going around homebase, distances inconsistent", self.basemarker_whole_scan_history)
+                    print (self.time, "app: No longer going around homebase")
                     self.currently_following_object['timestamp'] = None
                     self.currently_following_object['object_type'] = None
                     self.basemarker_centered = False
@@ -467,27 +512,30 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     self.on_driving_control(timestamp, None) # do this last as it possibly raises exception
                     
                 
-    #            if left_dist < 9:
-    #                print ("rover: right / left distance ratio: %f; centered: %r" % (right_dist / left_dist, self.basemarker_centered))
-                if self.basemarker_centered and left_dist < 6 and abs(1.0 - right_dist / left_dist) < 0.04: # cos 20 = dist_r / dist _l is the max ratio in order to be at most 10 degrees off; also needs to be closer than 6m
+                if self.basemarker_centered and left_dist < 6 and abs(homebase_cy) < 0.1: # cos 20 = dist_r / dist _l is the max ratio in order to be at most 10 degrees off; also needs to be closer than 6m
                     self.publish("desired_movement", [0, -9000, 0])
-                    self.set_brakes(True)
                     self.object_reached('basemarker')
                     return
 
-                if left_dist > 10:
+                # if seeing basemarker and homebase center is not straight ahead OR if looking past homebase in one of the directions, turn in place to adjust
+                if (self.currently_following_object['object_type'] == 'basemarker' and homebase_cy < -0.2) or left_dist > 10:
                     self.publish("desired_movement", [0, -9000, -SPEED_ON])
-                elif right_dist > 10:
+                elif (self.currently_following_object['object_type'] == 'basemarker' and homebase_cy > 0.2) or right_dist > 10:
                     self.publish("desired_movement", [0, -9000, SPEED_ON])
+                elif left_dist < 1.5 or right_dist < 1.5:
+                    self.publish("desired_movement", [float("inf"), -9000, -SPEED_ON])
                 else:                    
                     if self.basemarker_radius is None:
                         self.basemarker_radius = HOMEBASE_KEEP_DISTANCE + HOMEBASE_RADIUS # ideal trajectory
 
                     if 1.0 - right_dist / left_dist > 0.2:
                         self.basemarker_radius -= 0.2
+                        print ("tightening circle")
                     if 1.0 - right_dist / left_dist < -0.2:  #left is closer than right, need to increase the circle
                         self.basemarker_radius += 0.2
+                        print ("expanding circle")
 
+                    print ("driving radius: %f" % self.basemarker_radius)
                     # negative radius turns to the right
                     self.publish("desired_movement", [-self.basemarker_radius, -9000, SPEED_ON])
 
@@ -506,8 +554,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
 #            self.go_straight(-2, timeout=timedelta(seconds=20))
 #            self.turn(math.radians(45), timeout=timedelta(seconds=20))
 #            self.set_cam_angle(CAMERA_ANGLE_HOMEBASE)
-#            self.follow_object(['basemarker'])
-#            self.current_driver = 'basemarker'
+
 
 
             if SKIP_CUBESAT_SUCCESS:
@@ -515,10 +562,16 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 self.cubesat_success = True
                 self.follow_object(['homebase'])
             else:
-                # regular launch
+               # regular launch
                 self.follow_object(['cubesat', 'homebase'])
 
-#            self.publish("desired_movement", [10, 9000, 10])
+#            self.homebase_arrival_success = True        
+#            self.cubesat_success = True
+#            self.follow_object(['homebase'])
+#            self.follow_object(['basemarker'])
+#            self.current_driver = 'basemarker'
+
+            #            self.publish("desired_movement", [10, 9000, 10])
 #            self.wait(timedelta(seconds=10))
                                     
             last_walk_start = 0.0
