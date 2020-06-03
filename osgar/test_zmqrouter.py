@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import MagicMock
 
 from threading import Thread
 
@@ -10,7 +11,7 @@ class Test(unittest.TestCase):
         main()
 
     def test_record(self):
-        with Router() as router:
+        with Router(MagicMock()) as router:
             pass
 
 
@@ -21,13 +22,17 @@ def main():
         ["publisher.count", "listener1.count"],
     ]
 
-    with Router() as router:
+    logger = MagicMock()
+    with Router(logger) as router:
         Thread(target=node_listener, args=("listener0",)).start()
         Thread(target=node_listener, args=("listener1",)).start()
         Thread(target=node_publisher, args=("publisher", "count", 10)).start()
 
-        router.connect(len(nodes), links)
+        router.register_nodes(nodes)
+        for link_from, link_to in links:
+            router.connect(link_from, link_to)
         router.run()
+    print(logger.mock_calls)
 
 
 def node_listener(name):

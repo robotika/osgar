@@ -32,7 +32,8 @@ def main():
 
 
 def record(config, log_prefix, log_filename=None, duration_sec=None):
-    with Router() as router:
+    logger = LogWriter()
+    with Router(logger) as router:
         modules = {}
         for module_name, module_config in config['robot']['modules'].items():
             module_config['name'] = module_name
@@ -49,23 +50,27 @@ def record(config, log_prefix, log_filename=None, duration_sec=None):
 
 
 class Router:
-    def __init__(self):
+    def __init__(self, logger):
+        self.logger = logger
         self.start_time = datetime.datetime.now(datetime.timezone.utc)
         self._context = zmq.Context()
         self.socket = self._context.socket(zmq.ROUTER)
         self.nodes = dict()
         self.subscriptions = dict()
+        self.stream_id = dict()
         self.listening = set()
         self.stopping = datetime.timedelta()
 
     def __enter__(self):
         self.socket.bind("tcp://127.0.0.1:8881")
         signal.signal(signal.SIGINT, self.sigint)
+        self.logger.start(self.start_time)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.socket.close()
         self._context.term()
+        self.logger.stop()
 
     def sigint(self, signum, frame):
         # TODO send message to myself telling me to stop?
@@ -81,8 +86,13 @@ class Router:
             assert action == b"register", (sender, action, outputs)
             assert sender not in self.nodes
             assert sender in nodes, (sender, nodes)
+            print(sender, outputs)
             # receiving queue
             self.nodes[sender] = collections.deque()
+            for o in outputs:
+                link_from = sender + b"." + o
+                idx = self.logger.register(link_from.decode('ascii'))
+                self.stream_id[link_from] = idx
 
     def connect(self, link_from, link_to):
         link_from = bytes(link_from, "ascii")
@@ -121,12 +131,15 @@ class Router:
             self.socket.send_multipart(packet)
 
     def publish(self, sender, channel, data):
-        dt_uint32 = self._pack_timestamp(self._now())
+        dt = self._now()
+        dt_uint32 = self._pack_timestamp(dt)
         self.socket.send_multipart([sender, b"", b"publish", dt_uint32])
         link_from = sender + b"." + channel
         for node_name, input_channel in self.subscriptions.get(link_from, []):
             self.send(node_name, b'listen', dt_uint32, input_channel, data)
-    
+        stream_id = self.stream_id[link_from]
+        self.logger.write(stream_id, data, dt)
+
     def request_stop(self, sender):
         if self.stopping:
             return
