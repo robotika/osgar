@@ -356,11 +356,11 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
 
                         
                 elif self.currently_following_object['object_type'] == 'homebase':
-                    if center_x < 300: # if homebase to the left, steer left
+                    if center_x < (CAMERA_WIDTH/2 - 20): # if homebase to the left, steer left
                         self.publish("desired_movement", [TURN_ON, 0, SPEED_ON])
-                    elif center_x > 340:
+                    elif center_x > (CAMERA_WIDTH/2 + 20):
                         self.publish("desired_movement", [-TURN_ON, 0, SPEED_ON])
-                    else: # if within angle but object too small, keep going straight
+                    else: # if centered, keep going straight
                         self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
 
                 elif self.currently_following_object['object_type'] == 'basemarker':
@@ -379,7 +379,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         super().on_scan(timestamp, data)
 
         delete_in_view = [artf for artf in self.objects_in_view if self.objects_in_view[artf]['expiration'] < self.time]
-        for artf in delete_in_view: del self.objects_in_view[artf]
+        for artf in delete_in_view:
+            del self.objects_in_view[artf]
 
         if self.last_attempt_timestamp is not None and self.time - self.last_attempt_timestamp < ATTEMPT_DELAY:
             return
@@ -421,19 +422,31 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
 
             if 'basemarker' in self.objects_to_follow:
 
+                if 'homebase' not in self.objects_in_view.keys():
+                    # lost contact with homebase, try approach again
+                    print (self.time, "app: No longer going around homebase")
+                    self.currently_following_object['timestamp'] = None
+                    self.currently_following_object['object_type'] = None
+                    self.basemarker_centered = False
+                    self.basemarker_right_history = self.basemarker_left_history = []
+                    self.follow_object(['homebase'])
+                    self.on_driving_control(timestamp, None) # do this last as it possibly raises exception
+                    return
+
                 # find min_index where distance < 5 and max_index where distance < 5
                 # find circle passing through these points (defined in polar coordinates as [index*6 degrees, distance]
-                min_index = max_index = -1
+                min_index = max_index = None
                 for i in range(0,180):
-                    if data[i]> 10 and data[i] < 5000:
+                    if 10 < data[i] < 5000:
                         min_index = i
                         break
                 for i in range(180, 0, -1):
-                    if data[i-1]> 10 and data[i-1] < 5000:
+                    if 10 < data[i-1] < 5000:
                         max_index = i
                         break
 
-                if min_index < 0 or max_index < 0:
+                if min_index is None or max_index is None:
+                    # if in basemarker mode, looking at homebase but lidar shows no hits, it's a noisy lidar scan, ignore
                     return
                 
                 def pol2cart(rho, phi):
@@ -501,17 +514,6 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 
                 print (self.time, "app: Min dist front: %f, dist left=%f, right=%f" % (straight_ahead_dist, left_dist, right_dist))
 
-                if 'homebase' not in self.objects_in_view.keys():
-                    # lost contact with homebase, try approach again
-                    print (self.time, "app: No longer going around homebase")
-                    self.currently_following_object['timestamp'] = None
-                    self.currently_following_object['object_type'] = None
-                    self.basemarker_centered = False
-                    self.basemarker_right_history = self.basemarker_left_history = []
-                    self.follow_object(['homebase'])
-                    self.on_driving_control(timestamp, None) # do this last as it possibly raises exception
-                    
-                
                 if self.basemarker_centered and left_dist < 6 and abs(homebase_cy) < 0.1: # cos 20 = dist_r / dist _l is the max ratio in order to be at most 10 degrees off; also needs to be closer than 6m
                     self.publish("desired_movement", [0, -9000, 0])
                     self.object_reached('basemarker')
@@ -562,7 +564,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 self.cubesat_success = True
                 self.follow_object(['homebase'])
             else:
-               # regular launch
+                # regular launch
                 self.follow_object(['cubesat', 'homebase'])
 
 #            self.homebase_arrival_success = True        
