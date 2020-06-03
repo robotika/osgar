@@ -33,6 +33,7 @@ class ArtifactDetector(Node):
             {
                 'artefact_name': 'basemarker',
                 'detector_type': 'colormatch',
+                'mser': cv2.MSER_create(_min_area=100),
                 'min_size': 50,
                 'max_size': 500,
                 'pixel_count_threshold': 100,
@@ -43,6 +44,7 @@ class ArtifactDetector(Node):
             {
                 'artefact_name': 'homebase',
                 'detector_type': 'colormatch',
+                'mser': cv2.MSER_create(_min_area=400),
                 'min_size': 20,
                 'max_size': 700,
                 'pixel_count_threshold': 400,
@@ -113,9 +115,8 @@ class ArtifactDetector(Node):
                 upper_hue = np.array([c['hue_match'] + c['hue_max_difference'],255,255])
                 # Threshold the HSV image to get only the matching colors
                 mask = cv2.inRange(hsv_blurred, lower_hue, upper_hue)
-                mser = cv2.MSER_create(_min_area=c['pixel_count_threshold'])
 
-                _, bboxes = mser.detectRegions(mask)
+                _, bboxes = c['mser'].detectRegions(mask)
                 if len(bboxes) > 0:
                     sb = sorted(bboxes, key = box_area, reverse = True)[:1]
                     x, y, w, h = sb[0]
