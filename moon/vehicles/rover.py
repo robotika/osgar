@@ -112,7 +112,6 @@ class Rover(Node):
 
     def on_rot(self, data):
         rot = data
-        rot[2] += 18000
         (temp_yaw, self.pitch, self.roll) = [normalizeAnglePIPI(math.radians(x/100)) for x in rot]
         
         if self.yaw_offset is None:
