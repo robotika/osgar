@@ -84,13 +84,20 @@ class ArtifactDetector(Node):
                 while timestamp <= now:
                     timestamp = self.waitForImage()
                     dropped += 1
-                self.detect(self.left_image, self.right_image)
+                self.detect_and_publish(self.left_image, self.right_image)
         except BusShutdownException:
             pass
 
+    def detect_and_publish(self, left_image, right_image):
+        results = self.detect(left_image, right_image)
+        for r in results:
+            self.publish('artf', r)
+
     def detect(self, left_image, right_image):
-        limg = cv2.imdecode(np.fromstring(left_image, dtype=np.uint8), 1)
-        rimg = cv2.imdecode(np.fromstring(right_image, dtype=np.uint8), 1)
+        results = []
+
+        limg = cv2.imdecode(np.frombuffer(left_image, dtype=np.uint8), 1)
+        rimg = cv2.imdecode(np.frombuffer(right_image, dtype=np.uint8), 1)
 
         if self.width is None:
             self.stdout('Image resolution', limg.shape)
@@ -126,12 +133,12 @@ class ArtifactDetector(Node):
                             w >= c['min_size'] and h >= c['min_size'] and
                             w <= c['max_size'] and h <= c['max_size']
                     ):
-    #                print ("%s match count: %d; [%d %d %d %d]" % (c['artefact_name'], match_count, x, y, w, h))
+                        # print ("%s match count: %d; [%d %d %d %d]" % (c['artefact_name'], match_count, x, y, w, h))
                         if self.detect_sequences[c['artefact_name']] < c['subsequent_detects_required']:
                             # do not act until you have detections in a row
                             self.detect_sequences[c['artefact_name']] += 1
                         else:
-                            self.publish('artf', [c['artefact_name'], int(x), int(y), int(w), int(h), int(match_count)])
+                            results.append((c['artefact_name'], int(x), int(y), int(w), int(h), int(match_count)))
                     else:
                         self.detect_sequences[c['artefact_name']] = 0
                 else:
@@ -158,9 +165,12 @@ class ArtifactDetector(Node):
                         nx, ny, nw, nh = cv2.boundingRect(coords)
     #                    print(self.time, "Post: %d %d %d %d" % (x+nx,y+ny,nw,nh))
 
-                        self.publish('artf', [c['artefact_name'], int(x+nx), int(y+ny), int(nw), int(nh), int(nonzerocount)])
+                        results.append((c['artefact_name'], int(x+nx), int(y+ny), int(nw), int(nh), int(nonzerocount)))
                 else:
                     self.detect_sequences[c['artefact_name']] = 0
+
+        return results
+
 
 def debug2dir(filename, out_dir):
     from osgar.logger import LogReader, lookup_stream_names
