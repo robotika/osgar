@@ -7,10 +7,12 @@ from io import StringIO
 
 import cv2
 import numpy as np
+from pathlib import Path
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 
+curdir = Path(__file__).parent
 
 class ArtifactDetector(Node):
     def __init__(self, config, bus):
@@ -25,7 +27,7 @@ class ArtifactDetector(Node):
             {
                 'artefact_name': 'cubesat',
                 'detector_type': 'classifier',
-                'classifier': cv2.CascadeClassifier('/osgar/moon/xml/cubesat.xml'),
+                'classifier': cv2.CascadeClassifier(str(curdir/'xml/cubesat.xml')),
                 'min_size': 5,
                 'max_size': 110,
                 'subsequent_detects_required': 3
