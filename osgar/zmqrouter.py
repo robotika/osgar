@@ -36,7 +36,7 @@ def record(config, log_prefix=None, log_filename=None, duration_sec=None):
             modules = {}
             for module_name, module_config in config['robot']['modules'].items():
                 module_config['name'] = module_name
-                modules[module_name] = subprocess.Popen([sys.executable, __file__, str(module_config)])
+                modules[module_name] = subprocess.Popen([sys.executable, "-m", __name__, str(module_config)])
 
             router.register_nodes(modules.keys())
             links =  config['robot']['links']
