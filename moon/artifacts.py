@@ -98,8 +98,8 @@ class ArtifactDetector(Node):
     def detect(self, left_image, right_image):
         results = []
 
-        limg = cv2.imdecode(np.frombuffer(left_image, dtype=np.uint8), 1)
-        rimg = cv2.imdecode(np.frombuffer(right_image, dtype=np.uint8), 1)
+        limg = cv2.imdecode(np.frombuffer(left_image, dtype=np.uint8), cv2.IMREAD_COLOR)
+        rimg = cv2.imdecode(np.frombuffer(right_image, dtype=np.uint8), cv2.IMREAD_COLOR)
 
         if self.width is None:
             self.stdout('Image resolution', limg.shape)

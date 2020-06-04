@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import MagicMock
 from pathlib import Path
-import numpy as np
 
+import numpy as np
 import cv2
 
 from moon.artifacts import ArtifactDetector

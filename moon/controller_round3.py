@@ -492,8 +492,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     y = rho * math.sin(phi)
                     return(x, y)
 
-                x_l=[]
-                y_l=[]
+                x_l = []
+                y_l = []
                 for i in range(min_index, max_index):
                     x,y = pol2cart(data[i] / 1000.0, -1.29999995232 + (i - 40) * 0.0262626260519)
                     x_l.append(x)

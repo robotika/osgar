@@ -40,14 +40,13 @@ def plot_test_case(circle, lines):
 
 
 class Round3CircleTest(unittest.TestCase):
-
         
     def test_round3_circle(self):
         # generate random points on 2.6rad arc with random radius between 5 and 20
         # view is at (0,0)
         # circle is at random point and has random radius
         rand = Random(0)
-        for circle in range(0,100):
+        for _ in range(10):
             circle_distance = rand.randint(10,20)
             circle_angle = rand.random() * 2 * math.pi
             radius = rand.randint(2,6)
