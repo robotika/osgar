@@ -18,10 +18,7 @@ from osgar.logger import LogIndexedReader, lookup_stream_names
 from osgar.lib.serialize import deserialize
 from osgar.lib.config import get_class_by_name
 from osgar.lib import quaternion
-try:
-    from osgar.lib.depth import depth2danger, DepthParams
-except:
-    pass  # workaround to merge lib/depth.py
+from osgar.lib.depth import depth2danger, DepthParams
 
 
 WINDOW_SIZE = 1600, 1000  # controlled by --window-size
