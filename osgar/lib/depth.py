@@ -64,7 +64,7 @@ class DepthParams:
 X, Y, Z = 0, 1, 2
 
 
-def depth2danger(depth_mm, params=DepthParams()):
+def depth2danger(depth_mm, params):
     # COPY & PASTE - refactoring needed!
 
     depth = depth_mm * 0.001  # Converting to meters.
@@ -106,7 +106,7 @@ def depth2danger(depth_mm, params=DepthParams()):
     return danger
 
 
-def depth2dist(depth_mm, pitch=None, roll=None, params=DepthParams()):
+def depth2dist(depth_mm, params, pitch=None, roll=None):
     # return line in mm corresponding to scan
     # optional pitch and roll angles are in radians
     # warning: there is a bug (?) in either Osgar or in SubT and the angles
@@ -222,4 +222,3 @@ if __name__ == '__main__':
     plt.show()
 
 # vim: expandtab sw=4 ts=4
-

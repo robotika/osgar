@@ -152,7 +152,7 @@ def adjust_scan(scan, depth_scan, depth_params):
 class DepthToScan(Node):
     deg30 = int(30*720/270)
 
-    def __init__(self, config, bus, depth_params=DepthParams()):
+    def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("scan")
         self.depth = None  # initialize inputs
@@ -160,7 +160,7 @@ class DepthToScan(Node):
         self.verbose = False
         self.scale = np.array([1/math.cos(math.radians(30*(i-80)/80)) for i in range(160)])
         self.yaw, self.pitch, self.roll = None, None, None  # unknown values
-        self.depth_params = depth_params
+        self.depth_params = DepthParams()
 
     def update(self):
         channel = super().update()
