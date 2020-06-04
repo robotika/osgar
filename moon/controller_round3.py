@@ -500,7 +500,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     y_l.append(y)
 
                 homebase_cx, homebase_cy, homebase_radius = best_fit_circle(x_l, y_l)
-                print ("Center: [%f,%f], radius: %f" % (homebase_cx, homebase_cy, homebase_radius))
+                # print ("Center: [%f,%f], radius: %f" % (homebase_cx, homebase_cy, homebase_radius))
                 
                 right_dist = median_dist(data[midindex-8:midindex-6])
                 left_dist = median_dist(data[midindex+6:midindex+8])
@@ -516,7 +516,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 left_dist = min(self.basemarker_left_history)
                 right_dist = min(self.basemarker_right_history)
                 
-                print (self.time, "app: Min dist front: %f, dist left=%f, right=%f" % (straight_ahead_dist, left_dist, right_dist))
+                # print (self.time, "app: Min dist front: %f, dist left=%f, right=%f" % (straight_ahead_dist, left_dist, right_dist))
 
                 if self.basemarker_centered and left_dist < 6 and abs(homebase_cy) < 0.1: # cos 20 = dist_r / dist _l is the max ratio in order to be at most 10 degrees off; also needs to be closer than 6m
                     self.publish("desired_movement", [0, -9000, 0])
@@ -536,12 +536,12 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
 
                     if 1.0 - right_dist / left_dist > 0.2:
                         self.basemarker_radius -= 0.2
-                        print ("tightening circle")
+                        # print ("tightening circle")
                     if 1.0 - right_dist / left_dist < -0.2:  #left is closer than right, need to increase the circle
                         self.basemarker_radius += 0.2
-                        print ("expanding circle")
+                        # print ("expanding circle")
 
-                    print ("driving radius: %f" % self.basemarker_radius)
+                    # print ("driving radius: %f" % self.basemarker_radius)
                     # negative radius turns to the right
                     self.publish("desired_movement", [-self.basemarker_radius, -9000, SPEED_ON])
 
