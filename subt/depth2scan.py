@@ -173,7 +173,7 @@ class DepthToScan(Node):
             if self.depth is None:
                 self.publish('scan', self.scan)
                 return channel  # when no depth data are available ...
-            depth_scan = depth2dist(self.depth, self.pitch, self.roll, self.depth_params)
+            depth_scan = depth2dist(self.depth, self.depth_params, self.pitch, self.roll)
             new_scan = adjust_scan(self.scan, depth_scan, self.depth_params)
             self.publish('scan', new_scan.tolist())
         elif channel == 'rot':

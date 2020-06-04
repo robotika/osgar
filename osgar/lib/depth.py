@@ -216,7 +216,7 @@ if __name__ == '__main__':
         depth = f['depth']
 
     depth_params = DepthParams(**args.depth_params)
-    dist = depth2dist(depth, params=depth_params)
+    dist = depth2dist(depth, depth_params)
 
     plt.plot(range(640), dist, 'o-', linewidth=2)
     plt.show()
