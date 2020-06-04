@@ -55,13 +55,9 @@ def parse_imu( data ):
     data = data[3*8+9*8:] # skip velocity covariance
     assert len(data) == 0, len(data)
 
-    q0, q1, q2, q3 = orientation  # quaternion
-    x =  math.atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2))
-    y =  math.asin(2*(q0*q2-q3*q1))
-    z =  math.atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3))
-#    print('%d\t%f' % (stamp, math.degrees(y)))
+    az, ay, ax = euler_zyx(orientation)  # quaternion, rotations along axis: yaw, pitch, roll
 
-    return linearAcceleration, (x, y, z), orientation
+    return linearAcceleration, (az, ay, ax), orientation
 
 
 def Xparse_image( data ):
@@ -226,7 +222,7 @@ def parse_odom(data):
     #ax =  math.atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2))
     #ay =  math.asin(2*(q0*q2-q3*q1))
     #az =  math.atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3))
-    return timestamp_sec, (x, y),euler_zyx(ori)
+    return timestamp_sec, (x, y), euler_zyx(ori)
 
 
 def parse_points(data):
@@ -393,7 +389,7 @@ def parse_topic(topic_type, data):
         assert size == 40, size
         # __slots__ = ['score','calls','total_of_types']
         # _slot_types = ['int32','int32','int32[8]']        
-        return struct.unpack_from('<II', data, pos)  # only score and calls
+        return list(struct.unpack_from('<II', data, pos))  # only score and calls
     elif topic_type == 'srcp2_msgs/Qual2ScoringMsg':
         assert len(data) == 139, (len(data), data)
         # __slots__ = ['vol_type', 'points_per_type', 'num_of_dumps', 'total_score']
@@ -401,7 +397,7 @@ def parse_topic(topic_type, data):
         # let's ignore names of volatile types
         record = struct.unpack_from('<IIIIIIIIIf', data, len(data) - 10*4)
         # print(record)
-        return sum(record[:8]), record[8]  # score and attempts
+        return [sum(record[:8]), record[8]]  # score and attempts
     elif topic_type == 'srcp2_msgs/Qual3ScoringMsg':
         assert len(data) == 12, (len(data), data)
         size = struct.unpack_from('<I', data)[0]
@@ -409,7 +405,7 @@ def parse_topic(topic_type, data):
         assert size == 8, size
         # __slots__ = ['score','calls']
         # _slot_types = ['int32','int32']
-        return struct.unpack_from('<II', data, pos)  # score and calls
+        return list(struct.unpack_from('<II', data, pos))  # score and calls
     elif topic_type == 'srcp2_msgs/ExcavatorMsg':
         return parse_bucket(data)
     elif topic_type == 'sensor_msgs/JointState':
@@ -525,7 +521,7 @@ class ROSMsgParser(Thread):
             self.bus.publish('rot', [round(math.degrees(angle)*100) 
                                      for angle in rot])
             self.bus.publish('acc', [round(x * 1000) for x in acc])
-            self.bus.publish('orientation', orientation)
+            self.bus.publish('orientation', list(orientation))
         elif frame_id.endswith(b'/clock'):
             prev = self.timestamp_sec
             self.timestamp_sec, self.timestamp_nsec = parse_clock(packet)
