@@ -1,17 +1,11 @@
 import unittest
-from unittest.mock import MagicMock
-import numpy as np
 from random import Random
 import math
 
+import numpy as np
 from shapely.geometry import LineString
 from shapely.geometry import Point
 
-try: 
-    from matplotlib import pyplot as plt
-    has_matplotlib = True
-except ImportError:
-    has_matplotlib = False
 from moon.controller_round3 import best_fit_circle
 
 def pol2cart(rho, phi):
@@ -38,6 +32,7 @@ def plot_test_case(circle, lines):
     plt.axis([-50, 50, -50, 50])
     plt.show()
 
+has_matplotlib = False
 
 class Round3CircleTest(unittest.TestCase):
         
@@ -51,6 +46,7 @@ class Round3CircleTest(unittest.TestCase):
             circle_angle = rand.random() * 2 * math.pi
             radius = rand.randint(2,6)
             center_x, center_y = pol2cart(circle_distance, circle_angle)
+            circle_angle = circle_angle + (1 - rand.random() * 2) * math.pi / 4
 
             p = Point(center_x,center_y)
             c = p.buffer(radius).boundary
@@ -80,4 +76,14 @@ class Round3CircleTest(unittest.TestCase):
             if has_matplotlib:
                 plot_test_case((center_x, center_y, radius),(x_l, y_l))
             (cx, cy, cr) = best_fit_circle(x_l, y_l)
-            np.testing.assert_almost_equal((center_x/100, center_y/100, radius/100), (cx/100, cy/100, cr/100),2)
+            np.testing.assert_almost_equal((center_x/200, center_y/200, radius/200), (cx/200, cy/200, cr/200),2)
+
+if __name__ == '__main__':
+    # you may need to define your environment variable to point to the main osgar folder
+    # eg export PYTHONPATH=/osgar
+    try:
+        from matplotlib import pyplot as plt
+        has_matplotlib = True
+    except ImportError:
+        has_matplotlib = False
+    unittest.main()
