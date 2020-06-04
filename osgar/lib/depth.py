@@ -71,7 +71,7 @@ def depth2danger(depth_mm, params):
     # 3D coordinates of points detected by the depth camera, converted to
     # robot's coordinate system.
     xyz = (params.ps * np.expand_dims(depth, axis=Z) +
-           [[[params.camx, param.camy, param.camz]]])
+           [[params.camera_xyz]])
     # Relative positions of 3D points placed params.vertical_pixel_offset pixels
     # above each other.
     rel_xyz = (xyz[:-params.vertical_pixel_offset,:,:] -
