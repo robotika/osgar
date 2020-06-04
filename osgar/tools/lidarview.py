@@ -31,6 +31,9 @@ g_scale = 30
 g_rotation_offset_rad = 0.0  # set by --rotation (deg)
 g_lidar_fov_deg = 270  # controlled by --deg (deg)
 
+# depth data for ROBOTIKA_X2_SENSOR_CONFIG_1 (640 x 360)
+g_depth_params = DepthParams()
+
 CENTER_AXLE_DISTANCE = 0.348  # K2 distance specific
 
 
@@ -184,11 +187,9 @@ def get_image(data):
     """Extract JPEG or RGBD depth image"""
     # https://stackoverflow.com/questions/12569452/how-to-identify-numpy-types-in-python
     if isinstance(data, np.ndarray):
-        # depth data for ROBOTIKA_X2_SENSOR_CONFIG_1 (640 x 360)
-        depth_params = DepthParams()
         # https://www.learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
         if g_danger_binary_image:
-            img = np.array(depth2danger(data, depth_params) * 255, dtype=np.uint8)
+            img = np.array(depth2danger(data, g_depth_params) * 255, dtype=np.uint8)
             im_color = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
         else:
             img = np.array(np.minimum(255*40, data)/40, dtype=np.uint8)
