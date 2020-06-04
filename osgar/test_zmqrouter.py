@@ -4,6 +4,7 @@ import unittest
 import os
 import shutil
 import pathlib
+import time
 
 from unittest.mock import MagicMock
 
@@ -41,6 +42,7 @@ class Publisher:
         count = 10
         for i in range(count):
             dt = self.bus.publish("count", i)
+            time.sleep(0.01)
             #print("  published", i, dt)
 
 
