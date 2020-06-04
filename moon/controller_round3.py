@@ -54,7 +54,45 @@ def median_dist(laser_data):
         return median(laser_data)/1000.0
     return 0
 
+def best_fit_circle(x_l, y_l):
+    # Best Fit Circle https://goodcalculators.com/best-fit-circle-least-squares-calculator/
+    # receive 180 scan samples, first and last 40 are discarded, remaining 100 samples represent 2.6rad view
+    # samples are supposed to form a circle which this routine calculates
 
+    nop = len(x_l)       
+    x = np.array(x_l)
+    y = np.array(y_l)
+
+    x_y = np.multiply(x,y)
+    x_2 = np.square(x)
+    y_2 = np.square(y)
+
+    x_2_plus_y_2 = np.add(x_2,y_2)
+    x__x_2_plus_y_2 = np.multiply(x,x_2_plus_y_2)
+    y__x_2_plus_y_2 = np.multiply(y,x_2_plus_y_2)
+
+    sum_x = x.sum(dtype=float)
+    sum_y = y.sum(dtype=float)
+    sum_x_2 = x_2.sum(dtype=float)
+    sum_y_2 = y_2.sum(dtype=float)
+    sum_x_y = x_y.sum(dtype=float)
+    sum_x_2_plus_y_2 = x_2_plus_y_2.sum(dtype=float)
+    sum_x__x_2_plus_y_2 = x__x_2_plus_y_2.sum(dtype=float)
+    sum_y__x_2_plus_y_2 = y__x_2_plus_y_2.sum(dtype=float)
+
+    m3b3 = np.array([[sum_x_2,sum_x_y,sum_x],
+            [sum_x_y,sum_y_2,sum_y],
+            [sum_x,sum_y,nop]])
+    invm3b3 = np.linalg.inv(m3b3)
+    m3b1 = np.array([sum_x__x_2_plus_y_2,sum_y__x_2_plus_y_2,sum_x_2_plus_y_2])
+    A=np.dot(invm3b3,m3b1)[0]
+    B=np.dot(invm3b3,m3b1)[1]
+    C=np.dot(invm3b3,m3b1)[2]
+    homebase_cx = A/2
+    homebase_cy = B/2
+    homebase_radius = np.sqrt(4*C+A**2+B**2)/2
+
+    return(homebase_cx, homebase_cy, homebase_radius)
 
 class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
     def __init__(self, config, bus):
@@ -454,7 +492,6 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     y = rho * math.sin(phi)
                     return(x, y)
 
-                # Best Fit Circle https://goodcalculators.com/best-fit-circle-least-squares-calculator/
                 x_l=[]
                 y_l=[]
                 for i in range(min_index, max_index):
@@ -462,41 +499,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     x_l.append(x)
                     y_l.append(y)
 
-                nop = len(x_l)       
-                x = np.array(x_l)
-                y = np.array(y_l)
-
-                x_y = np.multiply(x,y)
-                x_2 = np.square(x)
-                y_2 = np.square(y)
-
-                x_2_plus_y_2 = np.add(x_2,y_2)
-                x__x_2_plus_y_2 = np.multiply(x,x_2_plus_y_2)
-                y__x_2_plus_y_2 = np.multiply(y,x_2_plus_y_2)
-
-                sum_x = x.sum(dtype=float)
-                sum_y = y.sum(dtype=float)
-                sum_x_2 = x_2.sum(dtype=float)
-                sum_y_2 = y_2.sum(dtype=float)
-                sum_x_y = x_y.sum(dtype=float)
-                sum_x_2_plus_y_2 = x_2_plus_y_2.sum(dtype=float)
-                sum_x__x_2_plus_y_2 = x__x_2_plus_y_2.sum(dtype=float)
-                sum_y__x_2_plus_y_2 = y__x_2_plus_y_2.sum(dtype=float)
-
-                m3b3 = np.array([[sum_x_2,sum_x_y,sum_x],
-                        [sum_x_y,sum_y_2,sum_y],
-                        [sum_x,sum_y,nop]])
-                invm3b3 = np.linalg.inv(m3b3)
-                m3b1 = np.array([sum_x__x_2_plus_y_2,sum_y__x_2_plus_y_2,sum_x_2_plus_y_2])
-                A=np.dot(invm3b3,m3b1)[0]
-                B=np.dot(invm3b3,m3b1)[1]
-                C=np.dot(invm3b3,m3b1)[2]
-                homebase_cx = A/2
-                homebase_cy = B/2
-                homebase_radius = np.sqrt(4*C+A**2+B**2)/2
+                homebase_cx, homebase_cy, homebase_radius = best_fit_circle(x_l, y_l)
                 print ("Center: [%f,%f], radius: %f" % (homebase_cx, homebase_cy, homebase_radius))
-
-
                 
                 right_dist = median_dist(data[midindex-8:midindex-6])
                 left_dist = median_dist(data[midindex+6:midindex+8])
