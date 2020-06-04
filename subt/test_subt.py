@@ -35,6 +35,19 @@ class SubTChallengeTest(unittest.TestCase):
         # 2nd report should be ignored
         self.assertEqual(game.maybe_remember_artifact(artf_data, artf_xyz), False)
 
+    def test_init(self):
+        bus = MagicMock()
+        config = {'virtual_world': True, 'max_speed': 1.0, 'walldist': 0.8, 'timeout': 600, 'symmetric': False, 'right_wall': 'auto'}
+        game = SubTChallenge(config, bus)
+
+        config = {'virtual_world': True, 'speed': 1.0, 'walldist': 0.8, 'timeout': 600, 'symmetric': False, 'right_wall': 'auto'}
+        game = SubTChallenge(config, bus)
+
+        # either speed or max_speed is required
+        with self.assertRaises(KeyError):
+            config = {'virtual_world': True, 'walldist': 0.8, 'timeout': 600, 'symmetric': False, 'right_wall': 'auto' }
+            game = SubTChallenge(config, bus)
+
     def test_go_to_entrance(self):
         config = {'virtual_world': True, 'max_speed': 1.0, 'walldist': 0.8, 'timeout': 600, 'symmetric': False, 'right_wall': 'auto'}
         bus = Bus(simulation.SimLogger())

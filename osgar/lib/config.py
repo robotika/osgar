@@ -2,7 +2,9 @@
   Osgar Config Class
 """
 import json
+import re
 import sys
+
 from importlib import import_module
 
 from osgar.drivers import all_drivers
@@ -63,5 +65,28 @@ def merge_dict(dict1, dict2):
         else:
             ret[key] = dict2[key]
     return ret
+
+
+def _replace(input, data):
+    m = re.match("{(.*)}", input)
+    if m is not None and m.group(1) in data:
+        return data[m.group(1)]
+    return input
+
+
+def config_expand(cfg, data):
+    if isinstance(cfg, dict):
+        ret = {}
+        for k,v in cfg.items():
+            ret[_replace(k, data)] = config_expand(v, data)
+        return ret
+    if isinstance(cfg, list):
+        ret = []
+        for v in cfg:
+            ret.append(config_expand(v, data))
+        return ret
+    if isinstance(cfg, str):
+        return _replace(cfg, data)
+    return cfg
 
 # vim: expandtab sw=4 ts=4

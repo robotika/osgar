@@ -93,7 +93,7 @@ class SubTChallenge:
         self.start_pose = None
         self.traveled_dist = 0.0
         self.time = None
-        self.max_speed = config['max_speed']
+        self.max_speed = config.get('speed') or config['max_speed']
         self.max_angular_speed = math.radians(60)
         self.walldist = config['walldist']
         self.timeout = timedelta(seconds=config['timeout'])
@@ -129,7 +129,7 @@ class SubTChallenge:
         self.emergency_stop = None
         self.monitors = []  # for Emergency Stop Exception
 
-        self.use_right_wall = config['right_wall']
+        self.use_right_wall = 'auto' if config.get('side') == 'auto' else config.get('side') == 'right'
         self.use_center = False  # navigate into center area (controlled by name ending by 'C')
         self.is_virtual = config.get('virtual_world', False)  # workaround to handle tunnel differences
 
@@ -895,72 +895,5 @@ class SubTChallenge:
     def join(self, timeout=None):
         self.thread.join(timeout)
 
-
-def main():
-    import argparse
-    from osgar.lib.config import config_load
-    from osgar.record import record
-
-    parser = argparse.ArgumentParser(description='SubT Challenge')
-    subparsers = parser.add_subparsers(help='sub-command help', dest='command')
-    subparsers.required = True
-    parser_run = subparsers.add_parser('run', help='run on real HW')
-    parser_run.add_argument('config', nargs='+', help='configuration file')
-    parser_run.add_argument('--note', help='add description')
-    parser_run.add_argument('--walldist', help='distance for wall following (default: %(default)sm)', default=1.0, type=float)
-    parser_run.add_argument('--side', help='which side to follow', choices=['left', 'right', 'auto'], required=True)
-    parser_run.add_argument('--speed', help='maximum speed (default: from config)', type=float)
-    parser_run.add_argument('--timeout', help='seconds of exploring before going home (default: %(default)s)',
-                            type=int, default=10*60)
-    parser_run.add_argument('--log', nargs='?', help='record log filename')
-    parser_run.add_argument('--init-offset', help='inital 3D offset accepted as a string of comma separated values (meters)')
-    parser_run.add_argument('--init-path', help='inital path to be followed from (0, 0). 2D coordinates are separated by ;')
-    parser_run.add_argument('--start-paused', dest='start_paused', action='store_true',
-                            help='start robota Paused and wait for LoRa Contine command')
-
-    parser_replay = subparsers.add_parser('replay', help='replay from logfile')
-    parser_replay.add_argument('logfile', help='recorded log file')
-    parser_replay.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
-    parser_replay.add_argument('--config', nargs='+', help='force alternative configuration file')
-    args = parser.parse_args()
-
-    if args.command == 'replay':
-        from osgar.replay import replay
-        args.module = 'app'
-        app = replay(args, application=SubTChallenge)
-        app.play()
-
-    elif args.command == 'run':
-        # To reduce latency spikes as described in https://morepypy.blogspot.com/2019/01/pypy-for-low-latency-systems.html.
-        # Increased latency leads to uncontrolled behavior and robot either missing turns or hitting walls.
-        # Disabled garbage collection needs to be paired with gc.collect() at place(s) that are not time sensitive.
-        gc.disable()
-
-        cfg = config_load(*args.config, application=SubTChallenge)
-
-        # apply overrides from command line
-        cfg['robot']['modules']['app']['init']['walldist'] = args.walldist
-        if args.side == 'auto':
-            cfg['robot']['modules']['app']['init']['right_wall'] = 'auto'
-        else:
-            cfg['robot']['modules']['app']['init']['right_wall'] = args.side == 'right'
-        cfg['robot']['modules']['app']['init']['timeout'] = args.timeout
-        if args.init_offset is not None:
-            x, y, z = [float(x) for x in args.init_offset.split(',')]
-            cfg['robot']['modules']['app']['init']['init_offset'] = [int(x*1000), int(y*1000), int(z*1000)]
-        if args.init_path is not None:
-            cfg['robot']['modules']['app']['init']['init_path'] = args.init_path
-
-        if args.speed is not None:
-            cfg['robot']['modules']['app']['init']['max_speed'] = args.speed
-
-        cfg['robot']['modules']['app']['init']['start_paused'] = args.start_paused
-
-        prefix = os.path.basename(args.config[0]).split('.')[0] + '-'
-        record(cfg, prefix, args.log)
-
-
-if __name__ == "__main__":
-    main()
 
 # vim: expandtab sw=4 ts=4
