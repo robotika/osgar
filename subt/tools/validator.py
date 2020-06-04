@@ -15,7 +15,7 @@ SIM_TIME_STREAM = 'rosmsg.sim_time_sec'
 ORIGIN_STREAM = 'rosmsg.origin'
 
 
-def evaluate_poses(poses, gt_poses, time_step_sec=1.0):
+def evaluate_poses(poses, gt_poses, time_step_sec=1):
     if len(poses) == 0 or len(gt_poses) == 0:
         return []
     time_limit = max(poses[0][0], gt_poses[0][0])
@@ -38,17 +38,24 @@ def evaluate_poses(poses, gt_poses, time_step_sec=1.0):
 def ign2arr(ign_poses, robot_name):
     """Convert Ignition state poses into array"""
     arr = []
+    prev_seconds = None
     for timestamp, data in ign_poses:
         if robot_name in data:
             pos = data[robot_name]
-            arr.append((timestamp.total_seconds(), pos.x, pos.y, pos.z))
+            if prev_seconds != timestamp.seconds:
+                # store only position every simulation second
+                if prev_seconds is not None:
+                    # ignore the first sample which is probably not on time boundary (we cannot prove it)
+                    arr.append((int(round(timestamp.total_seconds())), pos.x, pos.y, pos.z))
+                prev_seconds = timestamp.seconds
     return arr
 
 
 def osgar2arr(poses):
+    """drop orientation information from poses"""
     arr = []
-    for timestamp, data in poses:
-        arr.append((timestamp.total_seconds(), *data[0]))
+    for time_sec, data in poses:
+        arr.append((time_sec, *data[0]))
     return arr
 
 
@@ -56,15 +63,20 @@ def read_pose3d(filename, pose3d_name, seconds=MAX_SIMULATION_DURATION):
     stream_id = lookup_stream_id(filename, pose3d_name)
     sim_time_id = lookup_stream_id(filename, SIM_TIME_STREAM)
     poses = []
-    sim_time = 0
+    sim_time = None
+    pose_sim_time = None  # sim_time, but valid only for the first pose after time change
     for dt, channel, data in LogReader(filename, only_stream_id=[stream_id, sim_time_id]):
         value = deserialize(data)
-        if sim_time > seconds:
+        if len(poses) > seconds:
             break
         if channel == sim_time_id:
-            sim_time = value
+            if sim_time != value:
+                sim_time = value
+                pose_sim_time = sim_time
         else:  # pose3d
-            poses.append((datetime.timedelta(seconds=sim_time), value))
+            if pose_sim_time is not None:
+                poses.append((pose_sim_time, value))
+                pose_sim_time = None
     return poses
 
 
@@ -98,10 +110,11 @@ def main():
     print('GT count:', len(ground_truth))
 
     pose3d = read_pose3d(args.logfile, args.pose3d, seconds=args.sec)
-    print('Trace count:', len(pose3d))
+    print('Trace reduced count:', len(pose3d))
 
     tmp_poses = osgar2arr(pose3d)
     tmp_gt = ign2arr(ground_truth, robot_name=robot_name)
+    print('GT seconds:', len(tmp_gt))
     arr = evaluate_poses(tmp_poses, tmp_gt)
     if len(arr) == 0:
         print('EMPTY OVERLAP!')
