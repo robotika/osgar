@@ -36,7 +36,14 @@ def rotate_vector(vector, quaternion):
     return multiply(part1, con)[:-1]
 
 def euler_zyx(quaternion):
+    # https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+    # assumption that quaternion is normalized
     x0, y0, z0, w0 = quaternion
+    sqr_size = x0*x0 + y0*y0 + z0*z0 + w0*w0
+    if abs(sqr_size - 1.0) > 0.00001:
+        # the assumption is broken, so normalize it
+        k = math.sqrt(sqr_size)
+        x0, y0, z0, w0 = x0/k, y0/k, z0/k, w0/k
     ax =  math.atan2(2*(w0*x0+y0*z0), 1-2*(x0*x0+y0*y0))
     ay =  math.asin(2*(w0*y0-z0*x0))
     az =  math.atan2(2*(w0*z0+x0*y0), 1-2*(y0*y0+z0*z0))

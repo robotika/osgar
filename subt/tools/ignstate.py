@@ -39,6 +39,7 @@ MARKERS = {
 
 
 def read_poses(filename, seconds=3700):
+    offset = [-x for x in get_origin(filename)]
     ret = []
 
     con = sqlite3.connect(filename)
@@ -62,6 +63,9 @@ def read_poses(filename, seconds=3700):
             for pose in poses.pose:
                 if "_" in pose.name:
                     continue
+                pose.position.x += offset[0]
+                pose.position.y += offset[1]
+                pose.position.z += offset[2]
                 current[pose.name] = pose.position
             if len(current) > 0:
                 ret.append((timestamp, current))
@@ -71,7 +75,8 @@ def read_poses(filename, seconds=3700):
     return ret
 
 
-def read_artifacts(filename):
+def _read_artifacts(filename):
+    """internal version for reading artifacts in Gazebo coordinate system"""
     ret = []
     con = sqlite3.connect(filename)
     cursor = con.cursor()
@@ -92,6 +97,20 @@ def read_artifacts(filename):
             kind = match.group(1)
             x, y, z = [float(a) for a in model.find('./pose').text.split()[:3]]
             ret.append([kind, [x,y,z]])
+    return ret
+
+
+def get_origin(filename):
+    artifacts = _read_artifacts(filename)
+    origin = next(filter(lambda a: a[0] == 'artifact_origin', artifacts))[1]
+    return origin
+
+
+def read_artifacts(filename):
+    origin = get_origin(filename)
+    ret = []
+    for kind, p in _read_artifacts(filename):
+        ret.append([kind, [a - o for a, o in zip(p, origin)]])
     return ret
 
 
@@ -161,10 +180,9 @@ def main():
 
     if args.artifacts:
         artifacts = read_artifacts(args.filename)
-        origin = next(filter(lambda a: a[0] == 'artifact_origin', artifacts))[1]
         for kind, p in artifacts:
-            corrected = ", ".join(f"{aa-oo:.2f}".rstrip('0').rstrip('.') for aa, oo in zip(p, origin))
-            print(f"{kind:<15}", f"[{corrected}]")
+            formatted = ", ".join(f"{aa:.2f}".rstrip('0').rstrip('.') for aa in p)
+            print(f"{kind:<15}", f"[{formatted}]")
         return
 
     p = read_poses(args.filename, args.s)
