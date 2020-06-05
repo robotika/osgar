@@ -83,6 +83,7 @@ def main():
             img2 = draw_skyline(img, s)
             cv2.imshow('skyline' + str(stream_id), img2)
             KEY_Q = ord('q')
+            KEY_D = ord('d')
             KEY_SPACE = ord(' ')
             key = cv2.waitKey(1) & 0xFF
             if key == KEY_Q:
@@ -92,6 +93,8 @@ def main():
                 key = cv2.waitKey(0) & 0xFF
                 if key == KEY_Q:
                     break
+                if key == KEY_D:
+                    print(stream_id, s)
 
 
 if __name__ == "__main__":
