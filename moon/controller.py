@@ -47,6 +47,7 @@ class LidarCollisionMonitor:
             # NASA Lidar 150degrees wide, 50 samples
             # robot is ~2.21m wide (~1.2m x 2 with wiggle room), with 150 angle need to have 1.2m clearance (x = 1.2 / sin(150/2))
             if min_dist(robot.scan[60:210]) < 1.2 and not robot.inException:
+                robot.publish('driving_recovery', True)
                 raise LidarCollisionException()
 
     # context manager functions
@@ -99,6 +100,7 @@ class SpaceRoboticsChallenge(Node):
         self.current_driver = None
         
         self.inException = False
+        self.in_driving_recovery = False
 
         self.last_status_timestamp = None
         
@@ -138,7 +140,11 @@ class SpaceRoboticsChallenge(Node):
         self.brakes_on = on
         self.send_request('set_brakes %s\n' % ('on' if on else 'off'))
         print (self.time, "app: Brakes set to: %s" % on)
-            
+
+    def on_driving_recovery(self, timestamp, data):
+        self.in_driving_recovery = data
+        print (self.time, "Driving recovery changed to: %r" % data)
+
     def on_pose2d(self, timestamp, data):
         x, y, heading = data
         pose = (x / 1000.0, y / 1000.0, math.radians(heading / 100.0))
@@ -200,6 +206,8 @@ class SpaceRoboticsChallenge(Node):
             self.on_score(self.time, self.score)
         elif channel == 'driving_control':
             self.on_driving_control(self.time, self.driving_control)
+        elif channel == 'driving_recovery':
+            self.on_driving_recovery(self.time, self.driving_recovery)
         elif channel == 'object_reached':
             self.on_object_reached(self.time, self.object_reached)
         elif channel == 'scan':
@@ -213,10 +221,10 @@ class SpaceRoboticsChallenge(Node):
 
             if self.use_gimbal:
                 # maintain camera level
-                cam_angle = self.camera_angle - self.pitch
+                cam_angle = self.camera_angle + self.pitch
                 self.send_request('set_cam_angle %f\n' % cam_angle)
 
-            if not self.inException and self.pitch > 0.6:
+            if not self.inException and self.pitch < -0.6:
                 # TODO pitch can also go the other way if we back into an obstacle
                 # TODO: robot can also roll if it runs on a side of a rock while already on a slope
                 self.bus.publish('driving_recovery', True)
