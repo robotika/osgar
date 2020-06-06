@@ -1,6 +1,8 @@
 """
   Space Robotics Challenge 2
 """
+import math
+
 from osgar.lib import quaternion
 from moon.controller import SpaceRoboticsChallenge
 
