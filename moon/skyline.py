@@ -7,20 +7,37 @@ import numpy as np
 import cv2  # for debug
 
 
+class NoiseException(Exception):
+    pass
+
+
 def skyline(img):
     b = img[:,:,0]
     g = img[:,:,1]
     r = img[:,:,2]
     mask = r > 10
-    return mask.argmax(axis=0)
+    upper = mask.argmax(axis=0)
+    lower = mask.shape[0] - np.flip(mask, axis=0).argmin(axis=0)
+    diff = upper - lower
+#    print(upper[:10])
+#    print(lower[:10])
+    if np.max(np.abs(diff)) > 20:
+        print(diff, np.max(np.abs(diff)))
+        raise NoiseException()
+    return upper
+
+    x_min = (mask.argmax(axis=0) != 0).argmax()
+    x_max = mask.shape[1] - np.flip((mask.argmax(axis=0) != 0), axis=0).argmax() - 1
 
 
 def find_peaks(arr):
     x = arr.argmin()
     y = arr[x]
     ret = []
-    if x > 0:
-        ret.append((x, y))
+    if True:
+        if 0 < x < len(arr) - 1:
+            # ignore peaks on the image border
+            ret.append((x, y))
 
         # try to remove the single peak
         # TODO numpy optimize
@@ -78,9 +95,13 @@ def main():
         for timestamp, stream_id, data in log:
             buf = deserialize(data)
             img = cv2.imdecode(np.fromstring(buf, dtype=np.uint8), cv2.IMREAD_COLOR)
-            s = skyline(img)
-            peaks[stream_id] = find_peaks(s)
-            img2 = draw_skyline(img, s)
+            try:
+                s = skyline(img)
+                peaks[stream_id] = find_peaks(s)
+                img2 = draw_skyline(img, s)
+            except NoiseException:
+                pass
+                cv2.waitKey(0)
             cv2.imshow('skyline' + str(stream_id), img2)
             KEY_Q = ord('q')
             KEY_D = ord('d')
