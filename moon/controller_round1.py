@@ -25,7 +25,13 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
         message = self.send_request('request_origin').decode("ascii") 
         print ("controller round 1: origin received: %s" % message)
 
-        super().run()
+        self.turn(math.radians(360), timeout=timedelta(seconds=120))
+        self.go_straight(10.0, timeout=timedelta(seconds=120))
+        self.turn(math.radians(360), timeout=timedelta(seconds=120))
+        self.go_straight(10.0, timeout=timedelta(seconds=120))
+        self.turn(math.radians(360), timeout=timedelta(seconds=120))
+
+#        super().run()
 
 
 def main():
