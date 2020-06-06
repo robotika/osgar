@@ -2,6 +2,7 @@
   Space Robotics Challenge 2
 """
 import math
+from datetime import timedelta
 
 from osgar.lib import quaternion
 from moon.controller import SpaceRoboticsChallenge
