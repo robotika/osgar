@@ -5,9 +5,6 @@ import math
 from random import Random
 from datetime import timedelta
 
-from threading import Thread
-import time
-
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 from osgar.lib import quaternion
@@ -21,7 +18,6 @@ class ChangeDriverException(Exception):
 
 class VirtualBumperException(Exception):
     pass
-
 
 def distance(pose1, pose2):
     return math.hypot(pose1[0] - pose2[0], pose1[1] - pose2[1])
@@ -58,33 +54,6 @@ class LidarCollisionMonitor:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.robot.unregister(self.callback)
-
-class ResponsePoller(Thread):
-    def __init__(self, robot, token, callback):
-        super().__init__()
-        self.token = token
-        self.callback = callback
-        self.robot = robot
-        self.stop_request = False
-
-    def request_stop(self):
-        self.stop_request = True
-
-    def run(self):
-        request_sent = self.robot.time
-        while not self.stop_request and self.robot.time - request_sent < timedelta(seconds=5):
-            if self.robot.requests[self.token]["response"] is not None:
-                response = self.robot.requests[self.token]["response"]
-                print(self.robot.time, "controller:response received: token=%s, response=%s" % (self.token, response))
-                self.robot.requests.pop(self.token)
-                if self.callback is not None:
-                    self.callback(response)
-                return
-            self.robot.sleep(0.1)
-        print(self.robot.time, "controller: send_request timed out: token: %s" % self.token)
-        self.robot.requests[self.token]["thread"] = None
-
-        
 
 class SpaceRoboticsChallenge(Node):
     def __init__(self, config, bus):
@@ -125,11 +94,11 @@ class SpaceRoboticsChallenge(Node):
 
         self.score = 0
         self.current_driver = None
-        
+
         self.inException = False
 
         self.last_status_timestamp = None
-        
+
         self.virtual_bumper = None
         self.rand = Random(0)
 
@@ -144,12 +113,8 @@ class SpaceRoboticsChallenge(Node):
         self.monitors.remove(callback)
 
     def request_stop(self):
-        for r in self.requests:
-            if self.requests[token]["thread"] is not None:
-                self.requests[token]["thread"].request_stop()
-                self.requests[token]["thread"].join()
         super().request_stop()
-        
+
     def send_speed_cmd(self, speed, angular_speed):
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_desired_speed(speed, angular_speed)
@@ -157,31 +122,31 @@ class SpaceRoboticsChallenge(Node):
 
     def on_response(self, timestamp, data):
         token, response = data
-        self.requests[token]["response"] = response
-        
+        print(self.time, "controller:response received: token=%s, response=%s" % (token, response))
+        callback = self.requests[token]
+        self.requests.pop(token)
+        if callback is not None:
+            callback(response)
+
     def send_request(self, cmd, callback=None):
         """Send ROS Service Request from a single place"""
         token = hex(self.rand.getrandbits(128))
-        self.requests[token] = {
-            "response": None,
-            "thread": ResponsePoller(self, token, callback)
-        }
+        self.requests[token] = callback
         print(self.time, "controller:send_request:token: %s, command: %s" % (token, cmd))
         self.publish('request', [token, cmd])
-        self.requests[token]["thread"].start()
 
     def set_cam_angle(self, angle):
         self.send_request('set_cam_angle %f\n' % angle)
         self.camera_angle = angle
         print (self.time, "app: Camera angle set to: %f" % angle)
         self.camera_change_triggered_time = self.time
-        
+
     def set_brakes(self, on):
         assert type(on) is bool, on
         self.brakes_on = on
         self.send_request('set_brakes %s\n' % ('on' if on else 'off'))
         print (self.time, "app: Brakes set to: %s" % on)
-            
+
     def on_pose2d(self, timestamp, data):
         x, y, heading = data
         pose = (x / 1000.0, y / 1000.0, math.radians(heading / 100.0))
@@ -270,7 +235,7 @@ class SpaceRoboticsChallenge(Node):
 
         for m in self.monitors:
             m(self, channel)
-            
+
         return channel
 
     def go_straight(self, how_far, timeout=None):
@@ -347,7 +312,7 @@ class SpaceRoboticsChallenge(Node):
 
         # recovered enough at this point to switch to another driver (in case you see cubesat while doing the 3m drive or the final turn)
         self.bus.publish('driving_recovery', False)
-        
+
         self.go_straight(3.0, timeout=timedelta(seconds=20))
         self.turn(math.radians(-90), timeout=timedelta(seconds=10))
 
@@ -360,7 +325,7 @@ class SpaceRoboticsChallenge(Node):
         except BusShutdownException:
             pass
 
-        
+
     def run(self):
         try:
             last_walk_start = 0.0
@@ -374,7 +339,7 @@ class SpaceRoboticsChallenge(Node):
                         if self.current_driver is None and not self.brakes_on:
                             self.go_straight(50.0, timeout=timedelta(minutes=2))
                         else:
-                            self.wait(timedelta(minutes=2)) # allow for self driving, then timeout   
+                            self.wait(timedelta(minutes=2)) # allow for self driving, then timeout
                     self.update()
                 except ChangeDriverException as e:
                     continue
@@ -399,7 +364,7 @@ class SpaceRoboticsChallenge(Node):
                         # if it ran long time, maybe worth trying going in the same direction
                         continue
                     additional_turn = 30
-                        
+
                     # next random walk direction should be between 30 and 150 degrees
                     # (no need to go straight back or keep going forward)
                     # if part of virtual bumper handling, add 30 degrees to avoid the obstacle more forcefully
@@ -413,7 +378,7 @@ class SpaceRoboticsChallenge(Node):
                     self.turn(math.radians(deg_angle), timeout=timedelta(seconds=30))
                 except ChangeDriverException as e:
                     continue
-                    
+
                 except VirtualBumperException:
                     self.inException = True
                     print(self.time, "Turn Virtual Bumper!")
