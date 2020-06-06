@@ -25,6 +25,10 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
             pass
 
     def run(self):
+        # hack to get system initilized
+        for i in range(100):
+            self.update()
+
         message = self.send_request('request_origin').decode("ascii") 
         print ("controller round 1: origin received: %s" % message)
 
