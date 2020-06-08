@@ -1,0 +1,92 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+        "driver": "moon.controller_round3:SpaceRoboticsChallengeRound3",
+        "in": ["pose2d", "driving_control", "driving_recovery"],
+        "out": ["desired_speed", "artf_xyz", "artf_cmd", "pose3d", "driving_recovery"],
+        "init": {}
+      },
+      "transmitter": {
+        "driver": "zeromq",
+        "in": [],
+        "out": ["raw"],
+        "init": {
+          "mode": "PUSH",
+          "endpoint": "tcp://localhost:5556"
+        }
+      },
+      "receiver": {
+        "driver": "zeromq",
+        "in": [],
+        "out": ["raw"],
+        "init": {
+          "mode": "PULL",
+          "endpoint": "tcp://localhost:5555"
+        }
+      },
+      "rpc": {
+        "driver": "zeromq",
+        "in": ["request"],
+        "out": ["response"],
+        "init": {
+          "mode": "REQ",
+          "endpoint": "tcp://localhost:5557",
+          "save_data": true
+        }
+      },
+      "rosmsg": {
+        "driver": "rosmsg",
+        "in": ["slot_raw", "desired_speed", "tick", "stdout"],
+        "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd"],
+        "init": {
+          "downsample": 1,
+          "topics": [
+            ["/scout_1/joint_states", "sensor_msgs/JointState"],
+            ["/qual_3_score", "srcp2_msgs/Qual3ScoringMsg"],
+            ["/scout_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage"],
+            ["/scout_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage"]
+          ]
+        }
+      },
+      "scout": {
+        "driver": "moon.vehicles.scout:Scout",
+        "in": [],
+        "out": [],
+        "init": {
+        }
+      },
+      "detector": {
+        "driver": "moon.artifacts:ArtifactDetector",
+        "in": [],
+        "out": [],
+        "init": {
+        }
+      }
+    },
+    "links": [
+      ["receiver.raw", "rosmsg.raw"],
+      ["rosmsg.cmd", "transmitter.raw"],
+      ["rosmsg.rot", "app.rot"],
+      ["rosmsg.scan", "app.scan"],
+      ["rosmsg./qual_3_score", "app.score"],
+      ["rosmsg.joint_name", "scout.joint_name"],
+      ["rosmsg.joint_position", "scout.joint_position"],
+      ["rosmsg.joint_velocity", "scout.joint_velocity"],
+      ["rosmsg.joint_effort", "scout.joint_effort"],
+      ["rosmsg.rot", "scout.rot"],
+      ["rosmsg./scout_1/camera/left/image_raw/compressed", "detector.left_image"],
+      ["rosmsg./scout_1/camera/right/image_raw/compressed", "detector.right_image"],
+      ["detector.artf", "app.artf"],
+      ["app.desired_movement", "scout.desired_movement"],
+      ["app.desired_speed", "scout.desired_speed"],
+      ["app.driving_recovery", "scout.driving_recovery"],
+      ["app.driving_recovery", "app.driving_recovery"],
+      ["app.request", "rpc.request"],
+      ["rpc.response", "app.response"],
+      ["scout.cmd", "transmitter.raw"],
+      ["scout.pose2d", "app.pose2d"]
+    ]
+  }
+}

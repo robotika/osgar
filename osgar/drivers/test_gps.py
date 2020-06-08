@@ -11,6 +11,9 @@ class GPSTest(unittest.TestCase):
     def test_str2ms(self):
         self.assertEqual(gps.str2ms(b'5007.71882'), 180463129)
 
+    def test_str2ms_err_input(self):
+        self.assertEqual(gps.str2ms(b'01422.489915\x0052'), None) # the checksum is passing because a zero byte is added
+
     def test_parse_line(self):
         line = b'$GNGGA,182433.10,5007.71882,N,01422.50467,E,1,05,6.09,305.1,M,44.3,M,,*41'
         self.assertEqual(gps.parse_line(line), [51750280, 180463129])  # arc milliseconds (x, y) = (lon, lat)
