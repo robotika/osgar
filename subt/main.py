@@ -848,6 +848,10 @@ class SubTChallenge:
             self.update()
         self.stdout('robot_name:', self.robot_name)
 
+        # wait for critical data
+        while self.scan is None or self.yaw_offset is None:
+            self.update()
+
         if self.use_right_wall == 'auto':
             self.use_right_wall = self.robot_name.endswith('R')
             self.use_center = self.robot_name.endswith('C')
