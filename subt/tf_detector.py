@@ -7,7 +7,7 @@ import cv2
 # Directory with files saved_model.pb and saved_model.pbtxt
 MODEL_DIR = "subt/tf_models"
 
-class Tf_detector:
+class TfDetector:
     def __init__(self):
         self.model = tf.saved_model.load(MODEL_DIR)
         self.model = self.model.signatures['serving_default']
@@ -62,7 +62,7 @@ class Tf_detector:
 
 
 if __name__ == "__main__":
-    detector = Tf_detector()
+    detector = TfDetector()
     if sys.argv[1] == "cam":
         cam = cv2.VideoCapture(0)
         while True:
