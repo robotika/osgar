@@ -142,15 +142,16 @@ class Router:
             return
         g_logger.info(f"{str(sender, 'ascii')} requested stop")
         self.stopping = self._now()
+        dt_uint32 = osgar.logger.format_timedelta(self.stopping)
         for node_name in self.nodes:
-            self.send(node_name, b"quit")
+            self.send(node_name, b"quit", dt_uint32)
 
     def is_alive(self, sender):
         dt_uint32 = self._pack_timestamp(self._now())
         self.socket.send_multipart([sender, b"", b"quit" if self.stopping else b"is_alive", dt_uint32])
 
-    def send(self, node_name, *args):
-        packet = [node_name, b"", *args]
+    def send(self, node_name, action, dt_uint32, *args):
+        packet = [node_name, b"", action, dt_uint32, *args]
         if node_name in self.listening:
             self.listening.remove(node_name)
             self.socket.send_multipart(packet)
@@ -179,13 +180,13 @@ class Bus:
 
     def listen(self):
         self.sock.send(b"listen")
-        resp = self.sock.recv_multipart()
-        if resp[0] == b"quit":
+        action, dt, *args = self.sock.recv_multipart()
+        if action == b"quit":
             raise self._quit()
-        assert resp[0] == b"listen"
-        dt = self.parse_listen_dt(resp[1])
-        channel = str(resp[2], 'ascii')
-        data = osgar.lib.serialize.deserialize(resp[3])
+        assert action == b"listen"
+        dt = self.parse_listen_dt(dt)
+        channel = str(args[0], 'ascii')
+        data = osgar.lib.serialize.deserialize(args[1])
         return dt, channel, data
 
     def publish(self, channel, data):
