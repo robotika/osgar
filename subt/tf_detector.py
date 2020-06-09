@@ -44,7 +44,7 @@ class TfDetector:
         return None
 
 
-    def show_result(self, img, detection):
+    def show_result(self, img, detection, ret_img = False):
         if detection:
             num_detections = detection['num_detections']
             for ii in range(num_detections):
@@ -53,12 +53,14 @@ class TfDetector:
                 name = detection['classes_names'][ii]
                 cv2.rectangle(img, (x, y), (w, h), (255, 0, 0), thickness=2)
                 cv2.putText(img, name+' '+str(score), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
-
-            cv2.imshow('img', img)
-            cv2.waitKey(1000)
-        else:
+            if not ret_img:
+                cv2.imshow('img', img)
+                cv2.waitKey(1000)
+        elif not ret_img:
             cv2.imshow('img', img)
             cv2.waitKey(1)
+
+        return img
 
 
 if __name__ == "__main__":
