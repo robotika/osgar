@@ -55,6 +55,7 @@ class Router:
         self._context = zmq.Context()
         self.socket = self._context.socket(zmq.ROUTER)
         self.nodes = dict()
+        self.delays = dict()
         self.subscriptions = dict()
         self.stream_id = dict()
         self.listening = set()
@@ -86,6 +87,7 @@ class Router:
             #print(sender, outputs)
             # receiving queue
             self.nodes[sender] = collections.deque()
+            self.delays[sender] = datetime.timedelta()
             for o in outputs:
                 link_from = sender + b"." + o
                 idx = self.logger.register(str(link_from, 'ascii'))
@@ -106,6 +108,9 @@ class Router:
             sender, action, *args = packet
             getattr(self, str(action, 'ascii'))(sender, *args)
 
+        for sender, delay in self.delays.items():
+            g_logger.info(f"{str(sender, 'ascii')}: {delay}")
+
     def receive(self, hz=10):
         socket = self.socket
         poller = zmq.Poller()
@@ -123,9 +128,14 @@ class Router:
         if len(queue) == 0:
             self.listening.add(sender)
         else:
-            packet = queue.popleft()
+            first_dt = queue[0][0]
+            last_dt = queue[-1][0]
+            packet = queue.popleft()[1]
             assert packet[0] == sender, (packet[0], sender)
             self.socket.send_multipart(packet)
+            delay = last_dt - first_dt
+            if self.delays[sender] < delay:
+                self.delays[sender] = delay
 
     def publish(self, sender, channel, data):
         dt = self._now()
@@ -133,7 +143,7 @@ class Router:
         self.socket.send_multipart([sender, b"", b"publish", dt_uint32])
         link_from = sender + b"." + channel
         for node_name, input_channel in self.subscriptions.get(link_from, []):
-            self.send(node_name, b'listen', dt_uint32, input_channel, data)
+            self.send(node_name, b'listen', dt, input_channel, data)
         stream_id = self.stream_id[link_from]
         self.logger.write(stream_id, data, dt)
 
@@ -142,21 +152,21 @@ class Router:
             return
         g_logger.info(f"{str(sender, 'ascii')} requested stop")
         self.stopping = self._now()
-        dt_uint32 = osgar.logger.format_timedelta(self.stopping)
         for node_name in self.nodes:
-            self.send(node_name, b"quit", dt_uint32)
+            self.send(node_name, b"quit", self.stopping)
 
     def is_alive(self, sender):
         dt_uint32 = self._pack_timestamp(self._now())
         self.socket.send_multipart([sender, b"", b"quit" if self.stopping else b"is_alive", dt_uint32])
 
-    def send(self, node_name, action, dt_uint32, *args):
+    def send(self, node_name, action, dt, *args):
+        dt_uint32 = osgar.logger.format_timedelta(dt)
         packet = [node_name, b"", action, dt_uint32, *args]
         if node_name in self.listening:
             self.listening.remove(node_name)
             self.socket.send_multipart(packet)
         else:
-            self.nodes[node_name].append(packet)
+            self.nodes[node_name].append((dt, packet))
 
     def _now(self):
         return datetime.datetime.now(datetime.timezone.utc) - self.start_time
