@@ -13,6 +13,7 @@ import pygame
 from pygame.locals import *
 import cv2  # for video output
 import numpy as np  # faster depth data processing
+from importlib import import_module
 
 from osgar.logger import LogIndexedReader, lookup_stream_names
 from osgar.lib.serialize import deserialize
@@ -91,7 +92,6 @@ def draw_scan(foreground, pose, scan, color, joint=None):
         x, y = dist * math.cos(angle), dist * math.sin(angle)
         pygame.draw.circle(foreground, color, scr(X + x, Y + y), 3)
 
-
 def draw(foreground, pose, scan, poses=[], image=None, bbox=None, callback=None, acc_pts=None):
     foreground.lock()
     color = (0, 255, 0)
@@ -127,6 +127,17 @@ def draw(foreground, pose, scan, poses=[], image=None, bbox=None, callback=None,
     foreground.unlock()
 
     if image is not None:
+        if callback_img:
+            # convert pygame image to numpy image
+            view = pygame.surfarray.array3d(image)
+            view = view.transpose([1, 0, 2])
+            np_img = cv2.cvtColor(view, cv2.COLOR_RGB2BGR)
+            detection = callback_img.detect(np_img)
+            np_img = callback_img.show_result(np_img, detection, ret_img=True)
+            # convert nompy image to pygame image
+            np_img = cv2.cvtColor(np_img, cv2.COLOR_BGR2RGB)
+            image = pygame.image.frombuffer(np_img.tostring(), np_img.shape[1::-1], "RGB")
+
         width, height = image.get_size()
         if width > WINDOW_SIZE[0] or height > WINDOW_SIZE[1]:
             width, height = (512, 384)
@@ -140,7 +151,7 @@ def draw(foreground, pose, scan, poses=[], image=None, bbox=None, callback=None,
             color = (0, 255, 0)
             rect = pygame.Rect(x, y, width, height)
             pygame.draw.rect(image, color, rect, 2)
-        
+
     if callback is not None:
         debug_poly = []
         callback(scan, debug_poly)
@@ -339,7 +350,7 @@ class Framer:
         return timedelta(), self.pose, self.scan, self.scan2, self.image, self.image2, self.bbox, self.joint, self.keyframe, self.title, True
 
 
-def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
+def lidarview(gen, caption_filename, callback=False, callback_img=False, out_video=None, jump=None):
     global g_scale
 
     if out_video is not None:
@@ -437,7 +448,7 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
             draw(foreground, pose, scan, poses=poses,
                  image=img if camera_on else None, bbox=bbox,
                  acc_pts=acc_pts if map_on else None,
-                 callback=callback)
+                 callback=callback, callback_img=callback_img)
             screen.blit(background, (0, 0))
             screen.blit(foreground, (0, 0))
             pygame.display.flip() 
@@ -572,6 +583,8 @@ def main(args_in=None, startswith=None):
 
     parser.add_argument('--callback', help='callback function for lidar scans')
 
+    parser.add_argument('--callback-img', help='callback function for image')
+
     parser.add_argument('--rotate', help='rotate poses by angle in degrees, offset',
                         type=float, default=0.0)
 
@@ -602,6 +615,10 @@ def main(args_in=None, startswith=None):
     callback = None
     if args.callback is not None:
         callback = get_class_by_name(args.callback)
+    callback_img = None
+    if args.callback_img == "tf_detector":
+        from subt.tf_detector import TfDetector
+        callback_img = TfDetector()
 
     if args.lidar_limit is not None:
         MAX_SCAN_LIMIT = args.lidar_limit
@@ -614,7 +631,7 @@ def main(args_in=None, startswith=None):
     with Framer(args.logfile, lidar_name=args.lidar, lidar2_name=args.lidar2, pose2d_name=args.pose2d, pose3d_name=args.pose3d,
                 camera_name=args.camera, camera2_name=args.camera2, bbox_name=args.bbox, joint_name=args.joint,
                 keyframes_name=args.keyframes, title_name=args.title) as framer:
-        lidarview(framer, caption_filename=filename, callback=callback, out_video=args.create_video, jump=args.jump)
+        lidarview(framer, caption_filename=filename, callback=callback, callback_img=callback_img, out_video=args.create_video, jump=args.jump)
 
 if __name__ == "__main__":
     main()
