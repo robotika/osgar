@@ -88,7 +88,8 @@ class Router:
             # receiving queue
             self.nodes[sender] = collections.deque()
             self.delays[sender] = datetime.timedelta()
-            for o in outputs:
+            for name_and_type in outputs:
+                o = name_and_type.split(b':')[0]  # keep only prefixes
                 link_from = sender + b"." + o
                 idx = self.logger.register(str(link_from, 'ascii'))
                 self.stream_id[link_from] = idx
