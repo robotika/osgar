@@ -1,7 +1,7 @@
 import pdb
 
 
-PID_P = 0.2 # MOB # was 0.1
+PID_P = 0.1 # MOB # was 0.1
 PID_D = 0.05 # MOB
 PID_I = 0.05
 MAX_FORCE = 0.6 
@@ -51,7 +51,7 @@ class PID:
         elif self.doubleClickState == "FIRST_STOP" or self.doubleClickState == "INIT":
             self.doubleClickState = "INIT"
             self.prevSpeed = newSpeed
-        #print("doubleClickState=%s\tprev=%f\tnew=%f"%(self.doubleClickState, self.prevSpeed, newSpeed))
+        print("doubleClickState=%s\tprev=%f\tnew=%f"%(self.doubleClickState, self.prevSpeed, newSpeed))
         return newSpeed
 
     def stop(self):
