@@ -1,4 +1,3 @@
-import ast
 import collections
 import datetime
 import logging
@@ -19,14 +18,14 @@ ENDPOINT = "tcp://127.0.0.1:8882"
 g_logger = logging.getLogger(__name__)
 
 
-def main():
+def child(name, module_config):
+    # todo how to inherit logging setup from parent process?
     signal.signal(signal.SIGINT,signal.SIG_IGN)
-    module_config = ast.literal_eval(sys.argv[1])
     klass = osgar.lib.config.get_class_by_name(module_config['driver'])
-    bus = Bus(module_config['name'])
+    bus = Bus(name)
     instance = klass(config=module_config['init'], bus=bus)
     instance.start()
-    g_logger.info(f"{module_config['name']} running")
+    g_logger.info(f"{name} running")
     instance.join()
     bus.request_stop()
 
@@ -39,8 +38,8 @@ def record(config, log_prefix=None, log_filename=None, duration_sec=None):
         with Router(log) as router:
             modules = {}
             for module_name, module_config in config['robot']['modules'].items():
-                module_config['name'] = module_name
-                modules[module_name] = subprocess.Popen([sys.executable, "-m", __name__, str(module_config)])
+                program = f"import {__name__}; {__name__}.child('{module_name}', {module_config})"
+                modules[module_name] = subprocess.Popen([sys.executable, "-c", program])
 
             router.register_nodes(modules.keys())
             links =  config['robot']['links']
@@ -232,15 +231,3 @@ class Bus:
     def _quit(self):
         g_logger.info(f"{self.name} received quit")
         return SystemExit()
-
-
-if __name__ == "__main__":
-    # todo how to inherit logging setup from parent process?
-    #logging.basicConfig(
-    #    stream=sys.stderr,
-    #    level=logging.DEBUG,
-    #    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-    #    datefmt='%Y-%m-%d %H:%M',
-    #)
-    main()
-
