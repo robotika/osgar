@@ -375,6 +375,7 @@ def parse_bucket(data):
     pos = 4
     assert size + 4 == len(data), (size, len(data))  # it is going to be variable -> remove the assert
     vol_type_size = struct.unpack_from('<I', data, pos)[0]
+    pos += 4
     vol_type = data[pos:pos+vol_type_size]  # b'methanol'
     pos += vol_type_size
     vol_index, mass_in_bucket = struct.unpack_from('<if', data, pos)
@@ -388,7 +389,7 @@ def parse_topic(topic_type, data):
         pos = 4
         assert size == 40, size
         # __slots__ = ['score','calls','total_of_types']
-        # _slot_types = ['int32','int32','int32[8]']        
+        # _slot_types = ['int32','int32','int32[8]']
         return list(struct.unpack_from('<II', data, pos))  # only score and calls
     elif topic_type == 'srcp2_msgs/Qual2ScoringMsg':
         assert len(data) == 139, (len(data), data)
@@ -459,7 +460,7 @@ class ROSMsgParser(Thread):
         size += 4  # the length prefix
         if len(data) < size:
             return None
-        ret, self._buf = data[:size], data[size:]        
+        ret, self._buf = data[:size], data[size:]
         return ret
 
     def slot_raw(self, timestamp, data):
@@ -514,11 +515,11 @@ class ROSMsgParser(Thread):
 
             #workaround for not existing /clock on MOBoS
             cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
-            self.bus.publish('cmd', cmd) 
+            self.bus.publish('cmd', cmd)
 
         elif frame_id.endswith(b'/base_link/imu_sensor') or frame_id.endswith(b'imu_link'):  # self.topic_type == 'std_msgs/Imu':
             acc, rot, orientation = parse_imu(packet)
-            self.bus.publish('rot', [round(math.degrees(angle)*100) 
+            self.bus.publish('rot', [round(math.degrees(angle)*100)
                                      for angle in rot])
             self.bus.publish('acc', [round(x * 1000) for x in acc])
             self.bus.publish('orientation', list(orientation))
