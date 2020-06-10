@@ -18,9 +18,10 @@ from osgar.zmqrouter import Router, Bus, record
 class Noop:
     def __init__(self, config, bus):
         self.bus = bus
+        self.bus.register("output")
 
     def start(self):
-        self.bus.register()
+        pass
 
     def join(self, timeout=None):
         pass
@@ -29,9 +30,10 @@ class Noop:
 class Publisher:
     def __init__(self, config, bus):
         self.bus = bus
+        self.output_name = config["output"]
+        self.bus.register(self.output_name)
 
     def start(self):
-        self.bus.register("count")
         self.thread = Thread(target=self.run)
         self.thread.start()
 
@@ -41,7 +43,7 @@ class Publisher:
     def run(self):
         count = 10
         for i in range(count):
-            dt = self.bus.publish("count", i)
+            dt = self.bus.publish(self.output_name, i)
             time.sleep(0.01)
             #print("  published", i, dt)
 
@@ -57,7 +59,7 @@ class Test(unittest.TestCase):
     def test_threads(self):
         main()
 
-    def test_record_noop(self):
+    def test_noop(self):
         config = {
             'version': 2,
             'robot': {
@@ -71,17 +73,11 @@ class Test(unittest.TestCase):
         }
         record(config, log_filename='noop.log')
 
-    def test_record_publisher(self):
-        config = {
-            'version': 2,
-            'robot': {
-                'modules': {
-                    "publisher": {
-                        "driver": "osgar.test_zmqrouter:Publisher",
-                        "init": {}
-                    },
-                }, 'links':[]
-            }
+    def test_publisher_single(self):
+        config = { 'version': 2, 'robot': { 'modules': {}, 'links': [] } }
+        config['robot']['modules']['publisher'] = {
+            "driver": "osgar.test_zmqrouter:Publisher",
+            "init": { "output": "count"}
         }
         record(config, log_filename='publisher.log')
         with osgar.logger.LogReader(self.tempdir/"publisher.log", only_stream_id=1) as log:
@@ -92,6 +88,16 @@ class Test(unittest.TestCase):
                 self.assertEqual(int.from_bytes(data, 'little'), count)
                 last_dt = dt
                 count += 1
+
+    def test_publisher_multi(self):
+        config = { 'version': 2, 'robot': { 'modules': {}, 'links': [] } }
+        for i in range(3):
+            config['robot']['modules'][f'publisher{i}'] = {
+                "driver": "osgar.test_zmqrouter:Publisher",
+                "init": { "output": f"count{i}" }
+            }
+        record(config, log_filename='publisher.log')
+        return
 
 
 def main():

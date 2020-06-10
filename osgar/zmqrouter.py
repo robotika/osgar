@@ -5,6 +5,7 @@ import logging
 import signal
 import subprocess
 import sys
+import threading
 
 
 import zmq
@@ -12,6 +13,8 @@ import zmq
 import osgar.lib.serialize
 import osgar.lib.config
 import osgar.logger
+
+ENDPOINT = "tcp://127.0.0.1:8882"
 
 g_logger = logging.getLogger(__name__)
 
@@ -29,6 +32,7 @@ def main():
 
 
 def record(config, log_prefix=None, log_filename=None, duration_sec=None):
+    g_logger.info("recording...")
     with osgar.logger.LogWriter(prefix=log_prefix, filename=log_filename, note=str(sys.argv)) as log:
         log.write(0, bytes(str(config), 'ascii'))
         g_logger.info(log.filename)
@@ -62,7 +66,7 @@ class Router:
         self.stopping = datetime.timedelta()
 
     def __enter__(self):
-        self.socket.bind("tcp://127.0.0.1:8881")
+        self.socket.bind(ENDPOINT)
         signal.signal(signal.SIGINT, self.sigint)
         return self
 
@@ -71,8 +75,7 @@ class Router:
         self._context.term()
 
     def sigint(self, signum, frame):
-        # TODO send message to myself telling me to stop?
-        # use Event? what is ok to do from a signal handler?
+        # TODO se pipe-to-self trick to tell receive loop it is time to quit
         self.request_stop(b'ctrl-c')
 
     def register_nodes(self, nodes):
@@ -84,7 +87,6 @@ class Router:
             assert action == b"register", (sender, action, outputs)
             assert sender not in self.nodes
             assert sender in nodes, (sender, nodes)
-            #print(sender, outputs)
             # receiving queue
             self.nodes[sender] = collections.deque()
             self.delays[sender] = datetime.timedelta()
@@ -96,9 +98,10 @@ class Router:
 
     def connect(self, link_from, link_to):
         link_from = bytes(link_from, "ascii")
-        assert link_from in self.stream_id, self.stream_id
+        assert link_from in self.stream_id, (link_from, self.stream_id.keys())
         receiver, channel = bytes(link_to, "ascii").split(b".")
         self.subscriptions.setdefault(link_from, []).append((receiver, channel))
+        g_logger.info(f"connect {link_from} -> {link_to}")
 
     def run(self):
         # answer all connected nodes that it is ok to run now (connections are set up)
@@ -157,7 +160,7 @@ class Router:
             self.send(node_name, b"quit", self.stopping)
 
     def is_alive(self, sender):
-        dt_uint32 = self._pack_timestamp(self._now())
+        dt_uint32 = osgar.logger.format_timedelta(self._now())
         self.socket.send_multipart([sender, b"", b"quit" if self.stopping else b"is_alive", dt_uint32])
 
     def send(self, node_name, action, dt, *args):
@@ -175,23 +178,26 @@ class Router:
 
 class Bus:
     def __init__(self, name):
+        self.lock = threading.RLock()
         self.name = name
-        context = zmq.Context.instance()
+        context = zmq.Context()
         self.sock = context.socket(zmq.REQ)
         self.sock.setsockopt_string(zmq.IDENTITY, name)
-        self.sock.connect("tcp://127.0.0.1:8881")
+        self.sock.connect(ENDPOINT)
         self.parse_listen_dt = osgar.logger.timedelta_parser()
         self.parse_publish_dt = osgar.logger.timedelta_parser()
 
     def register(self, *outputs):
         bytes_outputs = list(bytes(o, 'ascii') for o in outputs)
-        self.sock.send_multipart([b"register", *bytes_outputs])
-        resp = self.sock.recv()
+        with self.lock:
+            self.sock.send_multipart([b"register", *bytes_outputs])
+            resp = self.sock.recv()
         assert resp == b'start'
 
     def listen(self):
-        self.sock.send(b"listen")
-        action, dt, *args = self.sock.recv_multipart()
+        with self.lock:
+            self.sock.send(b"listen")
+            action, dt, *args = self.sock.recv_multipart()
         if action == b"quit":
             raise self._quit()
         assert action == b"listen"
@@ -202,18 +208,21 @@ class Bus:
 
     def publish(self, channel, data):
         raw = osgar.lib.serialize.serialize(data)
-        self.sock.send_multipart([b"publish", bytes(channel, 'ascii'), raw])
-        resp, timestamp = self.sock.recv_multipart()
+        with self.lock:
+            self.sock.send_multipart([b"publish", bytes(channel, 'ascii'), raw])
+            resp, timestamp = self.sock.recv_multipart()
         assert resp == b"publish"
         dt = self.parse_publish_dt(timestamp)
         return dt
 
     def request_stop(self):
-        self.sock.send_multipart([b"request_stop"])
+        with self.lock:
+            self.sock.send_multipart([b"request_stop"])
 
     def is_alive(self):
-        self.sock.send_multipart([b"is_alive"])
-        resp, timestamp = self.sock.recv_multipart()
+        with self.lock:
+            self.sock.send_multipart([b"is_alive"])
+            resp, timestamp = self.sock.recv_multipart()
         assert resp in [b"is_alive", b"quit"], resp
         if resp == b"quit":
             self._quit()
