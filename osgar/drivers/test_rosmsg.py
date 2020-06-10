@@ -2,7 +2,7 @@ import unittest
 
 from osgar.drivers.rosmsg import (ROSMsgParser, parse_jpeg_image, parse_laser,
                                   parse_odom, parse_imu, parse_points, get_frame_id,
-                                  parse_bool, parse_volatile, parse_topic)
+                                  parse_bool, parse_volatile, parse_bucket, parse_topic)
 
 
 class ROSMsgParserTest(unittest.TestCase):
@@ -18,7 +18,7 @@ class ROSMsgParserTest(unittest.TestCase):
                 if index > 0:
                     ori = parse_imu(packet)
 #                    q0, q1, q2, q3 = ori  # quaternion
-                    
+
 #                    x =  math.atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2))
 #                    y =  math.asin(2*(q0*q2-q3*q1))
 #                    z =  math.atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3))
@@ -103,6 +103,10 @@ class ROSMsgParserTest(unittest.TestCase):
         data = b"<\x00\x00\x00\x8c\x00\x00\x009\x00\x00\x00\x00'\xb9)\x17\x00\x00\x00" + \
                b"scout_1/volatile_sensor\x08\x00\x00\x00methanol\n\x00\x00\x00\x01\xfb\xde`?"
         self.assertEqual(parse_volatile(data), ['methanol', 0.8784024119377136, 10])
+
+    def test_parse_bucket(self):
+        data = b'\x16\x00\x00\x00\n\x00\x00\x00sulfur_dio\x1b\x00\x00\x00\xd3\xa7\xabA'
+        self.assertEqual(parse_bucket(data), ['sulfur_dio', 27, 21.456945419311523])
 
     def test_parse_score_qual2(self):
         data = b'\x87\x00\x00\x00\x03\x00\x00\x00ice\x06\x00\x00\x00ethene\x07\x00\x00\x00methane' + \
