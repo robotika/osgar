@@ -63,6 +63,8 @@ class Router:
         self.stream_id = dict()
         self.listening = set()
         self.stopping = datetime.timedelta()
+        self.no_output = set()
+        self.compressed_output = set()
 
     def __enter__(self):
         self.socket.bind(ENDPOINT)
@@ -90,15 +92,21 @@ class Router:
             self.nodes[sender] = collections.deque()
             self.delays[sender] = datetime.timedelta()
             for name_and_type in outputs:
-                o = name_and_type.split(b':')[0]  # keep only prefixes
+                o, *suffix = name_and_type.split(b':')
+                suffix = suffix[0] if suffix else b''
                 link_from = sender + b"." + o
                 idx = self.logger.register(str(link_from, 'ascii'))
                 self.stream_id[link_from] = idx
+                if suffix == b'null':
+                    self.no_output.add(idx)
+                elif suffix == b'gz':
+                    self.compressed_output.add(idx)
 
     def connect(self, link_from, link_to):
         link_from = bytes(link_from, "ascii")
+        link_to = bytes(link_to, "ascii")
         assert link_from in self.stream_id, (link_from, self.stream_id.keys())
-        receiver, channel = bytes(link_to, "ascii").split(b".")
+        receiver, channel = link_to.split(b".")
         self.subscriptions.setdefault(link_from, []).append((receiver, channel))
         g_logger.info(f"connect {link_from} -> {link_to}")
 
@@ -148,6 +156,10 @@ class Router:
         for node_name, input_channel in self.subscriptions.get(link_from, []):
             self.send(node_name, b'listen', dt, input_channel, data)
         stream_id = self.stream_id[link_from]
+        if stream_id in self.no_output:
+            data = osgar.lib.serialize.serialize(None)
+        elif stream_id in self.compressed_output:
+            data = osgar.lib.serialize.compress(data)
         self.logger.write(stream_id, data, dt)
 
     def request_stop(self, sender):

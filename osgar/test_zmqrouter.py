@@ -30,8 +30,8 @@ class Noop:
 class Publisher:
     def __init__(self, config, bus):
         self.bus = bus
-        self.output_name = config["output"]
-        self.bus.register(self.output_name)
+        self.output_name = config["output"].split(":")[0] # drop any possible suffix
+        self.bus.register(config["output"])
 
     def start(self):
         self.thread = Thread(target=self.run)
@@ -97,7 +97,22 @@ class Test(unittest.TestCase):
                 "init": { "output": f"count{i}" }
             }
         record(config, log_filename='publisher.log')
-        return
+
+    def test_compress(self):
+        config = { 'version': 2, 'robot': { 'modules': {}, 'links': [] } }
+        config['robot']['modules']['publisher'] = {
+            "driver": "osgar.test_zmqrouter:Publisher",
+            "init": { "output": "count:gz"}
+        }
+        record(config, log_filename='compressed-publisher.log')
+
+    def test_null(self):
+        config = { 'version': 2, 'robot': { 'modules': {}, 'links': [] } }
+        config['robot']['modules']['publisher'] = {
+            "driver": "osgar.test_zmqrouter:Publisher",
+            "init": { "output": "count:null"}
+        }
+        record(config, log_filename='null-publisher.log')
 
 
 def main():
