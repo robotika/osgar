@@ -85,10 +85,13 @@ class LogZeroMQ:
             while True:
                 dt, __, data = self.bus.listen()
                 socket.send_string(data)
-                try:
-                    self.bus.publish('response', socket.recv())
-                except zmq.error.Again:
-                    self.bus.publish('timeout', True)
+                while self.bus.is_alive():
+                    try:
+                        resp = socket.recv()
+                        self.bus.publish('response', resp)
+                        break
+                    except zmq.error.Again:
+                        self.bus.publish('timeout', True)
         except BusShutdownException:
             pass
         socket.close()
