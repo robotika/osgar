@@ -842,11 +842,15 @@ class SubTChallenge:
         self.stdout("Dump END")
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver64!")
+        self.stdout("SubT Challenge Ver65!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
         self.stdout('robot_name:', self.robot_name)
+
+        # wait for critical data
+        while self.scan is None or self.yaw_offset is None:
+            self.update()
 
         if self.use_right_wall == 'auto':
             self.use_right_wall = self.robot_name.endswith('R')
