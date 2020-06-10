@@ -53,7 +53,7 @@ class LogZeroMQTest(unittest.TestCase):
         bus.is_alive = MagicMock(return_value=True)
         node = LogZeroMQ(config, bus)
         node.start()
-        time.sleep(0.1)  # give it a chance to start
+        time.sleep(1)  # give it a chance to start
         node.request_stop()
         bus.listen = MagicMock(side_effect=BusShutdownException())
         bus.is_alive = MagicMock(return_value=False)  # supplement mock request_stop()
