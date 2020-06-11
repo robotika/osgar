@@ -98,12 +98,12 @@ class SpaceRoboticsChallenge(Node):
 
         self.score = 0
         self.current_driver = None
-        
+
         self.inException = False
         self.in_driving_recovery = False
 
         self.last_status_timestamp = None
-        
+
         self.virtual_bumper = None
         self.rand = Random(0)
 
@@ -114,7 +114,7 @@ class SpaceRoboticsChallenge(Node):
     def unregister(self, callback):
         assert callback in self.monitors
         self.monitors.remove(callback)
-        
+
     def send_speed_cmd(self, speed, angular_speed):
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_desired_speed(speed, angular_speed)
@@ -134,7 +134,7 @@ class SpaceRoboticsChallenge(Node):
         self.camera_angle = angle
         print (self.time, "app: Camera angle set to: %f" % angle)
         self.camera_change_triggered_time = self.time
-        
+
     def set_brakes(self, on):
         assert type(on) is bool, on
         self.brakes_on = on
@@ -183,6 +183,9 @@ class SpaceRoboticsChallenge(Node):
     def on_scan(self, timestamp, data):
         pass
 
+    def on_bucket_info(self, timestamp, data):
+        pass
+
     def update(self):
 
         # print status periodically - location
@@ -210,6 +213,8 @@ class SpaceRoboticsChallenge(Node):
             self.on_driving_recovery(self.time, self.driving_recovery)
         elif channel == 'object_reached':
             self.on_object_reached(self.time, self.object_reached)
+        elif channel == 'bucket_info':
+            self.on_bucket_info(self.time, self.bucket_info)
         elif channel == 'scan':
             self.on_scan(self.time, self.scan)
             self.local_planner.update(self.scan)
@@ -233,7 +238,7 @@ class SpaceRoboticsChallenge(Node):
 
         for m in self.monitors:
             m(self, channel)
-            
+
         return channel
 
     def go_straight(self, how_far, timeout=None):
@@ -310,10 +315,10 @@ class SpaceRoboticsChallenge(Node):
 
         # recovered enough at this point to switch to another driver (in case you see cubesat while doing the 3m drive or the final turn)
         self.bus.publish('driving_recovery', False)
-        
+
         self.go_straight(3.0, timeout=timedelta(seconds=20))
         self.turn(math.radians(-90), timeout=timedelta(seconds=10))
-        
+
     def run(self):
         try:
             print('Wait for definition of last_position and yaw')
@@ -321,7 +326,7 @@ class SpaceRoboticsChallenge(Node):
                 self.update()  # define self.time
             print('done at', self.time)
 
-            
+
             last_walk_start = 0.0
             start_time = self.time
             while self.time - start_time < timedelta(minutes=40):
@@ -333,7 +338,7 @@ class SpaceRoboticsChallenge(Node):
                         if self.current_driver is None and not self.brakes_on:
                             self.go_straight(50.0, timeout=timedelta(minutes=2))
                         else:
-                            self.wait(timedelta(minutes=2)) # allow for self driving, then timeout   
+                            self.wait(timedelta(minutes=2)) # allow for self driving, then timeout
                     self.update()
                 except ChangeDriverException as e:
                     continue
@@ -358,7 +363,7 @@ class SpaceRoboticsChallenge(Node):
                         # if it ran long time, maybe worth trying going in the same direction
                         continue
                     additional_turn = 30
-                        
+
                     # next random walk direction should be between 30 and 150 degrees
                     # (no need to go straight back or keep going forward)
                     # if part of virtual bumper handling, add 30 degrees to avoid the obstacle more forcefully
@@ -372,7 +377,7 @@ class SpaceRoboticsChallenge(Node):
                     self.turn(math.radians(deg_angle), timeout=timedelta(seconds=30))
                 except ChangeDriverException as e:
                     continue
-                    
+
                 except VirtualBumperException:
                     self.inException = True
                     print(self.time, "Turn Virtual Bumper!")

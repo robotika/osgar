@@ -58,6 +58,13 @@
           "out": [],
           "init": {
           }
+      },
+      "detector": {
+        "driver": "moon.artifacts:ArtifactDetector",
+        "in": [],
+        "out": [],
+        "init": {
+        }
       }
     },
     "links": [["receiver.raw", "rosmsg.raw"],
@@ -68,11 +75,15 @@
               ["rosmsg.joint_name", "hauler.joint_name"],
               ["rosmsg.joint_position", "hauler.joint_position"],
               ["rosmsg.joint_velocity", "hauler.joint_velocity"],
+              ["rosmsg./hauler_1/camera/left/image_raw/compressed", "detector.left_image"],
+              ["rosmsg./hauler_1/camera/right/image_raw/compressed", "detector.right_image"],
               ["rosmsg.joint_effort", "hauler.joint_effort"],
               ["rosmsg.rot", "hauler.rot"],
               ["app.desired_speed", "hauler.desired_speed"],
+              ["app.desired_movement", "hauler.desired_movement"],
               ["app.request", "rpc.request"],
               ["rpc.response", "app.response"],
+              ["detector.artf", "app.artf"],
               ["hauler.cmd", "transmitter.raw"],
               ["hauler.pose2d", "app.pose2d"]
     ]
