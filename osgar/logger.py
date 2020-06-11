@@ -84,12 +84,12 @@ class LogWriter:
 
         if not pathlib.Path(self.filename).is_absolute():
             if ENV_OSGAR_LOGS in os.environ:
-                os.makedirs(os.environ[ENV_OSGAR_LOGS], exist_ok=True)
                 self.filename = os.path.join(os.environ[ENV_OSGAR_LOGS], self.filename)
             else:
                 logging.warning('Environment variable %s is not set - using working directory' % ENV_OSGAR_LOGS)
             self.filename = str(pathlib.Path(self.filename).absolute())
 
+        os.makedirs(pathlib.Path(self.filename).parent, exist_ok=True)
         self.f = open(self.filename, 'wb')
 
         self.f.write(b"".join(format_header(self.start_time)))
