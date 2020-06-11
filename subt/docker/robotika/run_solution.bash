@@ -49,6 +49,9 @@ roslaunch $LAUNCH_FILE --wait robot_name:=$ROBOT_NAME &
 CONFIG_FILE=/osgar-ws/src/osgar/subt/$CONFIG_FILE
 LOG_FILE=/osgar-ws/logs/zmq-subt-x2-$(date +%Y-%m-%dT%H.%M.%S).log
 PYTHON=/osgar-ws/env/bin/python3
+
+rosrun proxy sendlog.py $LOG_FILE &
+
 echo "Starting osgar"
 $PYTHON -m subt run $CONFIG_FILE --log $LOG_FILE --side auto --walldist 0.8 --speed 1.0 --note "run_solution.bash"
 

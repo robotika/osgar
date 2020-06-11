@@ -569,17 +569,8 @@ class ROSMsgParser(Thread):
         cmd = b'request_origin'
         self.bus.publish('cmd', cmd)
 
-    def send_filename(self):
-        try:
-            filename = self.bus.logger.filename  # deep hack
-        except AttributeError:
-            filename = "unknown"  # workaround for replay
-        cmd = b'file ' + bytes(filename, encoding='ascii')
-        self.bus.publish('cmd', cmd)
-
     def run(self):
         try:
-            self.send_filename()
             while True:
                 timestamp, channel, data = self.bus.listen()
                 if channel == 'raw':
