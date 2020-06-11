@@ -38,6 +38,7 @@ else
     LAUNCH_FILE="proxy sim.launch"
     CONFIG_FILE="zmq-subt-x2.json"
 fi
+
 echo "Starting ros<->osgar proxy"
 # Wait for ROS master, then start ros nodes
 # http://wiki.ros.org/roslaunch/Commandline%20Tools#line-45 
@@ -45,9 +46,11 @@ roslaunch $LAUNCH_FILE --wait robot_name:=$ROBOT_NAME &
 
 /osgar-ws/src/osgar/subt/cloudsim2osgar.py $ROBOT_NAME &
 
+CONFIG_FILE=/osgar-ws/src/osgar/subt/$CONFIG_FILE
+LOG_FILE=/osgar-ws/logs/zmq-subt-x2-$(date +%Y-%m-%dT%H.%M.%S).log
+PYTHON=/osgar-ws/env/bin/python3
 echo "Starting osgar"
-export OSGAR_LOGS=/osgar-ws/logs
-/osgar-ws/env/bin/python3 -m subt run /osgar-ws/src/osgar/subt/$CONFIG_FILE --side auto --walldist 0.8 --timeout 100 --speed 1.0 --note "run_solution.bash"
+$PYTHON -m subt run $CONFIG_FILE --log $LOG_FILE --side auto --walldist 0.8 --speed 1.0 --note "run_solution.bash"
 
 echo "Sleep and finish"
 sleep 30
