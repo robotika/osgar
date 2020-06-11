@@ -102,7 +102,7 @@ class _BusHandler:
             else:
                 to_write = serialize(data)
                 if stream_id in self.compressed_output:
-                    to_write = compress(data)
+                    to_write = compress(to_write)
             timestamp = self.logger.write(stream_id, to_write)
 
             if self._time is not None:
