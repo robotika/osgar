@@ -76,12 +76,12 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         if artifact_type == "rover":
             self.last_rover_timestamp = timestamp
 
-            if not self.tracking_excavator and (CAMERA_WIDTH/2 - 20 < center_x < CAMERA_WIDTH/2 + 20) and self.straight_ahead_distance < 8:
+            if not self.tracking_excavator and (CAMERA_WIDTH/2 - 20 < center_x < CAMERA_WIDTH/2 + 20) and self.straight_ahead_distance < 4:
                 self.tracking_excavator = True
                 raise ChangeDriverException
 
 
-            if self.approach_distance_timestamp is not None and self.time - self.approach_distance_timestamp > timedelta(seconds=5):
+            if self.approach_distance_timestamp is not None and self.time - self.approach_distance_timestamp > timedelta(seconds=15):
                 # if was in approach bracket more than 5 secs, approach
                 self.approaching = True
                 self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
@@ -118,7 +118,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
 
         midindex = len(data) // 2
         self.straight_ahead_distance = min_dist(data[midindex-40:midindex+40])
-        print(self.straight_ahead_distance)
+#        print(self.straight_ahead_distance)
         # if first time distance in bracket, mark timestamp
         # if leaves bracket, reset to None
         if self.approach_distance_timestamp is None and 0.5 < self.straight_ahead_distance < 2:

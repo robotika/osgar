@@ -56,25 +56,25 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             angle_diff = angle - yaw
 
             try:
+                self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
                 self.turn((angle_diff + math.pi) % (2*math.pi), timeout=timedelta(seconds=30))
                 self.go_straight(distance - 2, timeout=timedelta(seconds=30)) # -2: target the volatile to be in front of the vehicle
                 self.set_brakes(True)
-            except ChangeDriverException as e:
-                print(str(e))
-                pass
-            except VirtualBumper:
-                pass
 
-            while True:
-                for i in range(8):
-                    self.volatile_dug_up = False
-                    self.publish("dig", [i * 2*math.pi / 8, math.pi])
-                    self.wait(timedelta(seconds=55))
-                    while self.volatile_dug_up:
+                while True:
+                    for i in range(8):
                         self.volatile_dug_up = False
                         self.publish("dig", [i * 2*math.pi / 8, math.pi])
                         self.wait(timedelta(seconds=55))
-                    return
+                        if not self.volatile_dug_up:
+                            continue
+                        while self.volatile_dug_up:
+                            self.volatile_dug_up = False
+                            self.publish("dig", [i * 2*math.pi / 8, math.pi])
+                            self.wait(timedelta(seconds=55))
+                        return
+            except VirtualBumperException:
+                pass
 
 
         except BusShutdownException:
