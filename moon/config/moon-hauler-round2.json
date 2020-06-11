@@ -23,8 +23,7 @@
           "out": ["raw"],
           "init": {
             "mode": "PULL",
-            "endpoint": "tcp://localhost:6555",
-            "save_data": true
+            "endpoint": "tcp://localhost:6555"
           }
       },
       "rpc": {

@@ -23,8 +23,7 @@
           "out": ["raw"],
           "init": {
             "mode": "PULL",
-            "endpoint": "tcp://localhost:5555",
-            "save_data": true
+            "endpoint": "tcp://localhost:5555"
           }
       },
       "rpc": {
@@ -72,7 +71,8 @@
               ["rosmsg.joint_effort", "excavator.joint_effort"],
               ["rosmsg.rot", "excavator.rot"],
               ["app.desired_speed", "excavator.desired_speed"],
-              ["app.dig", "excavator.dig"],
+              ["app.bucket_dig", "excavator.bucket_dig"],
+              ["app.bucket_drop", "excavator.bucket_drop"],
               ["app.request", "rpc.request"],
               ["rpc.response", "app.response"],
               ["excavator.cmd", "transmitter.raw"],
