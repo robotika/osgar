@@ -46,7 +46,10 @@
               ["/excavator_1/joint_states", "sensor_msgs/JointState"],
               ["/qual_2_score", "srcp2_msgs/Qual2ScoringMsg"],
               ["/excavator_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage"],
-              ["/excavator_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage"]
+              ["/excavator_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage"],
+              ["excavator_1_tf/imu_link", "sensor_msgs/Imu"],
+              ["excavator_1_tf/hokuyo_link", "sensor_msgs/LaserScan"]
+
             ]
           }
       },
@@ -61,15 +64,15 @@
     "links": [["receiver.raw", "rosmsg.raw"],
               ["rosmsg.cmd", "transmitter.raw"],
               ["rosmsg.rot", "app.rot"],
+              ["rosmsg.rot", "excavator.rot"],
               ["rosmsg.scan", "app.scan"],
               ["rosmsg./qual_2_score", "app.score"],
               ["rosmsg.joint_name", "excavator.joint_name"],
-              ["rosmsg./excavator_1/bucket_info", "excavator.bucket_info"],
-              ["rosmsg./excavator_1/bucket_info", "app.bucket_info"],
               ["rosmsg.joint_position", "excavator.joint_position"],
               ["rosmsg.joint_velocity", "excavator.joint_velocity"],
               ["rosmsg.joint_effort", "excavator.joint_effort"],
-              ["rosmsg.rot", "excavator.rot"],
+              ["rosmsg./excavator_1/bucket_info", "excavator.bucket_info"],
+              ["rosmsg./excavator_1/bucket_info", "app.bucket_info"],
               ["app.desired_speed", "excavator.desired_speed"],
               ["app.bucket_dig", "excavator.bucket_dig"],
               ["app.bucket_drop", "excavator.bucket_drop"],
