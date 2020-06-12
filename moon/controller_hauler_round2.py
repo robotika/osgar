@@ -108,15 +108,14 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                 self.tracking_excavator = True
                 raise ChangeDriverException
 
-            if self.tracking_excavator:
-
+            if self.tracking_excavator and not self.brakes_on:
                 if self.approach_distance_timestamp is not None and self.time - self.approach_distance_timestamp > timedelta(seconds=15):
                     # if was in approach bracket more than 5 secs, approach
                     self.approaching = True
                     self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
 
                 if self.approaching:
-                    if self.straight_ahead_distance < 0.3 and not self.brakes_on:
+                    if self.straight_ahead_distance < 0.3:
                         self.set_brakes(True)
 
                 else:
@@ -147,9 +146,6 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                             self.publish("desired_movement", [-TURN_ON, 0, SPEED_ON])
                         else:
                             self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
-                            if self.brakes_on:
-                                self.approaching = False
-                                self.set_brakes(False)
 
 
     def on_scan(self, timestamp, data):
