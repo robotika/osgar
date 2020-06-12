@@ -501,10 +501,13 @@ class ROSMsgParser(Thread):
             # used to be self.topic_type == 'sensor_msgs/CompressedImage'
             self.bus.publish('image', parse_jpeg_image(packet))
         elif frame_id.endswith(b'base_link/front_laser') or frame_id.endswith(b'hokuyo_link'):  #self.topic_type == 'sensor_msgs/LaserScan':
-            self.count += 1
-            if self.count % self.downsample != 0:
-                return
-            self.bus.publish('scan', parse_laser(packet))
+            for n, t in self.topics:
+                if frame_id.decode("ascii") == n:
+                    self.count += 1
+                    if self.count % self.downsample != 0:
+                        return
+                    self.bus.publish('scan', parse_laser(packet))
+                    break
         elif frame_id.endswith(b'odom'):  #self.topic_type == 'nav_msgs/Odometry':
             __, (x, y),rot = parse_odom(packet)
             self.bus.publish('pose2d', [round(x*1000),
@@ -518,11 +521,14 @@ class ROSMsgParser(Thread):
             self.bus.publish('cmd', cmd)
 
         elif frame_id.endswith(b'/base_link/imu_sensor') or frame_id.endswith(b'imu_link'):  # self.topic_type == 'std_msgs/Imu':
-            acc, rot, orientation = parse_imu(packet)
-            self.bus.publish('rot', [round(math.degrees(angle)*100)
-                                     for angle in rot])
-            self.bus.publish('acc', [round(x * 1000) for x in acc])
-            self.bus.publish('orientation', list(orientation))
+            for n, t in self.topics:
+                if frame_id.decode("ascii") == n:
+                    acc, rot, orientation = parse_imu(packet)
+                    self.bus.publish('rot', [round(math.degrees(angle)*100)
+                                             for angle in rot])
+                    self.bus.publish('acc', [round(x * 1000) for x in acc])
+                    self.bus.publish('orientation', list(orientation))
+                    break
         elif frame_id.endswith(b'/clock'):
             prev = self.timestamp_sec
             self.timestamp_sec, self.timestamp_nsec = parse_clock(packet)
