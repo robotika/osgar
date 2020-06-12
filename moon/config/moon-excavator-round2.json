@@ -38,8 +38,8 @@
       },
       "rosmsg": {
           "driver": "rosmsg",
-          "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
-          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin"],
+          "in": ["slot_raw", "desired_speed", "tick", "stdout"],
+          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd"],
           "init": {
             "topics": [
               ["/excavator_1/bucket_info", "srcp2_msgs/ExcavatorMsg"],
@@ -77,9 +77,7 @@
               ["rpc.response", "app.response"],
               ["excavator.cmd", "transmitter.raw"],
               ["excavator.bucket_cmd", "transmitter.raw"],
-              ["excavator.pose2d", "app.pose2d"],
-              ["app.request_origin", "rosmsg.request_origin"],
-              ["rosmsg.origin", "app.origin"]
+              ["excavator.pose2d", "app.pose2d"]
     ]
   }
 }
