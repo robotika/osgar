@@ -257,10 +257,10 @@ class Rover(Node):
 
                 if self.drive_camera_angle == 0:
                     # during normal driving, steer against slope proportionately to the steepness of the slope
-                    fl -= self.roll
-                    fr -= self.roll
-                    rl -= self.roll
-                    rr -= self.roll
+                    fl += self.roll
+                    fr += self.roll
+                    rl += self.roll
+                    rr += self.roll
 
                 steering = [fl, fr, rl, rr]
 
