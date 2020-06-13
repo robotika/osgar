@@ -413,6 +413,10 @@ def parse_topic(topic_type, data):
         return parse_joint_state(data)
     elif topic_type == 'srcp2_msgs/VolSensorMsg':
         return parse_volatile(data)
+    elif topic_type == 'sensor_msgs/LaserScan':
+        return parse_laser(data)
+    elif topic_type == 'sensor_msgs/Imu':
+        return parse_imu(data)
     elif topic_type == 'sensor_msgs/CompressedImage':
         image = parse_jpeg_image(data)  # , dump_filename='nasa.jpg')
         return image
@@ -500,14 +504,6 @@ class ROSMsgParser(Thread):
         if frame_id.endswith(b'/base_link/camera_front') or frame_id.endswith(b'camera_color_optical_frame'):
             # used to be self.topic_type == 'sensor_msgs/CompressedImage'
             self.bus.publish('image', parse_jpeg_image(packet))
-        elif frame_id.endswith(b'base_link/front_laser') or frame_id.endswith(b'hokuyo_link'):  #self.topic_type == 'sensor_msgs/LaserScan':
-            for n, t in self.topics:
-                if frame_id.decode("ascii") == n:
-                    self.count += 1
-                    if self.count % self.downsample != 0:
-                        return
-                    self.bus.publish('scan', parse_laser(packet))
-                    break
         elif frame_id.endswith(b'odom'):  #self.topic_type == 'nav_msgs/Odometry':
             __, (x, y),rot = parse_odom(packet)
             self.bus.publish('pose2d', [round(x*1000),
@@ -520,15 +516,6 @@ class ROSMsgParser(Thread):
             cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
             self.bus.publish('cmd', cmd)
 
-        elif frame_id.endswith(b'/base_link/imu_sensor') or frame_id.endswith(b'imu_link'):  # self.topic_type == 'std_msgs/Imu':
-            for n, t in self.topics:
-                if frame_id.decode("ascii") == n:
-                    acc, rot, orientation = parse_imu(packet)
-                    self.bus.publish('rot', [round(math.degrees(angle)*100)
-                                             for angle in rot])
-                    self.bus.publish('acc', [round(x * 1000) for x in acc])
-                    self.bus.publish('orientation', list(orientation))
-                    break
         elif frame_id.endswith(b'/clock'):
             prev = self.timestamp_sec
             self.timestamp_sec, self.timestamp_nsec = parse_clock(packet)
@@ -561,6 +548,16 @@ class ROSMsgParser(Thread):
                         self.bus.publish('joint_position', list(position))
                         self.bus.publish('joint_velocity', list(velocity))
                         self.bus.publish('joint_effort', list(effort))
+                    elif t == 'sensor_msgs/Imu':
+                        acc, rot, orientation = result
+                        self.bus.publish('rot', [round(math.degrees(angle)*100)
+                                                 for angle in rot])
+                        self.bus.publish('acc', [round(x * 1000) for x in acc])
+                        self.bus.publish('orientation', list(orientation))
+                    elif t == 'sensor_msgs/LaserScan':
+                        self.count += 1
+                        if self.count % self.downsample == 0:
+                            self.bus.publish('scan', list(result))
                     else:
                         self.bus.publish(name, result)
 
