@@ -4,6 +4,7 @@
 import math
 from random import Random
 from datetime import timedelta
+from statistics import median
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
@@ -39,14 +40,24 @@ class LidarCollisionException(Exception):
 class LidarCollisionMonitor:
     def __init__(self, robot):
         self.robot = robot
+        self.scan_history = []
 
     def update(self, robot, channel):
         if channel == 'scan':
-            size = len(robot.scan)
-            # measure distance only in 160 degree angle
-            # NASA Lidar 150degrees wide, 50 samples
-            # robot is ~2.21m wide (~1.2m x 2 with wiggle room), with 150 angle need to have 1.2m clearance (x = 1.2 / sin(150/2))
-            if min_dist(robot.scan[60:210]) < 1.2 and not robot.inException:
+            # measure distance only in 66 degree angle (about the width of the robot 1.5m ahead)
+            # NASA Lidar 150degrees wide, 100 samples
+            # robot is ~2.21m wide (~1.2m x 2 with wiggle room)
+
+            collision_view = robot.scan[80:140]
+            self.scan_history.append(collision_view)
+            if len(self.scan_history) > 3:
+                self.scan_history.pop(0)
+
+            median_scan = []
+            for j in range(len(collision_view)):
+                median_scan.append(median([self.scan_history[i][j] for i in range(len(self.scan_history))]))
+
+            if min_dist(median_scan) < 1.2 and not robot.inException:
                 robot.publish('driving_recovery', True)
                 raise LidarCollisionException()
 
