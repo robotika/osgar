@@ -5,6 +5,7 @@ from scipy import spatial
 import numpy as np
 import math
 from datetime import timedelta
+import traceback
 
 from osgar.bus import BusShutdownException
 
@@ -43,17 +44,76 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
 
             message = self.send_request('request_origin').decode("ascii")
-            origin = [float(x) for x in message.split()[1:]]
+            if message.split()[0] == 'origin':
+                origin = [float(x) for x in message.split()[1:]]
 
-            xyz = origin[:3]
-            quat = origin[3:]
+                xyz = origin[:3]
+                quat = origin[3:]
 
-            rx = xyz[0]
-            ry = xyz[1]
-            yaw = euler_zyx(quat)[0]
+                rx = xyz[0]
+                ry = xyz[1]
+                yaw = euler_zyx(quat)[0]
+            else:
+                xyz = [0,]*3
+                quat = [0,0,0,1]
 
+                rx = 10
+                ry = 10
+                yaw = 0
 
             while len(vol_list) > 0:
+
+                def make_unprotected_move(step):
+                    move, value = step
+                    if move == 'go_straight':
+                        self.go_straight(value, timeout=timedelta(seconds=abs(value*4)))
+                    else:
+                        self.turn(value, timeout=timedelta(seconds=10))
+
+                def drive_step(next_step):
+                    queue = [next_step]
+                    in_exception = False
+                    while len(queue) > 0:
+                        one_step = queue.pop(0)
+                        move, value = one_step
+                        if move == "in_exception":
+                            in_exception = value
+                            continue
+                        starting_pose = self.last_position
+                        starting_yaw = self.yaw
+                        if not in_exception:
+                            self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
+                            try:
+                                with LidarCollisionMonitor(self):
+                                    make_unprotected_move(one_step)
+                            except (VirtualBumperException, LidarCollisionException) as e:
+                                in_exception = True
+                                self.virtual_bumper = None
+                                print(self.time, "excavator_controller exception in %s: %s" % (move, str(e)))
+                                traceback.print_exc()
+                                recovery_queue = []
+                                if move == "go_straight":
+                                    distance_covered = pose_distance(starting_pose, self.last_position)
+                                    print(self.time, "excavator_controller exception: distance covered so far: %f" % distance_covered)
+                                    recovery_queue.append(("turn", math.radians(90)))
+                                    recovery_queue.append(("go_straight", -1))
+                                    recovery_queue.append(("go_straight", 5.0))
+                                    recovery_queue.append(("in_exception", False))
+                                    recovery_queue.append(("turn", math.radians(-90)))
+                                    recovery_queue.append(("go_straight", 9.0))
+                                    recovery_queue.append(("turn", math.radians(-90)))
+                                    recovery_queue.append(("go_straight", 5.0))
+                                    recovery_queue.append(("turn", math.radians(90)))
+                                    recovery_queue.append(("go_straight", value - distance_covered - 8))
+                                else:
+                                    recovery_queue.append(("go_straight", -1))
+                                    recovery_queue.append(("turn", math.radians(value - starting_yaw)))
+                                    recovery_queue.append(("in_exception", False))
+                                    recovery_queue.append(("go_straight", 1))
+                                queue = recovery_queue + queue
+
+                        else:
+                            make_unprotected_move(one_step)
 
                 distance, index = spatial.KDTree(vol_list).query([rx,ry])
                 print ("Dist: %f, index: %d" % (distance, index))
@@ -69,43 +129,23 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 vol_list.pop(index)
 
                 try:
-                    self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
 
                     # move bucket to the back so that it does not interfere with lidar
                     # TODO: find better position/move for driving
+                    # wait for interface to wake up before trying to move arm
+                    self.wait(timedelta(seconds=2))
                     self.publish("bucket_drop", math.pi)
+                    self.wait(timedelta(seconds=10))
 
                     turn_angle = angle_diff % (2*math.pi)
                     if turn_angle > math.pi:
                         turn_angle = -(2*math.pi - turn_angle)
-                    self.turn(turn_angle, timeout=timedelta(seconds=30))
+                    drive_step(("turn", turn_angle))
+
                     # -2.5: target the volatile to be in front of the vehicle
                     # hauler may also push excavator forward a little bit too
-
-                    # split trip in two parts to give hauler a little time to get closer
-                    # in order to then follow in line in case the volatile is real close
-                    self.go_straight(3, timeout=timedelta(seconds=30))
-                    self.wait(timedelta(seconds=5))
-
-
-                    starting_pose = self.last_position
-                    desired_travel_distance = distance - 2.5 - 3
-                    try:
-                        with LidarCollisionMonitor(self):
-                            self.go_straight(desired_travel_distance, timeout=timedelta(seconds=30))
-                    except (VirtualBumperException, LidarCollisionException) as e:
-                        # TODO: exception in exception (eg steep hill) will just go to the next volatile
-                        distance_covered = pose_distance(starting_pose, self.last_position)
-                        self.go_straight(-1.0, timeout=timedelta(seconds=20))
-                        self.turn(math.radians(90), timeout=timedelta(seconds=10))
-                        self.go_straight(5.0, timeout=timedelta(seconds=20))
-                        self.turn(math.radians(-90), timeout=timedelta(seconds=10))
-                        self.go_straight(6.0, timeout=timedelta(seconds=20))
-                        self.turn(math.radians(-90), timeout=timedelta(seconds=10))
-                        self.go_straight(5.0, timeout=timedelta(seconds=20))
-                        self.turn(math.radians(90), timeout=timedelta(seconds=10))
-
-                        self.go_straight(desired_travel_distance - distance_covered - 5, timeout=timedelta(seconds=20))
+                    desired_travel_distance = distance - 2.5
+                    drive_step(("go_straight", desired_travel_distance))
 
                     print ("---- NEXT VOLATILE ----")
                     #self.wait(timedelta(seconds=10))
@@ -136,7 +176,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     self.set_brakes(False)
                     # move away from hauler to be able to turn
                     # TODO: adjust driving accordingly
-                    self.go_straight(1.0, timeout=timedelta(seconds=20))
+                    drive_step(("go_straight", 0.3))
 
                 except VirtualBumperException:
                     pass
