@@ -41,6 +41,8 @@ class LidarCollisionMonitor:
     def __init__(self, robot):
         self.robot = robot
         self.scan_history = []
+        self.threshold_distance = 1200 #1.2m
+        self.min_hits = 10 # we have to see at least 10 points nearer than threshold
 
     def update(self, robot, channel):
         if channel == 'scan':
@@ -48,7 +50,7 @@ class LidarCollisionMonitor:
             # NASA Lidar 150degrees wide, 100 samples
             # robot is ~2.21m wide (~1.2m x 2 with wiggle room)
 
-            collision_view = robot.scan[80:140]
+            collision_view = robot.scan[70:110]
             self.scan_history.append(collision_view)
             if len(self.scan_history) > 3:
                 self.scan_history.pop(0)
@@ -57,7 +59,8 @@ class LidarCollisionMonitor:
             for j in range(len(collision_view)):
                 median_scan.append(median([self.scan_history[i][j] for i in range(len(self.scan_history))]))
 
-            if min_dist(median_scan) < 1.2 and not robot.inException:
+            iterator = filter(lambda dist : 10 < dist < self.threshold_distance, median_scan)
+            if  len(list(iterator)) >= self.min_hits and not robot.inException:
                 robot.publish('driving_recovery', True)
                 raise LidarCollisionException()
 
