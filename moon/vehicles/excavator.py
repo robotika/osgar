@@ -21,7 +21,6 @@
 # distalarm_joint
 # mount_joint
 
-
 from datetime import timedelta
 import numpy as np
 
@@ -85,10 +84,10 @@ class Excavator(Rover):
         self.current_arm_position = np.array([data[self.joint_name.index(n)] for n in self.arm_joint_names])
 
     def update(self):
+        channel = super().update()
 
 #        print(self.target_arm_position)
 #        print(self.current_arm_position)
-
         # TODO: on a slope one should take into consideration current pitch and roll of the robot
         if self.time is not None:
             if (
@@ -116,11 +115,6 @@ class Excavator(Rover):
                     print ("Bucket content: Type: %s idx: %d mass: %f" % (self.bucket_status[0], self.bucket_status[1], self.bucket_status[2]))
 
 
-
-        channel = super().update()
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
 
         return channel
 
