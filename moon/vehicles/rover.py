@@ -177,12 +177,13 @@ class Rover(Node):
 
         steering = [0.0,] * 4
 
-        # turning in place if radius is 0 but speed is non-zero
-        if self.drive_radius == 0:
+        if self.drive_speed == 0:
+            effort = [0,] * 4
+
+        elif self.drive_radius == 0:
+            # turning in place if radius is 0 but speed is non-zero
             e = 40
-            if self.drive_speed == 0:
-                effort = [0,] * 4
-            elif self.drive_speed > 0:
+            if self.drive_speed > 0:
                 # turn left
                 effort = [-e, e, -e, e]
                 steering = [-CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE,-CRAB_ROLL_ANGLE]
