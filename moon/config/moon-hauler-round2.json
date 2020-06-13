@@ -48,8 +48,8 @@
               ["/qual_2_score", "srcp2_msgs/Qual2ScoringMsg"],
               ["/hauler_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage"],
               ["/hauler_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage"],
-              ["hauler_1_tf/imu_link", "sensor_msgs/Imu"],
-              ["hauler_1_tf/hokuyo_link", "sensor_msgs/LaserScan"]
+              ["/hauler_1/imu", "sensor_msgs/Imu"],
+              ["/hauler_1/laser/scan", "sensor_msgs/LaserScan"]
             ]
           }
       },
