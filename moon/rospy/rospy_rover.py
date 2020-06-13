@@ -50,22 +50,22 @@ class RospyRoverPushPull(RospyBasePushPull):
 
     def register_handlers(self):
         super(RospyRoverPushPull, self).register_handlers()
-        
+
     #    rospy.init_node('listener', anonymous=True)
     #    rospy.Subscriber('/odom', Odometry, callback_odom)
 
         rospy.Subscriber('/' + self.robot_name + '/joint_states', JointState, self.callback_topic, '/' + self.robot_name + '/joint_states')
-        rospy.Subscriber('/' + self.robot_name + '/laser/scan', LaserScan, self.callback)
-        rospy.Subscriber('/' + self.robot_name + '/imu', Imu, self.callback_imu)
+        rospy.Subscriber('/' + self.robot_name + '/laser/scan', LaserScan, self.callback, '/' + self.robot_name + '/laser/scan')
+        rospy.Subscriber('/' + self.robot_name + '/imu', Imu, self.callback_imu, '/' + self.robot_name + '/imu')
     #    rospy.Subscriber('/' + self.robot_name + '/camera/left/image_raw', Image, callback_depth)
     #    rospy.Subscriber('/image', CompressedImage, callback_camera)
     #    rospy.Subscriber('/clock', Clock, callback_clock)
 
         QSIZE = 10
 
-        rospy.Subscriber('/' + self.robot_name + '/camera/left/image_raw/compressed', CompressedImage, self.callback_topic, 
+        rospy.Subscriber('/' + self.robot_name + '/camera/left/image_raw/compressed', CompressedImage, self.callback_topic,
                          '/' + self.robot_name + '/camera/left/image_raw/compressed')
-        rospy.Subscriber('/' + self.robot_name + '/camera/right/image_raw/compressed', CompressedImage, self.callback_topic, 
+        rospy.Subscriber('/' + self.robot_name + '/camera/right/image_raw/compressed', CompressedImage, self.callback_topic,
                          '/' + self.robot_name + '/camera/right/image_raw/compressed')
 
         self.speed_msg = Float64()
@@ -91,7 +91,7 @@ class RospyRoverPushPull(RospyBasePushPull):
 
     def process_message(self, message):
         super(RospyRoverPushPull, self).process_message(message)
-        
+
 #        print("OSGAR:" + message)
         message_type = message.split(" ")[0]
         if message_type == "cmd_rover":
@@ -145,12 +145,12 @@ class RospyRoverPushPull(RospyBasePushPull):
             # may be picked up by a subclass
             pass
 
-    def callback_imu(self, data):
+    def callback_imu(self, data, topic_name):
         s1 = BytesIO()
         data.serialize(s1)
         to_send = s1.getvalue()
         header = struct.pack('<I', len(to_send))
-        self.socket_send(header + to_send)
+        self.socket_send(topic_name + '\0' + header + to_send)
 
 
     def callback_odom(self, data):
@@ -213,7 +213,7 @@ class RospyRoverReqRep(RospyBaseReqRep):
             if opt in ['--robot_name']:
                 self.robot_name = arg
 
-        
+
     def process_message(self, message):
         result = super(RospyRoverReqRep, self).process_message(message)
         if len(result) == 0:
@@ -239,7 +239,7 @@ class RospyRoverReqRep(RospyBaseReqRep):
                     request_origin = rospy.ServiceProxy('/' + self.robot_name + '/get_true_pose', LocalizationSrv)
                     p = request_origin(True)
                     print("rospy_rover: true pose [%f, %f, %f]  [%f, %f, %f, %f]" % (p.pose.position.x, p.pose.position.y, p.pose.position.z, p.pose.orientation.x, p.pose.orientation.y, p.pose.orientation.z, p.pose.orientation.w))
-                    s = "origin %f %f %f  %f %f %f %f" % (p.pose.position.x, p.pose.position.y, p.pose.position.z, 
+                    s = "origin %f %f %f  %f %f %f %f" % (p.pose.position.x, p.pose.position.y, p.pose.position.z,
                                                                   p.pose.orientation.x, p.pose.orientation.y, p.pose.orientation.z, p.pose.orientation.w)
                     return s
                 except rospy.service.ServiceException as e:
@@ -249,7 +249,7 @@ class RospyRoverReqRep(RospyBaseReqRep):
                 return ''
         else:
             return result
-        
+
     def register_handlers(self):
         super(RospyRoverReqRep, self).register_handlers()
 
@@ -269,6 +269,6 @@ class RospyRoverHelper(RospyBase):
 
 class RospyRover(RospyRoverHelper):
     pass
-        
+
 
 # vim: expandtab sw=4 ts=4

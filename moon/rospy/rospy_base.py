@@ -21,7 +21,7 @@ import rospy
 
 interrupted = False
 
-    
+
 def signal_handler(signum, frame):
     global interrupted
     interrupted = True
@@ -45,7 +45,7 @@ class RospyBasePushPull(Thread):
 
         self.g_socket = None
         self.g_lock = RLock()
-        
+
     def setup_sockets(self, context=None):
 
         with self.g_lock:
@@ -57,7 +57,7 @@ class RospyBasePushPull(Thread):
         context2 = context or zmq.Context()
         self.pull_socket = context2.socket(zmq.PULL)
         self.pull_socket.setsockopt(zmq.LINGER, 0)  # milliseconds
-        self.pull_socket.RCVTIMEO = 2000 
+        self.pull_socket.RCVTIMEO = 2000
         self.pull_socket.bind('tcp://*:' + self.PULL_PORT)
 
     def register_handlers(self):
@@ -72,7 +72,7 @@ class RospyBasePushPull(Thread):
             self.g_socket.send(data)
 
 
-    def callback(self, data):
+    def callback(self, data, topic_name):
         # rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
         # print(rospy.get_caller_id(), data)
 
@@ -81,7 +81,7 @@ class RospyBasePushPull(Thread):
         data.serialize(s1)
         to_send = s1.getvalue()
         header = struct.pack('<I', len(to_send))
-        self.socket_send(header + to_send)
+        self.socket_send(topic_name + '\0' + header + to_send)
 
     def callback_clock(self, data):
         s1 = BytesIO()
@@ -97,9 +97,9 @@ class RospyBasePushPull(Thread):
         to_send = s1.getvalue()
         header = struct.pack('<I', len(to_send))
         self.socket_send(topic_name + '\0' + header + to_send)
-        
+
     def run(self):
-        
+
         while True:
             try:
                 message = self.pull_socket.recv()
@@ -126,12 +126,12 @@ class RospyBaseReqRep(Thread):
             if opt in ['--reqrep_port']:
                 self.REQREP_PORT = arg
         self.reqrep_socket = None
-        
+
     def setup_sockets(self, context=None):
         context2 = context or zmq.Context().instance()
         self.reqrep_socket = context2.socket(zmq.REP)
         self.reqrep_socket.setsockopt(zmq.LINGER, 0)  # milliseconds
-        self.reqrep_socket.RCVTIMEO = 2000 
+        self.reqrep_socket.RCVTIMEO = 2000
         self.reqrep_socket.bind('tcp://127.0.0.1:' + self.REQREP_PORT)
 
     def process_message(self, message):
@@ -153,7 +153,7 @@ class RospyBaseReqRep(Thread):
                 break
 
 class RospyBaseHelper(object):
-        
+
     def launch(self, pushpullclass, reqrepclass, argv):
 
         signal.signal(signal.SIGTERM, signal_handler) #SIGTERM - kill
@@ -183,6 +183,6 @@ class RospyBaseHelper(object):
 
 class RospyBase(RospyBaseHelper):
     pass
-        
+
 
 # vim: expandtab sw=4 ts=4
