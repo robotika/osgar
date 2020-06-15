@@ -62,4 +62,12 @@ def from_axis_angle(axis, angle):
     qw = math.cos(angle / 2)
     return [qx, qy, qz, qw]
 
+
+def rotation_matrix(quaternion):
+    qx, qy, qz, qw = quaternion
+    r1 = [1 - 2*qy**2 - 2*qz**2,  2*qx*qy - 2*qz*qw,      2*qx*qz + 2*qy*qw]
+    r2 = [2*qx*qy + 2*qz*qw,      1 - 2*qx**2 - 2*qz**2,  2*qy*qz - 2*qx*qw]
+    r3 = [2*qx*qz - 2*qy*qw,      2*qy*qz + 2*qx*qw,      1 - 2*qx**2 - 2*qy**2]
+    return [r1, r2, r3]
+
 # vim: expandtab sw=4 ts=4
