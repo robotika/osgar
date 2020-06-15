@@ -2,7 +2,7 @@ import unittest
 import unittest.mock
 import numpy
 
-from osgar.lib.serialize import serialize, deserialize
+from osgar.lib.serialize import serialize, deserialize, compress
 
 
 class SerializeTest(unittest.TestCase):
@@ -19,17 +19,23 @@ class SerializeTest(unittest.TestCase):
         self.assertEqual(len(packet), 1003)
         self.assertEqual(deserialize(packet), data)
 
-        compressed_packet = serialize(data, compress=True)
+        compressed_packet = compress(packet)
         self.assertEqual(len(compressed_packet), 22)
         self.assertEqual(deserialize(compressed_packet), data)
 
     def test_numpy(self):
         data = numpy.asarray(range(1, 100, 2), dtype=numpy.uint16)
         packet = serialize(data)
-        self.assertEqual(len(packet), 163)
+        packet_zlib = compress(packet)
+        self.assertEqual(len(packet), 231)
+        self.assertEqual(len(packet_zlib), 168)
         dedata = deserialize(packet)
         self.assertTrue(numpy.array_equal(dedata, data))
         self.assertEqual(dedata.dtype, data.dtype)
+
+        dedata_zlib = deserialize(packet_zlib)
+        self.assertTrue(numpy.array_equal(dedata_zlib, data))
+        self.assertEqual(dedata_zlib.dtype, data.dtype)
 
         with unittest.mock.patch('osgar.lib.serialize.numpy', new=False):
             with self.assertRaises(TypeError):
