@@ -8,7 +8,7 @@ from queue import Queue
 from datetime import timedelta
 from collections import deque
 
-from osgar.lib.serialize import serialize, deserialize
+from osgar.lib.serialize import serialize, deserialize, compress
 
 
 # restrict replay time from given input
@@ -100,7 +100,9 @@ class _BusHandler:
             if stream_id in self.no_output:
                 to_write = serialize(None)  # i.e. at least there will be timestamp record
             else:
-                to_write = serialize(data, compress=(stream_id in self.compressed_output))
+                to_write = serialize(data)
+                if stream_id in self.compressed_output:
+                    to_write = compress(to_write)
             timestamp = self.logger.write(stream_id, to_write)
 
             if self._time is not None:
