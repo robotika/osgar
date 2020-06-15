@@ -46,8 +46,8 @@ roslaunch $LAUNCH_FILE --wait robot_name:=$ROBOT_NAME &
 
 /osgar-ws/src/osgar/subt/cloudsim2osgar.py $ROBOT_NAME &
 
+LOG_FILE=/osgar-ws/logs/$(basename $CONFIG_FILE .json)-$(date +%Y-%m-%dT%H.%M.%S).log
 CONFIG_FILE=/osgar-ws/src/osgar/subt/$CONFIG_FILE
-LOG_FILE=/osgar-ws/logs/zmq-subt-x2-$(date +%Y-%m-%dT%H.%M.%S).log
 PYTHON=/osgar-ws/env/bin/python3
 
 rosrun proxy sendlog.py $LOG_FILE &
