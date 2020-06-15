@@ -76,6 +76,13 @@ def format_timedelta(dt):
 
 
 def timedelta_parser(start_time=datetime.timedelta()):
+    """ create timedelta parser
+
+    Created parser converts `uint32` microseconds to `timedelta` object. The parser internally
+    tracks overflows in `us_offset` and `prev_microseconds`. The intended use is to sequentially
+    parse incoming timestamps. The argument `start_time` supports creation  of a parser where
+    the last processed timestamp corresponds to the given timedelta object.
+    """
     times, prev = divmod(start_time, datetime.timedelta(microseconds=TIMESTAMP_OVERFLOW_STEP))
     us_offset = times * TIMESTAMP_OVERFLOW_STEP
     prev_microseconds = prev.microseconds + prev.seconds * 10**6 + prev.days * 24 * 3600 * 10**6
