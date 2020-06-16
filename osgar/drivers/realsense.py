@@ -47,7 +47,7 @@ def t265_to_osgar_orientation(t265_orientation):
 class RealSense(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('pose2d', 'pose3d', 'pose_raw', 'orientation', 'depth', 'color')
+        bus.register('pose2d', 'pose3d', 'pose_raw', 'orientation', 'depth:gz', 'color')
         self.verbose = config.get('verbose', False)
         self.depth_subsample = config.get("depth_subsample", 3)
         self.pose_subsample = config.get("pose_subsample", 20)
