@@ -127,17 +127,6 @@ def draw(foreground, pose, scan, poses=[], image=None, bbox=None, callback=None,
     foreground.unlock()
 
     if image is not None:
-        if callback_img:
-            # convert pygame image to numpy image
-            view = pygame.surfarray.array3d(image)
-            view = view.transpose([1, 0, 2])
-            np_img = cv2.cvtColor(view, cv2.COLOR_RGB2BGR)
-            detection = callback_img.detect(np_img)
-            np_img = callback_img.show_result(np_img, detection, ret_img=True)
-            # convert nompy image to pygame image
-            np_img = cv2.cvtColor(np_img, cv2.COLOR_BGR2RGB)
-            image = pygame.image.frombuffer(np_img.tostring(), np_img.shape[1::-1], "RGB")
-
         width, height = image.get_size()
         if width > WINDOW_SIZE[0] or height > WINDOW_SIZE[1]:
             width, height = (512, 384)
@@ -352,6 +341,8 @@ class Framer:
 
 def lidarview(gen, caption_filename, callback=False, callback_img=False, out_video=None, jump=None):
     global g_scale
+    last_timestamp = None
+    last_image = None
 
     if out_video is not None:
         width, height = WINDOW_SIZE
@@ -443,6 +434,21 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
 
             foreground.fill((0, 0, 0))
             img = image2 if use_image2 else image
+            if callback_img:
+                if last_timestamp != timestamp:
+                    # convert pygame image to numpy image
+                    view = pygame.surfarray.array3d(img)
+                    view = view.transpose([1, 0, 2])
+                    np_img = cv2.cvtColor(view, cv2.COLOR_RGB2BGR)
+                    detection = callback_img.detect(np_img)
+                    np_img = callback_img.show_result(np_img, detection, ret_img=True)
+                    # convert nompy image to pygame image
+                    np_img = cv2.cvtColor(np_img, cv2.COLOR_BGR2RGB)
+                    img = pygame.image.frombuffer(np_img.tostring(), np_img.shape[1::-1], "RGB")
+                    last_timestamp = timestamp
+                    last_image = img
+                else:
+                    img = last_image
             draw_robot(foreground, pose, joint)
             draw_scan(foreground, pose, scan2, color=(128, 128, 0), joint=joint)
             draw(foreground, pose, scan, poses=poses,
