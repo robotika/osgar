@@ -49,4 +49,20 @@ class QuaternionTest(unittest.TestCase):
         self.assertAlmostEqual(angles[1], 1.0194396)
         self.assertAlmostEqual(angles[2], -1.0505728)
 
+    def test_rotation_matrix(self):
+        from collections import namedtuple
+        T = namedtuple('T', ('q', 'matrix'))
+        tests = [
+            T([ 0, 0, 0.7071068, 0.7071068 ], [[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]),
+            T([ 0, 0.7071068, 0, 0.7071068 ], [[0.0, 0.0, 1.0], [0.0,  1.0,  0.0], [-1.0, 0.0, 0.0]]),
+            T([ 0.7071068, 0, 0, 0.7071068 ], [[1.0,  0.0,  0.0], [0.0,  0.0, -1.0], [0.0, 1.0, 0.0 ]]),
+            T([ 0.5, 0.5, 0, 0.7071068 ], [[0.5, 0.5, 0.7071068], [0.5, 0.5, -0.7071068], [-0.7071068, 0.7071068, 0.0]])
+        ]
+        for i, t in enumerate(tests):
+            with self.subTest(test=i):
+                actual = quaternion.rotation_matrix(t.q)
+                for row in range(len(actual)):
+                    for col in range(len(actual[0])):
+                        self.assertAlmostEqual(t.matrix[row][col], actual[row][col], places=6, msg=(row, col))
+
 # vim: expandtab sw=4 ts=4
