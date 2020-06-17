@@ -10,6 +10,7 @@ like Eigen put w as the first number!). The commonly-used unit quaternion that
 yields no rotation about the x/y/z axes is (0,0,0,1)
 
 https://www.andre-gaschler.com/rotationconverter/
+https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
 """
 import math
 
@@ -36,7 +37,6 @@ def rotate_vector(vector, quaternion):
     return multiply(part1, con)[:-1]
 
 def euler_zyx(quaternion):
-    # https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
     # assumption that quaternion is normalized
     x0, y0, z0, w0 = quaternion
     sqr_size = x0*x0 + y0*y0 + z0*z0 + w0*w0
