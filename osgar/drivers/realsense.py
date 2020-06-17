@@ -91,7 +91,8 @@ class RealSense(Node):
             n = depth_frame.get_frame_number()
             if n % self.depth_subsample != 0:
                 return
-            assert depth_frame.is_depth_frame() and color_frame.is_frame()
+            assert depth_frame.is_depth_frame()
+            assert color_frame.is_frame()
             depth_image = np.asanyarray(depth_frame.as_depth_frame().get_data())
             color_image = np.asanyarray(color_frame.as_frame().get_data())
             __, data = cv2.imencode('*.jpeg', color_image)
