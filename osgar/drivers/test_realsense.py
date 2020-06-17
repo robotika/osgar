@@ -4,6 +4,7 @@ import datetime
 from collections import namedtuple
 
 import numpy as np
+import cv2
 
 from osgar.drivers.realsense import RealSense
 from osgar.bus import Bus
@@ -224,6 +225,7 @@ class RealSenseTest(unittest.TestCase):
         c = RealSense(bus=bus.handle('rs'), config={})
         tester = bus.handle('tester')
         bus.connect('rs.depth', 'tester.depth')
+        bus.connect('rs.color', 'tester.color')
         frameset = MagicMock()
         frameset.is_frameset.return_value = True
         frame = frameset.as_frameset.return_value.get_depth_frame.return_value
@@ -231,12 +233,25 @@ class RealSenseTest(unittest.TestCase):
         frame.get_frame_number.return_value = 0
         frame.is_depth_frame.return_value = True
         frame.as_depth_frame.return_value.get_data.return_value = [1,2]
+
+        color_frame = frameset.as_frameset.return_value.get_color_frame.return_value
+        color_frame.get_timestamp.return_value = 0
+        color_frame.get_frame_number.return_value = 0
+        color_frame.is_frame.return_value = True
+        color_frame.as_frame.return_value.get_data.return_value = np.asarray([[0, 100, 255]], dtype=np.uint8)
+
         c.depth_callback(frameset)
-        dt, channel, depth = tester.listen()
+        dt, channel_1, depth = tester.listen()
+        dt, channel_2, color = tester.listen()
         depth_expected = np.asanyarray([1,2])
-        self.assertEqual(channel, 'depth')
+        color_expected = np.asanyarray([[0, 100, 255]], dtype=np.uint8)
+        self.assertEqual(channel_1, 'depth')
+        self.assertEqual(channel_2, 'color')
+        color = cv2.imdecode(np.fromstring(color, dtype=np.uint8), 0)
         self.assertEqual(depth.shape, depth_expected.shape)
         self.assertEqual(depth.dtype, depth_expected.dtype)
         self.assertTrue(np.array_equal(depth, depth_expected))
+        self.assertEqual(color.shape, color_expected.shape)
+#        self.assertTrue(np.array_equal(color, color_expected))
 
 # vim: expandtab sw=4 ts=4
