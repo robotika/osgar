@@ -114,6 +114,13 @@ class Test(unittest.TestCase):
         }
         record(config, log_filename='null-publisher.log')
 
+    def test_fail_to_register(self):
+        config = { 'version': 2, 'robot': { 'modules': {}, 'links': [] } }
+        config['robot']['modules']['publisher'] = {
+            "driver": "osgar.test_zmqrouter:Nonexisting",
+            "init": { "output": "count:null"}
+        }
+        record(config, log_filename='null-publisher.log')
 
 def main():
     nodes = ["listener0", "listener1", "publisher"]

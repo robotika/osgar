@@ -41,11 +41,15 @@ def record(config, log_prefix=None, log_filename=None, duration_sec=None):
                 program = f"import {__name__}; {__name__}.child('{module_name}', {module_config})"
                 modules[module_name] = subprocess.Popen([sys.executable, "-c", program])
 
-            router.register_nodes(modules.keys())
-            links =  config['robot']['links']
-            for link_from, link_to in links:
-                router.connect(link_from, link_to)
-            router.run()
+            try:
+                router.register_nodes(modules.keys(), timeout=datetime.timedelta(seconds=1))
+                links =  config['robot']['links']
+                for link_from, link_to in links:
+                    router.connect(link_from, link_to)
+                router.run()
+            except Exception as e:
+                g_logger.error(str(e))
+                router.request_stop(b"exception")
 
             for module in modules.values():
                 module.wait() # TODO terminate rogue modules
@@ -77,21 +81,20 @@ class Router:
 
     def sigint(self, signum, frame):
         # TODO se pipe-to-self trick to tell receive loop it is time to quit
+        g_logger.error("ctrl-c")
         self.request_stop(b'ctrl-c')
 
-    def register_nodes(self, nodes):
+    def register_nodes(self, nodes, timeout=datetime.timedelta.max):
         # wait for all nodes to "register" their outputs
-        nodes = [bytes(node_name, "ascii") for node_name in nodes]
-        for _ in range(len(nodes)):
-            packet = self.socket.recv_multipart()  # TODO handle timeout
-            sender, _, action, *outputs = packet
-            assert action == b"register", (sender, action, outputs)
-            assert sender not in self.nodes
-            assert sender in nodes, (sender, nodes)
-            # receiving queue
-            self.nodes[sender] = collections.deque()
+        nodes = set(bytes(node_name, "ascii") for node_name in nodes)
+        for packet in self.receive(timeout=timeout):
+            sender, action, *args = packet
+            assert action == b"register", (sender, action, args)
+            assert sender not in self.nodes             # we have not registered the node yet
+            assert sender in nodes, (sender, nodes)     # it is one of the nodes we expect
+            self.nodes[sender] = collections.deque()    # receiving queue
             self.delays[sender] = datetime.timedelta()
-            for name_and_type in outputs:
+            for name_and_type in args:
                 o, *suffix = name_and_type.split(b':')
                 suffix = suffix[0] if suffix else b''
                 link_from = sender + b"." + o
@@ -101,6 +104,9 @@ class Router:
                     self.no_output.add(idx)
                 elif suffix == b'gz':
                     self.compressed_output.add(idx)
+            if self.nodes.keys() == nodes:
+                return
+        raise RuntimeError("unexpected stop")
 
     def connect(self, link_from, link_to):
         link_from = bytes(link_from, "ascii")
@@ -122,11 +128,17 @@ class Router:
         for sender, delay in self.delays.items():
             g_logger.info(f"{str(sender, 'ascii')}: {delay}")
 
-    def receive(self, hz=10):
+    def receive(self, *, hz=10, timeout=datetime.timedelta.max):
         socket = self.socket
         poller = zmq.Poller()
         poller.register(socket, zmq.POLLIN)
-        while not self.stopping or self._now() - self.stopping < datetime.timedelta(seconds=1):
+        start_time = self._now()
+        while True:
+            now = self._now()
+            if now - start_time > timeout:
+                raise RuntimeError("timeout")
+            if self.stopping and now - self.stopping > datetime.timedelta(seconds=0.3):
+                return
             obj = dict(poller.poll(1000//hz))
             if socket in obj and obj[socket] == zmq.POLLIN:
                 packet = socket.recv_multipart()
