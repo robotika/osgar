@@ -17,7 +17,7 @@ mkdir -p $LOG_DIR
 
 trap 'echo; echo $LOG_DIR; echo $ROBOT; echo $WORLD; echo;' EXIT
 
-DOCKER_OPTS="--volume ${LOG_DIR}:/tmp/ign/logs"
+DOCKER_OPTS="--volume ${LOG_DIR}:/tmp/ign/logs --name sim"
 export DOCKER_OPTS
 
 termtitle "sim $ROBOT $WORLD"
