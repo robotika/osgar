@@ -50,6 +50,7 @@ def any_is_none(*args):
             return True
     return False
 
+
 def min_dist(laser_data):
     if len(laser_data) > 0:
         # remove ultra near reflections and unlimited values == 0
@@ -460,10 +461,11 @@ class SubTChallenge:
         self.xyz = x, y, z
         self.trace.update_trace(self.xyz)
         # pose3d
-        if self.xyz_quat is not None and self.orientation is not None:
-            dist3d = quaternion.rotate_vector([dist, 0, 0], self.orientation)
-            self.xyz_quat = [a + b for a, b in zip(self.xyz_quat, dist3d)]
-            self.bus.publish('pose3d', [self.xyz_quat, self.orientation])
+        if any_is_none(self.xyz_quat, self.orientation):
+            return
+        dist3d = quaternion.rotate_vector([dist, 0, 0], self.orientation)
+        self.xyz_quat = [a + b for a, b in zip(self.xyz_quat, dist3d)]
+        self.bus.publish('pose3d', [self.xyz_quat, self.orientation])
 
     def on_acc(self, timestamp, data):
         acc = [x / 1000.0 for x in data]
