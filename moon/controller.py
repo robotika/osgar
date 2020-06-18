@@ -110,6 +110,8 @@ class SpaceRoboticsChallenge(Node):
         self.camera_change_triggered_time = None
         self.camera_angle = 0.0
 
+        self.joint_name = None
+
         self.score = 0
         self.current_driver = None
 
@@ -155,11 +157,11 @@ class SpaceRoboticsChallenge(Node):
         self.send_request('set_brakes %s\n' % ('on' if on else 'off'))
         print (self.time, "app: Brakes set to: %s" % on)
 
-    def on_driving_recovery(self, timestamp, data):
+    def on_driving_recovery(self, data):
         self.in_driving_recovery = data
         print (self.time, "Driving recovery changed to: %r" % data)
 
-    def on_pose2d(self, timestamp, data):
+    def on_pose2d(self, data):
         x, y, heading = data
         pose = (x / 1000.0, y / 1000.0, math.radians(heading / 100.0))
         if self.last_position is not None:
@@ -187,18 +189,36 @@ class SpaceRoboticsChallenge(Node):
                 self.bus.publish('driving_recovery', True)
                 raise VirtualBumperException()
 
-    def on_driving_control(self, timestamp, data):
+    def on_driving_control(self, data):
         # someone else took over driving
         self.current_driver = data
 
-    def on_score(self, timestamp, data):
+    def on_score(self, data):
         self.score = data[0]
 
-    def on_scan(self, timestamp, data):
+    def on_scan(self, data):
         pass
 
-    def on_bucket_info(self, timestamp, data):
+    def on_joint_position(self, data):
         pass
+
+    def on_rot(self, data):
+        temp_yaw, self.pitch, self.roll = [normalizeAnglePIPI(math.radians(x/100)) for x in data]
+        if self.yaw_offset is None:
+            self.yaw_offset = -temp_yaw
+        self.yaw = temp_yaw + self.yaw_offset
+
+        if self.use_gimbal:
+            # maintain camera level
+            cam_angle = self.camera_angle + self.pitch
+            self.send_request('set_cam_angle %f\n' % cam_angle)
+
+        if not self.inException and self.pitch < -0.6:
+            # TODO pitch can also go the other way if we back into an obstacle
+            # TODO: robot can also roll if it runs on a side of a rock while already on a slope
+            self.bus.publish('driving_recovery', True)
+            print (self.time, "app: Excess pitch, going back down")
+            raise VirtualBumperException()
 
     def update(self):
 
@@ -212,43 +232,9 @@ class SpaceRoboticsChallenge(Node):
                 print (self.time, "Loc: [%f %f %f] [%f %f %f]; Driver: %s; Score: %d" % (x, y, z, self.roll, self.pitch, self.yaw, self.current_driver, self.score))
 
         channel = super().update()
-#        handler = getattr(self, "on_" + channel, None)
-#        if handler is not None:
-#            handler(self.time, data)
-        if channel == 'pose2d':
-            self.on_pose2d(self.time, self.pose2d)
-        elif channel == 'artf':
-            self.on_artf(self.time, self.artf)
-        elif channel == 'score':
-            self.on_score(self.time, self.score)
-        elif channel == 'driving_control':
-            self.on_driving_control(self.time, self.driving_control)
-        elif channel == 'driving_recovery':
-            self.on_driving_recovery(self.time, self.driving_recovery)
-        elif channel == 'object_reached':
-            self.on_object_reached(self.time, self.object_reached)
-        elif channel == 'bucket_info':
-            self.on_bucket_info(self.time, self.bucket_info)
-        elif channel == 'scan':
-            self.on_scan(self.time, self.scan)
-            self.local_planner.update(self.scan)
-        elif channel == 'rot':
-            temp_yaw, self.pitch, self.roll = [normalizeAnglePIPI(math.radians(x/100)) for x in self.rot]
-            if self.yaw_offset is None:
-                self.yaw_offset = -temp_yaw
-            self.yaw = temp_yaw + self.yaw_offset
-
-            if self.use_gimbal:
-                # maintain camera level
-                cam_angle = self.camera_angle + self.pitch
-                self.send_request('set_cam_angle %f\n' % cam_angle)
-
-            if not self.inException and self.pitch < -0.6:
-                # TODO pitch can also go the other way if we back into an obstacle
-                # TODO: robot can also roll if it runs on a side of a rock while already on a slope
-                self.bus.publish('driving_recovery', True)
-                print (self.time, "app: Excess pitch, going back down")
-                raise VirtualBumperException()
+        handler = getattr(self, "on_" + channel, None)
+        if handler is not None:
+            handler(getattr(self, channel))
 
         for m in self.monitors:
             m(self, channel)
