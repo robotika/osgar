@@ -88,7 +88,9 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         except BusShutdownException:
             pass
 
-    def on_artf(self, timestamp, data):
+        print("HAULER END")
+
+    def on_artf(self, data):
         # vol_type, x, y, w, h
         # coordinates are pixels of bounding box
         artifact_type = data[0]
@@ -102,9 +104,9 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
             return
 
         if artifact_type == "rover":
-            self.last_rover_timestamp = timestamp
+            self.last_rover_timestamp = self.time
 
-            if not self.tracking_excavator and self.straight_ahead_distance < 6:
+            if not self.tracking_excavator and self.straight_ahead_distance < 8:
                 self.tracking_excavator = True
                 raise ChangeDriverException
 
@@ -148,9 +150,9 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                             self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
 
 
-    def on_scan(self, timestamp, data):
+    def on_scan(self, data):
         assert len(data) == 180
-        super().on_scan(timestamp, data)
+        super().on_scan(data)
 
         # if we lose sight of rover for more than X seconds, it means it left and we should release brakes and look for it
         # doesn't work super well because up real close, especially when aligned well, we do not see enough orange to idenfity rover
@@ -158,8 +160,8 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         if (
                 self.tracking_excavator and
                 self.last_rover_timestamp is not None and
-                timestamp is not None and
-                timestamp - self.last_rover_timestamp > timedelta(seconds=30)
+                self.time is not None and
+                self.time - self.last_rover_timestamp > timedelta(seconds=30)
         ):
             self.set_brakes(False)
             self.tracking_excavator = False
@@ -171,7 +173,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         # if first time distance in bracket, mark timestamp
         # if leaves bracket, reset to None
         if self.approach_distance_timestamp is None and 0.5 < self.straight_ahead_distance < 2:
-            self.approach_distance_timestamp = timestamp
+            self.approach_distance_timestamp = self.time
         elif 0.5 > self.straight_ahead_distance or self.straight_ahead_distance > 2:
             self.approach_distance_timestamp = None
 

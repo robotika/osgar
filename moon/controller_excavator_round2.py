@@ -21,10 +21,14 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         super().__init__(config, bus)
         bus.register("bucket_dig", "bucket_drop")
         self.volatile_dug_up = None
+        self.mount_angle = None
 
-    def on_bucket_info(self, timestamp, bucket_status):
-        if bucket_status[1] != 100:
-            self.volatile_dug_up = bucket_status[2]
+    def on_bucket_info(self, bucket_status):
+        self.volatile_dug_up = bucket_status
+
+    def on_joint_position(self, data):
+        super().on_joint_position(data)
+        self.mount_angle = data[self.joint_name.index(b'mount_joint')]
 
     def run(self):
 
@@ -42,6 +46,14 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             vol_list_one = vol_string.split(',')
             vol_list = [list(map(float, s.split())) for s in vol_list_one]
 
+            # robots face each other, turn away as not to trigger collision
+            # move bucket to the back so that it does not interfere with lidar
+            # TODO: find better position/move for driving
+            # wait for interface to wake up before trying to move arm
+            self.wait(timedelta(seconds=1))
+            self.publish("bucket_drop", [math.pi, 'reset'])
+            self.wait(timedelta(seconds=1))
+            self.turn(math.pi/2, timeout=timedelta(seconds=10))
 
             message = self.send_request('request_origin').decode("ascii")
             if message.split()[0] == 'origin':
@@ -107,7 +119,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                     recovery_queue.append(("go_straight", value - distance_covered - 8))
                                 else:
                                     recovery_queue.append(("go_straight", -1))
-                                    recovery_queue.append(("turn", math.radians(value - starting_yaw)))
+                                    recovery_queue.append(("turn", math.radians(value - (self.yaw - starting_yaw))))
                                     recovery_queue.append(("in_exception", False))
                                     recovery_queue.append(("go_straight", 1))
                                 queue = recovery_queue + queue
@@ -130,13 +142,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
                 try:
 
-                    # move bucket to the back so that it does not interfere with lidar
-                    # TODO: find better position/move for driving
-                    # wait for interface to wake up before trying to move arm
-                    self.wait(timedelta(seconds=2))
-                    self.publish("bucket_drop", math.pi)
-                    self.wait(timedelta(seconds=10))
-
                     turn_angle = angle_diff % (2*math.pi)
                     if turn_angle > math.pi:
                         turn_angle = -(2*math.pi - turn_angle)
@@ -153,26 +158,38 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
                     self.set_brakes(True)
 
-                    found_index = None
+                    found_angle = None
                     for i in range(DIG_SAMPLE_COUNT):
-                        self.volatile_dug_up = None
-                        self.publish("bucket_dig", (-math.pi / 2 + i * 2*math.pi / DIG_SAMPLE_COUNT) % (2*math.pi))
-                        self.wait(timedelta(seconds=26))
-                        # if scooped less than DIG_GOOD_LOCATION_MASS, we can probably do better digging on different angle
-                        # still dump first though
-                        if self.volatile_dug_up is not None:
-                            self.publish("bucket_drop", math.pi)
-                            self.wait(timedelta(seconds=28))
-                            if self.volatile_dug_up > DIG_GOOD_LOCATION_MASS:
-                                found_index = i
-                                break
-                    if found_index is not None:
-                        while self.volatile_dug_up > 0:
-                            self.volatile_dug_up = 0
-                            self.publish("bucket_dig", (-math.pi / 2 + found_index * 2*math.pi / DIG_SAMPLE_COUNT) % (2*math.pi))
-                            self.wait(timedelta(seconds=26))
-                            self.publish("bucket_drop", math.pi)
-                            self.wait(timedelta(seconds=28))
+                        self.publish("bucket_dig", [(-math.pi / 2 + i * 2*math.pi / DIG_SAMPLE_COUNT) % (2*math.pi), 'append'])
+
+                    while found_angle is None:
+                        # TODO: add timeout, try something else if no volatile found
+                        while self.volatile_dug_up[1] == 100:
+                            self.wait(timedelta(milliseconds=300))
+                        if self.volatile_dug_up[2] > DIG_GOOD_LOCATION_MASS:
+                            found_angle = self.mount_angle
+
+                        # go for volatile drop (to hauler), wait until finished
+                        self.publish("bucket_drop", [math.pi, 'prepend'])
+                        while self.volatile_dug_up[1] != 100:
+                            self.wait(timedelta(milliseconds=300))
+
+                    def scoop_all(angle):
+                        while True:
+                            dig_start = self.time
+                            self.publish("bucket_dig", [angle, 'reset'])
+                            while self.volatile_dug_up[1] == 100:
+                                self.wait(timedelta(milliseconds=300))
+                                if self.time - dig_start > timedelta(seconds=20):
+                                    # move bucket out of the way and continue to next volatile
+                                    self.publish("bucket_drop", [math.pi, 'append'])
+                                    return
+                            self.publish("bucket_drop", [math.pi, 'append'])
+                            while self.volatile_dug_up[1] != 100:
+                                self.wait(timedelta(milliseconds=300))
+
+                    scoop_all(found_angle)
+
                     self.set_brakes(False)
                     # move away from hauler to be able to turn
                     # TODO: adjust driving accordingly
@@ -184,5 +201,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
         except BusShutdownException:
             pass
+
+        print ("EXCAVATOR END")
 
 # vim: expandtab sw=4 ts=4

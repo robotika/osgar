@@ -68,6 +68,8 @@
               ["rosmsg.scan", "app.scan"],
               ["rosmsg./qual_2_score", "app.score"],
               ["rosmsg.joint_name", "excavator.joint_name"],
+              ["rosmsg.joint_name", "app.joint_name"],
+              ["rosmsg.joint_position", "app.joint_position"],
               ["rosmsg.joint_position", "excavator.joint_position"],
               ["rosmsg.joint_velocity", "excavator.joint_velocity"],
               ["rosmsg.joint_effort", "excavator.joint_effort"],
