@@ -90,7 +90,6 @@ class SubTChallenge:
     def __init__(self, config, bus):
         self.bus = bus
         bus.register("desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout", "request_origin")
-        self.start_pose = None
         self.traveled_dist = 0.0
         self.time = None
         self.max_speed = config['max_speed']
@@ -439,8 +438,6 @@ class SubTChallenge:
         else:
             dist = 0.0
         self.last_position = pose
-        if self.start_pose is None:
-            self.start_pose = pose
         self.traveled_dist += dist
         x, y, z = self.xyz
         x += math.cos(self.pitch) * math.cos(self.yaw) * dist
