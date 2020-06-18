@@ -112,7 +112,9 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
 
             if self.tracking_excavator and not self.brakes_on:
                 if self.approach_distance_timestamp is not None and self.time - self.approach_distance_timestamp > timedelta(seconds=15):
-                    # if was in approach bracket more than 5 secs, approach
+                    # if was in approach bracket more than X secs, approach
+                    # TODO: may be following moving robot within the approach distance envelope for more than 15 secs
+                    # then it would give up control before lining up behind a digging robot
                     self.approaching = True
                     self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
 
