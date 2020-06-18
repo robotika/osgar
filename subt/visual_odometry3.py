@@ -937,6 +937,7 @@ class Demo:
         # trajectory. They are merged into the same variables to keep the
         # scaling ratio same for both axes when visualizing the trajectory.
         self.min_xy = self.max_xy = 0
+        self._waitKey_timeout = 0
 
     def on_initial_pose(self, initial_xyz, initial_rpy):
         """Finish initialization by setting global coordinate frame."""
@@ -1003,8 +1004,7 @@ class Demo:
                          ((self.max_xy + MARGIN) - (self.min_xy - MARGIN)))
                 return ix, trajectory_img.shape[0] - MARGIN - iy
 
-            assert(len(self.baseline_trajectory_xy) ==
-                   len(self.odometry.trajectory))
+            #assert(len(self.baseline_trajectory_xy) == len(self.odometry.trajectory))
             for bxy_a, bxy_b in zip(self.baseline_trajectory_xy[:-2],
                                     self.baseline_trajectory_xy[1:]):
                 cv2.line(trajectory_img, img_coord(*bxy_a), img_coord(*bxy_b),
@@ -1024,9 +1024,12 @@ class Demo:
             if self.visualize:
                 cv2.imshow('img', self.color_img)
                 KEY_Q = ord('q')
-                key = cv2.waitKey(1) & 0xFF
+                KEY_SPACE = ord(' ')
+                key = cv2.waitKey(self._waitKey_timeout) & 0xFF
                 if key == KEY_Q:
                     return False
+                if key == KEY_SPACE:
+                    self._waitKey_timeout = 0 if self._waitKey_timeout > 0 else 1
 
         # Discard measurements, because they are now obsolete ("consumed.")
         self.imu_rpy = None
@@ -1083,7 +1086,8 @@ class Demo:
         self.baseline_rpy = baseline_rpy
 
 
-if __name__ == '__main__':
+def main():
+    cv2.setNumThreads(1)
     import argparse
     import json
 
@@ -1241,3 +1245,7 @@ if __name__ == '__main__':
                 baseline_ypr = euler_zyx(baseline_quaternion)
                 baseline_rpy = baseline_ypr[::-1]
                 demo.on_baseline(baseline_xyz, baseline_rpy)
+
+
+if __name__ == '__main__':
+    main()
