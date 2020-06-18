@@ -504,6 +504,17 @@ class SubTChallenge:
     def on_bumpers_rear(self, timestamp, data):
         self.rear_bumper = max(data)  # array of boolean values where True means collision
 
+    def on_origin(self, timestamp, data):
+        if self.origin is None:  # accept only initial offset
+            self.robot_name = data[0].decode('ascii')
+            if len(data) == 8:
+                self.origin = data[1:4]
+                qx, qy, qz, qw = data[4:]
+                self.origin_quat = qx, qy, qz, qw  # quaternion
+            else:
+                self.stdout('Origin ERROR received')
+                self.origin_error = True
+
     def update(self):
         packet = self.bus.listen()
         if packet is not None:
@@ -565,16 +576,6 @@ class SubTChallenge:
                 self.orientation = data
             elif channel == 'sim_time_sec':
                 self.sim_time_sec = data
-            elif channel == 'origin':
-                if self.origin is None:  # accept only initial offset
-                    self.robot_name = data[0].decode('ascii')
-                    if len(data) == 8:
-                        self.origin = data[1:4]
-                        qx, qy, qz, qw = data[4:]
-                        self.origin_quat = qx, qy, qz, qw  # quaternion
-                    else:
-                        self.stdout('Origin ERROR received')
-                        self.origin_error = True
             elif channel == 'voltage':
                 self.voltage = data
             elif channel == 'emergency_stop':
