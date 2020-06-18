@@ -108,8 +108,8 @@ class SubTChallenge:
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
         self.xyz = (0, 0, 0)  # 3D position for mapping artifacts
-        self.xyz_quat = [0, 0, 0]
-        self.orientation = quaternion.identity()
+        self.xyz_quat = None # 3D position updated using odometry dist and imu orientation, defined when 'origin' received
+        self.orientation = None  # not defined until first 'orientation' received
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.yaw_offset = None  # not defined, use first IMU reading
         self.is_moving = None  # unknown
@@ -454,10 +454,10 @@ class SubTChallenge:
         self.xyz = x, y, z
         self.trace.update_trace(self.xyz)
         # pose3d
-        dist3d = quaternion.rotate_vector([dist, 0, 0], self.orientation)
-        self.xyz_quat = [a + b for a, b in zip(self.xyz_quat, dist3d)]
-        xyz_quat = [p + o for p, o in zip(self.xyz_quat, self.offset)]
-        self.bus.publish('pose3d', [xyz_quat, self.orientation])
+        if self.xyz_quat is not None and self.orientation is not None:
+            dist3d = quaternion.rotate_vector([dist, 0, 0], self.orientation)
+            self.xyz_quat = [a + b for a, b in zip(self.xyz_quat, dist3d)]
+            self.bus.publish('pose3d', [self.xyz_quat, self.orientation])
 
     def on_acc(self, timestamp, data):
         acc = [x / 1000.0 for x in data]
@@ -508,6 +508,7 @@ class SubTChallenge:
         if self.origin is None:  # accept only initial offset
             self.robot_name = data[0].decode('ascii')
             if len(data) == 8:
+                self.xyz_quat = data[1:4]
                 self.origin = data[1:4]
                 qx, qy, qz, qw = data[4:]
                 self.origin_quat = qx, qy, qz, qw  # quaternion
