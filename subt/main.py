@@ -44,6 +44,12 @@ REASON_FRONT_BUMPER = 'front_bumper'
 REASON_REAR_BUMPER = 'rear_bumper'
 
 
+def any_is_none(*args):
+    for a in args:
+        if a is None:
+            return True
+    return False
+
 def min_dist(laser_data):
     if len(laser_data) > 0:
         # remove ultra near reflections and unlimited values == 0
@@ -837,7 +843,7 @@ class SubTChallenge:
         self.stdout('robot_name:', self.robot_name)
 
         # wait for critical data
-        while self.scan is None or self.yaw_offset is None:
+        while any_is_none(self.scan, self.yaw_offset, self.orientation):
             self.update()
 
         if self.use_right_wall == 'auto':
