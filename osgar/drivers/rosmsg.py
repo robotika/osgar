@@ -20,7 +20,6 @@ ROS_MESSAGE_TYPES = {
     'std_msgs/Imu': '6a62c6daae103f4ff57a132d6f95cec2',
 }
 
-#### DUPLICATE with rosproxy.py !!! ####
 def prefix4BytesLen(s):
     "adding ROS length"
     if type(s) == str:
@@ -30,7 +29,6 @@ def prefix4BytesLen(s):
 
 def packCmdVel(speed, angularSpeed):
     return struct.pack("dddddd", speed, 0, 0, 0, 0, angularSpeed)
-#########################################
 
 
 def parse_imu( data ):
