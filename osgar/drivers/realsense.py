@@ -6,7 +6,6 @@ import math
 import logging
 import threading
 import numpy as np
-import cv2
 
 g_logger = logging.getLogger(__name__)
 
@@ -51,9 +50,13 @@ class RealSense(Node):
         self.verbose = config.get('verbose', False)
         self.depth_subsample = config.get("depth_subsample", 3)
         self.pose_subsample = config.get("pose_subsample", 20)
+        self.depth_rgb = config.get("depth_rgb", False)
         self.pose_pipeline = None  # not initialized yet
         self.depth_pipeline = None
         self.finished = None
+        if self.depth_rgb:
+            import cv2
+            global cv2
 
     def pose_callback(self, frame):
         try:
@@ -92,16 +95,18 @@ class RealSense(Node):
             if n % self.depth_subsample != 0:
                 return
             assert depth_frame.is_depth_frame()
-            assert color_frame.is_frame()
+            assert color_frame.is_frame() == self.depth_rgb
             depth_image = np.asanyarray(depth_frame.as_depth_frame().get_data())
-            color_image = np.asanyarray(color_frame.as_frame().get_data())
-            __, data = cv2.imencode('*.jpeg', color_image)
+            self.publish('depth', depth_image)
+
+            if color_frame.is_frame():
+                color_image = np.asanyarray(color_frame.as_frame().get_data())
+                __, data = cv2.imencode('*.jpeg', color_image)
+                self.publish('color', data.tobytes())
         except Exception as e:
             print(e)
             self.finished.set()
             return
-        self.publish('depth', depth_image)
-        self.publish('color', data.tobytes())
 
 
     def start(self):
@@ -138,7 +143,8 @@ class RealSense(Node):
             self.depth_pipeline = rs.pipeline(ctx)
             depth_cfg = rs.config()
             depth_cfg.enable_stream(rs.stream.depth, 640, 360, rs.format.z16, 30)
-            depth_cfg.enable_stream(rs.stream.color, 640, 360, rs.format.bgr8, 30)
+            if self.depth_rgb:
+                depth_cfg.enable_stream(rs.stream.color, 640, 360, rs.format.bgr8, 30)
             self.depth_pipeline.start(depth_cfg, self.depth_callback)
 
         if not enable_pose and not enable_depth:
