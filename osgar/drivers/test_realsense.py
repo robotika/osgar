@@ -222,7 +222,7 @@ class RealSenseTest(unittest.TestCase):
         logger = MagicMock()
         logger.write = MagicMock(return_value=datetime.timedelta(microseconds=9721))
         bus = Bus(logger)
-        c = RealSense(bus=bus.handle('rs'), config={})
+        c = RealSense(bus=bus.handle('rs'), config={"depth_rgb": True})
         tester = bus.handle('tester')
         bus.connect('rs.depth', 'tester.depth')
         bus.connect('rs.color', 'tester.color')
@@ -247,11 +247,10 @@ class RealSenseTest(unittest.TestCase):
         color_expected = np.asanyarray([[0, 100, 255]], dtype=np.uint8)
         self.assertEqual(channel_1, 'depth')
         self.assertEqual(channel_2, 'color')
-        color = cv2.imdecode(np.fromstring(color, dtype=np.uint8), 0)
+        color = cv2.imdecode(np.frombuffer(color, dtype=np.uint8), 0)
         self.assertEqual(depth.shape, depth_expected.shape)
         self.assertEqual(depth.dtype, depth_expected.dtype)
         self.assertTrue(np.array_equal(depth, depth_expected))
         self.assertEqual(color.shape, color_expected.shape)
-#        self.assertTrue(np.array_equal(color, color_expected))
 
 # vim: expandtab sw=4 ts=4
