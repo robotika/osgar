@@ -95,11 +95,11 @@ class RealSense(Node):
             if n % self.depth_subsample != 0:
                 return
             assert depth_frame.is_depth_frame()
-            assert color_frame.is_frame() == self.depth_rgb
+            assert color_frame.is_video_frame() == self.depth_rgb
             depth_image = np.asanyarray(depth_frame.as_depth_frame().get_data())
             self.publish('depth', depth_image)
 
-            if color_frame.is_frame():
+            if color_frame.is_video_frame():
                 color_image = np.asanyarray(color_frame.as_frame().get_data())
                 __, data = cv2.imencode('*.jpeg', color_image)
                 self.publish('color', data.tobytes())
@@ -144,7 +144,7 @@ class RealSense(Node):
             depth_cfg = rs.config()
             depth_cfg.enable_stream(rs.stream.depth, 640, 360, rs.format.z16, 30)
             if self.depth_rgb:
-                depth_cfg.enable_stream(rs.stream.color, 640, 360, rs.format.bgr8, 30)
+                depth_cfg.enable_stream(rs.stream.color, 960, 540, rs.format.bgr8, 30)
             self.depth_pipeline.start(depth_cfg, self.depth_callback)
 
         if not enable_pose and not enable_depth:
