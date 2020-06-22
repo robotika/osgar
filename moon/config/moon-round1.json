@@ -46,8 +46,10 @@
               ["/scout_1/joint_states", "sensor_msgs/JointState"],
               ["/qual_1_score", "srcp2_msgs/Qual1ScoringMsg"],
               ["/scout_1/volatile_sensor", "srcp2_msgs/VolSensorMsg"],
-              ["/scout_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage"],
-              ["/scout_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage"]
+              ["/scout_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage", "left_image"],
+              ["/scout_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage", "right_image"],
+              ["/scout_1/imu", "sensor_msgs/Imu", "orientation"],
+              ["/scout_1/laser/scan", "sensor_msgs/LaserScan", "scan"]
             ]
           }
       },
@@ -71,8 +73,6 @@
               ["rosmsg.joint_effort", "scout.joint_effort"],
               ["rosmsg.rot", "scout.rot"],
               ["app.desired_speed", "scout.desired_speed"],
-              ["app.request", "rpc.request"],
-              ["rpc.response", "app.response"],
               ["app.request", "rpc.request"],
               ["rpc.response", "app.response"],
               ["scout.cmd", "transmitter.raw"],

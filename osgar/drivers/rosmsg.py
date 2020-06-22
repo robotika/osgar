@@ -20,7 +20,6 @@ ROS_MESSAGE_TYPES = {
     'std_msgs/Imu': '6a62c6daae103f4ff57a132d6f95cec2',
 }
 
-#### DUPLICATE with rosproxy.py !!! ####
 def prefix4BytesLen(s):
     "adding ROS length"
     if type(s) == str:
@@ -30,7 +29,6 @@ def prefix4BytesLen(s):
 
 def packCmdVel(speed, angularSpeed):
     return struct.pack("dddddd", speed, 0, 0, 0, 0, angularSpeed)
-#########################################
 
 
 def parse_imu( data ):
@@ -375,6 +373,7 @@ def parse_bucket(data):
     pos = 4
     assert size + 4 == len(data), (size, len(data))  # it is going to be variable -> remove the assert
     vol_type_size = struct.unpack_from('<I', data, pos)[0]
+    pos += 4
     vol_type = data[pos:pos+vol_type_size]  # b'methanol'
     pos += vol_type_size
     vol_index, mass_in_bucket = struct.unpack_from('<if', data, pos)
@@ -388,7 +387,7 @@ def parse_topic(topic_type, data):
         pos = 4
         assert size == 40, size
         # __slots__ = ['score','calls','total_of_types']
-        # _slot_types = ['int32','int32','int32[8]']        
+        # _slot_types = ['int32','int32','int32[8]']
         return list(struct.unpack_from('<II', data, pos))  # only score and calls
     elif topic_type == 'srcp2_msgs/Qual2ScoringMsg':
         assert len(data) == 139, (len(data), data)
@@ -412,6 +411,10 @@ def parse_topic(topic_type, data):
         return parse_joint_state(data)
     elif topic_type == 'srcp2_msgs/VolSensorMsg':
         return parse_volatile(data)
+    elif topic_type == 'sensor_msgs/LaserScan':
+        return parse_laser(data)
+    elif topic_type == 'sensor_msgs/Imu':
+        return parse_imu(data)
     elif topic_type == 'sensor_msgs/CompressedImage':
         image = parse_jpeg_image(data)  # , dump_filename='nasa.jpg')
         return image
@@ -427,8 +430,12 @@ class ROSMsgParser(Thread):
                    "depth:gz", "t265_rot", "orientation", "debug",
                     "joint_name", "joint_position", "joint_velocity", "joint_effort"]
         self.topics = config.get('topics', [])
-        for topic_name, topic_type in self.topics:
-            outputs.append(topic_name)
+        for row in self.topics:
+            topic_name, topic_type = row[:2]
+            if len(row) > 2:  # extra rename
+                outputs.append(row[2])
+            else:
+                outputs.append(topic_name)  # default use topic name
         bus.register(*outputs)
 
         self.bus = bus
@@ -459,7 +466,7 @@ class ROSMsgParser(Thread):
         size += 4  # the length prefix
         if len(data) < size:
             return None
-        ret, self._buf = data[:size], data[size:]        
+        ret, self._buf = data[:size], data[size:]
         return ret
 
     def slot_raw(self, timestamp, data):
@@ -499,7 +506,7 @@ class ROSMsgParser(Thread):
         if frame_id.endswith(b'/base_link/camera_front') or frame_id.endswith(b'camera_color_optical_frame'):
             # used to be self.topic_type == 'sensor_msgs/CompressedImage'
             self.bus.publish('image', parse_jpeg_image(packet))
-        elif frame_id.endswith(b'base_link/front_laser') or frame_id.endswith(b'hokuyo_link'):  #self.topic_type == 'sensor_msgs/LaserScan':
+        elif frame_id.endswith(b'base_link/front_laser'):  # self.topic_type == 'sensor_msgs/LaserScan':
             self.count += 1
             if self.count % self.downsample != 0:
                 return
@@ -514,11 +521,11 @@ class ROSMsgParser(Thread):
 
             #workaround for not existing /clock on MOBoS
             cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
-            self.bus.publish('cmd', cmd) 
+            self.bus.publish('cmd', cmd)
 
-        elif frame_id.endswith(b'/base_link/imu_sensor') or frame_id.endswith(b'imu_link'):  # self.topic_type == 'std_msgs/Imu':
+        elif frame_id.endswith(b'/base_link/imu_sensor'):  # self.topic_type == 'std_msgs/Imu':
             acc, rot, orientation = parse_imu(packet)
-            self.bus.publish('rot', [round(math.degrees(angle)*100) 
+            self.bus.publish('rot', [round(math.degrees(angle)*100)
                                      for angle in rot])
             self.bus.publish('acc', [round(x * 1000) for x in acc])
             self.bus.publish('orientation', list(orientation))
@@ -539,10 +546,13 @@ class ROSMsgParser(Thread):
                 self.bus.publish('gas_detected', self.gas_detected)
 
         elif b'\0' in packet[:MAX_TOPIC_NAME_LENGTH]:
-            name = packet[:packet.index(b'\0')].decode('ascii')
-            for n, t in self.topics:
-                if name == n:
-                    result = parse_topic(t, packet[len(name) + 1:])
+            ros_name = packet[:packet.index(b'\0')].decode('ascii')
+            for row in self.topics:
+                n, t = row[:2]
+                new_name = n if len(row) == 2 else row[2]
+
+                if ros_name == n:
+                    result = parse_topic(t, packet[len(ros_name) + 1:])
                     if t == 'sensor_msgs/JointState':
                         name, position, velocity, effort = result
 
@@ -554,8 +564,18 @@ class ROSMsgParser(Thread):
                         self.bus.publish('joint_position', list(position))
                         self.bus.publish('joint_velocity', list(velocity))
                         self.bus.publish('joint_effort', list(effort))
+                    elif t == 'sensor_msgs/Imu':
+                        acc, rot, orientation = result
+                        self.bus.publish('rot', [round(math.degrees(angle)*100)
+                                                 for angle in rot])  # this is deprecated and will be removed
+                        self.bus.publish('acc', [round(x * 1000) for x in acc])  # potential name conflict
+                        self.bus.publish(new_name, list(orientation))  # typically 'orientation'
+                    elif t == 'sensor_msgs/LaserScan':
+                        self.count += 1
+                        if self.count % self.downsample == 0:
+                            self.bus.publish(new_name, list(result))  # typically 'scan'
                     else:
-                        self.bus.publish(name, result)
+                        self.bus.publish(new_name, result)
 
     def slot_desired_speed(self, timestamp, data):
         self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
@@ -568,17 +588,8 @@ class ROSMsgParser(Thread):
         cmd = b'request_origin'
         self.bus.publish('cmd', cmd)
 
-    def send_filename(self):
-        try:
-            filename = self.bus.logger.filename  # deep hack
-        except AttributeError:
-            filename = "unknown"  # workaround for replay
-        cmd = b'file ' + bytes(filename, encoding='ascii')
-        self.bus.publish('cmd', cmd)
-
     def run(self):
         try:
-            self.send_filename()
             while True:
                 timestamp, channel, data = self.bus.listen()
                 if channel == 'raw':

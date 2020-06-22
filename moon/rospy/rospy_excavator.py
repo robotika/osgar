@@ -12,7 +12,7 @@ from srcp2_msgs.msg import ExcavatorMsg
 from rospy_rover import RospyRover, RospyRoverReqRep, RospyRoverPushPull
 
 class RospyExcavatorPushPull(RospyRoverPushPull):
-        
+
     def register_handlers(self):
         super(RospyExcavatorPushPull, self).register_handlers()
 
@@ -28,7 +28,7 @@ class RospyExcavatorPushPull(RospyRoverPushPull):
         self.bucket_msg.data = 0
 
         rospy.Subscriber('/' + self.robot_name + '/bucket_info', ExcavatorMsg, self.callback_topic, '/' + self.robot_name + '/bucket_info')
-        
+
     def process_message(self, message):
         super(RospyExcavatorPushPull, self).process_message(message)
         message_type = message.split(" ")[0]
@@ -37,13 +37,13 @@ class RospyExcavatorPushPull(RospyRoverPushPull):
             basearm = float(message.split(" ")[2])
             distalarm = float(message.split(" ")[3])
             bucket = float(message.split(" ")[4])
-            
+
             for pub, value in zip(
                     [self.mount_joint_publisher, self.basearm_joint_publisher, self.distalarm_joint_publisher, self.bucket_joint_publisher],
                     (mount, basearm, distalarm, bucket)):
                 self.bucket_msg.data = value
                 pub.publish(self.bucket_msg)
-                
+
 
 
 class RospyExcavatorReqRep(RospyRoverReqRep):
@@ -51,7 +51,7 @@ class RospyExcavatorReqRep(RospyRoverReqRep):
 
 class RospyExcavator(RospyRover):
     pass
-        
+
 if __name__ == '__main__':
     re = RospyExcavator()
     re.launch(RospyExcavatorPushPull, RospyExcavatorReqRep, sys.argv[1:])

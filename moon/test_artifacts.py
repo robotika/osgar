@@ -25,8 +25,7 @@ class ArtifactTest(unittest.TestCase):
 
         with open(str(curdir/'test_data/basemarker.jpg'), mode='rb') as img_h:
             img = img_h.read()
-        self.assertEqual(detector.detect(img, img), [('basemarker', 122, 174, 135, 104, 3848), ('homebase', 321, 82, 108, 202, 4763)])
+        self.assertEqual(detector.detect(img, img), [('basemarker', 122, 174, 135, 104, 3848), ('homebase', 1, 1, 349, 286, 8370), ('rover', 314, 1, 84, 198, 9558)])
 
-    
+
 # vim: expandtab sw=4 ts=4
-

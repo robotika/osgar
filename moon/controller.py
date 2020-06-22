@@ -4,6 +4,7 @@
 import math
 from random import Random
 from datetime import timedelta
+from statistics import median
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
@@ -39,14 +40,27 @@ class LidarCollisionException(Exception):
 class LidarCollisionMonitor:
     def __init__(self, robot):
         self.robot = robot
+        self.scan_history = []
+        self.threshold_distance = 1200 #1.2m
+        self.min_hits = 10 # we have to see at least 10 points nearer than threshold
 
     def update(self, robot, channel):
         if channel == 'scan':
-            size = len(robot.scan)
-            # measure distance only in 160 degree angle
-            # NASA Lidar 150degrees wide, 50 samples
-            # robot is ~2.21m wide (~1.2m x 2 with wiggle room), with 150 angle need to have 1.2m clearance (x = 1.2 / sin(150/2))
-            if min_dist(robot.scan[60:210]) < 1.2 and not robot.inException:
+            # measure distance only in 66 degree angle (about the width of the robot 1.5m ahead)
+            # NASA Lidar 150degrees wide, 100 samples
+            # robot is ~2.21m wide (~1.2m x 2 with wiggle room)
+
+            collision_view = robot.scan[70:110]
+            self.scan_history.append(collision_view)
+            if len(self.scan_history) > 3:
+                self.scan_history.pop(0)
+
+            median_scan = []
+            for j in range(len(collision_view)):
+                median_scan.append(median([self.scan_history[i][j] for i in range(len(self.scan_history))]))
+
+            iterator = filter(lambda dist : 10 < dist < self.threshold_distance, median_scan)
+            if  len(list(iterator)) >= self.min_hits and not robot.inException:
                 robot.publish('driving_recovery', True)
                 raise LidarCollisionException()
 
@@ -96,14 +110,16 @@ class SpaceRoboticsChallenge(Node):
         self.camera_change_triggered_time = None
         self.camera_angle = 0.0
 
+        self.joint_name = None
+
         self.score = 0
         self.current_driver = None
-        
+
         self.inException = False
         self.in_driving_recovery = False
 
         self.last_status_timestamp = None
-        
+
         self.virtual_bumper = None
         self.rand = Random(0)
 
@@ -114,7 +130,7 @@ class SpaceRoboticsChallenge(Node):
     def unregister(self, callback):
         assert callback in self.monitors
         self.monitors.remove(callback)
-        
+
     def send_speed_cmd(self, speed, angular_speed):
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_desired_speed(speed, angular_speed)
@@ -134,18 +150,18 @@ class SpaceRoboticsChallenge(Node):
         self.camera_angle = angle
         print (self.time, "app: Camera angle set to: %f" % angle)
         self.camera_change_triggered_time = self.time
-        
+
     def set_brakes(self, on):
         assert type(on) is bool, on
         self.brakes_on = on
         self.send_request('set_brakes %s\n' % ('on' if on else 'off'))
         print (self.time, "app: Brakes set to: %s" % on)
 
-    def on_driving_recovery(self, timestamp, data):
+    def on_driving_recovery(self, data):
         self.in_driving_recovery = data
         print (self.time, "Driving recovery changed to: %r" % data)
 
-    def on_pose2d(self, timestamp, data):
+    def on_pose2d(self, data):
         x, y, heading = data
         pose = (x / 1000.0, y / 1000.0, math.radians(heading / 100.0))
         if self.last_position is not None:
@@ -173,15 +189,36 @@ class SpaceRoboticsChallenge(Node):
                 self.bus.publish('driving_recovery', True)
                 raise VirtualBumperException()
 
-    def on_driving_control(self, timestamp, data):
+    def on_driving_control(self, data):
         # someone else took over driving
         self.current_driver = data
 
-    def on_score(self, timestamp, data):
+    def on_score(self, data):
         self.score = data[0]
 
-    def on_scan(self, timestamp, data):
+    def on_scan(self, data):
         pass
+
+    def on_joint_position(self, data):
+        pass
+
+    def on_rot(self, data):
+        temp_yaw, self.pitch, self.roll = [normalizeAnglePIPI(math.radians(x/100)) for x in data]
+        if self.yaw_offset is None:
+            self.yaw_offset = -temp_yaw
+        self.yaw = temp_yaw + self.yaw_offset
+
+        if self.use_gimbal:
+            # maintain camera level
+            cam_angle = self.camera_angle + self.pitch
+            self.send_request('set_cam_angle %f\n' % cam_angle)
+
+        if not self.inException and self.pitch < -0.6:
+            # TODO pitch can also go the other way if we back into an obstacle
+            # TODO: robot can also roll if it runs on a side of a rock while already on a slope
+            self.bus.publish('driving_recovery', True)
+            print (self.time, "app: Excess pitch, going back down")
+            raise VirtualBumperException()
 
     def update(self):
 
@@ -195,45 +232,13 @@ class SpaceRoboticsChallenge(Node):
                 print (self.time, "Loc: [%f %f %f] [%f %f %f]; Driver: %s; Score: %d" % (x, y, z, self.roll, self.pitch, self.yaw, self.current_driver, self.score))
 
         channel = super().update()
-#        handler = getattr(self, "on_" + channel, None)
-#        if handler is not None:
-#            handler(self.time, data)
-        if channel == 'pose2d':
-            self.on_pose2d(self.time, self.pose2d)
-        elif channel == 'artf':
-            self.on_artf(self.time, self.artf)
-        elif channel == 'score':
-            self.on_score(self.time, self.score)
-        elif channel == 'driving_control':
-            self.on_driving_control(self.time, self.driving_control)
-        elif channel == 'driving_recovery':
-            self.on_driving_recovery(self.time, self.driving_recovery)
-        elif channel == 'object_reached':
-            self.on_object_reached(self.time, self.object_reached)
-        elif channel == 'scan':
-            self.on_scan(self.time, self.scan)
-            self.local_planner.update(self.scan)
-        elif channel == 'rot':
-            temp_yaw, self.pitch, self.roll = [normalizeAnglePIPI(math.radians(x/100)) for x in self.rot]
-            if self.yaw_offset is None:
-                self.yaw_offset = -temp_yaw
-            self.yaw = temp_yaw + self.yaw_offset
-
-            if self.use_gimbal:
-                # maintain camera level
-                cam_angle = self.camera_angle + self.pitch
-                self.publish('set_cam_angle', cam_angle)
-
-            if not self.inException and self.pitch < -0.6:
-                # TODO pitch can also go the other way if we back into an obstacle
-                # TODO: robot can also roll if it runs on a side of a rock while already on a slope
-                self.bus.publish('driving_recovery', True)
-                print (self.time, "app: Excess pitch, going back down")
-                raise VirtualBumperException()
+        handler = getattr(self, "on_" + channel, None)
+        if handler is not None:
+            handler(getattr(self, channel))
 
         for m in self.monitors:
             m(self, channel)
-            
+
         return channel
 
     def go_straight(self, how_far, timeout=None):
@@ -310,10 +315,10 @@ class SpaceRoboticsChallenge(Node):
 
         # recovered enough at this point to switch to another driver (in case you see cubesat while doing the 3m drive or the final turn)
         self.bus.publish('driving_recovery', False)
-        
+
         self.go_straight(3.0, timeout=timedelta(seconds=20))
         self.turn(math.radians(-90), timeout=timedelta(seconds=10))
-        
+
     def run(self):
         try:
             print('Wait for definition of last_position and yaw')
@@ -321,7 +326,7 @@ class SpaceRoboticsChallenge(Node):
                 self.update()  # define self.time
             print('done at', self.time)
 
-            
+
             last_walk_start = 0.0
             start_time = self.time
             while self.time - start_time < timedelta(minutes=40):
@@ -333,7 +338,7 @@ class SpaceRoboticsChallenge(Node):
                         if self.current_driver is None and not self.brakes_on:
                             self.go_straight(50.0, timeout=timedelta(minutes=2))
                         else:
-                            self.wait(timedelta(minutes=2)) # allow for self driving, then timeout   
+                            self.wait(timedelta(minutes=2)) # allow for self driving, then timeout
                     self.update()
                 except ChangeDriverException as e:
                     continue
@@ -358,7 +363,7 @@ class SpaceRoboticsChallenge(Node):
                         # if it ran long time, maybe worth trying going in the same direction
                         continue
                     additional_turn = 30
-                        
+
                     # next random walk direction should be between 30 and 150 degrees
                     # (no need to go straight back or keep going forward)
                     # if part of virtual bumper handling, add 30 degrees to avoid the obstacle more forcefully
@@ -372,7 +377,7 @@ class SpaceRoboticsChallenge(Node):
                     self.turn(math.radians(deg_angle), timeout=timedelta(seconds=30))
                 except ChangeDriverException as e:
                     continue
-                    
+
                 except VirtualBumperException:
                     self.inException = True
                     print(self.time, "Turn Virtual Bumper!")
