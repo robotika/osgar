@@ -64,7 +64,6 @@ int g_countPoints = 0;
 
 int g_countUpdates = 0;
 int g_countReceives = 0;
-int g_countSendLog = 0;
 
 void *g_context;
 void *g_responder;
@@ -74,7 +73,10 @@ void initZeroMQ()
   g_context = zmq_ctx_new ();
   g_responder = zmq_socket (g_context, ZMQ_PUSH);  // use "Pipeline pattern" to send all data to Python3
   int rc = zmq_bind (g_responder, "tcp://*:5555");
-  assert (rc == 0);
+  if (rc != 0) {
+    ROS_ERROR("zmq_bind failed");
+    exit(1);
+  }
 }
 
 void clockCallback(const rosgraph_msgs::Clock::ConstPtr& msg)
@@ -195,9 +197,6 @@ class Controller
   /// \brief publisher to send cmd_vel
   public: ros::Publisher velPub;
 
-  /// \brief publisher to send logging data
-  public: ros::Publisher robotDataPub;
-
   /// \brief Communication client.
   private: std::unique_ptr<subt::CommsClient> client;
 
@@ -250,10 +249,8 @@ class Controller
     return true;
   }
 
-  std::thread m_logSending;
   std::thread m_receiveZmq;
 
-  static void logSendingThread(Controller * self, std::string logFilename);
   static void receiveZmqThread(Controller * self);
 };
 
@@ -333,11 +330,6 @@ void Controller::Update(const ros::TimerEvent&)
       this->velPub = this->n.advertise<geometry_msgs::Twist>(
           this->name + "/cmd_vel", 1);
 
-      // Create data logging publisher
-      // https://bitbucket.org/osrf/subt/pull-requests/329/support-recording-up-to-2gb-of-custom-data/diff
-      this->robotDataPub = this->n.advertise<std_msgs::String>(
-          "/robot_data", 1);
-
       this->subClock  = n.subscribe("/clock", 1000, clockCallback);
       this->subScan = n.subscribe(this->name + "/front_scan", 1000, scanCallback);
       this->subImage = n.subscribe(this->name + "/front/image_raw/compressed", 1000, imageCallback);
@@ -387,8 +379,7 @@ not available.");
              pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w);
 
   // Distance to goal
-  double dist = pose.position.x * pose.position.x +
-    pose.position.y * pose.position.y;
+  double dist = sqrt(pose.position.x * pose.position.x + pose.position.y * pose.position.y);
 
   if(abs(prev_dist2 - dist) > 1.0)
   {
@@ -403,55 +394,6 @@ not available.");
     this->updateTimer.stop();
     ROS_INFO("Arrived at entrance!");
   }
-}
-
-/////////////////////////////////////////////////
-void Controller::logSendingThread(Controller * self, std::string logFilename) {
-
-    ROS_INFO_STREAM("waiting for at least one subscriber at 'robotDataPub'");
-    while (self->robotDataPub.getNumSubscribers() == 0) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        if (!ros::ok()) {
-            return;
-        }
-    }
-
-    // open the log file
-    ROS_INFO_STREAM("opening log " << logFilename);
-    std::ifstream log_file(logFilename, std::ios_base::in|std::ios_base::binary);
-    if (!log_file.is_open()) {
-        ROS_WARN("opening log for reading failed");
-        return;
-    }
-
-    // spin sending log parts
-    while (ros::ok()) {
-
-        // heartbeat
-        if(g_countSendLog % 100 == 0) {
-            ROS_INFO_STREAM("sendLogPart count " << g_countSendLog);
-        }
-        g_countSendLog++;
-
-        // send current ROS time
-        std_msgs::String msg;
-        std::ostringstream stream;
-        ros::Time currentTime = ros::Time::now();
-        stream << currentTime.sec + currentTime.nsec*1e-9 << ": Hello " << self->name;
-        msg.data = stream.str();
-        self->robotDataPub.publish(msg);
-
-        // send log data
-        std::string buffer(std::istreambuf_iterator<char>(log_file), {});
-        if (log_file.tellg() >= ROSBAG_SIZE_LIMIT) {
-            ROS_WARN_STREAM("ROSBAG_SIZE_LIMIT reached, exiting log sending thread");
-            return;
-        }
-        msg.data = buffer;
-        self->robotDataPub.publish(msg);
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
 }
 
 /////////////////////////////////////////////////
@@ -599,11 +541,6 @@ void Controller::receiveZmqThread(Controller * self)
         ROS_INFO("ERROR! - failed to parse received artifact info");
       }
     }
-    else if(strncmp(buffer, "file ", 5) == 0)
-    {
-      ROS_INFO("FILE: %s", buffer + 5);
-      self->m_logSending = std::thread(Controller::logSendingThread, self, std::string(buffer + 5));
-    }
     else
     {
       double speed, angular_speed;
@@ -634,14 +571,13 @@ int main(int argc, char** argv)
     return -1;
   }
 
-  // init ROS proxy server
-  initZeroMQ();
-
   // Initialize ros
   std::string robot_name = argv[1];
   ros::init(argc, argv, robot_name);
 
   ROS_INFO_STREAM("Starting robotika solution for robot " << robot_name);
+
+  initZeroMQ();
 
   Controller controller(robot_name);
   ros::spin();
