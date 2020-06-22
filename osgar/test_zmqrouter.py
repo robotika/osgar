@@ -12,7 +12,7 @@ from threading import Thread
 
 import osgar.logger
 
-from osgar.zmqrouter import Router, Bus, record
+from osgar.zmqrouter import _Router, _Bus, record
 
 
 class Noop:
@@ -46,6 +46,23 @@ class Publisher:
             dt = self.bus.publish(self.output_name, i)
             time.sleep(0.01)
             #print("  published", i, dt)
+
+
+class NoQuit:
+    def __init__(self, config, bus):
+        self.bus = bus
+        self.bus.register()
+
+    def start(self):
+        self.thread = Thread(target=self.run)
+        self.thread.start()
+
+    def join(self, timeout=None):
+        self.thread.join(timeout)
+
+    def run(self):
+        while True:
+            time.sleep(1)
 
 
 class Test(unittest.TestCase):
@@ -122,6 +139,18 @@ class Test(unittest.TestCase):
         }
         record(config, log_filename='null-publisher.log')
 
+    def test_fail_to_quit(self):
+        config = { 'version': 2, 'robot': { 'modules': {}, 'links': [] } }
+        config['robot']['modules']['publisher'] = {
+            "driver": "osgar.test_zmqrouter:Publisher",
+            "init": { "output": "count:null"}
+        }
+        config['robot']['modules']['noquit'] = {
+            "driver": "osgar.test_zmqrouter:NoQuit",
+        }
+        record(config, log_filename='noquit.log')
+
+
 def main():
     nodes = ["listener0", "listener1", "publisher"]
     links = [
@@ -131,7 +160,7 @@ def main():
 
     logger = MagicMock()
     logger.start_time = datetime.datetime.now(datetime.timezone.utc)
-    with Router(logger) as router:
+    with _Router(logger) as router:
         Thread(target=node_listener, args=("listener0",)).start()
         Thread(target=node_listener, args=("listener1",)).start()
         Thread(target=node_publisher, args=("publisher", "count", 10)).start()
@@ -144,7 +173,7 @@ def main():
 
 
 def node_listener(name):
-    bus = Bus(name)
+    bus = _Bus(name)
     bus.register()
     expected = 0
     while True:
@@ -155,7 +184,7 @@ def node_listener(name):
 
 
 def node_publisher(name, channel, count):
-    bus = Bus(name)
+    bus = _Bus(name)
     bus.register(channel)
     for i in range(count):
         dt = bus.publish(channel, i)

@@ -22,8 +22,8 @@ def child(name, module_config):
     # todo how to inherit logging setup from parent process?
     signal.signal(signal.SIGINT,signal.SIG_IGN)
     klass = osgar.lib.config.get_class_by_name(module_config['driver'])
-    bus = Bus(name)
-    instance = klass(config=module_config['init'], bus=bus)
+    bus = _Bus(name)
+    instance = klass(config=module_config.get('init', {}), bus=bus)
     instance.start()
     g_logger.info(f"{name} running")
     instance.join()
@@ -35,7 +35,7 @@ def record(config, log_prefix=None, log_filename=None, duration_sec=None):
     with osgar.logger.LogWriter(prefix=log_prefix, filename=log_filename, note=str(sys.argv)) as log:
         log.write(0, bytes(str(config), 'ascii'))
         g_logger.info(log.filename)
-        with Router(log) as router:
+        with _Router(log) as router:
             modules = {}
             for module_name, module_config in config['robot']['modules'].items():
                 program = f"import {__name__}; {__name__}.child('{module_name}', {module_config})"
@@ -52,10 +52,16 @@ def record(config, log_prefix=None, log_filename=None, duration_sec=None):
                 router.request_stop(b"exception")
 
             for module in modules.values():
-                module.wait() # TODO terminate rogue modules
+                try:
+                    # always stop within 1s
+                    timeout = 1 - (router.now() - router.stopping).total_seconds()
+                    module.wait(timeout)
+                except subprocess.TimeoutExpired:
+                    module.kill()
+                    module.wait()
 
 
-class Router:
+class _Router:
     def __init__(self, logger):
         self.logger = logger
         self.start_time = self.logger.start_time
@@ -132,9 +138,9 @@ class Router:
         socket = self.socket
         poller = zmq.Poller()
         poller.register(socket, zmq.POLLIN)
-        start_time = self._now()
+        start_time = self.now()
         while True:
-            now = self._now()
+            now = self.now()
             if now - start_time > timeout:
                 raise RuntimeError("timeout")
             if self.stopping and now - self.stopping > datetime.timedelta(seconds=0.3):
@@ -161,7 +167,7 @@ class Router:
                 self.delays[sender] = delay
 
     def publish(self, sender, channel, data):
-        dt = self._now()
+        dt = self.now()
         dt_uint32 = osgar.logger.format_timedelta(dt)
         self.socket.send_multipart([sender, b"", b"publish", dt_uint32])
         link_from = sender + b"." + channel
@@ -178,12 +184,12 @@ class Router:
         if self.stopping:
             return
         g_logger.info(f"{str(sender, 'ascii')} requested stop")
-        self.stopping = self._now()
+        self.stopping = self.now()
         for node_name in self.nodes:
             self.send(node_name, b"quit", self.stopping)
 
     def is_alive(self, sender):
-        dt_uint32 = osgar.logger.format_timedelta(self._now())
+        dt_uint32 = osgar.logger.format_timedelta(self.now())
         self.socket.send_multipart([sender, b"", b"quit" if self.stopping else b"is_alive", dt_uint32])
 
     def send(self, node_name, action, dt, *args):
@@ -195,11 +201,11 @@ class Router:
         else:
             self.nodes[node_name].append((dt, packet))
 
-    def _now(self):
+    def now(self):
         return datetime.datetime.now(datetime.timezone.utc) - self.start_time
 
 
-class Bus:
+class _Bus:
     def __init__(self, name):
         self.lock = threading.RLock()
         self.name = name
