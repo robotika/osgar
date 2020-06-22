@@ -45,10 +45,10 @@
           "topics": [
             ["/scout_1/joint_states", "sensor_msgs/JointState"],
             ["/qual_3_score", "srcp2_msgs/Qual3ScoringMsg"],
-            ["/scout_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage"],
-            ["/scout_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage"],
-            ["/scout_1/imu", "sensor_msgs/Imu"],
-            ["/scout_1/laser/scan", "sensor_msgs/LaserScan"]
+            ["/scout_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage", "left_image"],
+            ["/scout_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage", "right_image"],
+            ["/scout_1/imu", "sensor_msgs/Imu", "orientation"],
+            ["/scout_1/laser/scan", "sensor_msgs/LaserScan", "scan"]
           ]
         }
       },
@@ -78,8 +78,8 @@
       ["rosmsg.joint_velocity", "scout.joint_velocity"],
       ["rosmsg.joint_effort", "scout.joint_effort"],
       ["rosmsg.rot", "scout.rot"],
-      ["rosmsg./scout_1/camera/left/image_raw/compressed", "detector.left_image"],
-      ["rosmsg./scout_1/camera/right/image_raw/compressed", "detector.right_image"],
+      ["rosmsg.left_image", "detector.left_image"],
+      ["rosmsg.right_image", "detector.right_image"],
       ["detector.artf", "app.artf"],
       ["app.desired_movement", "scout.desired_movement"],
       ["app.desired_speed", "scout.desired_speed"],

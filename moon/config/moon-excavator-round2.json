@@ -45,11 +45,10 @@
               ["/excavator_1/bucket_info", "srcp2_msgs/ExcavatorMsg"],
               ["/excavator_1/joint_states", "sensor_msgs/JointState"],
               ["/qual_2_score", "srcp2_msgs/Qual2ScoringMsg"],
-              ["/excavator_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage"],
-              ["/excavator_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage"],
-              ["/excavator_1/imu", "sensor_msgs/Imu"],
-              ["/excavator_1/laser/scan", "sensor_msgs/LaserScan"]
-
+              ["/excavator_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage", "left_image"],
+              ["/excavator_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage", "right_image"],
+              ["/excavator_1/imu", "sensor_msgs/Imu", "orientation"],
+              ["/excavator_1/laser/scan", "sensor_msgs/LaserScan", "scan"]
             ]
           }
       },

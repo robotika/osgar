@@ -13,6 +13,9 @@ CONFIG="${CONFIG:-ROBOTIKA_X2_SENSOR_CONFIG_1}"
 
 cd $(git rev-parse --show-toplevel)
 
+DOCKER_OPTS="--name bridge"
+export DOCKER_OPTS
+
 ./subt/docker/run.bash osrf/subt-virtual-testbed:cloudsim_bridge_latest \
   circuit:=$CIRCUIT \
   worldName:=$WORLD \

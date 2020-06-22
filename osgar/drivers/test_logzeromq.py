@@ -48,21 +48,21 @@ class LogZeroMQTest(unittest.TestCase):
             'endpoint': 'tcp://localhost:5557',
             'timeout': 0.1
         }
+        context = zmq.Context()
+        socket = context.socket(zmq.REP)
+        socket.RCVTIMEO = 1000
+        socket.bind('tcp://127.0.0.1:5557')
+
         bus = MagicMock()
         bus.listen = MagicMock(return_value=(1, 2, 'set_brakes on\n'))
         bus.is_alive = MagicMock(return_value=True)
         node = LogZeroMQ(config, bus)
         node.start()
-        time.sleep(0.1)  # give it a chance to start
+        time.sleep(0.2)  # let it start and timeout in recv call
         node.request_stop()
         bus.listen = MagicMock(side_effect=BusShutdownException())
         bus.is_alive = MagicMock(return_value=False)  # supplement mock request_stop()
 
-        # we have to readout the request otherwise the sender context.term() will never terminate
-        context = zmq.Context()
-        socket = context.socket(zmq.REP)
-        socket.RCVTIMEO = 1000
-        socket.bind('tcp://127.0.0.1:5557')
         msg = socket.recv()
         node.join()
         self.assertEqual(msg, b'set_brakes on\n')

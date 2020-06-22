@@ -44,6 +44,22 @@ class LoggerStreamingTest(unittest.TestCase):
         if ref is None:
             os.environ['OSGAR_LOGS'] = "."
 
+    def test_timedelta_sequence(self):
+        parse_timedelta = osgar.logger.timedelta_parser()
+        for i in range(20000):
+            t_ref = timedelta(seconds=i)
+            binary = osgar.logger.format_timedelta(t_ref)
+            t_parsed = parse_timedelta(binary)
+            self.assertEqual(t_ref, t_parsed)
+
+    def test_timedelta_cases(self):
+        t_ref = timedelta(hours=1, minutes=11, seconds=35)
+        last_dt = t_ref - timedelta(seconds=1)
+        binary = osgar.logger.format_timedelta(t_ref)
+        parse_timedelta = osgar.logger.timedelta_parser(last_dt)
+        t_parsed = parse_timedelta(binary)
+        self.assertEqual(t_ref, t_parsed)
+
     def test_writer_prefix(self):
         with LogWriter(prefix='tmp') as log:
             self.assertTrue(Path(log.filename).name.startswith('tmp'))
@@ -313,7 +329,7 @@ class LoggerStreamingTest(unittest.TestCase):
     def test_large_invalid(self):
         header = osgar.logger.format_header(datetime(2019, 1, 1, 1))
         packet = osgar.logger.format_packet(1, b"\x00"*(2**16), timedelta())
-        invalid = b"\xFF"*len(packet[-2])
+        invalid = b"\xFF"*len(packet[-2]) # overwrite header of the last subpacket
         self.assertNotEqual(packet[-2], invalid)
         packet[-2] = invalid
         logdata = b"".join(header + packet)

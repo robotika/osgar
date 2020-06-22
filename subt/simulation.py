@@ -91,6 +91,9 @@ class Simulation:
         corrected = [rr - oo for rr, oo in zip(self.xyz, self.origin)]
         self.bus.publish('origin', [b'X0F100L', *corrected, *self.orientation])
         self.bus.publish('scan', self.scan())
+        heading_centidegrees = round(math.degrees(quaternion.heading(self.orientation))*100)
+        self.bus.publish('rot', [heading_centidegrees, 0, 0])
+        self.bus.publish('orientation', self.orientation)
 
     def on_pose(self, dt, channel, data):
         if channel == 'pose2d':

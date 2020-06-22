@@ -58,16 +58,43 @@ def format_header(start_time):
 
 def format_packet(stream_id, data, dt):
     ret = []
-    assert dt.days == 0, dt  # multiple days not supported yet
-    time_frac = (dt.seconds * 1000000 + dt.microseconds) & TIMESTAMP_MASK
+    dt_bytes = format_timedelta(dt)
     index = 0
     while index + 0xFFFF <= len(data):
-        ret.append(struct.pack('IHH', time_frac, stream_id, 0xFFFF))  # header
+        ret.append(dt_bytes + struct.pack('HH', stream_id, 0xFFFF))  # header
         ret.append(data[index:index + 0xFFFF]) # partial data
         index += 0xFFFF
-    ret.append(struct.pack('IHH', time_frac, stream_id, len(data) - index))  # header
+    ret.append(dt_bytes + struct.pack('HH', stream_id, len(data) - index))  # header
     ret.append(data[index:])
     return ret
+
+
+def format_timedelta(dt):
+    assert dt.days == 0, dt  # multiple days not supported yet
+    time_frac = (dt.seconds * 1000000 + dt.microseconds) & TIMESTAMP_MASK
+    return time_frac.to_bytes(4, 'little')
+
+
+def timedelta_parser(start_time=datetime.timedelta()):
+    """ create timedelta parser
+
+    Created parser converts `uint32` microseconds to `timedelta` object. The parser internally
+    tracks overflows in `us_offset` and `prev_microseconds`. The intended use is to sequentially
+    parse incoming timestamps. The argument `start_time` supports creation  of a parser where
+    the last processed timestamp corresponds to the given timedelta object.
+    """
+    times, prev = divmod(start_time, datetime.timedelta(microseconds=TIMESTAMP_OVERFLOW_STEP))
+    us_offset = times * TIMESTAMP_OVERFLOW_STEP
+    prev_microseconds = prev.microseconds + prev.seconds * 10**6 + prev.days * 24 * 3600 * 10**6
+    def parse_timedelta(data):
+        nonlocal us_offset, prev_microseconds
+        assert len(data) == 4
+        microseconds = int.from_bytes(data, 'little')
+        if prev_microseconds > microseconds:
+            us_offset += TIMESTAMP_OVERFLOW_STEP
+        prev_microseconds = microseconds
+        return datetime.timedelta(microseconds=microseconds+us_offset)
+    return parse_timedelta
 
 
 class LogWriter:
@@ -84,12 +111,12 @@ class LogWriter:
 
         if not pathlib.Path(self.filename).is_absolute():
             if ENV_OSGAR_LOGS in os.environ:
-                os.makedirs(os.environ[ENV_OSGAR_LOGS], exist_ok=True)
                 self.filename = os.path.join(os.environ[ENV_OSGAR_LOGS], self.filename)
             else:
                 logging.warning('Environment variable %s is not set - using working directory' % ENV_OSGAR_LOGS)
             self.filename = str(pathlib.Path(self.filename).absolute())
 
+        os.makedirs(pathlib.Path(self.filename).parent, exist_ok=True)
         self.f = open(self.filename, 'wb')
 
         self.f.write(b"".join(format_header(self.start_time)))
@@ -138,8 +165,6 @@ class LogReader:
 
         data = self._read(12)
         self.start_time = datetime.datetime(*struct.unpack('HBBBBBI', data), datetime.timezone.utc)
-        self.us_offset = 0  # increase after overflow
-        self.prev_microseconds = 0
 
         if only_stream_id is None:
             self.multiple_streams = set()
@@ -161,17 +186,15 @@ class LogReader:
 
     def _read_gen(self, only_stream_id=None):
         "packed generator - yields (time, stream, data)"
+        parse_timedelta = timedelta_parser()
         while True:
             start = self.f.tell()
             header = self._read(8)
             if len(header) < 8:
                 break
-            microseconds, stream_id, size = struct.unpack('IHH', header)
-            if self.prev_microseconds > microseconds:
-                self.us_offset += TIMESTAMP_OVERFLOW_STEP
-            self.prev_microseconds = microseconds
-            microseconds += self.us_offset
-            dt = datetime.timedelta(microseconds=microseconds)
+            dt_bytes = header[:4]
+            dt =  parse_timedelta(dt_bytes)
+            stream_id, size = struct.unpack('HH', header[4:])
             data = self._read(size)
             if len(data) != size:
                 g_logger.error(f"Incomplete log file {self.f.name} from position {start}")
@@ -180,8 +203,9 @@ class LogReader:
                 header = self._read(8)
                 if len(header) < 8:
                     break
-                ref_microseconds, ref_stream_id, size = struct.unpack('IHH', header)
-                if not (microseconds & TIMESTAMP_MASK == ref_microseconds) or not (stream_id == ref_stream_id):
+                ref_dt_bytes = header[:4]
+                ref_stream_id, size = struct.unpack('HH', header[4:])
+                if dt_bytes != ref_dt_bytes or stream_id != ref_stream_id:
                     g_logger.error(f"Corrupted log file {self.f.name} from position {start}")
                     return
                 part = self._read(size)
@@ -229,24 +253,21 @@ def _create_index(data, pos, start_time=datetime.timedelta()):
     """
     index = []
     end = len(data)
-    times, prev = divmod(start_time, datetime.timedelta(microseconds=TIMESTAMP_OVERFLOW_STEP))
-    us_offset = times * TIMESTAMP_OVERFLOW_STEP
-    prev_micros = prev.microseconds + prev.seconds * 10**6 + prev.days * 24 * 3600 * 10**6
+    parse_timedelta = timedelta_parser(start_time)
     dt = start_time
     while pos + 8 <= end:
         start = pos
         header = data[pos:pos+8]
-        micros, channel, size = struct.unpack('IHH', header)
-        if prev_micros > micros:
-            us_offset += TIMESTAMP_OVERFLOW_STEP
-        prev_micros = micros
-        dt = datetime.timedelta(microseconds=micros+us_offset)
+        dt_bytes = header[:4]
+        channel, size = struct.unpack('HH', header[4:])
+        dt = parse_timedelta(dt_bytes)
         index.append((start, dt))
         pos += 8 + size
         while size == 0xFFFF and pos + 8 <= end:
             header = data[pos:pos+8]
-            micros_, channel_, size = struct.unpack('IHH', header)
-            if micros_ != micros_ or channel_ != channel:
+            dt_bytes_ = header[:4]
+            channel_, size = struct.unpack('HH', header[4:])
+            if dt_bytes_ != dt_bytes or channel_ != channel:
                 g_logger.error(f"Corrupted log file from position {start}")
                 return index  # packet invalid
             pos += 8 + size
