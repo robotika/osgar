@@ -87,6 +87,8 @@ class RospyRoverPushPull(RospyBasePushPull):
         self.steering_bl_publisher = rospy.Publisher('/' + self.robot_name + '/bl_steering_arm_controller/command', Float64, queue_size=QSIZE)
         self.steering_br_publisher = rospy.Publisher('/' + self.robot_name + '/br_steering_arm_controller/command', Float64, queue_size=QSIZE)
 
+        self.light_up_pub = rospy.Publisher('/' + self.robot_name + '/sensor_controller/command', Float64, queue_size=QSIZE, latch=True)
+        self.light_up_msg = Float64()
 
 
     def process_message(self, message):
@@ -107,6 +109,10 @@ class RospyRoverPushPull(RospyBasePushPull):
                     arr[4:]):
                 self.effort_msg.data = effort
                 pub.publish(self.effort_msg)
+
+        elif message_type == "set_cam_angle":
+            self.light_up_msg.data = float(message.split(" ")[1])
+            self.light_up_pub.publish(self.light_up_msg)
 
         elif message_type == "cmd_vel":
             desired_speed = float(message.split(" ")[1])

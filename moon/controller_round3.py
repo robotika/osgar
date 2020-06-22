@@ -340,11 +340,15 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
 
                             distance = self.interpolate_distance((img_w + img_h) / 2)
                             ax = self.nasa_yaw + angle_x
-                            ay = self.nasa_pitch + angle_y + self.camera_angle
+                            ay = self.nasa_pitch + angle_y
+
                             if self.use_gimbal:
                                 # gimbal changes the actual angle dynamically so pitch needs to be offset
-                                ay -= self.nasa_pitch
+                                ay += min(math.pi / 4.0, max(-math.pi / 8.0, self.camera_angle - self.nasa_pitch))
+                            else:
+                                ay += self.camera_angle
 
+                                
                             x, y, z = self.nasa_xyz
                             print("Using pose: xyz=[%f %f %f] orientation=[%f %f %f]" % (x, y, z, self.nasa_roll, self.nasa_pitch, self.nasa_yaw))
                             print("In combination with view angle %f %f and distance %f" % (ax, ay, distance))
