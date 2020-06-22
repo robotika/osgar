@@ -47,8 +47,8 @@
               ["/hauler_1/bin_info", "srcp2_msgs/HaulerMsg"],
               ["/hauler_1/joint_states", "sensor_msgs/JointState"],
               ["/qual_2_score", "srcp2_msgs/Qual2ScoringMsg"],
-              ["/hauler_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage"],
-              ["/hauler_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage"]
+              ["/hauler_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage", "left_image"],
+              ["/hauler_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage", "right_image"]
             ]
           }
       },
