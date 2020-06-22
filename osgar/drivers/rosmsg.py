@@ -411,6 +411,10 @@ def parse_topic(topic_type, data):
         return parse_joint_state(data)
     elif topic_type == 'srcp2_msgs/VolSensorMsg':
         return parse_volatile(data)
+    elif topic_type == 'sensor_msgs/LaserScan':
+        return parse_laser(data)
+    elif topic_type == 'sensor_msgs/Imu':
+        return parse_imu(data)
     elif topic_type == 'sensor_msgs/CompressedImage':
         image = parse_jpeg_image(data)  # , dump_filename='nasa.jpg')
         return image
@@ -502,7 +506,7 @@ class ROSMsgParser(Thread):
         if frame_id.endswith(b'/base_link/camera_front') or frame_id.endswith(b'camera_color_optical_frame'):
             # used to be self.topic_type == 'sensor_msgs/CompressedImage'
             self.bus.publish('image', parse_jpeg_image(packet))
-        elif frame_id.endswith(b'base_link/front_laser') or frame_id.endswith(b'hokuyo_link'):  #self.topic_type == 'sensor_msgs/LaserScan':
+        elif frame_id.endswith(b'base_link/front_laser'):  # self.topic_type == 'sensor_msgs/LaserScan':
             self.count += 1
             if self.count % self.downsample != 0:
                 return
@@ -519,7 +523,7 @@ class ROSMsgParser(Thread):
             cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
             self.bus.publish('cmd', cmd)
 
-        elif frame_id.endswith(b'/base_link/imu_sensor') or frame_id.endswith(b'imu_link'):  # self.topic_type == 'std_msgs/Imu':
+        elif frame_id.endswith(b'/base_link/imu_sensor'):  # self.topic_type == 'std_msgs/Imu':
             acc, rot, orientation = parse_imu(packet)
             self.bus.publish('rot', [round(math.degrees(angle)*100)
                                      for angle in rot])
@@ -560,6 +564,16 @@ class ROSMsgParser(Thread):
                         self.bus.publish('joint_position', list(position))
                         self.bus.publish('joint_velocity', list(velocity))
                         self.bus.publish('joint_effort', list(effort))
+                    elif t == 'sensor_msgs/Imu':
+                        acc, rot, orientation = result
+                        self.bus.publish('rot', [round(math.degrees(angle)*100)
+                                                 for angle in rot])  # this is deprecated and will be removed
+                        self.bus.publish('acc', [round(x * 1000) for x in acc])  # potential name conflict
+                        self.bus.publish(new_name, list(orientation))  # typically 'orientation'
+                    elif t == 'sensor_msgs/LaserScan':
+                        self.count += 1
+                        if self.count % self.downsample == 0:
+                            self.bus.publish(new_name, list(result))  # typically 'scan'
                     else:
                         self.bus.publish(new_name, result)
 
