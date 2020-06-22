@@ -68,6 +68,8 @@ def record(config, log_prefix=None, log_filename=None, duration_sec=None):
                 try:
                     # always stop within 1s
                     timeout = 1 - (router.now() - router.stopping).total_seconds()
+                    if timeout < 0:
+                        timeout = 0
                     module.wait(timeout)
                 except subprocess.TimeoutExpired:
                     module.kill()
