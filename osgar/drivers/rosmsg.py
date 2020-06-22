@@ -567,13 +567,13 @@ class ROSMsgParser(Thread):
                     elif t == 'sensor_msgs/Imu':
                         acc, rot, orientation = result
                         self.bus.publish('rot', [round(math.degrees(angle)*100)
-                                                 for angle in rot])
-                        self.bus.publish('acc', [round(x * 1000) for x in acc])
-                        self.bus.publish('orientation', list(orientation))
+                                                 for angle in rot])  # this is deprecated and will be removed
+                        self.bus.publish('acc', [round(x * 1000) for x in acc])  # potential name conflict
+                        self.bus.publish(new_name, list(orientation))  # typically 'orientation'
                     elif t == 'sensor_msgs/LaserScan':
                         self.count += 1
                         if self.count % self.downsample == 0:
-                            self.bus.publish('scan', list(result))
+                            self.bus.publish(new_name, list(result))  # typically 'scan'
                     else:
                         self.bus.publish(new_name, result)
 
