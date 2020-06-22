@@ -1,10 +1,12 @@
+import ast
 import datetime
-import tempfile
-import unittest
+import logging
 import os
-import shutil
 import pathlib
+import shutil
+import tempfile
 import time
+import unittest
 
 from unittest.mock import MagicMock
 
@@ -47,6 +49,28 @@ class Publisher:
             time.sleep(0.01)
             #print("  published", i, dt)
 
+
+class PublisherListener:
+    def __init__(self, config, bus):
+        self.bus = bus
+        self.output_name = config["output"].split(":")[0] # drop any possible suffix
+        self.bus.register(config["output"])
+
+    def start(self):
+        self.thread = Thread(target=self.run)
+        self.thread.start()
+
+    def join(self, timeout=None):
+        self.thread.join(timeout)
+
+    def run(self):
+        count = 10
+        for i in range(count):
+            dt, channel, value = self.bus.listen()
+            assert value == i
+            time.sleep(0.15)
+            dt = self.bus.publish(self.output_name, i)
+            #print(self.bus.name, dt, channel, value)
 
 class NoQuit:
     def __init__(self, config, bus):
@@ -131,6 +155,29 @@ class Test(unittest.TestCase):
         }
         record(config, log_filename='null-publisher.log')
 
+    def test_delays(self):
+        config = { 'version': 2, 'robot': { 'modules': {}, 'links': [] } }
+        config['robot']['modules']['publisher-listener'] = {
+            "driver": "osgar.test_zmqrouter:PublisherListener",
+            "init": { "output": "count"}
+        }
+        config['robot']['modules']['publisher'] = {
+            "driver": "osgar.test_zmqrouter:Publisher",
+            "init": { "output": "count"}
+        }
+        config['robot']['links'] = [
+            ['publisher.count', 'publisher-listener.count'],
+        ]
+        record(config, log_filename='delays.log')
+        with osgar.logger.LogReader(self.tempdir/"delays.log", only_stream_id=0) as log:
+            count = 0
+            for dt, channel, data in log:
+                data = ast.literal_eval(str(data, 'ascii'))
+                if hasattr(data, 'keys') and 'delay' in data.keys():
+                    count += 1
+                    self.assertGreater(data['delay'], 0.15)
+            self.assertEqual(count, 10)
+
     def test_fail_to_register(self):
         config = { 'version': 2, 'robot': { 'modules': {}, 'links': [] } }
         config['robot']['modules']['publisher'] = {
@@ -175,12 +222,15 @@ def main():
 def node_listener(name):
     bus = _Bus(name)
     bus.register()
-    expected = 0
-    while True:
-        dt, channel, data = bus.listen()
-        assert data == expected
-        expected += 1
-        #print(f"  {name}", dt, channel, data)
+    try:
+        expected = 0
+        while True:
+            dt, channel, data = bus.listen()
+            assert data == expected
+            expected += 1
+            #print(f"  {name}", dt, channel, data)
+    except SystemExit:
+        bus.request_stop()
 
 
 def node_publisher(name, channel, count):
@@ -193,11 +243,10 @@ def node_publisher(name, channel, count):
 
 
 if __name__ == "__main__":
-    import logging, sys
+    import sys
     logging.basicConfig(
-        stream=sys.stderr,
+        stream=sys.stdout,
         level=logging.DEBUG,
         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-        datefmt='%Y-%m-%d %H:%M',
     )
-    main()
+    unittest.main()

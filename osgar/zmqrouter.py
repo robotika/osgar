@@ -14,12 +14,23 @@ import osgar.lib.config
 import osgar.logger
 
 ENDPOINT = "tcp://127.0.0.1:8882"
+ASSERT_QUEUE_DELAY = datetime.timedelta(seconds=.1)
+STOPPING_TIMEOUT = datetime.timedelta(seconds=2)
 
 g_logger = logging.getLogger(__name__)
 
 
-def child(name, module_config):
+def child(name, module_config, log_level):
     # todo how to inherit logging setup from parent process?
+    # a proper way is probably using a config file
+    import logging, sys
+    #print(logging.getLevelName(log_level))
+    logging.basicConfig(
+        stream=sys.stdout,
+        level=log_level,
+        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+    )
+    # todo end
     signal.signal(signal.SIGINT,signal.SIG_IGN)
     klass = osgar.lib.config.get_class_by_name(module_config['driver'])
     bus = _Bus(name)
@@ -27,7 +38,9 @@ def child(name, module_config):
     instance.start()
     g_logger.info(f"{name} running")
     instance.join()
+    g_logger.info(f"{name} finished")
     bus.request_stop()
+    g_logger.debug(f"{name} stop confirmed")
 
 
 def record(config, log_prefix=None, log_filename=None, duration_sec=None):
@@ -38,7 +51,7 @@ def record(config, log_prefix=None, log_filename=None, duration_sec=None):
         with _Router(log) as router:
             modules = {}
             for module_name, module_config in config['robot']['modules'].items():
-                program = f"import {__name__}; {__name__}.child('{module_name}', {module_config})"
+                program = f"import {__name__}; {__name__}.child('{module_name}', {module_config}, {logging.root.level})"
                 modules[module_name] = subprocess.Popen([sys.executable, "-c", program])
 
             try:
@@ -69,6 +82,8 @@ class _Router:
         self.socket = self._context.socket(zmq.ROUTER)
         self.nodes = dict()
         self.delays = dict()
+        self.last_listen = dict()
+        self.stopped = set()
         self.subscriptions = dict()
         self.stream_id = dict()
         self.listening = set()
@@ -132,7 +147,10 @@ class _Router:
             getattr(self, str(action, 'ascii'))(sender, *args)
 
         for sender, delay in self.delays.items():
-            g_logger.info(f"{str(sender, 'ascii')}: {delay}")
+            if delay > ASSERT_QUEUE_DELAY:
+                g_logger.error(f"{str(sender, 'ascii')} max delay: {delay}")
+            else:
+                g_logger.info(f"{str(sender, 'ascii')} max delay: {delay}")
 
     def receive(self, *, hz=10, timeout=datetime.timedelta.max):
         socket = self.socket
@@ -143,28 +161,30 @@ class _Router:
             now = self.now()
             if now - start_time > timeout:
                 raise RuntimeError("timeout")
-            if self.stopping and now - self.stopping > datetime.timedelta(seconds=0.3):
+            if self.stopping and now - self.stopping > STOPPING_TIMEOUT:
+                g_logger.error(f'failed to stop within timeout of {STOPPING_TIMEOUT}, exiting anyway')
+                for name, q in self.nodes.items():
+                    if len(q) > 0:
+                        g_logger.error(f"{name} queue: {len(q)}")
+                g_logger.error(f"still running: {self.nodes.keys() - self.stopped}")
+                return
+            if self.stopping and self.nodes.keys() == self.stopped:
+                g_logger.info('all done, stopping')
                 return
             obj = dict(poller.poll(1000//hz))
             if socket in obj and obj[socket] == zmq.POLLIN:
                 packet = socket.recv_multipart()
                 yield (packet[0], *packet[2:]) # drop frame separator from REQ socket
-            elif self.stopping: # timeout && we are stopping
-                return
 
     def listen(self, sender):
         queue = self.nodes[sender]
         if len(queue) == 0:
             self.listening.add(sender)
         else:
-            first_dt = queue[0][0]
-            last_dt = queue[-1][0]
             packet = queue.popleft()[1]
             assert packet[0] == sender, (packet[0], sender)
             self.socket.send_multipart(packet)
-            delay = last_dt - first_dt
-            if self.delays[sender] < delay:
-                self.delays[sender] = delay
+            self.last_listen[sender] = self.now()
 
     def publish(self, sender, channel, data):
         dt = self.now()
@@ -180,13 +200,26 @@ class _Router:
             data = osgar.lib.serialize.compress(data)
         self.logger.write(stream_id, data, dt)
 
+        delay = dt - self.last_listen.get(sender, dt)
+        if self.delays.get(sender, datetime.timedelta()) < delay:
+            self.delays[sender] = delay
+        if delay > ASSERT_QUEUE_DELAY:
+            self.report_error(name=sender, delay=delay.total_seconds(), channel=channel)
+
     def request_stop(self, sender):
+        # confirm
+        dt_uint32 = osgar.logger.format_timedelta(self.now())
+        packet = [sender, b"", b"quit", dt_uint32]
+        self.socket.send_multipart(packet)
+        assert sender not in self.stopped
+        self.stopped.add(sender)
         if self.stopping:
             return
         g_logger.info(f"{str(sender, 'ascii')} requested stop")
         self.stopping = self.now()
         for node_name in self.nodes:
-            self.send(node_name, b"quit", self.stopping)
+            if node_name != sender:
+                self.send(node_name, b"quit", self.stopping)
 
     def is_alive(self, sender):
         dt_uint32 = osgar.logger.format_timedelta(self.now())
@@ -198,11 +231,16 @@ class _Router:
         if node_name in self.listening:
             self.listening.remove(node_name)
             self.socket.send_multipart(packet)
+            self.last_listen[node_name] = dt
         else:
             self.nodes[node_name].append((dt, packet))
 
     def now(self):
         return datetime.datetime.now(datetime.timezone.utc) - self.start_time
+
+    def report_error(self, **err):
+        self.logger.write(0, bytes(str(err), encoding='ascii'))
+        g_logger.error(str(err))
 
 
 class _Bus:
@@ -247,6 +285,7 @@ class _Bus:
     def request_stop(self):
         with self.lock:
             self.sock.send_multipart([b"request_stop"])
+            action, dt, *args = self.sock.recv_multipart()
 
     def is_alive(self):
         with self.lock:
