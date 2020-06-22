@@ -237,7 +237,7 @@ class RealSenseTest(unittest.TestCase):
         color_frame = frameset.as_frameset.return_value.get_color_frame.return_value
         color_frame.get_timestamp.return_value = 0
         color_frame.get_frame_number.return_value = 0
-        color_frame.is_frame.return_value = True
+        color_frame.is_video_frame.return_value = True
         color_frame.as_frame.return_value.get_data.return_value = np.asarray([[0, 100, 255]], dtype=np.uint8)
 
         c.depth_callback(frameset)
