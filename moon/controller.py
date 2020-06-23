@@ -211,7 +211,7 @@ class SpaceRoboticsChallenge(Node):
         if self.use_gimbal:
             # maintain camera level
             cam_angle = self.camera_angle + self.pitch
-            self.send_request('set_cam_angle %f\n' % cam_angle)
+            self.publish('set_cam_angle', cam_angle)
 
         if not self.inException and self.pitch < -0.6:
             # TODO pitch can also go the other way if we back into an obstacle
