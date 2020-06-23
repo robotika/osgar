@@ -9,7 +9,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
     def __init__(self, config, bus):
         super().__init__(config, bus)
 
-    def on_object_reached(self, timestamp, data):
+    def on_object_reached(self, data):
         object_type = data
         x,y,z = self.xyz
         print(self.sim_time, "app: Object %s reached" % object_type)

@@ -76,7 +76,7 @@ class LidarCollisionMonitor:
 class SpaceRoboticsChallenge(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register("desired_speed", "artf_xyz", "artf_cmd", "pose2d", "pose3d", "driving_recovery", "request", "set_cam_angle")
+        bus.register("desired_speed", "artf_xyz", "artf_cmd", "pose2d", "pose3d", "driving_recovery", "request", "cmd")
 
         self.sim_time = None
         self.monitors = []
@@ -215,7 +215,7 @@ class SpaceRoboticsChallenge(Node):
         if self.use_gimbal:
             # maintain camera level
             cam_angle = self.camera_angle + self.pitch
-            self.publish('set_cam_angle', cam_angle)
+            self.publish('cmd', b'set_cam_angle %f' % cam_angle)
 
         if not self.inException and self.pitch < -0.6:
             # TODO pitch can also go the other way if we back into an obstacle

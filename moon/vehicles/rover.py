@@ -217,7 +217,7 @@ class Rover(Node):
                 camera_angle = math.pi * (self.drive_camera_angle / 100.0) / 180.0
                 fl = fr = rl = rr = 0.0
 
-                e = 80 if self.drive_speed > 0 else -80
+                e = 40 if self.drive_speed > 0 else -40
                 effort = [e, e, e, e]
 
                 if not math.isinf(self.drive_radius):
