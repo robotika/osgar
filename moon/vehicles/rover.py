@@ -76,6 +76,8 @@ class Rover(Node):
         super().__init__(config, bus)
         bus.register('cmd', 'pose2d')
 
+        self.sim_time = None
+
         # general driving parameters
         # radius: radius of circle to drive around, "inf" if going straight; 0 if turning round in place
         # positive if turning left, negative if turning right
@@ -99,6 +101,9 @@ class Rover(Node):
         self.yaw = 0.0
         self.yaw_offset = None
         self.in_driving_recovery = False
+
+    def on_sim_clock(self, data):
+        self.sim_time = timedelta(seconds=data[0], microseconds=data[1] // 1000)
 
     def on_driving_recovery(self, data):
         self.in_driving_recovery = data
@@ -182,7 +187,7 @@ class Rover(Node):
 
         elif self.drive_radius == 0:
             # turning in place if radius is 0 but speed is non-zero
-            e = 40
+            e = 60
             if self.drive_speed > 0:
                 # turn left
                 effort = [-e, e, -e, e]

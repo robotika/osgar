@@ -39,7 +39,7 @@
       "rosmsg": {
           "driver": "rosmsg",
           "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
-          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin"],
+          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_clock", "cmd", "origin"],
           "init": {
             "downsample": 2,
           "topics": [
@@ -68,6 +68,8 @@
               ["rosmsg./scout_1/volatile_sensor", "scout.volatile"],
               ["rosmsg./qual_1_score", "app.score"],
               ["rosmsg.joint_name", "scout.joint_name"],
+              ["rosmsg.sim_clock", "scout.sim_clock"],
+              ["rosmsg.sim_clock", "app.sim_clock"],
               ["rosmsg.joint_position", "scout.joint_position"],
               ["rosmsg.joint_velocity", "scout.joint_velocity"],
               ["rosmsg.joint_effort", "scout.joint_effort"],

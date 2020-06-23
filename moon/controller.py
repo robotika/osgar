@@ -78,6 +78,7 @@ class SpaceRoboticsChallenge(Node):
         super().__init__(config, bus)
         bus.register("desired_speed", "artf_xyz", "artf_cmd", "pose2d", "pose3d", "driving_recovery", "request", "set_cam_angle")
 
+        self.sim_time = None
         self.monitors = []
         self.last_position = None
         self.max_speed = 1.0  # oficial max speed is 1.5m/s
@@ -148,18 +149,21 @@ class SpaceRoboticsChallenge(Node):
     def set_cam_angle(self, angle):
         self.send_request('set_cam_angle %f\n' % angle)
         self.camera_angle = angle
-        print (self.time, "app: Camera angle set to: %f" % angle)
-        self.camera_change_triggered_time = self.time
+        print (self.sim_time, "app: Camera angle set to: %f" % angle)
+        self.camera_change_triggered_time = self.sim_time
 
     def set_brakes(self, on):
         assert type(on) is bool, on
         self.brakes_on = on
         self.send_request('set_brakes %s\n' % ('on' if on else 'off'))
-        print (self.time, "app: Brakes set to: %s" % on)
+        print (self.sim_time, "app: Brakes set to: %s" % on)
+
+    def on_sim_clock(self, data):
+        self.sim_time = timedelta(seconds=data[0], microseconds=data[1] // 1000)
 
     def on_driving_recovery(self, data):
         self.in_driving_recovery = data
-        print (self.time, "Driving recovery changed to: %r" % data)
+        print (self.sim_time, "Driving recovery changed to: %r" % data)
 
     def on_pose2d(self, data):
         x, y, heading = data
@@ -184,7 +188,7 @@ class SpaceRoboticsChallenge(Node):
                                     round(math.degrees(self.yaw) * 100)])
         self.xyz = x, y, z
         if self.virtual_bumper is not None:
-            self.virtual_bumper.update_pose(self.time, pose)
+            self.virtual_bumper.update_pose(self.sim_time, pose)
             if not self.inException and self.virtual_bumper.collision():
                 self.bus.publish('driving_recovery', True)
                 raise VirtualBumperException()
@@ -217,19 +221,19 @@ class SpaceRoboticsChallenge(Node):
             # TODO pitch can also go the other way if we back into an obstacle
             # TODO: robot can also roll if it runs on a side of a rock while already on a slope
             self.bus.publish('driving_recovery', True)
-            print (self.time, "app: Excess pitch, going back down")
+            print (self.sim_time, "app: Excess pitch, going back down")
             raise VirtualBumperException()
 
     def update(self):
 
         # print status periodically - location
-        if self.time is not None:
+        if self.sim_time is not None:
             if self.last_status_timestamp is None:
-                self.last_status_timestamp = self.time
-            elif self.time - self.last_status_timestamp > timedelta(seconds=8):
-                self.last_status_timestamp = self.time
+                self.last_status_timestamp = self.sim_time
+            elif self.sim_time - self.last_status_timestamp > timedelta(seconds=8):
+                self.last_status_timestamp = self.sim_time
                 x, y, z = self.xyz
-                print (self.time, "Loc: [%f %f %f] [%f %f %f]; Driver: %s; Score: %d" % (x, y, z, self.roll, self.pitch, self.yaw, self.current_driver, self.score))
+                print (self.sim_time, "Loc: [%f %f %f] [%f %f %f]; Driver: %s; Score: %d" % (x, y, z, self.roll, self.pitch, self.yaw, self.current_driver, self.score))
 
         channel = super().update()
         handler = getattr(self, "on_" + channel, None)
@@ -242,27 +246,27 @@ class SpaceRoboticsChallenge(Node):
         return channel
 
     def go_straight(self, how_far, timeout=None):
-        print(self.time, "go_straight %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position)
+        print(self.sim_time, "go_straight %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position)
         start_pose = self.last_position
         if how_far >= 0:
             self.send_speed_cmd(self.max_speed, 0.0)
         else:
             self.send_speed_cmd(-self.max_speed, 0.0)
-        start_time = self.time
+        start_time = self.sim_time
         while distance(start_pose, self.last_position) < abs(how_far):
             self.update()
-            if timeout is not None and self.time - start_time > timeout:
+            if timeout is not None and self.sim_time - start_time > timeout:
                 print("go_straight - timeout at %.1fm" % distance(start_pose, self.last_position))
                 break
         self.send_speed_cmd(0.0, 0.0)
 
     def turn(self, angle, with_stop=True, speed=0.0, timeout=None):
-        print(self.time, "turn %.1f" % math.degrees(angle))
+        print(self.sim_time, "turn %.1f" % math.degrees(angle))
         if angle >= 0:
             self.send_speed_cmd(speed, self.max_angular_speed)
         else:
             self.send_speed_cmd(speed, -self.max_angular_speed)
-        start_time = self.time
+        start_time = self.sim_time
         # problem with accumulated angle
 
         sum_angle = 0.0
@@ -271,21 +275,21 @@ class SpaceRoboticsChallenge(Node):
             self.update()
             sum_angle += normalizeAnglePIPI(self.yaw - prev_angle)
             prev_angle = self.yaw
-            if timeout is not None and self.time - start_time > timeout:
-                print(self.time, "turn - timeout at %.1fdeg" % math.degrees(sum_angle))
+            if timeout is not None and self.sim_time - start_time > timeout:
+                print(self.sim_time, "turn - timeout at %.1fdeg" % math.degrees(sum_angle))
                 break
         if with_stop:
             self.send_speed_cmd(0.0, 0.0)
-            start_time = self.time
-            while self.time - start_time < timedelta(seconds=2):
+            start_time = self.sim_time
+            while self.sim_time - start_time < timedelta(seconds=2):
                 self.update()
-            print(self.time, 'stop at', self.time - start_time)
+            print(self.sim_time, 'stop at', self.sim_time - start_time)
 
     def wait(self, dt):  # TODO refactor to some common class
-        if self.time is None:
+        while self.sim_time is None:
             self.update()
-        start_time = self.time
-        while self.time - start_time < dt:
+        start_sim_time = self.sim_time
+        while self.sim_time - start_sim_time < dt:
             self.update()
 
     def go_safely(self, desired_direction):
@@ -303,8 +307,8 @@ class SpaceRoboticsChallenge(Node):
         return safety
 
     def random_walk(self, timeout):
-        start_time = self.time
-        while self.time - start_time < timeout:
+        start_time = self.sim_time
+        while self.sim_time - start_time < timeout:
             if self.update() == 'scan':
                 self.go_safely(0.0)
 
@@ -323,15 +327,15 @@ class SpaceRoboticsChallenge(Node):
         try:
             print('Wait for definition of last_position and yaw')
             while self.last_position is None or self.yaw is None:
-                self.update()  # define self.time
-            print('done at', self.time)
+                self.update()  # define self.sim_time
+            print('done at', self.sim_time)
 
 
             last_walk_start = 0.0
-            start_time = self.time
-            while self.time - start_time < timedelta(minutes=40):
+            start_time = self.sim_time
+            while self.sim_time - start_time < timedelta(minutes=40):
                 additional_turn = 0
-                last_walk_start = self.time
+                last_walk_start = self.sim_time
                 try:
                     self.virtual_bumper = VirtualBumper(timedelta(seconds=4), 0.1)
                     with LidarCollisionMonitor(self):
@@ -346,8 +350,8 @@ class SpaceRoboticsChallenge(Node):
                 except (VirtualBumperException, LidarCollisionException) as e:
                     self.inException = True
 # TODO: crashes if an exception (e.g., excess pitch) occurs while handling an exception (e.g., virtual/lidar bump)
-                    print(self.time, repr(e))
-                    last_walk_end = self.time
+                    print(self.sim_time, repr(e))
+                    last_walk_end = self.sim_time
                     self.virtual_bumper = None
                     self.go_straight(-2.0, timeout=timedelta(seconds=10))
                     if last_walk_end - last_walk_start > timedelta(seconds=20): # if we went more than 20 secs, try to continue a step to the left
@@ -380,7 +384,7 @@ class SpaceRoboticsChallenge(Node):
 
                 except VirtualBumperException:
                     self.inException = True
-                    print(self.time, "Turn Virtual Bumper!")
+                    print(self.sim_time, "Turn Virtual Bumper!")
                     self.virtual_bumper = None
                     if self.current_driver is not None:
                         # probably didn't throw in previous turn but during self driving

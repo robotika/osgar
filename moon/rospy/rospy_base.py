@@ -18,6 +18,7 @@ import zmq
 import sys, getopt
 
 import rospy
+from rosgraph_msgs.msg import Clock
 
 interrupted = False
 
@@ -61,7 +62,7 @@ class RospyBasePushPull(Thread):
         self.pull_socket.bind('tcp://*:' + self.PULL_PORT)
 
     def register_handlers(self):
-        pass
+        rospy.Subscriber('/clock', Clock, self.callback_clock)
 
     def process_message(self, message):
         pass

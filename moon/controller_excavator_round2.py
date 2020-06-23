@@ -38,9 +38,9 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
         try:
             print('Wait for definition of last_position and yaw')
-            while self.last_position is None or self.yaw is None:
+            while self.sim_time is None or self.last_position is None or self.yaw is None:
                 self.update()  # define self.time
-            print('done at', self.time)
+            print('done at', self.sim_time)
 
             vol_string = self.send_request('get_volatile_locations').decode('ascii')
             vol_list_one = vol_string.split(',')
@@ -101,12 +101,12 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             except (VirtualBumperException, LidarCollisionException) as e:
                                 in_exception = True
                                 self.virtual_bumper = None
-                                print(self.time, "excavator_controller exception in %s: %s" % (move, str(e)))
+                                print(self.sim_time, "excavator_controller exception in %s: %s" % (move, str(e)))
                                 traceback.print_exc()
                                 recovery_queue = []
                                 if move == "go_straight":
                                     distance_covered = pose_distance(starting_pose, self.last_position)
-                                    print(self.time, "excavator_controller exception: distance covered so far: %f" % distance_covered)
+                                    print(self.sim_time, "excavator_controller exception: distance covered so far: %f" % distance_covered)
                                     recovery_queue.append(("turn", math.radians(90)))
                                     recovery_queue.append(("go_straight", -1))
                                     recovery_queue.append(("go_straight", 5.0))
@@ -176,11 +176,11 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
                     def scoop_all(angle):
                         while True:
-                            dig_start = self.time
+                            dig_start = self.sim_time
                             self.publish("bucket_dig", [angle, 'reset'])
                             while self.volatile_dug_up[1] == 100:
                                 self.wait(timedelta(milliseconds=300))
-                                if self.time - dig_start > timedelta(seconds=20):
+                                if self.sim_time - dig_start > timedelta(seconds=20):
                                     # move bucket out of the way and continue to next volatile
                                     self.publish("bucket_drop", [math.pi, 'append'])
                                     return
