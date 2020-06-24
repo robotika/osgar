@@ -21,7 +21,7 @@ class ExploreTest(unittest.TestCase):
     def test_follow_wall_angle(self):
         # nothing close -> no command
         scan = [0] * 271  # 1deg resolution
-        cmd = follow_wall_angle(scan, radius=1.0, right_wall=True)
+        cmd, *angles = follow_wall_angle(scan, radius=1.0, right_wall=True)
         self.assertAlmostEqual(cmd, math.radians(-20))
 
         # parallel wall at 1m on the right
@@ -37,18 +37,18 @@ class ExploreTest(unittest.TestCase):
             else:
                 dist_mm = 0  # no reflection
             scan.append(dist_mm)
-        cmd = follow_wall_angle(scan, radius=1.0, right_wall=True)
+        cmd, *angles = follow_wall_angle(scan, radius=1.0, right_wall=True)
         self.assertIsNotNone(cmd)
         # angle should be 0.0, but due to resolution it corresponds to 1deg
         self.assertLess(abs(math.degrees(cmd)), 1.5)
 
         # move towards wall
-        cmd = follow_wall_angle(scan, radius=0.7, right_wall=True)
+        cmd, *angles = follow_wall_angle(scan, radius=0.7, right_wall=True)
         self.assertIsNotNone(cmd)
         self.assertLess(math.degrees(cmd), 0)  # used to be -45, now only slightly move right
 
         # move from wall
-        cmd = follow_wall_angle(scan, radius=1.3, right_wall=True)
+        cmd, *angles = follow_wall_angle(scan, radius=1.3, right_wall=True)
         self.assertIsNotNone(cmd)
         self.assertGreater(math.degrees(cmd), 0)  # just move from the wall (used to be 8deg)
 

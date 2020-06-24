@@ -30,7 +30,7 @@ def draw_scan(scan, max_obstacle_distance=None, scan_begin=-135, scan_end=135):
 
     scale = 50
     for ix, iy, is_far in zip(x, y, far_map):
-        point = (width_px//2 + int(iy*scale), height_px//2 - int(ix*scale))
+        point = (width_px//2 - int(iy*scale), height_px//2 - int(ix*scale))
         color = (0, 255, 0) if not is_far else (120, 120, 120)
         cv2.circle(img, point, radius=3, color=color, thickness=-1)
 

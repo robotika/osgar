@@ -281,8 +281,11 @@ class SubTChallenge:
                         if self.use_center:
                             desired_direction = 0
                         else:
-                            debug_callback = debug_follow_wall if self.verbose else None
-                            desired_direction = follow_wall_angle(self.scan, radius=radius, right_wall=right_wall, debug_callback=debug_callback)
+                            max_obstacle_distance = 4.0
+                            desired_direction, *angles = follow_wall_angle(self.scan, radius, right_wall, max_obstacle_distance, debug=self.verbose)
+                            #print(angles)
+                            if len(angles):
+                                debug_follow_wall(self.sim_time_sec, self.scan, max_obstacle_distance, angles[0], angles[1], desired_direction)
                         self.go_safely(desired_direction)
                 if dist_limit is not None:
                     if dist_limit < abs(self.traveled_dist - start_dist):  # robot can return backward -> abs()
@@ -901,12 +904,16 @@ class SubTChallenge:
     def join(self, timeout=None):
         self.thread.join(timeout)
 
+g_timeout = 0
 
-def debug_follow_wall(laser_data, max_obstacle_distance_m, start_rad, last_rad, total_rad):
+def debug_follow_wall(sim_time, laser_data, max_obstacle_distance_m, start_rad, last_rad, total_rad):
+    global g_timeout
     from osgar.lib.drawscan import draw_scan
     import cv2
 
     img = draw_scan(laser_data, max_obstacle_distance=max_obstacle_distance_m)
+    cv2.putText(img, f"{sim_time} sec", (50,50), cv2.FONT_HERSHEY_PLAIN, 1, (200,200,200))
+
     width_px, height_px = img.shape[1], img.shape[0]
     scale = 300
     dest_x = math.cos(start_rad)
@@ -929,7 +936,11 @@ def debug_follow_wall(laser_data, max_obstacle_distance_m, start_rad, last_rad, 
 
     #print(f"start {math.degrees(start_rad):.2f}°", f"last wall {math.degrees(last_rad):.2f}°" , f"desired {math.degrees(total_rad):.2f}°")
     cv2.imshow("follow_wall_angle", img)
-    cv2.waitKey()
+    key = cv2.waitKey(g_timeout) & 0xFF
+    if key == ord('q'):
+        raise SystemExit()
+    if key == ord(' '):
+        g_timeout = 1 if g_timeout == 0 else 0
 
 
 def main():
