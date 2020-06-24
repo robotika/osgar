@@ -92,13 +92,15 @@ class _Router:
         self.stopping = datetime.timedelta()
         self.no_output = set()
         self.compressed_output = set()
+        self._saved_sigint = None
 
     def __enter__(self):
         self.socket.bind(ENDPOINT)
-        signal.signal(signal.SIGINT, self.sigint)
+        self._saved_sigint = signal.signal(signal.SIGINT, self.sigint)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        signal.signal(signal.SIGINT, self._saved_sigint)
         self.socket.close()
         self._context.term()
 
