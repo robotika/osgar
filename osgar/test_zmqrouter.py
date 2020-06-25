@@ -50,6 +50,17 @@ class Publisher:
             #print("  published", i, dt)
 
 
+class Sleeper:
+    def __init__(self, config, bus):
+        self.bus = bus
+        self.bus.register()
+
+    def start(self):
+        self.bus.sleep(0.001)
+
+    def join(self, timeout=None):
+        pass
+
 class PublisherListener:
     def __init__(self, config, bus):
         self.bus = bus
@@ -177,6 +188,13 @@ class Test(unittest.TestCase):
                     count += 1
                     self.assertGreater(data['delay'], 0.15)
             self.assertEqual(count, 10)
+
+    def test_sleep(self):
+        config = { 'version': 2, 'robot': { 'modules': {}, 'links': [] } }
+        config['robot']['modules']['sleeper'] = {
+            "driver": "osgar.test_zmqrouter:Sleeper",
+        }
+        record(config, log_filename='sleeps.log')
 
     def test_fail_to_register(self):
         config = { 'version': 2, 'robot': { 'modules': {}, 'links': [] } }

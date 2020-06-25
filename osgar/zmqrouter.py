@@ -5,6 +5,7 @@ import signal
 import subprocess
 import sys
 import threading
+import time
 
 
 import zmq
@@ -300,6 +301,9 @@ class _Bus:
             self._quit()
             return False
         return True
+
+    def sleep(self, duration):
+        time.sleep(duration)
 
     def _quit(self):
         g_logger.info(f"{self.name} received quit")
