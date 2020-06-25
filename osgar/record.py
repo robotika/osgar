@@ -78,8 +78,7 @@ def main():
     import logging
     logging.basicConfig(
         level=logging.DEBUG,
-        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-        datefmt='%Y-%m-%d %H:%M',
+        format='%(asctime)s %(name)-16s %(levelname)-8s %(message)s',
     )
     parser = argparse.ArgumentParser(description='Record run on real HW with given configuration')
     parser.add_argument('config', nargs='+', help='configuration file')

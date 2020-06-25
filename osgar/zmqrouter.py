@@ -18,7 +18,7 @@ ENDPOINT = "tcp://127.0.0.1:8882"
 ASSERT_QUEUE_DELAY = datetime.timedelta(seconds=.1)
 STOPPING_TIMEOUT = datetime.timedelta(seconds=2)
 
-g_logger = logging.getLogger(__name__)
+g_logger = logging.getLogger(sys.modules[__name__].__spec__.name)
 
 
 def child(name, module_config, log_level):
@@ -29,7 +29,7 @@ def child(name, module_config, log_level):
     logging.basicConfig(
         stream=sys.stdout,
         level=log_level,
-        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+        format='%(asctime)s %(name)-16s %(levelname)-8s %(message)s',
     )
     # todo end
     signal.signal(signal.SIGINT,signal.SIG_IGN)
