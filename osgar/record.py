@@ -74,7 +74,7 @@ def record(config, log_prefix, log_filename=None, duration_sec=None):
                 recorder.stop_requested.wait(duration_sec)
 
 
-def main():
+def main(record=record):
     import logging
     logging.basicConfig(
         level=logging.DEBUG,

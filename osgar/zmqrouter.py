@@ -51,8 +51,9 @@ def record(config, log_prefix=None, log_filename=None, duration_sec=None):
         g_logger.info(log.filename)
         with _Router(log) as router:
             modules = {}
+            s = sys.modules[__name__].__spec__
             for module_name, module_config in config['robot']['modules'].items():
-                program = f"import {__name__}; {__name__}.child('{module_name}', {module_config}, {logging.root.level})"
+                program = f"import {s.name}; {s.name}.child('{module_name}', {module_config}, {logging.root.level})"
                 modules[module_name] = subprocess.Popen([sys.executable, "-c", program])
 
             try:
@@ -173,7 +174,7 @@ class _Router:
                         g_logger.error(f"{name} queue: {len(q)}")
                 g_logger.error(f"still running: {self.nodes.keys() - self.stopped}")
                 return
-            if self.stopping and self.nodes.keys() == self.stopped:
+            if self.stopping and len(self.nodes.keys() - self.stopped) == 0:
                 g_logger.info('all done, stopping')
                 return
             obj = dict(poller.poll(1000//hz))
@@ -308,3 +309,8 @@ class _Bus:
     def _quit(self):
         g_logger.info(f"{self.name} received quit")
         return SystemExit()
+
+
+if __name__ == "__main__":
+    from .record import main
+    main(record)
