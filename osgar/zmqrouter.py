@@ -61,7 +61,8 @@ def record(config, log_prefix=None, log_filename=None, duration_sec=None):
                 links =  config['robot']['links']
                 for link_from, link_to in links:
                     router.connect(link_from, link_to)
-                router.run()
+                duration = datetime.timedelta(seconds=duration_sec) if duration_sec else datetime.timedelta.max
+                router.run(duration=duration)
             except Exception as e:
                 g_logger.error(str(e))
                 router.request_stop(b"exception")
@@ -143,12 +144,12 @@ class _Router:
         self.subscriptions.setdefault(link_from, []).append((receiver, channel))
         g_logger.info(f"connect {link_from} -> {link_to}")
 
-    def run(self):
+    def run(self, *, duration=datetime.timedelta.max):
         # answer all connected nodes that it is ok to run now (connections are set up)
         for node_name in self.nodes:
             self.socket.send_multipart([node_name, b"", b"start"])
 
-        for packet in self.receive():
+        for packet in self.receive(duration=duration):
             sender, action, *args = packet
             getattr(self, str(action, 'ascii'))(sender, *args)
 
@@ -158,15 +159,18 @@ class _Router:
             else:
                 g_logger.info(f"{str(sender, 'ascii')} max delay: {delay}")
 
-    def receive(self, *, hz=10, timeout=datetime.timedelta.max):
+    def receive(self, *, hz=10, timeout=datetime.timedelta.max, duration=datetime.timedelta.max):
         socket = self.socket
         poller = zmq.Poller()
         poller.register(socket, zmq.POLLIN)
         start_time = self.now()
         while True:
             now = self.now()
-            if now - start_time > timeout:
+            running_time = now - start_time
+            if running_time > timeout:
                 raise RuntimeError("timeout")
+            if not self.stopping and running_time > duration:
+                self.request_stop(b"duration")
             if self.stopping and now - self.stopping > STOPPING_TIMEOUT:
                 g_logger.error(f'failed to stop within timeout of {STOPPING_TIMEOUT}, exiting anyway')
                 for name, q in self.nodes.items():

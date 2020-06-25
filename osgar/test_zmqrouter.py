@@ -61,6 +61,24 @@ class Sleeper:
     def join(self, timeout=None):
         pass
 
+
+class Listener:
+    def __init__(self, config, bus):
+        self.bus = bus
+        self.bus.register()
+
+    def start(self):
+        self.thread = Thread(target=self.run)
+        self.thread.start()
+
+    def run(self):
+        while True:
+            self.bus.listen()
+
+    def join(self, timeout=None):
+        self.thread.join(timeout)
+
+
 class PublisherListener:
     def __init__(self, config, bus):
         self.bus = bus
@@ -196,6 +214,13 @@ class Test(unittest.TestCase):
         }
         record(config, log_filename='sleeps.log')
 
+    def test_duration(self):
+        config = { 'version': 2, 'robot': { 'modules': {}, 'links': [] } }
+        config['robot']['modules']['listener'] = {
+            "driver": "osgar.test_zmqrouter:Listener",
+        }
+        record(config, log_filename='duration.log', duration_sec=0.3)
+
     def test_fail_to_register(self):
         config = { 'version': 2, 'robot': { 'modules': {}, 'links': [] } }
         config['robot']['modules']['publisher'] = {
@@ -214,6 +239,13 @@ class Test(unittest.TestCase):
             "driver": "osgar.test_zmqrouter:NoQuit",
         }
         record(config, log_filename='noquit.log')
+
+    def test_fail_to_quit_duration(self):
+        config = { 'version': 2, 'robot': { 'modules': {}, 'links': [] } }
+        config['robot']['modules']['noquit'] = {
+            "driver": "osgar.test_zmqrouter:NoQuit",
+        }
+        record(config, log_filename='duration-no-quit.log', duration_sec=0.3)
 
 
 def main():
