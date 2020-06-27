@@ -90,23 +90,26 @@ class RealSense(Node):
         try:
             assert frameset.is_frameset()
             depth_frame = frameset.as_frameset().get_depth_frame()
-            color_frame = frameset.as_frameset().get_color_frame()
             n = depth_frame.get_frame_number()
             if n % self.depth_subsample != 0:
                 return
             assert depth_frame.is_depth_frame()
-            assert color_frame.is_video_frame() == self.depth_rgb
             depth_image = np.asanyarray(depth_frame.as_depth_frame().get_data())
-            self.publish('depth', depth_image)
 
-            if color_frame.is_video_frame():
-                color_image = np.asanyarray(color_frame.as_frame().get_data())
+            if self.depth_rgb:
+                color_frame = frameset.as_frameset().get_color_frame()
+                assert color_frame.is_video_frame()
+                color_image = np.asanyarray(color_frame.as_video_frame().get_data())
                 __, data = cv2.imencode('*.jpeg', color_image)
-                self.publish('color', data.tobytes())
+
         except Exception as e:
             print(e)
             self.finished.set()
             return
+
+        self.publish('depth', depth_image)
+        if self.depth_rgb:
+            self.publish('color', data.tobytes())
 
 
     def start(self):
