@@ -47,7 +47,9 @@
               ["/qual_1_score", "srcp2_msgs/Qual1ScoringMsg"],
               ["/scout_1/volatile_sensor", "srcp2_msgs/VolSensorMsg"],
               ["/scout_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage", "left_image"],
-              ["/scout_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage", "right_image"]
+              ["/scout_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage", "right_image"],
+              ["/scout_1/imu", "sensor_msgs/Imu", "orientation"],
+              ["/scout_1/laser/scan", "sensor_msgs/LaserScan", "scan"]
             ]
           }
       },
@@ -73,9 +75,8 @@
               ["app.desired_speed", "scout.desired_speed"],
               ["app.request", "rpc.request"],
               ["rpc.response", "app.response"],
-              ["app.request", "rpc.request"],
-              ["rpc.response", "app.response"],
               ["scout.cmd", "transmitter.raw"],
+              ["app.cmd", "transmitter.raw"],
               ["scout.object_reached", "app.object_reached"],
               ["scout.pose2d", "app.pose2d"]
     ]

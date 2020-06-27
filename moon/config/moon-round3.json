@@ -46,7 +46,9 @@
             ["/scout_1/joint_states", "sensor_msgs/JointState"],
             ["/qual_3_score", "srcp2_msgs/Qual3ScoringMsg"],
             ["/scout_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage", "left_image"],
-            ["/scout_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage", "right_image"]
+            ["/scout_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage", "right_image"],
+            ["/scout_1/imu", "sensor_msgs/Imu", "orientation"],
+            ["/scout_1/laser/scan", "sensor_msgs/LaserScan", "scan"]
           ]
         }
       },
