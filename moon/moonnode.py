@@ -1,6 +1,8 @@
 """
   MoonNode - parent for Moon processing nodes
 """
+from datetime import timedelta
+
 from osgar.node import Node
 
 
