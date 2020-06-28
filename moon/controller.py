@@ -6,13 +6,14 @@ from random import Random
 from datetime import timedelta
 from statistics import median
 
-from osgar.node import Node
 from osgar.bus import BusShutdownException
 from osgar.lib import quaternion
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.lib.virtual_bumper import VirtualBumper
 
 from subt.local_planner import LocalPlanner
+
+from moon.moonnode import MoonNode
 
 
 class ChangeDriverException(Exception):
@@ -73,13 +74,11 @@ class LidarCollisionMonitor:
         self.robot.unregister(self.callback)
 
 
-class SpaceRoboticsChallenge(Node):
+class SpaceRoboticsChallenge(MoonNode):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("desired_speed", "artf_xyz", "artf_cmd", "pose2d", "pose3d", "driving_recovery", "request", "cmd")
 
-        self.sim_time = None
-        self.monitors = []
         self.last_position = None
         self.max_speed = 1.0  # oficial max speed is 1.5m/s
         self.max_angular_speed = math.radians(60)
@@ -236,13 +235,6 @@ class SpaceRoboticsChallenge(Node):
                 print (self.sim_time, "Loc: [%f %f %f] [%f %f %f]; Driver: %s; Score: %d" % (x, y, z, self.roll, self.pitch, self.yaw, self.current_driver, self.score))
 
         channel = super().update()
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-
-        for m in self.monitors:
-            m(self, channel)
-
         return channel
 
     def go_straight(self, how_far, timeout=None):
