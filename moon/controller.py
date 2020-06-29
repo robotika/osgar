@@ -157,9 +157,6 @@ class SpaceRoboticsChallenge(MoonNode):
         self.send_request('set_brakes %s\n' % ('on' if on else 'off'))
         print (self.sim_time, "app: Brakes set to: %s" % on)
 
-    def on_sim_clock(self, data):
-        self.sim_time = timedelta(seconds=data[0], microseconds=data[1] // 1000)
-
     def on_driving_recovery(self, data):
         self.in_driving_recovery = data
         print (self.sim_time, "Driving recovery changed to: %r" % data)
