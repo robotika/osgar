@@ -532,7 +532,7 @@ class ROSMsgParser(Thread):
         elif frame_id.endswith(b'/clock'):
             prev = self.timestamp_sec
             self.timestamp_sec, self.timestamp_nsec = parse_clock(packet)
-            self.bus.publish('sim_clock', [self.timestamp_sec, self.timestamp_nsec])
+            self.bus.publish('sim_clock', [self.timestamp_sec, self.timestamp_nsec//1000])  # publish us resolution (~Python.timedelta)
             if prev != self.timestamp_sec:
                 self.bus.publish('sim_time_sec', self.timestamp_sec)
 

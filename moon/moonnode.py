@@ -13,7 +13,7 @@ class MoonNode(Node):
         self.monitors = []
 
     def on_sim_clock(self, data):
-        self.sim_time = timedelta(seconds=data[0], microseconds=data[1] // 1000)
+        self.sim_time = timedelta(seconds=data[0], microseconds=data[1])
 
     def update(self):
         channel = super().update()
