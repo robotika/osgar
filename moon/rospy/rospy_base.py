@@ -87,7 +87,7 @@ class RospyBasePushPull(Thread):
 
     def callback_clock(self, data):
         if (self.prev_time is not None and 
-                prev_time.nsecs//100_000_000 != data.clock.nsecs//100_000_000):
+                prev_time.nsecs//100000000 != data.clock.nsecs//100000000):
             # run at 10Hz, i.e. every 100ms
             s1 = BytesIO()
             data.serialize(s1)
