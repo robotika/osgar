@@ -27,6 +27,7 @@ def signal_handler(signum, frame):
     global interrupted
     interrupted = True
 
+
 class RospyBasePushPull(Thread):
     def __init__(self, argv):
         Thread.__init__(self)
@@ -46,6 +47,7 @@ class RospyBasePushPull(Thread):
 
         self.g_socket = None
         self.g_lock = RLock()
+        self.prev_time = None
 
     def setup_sockets(self, context=None):
 
@@ -72,7 +74,6 @@ class RospyBasePushPull(Thread):
         with self.g_lock:
             self.g_socket.send(data)
 
-
     def callback(self, data, topic_name):
         # rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
         # print(rospy.get_caller_id(), data)
@@ -85,12 +86,15 @@ class RospyBasePushPull(Thread):
         self.socket_send(topic_name + '\0' + header + to_send)
 
     def callback_clock(self, data):
-        s1 = BytesIO()
-        data.serialize(s1)
-        to_send = s1.getvalue()
-        header = struct.pack('<I', len(to_send))
-        self.socket_send(header + to_send)
-
+        if (self.prev_time is not None and 
+                prev_time.nsecs//100_000_000 != data.clock.nsecs//100_000_000):
+            # run at 10Hz, i.e. every 100ms
+            s1 = BytesIO()
+            data.serialize(s1)
+            to_send = s1.getvalue()
+            header = struct.pack('<I', len(to_send))
+            self.socket_send(header + to_send)
+        self.prev_time = data.clock
 
     def callback_topic(self, data, topic_name):
         s1 = BytesIO()
