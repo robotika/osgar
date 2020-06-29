@@ -128,8 +128,11 @@ class RealSense(Node):
             intro = f"Found {name} (S/N: {serial_number}): "
             product_line = device.get_info(rs.camera_info.product_line)
             if product_line == "D400":
-                g_logger.info(intro + "Enabling depth stream")
+                info_msg = "Enabling streams: depth"
                 enable_depth = True
+                if self.depth_rgb:
+                    info_msg += ", depth_rgb"
+                g_logger.info(intro + info_msg)
             elif product_line == "T200":
                 enable_pose = True
                 g_logger.info(intro + "Enabling pose stream")
