@@ -55,6 +55,7 @@
 
 
 int g_countClock = 0;
+int g_clockPrevSec = -1;
 int g_countScan = 0;
 int g_countImage = 0;
 int g_countOdom = 0;
@@ -82,7 +83,11 @@ void initZeroMQ()
 void clockCallback(const rosgraph_msgs::Clock::ConstPtr& msg)
 {
   ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
+  if(g_clockPrevSec != msg.clock.secs)
+  {
+    zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
+    g_clockPrevSec = msg.clock.secs;
+  }
   if(g_countClock % 1000 == 0)
     ROS_INFO("received Clock %d ", g_countClock);
   g_countClock++;
