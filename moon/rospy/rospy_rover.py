@@ -17,7 +17,6 @@ import rospy
 from std_msgs.msg import *  # Float64, JointState
 from sensor_msgs.msg import *
 from nav_msgs.msg import Odometry
-from rosgraph_msgs.msg import Clock
 from geometry_msgs.msg import Twist, Point
 
 # SRCP2 specific
@@ -59,7 +58,6 @@ class RospyRoverPushPull(RospyBasePushPull):
         rospy.Subscriber('/' + self.robot_name + '/imu', Imu, self.callback_imu, '/' + self.robot_name + '/imu')
     #    rospy.Subscriber('/' + self.robot_name + '/camera/left/image_raw', Image, callback_depth)
     #    rospy.Subscriber('/image', CompressedImage, callback_camera)
-    #    rospy.Subscriber('/clock', Clock, callback_clock)
 
         QSIZE = 10
 

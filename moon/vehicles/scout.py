@@ -25,7 +25,7 @@ class Scout(Rover):
         self.last_vol_index = None
 
     def on_volatile(self, data):
-        
+
         # called by incoming volatile sensor report (among other sources)
         # 0 vol_type, 1 distance_to, 2 vol_index
         artifact_type = data[0]  # meters ... TODO distinguish CubeSat, volatiles, ProcessingPlant
@@ -43,12 +43,12 @@ class Scout(Rover):
                 self.last_volatile_distance = None
                 # TODO: this must be adjusted to report the position of the sensor, not the robot (which NASA will update their code for at some point)
                 # the best known distance was in reference to mutual position of the sensor and the volatile
-                print (self.time, "Volatile detection, starting to go further, reporting")
+                print (self.sim_time, "Volatile detection, starting to go further, reporting")
 
                 self.bus.publish('object_reached', artifact_type)
             else:
                 self.last_volatile_distance = None
     #            print ("Previously visited volatile %d, not reporting" % vol_index)
-            
+
 
 # vim: expandtab sw=4 ts=4

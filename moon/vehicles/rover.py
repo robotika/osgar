@@ -60,7 +60,8 @@ import math
 from datetime import timedelta
 
 from osgar.lib.mathex import normalizeAnglePIPI
-from osgar.node import Node
+
+from moon.moonnode import MoonNode
 
 
 WHEEL_RADIUS = 0.275  # meters
@@ -71,7 +72,7 @@ WHEEL_NAMES = ['fl', 'fr', 'bl', 'br']
 
 CRAB_ROLL_ANGLE = 0.78
 
-class Rover(Node):
+class Rover(MoonNode):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('cmd', 'pose2d')
@@ -182,7 +183,7 @@ class Rover(Node):
 
         elif self.drive_radius == 0:
             # turning in place if radius is 0 but speed is non-zero
-            e = 40
+            e = 60
             if self.drive_speed > 0:
                 # turn left
                 effort = [-e, e, -e, e]
@@ -276,15 +277,6 @@ class Rover(Node):
 
         cmd = b'cmd_rover %f %f %f %f %f %f %f %f' % tuple(steering + effort)
         self.bus.publish('cmd', cmd)
-
-    def update(self):
-        channel = super().update()
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-
-        return channel
-
 
     def draw(self):
         # for debugging

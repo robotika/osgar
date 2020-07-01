@@ -46,6 +46,7 @@ class Excavator(Rover):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('cmd', 'bucket_cmd')
+
         # TODO: account for working on an incline
 
         self.target_arm_position = None
@@ -112,12 +113,12 @@ class Excavator(Rover):
         channel = super().update()
 
         # TODO: on a slope one should take into consideration current pitch and roll of the robot
-        if self.time is not None:
+        if self.sim_time is not None:
             if (
                     len(self.execute_bucket_queue) > 0 and
                     (
                         self.scoop_time is None or
-                        self.time > self.scoop_time or
+                        self.sim_time > self.scoop_time or
                         self.target_arm_position is None or
                         rad_array_close(self.target_arm_position, self.current_arm_position)
                      )
@@ -126,14 +127,14 @@ class Excavator(Rover):
                 self.target_arm_position = bucket_targets
 #                print ("bucket_position %f %f %f " % (bucket_params[0], bucket_params[1],bucket_params[2]))
                 self.send_bucket_position(bucket_params)
-                self.scoop_time = self.time + timedelta(seconds=duration)
+                self.scoop_time = self.sim_time + timedelta(seconds=duration)
 
         # print status periodically - location and content of bucket if any
-        if self.time is not None:
+        if self.sim_time is not None:
             if self.bucket_last_status_timestamp is None:
-                self.bucket_last_status_timestamp = self.time
-            elif self.time - self.bucket_last_status_timestamp > timedelta(seconds=8):
-                self.bucket_last_status_timestamp = self.time
+                self.bucket_last_status_timestamp = self.sim_time
+            elif self.sim_time - self.bucket_last_status_timestamp > timedelta(seconds=8):
+                self.bucket_last_status_timestamp = self.sim_time
                 if self.bucket_status is not None and self.bucket_status[1] != 100:
                     print ("Bucket content: Type: %s idx: %d mass: %f" % (self.bucket_status[0], self.bucket_status[1], self.bucket_status[2]))
 

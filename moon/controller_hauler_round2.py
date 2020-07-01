@@ -61,9 +61,9 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
 
         try:
             print('Wait for definition of last_position and yaw')
-            while self.last_position is None or self.yaw is None:
+            while self.sim_time is None or self.last_position is None or self.yaw is None:
                 self.update()  # define self.time
-            print('done at', self.time)
+            print('done at', self.sim_time)
 
             self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
 
@@ -104,14 +104,14 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
             return
 
         if artifact_type == "rover":
-            self.last_rover_timestamp = self.time
+            self.last_rover_timestamp = self.sim_time
 
             if not self.tracking_excavator and self.straight_ahead_distance < 8:
                 self.tracking_excavator = True
                 raise ChangeDriverException
 
             if self.tracking_excavator and not self.brakes_on:
-                if self.approach_distance_timestamp is not None and self.time - self.approach_distance_timestamp > timedelta(seconds=15):
+                if self.approach_distance_timestamp is not None and self.sim_time - self.approach_distance_timestamp > timedelta(seconds=15):
                     # if was in approach bracket more than X secs, approach
                     # TODO: may be following moving robot within the approach distance envelope for more than 15 secs
                     # then it would give up control before lining up behind a digging robot
@@ -162,8 +162,8 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         if (
                 self.tracking_excavator and
                 self.last_rover_timestamp is not None and
-                self.time is not None and
-                self.time - self.last_rover_timestamp > timedelta(seconds=30)
+                self.sim_time is not None and
+                self.sim_time - self.last_rover_timestamp > timedelta(seconds=30)
         ):
             self.set_brakes(False)
             self.tracking_excavator = False
@@ -175,7 +175,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         # if first time distance in bracket, mark timestamp
         # if leaves bracket, reset to None
         if self.approach_distance_timestamp is None and 0.5 < self.straight_ahead_distance < 2:
-            self.approach_distance_timestamp = self.time
+            self.approach_distance_timestamp = self.sim_time
         elif 0.5 > self.straight_ahead_distance or self.straight_ahead_distance > 2:
             self.approach_distance_timestamp = None
 
