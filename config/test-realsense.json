@@ -6,7 +6,8 @@
           "driver": "realsense",
           "init": {
             "depth_subsample": 3,
-            "pose_subsample": 20
+            "pose_subsample": 20,
+            "depth_rgb": true
           }
       }
     },

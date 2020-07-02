@@ -18,6 +18,7 @@ import zmq
 import sys, getopt
 
 import rospy
+from rosgraph_msgs.msg import Clock
 
 interrupted = False
 
@@ -25,6 +26,7 @@ interrupted = False
 def signal_handler(signum, frame):
     global interrupted
     interrupted = True
+
 
 class RospyBasePushPull(Thread):
     def __init__(self, argv):
@@ -45,6 +47,7 @@ class RospyBasePushPull(Thread):
 
         self.g_socket = None
         self.g_lock = RLock()
+        self.prev_time = None
 
     def setup_sockets(self, context=None):
 
@@ -61,7 +64,7 @@ class RospyBasePushPull(Thread):
         self.pull_socket.bind('tcp://*:' + self.PULL_PORT)
 
     def register_handlers(self):
-        pass
+        rospy.Subscriber('/clock', Clock, self.callback_clock)
 
     def process_message(self, message):
         pass
@@ -70,7 +73,6 @@ class RospyBasePushPull(Thread):
         assert self.g_socket is not None
         with self.g_lock:
             self.g_socket.send(data)
-
 
     def callback(self, data, topic_name):
         # rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
@@ -84,12 +86,15 @@ class RospyBasePushPull(Thread):
         self.socket_send(topic_name + '\0' + header + to_send)
 
     def callback_clock(self, data):
-        s1 = BytesIO()
-        data.serialize(s1)
-        to_send = s1.getvalue()
-        header = struct.pack('<I', len(to_send))
-        self.socket_send(header + to_send)
-
+        if (self.prev_time is not None and 
+                self.prev_time.nsecs//100000000 != data.clock.nsecs//100000000):
+            # run at 10Hz, i.e. every 100ms
+            s1 = BytesIO()
+            data.serialize(s1)
+            to_send = s1.getvalue()
+            header = struct.pack('<I', len(to_send))
+            self.socket_send(header + to_send)
+        self.prev_time = data.clock
 
     def callback_topic(self, data, topic_name):
         s1 = BytesIO()

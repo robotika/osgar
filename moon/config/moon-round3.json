@@ -39,7 +39,7 @@
       "rosmsg": {
         "driver": "rosmsg",
         "in": ["slot_raw", "desired_speed", "tick", "stdout"],
-        "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd"],
+        "out": ["rot", "acc", "scan", "image", "pose2d", "sim_clock", "cmd"],
         "init": {
           "downsample": 1,
           "topics": [
@@ -77,6 +77,8 @@
       ["rosmsg.joint_position", "scout.joint_position"],
       ["rosmsg.joint_velocity", "scout.joint_velocity"],
       ["rosmsg.joint_effort", "scout.joint_effort"],
+      ["rosmsg.sim_clock", "scout.sim_clock"],
+      ["rosmsg.sim_clock", "app.sim_clock"],
       ["rosmsg.rot", "scout.rot"],
       ["rosmsg.left_image", "detector.left_image"],
       ["rosmsg.right_image", "detector.right_image"],

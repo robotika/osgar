@@ -135,7 +135,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
     def follow_object(self, data):
         self.objects_to_follow = data
         self.last_attempt_timestamp = None
-        print (self.time, "Starting to look for " + ','.join(data))
+        print (self.sim_time, "Starting to look for " + ','.join(data))
 
     def on_driving_control(self, data):
         super().on_driving_control(data)
@@ -164,7 +164,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
             if self.cubesat_success:
                 if not self.homebase_arrival_success:
                     response = self.send_request('artf homebase\n').decode("ascii")
-                    print(self.time, "app: Homebase response: %s" % response)
+                    print(self.sim_time, "app: Homebase response: %s" % response)
 
                     if response == 'ok' or SKIP_HOMEBASE_SUCCESS:
                         self.set_cam_angle(CAMERA_ANGLE_HOMEBASE)
@@ -175,7 +175,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     else:
                         # homebase arrival not accepted, keep trying after a delay
                         self.follow_object(['homebase'])
-                        self.last_attempt_timestamp = self.time
+                        self.last_attempt_timestamp = self.sim_time
                         self.on_driving_control(None) # do this last as it raises exception
 
                 else:
@@ -185,13 +185,13 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     self.follow_object(['basemarker'])
 
             else:
-                print(self.time, "app: Reached reportable home base destination, need to find cubesat first though")
+                print(self.sim_time, "app: Reached reportable home base destination, need to find cubesat first though")
                 self.on_driving_control(None) # do this last as it raises exception
 
         elif object_type == 'basemarker':
-            print (self.time, "app: Reporting alignment to server")
+            print (self.sim_time, "app: Reporting alignment to server")
             response = self.send_request('artf homebase_alignment\n').decode("ascii")
-            print(self.time, "app: Alignment response: %s" % response)
+            print(self.sim_time, "app: Alignment response: %s" % response)
             if response == 'ok':
                 # all done, exiting
                 exit
@@ -244,10 +244,10 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         artifact_type = data[0]
 
         self.objects_in_view[artifact_type] = {
-            "expiration": self.time + timedelta(milliseconds=200)
+            "expiration": self.sim_time + timedelta(milliseconds=200)
             }
 
-        if self.last_attempt_timestamp is not None and self.time - self.last_attempt_timestamp < ATTEMPT_DELAY:
+        if self.last_attempt_timestamp is not None and self.sim_time - self.last_attempt_timestamp < ATTEMPT_DELAY:
             return
 
 
@@ -268,20 +268,20 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         ): # if in exception, let the exception handling take its course
             if self.currently_following_object['object_type'] is None:
                 self.currently_following_object['object_type'] = artifact_type
-                self.currently_following_object['timestamp'] = self.time
-                print (self.time, "Starting to track %s" % artifact_type)
+                self.currently_following_object['timestamp'] = self.sim_time
+                print (self.sim_time, "Starting to track %s" % artifact_type)
                 self.on_driving_control(artifact_type)
             else:
                 for looking_for in self.objects_to_follow:
                     if self.currently_following_object['object_type'] == looking_for: # detected artefact is top priority and it is the one being followed already, continue what you were doing
                         break
                     elif looking_for == artifact_type: # we are looking for this artifact but it's not the one currently being followed, switch
-                        print (self.time, "Switching to tracking %s" % artifact_type)
+                        print (self.sim_time, "Switching to tracking %s" % artifact_type)
                         self.currently_following_object['object_type'] = artifact_type
                         self.on_driving_control(artifact_type)
 
             if self.currently_following_object['object_type'] == artifact_type:
-                self.currently_following_object['timestamp'] = self.time
+                self.currently_following_object['timestamp'] = self.sim_time
 
                 if self.currently_following_object['object_type'] == 'cubesat':
                     #            print("Cubesat reported at %d %d %d %d" % (data[1], data[2], data[3], data[4]))
@@ -297,7 +297,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                         # TODO: if found during side sweep, robot will turn some between last frame and true pose messing up the angle
                         self.set_brakes(True)
                         self.publish("desired_movement", [0, 0, 0])
-                        print(self.time, "app: cubesat final frame x=%d y=%d w=%d h=%d" % (data[1], data[2], data[3], data[4]))
+                        print(self.sim_time, "app: cubesat final frame x=%d y=%d w=%d h=%d" % (data[1], data[2], data[3], data[4]))
 
                         if 'homebase' in self.objects_to_follow:
                             self.objects_to_follow.remove('homebase') # do not immediately follow homebase if it was secondary to give main a chance to report cubesat
@@ -310,7 +310,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
 
                             self.publish('pose3d', [self.xyz, origin[3:]])
 
-                            print(self.time, "Origin received, internal position updated")
+                            print(self.sim_time, "Origin received, internal position updated")
                             # robot should be stopped right now (using brakes once available)
                             # lift camera to max, object should be (back) in view
                             # trigger recognition, get bounding box and calculate fresh angles
@@ -332,9 +332,9 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                             siny_cosp = 2 * (qw * qz + qx * qy);
                             cosy_cosp = 1 - 2 * (qy * qy + qz * qz);
                             self.nasa_yaw = math.atan2(siny_cosp, cosy_cosp);
-                            print (self.time, "app: True pose received: xyz=[%f,%f,%f], roll=%f, pitch=%f, yaw=%f" % (origin[0],origin[1],origin[2],self.nasa_roll, self.nasa_pitch, self.nasa_yaw))
+                            print (self.sim_time, "app: True pose received: xyz=[%f,%f,%f], roll=%f, pitch=%f, yaw=%f" % (origin[0],origin[1],origin[2],self.nasa_roll, self.nasa_pitch, self.nasa_yaw))
 
-                            print(self.time, "app: Final frame x=%d y=%d w=%d h=%d, nonblack=%d" % (data[1], data[2], data[3], data[4], data[5]))
+                            print(self.sim_time, "app: Final frame x=%d y=%d w=%d h=%d, nonblack=%d" % (data[1], data[2], data[3], data[4], data[5]))
                             angle_x = math.atan( (CAMERA_WIDTH / 2 - (img_x + img_w/2) ) / float(CAMERA_FOCAL_LENGTH))
                             angle_y = math.atan( (CAMERA_HEIGHT / 2 - (img_y + img_h/2) ) / float(CAMERA_FOCAL_LENGTH))
 
@@ -348,7 +348,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                             else:
                                 ay += self.camera_angle
 
-                                
+
                             x, y, z = self.nasa_xyz
                             print("Using pose: xyz=[%f %f %f] orientation=[%f %f %f]" % (x, y, z, self.nasa_roll, self.nasa_pitch, self.nasa_yaw))
                             print("In combination with view angle %f %f and distance %f" % (ax, ay, distance))
@@ -356,8 +356,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                             oy = math.sin(ax) * math.cos(ay) * distance
                             oz = math.sin(ay) * distance
                             self.cubesat_location = (x+ox, y+oy, z+oz)
-                            print (self.time, "app: Object offset calculated at: [%f %f %f]" % (ox, oy, oz))
-                            print (self.time, "app: Reporting estimated object location at: [%f,%f,%f]" % (x+ox, y+oy, z+oz))
+                            print (self.sim_time, "app: Object offset calculated at: [%f %f %f]" % (ox, oy, oz))
+                            print (self.sim_time, "app: Reporting estimated object location at: [%f,%f,%f]" % (x+ox, y+oy, z+oz))
 
                             s = '%s %.2f %.2f %.2f\n' % (artifact_type, x+ox, y+oy, z+oz)
                             response = self.send_request('artf ' + s).decode("ascii")
@@ -370,10 +370,10 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                                 self.follow_object(['homebase'])
                             else:
                                 print("app: Estimated object location incorrect, wait before continuing task; response: %s" % str(response))
-                                self.last_attempt_timestamp = self.time
+                                self.last_attempt_timestamp = self.sim_time
                         else:
-                            print(self.time, "Origin request failed") # TODO: in future, we should try to find the cubesat again based on accurate position tracking
-                            self.last_attempt_timestamp = self.time
+                            print(self.sim_time, "Origin request failed") # TODO: in future, we should try to find the cubesat again based on accurate position tracking
+                            self.last_attempt_timestamp = self.sim_time
 
                         # TODO: object was reached but not necessarily successfully reported;
                         # for now, just return driving to main which will either drive randomly with no additional purpose if homebase was previously found or will look for homebase
@@ -411,7 +411,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     elif center_x > (CAMERA_WIDTH/2 + 5):
                         self.basemarker_centered = False
                     else:
-                        print(self.time, "app: basemarker centered")
+                        print(self.sim_time, "app: basemarker centered")
                         self.basemarker_centered = True
 
 
@@ -420,22 +420,22 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         assert len(data) == 180
         super().on_scan(data)
 
-        delete_in_view = [artf for artf in self.objects_in_view if self.objects_in_view[artf]['expiration'] < self.time]
+        delete_in_view = [artf for artf in self.objects_in_view if self.objects_in_view[artf]['expiration'] < self.sim_time]
         for artf in delete_in_view:
             del self.objects_in_view[artf]
 
-        if self.last_attempt_timestamp is not None and self.time - self.last_attempt_timestamp < ATTEMPT_DELAY:
+        if self.last_attempt_timestamp is not None and self.sim_time - self.last_attempt_timestamp < ATTEMPT_DELAY:
             return
 
         # if was following an artefact but it disappeared, just go straight until another driver takes over
         if (
                 self.currently_following_object['timestamp'] is not None and
                 self.currently_following_object['object_type'] is not None and
-                self.time - self.currently_following_object['timestamp'] > self.object_timeouts[self.currently_following_object['object_type']]
+                self.sim_time - self.currently_following_object['timestamp'] > self.object_timeouts[self.currently_following_object['object_type']]
 
         ):
             self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
-            print (self.time, "No longer tracking %s" % self.currently_following_object['object_type'])
+            print (self.sim_time, "No longer tracking %s" % self.currently_following_object['object_type'])
             self.currently_following_object['timestamp'] = None
             self.currently_following_object['object_type'] = None
             self.basemarker_centered = False
@@ -454,7 +454,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
             straight_ahead_dist = min_dist(data[midindex-15:midindex+15])
 
             if self.currently_following_object['object_type'] == 'homebase':
-#                print (self.time, "controller_round3: homebase current distance: %f" % (straight_ahead_dist))
+#                print (self.sim_time, "controller_round3: homebase current distance: %f" % (straight_ahead_dist))
 
                 if straight_ahead_dist < HOMEBASE_KEEP_DISTANCE:
                     self.publish("desired_movement", [0, 0, 0])
@@ -466,7 +466,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
 
                 if 'homebase' not in self.objects_in_view.keys():
                     # lost contact with homebase, try approach again
-                    print (self.time, "app: No longer going around homebase")
+                    print (self.sim_time, "app: No longer going around homebase")
                     self.currently_following_object['timestamp'] = None
                     self.currently_following_object['object_type'] = None
                     self.basemarker_centered = False
@@ -520,7 +520,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 left_dist = min(self.basemarker_left_history)
                 right_dist = min(self.basemarker_right_history)
 
-                # print (self.time, "app: Min dist front: %f, dist left=%f, right=%f" % (straight_ahead_dist, left_dist, right_dist))
+                # print (self.sim_time, "app: Min dist front: %f, dist left=%f, right=%f" % (straight_ahead_dist, left_dist, right_dist))
 
                 if self.basemarker_centered and left_dist < 6 and abs(homebase_cy) < 0.1: # cos 20 = dist_r / dist _l is the max ratio in order to be at most 10 degrees off; also needs to be closer than 6m
                     self.publish("desired_movement", [0, -9000, 0])
@@ -554,9 +554,9 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
     def run(self):
         try:
             print('Wait for definition of last_position and yaw')
-            while self.last_position is None or self.yaw is None:
-                self.update()  # define self.time
-            print('done at', self.time)
+            while self.sim_time is None or self.last_position is None or self.yaw is None:
+                self.update()  # define self.sim_time
+            print('done at', self.sim_time)
 
             self.set_brakes(False)
             # some random manual starting moves to choose from
@@ -585,10 +585,10 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
 #            self.wait(timedelta(seconds=10))
 
             last_walk_start = 0.0
-            start_time = self.time
-            while self.time - start_time < timedelta(minutes=40):
+            start_time = self.sim_time
+            while self.sim_time - start_time < timedelta(minutes=40):
                 additional_turn = 0
-                last_walk_start = self.time
+                last_walk_start = self.sim_time
 
                 # TURN 360
                 try:
@@ -601,12 +601,12 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                         else:
                             self.wait(timedelta(minutes=2)) # allow for self driving, then timeout
                 except ChangeDriverException as e:
-                    print(self.time, "Turn interrupted by driver: %s" % e)
+                    print(self.sim_time, "Turn interrupted by driver: %s" % e)
                     continue
                 except (VirtualBumperException, LidarCollisionException):
                     self.inException = True
                     self.set_cam_angle(CAMERA_ANGLE_DRIVING)
-                    print(self.time, "Turn Virtual Bumper!")
+                    print(self.sim_time, "Turn Virtual Bumper!")
                     # TODO: if detector takes over driving within initial turn, rover may be actually going straight at this moment
                     # also, it may be simple timeout, not a crash
                     self.virtual_bumper = None
@@ -631,8 +631,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 except (VirtualBumperException, LidarCollisionException) as e:
                     self.inException = True
                     # TODO: crashes if an exception (e.g., excess pitch) occurs while handling an exception (e.g., virtual/lidar bump)
-                    print(self.time, repr(e))
-                    last_walk_end = self.time
+                    print(self.sim_time, repr(e))
+                    last_walk_end = self.sim_time
                     self.virtual_bumper = None
                     self.set_cam_angle(CAMERA_ANGLE_DRIVING)
                     self.go_straight(-2.0, timeout=timedelta(seconds=10)) # this should be reasonably safe, we just came from there
@@ -670,7 +670,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 except (VirtualBumperException, LidarCollisionException):
                     self.inException = True
                     self.set_cam_angle(CAMERA_ANGLE_DRIVING)
-                    print(self.time, "Turn Virtual Bumper!")
+                    print(self.sim_time, "Turn Virtual Bumper!")
                     self.virtual_bumper = None
                     if self.current_driver is not None:
                         # probably didn't throw in previous turn but during self driving

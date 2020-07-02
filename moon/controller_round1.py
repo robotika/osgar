@@ -12,9 +12,9 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
     def on_object_reached(self, data):
         object_type = data
         x,y,z = self.xyz
-        print(self.time, "app: Object %s reached" % object_type)
+        print(self.sim_time, "app: Object %s reached" % object_type)
         response = self.send_request('artf %s %f %f 0.0\n' % (object_type, x, y)).decode("ascii")
-        print(self.time, "app: Volatile report response: %s" % response)
+        print(self.sim_time, "app: Volatile report response: %s" % response)
         if response == 'ok':
             pass
         else:

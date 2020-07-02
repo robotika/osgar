@@ -55,15 +55,14 @@ def scan2xy(pose, scan):
     return pts
 
 
-def filter_pts(pts):
+def filter_pts(grid, pts):
     # filter out duplicity points - keep older
-    grid = defaultdict(int)
     ret = []
     for x, y in pts:
         k = int(2*x), int(2*y)
-        grid[k] += 1
         if grid[k] < 10:
             ret.append((x, y))
+            grid[k] += 1
     return ret
 
 
@@ -375,6 +374,7 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
     map_on = False
     poses = []
     acc_pts = []
+    grid = defaultdict(int)
     skip_frames = 0
     frames_step = 0
     save_counter = 0
@@ -397,8 +397,9 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
             if len(poses) == 0 or math.hypot(poses[-1][0] - pose[0], poses[-1][1] - pose[1]) >= TAIL_MIN_STEP:
                 poses.append(pose)
 
-            acc_pts.extend(scan2xy(pose, scan))
-            acc_pts = filter_pts(acc_pts)
+            xy_scan = scan2xy(pose, scan)
+            xy_scan_filtred = filter_pts(grid, xy_scan)
+            acc_pts.extend(xy_scan_filtred)
 
         if wait_for_keyframe and not keyframe and not eof:
             paused = True
