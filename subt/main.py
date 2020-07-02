@@ -899,7 +899,8 @@ class SubTChallenge:
 def main():
     import argparse
     from osgar.lib.config import config_load
-    from osgar.record import record
+    #from osgar.record import record
+    from osgar.zmqrouter import record
 
     parser = argparse.ArgumentParser(description='SubT Challenge')
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
