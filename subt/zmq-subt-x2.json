@@ -15,6 +15,9 @@
             "virtual_world": true
           }
       },
+      "localization": {
+        "driver": "subt.odoimuloc:Localization"
+      },
       "detector": {
           "driver": "subt.artf_node:ArtifactDetectorDNN",
           "in": ["image", "scan"],
@@ -71,6 +74,10 @@
               ["app.stdout", "rosmsg.stdout"],
               ["app.request_origin", "rosmsg.request_origin"],
               ["rosmsg.origin", "app.origin"],
+
+              ["rosmsg.origin",     "localization.origin"],
+              ["rosmsg.pose2d",     "localization.odom"],
+              ["rospy.orientation", "localization.orientation"],
 
               ["receiver.raw", "rosmsg.raw"],
               ["rosmsg.cmd", "transmitter.raw"],
