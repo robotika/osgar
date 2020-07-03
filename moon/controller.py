@@ -138,7 +138,7 @@ class SpaceRoboticsChallenge(MoonNode):
             self.virtual_bumper.update_desired_speed(speed, angular_speed)
         self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
 
-    def on_response(self, timestamp, data):
+    def on_response(self, data):
         token, response = data
         print(self.time, "controller:response received: token=%s, response=%s" % (token, response))
         callback = self.requests[token]
@@ -153,7 +153,7 @@ class SpaceRoboticsChallenge(MoonNode):
         print(self.time, "controller:send_request:token: %s, command: %s" % (token, cmd))
         self.publish('request', [token, cmd])
 
-        while blocking:  # this is kept here for backward compatibility and will be removed ASAP
+        while callback is None and blocking:  # this is kept here for backward compatibility and will be removed ASAP
             dt, channel, data = self.listen()
             if channel == 'response':
                 response_token, response = data
