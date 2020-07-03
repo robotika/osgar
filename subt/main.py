@@ -212,7 +212,7 @@ class SubTChallenge:
             heading = math.degrees(quaternion.heading(self.orientation))
             desired_deg = math.degrees(desired_direction)
             safe_deg = math.degrees(safe_direction)
-            print(self.time, self.sim_time_sec, f"safety:{safety:.2f}    desired:{desired_deg:.2f}°  safe_direction: {safe_deg:.2f}°")
+            print(self.time, self.sim_time_sec, f"safety:{safety:.2f}    desired:{desired_deg: 7.2f}°  safe_direction:{safe_deg: 7.2f}°")
         #desired_angular_speed = 1.2 * safe_direction
         desired_angular_speed = 0.9 * safe_direction
         size = len(self.scan)
