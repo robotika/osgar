@@ -588,7 +588,7 @@ def main(args_in=None, startswith=None):
 
     parser.add_argument('--callback', help='callback function for lidar scans')
 
-    parser.add_argument('--callback-img', help='callback function for image')
+    parser.add_argument('--callback-img', help='callback function for image, eg.: subt.tf_detector:TfDetector')
 
     parser.add_argument('--rotate', help='rotate poses by angle in degrees, offset',
                         type=float, default=0.0)
@@ -621,9 +621,14 @@ def main(args_in=None, startswith=None):
     if args.callback is not None:
         callback = get_class_by_name(args.callback)
     callback_img = None
-    if args.callback_img == "tf_detector":
-        from subt.tf_detector import TfDetector
-        callback_img = TfDetector()
+    if args.callback_img:
+        name = args.callback_img
+        assert ':' in name, name  # import path and class name expected
+        s = name.split(':')
+        assert len(s) == 2  # package and class name
+        module_name, class_name = s
+        m = import_module(module_name)
+        callback_img = getattr(m, class_name)
 
     if args.lidar_limit is not None:
         MAX_SCAN_LIMIT = args.lidar_limit
@@ -636,7 +641,7 @@ def main(args_in=None, startswith=None):
     with Framer(args.logfile, lidar_name=args.lidar, lidar2_name=args.lidar2, pose2d_name=args.pose2d, pose3d_name=args.pose3d,
                 camera_name=args.camera, camera2_name=args.camera2, bbox_name=args.bbox, joint_name=args.joint,
                 keyframes_name=args.keyframes, title_name=args.title) as framer:
-        lidarview(framer, caption_filename=filename, callback=callback, callback_img=callback_img, out_video=args.create_video, jump=args.jump)
+        lidarview(framer, caption_filename=filename, callback=callback, callback_img=callback_img(), out_video=args.create_video, jump=args.jump)
 
 if __name__ == "__main__":
     main()
