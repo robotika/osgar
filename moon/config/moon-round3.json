@@ -27,11 +27,11 @@
         }
       },
       "rpc": {
-        "driver": "zeromq",
+        "driver": "moon.zmqpool:ZMQPool",
         "in": ["request"],
         "out": ["response"],
         "init": {
-          "mode": "REQ",
+          "pool_size": 5,
           "endpoint": "tcp://localhost:5557",
           "save_data": true
         }
