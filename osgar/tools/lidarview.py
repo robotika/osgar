@@ -440,8 +440,7 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
                     view = pygame.surfarray.array3d(img)
                     view = view.transpose([1, 0, 2])
                     np_img = cv2.cvtColor(view, cv2.COLOR_RGB2BGR)
-                    detection = callback_img.detect(np_img)
-                    np_img = callback_img.show_result(np_img, detection, ret_img=True)
+                    np_img = callback_img.run_on_image(np_img)
                     # convert nompy image to pygame image
                     np_img = cv2.cvtColor(np_img, cv2.COLOR_BGR2RGB)
                     img = pygame.image.frombuffer(np_img.tostring(), np_img.shape[1::-1], "RGB")
@@ -454,7 +453,7 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
             draw(foreground, pose, scan, poses=poses,
                  image=img if camera_on else None, bbox=bbox,
                  acc_pts=acc_pts if map_on else None,
-                 callback=callback, callback_img=callback_img)
+                 callback=callback)
             screen.blit(background, (0, 0))
             screen.blit(foreground, (0, 0))
             pygame.display.flip() 
