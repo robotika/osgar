@@ -12,9 +12,10 @@ from osgar.bus import BusShutdownException
 class ZMQPool:
     def __init__(self, config, bus):
         bus.register('raw:gz' if config.get('save_data', False) else 'raw:null', 'response', 'timeout')
-        mode = config['mode']
+        mode = 'REQ'
         self.endpoint = config['endpoint']
         self.timeout = config.get('timeout', 1)  # default recv timeout 1s
+        self.pool_size = config.get('pool_size', 5)
 
         # support only mode='REQ'
         self.thread = Thread(target=self.run_reqrep)
@@ -27,7 +28,7 @@ class ZMQPool:
 
     def join(self, timeout=None):
         self.thread.join(timeout=timeout)
-    
+
     class ReqRepWorker(Thread):
         def __init__(self, context, bus, endpoint):
             Thread.__init__ (self)
@@ -38,10 +39,10 @@ class ZMQPool:
             self.rossocket.RCVTIMEO = int(2000)
             self.rossocket.connect(endpoint)
             self.stop_requested = False
-            
+
         def stop(self):
             self.stop_requested = True
-            
+
         def run(self):
             worker = self.context.socket(zmq.REQ)
             worker.setsockopt(zmq.LINGER, 0)
@@ -70,14 +71,14 @@ class ZMQPool:
             run_loop()
             worker.close()
             self.rossocket.close()
-            
+
     def run_reqrep(self):
         context = zmq.Context()
         backend = context.socket(zmq.ROUTER)
         backend.bind('inproc://reqrepbackend')
 
         workers = []
-        for i in range(5):
+        for i in range(self.pool_size):
             worker = self.ReqRepWorker(context, self.bus, self.endpoint)
             worker.start()
             workers.append(worker)

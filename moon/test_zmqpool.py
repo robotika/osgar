@@ -16,10 +16,10 @@ class ZMQPoolTest(unittest.TestCase):
             super().__init__()
             self.msg = b''
             self.stop_requested = False
-            
+
         def stop(self):
             self.stop_requested = True
-            
+
         def run(self):
             context = zmq.Context()
             socket = context.socket(zmq.REP)
@@ -31,15 +31,15 @@ class ZMQPoolTest(unittest.TestCase):
                     socket.send_string("OK")
                 except zmq.Again:
                     pass
-                
+
         def get_message(self):
             return self.msg
-        
+
     def test_req(self):
         config = {
-            'mode': 'REQ',
             'endpoint': 'tcp://localhost:5557',
-            'timeout': 0.1
+            'timeout': 0.1,
+            'pool_size': 2
         }
         bus = MagicMock()
         bus.listen = MagicMock(return_value=(1, 2, ['abcdef', 'set_brakes on']))
