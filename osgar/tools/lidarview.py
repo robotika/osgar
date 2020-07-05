@@ -440,7 +440,7 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
                     view = pygame.surfarray.array3d(img)
                     view = view.transpose([1, 0, 2])
                     np_img = cv2.cvtColor(view, cv2.COLOR_RGB2BGR)
-                    np_img = callback_img.run_on_image(np_img)
+                    np_img = callback_img(np_img)
                     # convert nompy image to pygame image
                     np_img = cv2.cvtColor(np_img, cv2.COLOR_BGR2RGB)
                     img = pygame.image.frombuffer(np_img.tostring(), np_img.shape[1::-1], "RGB")
@@ -625,10 +625,11 @@ def main(args_in=None, startswith=None):
         name = args.callback_img
         assert ':' in name, name  # import path and class name expected
         s = name.split(':')
-        assert len(s) == 2  # package and class name
+        assert len(s) == 2, s  # package and class name
         module_name, class_name = s
         m = import_module(module_name)
         callback_img = getattr(m, class_name)
+        callback_img = callback_img().run_on_image
 
     if args.lidar_limit is not None:
         MAX_SCAN_LIMIT = args.lidar_limit
@@ -641,7 +642,7 @@ def main(args_in=None, startswith=None):
     with Framer(args.logfile, lidar_name=args.lidar, lidar2_name=args.lidar2, pose2d_name=args.pose2d, pose3d_name=args.pose3d,
                 camera_name=args.camera, camera2_name=args.camera2, bbox_name=args.bbox, joint_name=args.joint,
                 keyframes_name=args.keyframes, title_name=args.title) as framer:
-        lidarview(framer, caption_filename=filename, callback=callback, callback_img=callback_img(), out_video=args.create_video, jump=args.jump)
+        lidarview(framer, caption_filename=filename, callback=callback, callback_img=callback_img, out_video=args.create_video, jump=args.jump)
 
 if __name__ == "__main__":
     main()
