@@ -94,6 +94,7 @@ class ZMQPool:
         except BusShutdownException:
             for w in workers:
                 w.stop()
+            for w in workers:
                 w.join()
 
         backend.close()
