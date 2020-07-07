@@ -29,7 +29,9 @@ class Test(unittest.TestCase):
                 tester.publish('orientation', quaternion.from_axis_angle([0,0,1], math.radians(-180)))
                 tester.publish('odom', [-100, -100, -100])
                 tester.publish('odom', [-101, -100, -100])
-                # first origin accepted
+                # first invalid origin
+                tester.publish('origin', ['name', 'error'])
+                # first valid origin accepted
                 tester.publish('origin', ['name'] + origin + quaternion.identity())
                 # second origin ignored
                 tester.publish('origin', ['name'] + [-9, -9, -9] + quaternion.identity())

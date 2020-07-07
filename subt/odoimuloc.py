@@ -61,7 +61,7 @@ class Localization(osgar.node.Node):
                 dt, channel, data = self.bus.listen()
                 if channel == "origin":
                     self.on_origin(data)
-                    if not self.origin_error:
+                    if self.xyz is not None:
                         break
 
             while True:
