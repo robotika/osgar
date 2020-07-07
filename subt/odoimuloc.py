@@ -15,8 +15,8 @@ class Localization(osgar.node.Node):
         # outputs
         bus.register('pose3d')
         # inputs: origin, orientation, odom
-        self.xyz = None
-        self.orientation = None
+        self.xyz = None # 3D position updated using odometry dist and imu orientation, defined when 'origin' received
+        self.orientation = None # not defined until first 'orientation' received
         self.last_odom = None
         self.origin_xyz = None
         self.origin_orientation = None
@@ -33,7 +33,8 @@ class Localization(osgar.node.Node):
     def on_orientation(self, dt, orientation):
         self.orientation = orientation
 
-    def on_odom(self, dt, x, y, heading):
+    def on_odom(self, dt, pose2d):
+        x, y, heading = pose2d
         assert self.xyz is not None
         if self.orientation is None:
             return
@@ -68,7 +69,7 @@ class Localization(osgar.node.Node):
                 if channel == "orientation":
                     self.on_orientation(dt, data)
                 elif channel == "odom":
-                    self.on_odom(dt, *data)
+                    self.on_odom(dt, data)
                 elif channel == "origin":
                     pass
                 else:
