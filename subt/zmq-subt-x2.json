@@ -85,7 +85,6 @@
               ["rospy.rot", "app.rot"],
               ["rospy.rot", "depth2scan.rot"],
               ["rospy.acc", "app.acc"],
-              ["rospy.orientation", "app.orientation"],
 
               ["rosmsg.scan", "detector.scan"],
               ["rosmsg.scan", "depth2scan.scan"],
