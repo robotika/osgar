@@ -1,7 +1,7 @@
 import collections
 import logging
 import math
-import threading
+import osgar.node
 
 import osgar.lib.quaternion as quaternion
 
@@ -9,9 +9,9 @@ g_logger = logging.getLogger(__name__)
 
 Pose2d = collections.namedtuple("Pose2d", ("x", "y", "heading"))
 
-class Localization:
+class Localization(osgar.node.Node):
     def __init__(self, config, bus):
-        self.bus = bus
+        super().__init__(config, bus)
         # outputs
         bus.register('pose3d')
         # inputs: origin, orientation, odom
@@ -21,13 +21,6 @@ class Localization:
         self.origin_xyz = None
         self.origin_orientation = None
         self.origin_error = False
-
-    def start(self):
-        self.thread = threading.Thread(target=self.main)
-        self.thread.start()
-
-    def join(self, timeout=None):
-        self.thread.join(timeout)
 
     def on_origin(self, data):
         if len(data) == 8:
@@ -60,25 +53,28 @@ class Localization:
         self.xyz = [a + b for a, b in zip(self.xyz, dist3d)]
         self.bus.publish('pose3d', [self.xyz, self.orientation])
 
-    def main(self):
-        # wait for valid origin
-        while True:
-            dt, channel, data = self.bus.listen()
-            if channel == "origin":
-                self.on_origin(data)
-                if not self.origin_error:
-                    break
+    def run(self):
+        try:
+            # wait for valid origin
+            while True:
+                dt, channel, data = self.bus.listen()
+                if channel == "origin":
+                    self.on_origin(data)
+                    if not self.origin_error:
+                        break
 
-        while True:
-            dt, channel, data = self.bus.listen()
-            if channel == "orientation":
-                self.on_orientation(dt, data)
-            elif channel == "odom":
-                self.on_odom(dt, *data)
-            elif channel == "origin":
-                pass
-            else:
-                assert False, "unknown input channel"
+            while True:
+                dt, channel, data = self.bus.listen()
+                if channel == "orientation":
+                    self.on_orientation(dt, data)
+                elif channel == "odom":
+                    self.on_odom(dt, *data)
+                elif channel == "origin":
+                    pass
+                else:
+                    assert False, "unknown input channel"
+        except osgar.bus.BusShutdownException:
+            pass
 
 
 
