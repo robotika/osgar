@@ -38,7 +38,7 @@
       },
       "rosmsg": {
           "driver": "rosmsg",
-          "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
+          "in": ["raw", "desired_speed", "tick", "stdout", "request_origin"],
           "out": ["rot", "acc", "scan", "image", "pose2d", "sim_clock", "cmd", "origin"],
           "init": {
             "topics": [
