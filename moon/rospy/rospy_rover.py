@@ -39,14 +39,6 @@ class RospyRoverPushPull(RospyBasePushPull):
         self.WHEEL_SEPARATION_WIDTH = 1.87325  # meters
         self.WHEEL_SEPARATION_HEIGHT = 1.5748  # meters
 
-        self.FILTER_ODOM_NTH = 1  #n - every nth message shall be sent to osgar
-        self.FILTER_CAMERA_NTH = 4 #n - every nth message shall be sent to osgar
-        self.FILTER_DEPTH_NTH = 1  #n - every nth message shall be sent to osgar
-
-        self.g_odom_counter = 0
-        self.g_depth_counter = 0
-        self.g_camera_counter = 0
-
     def register_handlers(self):
         super(RospyRoverPushPull, self).register_handlers()
 
