@@ -14,11 +14,15 @@ class TestCase(unittest.TestCase):
     def assertNumpyEqual(self, n1, n2, msg=None):
         self.assertIsInstance(n1, np.ndarray, 'First argument is not a numpy.ndarray')
         self.assertIsInstance(n2, np.ndarray, 'Second argument is not a numpy.ndarray')
-        np.testing.assert_almost_equal(n1, n2, msg)
+        np.testing.assert_almost_equal(n1, n2, err_msg=msg)
 
     def assertPose3dEqual(self, p1, p2):
         self.assertEqual(len(p1), 2, msg='First Pose3d needs xyz and quaternion')
         self.assertEqual(len(p2), 2, msg='Second Pose3d needs xyz and quaternion')
+        self.assertEqual(len(p1[0]), 3, msg='First pose3d xyz needs 3 coordinates')
+        self.assertEqual(len(p1[1]), 4, msg='First pose3d quaternion needs 4 coordinates')
+        self.assertEqual(len(p2[0]), 3, msg='Second pose3d xyz needs 3 coordinates')
+        self.assertEqual(len(p2[1]), 4, msg='Second pose3d quaternion needs 4 coordinates')
         self.assertListAlmostEqual(p1[0], p2[0])
         self.assertListAlmostEqual(p1[1], p2[1])
 
