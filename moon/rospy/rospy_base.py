@@ -74,17 +74,6 @@ class RospyBasePushPull(Thread):
         with self.g_lock:
             self.g_socket.send(data)
 
-    def callback(self, data, topic_name):
-        # rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
-        # print(rospy.get_caller_id(), data)
-
-        # https://answers.ros.org/question/303115/serialize-ros-message-and-pass-it/
-        s1 = BytesIO()
-        data.serialize(s1)
-        to_send = s1.getvalue()
-        header = struct.pack('<I', len(to_send))
-        self.socket_send(topic_name + '\0' + header + to_send)
-
     def callback_clock(self, data):
         if (self.prev_time is not None and 
                 self.prev_time.nsecs//100000000 != data.clock.nsecs//100000000):

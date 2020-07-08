@@ -123,6 +123,8 @@ class SpaceRoboticsChallenge(MoonNode):
         self.virtual_bumper = None
         self.rand = Random(0)
 
+        self.requests = {}
+
     def register(self, callback):
         self.monitors.append(callback)
         return callback
@@ -136,13 +138,27 @@ class SpaceRoboticsChallenge(MoonNode):
             self.virtual_bumper.update_desired_speed(speed, angular_speed)
         self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
 
-    def send_request(self, cmd):
-        """Send ROS Service Request form a single place"""
-        self.publish('request', cmd)
-        while True:
+    def on_response(self, data):
+        token, response = data
+        print(self.time, "controller:response received: token=%s, response=%s" % (token, response))
+        callback = self.requests[token]
+        self.requests.pop(token)
+        if callback is not None:
+            callback(response)
+
+    def send_request(self, cmd, callback=None, blocking=True):
+        """Send ROS Service Request from a single place"""
+        token = hex(self.rand.getrandbits(128))
+        self.requests[token] = callback
+        print(self.time, "controller:send_request:token: %s, command: %s" % (token, cmd))
+        self.publish('request', [token, cmd])
+
+        while callback is None and blocking:  # this is kept here for backward compatibility and will be removed ASAP
             dt, channel, data = self.listen()
             if channel == 'response':
-                return data
+                response_token, response = data
+                assert token == response_token, (token, response_token)
+                return response
             print(dt, 'ignoring', channel)
 
     def set_cam_angle(self, angle):

@@ -30,6 +30,7 @@ class Recorder:
             self.bus.connect(sender, receiver, self.modules)
 
         signal.signal(signal.SIGINT, self.request_stop)
+        g_logger.info("SIGINT handler installed")
 
     def __enter__(self):
         for module in self.modules.values():
