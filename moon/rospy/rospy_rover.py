@@ -54,7 +54,7 @@ class RospyRoverPushPull(RospyBasePushPull):
     #    rospy.Subscriber('/odom', Odometry, callback_odom)
 
         rospy.Subscriber('/' + self.robot_name + '/joint_states', JointState, self.callback_topic, '/' + self.robot_name + '/joint_states')
-        rospy.Subscriber('/' + self.robot_name + '/laser/scan', LaserScan, self.callback, '/' + self.robot_name + '/laser/scan')
+        rospy.Subscriber('/' + self.robot_name + '/laser/scan', LaserScan, self.callback_topic, '/' + self.robot_name + '/laser/scan')
         rospy.Subscriber('/' + self.robot_name + '/imu', Imu, self.callback_imu, '/' + self.robot_name + '/imu')
     #    rospy.Subscriber('/' + self.robot_name + '/camera/left/image_raw', Image, callback_depth)
     #    rospy.Subscriber('/image', CompressedImage, callback_camera)
