@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 
+# if this variable is set, stack trace on test failure from this module is not in the output
 __unittest = True
 
 class TestCase(unittest.TestCase):
@@ -17,7 +18,7 @@ class TestCase(unittest.TestCase):
 
     def assertPose3dEqual(self, p1, p2):
         self.assertEqual(len(p1), 2, msg='First Pose3d needs xyz and quaternion')
-        self.assertEqual(len(p1), 2, msg='Second Pose3d needs xyz and quaternion')
+        self.assertEqual(len(p2), 2, msg='Second Pose3d needs xyz and quaternion')
         self.assertXYZEqual(p1[0], p2[0])
         self.assertQuaternionEqual(p1[1], p2[1])
 
