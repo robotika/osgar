@@ -19,16 +19,12 @@ class TestCase(unittest.TestCase):
     def assertPose3dEqual(self, p1, p2):
         self.assertEqual(len(p1), 2, msg='First Pose3d needs xyz and quaternion')
         self.assertEqual(len(p2), 2, msg='Second Pose3d needs xyz and quaternion')
-        self.assertXYZEqual(p1[0], p2[0])
-        self.assertQuaternionEqual(p1[1], p2[1])
+        self.assertListAlmostEqual(p1[0], p2[0])
+        self.assertListAlmostEqual(p1[1], p2[1])
 
-    def assertQuaternionEqual(self, q1, q2):
-        self.assertAlmostEqual(q1[0], q2[0], places=6, msg="qx differs")
-        self.assertAlmostEqual(q1[1], q2[1], places=6, msg="qy differs")
-        self.assertAlmostEqual(q1[2], q2[2], places=6, msg="qz differs")
-        self.assertAlmostEqual(q1[3], q2[3], places=6, msg="qw differs")
-
-    def assertXYZEqual(self, xyz1, xyz2):
-        self.assertAlmostEqual(xyz1[0], xyz2[0], places=6, msg="x differs")
-        self.assertAlmostEqual(xyz1[1], xyz2[1], places=6, msg="y differs")
-        self.assertAlmostEqual(xyz1[2], xyz2[2], places=6, msg="z differs")
+    def assertListAlmostEqual(self, l1, l2, places=None, delta=None):
+        self.assertIsInstance(l1, list, 'First argument is not a list')
+        self.assertIsInstance(l2, list, 'Second argument is not a list')
+        self.assertEqual(len(l1), len(l2), "")
+        for i, (a, b) in enumerate(zip(l1, l2)):
+            self.assertAlmostEqual(a, b, places=places, msg=f"\nFirst differing element index: {i}", delta=delta)
