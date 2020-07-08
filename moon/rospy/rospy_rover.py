@@ -55,7 +55,7 @@ class RospyRoverPushPull(RospyBasePushPull):
 
         rospy.Subscriber('/' + self.robot_name + '/joint_states', JointState, self.callback_topic, '/' + self.robot_name + '/joint_states')
         rospy.Subscriber('/' + self.robot_name + '/laser/scan', LaserScan, self.callback_topic, '/' + self.robot_name + '/laser/scan')
-        rospy.Subscriber('/' + self.robot_name + '/imu', Imu, self.callback_imu, '/' + self.robot_name + '/imu')
+        rospy.Subscriber('/' + self.robot_name + '/imu', Imu, self.callback_topic, '/' + self.robot_name + '/imu')
     #    rospy.Subscriber('/' + self.robot_name + '/camera/left/image_raw', Image, callback_depth)
     #    rospy.Subscriber('/image', CompressedImage, callback_camera)
 
@@ -148,14 +148,6 @@ class RospyRoverPushPull(RospyBasePushPull):
         else:
             # may be picked up by a subclass
             pass
-
-    def callback_imu(self, data, topic_name):
-        s1 = BytesIO()
-        data.serialize(s1)
-        to_send = s1.getvalue()
-        header = struct.pack('<I', len(to_send))
-        self.socket_send(topic_name + '\0' + header + to_send)
-
 
     def callback_odom(self, data):
         # rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
