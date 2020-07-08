@@ -9,10 +9,54 @@ import zmq
 from osgar.bus import BusShutdownException
 
 
+class ReqRepWorker(Thread):
+    def __init__(self, context, bus, endpoint):
+        Thread.__init__ (self)
+        self.context = context
+        self.bus = bus
+
+        self.rossocket = context.socket(zmq.REQ)
+        self.rossocket.RCVTIMEO = int(2000)
+        self.rossocket.connect(endpoint)
+        self.stop_requested = False
+
+    def stop(self):
+        self.stop_requested = True
+
+    def run_loop(self, worker):
+        while not self.stop_requested:
+            try:
+                worker.send(b"ready")
+                while true:
+                    try:
+                        data = worker.recv()
+                        break
+                    except zmq.again:
+                        if self.stop_requested:
+                            return
+
+                ident, msg = data.decode('ascii').split('|')
+                self.rossocket.send_string(msg)
+                rsp = self.rossocket.recv().decode('ascii')
+                self.bus.publish('response', [ident, rsp])
+            except Exception as e:
+                print("logzeromq thread: %s" % str(e))
+
+    def run(self):
+        worker = self.context.socket(zmq.REQ)
+        worker.setsockopt(zmq.LINGER, 0)
+        worker.RCVTIMEO = 1000 
+        worker.connect('inproc://reqrepbackend')
+
+        self.run_loop(worker)
+
+        worker.close()
+        self.rossocket.close()
+
+
 class ZMQPool:
     def __init__(self, config, bus):
         bus.register('raw:gz' if config.get('save_data', False) else 'raw:null', 'response', 'timeout')
-        mode = 'REQ'
         self.endpoint = config['endpoint']
         self.timeout = config.get('timeout', 1)  # default recv timeout 1s
         self.pool_size = config.get('pool_size', 5)
@@ -29,49 +73,6 @@ class ZMQPool:
     def join(self, timeout=None):
         self.thread.join(timeout=timeout)
 
-    class ReqRepWorker(Thread):
-        def __init__(self, context, bus, endpoint):
-            Thread.__init__ (self)
-            self.context = context
-            self.bus = bus
-
-            self.rossocket = context.socket(zmq.REQ)
-            self.rossocket.RCVTIMEO = int(2000)
-            self.rossocket.connect(endpoint)
-            self.stop_requested = False
-
-        def stop(self):
-            self.stop_requested = True
-
-        def run(self):
-            worker = self.context.socket(zmq.REQ)
-            worker.setsockopt(zmq.LINGER, 0)
-            worker.RCVTIMEO = 1000 
-            worker.connect('inproc://reqrepbackend')
-
-            def run_loop():
-                while not self.stop_requested:
-                    try:
-                        worker.send(b"ready")
-                        while True:
-                            try:
-                                data = worker.recv()
-                                break
-                            except zmq.Again:
-                                if self.stop_requested:
-                                    return
-
-                        ident, msg = data.decode('ascii').split('|')
-                        self.rossocket.send_string(msg)
-                        rsp = self.rossocket.recv().decode('ascii')
-                        self.bus.publish('response', [ident, rsp])
-                    except Exception as e:
-                        print("logzeromq thread: %s" % str(e))
-
-            run_loop()
-            worker.close()
-            self.rossocket.close()
-
     def run_reqrep(self):
         context = zmq.Context()
         backend = context.socket(zmq.ROUTER)
@@ -79,7 +80,7 @@ class ZMQPool:
 
         workers = []
         for i in range(self.pool_size):
-            worker = self.ReqRepWorker(context, self.bus, self.endpoint)
+            worker = ReqRepWorker(context, self.bus, self.endpoint)
             worker.start()
             workers.append(worker)
 
