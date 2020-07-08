@@ -30,10 +30,10 @@ class Localization(osgar.node.Node):
         else:
             self.origin_error = True
 
-    def on_orientation(self, dt, orientation):
+    def on_orientation(self, orientation):
         self.orientation = orientation
 
-    def on_odom(self, dt, pose2d):
+    def on_odom(self, pose2d):
         x, y, heading = pose2d
         assert self.xyz is not None
         if self.orientation is None:
@@ -66,10 +66,11 @@ class Localization(osgar.node.Node):
 
             while True:
                 dt, channel, data = self.bus.listen()
+                self.time = dt
                 if channel == "orientation":
-                    self.on_orientation(dt, data)
+                    self.on_orientation(data)
                 elif channel == "odom":
-                    self.on_odom(dt, data)
+                    self.on_odom(data)
                 elif channel == "origin":
                     pass
                 else:
