@@ -9,9 +9,12 @@ import numpy as np
 
 from osgar.bus import Bus
 from osgar.lib import quaternion
+from osgar.lib.unittest import TestCase
+
 from subt.odoimuloc import Localization
 
-class Test(unittest.TestCase):
+
+class Test(TestCase):
 
     def test_origin(self):
         for origin in [[0, 0, 0], [1, 2, 3]]:
@@ -40,7 +43,7 @@ class Test(unittest.TestCase):
                 tester.publish('odom', origin)
                 dt, channel, pose3d = tester.listen()
                 self.assertEqual(channel, 'pose3d')
-                self.assertEqual(pose3d, [origin, quaternion.identity()])
+                self.assertPose3dEqual(pose3d, [origin, quaternion.identity()])
                 loc.request_stop()
                 loc.join()
 
@@ -63,11 +66,11 @@ class Test(unittest.TestCase):
         tester.publish('odom', 2*inc)
         dt, channel, pose3d = tester.listen()
         self.assertEqual(channel, 'pose3d')
-        self.assertEqual(pose3d, [list(origin), quaternion.identity()])
+        self.assertPose3dEqual(pose3d, [list(origin), quaternion.identity()])
         dt, channel, pose3d = tester.listen()
-        self.assertEqual(pose3d, [list(origin+inc/1000), quaternion.identity()])
+        self.assertPose3dEqual(pose3d, [list(origin+inc/1000), quaternion.identity()])
         dt, channel, pose3d = tester.listen()
-        self.assertEqual(pose3d, [list(origin+2*inc/1000), quaternion.identity()])
+        self.assertPose3dEqual(pose3d, [list(origin+2*inc/1000), quaternion.identity()])
         loc.request_stop()
         loc.join()
 
@@ -92,11 +95,11 @@ class Test(unittest.TestCase):
         tester.publish('odom', 2*inc)
         dt, channel, pose3d = tester.listen()
         self.assertEqual(channel, 'pose3d')
-        self.assertEqual(pose3d, [list(origin), orientation])
+        self.assertPose3dEqual(pose3d, [list(origin), orientation])
         dt, channel, pose3d = tester.listen()
-        self.assertEqual(pose3d, [list(origin+inc_ori/1000), orientation])
+        self.assertPose3dEqual(pose3d, [list(origin+inc_ori/1000), orientation])
         dt, channel, pose3d = tester.listen()
-        self.assertEqual(pose3d, [list(origin+2*inc_ori/1000), orientation])
+        self.assertPose3dEqual(pose3d, [list(origin+2*inc_ori/1000), orientation])
         loc.request_stop()
         loc.join()
 
