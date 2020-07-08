@@ -1,10 +1,10 @@
 import math
-import unittest
+from osgar.lib.unittest import TestCase
 
 from . import quaternion
 
 
-class QuaternionTest(unittest.TestCase):
+class QuaternionTest(TestCase):
 
     def test_multiply(self):
         qa = [0, 0, 0, 1]
@@ -24,23 +24,16 @@ class QuaternionTest(unittest.TestCase):
         q = [ 0, 0, 0.7071068, 0.7071068 ]
         actual = quaternion.rotate_vector(v, q)
         expected = [0, 1, 0]
-        self.assertAlmostEqual(expected[0], actual[0], places=6)
-        self.assertAlmostEqual(expected[1], actual[1], places=6)
-        self.assertAlmostEqual(expected[2], actual[2], places=6)
+        self.assertXYZEqual(expected, actual)
 
         actual = quaternion.rotate_vector(expected, q)
         expected = [-1, 0, 0]
-        self.assertAlmostEqual(expected[0], actual[0], places=6)
-        self.assertAlmostEqual(expected[1], actual[1], places=6)
-        self.assertAlmostEqual(expected[2], actual[2], places=6)
+        self.assertXYZEqual(expected, actual)
 
     def test_from_axis_angle(self):
         actual = quaternion.from_axis_angle((0,0,1), math.radians(90))
         expected = [0, 0, 0.7071068, 0.7071068]
-        self.assertAlmostEqual(expected[0], actual[0], places=6)
-        self.assertAlmostEqual(expected[1], actual[1], places=6)
-        self.assertAlmostEqual(expected[2], actual[2], places=6)
-        self.assertAlmostEqual(expected[3], actual[3], places=6)
+        self.assertQuaternionEqual(expected, actual)
 
     def test_quaterion_internal_normalization(self):
         q = (0.02089575225593203, -0.6597655110187111, 0.381406681115162, -0.7726979260818011)
