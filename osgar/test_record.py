@@ -15,10 +15,9 @@ from osgar.record import Recorder
 class Sleeper:
 
     def __init__(self, cfg, bus):
-        pass
+        self.e = threading.Event()
 
     def start(self):
-        self.e = threading.Event()
         self.t = threading.Thread(target=self.e.wait, args=(5,))
         self.t.start()
 
@@ -110,20 +109,17 @@ class RecorderTest(unittest.TestCase):
                     start_new_session=True,
                     env=env,
             ) as proc:
-                import time
-                time.sleep(0.3)
                 grp_id = os.getpgid(proc.pid)
+                self.assertEqual(proc.stdout.readline().strip(), b"starting")
+                log_line = proc.stderr.readline().strip().split()
+                log_filename = log_line[-1]
+                self.assertTrue(log_filename.endswith(b".log"), log_line)
+                self.assertIn(b"SIGINT handler installed", proc.stderr.readline())
                 os.killpg(grp_id, signal.SIGINT)
                 stdout, stderr = proc.communicate()
-                stdout = stdout.splitlines()
-                stderr = stderr.splitlines()
-                self.assertEqual(stdout[0], b"starting")
-                log_line = stderr[0].split()
-                log_filename = log_line[-1]
-                self.assertTrue(log_filename.endswith(b".log"), stderr)
-                self.assertEqual(len(stdout), 1, stdout)
-                self.assertEqual(len(stderr), 2, stderr)
-                self.assertTrue(b"committing suicide by SIGINT" in stderr[-1])
+                self.assertIn(b"committing suicide by SIGINT", stderr)
+                self.assertEqual(len(stdout), 0, stdout)
+                self.assertEqual(len(stderr.splitlines()), 1, stderr)
             os.unlink(log_filename)
 
 
