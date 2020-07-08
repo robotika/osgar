@@ -96,7 +96,7 @@ class EmergencyStopMonitor:
 class SubTChallenge:
     def __init__(self, config, bus):
         self.bus = bus
-        bus.register("desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout", "request_origin")
+        bus.register("desired_speed", "pose2d", "artf_xyz", "stdout", "request_origin")
         self.traveled_dist = 0.0
         self.time = None
         self.max_speed = config['max_speed']
@@ -115,8 +115,6 @@ class SubTChallenge:
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
         self.xyz = (0, 0, 0)  # 3D position for mapping artifacts
-        self.xyz_quat = None # 3D position updated using odometry dist and imu orientation, defined when 'origin' received
-        self.orientation = None  # not defined until first 'orientation' received
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.yaw_offset = None  # not defined, use first IMU reading
         self.is_moving = None  # unknown
@@ -460,12 +458,6 @@ class SubTChallenge:
                 self.virtual_bumper.update_pose(self.time, pose)
         self.xyz = x, y, z
         self.trace.update_trace(self.xyz)
-        # pose3d
-        if any_is_none(self.xyz_quat, self.orientation):
-            return
-        dist3d = quaternion.rotate_vector([dist, 0, 0], self.orientation)
-        self.xyz_quat = [a + b for a, b in zip(self.xyz_quat, dist3d)]
-        self.bus.publish('pose3d', [self.xyz_quat, self.orientation])
 
     def on_acc(self, timestamp, data):
         acc = [x / 1000.0 for x in data]
@@ -581,8 +573,6 @@ class SubTChallenge:
                     self.yaw_offset = -temp_yaw
                 self.yaw = temp_yaw + self.yaw_offset
 
-            elif channel == 'orientation':
-                self.orientation = data
             elif channel == 'sim_time_sec':
                 self.sim_time_sec = data
             elif channel == 'voltage':
@@ -845,7 +835,7 @@ class SubTChallenge:
         self.stdout('robot_name:', self.robot_name)
 
         # wait for critical data
-        while any_is_none(self.scan, self.yaw_offset, self.orientation):
+        while any_is_none(self.scan, self.yaw_offset):
             self.update()
 
         if self.use_right_wall == 'auto':
