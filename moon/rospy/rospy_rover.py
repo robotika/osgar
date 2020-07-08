@@ -50,14 +50,9 @@ class RospyRoverPushPull(RospyBasePushPull):
     def register_handlers(self):
         super(RospyRoverPushPull, self).register_handlers()
 
-    #    rospy.init_node('listener', anonymous=True)
-    #    rospy.Subscriber('/odom', Odometry, callback_odom)
-
         rospy.Subscriber('/' + self.robot_name + '/joint_states', JointState, self.callback_topic, '/' + self.robot_name + '/joint_states')
         rospy.Subscriber('/' + self.robot_name + '/laser/scan', LaserScan, self.callback_topic, '/' + self.robot_name + '/laser/scan')
         rospy.Subscriber('/' + self.robot_name + '/imu', Imu, self.callback_topic, '/' + self.robot_name + '/imu')
-    #    rospy.Subscriber('/' + self.robot_name + '/camera/left/image_raw', Image, callback_depth)
-    #    rospy.Subscriber('/image', CompressedImage, callback_camera)
 
         QSIZE = 10
 
@@ -87,7 +82,6 @@ class RospyRoverPushPull(RospyBasePushPull):
 
         self.light_up_pub = rospy.Publisher('/' + self.robot_name + '/sensor_controller/command', Float64, queue_size=QSIZE, latch=True)
         self.light_up_msg = Float64()
-
 
     def process_message(self, message):
         super(RospyRoverPushPull, self).process_message(message)
@@ -148,53 +142,6 @@ class RospyRoverPushPull(RospyBasePushPull):
         else:
             # may be picked up by a subclass
             pass
-
-    def callback_odom(self, data):
-        # rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
-        # print(rospy.get_caller_id(), data)
-
-        # https://answers.ros.org/question/303115/serialize-ros-message-and-pass-it/
-        if self.g_odom_counter >= self.FILTER_ODOM_NTH:
-            s1 = BytesIO()
-            data.serialize(s1)
-            to_send = s1.getvalue()
-            header = struct.pack('<I', len(to_send))
-            self.socket_send(header + to_send)
-            g_odom_counter = 0
-        else:
-            g_odom_counter += 1
-
-
-    def callback_depth(self, data):
-        # rospy.loginfo(rospy.get_caller_id() + "I heard depth data")
-        # print(rospy.get_caller_id(), data)
-
-        # https://answers.ros.org/question/303115/serialize-ros-message-and-pass-it/
-        if self.g_depth_counter >= self.FILTER_DEPTH_NTH:
-            s1 = BytesIO()
-            data.serialize(s1)
-            to_send = s1.getvalue()
-            header = struct.pack('<I', len(to_send))
-            self.socket_send("depth" + header + to_send)
-            self.g_depth_counter = 0
-        else:
-            g_depth_counter += 1
-
-
-    def callback_camera(self, data):
-        # rospy.loginfo(rospy.get_caller_id() + "I heard depth data")
-        # print(rospy.get_caller_id(), data)
-
-        # https://answers.ros.org/question/303115/serialize-ros-message-and-pass-it/
-        if self.g_camera_counter >= self.FILTER_CAMERA_NTH:
-            s1 = BytesIO()
-            data.serialize(s1)
-            to_send = s1.getvalue()
-            header = struct.pack('<I', len(to_send))
-            self.socket_send(header + to_send)
-            self.g_camera_counter = 0
-        else:
-            self.g_camera_counter += 1
 
 
 class RospyRoverReqRep(RospyBaseReqRep):
