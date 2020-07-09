@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 if __name__ == "__main__":
+    import logging
+    logging.root.level = logging.CRITICAL
     import unittest
     import unittest.loader
     testLoader = unittest.loader.TestLoader()

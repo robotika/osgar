@@ -17,7 +17,6 @@ import rospy
 from std_msgs.msg import *  # Float64, JointState
 from sensor_msgs.msg import *
 from nav_msgs.msg import Odometry
-from rosgraph_msgs.msg import Clock
 from geometry_msgs.msg import Twist, Point
 
 # SRCP2 specific
@@ -40,32 +39,18 @@ class RospyRoverPushPull(RospyBasePushPull):
         self.WHEEL_SEPARATION_WIDTH = 1.87325  # meters
         self.WHEEL_SEPARATION_HEIGHT = 1.5748  # meters
 
-        self.FILTER_ODOM_NTH = 1  #n - every nth message shall be sent to osgar
-        self.FILTER_CAMERA_NTH = 4 #n - every nth message shall be sent to osgar
-        self.FILTER_DEPTH_NTH = 1  #n - every nth message shall be sent to osgar
-
-        self.g_odom_counter = 0
-        self.g_depth_counter = 0
-        self.g_camera_counter = 0
-
     def register_handlers(self):
         super(RospyRoverPushPull, self).register_handlers()
-        
-    #    rospy.init_node('listener', anonymous=True)
-    #    rospy.Subscriber('/odom', Odometry, callback_odom)
 
         rospy.Subscriber('/' + self.robot_name + '/joint_states', JointState, self.callback_topic, '/' + self.robot_name + '/joint_states')
-        rospy.Subscriber('/' + self.robot_name + '/laser/scan', LaserScan, self.callback)
-        rospy.Subscriber('/' + self.robot_name + '/imu', Imu, self.callback_imu)
-    #    rospy.Subscriber('/' + self.robot_name + '/camera/left/image_raw', Image, callback_depth)
-    #    rospy.Subscriber('/image', CompressedImage, callback_camera)
-    #    rospy.Subscriber('/clock', Clock, callback_clock)
+        rospy.Subscriber('/' + self.robot_name + '/laser/scan', LaserScan, self.callback_topic, '/' + self.robot_name + '/laser/scan')
+        rospy.Subscriber('/' + self.robot_name + '/imu', Imu, self.callback_topic, '/' + self.robot_name + '/imu')
 
         QSIZE = 10
 
-        rospy.Subscriber('/' + self.robot_name + '/camera/left/image_raw/compressed', CompressedImage, self.callback_topic, 
+        rospy.Subscriber('/' + self.robot_name + '/camera/left/image_raw/compressed', CompressedImage, self.callback_topic,
                          '/' + self.robot_name + '/camera/left/image_raw/compressed')
-        rospy.Subscriber('/' + self.robot_name + '/camera/right/image_raw/compressed', CompressedImage, self.callback_topic, 
+        rospy.Subscriber('/' + self.robot_name + '/camera/right/image_raw/compressed', CompressedImage, self.callback_topic,
                          '/' + self.robot_name + '/camera/right/image_raw/compressed')
 
         self.speed_msg = Float64()
@@ -87,11 +72,12 @@ class RospyRoverPushPull(RospyBasePushPull):
         self.steering_bl_publisher = rospy.Publisher('/' + self.robot_name + '/bl_steering_arm_controller/command', Float64, queue_size=QSIZE)
         self.steering_br_publisher = rospy.Publisher('/' + self.robot_name + '/br_steering_arm_controller/command', Float64, queue_size=QSIZE)
 
-
+        self.light_up_pub = rospy.Publisher('/' + self.robot_name + '/sensor_controller/command', Float64, queue_size=QSIZE, latch=True)
+        self.light_up_msg = Float64()
 
     def process_message(self, message):
         super(RospyRoverPushPull, self).process_message(message)
-        
+
 #        print("OSGAR:" + message)
         message_type = message.split(" ")[0]
         if message_type == "cmd_rover":
@@ -107,6 +93,10 @@ class RospyRoverPushPull(RospyBasePushPull):
                     arr[4:]):
                 self.effort_msg.data = effort
                 pub.publish(self.effort_msg)
+
+        elif message_type == "set_cam_angle":
+            self.light_up_msg.data = float(message.split(" ")[1])
+            self.light_up_pub.publish(self.light_up_msg)
 
         elif message_type == "cmd_vel":
             desired_speed = float(message.split(" ")[1])
@@ -145,61 +135,6 @@ class RospyRoverPushPull(RospyBasePushPull):
             # may be picked up by a subclass
             pass
 
-    def callback_imu(self, data):
-        s1 = BytesIO()
-        data.serialize(s1)
-        to_send = s1.getvalue()
-        header = struct.pack('<I', len(to_send))
-        self.socket_send(header + to_send)
-
-
-    def callback_odom(self, data):
-        # rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
-        # print(rospy.get_caller_id(), data)
-
-        # https://answers.ros.org/question/303115/serialize-ros-message-and-pass-it/
-        if self.g_odom_counter >= self.FILTER_ODOM_NTH:
-            s1 = BytesIO()
-            data.serialize(s1)
-            to_send = s1.getvalue()
-            header = struct.pack('<I', len(to_send))
-            self.socket_send(header + to_send)
-            g_odom_counter = 0
-        else:
-            g_odom_counter += 1
-
-
-    def callback_depth(self, data):
-        # rospy.loginfo(rospy.get_caller_id() + "I heard depth data")
-        # print(rospy.get_caller_id(), data)
-
-        # https://answers.ros.org/question/303115/serialize-ros-message-and-pass-it/
-        if self.g_depth_counter >= self.FILTER_DEPTH_NTH:
-            s1 = BytesIO()
-            data.serialize(s1)
-            to_send = s1.getvalue()
-            header = struct.pack('<I', len(to_send))
-            self.socket_send("depth" + header + to_send)
-            self.g_depth_counter = 0
-        else:
-            g_depth_counter += 1
-
-
-    def callback_camera(self, data):
-        # rospy.loginfo(rospy.get_caller_id() + "I heard depth data")
-        # print(rospy.get_caller_id(), data)
-
-        # https://answers.ros.org/question/303115/serialize-ros-message-and-pass-it/
-        if self.g_camera_counter >= self.FILTER_CAMERA_NTH:
-            s1 = BytesIO()
-            data.serialize(s1)
-            to_send = s1.getvalue()
-            header = struct.pack('<I', len(to_send))
-            self.socket_send(header + to_send)
-            self.g_camera_counter = 0
-        else:
-            self.g_camera_counter += 1
-
 
 class RospyRoverReqRep(RospyBaseReqRep):
     def __init__(self, argv):
@@ -213,7 +148,7 @@ class RospyRoverReqRep(RospyBaseReqRep):
             if opt in ['--robot_name']:
                 self.robot_name = arg
 
-        
+
     def process_message(self, message):
         result = super(RospyRoverReqRep, self).process_message(message)
         if len(result) == 0:
@@ -239,7 +174,7 @@ class RospyRoverReqRep(RospyBaseReqRep):
                     request_origin = rospy.ServiceProxy('/' + self.robot_name + '/get_true_pose', LocalizationSrv)
                     p = request_origin(True)
                     print("rospy_rover: true pose [%f, %f, %f]  [%f, %f, %f, %f]" % (p.pose.position.x, p.pose.position.y, p.pose.position.z, p.pose.orientation.x, p.pose.orientation.y, p.pose.orientation.z, p.pose.orientation.w))
-                    s = "origin %f %f %f  %f %f %f %f" % (p.pose.position.x, p.pose.position.y, p.pose.position.z, 
+                    s = "origin %f %f %f  %f %f %f %f" % (p.pose.position.x, p.pose.position.y, p.pose.position.z,
                                                                   p.pose.orientation.x, p.pose.orientation.y, p.pose.orientation.z, p.pose.orientation.w)
                     return s
                 except rospy.service.ServiceException as e:
@@ -249,7 +184,7 @@ class RospyRoverReqRep(RospyBaseReqRep):
                 return ''
         else:
             return result
-        
+
     def register_handlers(self):
         super(RospyRoverReqRep, self).register_handlers()
 
@@ -269,6 +204,6 @@ class RospyRoverHelper(RospyBase):
 
 class RospyRover(RospyRoverHelper):
     pass
-        
+
 
 # vim: expandtab sw=4 ts=4

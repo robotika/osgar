@@ -46,13 +46,17 @@ def t265_to_osgar_orientation(t265_orientation):
 class RealSense(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('pose2d', 'pose3d', 'pose_raw', 'orientation', 'depth:gz')
+        bus.register('pose2d', 'pose3d', 'pose_raw', 'orientation', 'depth:gz', 'color')
         self.verbose = config.get('verbose', False)
         self.depth_subsample = config.get("depth_subsample", 3)
         self.pose_subsample = config.get("pose_subsample", 20)
+        self.depth_rgb = config.get("depth_rgb", False)
         self.pose_pipeline = None  # not initialized yet
         self.depth_pipeline = None
         self.finished = None
+        if self.depth_rgb:
+            import cv2
+            global cv2
 
     def pose_callback(self, frame):
         try:
@@ -85,17 +89,28 @@ class RealSense(Node):
     def depth_callback(self, frameset):
         try:
             assert frameset.is_frameset()
-            frame = frameset.as_frameset().get_depth_frame()
-            n = frame.get_frame_number()
+            depth_frame = frameset.as_frameset().get_depth_frame()
+            n = depth_frame.get_frame_number()
             if n % self.depth_subsample != 0:
                 return
-            assert frame.is_depth_frame()
-            depth_image = np.asanyarray(frame.as_depth_frame().get_data())
+            assert depth_frame.is_depth_frame()
+            depth_image = np.asanyarray(depth_frame.as_depth_frame().get_data())
+
+            if self.depth_rgb:
+                color_frame = frameset.as_frameset().get_color_frame()
+                assert color_frame.is_video_frame()
+                color_image = np.asanyarray(color_frame.as_video_frame().get_data())
+                __, data = cv2.imencode('*.jpeg', color_image)
+
         except Exception as e:
             print(e)
             self.finished.set()
             return
+
         self.publish('depth', depth_image)
+        if self.depth_rgb:
+            self.publish('color', data.tobytes())
+
 
     def start(self):
         self.finished = threading.Event()
@@ -113,8 +128,11 @@ class RealSense(Node):
             intro = f"Found {name} (S/N: {serial_number}): "
             product_line = device.get_info(rs.camera_info.product_line)
             if product_line == "D400":
-                g_logger.info(intro + "Enabling depth stream")
+                info_msg = "Enabling streams: depth"
                 enable_depth = True
+                if self.depth_rgb:
+                    info_msg += ", depth_rgb"
+                g_logger.info(intro + info_msg)
             elif product_line == "T200":
                 enable_pose = True
                 g_logger.info(intro + "Enabling pose stream")
@@ -131,6 +149,8 @@ class RealSense(Node):
             self.depth_pipeline = rs.pipeline(ctx)
             depth_cfg = rs.config()
             depth_cfg.enable_stream(rs.stream.depth, 640, 360, rs.format.z16, 30)
+            if self.depth_rgb:
+                depth_cfg.enable_stream(rs.stream.color, 960, 540, rs.format.bgr8, 30)
             self.depth_pipeline.start(depth_cfg, self.depth_callback)
 
         if not enable_pose and not enable_depth:

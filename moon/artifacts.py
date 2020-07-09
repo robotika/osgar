@@ -39,6 +39,7 @@ class ArtifactDetector(Node):
                 'min_size': 50,
                 'max_size': 500,
                 'pixel_count_threshold': 100,
+                'bbox_union_count': 1,
                 'hue_max_difference': 10,
                 'hue_match': 100, # from RGB 007DBD
                 'subsequent_detects_required': 3  # noise will add some of this color, wait for a consistent sequence
@@ -50,13 +51,26 @@ class ArtifactDetector(Node):
                 'min_size': 20,
                 'max_size': 700,
                 'pixel_count_threshold': 400,
+                'bbox_union_count': 5,
                 'hue_max_difference': 10,
                 'hue_match': 19, # from RGB FFA616
+                'subsequent_detects_required': 3
+            },
+            {
+                'artefact_name': 'rover',
+                'detector_type': 'colormatch',
+                'mser': cv2.MSER_create(_min_area=100),
+                'min_size': 20,
+                'max_size': 700,
+                'pixel_count_threshold': 500,
+                'bbox_union_count': 3,
+                'hue_max_difference': 5,
+                'hue_match': 29, # from RGB FFA616
                 'subsequent_detects_required': 3
             }
         ]
         self.detect_sequences = {}
-        
+
     def stdout(self, *args, **kwargs):
         # maybe refactor to Node?
         output = StringIO()
@@ -68,7 +82,7 @@ class ArtifactDetector(Node):
 
     def waitForImage(self):
         self.left_image = self.right_image = None
-        while self.left_image is None or self.right_image is None:  
+        while self.left_image is None or self.right_image is None:
             self.time, channel, data = self.listen()
             if channel == "left_image":
                 self.left_image = data
@@ -109,9 +123,9 @@ class ArtifactDetector(Node):
 
         def box_area(b):
             return b[2]*b[3]
-        
-        limg_rgb = cv2.cvtColor(limg, cv2.COLOR_BGR2RGB) 
-        rimg_rgb = cv2.cvtColor(rimg, cv2.COLOR_BGR2RGB) 
+
+        limg_rgb = cv2.cvtColor(limg, cv2.COLOR_BGR2RGB)
+        rimg_rgb = cv2.cvtColor(rimg, cv2.COLOR_BGR2RGB)
         hsv = cv2.cvtColor(limg, cv2.COLOR_BGR2HSV)
         hsv_blurred = cv2.medianBlur(hsv,5) # some frames have noise, need to blur otherwise threshold doesn't work
 
@@ -127,8 +141,19 @@ class ArtifactDetector(Node):
 
                 _, bboxes = c['mser'].detectRegions(mask)
                 if len(bboxes) > 0:
-                    sb = sorted(bboxes, key = box_area, reverse = True)[:1]
-                    x, y, w, h = sb[0]
+                    sb = sorted(bboxes, key = box_area, reverse = True)[:c['bbox_union_count']]
+                    bbox = sb[0]
+                    for b in sb[1:]:
+                        if b[0] < bbox[0]:
+                            bbox[0] = b[0]
+                        if b[1] < bbox[1]:
+                            bbox[1] =b[1]
+                        if b[0] + b[2] > bbox[0] + bbox[2]:
+                            bbox[2] = b[0] + b[2] - bbox[0]
+                        if b[1] + b[3] > bbox[1] + bbox[3]:
+                            bbox[3] = b[1] + b[3] - bbox[1]
+
+                    x, y, w, h = bbox
                     match_count = cv2.countNonZero(mask[y:y+h,x:x+w])
                     if (
                             match_count > c['pixel_count_threshold'] and
@@ -145,11 +170,11 @@ class ArtifactDetector(Node):
                         self.detect_sequences[c['artefact_name']] = 0
                 else:
                     self.detect_sequences[c['artefact_name']] = 0
-                    
+
 
             if c['detector_type'] == 'classifier':
-                lfound = c['classifier'].detectMultiScale(limg_rgb, minSize =(c['min_size'], c['min_size']),  maxSize =(c['max_size'], c['max_size'])) 
-                rfound = c['classifier'].detectMultiScale(rimg_rgb, minSize =(c['min_size'], c['min_size']),  maxSize =(c['max_size'], c['max_size'])) 
+                lfound = c['classifier'].detectMultiScale(limg_rgb, minSize =(c['min_size'], c['min_size']),  maxSize =(c['max_size'], c['max_size']))
+                rfound = c['classifier'].detectMultiScale(rimg_rgb, minSize =(c['min_size'], c['min_size']),  maxSize =(c['max_size'], c['max_size']))
 
                 if len(lfound) > 0 and len(rfound) > 0: # only report if both cameras see it
                     if self.detect_sequences[c['artefact_name']] < c['subsequent_detects_required']: # do not act until you have detections in a row

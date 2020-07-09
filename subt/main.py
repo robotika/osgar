@@ -44,6 +44,13 @@ REASON_FRONT_BUMPER = 'front_bumper'
 REASON_REAR_BUMPER = 'rear_bumper'
 
 
+def any_is_none(*args):
+    for a in args:
+        if a is None:
+            return True
+    return False
+
+
 def min_dist(laser_data):
     if len(laser_data) > 0:
         # remove ultra near reflections and unlimited values == 0
@@ -89,8 +96,7 @@ class EmergencyStopMonitor:
 class SubTChallenge:
     def __init__(self, config, bus):
         self.bus = bus
-        bus.register("desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout", "request_origin")
-        self.start_pose = None
+        bus.register("desired_speed", "pose2d", "artf_xyz", "stdout", "request_origin")
         self.traveled_dist = 0.0
         self.time = None
         self.max_speed = config['max_speed']
@@ -109,8 +115,6 @@ class SubTChallenge:
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
         self.xyz = (0, 0, 0)  # 3D position for mapping artifacts
-        self.xyz_quat = [0, 0, 0]
-        self.orientation = quaternion.identity()
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.yaw_offset = None  # not defined, use first IMU reading
         self.is_moving = None  # unknown
@@ -439,8 +443,6 @@ class SubTChallenge:
         else:
             dist = 0.0
         self.last_position = pose
-        if self.start_pose is None:
-            self.start_pose = pose
         self.traveled_dist += dist
         x, y, z = self.xyz
         x += math.cos(self.pitch) * math.cos(self.yaw) * dist
@@ -456,11 +458,6 @@ class SubTChallenge:
                 self.virtual_bumper.update_pose(self.time, pose)
         self.xyz = x, y, z
         self.trace.update_trace(self.xyz)
-        # pose3d
-        dist3d = quaternion.rotate_vector([dist, 0, 0], self.orientation)
-        self.xyz_quat = [a + b for a, b in zip(self.xyz_quat, dist3d)]
-        xyz_quat = [p + o for p, o in zip(self.xyz_quat, self.offset)]
-        self.bus.publish('pose3d', [xyz_quat, self.orientation])
 
     def on_acc(self, timestamp, data):
         acc = [x / 1000.0 for x in data]
@@ -506,6 +503,18 @@ class SubTChallenge:
 
     def on_bumpers_rear(self, timestamp, data):
         self.rear_bumper = max(data)  # array of boolean values where True means collision
+
+    def on_origin(self, timestamp, data):
+        if self.origin is None:  # accept only initial offset
+            self.robot_name = data[0].decode('ascii')
+            if len(data) == 8:
+                self.xyz_quat = data[1:4]
+                self.origin = data[1:4]
+                qx, qy, qz, qw = data[4:]
+                self.origin_quat = qx, qy, qz, qw  # quaternion
+            else:
+                self.stdout('Origin ERROR received')
+                self.origin_error = True
 
     def update(self):
         packet = self.bus.listen()
@@ -564,20 +573,8 @@ class SubTChallenge:
                     self.yaw_offset = -temp_yaw
                 self.yaw = temp_yaw + self.yaw_offset
 
-            elif channel == 'orientation':
-                self.orientation = data
             elif channel == 'sim_time_sec':
                 self.sim_time_sec = data
-            elif channel == 'origin':
-                if self.origin is None:  # accept only initial offset
-                    self.robot_name = data[0].decode('ascii')
-                    if len(data) == 8:
-                        self.origin = data[1:4]
-                        qx, qy, qz, qw = data[4:]
-                        self.origin_quat = qx, qy, qz, qw  # quaternion
-                    else:
-                        self.stdout('Origin ERROR received')
-                        self.origin_error = True
             elif channel == 'voltage':
                 self.voltage = data
             elif channel == 'emergency_stop':
@@ -830,17 +827,6 @@ class SubTChallenge:
 
         self.wait(timedelta(seconds=10), use_sim_time=True)
 
-    def dumplog(self):
-        import os
-        filename = self.bus.logger.filename  # deep hack
-        self.stdout("Dump Log:", filename)
-        size = statinfo = os.stat(filename).st_size
-        self.stdout("Size:", size)
-        with open(filename, 'rb') as f:
-            for i in range(0, size, 100):
-                self.stdout(i, f.read(100))
-        self.stdout("Dump END")
-
     def play_virtual_track(self):
         self.stdout("SubT Challenge Ver65!")
         self.stdout("Waiting for robot_name ...")
@@ -849,7 +835,7 @@ class SubTChallenge:
         self.stdout('robot_name:', self.robot_name)
 
         # wait for critical data
-        while self.scan is None or self.yaw_offset is None:
+        while any_is_none(self.scan, self.yaw_offset):
             self.update()
 
         if self.use_right_wall == 'auto':
@@ -903,7 +889,8 @@ class SubTChallenge:
 def main():
     import argparse
     from osgar.lib.config import config_load
-    from osgar.record import record
+    #from osgar.record import record
+    from osgar.zmqrouter import record
 
     parser = argparse.ArgumentParser(description='SubT Challenge')
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')

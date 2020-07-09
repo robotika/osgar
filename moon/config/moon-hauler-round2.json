@@ -23,8 +23,7 @@
           "out": ["raw"],
           "init": {
             "mode": "PULL",
-            "endpoint": "tcp://localhost:6555",
-            "save_data": true
+            "endpoint": "tcp://localhost:6555"
           }
       },
       "rpc": {
@@ -39,16 +38,17 @@
       },
       "rosmsg": {
           "driver": "rosmsg",
-          "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
-          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin"],
+          "in": ["raw", "desired_speed", "tick", "stdout", "request_origin"],
+          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_clock", "cmd", "origin"],
           "init": {
-            "downsample": 2,
             "topics": [
               ["/hauler_1/bin_info", "srcp2_msgs/HaulerMsg"],
               ["/hauler_1/joint_states", "sensor_msgs/JointState"],
               ["/qual_2_score", "srcp2_msgs/Qual2ScoringMsg"],
-              ["/hauler_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage"],
-              ["/hauler_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage"]
+              ["/hauler_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage", "left_image"],
+              ["/hauler_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage", "right_image"],
+              ["/hauler_1/imu", "sensor_msgs/Imu", "orientation"],
+              ["/hauler_1/laser/scan", "sensor_msgs/LaserScan", "scan"]
             ]
           }
       },
@@ -58,21 +58,32 @@
           "out": [],
           "init": {
           }
+      },
+      "detector": {
+        "driver": "moon.artifacts:ArtifactDetector",
+        "in": [],
+        "out": [],
+        "init": {
+        }
       }
     },
     "links": [["receiver.raw", "rosmsg.raw"],
               ["rosmsg.cmd", "transmitter.raw"],
               ["rosmsg.rot", "app.rot"],
+              ["rosmsg.rot", "hauler.rot"],
               ["rosmsg.scan", "app.scan"],
               ["rosmsg./qual_2_score", "app.score"],
               ["rosmsg.joint_name", "hauler.joint_name"],
               ["rosmsg.joint_position", "hauler.joint_position"],
               ["rosmsg.joint_velocity", "hauler.joint_velocity"],
               ["rosmsg.joint_effort", "hauler.joint_effort"],
-              ["rosmsg.rot", "hauler.rot"],
+              ["rosmsg.left_image", "detector.left_image"],
+              ["rosmsg.right_image", "detector.right_image"],
               ["app.desired_speed", "hauler.desired_speed"],
+              ["app.desired_movement", "hauler.desired_movement"],
               ["app.request", "rpc.request"],
               ["rpc.response", "app.response"],
+              ["detector.artf", "app.artf"],
               ["hauler.cmd", "transmitter.raw"],
               ["hauler.pose2d", "app.pose2d"]
     ]

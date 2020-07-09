@@ -30,6 +30,7 @@ class Recorder:
             self.bus.connect(sender, receiver, self.modules)
 
         signal.signal(signal.SIGINT, self.request_stop)
+        g_logger.info("SIGINT handler installed")
 
     def __enter__(self):
         for module in self.modules.values():
@@ -74,12 +75,11 @@ def record(config, log_prefix, log_filename=None, duration_sec=None):
                 recorder.stop_requested.wait(duration_sec)
 
 
-def main():
+def main(record=record):
     import logging
     logging.basicConfig(
         level=logging.DEBUG,
-        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-        datefmt='%Y-%m-%d %H:%M',
+        format='%(asctime)s %(name)-16s %(levelname)-8s %(message)s',
     )
     parser = argparse.ArgumentParser(description='Record run on real HW with given configuration')
     parser.add_argument('config', nargs='+', help='configuration file')
