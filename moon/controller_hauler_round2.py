@@ -58,13 +58,8 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         self.rover_angle = None
 
     def run(self):
-
+        self.wait_for_init()
         try:
-            print('Wait for definition of last_position and yaw')
-            while self.sim_time is None or self.last_position is None or self.yaw is None:
-                self.update()  # define self.time
-            print('done at', self.sim_time)
-
             self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
 
             while True:

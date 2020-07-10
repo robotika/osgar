@@ -22,6 +22,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         bus.register("bucket_dig", "bucket_drop")
         self.volatile_dug_up = None
         self.mount_angle = None
+        self.vol_list = None
 
     def on_bucket_info(self, bucket_status):
         self.volatile_dug_up = bucket_status
@@ -35,27 +36,15 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         def pose_distance(pose1, pose2):
             return math.hypot(pose1[0] - pose2[0], pose1[1] - pose2[1])
 
+        def process_volatiles(vol_string):
+            nonlocal vol_list
 
-        try:
-            print('Wait for definition of last_position and yaw')
-            while self.sim_time is None or self.last_position is None or self.yaw is None:
-                self.update()  # define self.time
-            print('done at', self.sim_time)
-
-            vol_string = self.send_request('get_volatile_locations').decode('ascii')
+            print (self.sim_time, "main-excavator-round2: Volatiles: %s" % vol_string)
             vol_list_one = vol_string.split(',')
             vol_list = [list(map(float, s.split())) for s in vol_list_one]
 
-            # robots face each other, turn away as not to trigger collision
-            # move bucket to the back so that it does not interfere with lidar
-            # TODO: find better position/move for driving
-            # wait for interface to wake up before trying to move arm
-            self.wait(timedelta(seconds=1))
-            self.publish("bucket_drop", [math.pi, 'reset'])
-            self.wait(timedelta(seconds=1))
-            self.turn(math.pi/2, timeout=timedelta(seconds=10))
-
-            message = self.send_request('request_origin').decode("ascii")
+        def process_origin(message):
+            nonlocal origin_reported, xyz, quat, rx, ry, yaw
             if message.split()[0] == 'origin':
                 origin = [float(x) for x in message.split()[1:]]
 
@@ -65,13 +54,31 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 rx = xyz[0]
                 ry = xyz[1]
                 yaw = euler_zyx(quat)[0]
-            else:
-                xyz = [0,]*3
-                quat = [0,0,0,1]
+            origin_reported = True
 
-                rx = 10
-                ry = 10
-                yaw = 0
+
+        vol_list = None
+
+        origin_reported = False
+        xyz = [0,]*3
+        quat = [0,0,0,1]
+        rx = 10
+        ry = 10
+        yaw = 0
+
+        self.wait_for_init()
+
+        try:
+            self.send_request('get_volatile_locations', process_volatiles)
+            self.send_request('request_origin', process_origin)
+
+            while vol_list is None or not origin_reported:
+                self.wait(timedelta(seconds=1))
+
+            # move bucket to the back so that it does not interfere with lidar
+            # TODO: find better position/move for driving
+            # wait for interface to wake up before trying to move arm
+            self.publish("bucket_drop", [math.pi, 'reset'])
 
             while len(vol_list) > 0:
 
