@@ -62,6 +62,7 @@ from datetime import timedelta
 from osgar.lib.mathex import normalizeAnglePIPI
 
 from moon.moonnode import MoonNode
+from moon.motorpid import MotorPID
 
 
 WHEEL_RADIUS = 0.275  # meters
@@ -100,6 +101,8 @@ class Rover(MoonNode):
         self.yaw = 0.0
         self.yaw_offset = None
         self.in_driving_recovery = False
+
+        self.motor_pid = [MotorPID(p=40.0) for __ in WHEEL_NAMES]  # TODO tune PID params
 
     def on_driving_recovery(self, data):
         self.in_driving_recovery = data
@@ -165,14 +168,25 @@ class Rover(MoonNode):
     def on_joint_velocity(self, data):
         assert self.joint_name is not None
         speed = []
-        for wheel in WHEEL_NAMES:  # cycle through fl, fr, bl, br
-            speed.append(WHEEL_RADIUS * data[self.joint_name.index(bytes(wheel, 'ascii') + b'_wheel_joint')])
+        for i, wheel in enumerate(WHEEL_NAMES):  # cycle through fl, fr, bl, br
+            s = WHEEL_RADIUS * data[self.joint_name.index(bytes(wheel, 'ascii') + b'_wheel_joint')]
+            speed.append(s)
+            self.motor_pid[i].update(s)
+
         if self.verbose:
             self.debug_arr.append([self.time.total_seconds(),] + speed)
 
     def on_joint_effort(self, data):
         assert self.joint_name is not None
         steering, effort = self.get_steering_and_effort()
+
+        ##### integrate PID start #####
+        for i, e in enumerate(effort):
+            self.motor_pid[i].set_desired_speed(e/40)  # TODO review values 0, 40, 60, 120
+        effort = []
+        for m in self.motor_pid:
+            effort.append(m.get_effort())
+        ###### integrate PID end ######
         cmd = b'cmd_rover %f %f %f %f %f %f %f %f' % tuple(steering + effort)
         self.bus.publish('cmd', cmd)
 
