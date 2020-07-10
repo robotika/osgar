@@ -172,10 +172,11 @@ class Rover(MoonNode):
 
     def on_joint_effort(self, data):
         assert self.joint_name is not None
+        steering, effort = self.get_steering_and_effort()
+        cmd = b'cmd_rover %f %f %f %f %f %f %f %f' % tuple(steering + effort)
+        self.bus.publish('cmd', cmd)
 
-        # TODO cycle through fl, fr, bl, br
-        effort =  data[self.joint_name.index(b'fl_wheel_joint')]
-
+    def get_steering_and_effort(self):
         steering = [0.0,] * 4
 
         if self.drive_speed == 0:
@@ -274,9 +275,7 @@ class Rover(MoonNode):
                             abs(self.prev_position[self.joint_name.index(b'fr_steering_arm_joint')] - fr) > 0.2
                     ):
                         effort = [0.0,]*4
-
-        cmd = b'cmd_rover %f %f %f %f %f %f %f %f' % tuple(steering + effort)
-        self.bus.publish('cmd', cmd)
+        return steering, effort
 
     def draw(self):
         # for debugging
