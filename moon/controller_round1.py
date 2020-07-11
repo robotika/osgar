@@ -1,6 +1,9 @@
 """
   Space Robotics Challenge 2
 """
+from datetime import timedelta
+
+from osgar.bus import BusShutdownException
 from osgar.lib import quaternion
 from moon.controller import SpaceRoboticsChallenge
 
