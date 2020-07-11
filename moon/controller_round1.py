@@ -5,7 +5,10 @@ from datetime import timedelta
 
 from osgar.bus import BusShutdownException
 from osgar.lib import quaternion
-from moon.controller import SpaceRoboticsChallenge
+from osgar.lib.virtual_bumper import VirtualBumper
+
+from moon.controller import (SpaceRoboticsChallenge, ChangeDriverException, VirtualBumperException,
+                             LidarCollisionException, LidarCollisionMonitor)
 
 
 class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
