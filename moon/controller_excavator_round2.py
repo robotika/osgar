@@ -66,9 +66,9 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         ry = 10
         yaw = 0
 
-        self.wait_for_init()
-
         try:
+            self.wait_for_init()
+
             self.send_request('get_volatile_locations', process_volatiles)
             self.send_request('request_origin', process_origin)
 

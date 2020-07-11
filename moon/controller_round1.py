@@ -26,13 +26,11 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
         self.send_request('artf %s %f %f 0.0' % (object_type, x, y), process_volatile_response)
 
     def run(self):
-        self.wait_for_init()
-
         def register_origin(message):
             print ("controller round 1: origin received: %s" % message)
         self.send_request('request_origin', register_origin)
 
-        super().run()
+        super().run()  # TODO refactor and move the code here (shared is not used/needed)
 
 
 def main():

@@ -321,16 +321,14 @@ class SpaceRoboticsChallenge(MoonNode):
         self.turn(math.radians(-90), timeout=timedelta(seconds=10))
 
     def wait_for_init(self):
-        try:
-            print('Wait for definition of last_position and yaw')
-            while self.sim_time is None or self.last_position is None or self.yaw is None:
-                self.update()  # define self.time
-            print('done at', self.sim_time)
-        except BusShutdownException:
-            pass
+        print('Wait for definition of last_position and yaw')
+        while self.sim_time is None or self.last_position is None or self.yaw is None:
+            self.update()
+        print('done at', self.sim_time)
 
     def run(self):
         try:
+            self.wait_for_init()
             last_walk_start = 0.0
             start_time = self.sim_time
             while self.sim_time - start_time < timedelta(minutes=40):

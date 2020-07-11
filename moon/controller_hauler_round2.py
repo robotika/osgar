@@ -58,8 +58,8 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         self.rover_angle = None
 
     def run(self):
-        self.wait_for_init()
         try:
+            self.wait_for_init()
             self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
 
             while True:

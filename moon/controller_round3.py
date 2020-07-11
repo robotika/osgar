@@ -561,9 +561,9 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
 
 
     def run(self):
-        self.wait_for_init()
 
         try:
+            self.wait_for_init()
             self.set_brakes(False)
             # some random manual starting moves to choose from
 #            self.go_straight(-0.1, timeout=timedelta(seconds=20))
