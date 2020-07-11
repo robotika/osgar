@@ -26,6 +26,11 @@ class ControllerTest(unittest.TestCase):
 
         echo = EchoController(config, bus=bus.handle('echo'))
 
+        # initialize internal variables, so that wait_for_init() can be skipped
+        echo.sim_time = timedelta()
+        echo.last_position = [0, 0, 0]
+        echo.yaw = 0.0
+
         tester = bus.handle('tester')
         tester.register("response")
         bus.connect("tester.response", "echo.response")

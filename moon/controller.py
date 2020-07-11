@@ -146,20 +146,12 @@ class SpaceRoboticsChallenge(MoonNode):
         if callback is not None:
             callback(response)
 
-    def send_request(self, cmd, callback=None, blocking=True):
+    def send_request(self, cmd, callback=None):
         """Send ROS Service Request from a single place"""
         token = hex(self.rand.getrandbits(128))
         self.requests[token] = callback
         print(self.time, "controller:send_request:token: %s, command: %s" % (token, cmd))
         self.publish('request', [token, cmd])
-
-        while callback is None and blocking:  # this is kept here for backward compatibility and will be removed ASAP
-            dt, channel, data = self.listen()
-            if channel == 'response':
-                response_token, response = data
-                assert token == response_token, (token, response_token)
-                return response
-            print(dt, 'ignoring', channel)
 
     def set_cam_angle(self, angle):
         self.send_request('set_cam_angle %f\n' % angle)
@@ -328,14 +320,15 @@ class SpaceRoboticsChallenge(MoonNode):
         self.go_straight(3.0, timeout=timedelta(seconds=20))
         self.turn(math.radians(-90), timeout=timedelta(seconds=10))
 
+    def wait_for_init(self):
+        print('Wait for definition of last_position and yaw')
+        while self.sim_time is None or self.last_position is None or self.yaw is None:
+            self.update()
+        print('done at', self.sim_time)
+
     def run(self):
         try:
-            print('Wait for definition of last_position and yaw')
-            while self.last_position is None or self.yaw is None:
-                self.update()  # define self.sim_time
-            print('done at', self.sim_time)
-
-
+            self.wait_for_init()
             last_walk_start = 0.0
             start_time = self.sim_time
             while self.sim_time - start_time < timedelta(minutes=40):
