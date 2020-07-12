@@ -140,7 +140,7 @@ class SpaceRoboticsChallenge(MoonNode):
 
     def on_response(self, data):
         token, response = data
-        print(self.time, "controller:response received: token=%s, response=%s" % (token, response))
+        print(self.sim_time, "controller:response received: token=%s, response=%s" % (token, response))
         callback = self.requests[token]
         self.requests.pop(token)
         if callback is not None:
@@ -150,7 +150,7 @@ class SpaceRoboticsChallenge(MoonNode):
         """Send ROS Service Request from a single place"""
         token = hex(self.rand.getrandbits(128))
         self.requests[token] = callback
-        print(self.time, "controller:send_request:token: %s, command: %s" % (token, cmd))
+        print(self.sim_time, "controller:send_request:token: %s, command: %s" % (token, cmd))
         self.publish('request', [token, cmd])
 
     def set_cam_angle(self, angle):
