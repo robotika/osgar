@@ -99,12 +99,14 @@ class SpaceRoboticsChallenge(MoonNode):
         self.origin = None  # unknown initial position
         self.origin_quat = quaternion.identity()
         self.start_pose = None
-        self.yaw_offset = None
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.xyz = (0, 0, 0)  # 3D position for mapping artifacts
         self.xyz_quat = [0, 0, 0]
         self.offset = (0, 0, 0)
         self.use_gimbal = True # try to keep the camera on level as we go over obstacles
+        self.yaw_history = []
+        self.pitch_history = []
+        self.roll_history = []
 
         self.brakes_on = False
         self.camera_change_triggered_time = None
@@ -211,10 +213,19 @@ class SpaceRoboticsChallenge(MoonNode):
         pass
 
     def on_rot(self, data):
-        temp_yaw, self.pitch, self.roll = [normalizeAnglePIPI(math.radians(x/100)) for x in data]
-        if self.yaw_offset is None:
-            self.yaw_offset = -temp_yaw
-        self.yaw = temp_yaw + self.yaw_offset
+        temp_yaw, temp_pitch, temp_roll = [normalizeAnglePIPI(math.radians(x/100)) for x in data]
+
+        self.yaw_history.append(temp_yaw)
+        self.pitch_history.append(temp_pitch)
+        self.roll_history.append(temp_roll)
+        if len(self.yaw_history) > 5:
+            self.yaw_history.pop(0)
+            self.pitch_history.pop(0)
+            self.roll_history.pop(0)
+
+        self.yaw = median(self.yaw_history)
+        self.pitch = median(self.pitch_history)
+        self.roll = median(self.roll_history)
 
         if self.use_gimbal:
             # maintain camera level
