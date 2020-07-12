@@ -89,6 +89,7 @@
       ["app.request", "rpc.request"],
       ["rpc.response", "app.response"],
       ["scout.cmd", "transmitter.raw"],
+      ["app.cmd", "transmitter.raw"],
       ["scout.pose2d", "app.pose2d"]
     ]
   }
