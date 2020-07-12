@@ -21,7 +21,7 @@ CAMERA_HEIGHT = 480
 CAMERA_ANGLE_DRIVING = 0.1
 CAMERA_ANGLE_LOOKING = 0.5
 CAMERA_ANGLE_CUBESAT = 0.78
-CAMERA_ANGLE_HOMEBASE = 0.0
+CAMERA_ANGLE_HOMEBASE = 0.25 # look up while circling around homebase to avoid fake reflections from surrounding terrain
 
 MAX_NR_OF_FARTHER_SCANS = 20
 HOMEBASE_KEEP_DISTANCE = 3 # maintain this distance from home base while approaching and going around
@@ -150,8 +150,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 self.set_cam_angle(CAMERA_ANGLE_LOOKING)
             elif self.current_driver == "homebase":
                 self.set_cam_angle(CAMERA_ANGLE_DRIVING)
-            else:
-                self.set_cam_angle(CAMERA_ANGLE_DRIVING)
+            else: # basemarker
+                self.set_cam_angle(CAMERA_ANGLE_HOMEBASE)
         if not self.inException: # do not interrupt driving if processing an exception
             raise ChangeDriverException(data)
 
