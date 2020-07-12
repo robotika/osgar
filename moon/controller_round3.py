@@ -110,6 +110,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         self.basemarker_right_history = []
         self.basemarker_whole_scan_history = []
         self.basemarker_radius = None
+        self.centering = False
 
         self.last_attempt_timestamp = None
 
@@ -496,7 +497,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                         max_index = i
                         break
 
-                if min_index is None or max_index is None:
+                if min_index is None or max_index is None or max_index - min_index < 3:
                     # if in basemarker mode, looking at homebase but lidar shows no hits, it's a noisy lidar scan, ignore
                     return
 
@@ -536,27 +537,33 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     self.object_reached('basemarker')
                     return
 
+                # if re-centering rover towards the homebase, keep turning until very close to centered (as opposed to within the target range)
+                if self.centering and abs(homebase_cy > 0.1):
+                    return
+                else:
+                    self.centering = False
+
                 # if seeing basemarker and homebase center is not straight ahead OR if looking past homebase in one of the directions, turn in place to adjust
                 if (self.currently_following_object['object_type'] == 'basemarker' and homebase_cy < -0.2) or left_dist > 10:
+                    self.centering = True
                     self.publish("desired_movement", [0, -9000, -SPEED_ON])
                 elif (self.currently_following_object['object_type'] == 'basemarker' and homebase_cy > 0.2) or right_dist > 10:
+                    self.centering = True
                     self.publish("desired_movement", [0, -9000, SPEED_ON])
                 elif left_dist < 1.5 or right_dist < 1.5:
                     self.publish("desired_movement", [float("inf"), -9000, -SPEED_ON])
+                elif left_dist > HOMEBASE_KEEP_DISTANCE + 1 or right_dist > HOMEBASE_KEEP_DISTANCE + 1:
+                    self.publish("desired_movement", [float("inf"), -9000, SPEED_ON])
+                elif homebase_cy < -1:
+                    self.centering = True
+                    self.publish("desired_movement", [0, -9000, -SPEED_ON])
+                elif homebase_cy > 1:
+                    self.centering = True
+                    self.publish("desired_movement", [0, -9000, SPEED_ON])
                 else:
-                    if self.basemarker_radius is None:
-                        self.basemarker_radius = HOMEBASE_KEEP_DISTANCE + HOMEBASE_RADIUS # ideal trajectory
-
-                    if 1.0 - right_dist / left_dist > 0.2:
-                        self.basemarker_radius -= 0.2
-                        # print ("tightening circle")
-                    if 1.0 - right_dist / left_dist < -0.2:  #left is closer than right, need to increase the circle
-                        self.basemarker_radius += 0.2
-                        # print ("expanding circle")
-
                     # print ("driving radius: %f" % self.basemarker_radius)
                     # negative radius turns to the right
-                    self.publish("desired_movement", [-self.basemarker_radius, -9000, SPEED_ON])
+                    self.publish("desired_movement", [-(HOMEBASE_KEEP_DISTANCE + HOMEBASE_RADIUS), -9000, SPEED_ON])
 
 
 
