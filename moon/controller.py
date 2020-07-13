@@ -213,6 +213,9 @@ class SpaceRoboticsChallenge(MoonNode):
         pass
 
     def on_rot(self, data):
+        # use of on_rot is deprecated, will be replaced by on_orientation
+        # also, this filtering does not work when an outlier is presented while angles near singularity
+        # e.g., values 0, 1, 359, 358, 120 will return 120
         temp_yaw, temp_pitch, temp_roll = [normalizeAnglePIPI(math.radians(x/100)) for x in data]
 
         self.yaw_history.append(temp_yaw)
