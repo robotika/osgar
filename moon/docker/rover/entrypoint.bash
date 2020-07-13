@@ -1,6 +1,6 @@
 #!/bin/bash
 
 source /opt/ros/melodic/setup.bash
-# source ~/subt_solution/install/setup.sh
+source /srcp2-competitors/ros_workspace/install/setup.bash
 
 exec "$@"
