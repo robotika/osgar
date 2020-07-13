@@ -620,7 +620,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     with LidarCollisionMonitor(self):
                         if self.current_driver is None and not self.brakes_on:
                             # start each straight stretch by looking around first
-                            self.set_cam_angle(CAMERA_ANGLE_LOOKING)
+                            # if cubesat already found, we are looking for homebase, no need to lift camera as much
+                            self.set_cam_angle(CAMERA_ANGLE_DRIVING if self.cubesat_success else CAMERA_ANGLE_LOOKING)
                             self.turn(math.radians(360), timeout=timedelta(seconds=20))
                         else:
                             self.wait(timedelta(minutes=2)) # allow for self driving, then timeout
