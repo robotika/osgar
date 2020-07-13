@@ -20,8 +20,8 @@ CAMERA_HEIGHT = 480
 
 CAMERA_ANGLE_DRIVING = 0.1
 CAMERA_ANGLE_LOOKING = 0.5
-CAMERA_ANGLE_CUBESAT = 0.78
 CAMERA_ANGLE_HOMEBASE = 0.25 # look up while circling around homebase to avoid fake reflections from surrounding terrain
+CUBESAT_MIN_EDGE_DISTANCE = 100
 
 MAX_NR_OF_FARTHER_SCANS = 20
 HOMEBASE_KEEP_DISTANCE = 3 # maintain this distance from home base while approaching and going around
@@ -296,8 +296,14 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
 
                     # when cubesat disappears, we need to reset the steering to going straight
                     # NOTE: light does not shine in corners of viewport, need to report sooner or turn first
-                    if bbox_size > 25 and img_y < 40: # box is big enough to report on and close to the edge, report
-                         # box 25 pixels represents distance about 27m which is as close as we can possibly get for cubesats with high altitude
+                    # box is big enough and close to the top edge and camera is pointing up and far enough from x edges, report
+                    if (
+                            bbox_size > 25 and
+                            img_y < 40 and
+                            self.camera_angle > 0.8 * CAMERA_ANGLE_LOOKING and
+                            CUBESAT_MIN_EDGE_DISTANCE < img_x < (CAMERA_WIDTH - CUBESAT_MIN_EDGE_DISTANCE - bbox_size)
+                    ):
+                        # box 25 pixels represents distance about 27m which is as close as we can possibly get for cubesats with high altitude
                         # object in center (x axis) and close enough (bbox size)
                         # stop and report angle and distance from robot
                         # robot moves a little after detection so the angles do not correspond with the true pose we will receive
