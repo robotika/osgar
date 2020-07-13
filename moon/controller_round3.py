@@ -111,6 +111,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         self.basemarker_whole_scan_history = []
         self.basemarker_radius = None
         self.centering = False
+        self.going_around_count = 0
 
         self.last_attempt_timestamp = None
 
@@ -172,6 +173,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                             self.set_cam_angle(CAMERA_ANGLE_HOMEBASE)
                             self.current_driver = "basemarker"
                             self.homebase_arrival_success = True
+                            self.going_around_count += 1
                             self.follow_object(['basemarker'])
 
                         else:
@@ -186,6 +188,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     # homebase found (again), does not need reporting, just start basemarker search
                     self.set_cam_angle(CAMERA_ANGLE_HOMEBASE)
                     self.current_driver = "basemarker"
+                    self.going_around_count += 1
                     self.follow_object(['basemarker'])
 
             else:
@@ -201,6 +204,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     # all done, exiting
                     exit
                 else:
+                    self.going_around_count += 1
                     self.follow_object(['basemarker'])
 
             self.send_request('artf homebase_alignment', process_alignment)
@@ -550,6 +554,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     self.centering = False
 
                 # if seeing basemarker and homebase center is not straight ahead OR if looking past homebase in one of the directions, turn in place to adjust
+                circle_direction = 1 if self.going_around_count % 2 == 0 else -1
                 if (self.currently_following_object['object_type'] == 'basemarker' and homebase_cy < -0.2) or left_dist > 10:
                     self.centering = True
                     self.publish("desired_movement", [0, -9000, -SPEED_ON])
@@ -569,7 +574,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 else:
                     # print ("driving radius: %f" % self.basemarker_radius)
                     # negative radius turns to the right
-                    self.publish("desired_movement", [-(HOMEBASE_KEEP_DISTANCE + HOMEBASE_RADIUS), -9000, SPEED_ON])
+                    self.publish("desired_movement", [-(HOMEBASE_KEEP_DISTANCE + HOMEBASE_RADIUS), -9000, circle_direction * SPEED_ON])
 
 
 
