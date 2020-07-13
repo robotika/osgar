@@ -99,12 +99,14 @@ class SpaceRoboticsChallenge(MoonNode):
         self.origin = None  # unknown initial position
         self.origin_quat = quaternion.identity()
         self.start_pose = None
-        self.yaw_offset = None
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.xyz = (0, 0, 0)  # 3D position for mapping artifacts
         self.xyz_quat = [0, 0, 0]
         self.offset = (0, 0, 0)
         self.use_gimbal = True # try to keep the camera on level as we go over obstacles
+        self.yaw_history = []
+        self.pitch_history = []
+        self.roll_history = []
 
         self.brakes_on = False
         self.camera_change_triggered_time = None
@@ -140,7 +142,7 @@ class SpaceRoboticsChallenge(MoonNode):
 
     def on_response(self, data):
         token, response = data
-        print(self.time, "controller:response received: token=%s, response=%s" % (token, response))
+        print(self.sim_time, "controller:response received: token=%s, response=%s" % (token, response))
         callback = self.requests[token]
         self.requests.pop(token)
         if callback is not None:
@@ -150,7 +152,7 @@ class SpaceRoboticsChallenge(MoonNode):
         """Send ROS Service Request from a single place"""
         token = hex(self.rand.getrandbits(128))
         self.requests[token] = callback
-        print(self.time, "controller:send_request:token: %s, command: %s" % (token, cmd))
+        print(self.sim_time, "controller:send_request:token: %s, command: %s" % (token, cmd))
         self.publish('request', [token, cmd])
 
     def set_cam_angle(self, angle):
@@ -211,10 +213,22 @@ class SpaceRoboticsChallenge(MoonNode):
         pass
 
     def on_rot(self, data):
-        temp_yaw, self.pitch, self.roll = [normalizeAnglePIPI(math.radians(x/100)) for x in data]
-        if self.yaw_offset is None:
-            self.yaw_offset = -temp_yaw
-        self.yaw = temp_yaw + self.yaw_offset
+        # use of on_rot is deprecated, will be replaced by on_orientation
+        # also, this filtering does not work when an outlier is presented while angles near singularity
+        # e.g., values 0, 1, 359, 358, 120 will return 120
+        temp_yaw, temp_pitch, temp_roll = [normalizeAnglePIPI(math.radians(x/100)) for x in data]
+
+        self.yaw_history.append(temp_yaw)
+        self.pitch_history.append(temp_pitch)
+        self.roll_history.append(temp_roll)
+        if len(self.yaw_history) > 5:
+            self.yaw_history.pop(0)
+            self.pitch_history.pop(0)
+            self.roll_history.pop(0)
+
+        self.yaw = median(self.yaw_history)
+        self.pitch = median(self.pitch_history)
+        self.roll = median(self.roll_history)
 
         if self.use_gimbal:
             # maintain camera level
