@@ -21,7 +21,7 @@ CAMERA_HEIGHT = 480
 CAMERA_ANGLE_DRIVING = 0.1
 CAMERA_ANGLE_LOOKING = 0.5
 CAMERA_ANGLE_HOMEBASE = 0.25 # look up while circling around homebase to avoid fake reflections from surrounding terrain
-CUBESAT_MIN_EDGE_DISTANCE = 100
+CUBESAT_MIN_EDGE_DISTANCE = 130
 
 MAX_NR_OF_FARTHER_SCANS = 20
 HOMEBASE_KEEP_DISTANCE = 3 # maintain this distance from home base while approaching and going around
@@ -31,14 +31,14 @@ MAX_BASEMARKER_DISTANCE_HISTORY = 20 # do not act on a single lidar measurement,
 MAX_BASEMARKER_DISTANCE = 15
 
 SPEED_ON = 10 # only +/0/- matters
-TURN_ON = 10 # radius of circle when turning
+TURN_ON = 8 # radius of circle when turning
 GO_STRAIGHT = float("inf")
 
 # DEBUG launch options
 SKIP_CUBESAT_SUCCESS = False # skip cubesat, try to reach homebase directly
 SKIP_HOMEBASE_SUCCESS = False # do not require successful homebase arrival report in order to look for alignment
 
-ATTEMPT_DELAY = timedelta(seconds=20)
+ATTEMPT_DELAY = timedelta(seconds=30)
 
 def min_dist(laser_data):
     if len(laser_data) > 0:
@@ -253,6 +253,9 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         # vol_type, x, y, w, h
         # coordinates are pixels of bounding box
         artifact_type = data[0]
+
+        if self.sim_time is None:
+            return
 
         self.objects_in_view[artifact_type] = {
             "expiration": self.sim_time + timedelta(milliseconds=200)
@@ -562,9 +565,9 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     self.centering = True
                     self.publish("desired_movement", [0, -9000, SPEED_ON])
                 elif left_dist < 1.5 or right_dist < 1.5:
-                    self.publish("desired_movement", [float("inf"), -9000, -SPEED_ON])
+                    self.publish("desired_movement", [GO_STRAIGHT, -9000, -SPEED_ON])
                 elif left_dist > HOMEBASE_KEEP_DISTANCE + 1 or right_dist > HOMEBASE_KEEP_DISTANCE + 1:
-                    self.publish("desired_movement", [float("inf"), -9000, SPEED_ON])
+                    self.publish("desired_movement", [GO_STRAIGHT, -9000, SPEED_ON])
                 elif homebase_cy < -1:
                     self.centering = True
                     self.publish("desired_movement", [0, -9000, -SPEED_ON])
@@ -610,11 +613,17 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
 
             last_walk_start = 0.0
             start_time = self.sim_time
-            while self.sim_time - start_time < timedelta(minutes=40):
+            while self.sim_time - start_time < timedelta(minutes=45):
                 additional_turn = 0
                 last_walk_start = self.sim_time
 
                 # TURN 360
+                # TODO:
+                # if looking for multiple objects, sweep multiple times, each looking only for one object (objects listed in order of priority)
+                # this way we won't start following homebase when cubesat was also visible, but later in the sweep
+                # alternatively, sweep once without immediately reacting to matches but note match angles
+                # then turn back to the direction of the top priority match
+
                 try:
                     self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
                     with LidarCollisionMonitor(self):
@@ -647,7 +656,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     with LidarCollisionMonitor(self):
                         if self.current_driver is None and not self.brakes_on:
                             self.set_cam_angle(CAMERA_ANGLE_DRIVING)
-                            self.go_straight(50.0, timeout=timedelta(minutes=2))
+                            self.go_straight(30.0, timeout=timedelta(minutes=2))
                         else:
                             self.wait(timedelta(minutes=2)) # allow for self driving, then timeout
                     self.update()
