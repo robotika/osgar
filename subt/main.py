@@ -926,7 +926,6 @@ def main():
         logging.basicConfig(
             level=logging.DEBUG,
             format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-            datefmt='%Y-%m-%d %H:%M',
         )
         # To reduce latency spikes as described in https://morepypy.blogspot.com/2019/01/pypy-for-low-latency-systems.html.
         # Increased latency leads to uncontrolled behavior and robot either missing turns or hitting walls.
