@@ -343,7 +343,7 @@ class Framer:
 
 
 def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
-    global g_scale
+    global g_scale, WINDOW_SIZE
 
     if out_video is not None:
         width, height = WINDOW_SIZE
@@ -354,7 +354,7 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
                                  (width, height))
 
     pygame.display.init()
-    screen = pygame.display.set_mode(WINDOW_SIZE)
+    screen = pygame.display.set_mode(WINDOW_SIZE, pygame.RESIZABLE)
 
     # create backgroud
     background = pygame.Surface(screen.get_size())
@@ -381,6 +381,8 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
     skip_frames = 0
     frames_step = 0
     save_counter = 0
+
+    was_resized = False
 
     history = gen
     max_timestamp = None
@@ -461,6 +463,15 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
                 event = pygame.event.poll()
             if event.type == QUIT:
                 return
+            if event.type == pygame.VIDEORESIZE:
+                was_resized = True
+                updated_size = event.size
+            if event.type is pygame.ACTIVEEVENT and was_resized:
+                was_resized = False
+                screen = pygame.display.set_mode(updated_size, pygame.RESIZABLE)
+                WINDOW_SIZE = updated_size
+                background = pygame.Surface(screen.get_size())
+                foreground = pygame.Surface(screen.get_size())
             if event.type == KEYDOWN:
                 if event.key in [K_ESCAPE, K_q]:
                     return
