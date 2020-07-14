@@ -64,6 +64,9 @@ def record(config, log_prefix=None, log_filename=None, duration_sec=None):
                 duration = datetime.timedelta(seconds=duration_sec) if duration_sec else datetime.timedelta.max
                 router.run(duration=duration)
             except Exception as e:
+                (etype, evalue, tb) = sys.exc_info()
+                import traceback
+                traceback.print_tb(tb)
                 g_logger.error(str(e))
                 router.request_stop(b"exception")
 
