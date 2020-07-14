@@ -18,6 +18,15 @@
       "localization": {
         "driver": "subt.odoimuloc:Localization"
       },
+      "vo": {
+        "driver": "subt.visual_odometry3:Localization",
+        "init": {
+          "xyz": [0.23, 0, 0.25256005000000004],
+          "rpy": [0.0, 0.0, 0.0],
+          "principal-point": [320.5, 180.5],
+          "focal-length": 462.1
+        }
+      },
       "detector": {
           "driver": "subt.artf_node:ArtifactDetectorDNN",
           "in": ["image", "scan"],
@@ -78,6 +87,12 @@
               ["rosmsg.origin",     "localization.origin"],
               ["rosmsg.pose2d",     "localization.odom"],
               ["rospy.orientation", "localization.orientation"],
+
+              ["rosmsg.origin",     "vo.origin"],
+              ["rospy.orientation", "vo.orientation"],
+              ["rosmsg.depth",      "vo.depth"],
+              ["rosmsg.image",      "vo.image"],
+              ["localization.pose3d", "vo.baseline"],
 
               ["receiver.raw", "rosmsg.raw"],
               ["rosmsg.cmd", "transmitter.raw"],

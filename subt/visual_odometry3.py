@@ -1,7 +1,14 @@
 import cv2
+import functools
+import logging
 import numpy as np
 import sys
 
+import osgar.bus
+import osgar.node
+import osgar.lib.quaternion
+
+g_logger = logging.getLogger(sys.modules[__name__].__spec__.name)
 
 def no_change_rigid_transform():
     """Create a 4x4 matrix representing no change in orientation or position."""
@@ -580,7 +587,7 @@ class CameraVisualOdometry:
                         self.params.ransac_attempt_reprojection_increase_factor
                     )
             except cv2.error as e:
-                print('RANSAC is unhappy:', e, file=sys.stderr)
+                g_logger.error('RANSAC is unhappy: {e}')
             if inliers is None:
                 # Like in the song by Nazareth: "None hurts ...". Or was it
                 # love?
@@ -897,10 +904,80 @@ class GlobalVisualOdometry:
         return global_pose
 
 
+class Localization(osgar.node.Node):
+    def __init__(self, config, bus):
+        super().__init__(config, bus)
+        odometry_params = VisualOdometryParams(config['focal-length'],
+                                               config['principal-point'],
+                                               min_valid_depth=config.get('min-depth', 0.01),
+                                               max_valid_depth=config.get('max-depth', 10.0))
+        publish_pose3d = functools.partial(self.bus.publish, 'pose3d')
+        self.demo = Demo(config['xyz'], np.radians(config['rpy']), odometry_params, callback=publish_pose3d)
+        self.bus.register('pose3d')
+        cv2.setNumThreads(1)
+
+    def on_origin(self, data):
+        if len(data) == 8:
+            robot_name, x, y, z, qa, qb, qc, qd = data
+            rpy = osgar.lib.quaternion.euler_zyx((qa, qb, qc, qd))[::-1]
+            self.demo.on_initial_pose([x, y, z], rpy)
+
+    def on_orientation(self, data):
+        quaternion = data
+        ypr = osgar.lib.quaternion.euler_zyx(quaternion)
+        rpy = ypr[::-1]
+        imu_rpy = rpy
+        return self.demo.on_imu_rpy(imu_rpy)
+
+    def on_image(self, data):
+        grey_img = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_GRAYSCALE)
+        color_img = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+        return self.demo.on_img(self.time.total_seconds(), grey_img, color_img)
+
+    def on_depth(self, data):
+        # Converting to meters.
+        depth = (data * 1e-3).astype(np.float32)
+        return self.demo.on_depth(self.time.total_seconds(), depth)
+
+    def on_baseline(self, data):
+        baseline_xyz, baseline_quaternion = data
+        baseline_ypr = osgar.lib.quaternion.euler_zyx(baseline_quaternion)
+        baseline_rpy = baseline_ypr[::-1]
+        self.demo.on_baseline(baseline_xyz, baseline_rpy)
+
+    def run(self):
+        try:
+            # wait for valid origin
+            while True:
+                dt, channel, data = self.bus.listen()
+                if channel == "origin":
+                    self.on_origin(data)
+                    if self.demo.odometry is not None:
+                        break
+
+            while True:
+                dt, channel, data = self.bus.listen()
+                self.time = dt
+                if channel == "orientation":
+                    self.on_orientation(data)
+                elif channel == "depth":
+                    self.on_depth(data)
+                elif channel == "image":
+                    self.on_image(data)
+                elif channel == "baseline":
+                    self.on_baseline(data)
+                elif channel == "origin":
+                    pass
+                else:
+                    assert False, "unknown input channel"
+        except osgar.bus.BusShutdownException:
+            pass
+
+
 class Demo:
     """Sample application and visualization of GlobalVisualOdometry."""
     def __init__(self, camera_xyz, camera_rpy, odometry_params, visualize=False,
-                 output_trajectory_img_path=None):
+                 output_trajectory_img_path=None, callback=None):
         """Initialize the demo.
 
         To complete the initialization, you also need to provide initial pose
@@ -910,6 +987,7 @@ class Demo:
         camera_rpy -- Roll, pitch and yaw (radians) of camera orientation on the
                       robot.
         odometry_params -- VisualOdometryParams()
+        callback -- is called whenever a new estimate is available
         visualize -- If True, show extra visualizations.
         output_trajectory_img_path -- Path to an image file where trajectory
                                       should be stored.
@@ -918,6 +996,7 @@ class Demo:
         self.camera_rpy = camera_rpy
         self.odometry_params = odometry_params
         self.odometry = None
+        self.callback = callback
         self.visualize = visualize
         self.output_trajectory_img_path = output_trajectory_img_path
 
@@ -974,14 +1053,18 @@ class Demo:
                                            self.visualize)
         xyz = np.asarray(global_pose)[:3, 3]
         rpy = rotation_matrix_to_euler_angles(global_pose[:3, :3])
+        quat = osgar.lib.quaternion.from_rotation_matrix(global_pose[:3, :3])
+        if self.callback is not None:
+            # `tolist` changes numpy scalars to Python scalars
+            self.callback([xyz.tolist(), quat])
 
         # User interface, ha ha.
-        print('Estimate: xyz={}, rpy={}'.format(xyz, np.degrees(rpy)))
+        g_logger.info('Estimate: xyz={}, rpy={}'.format(xyz, np.degrees(rpy)))
         if self.baseline_xyz is not None:
             drift = np.sqrt(np.sum((xyz - np.asarray(self.baseline_xyz))**2))
-            print('Baseline: xyz={}, rpy={}'.format(
+            g_logger.info('Baseline: xyz={}, rpy={}'.format(
                 self.baseline_xyz, np.degrees(self.baseline_rpy)))
-            print(f'Drift: {drift}')
+            g_logger.info(f'Drift: {drift}')
 
         if self.baseline_xyz is not None:
             self.baseline_trajectory_xy.append(self.baseline_xyz[:2])
