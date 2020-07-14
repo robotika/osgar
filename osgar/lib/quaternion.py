@@ -78,17 +78,16 @@ def rotation_matrix(quaternion):
 def from_rotation_matrix(rotation_matrix):
     # http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm
     # https://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
-    sqrt, copysign = math.sqrt, math.copysign
     m00, m01, m02 = rotation_matrix[0]
     m10, m11, m12 = rotation_matrix[1]
     m20, m21, m22 = rotation_matrix[2]
-    qw = sqrt(max(0, 1 + m00 + m11 + m22)) / 2
-    qx = sqrt(max(0, 1 + m00 - m11 - m22)) / 2
-    qy = sqrt(max(0, 1 - m00 + m11 - m22)) / 2
-    qz = sqrt(max(0, 1 - m00 - m11 + m22)) / 2
-    qx = copysign(qx, m21 - m12)
-    qy = copysign(qy, m02 - m20)
-    qz = copysign(qz, m10 - m01)
+    qw = math.sqrt(max(0, 1 + m00 + m11 + m22)) / 2
+    qx = math.sqrt(max(0, 1 + m00 - m11 - m22)) / 2
+    qy = math.sqrt(max(0, 1 - m00 + m11 - m22)) / 2
+    qz = math.sqrt(max(0, 1 - m00 - m11 + m22)) / 2
+    qx = math.copysign(qx, m21 - m12)
+    qy = math.copysign(qy, m02 - m20)
+    qz = math.copysign(qz, m10 - m01)
     return [qx, qy, qz, qw]
 
 # vim: expandtab sw=4 ts=4
