@@ -36,14 +36,18 @@ def rotate_vector(vector, quaternion):
     part1 = multiply(quaternion, qvector)
     return multiply(part1, con)[:-1]
 
-def euler_zyx(quaternion):
-    # assumption that quaternion is normalized
+
+def normalize(quaternion):
     x0, y0, z0, w0 = quaternion
     sqr_size = x0*x0 + y0*y0 + z0*z0 + w0*w0
     if abs(sqr_size - 1.0) > 0.00001:
-        # the assumption is broken, so normalize it
         k = math.sqrt(sqr_size)
         x0, y0, z0, w0 = x0/k, y0/k, z0/k, w0/k
+    return [x0, y0, z0, w0]
+
+
+def euler_zyx(quaternion):
+    x0, y0, z0, w0 = normalize(quaternion)
     ax =  math.atan2(2*(w0*x0+y0*z0), 1-2*(x0*x0+y0*y0))
     ay =  math.asin(2*(w0*y0-z0*x0))
     az =  math.atan2(2*(w0*z0+x0*y0), 1-2*(y0*y0+z0*z0))
@@ -69,5 +73,21 @@ def rotation_matrix(quaternion):
     r2 = [2*qx*qy + 2*qz*qw,      1 - 2*qx**2 - 2*qz**2,  2*qy*qz - 2*qx*qw]
     r3 = [2*qx*qz - 2*qy*qw,      2*qy*qz + 2*qx*qw,      1 - 2*qx**2 - 2*qy**2]
     return [r1, r2, r3]
+
+
+def from_rotation_matrix(rotation_matrix):
+    # http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm
+    # https://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
+    m00, m01, m02 = rotation_matrix[0]
+    m10, m11, m12 = rotation_matrix[1]
+    m20, m21, m22 = rotation_matrix[2]
+    qw = math.sqrt(max(0, 1 + m00 + m11 + m22)) / 2
+    qx = math.sqrt(max(0, 1 + m00 - m11 - m22)) / 2
+    qy = math.sqrt(max(0, 1 - m00 + m11 - m22)) / 2
+    qz = math.sqrt(max(0, 1 - m00 - m11 + m22)) / 2
+    qx = math.copysign(qx, m21 - m12)
+    qy = math.copysign(qy, m02 - m20)
+    qz = math.copysign(qz, m10 - m01)
+    return [qx, qy, qz, qw]
 
 # vim: expandtab sw=4 ts=4

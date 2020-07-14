@@ -48,13 +48,30 @@ class QuaternionTest(TestCase):
             T([ 0, 0, 0.7071068, 0.7071068 ], [[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]),
             T([ 0, 0.7071068, 0, 0.7071068 ], [[0.0, 0.0, 1.0], [0.0,  1.0,  0.0], [-1.0, 0.0, 0.0]]),
             T([ 0.7071068, 0, 0, 0.7071068 ], [[1.0,  0.0,  0.0], [0.0,  0.0, -1.0], [0.0, 1.0, 0.0 ]]),
-            T([ 0.5, 0.5, 0, 0.7071068 ], [[0.5, 0.5, 0.7071068], [0.5, 0.5, -0.7071068], [-0.7071068, 0.7071068, 0.0]])
+            T([ 0.5, 0.5, 0, 0.7071068 ], [[0.5, 0.5, 0.7071068], [0.5, 0.5, -0.7071068], [-0.7071068, 0.7071068, 0.0]]),
+            T([ 0, 0, 1, 0 ], [[-1.0, -0.0,  0.0], [0.0000000, -1.0,  0.0], [0.0,  0.0,  1.0]]),
         ]
         for i, t in enumerate(tests):
-            with self.subTest(test=i):
+            with self.subTest(test=i, kind="to matrix"):
                 actual = quaternion.rotation_matrix(t.q)
                 for row in range(len(actual)):
                     for col in range(len(actual[0])):
                         self.assertAlmostEqual(t.matrix[row][col], actual[row][col], places=6, msg=(row, col))
+
+        for i, t in enumerate(tests):
+            with self.subTest(test=i, kind="from matrix"):
+                q = quaternion.from_rotation_matrix(t.matrix)
+                self.assertListAlmostEqual(q, t.q)
+
+
+    def test_rotation_matrix_random(self):
+        from random import Random
+        r = Random(0).random
+        for i in range(1000):
+            with self.subTest(test=i):
+                q = quaternion.normalize([r(), r(), r(), r()])
+                rotmat = quaternion.rotation_matrix(q)
+                qq = quaternion.from_rotation_matrix(rotmat)
+                self.assertListAlmostEqual(q, qq)
 
 # vim: expandtab sw=4 ts=4
