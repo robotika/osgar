@@ -99,12 +99,14 @@ class SpaceRoboticsChallenge(MoonNode):
         self.origin = None  # unknown initial position
         self.origin_quat = quaternion.identity()
         self.start_pose = None
-        self.yaw_offset = None
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.xyz = (0, 0, 0)  # 3D position for mapping artifacts
         self.xyz_quat = [0, 0, 0]
         self.offset = (0, 0, 0)
         self.use_gimbal = True # try to keep the camera on level as we go over obstacles
+        self.yaw_history = []
+        self.pitch_history = []
+        self.roll_history = []
 
         self.brakes_on = False
         self.camera_change_triggered_time = None
@@ -140,26 +142,18 @@ class SpaceRoboticsChallenge(MoonNode):
 
     def on_response(self, data):
         token, response = data
-        print(self.time, "controller:response received: token=%s, response=%s" % (token, response))
+        print(self.sim_time, "controller:response received: token=%s, response=%s" % (token, response))
         callback = self.requests[token]
         self.requests.pop(token)
         if callback is not None:
             callback(response)
 
-    def send_request(self, cmd, callback=None, blocking=True):
+    def send_request(self, cmd, callback=None):
         """Send ROS Service Request from a single place"""
         token = hex(self.rand.getrandbits(128))
         self.requests[token] = callback
-        print(self.time, "controller:send_request:token: %s, command: %s" % (token, cmd))
+        print(self.sim_time, "controller:send_request:token: %s, command: %s" % (token, cmd))
         self.publish('request', [token, cmd])
-
-        while callback is None and blocking:  # this is kept here for backward compatibility and will be removed ASAP
-            dt, channel, data = self.listen()
-            if channel == 'response':
-                response_token, response = data
-                assert token == response_token, (token, response_token)
-                return response
-            print(dt, 'ignoring', channel)
 
     def set_cam_angle(self, angle):
         self.send_request('set_cam_angle %f\n' % angle)
@@ -219,10 +213,22 @@ class SpaceRoboticsChallenge(MoonNode):
         pass
 
     def on_rot(self, data):
-        temp_yaw, self.pitch, self.roll = [normalizeAnglePIPI(math.radians(x/100)) for x in data]
-        if self.yaw_offset is None:
-            self.yaw_offset = -temp_yaw
-        self.yaw = temp_yaw + self.yaw_offset
+        # use of on_rot is deprecated, will be replaced by on_orientation
+        # also, this filtering does not work when an outlier is presented while angles near singularity
+        # e.g., values 0, 1, 359, 358, 120 will return 120
+        temp_yaw, temp_pitch, temp_roll = [normalizeAnglePIPI(math.radians(x/100)) for x in data]
+
+        self.yaw_history.append(temp_yaw)
+        self.pitch_history.append(temp_pitch)
+        self.roll_history.append(temp_roll)
+        if len(self.yaw_history) > 5:
+            self.yaw_history.pop(0)
+            self.pitch_history.pop(0)
+            self.roll_history.pop(0)
+
+        self.yaw = median(self.yaw_history)
+        self.pitch = median(self.pitch_history)
+        self.roll = median(self.roll_history)
 
         if self.use_gimbal:
             # maintain camera level
@@ -328,77 +334,10 @@ class SpaceRoboticsChallenge(MoonNode):
         self.go_straight(3.0, timeout=timedelta(seconds=20))
         self.turn(math.radians(-90), timeout=timedelta(seconds=10))
 
-    def run(self):
-        try:
-            print('Wait for definition of last_position and yaw')
-            while self.last_position is None or self.yaw is None:
-                self.update()  # define self.sim_time
-            print('done at', self.sim_time)
-
-
-            last_walk_start = 0.0
-            start_time = self.sim_time
-            while self.sim_time - start_time < timedelta(minutes=40):
-                additional_turn = 0
-                last_walk_start = self.sim_time
-                try:
-                    self.virtual_bumper = VirtualBumper(timedelta(seconds=4), 0.1)
-                    with LidarCollisionMonitor(self):
-                        if self.current_driver is None and not self.brakes_on:
-                            self.go_straight(50.0, timeout=timedelta(minutes=2))
-                        else:
-                            self.wait(timedelta(minutes=2)) # allow for self driving, then timeout
-                    self.update()
-                except ChangeDriverException as e:
-                    continue
-
-                except (VirtualBumperException, LidarCollisionException) as e:
-                    self.inException = True
-# TODO: crashes if an exception (e.g., excess pitch) occurs while handling an exception (e.g., virtual/lidar bump)
-                    print(self.sim_time, repr(e))
-                    last_walk_end = self.sim_time
-                    self.virtual_bumper = None
-                    self.go_straight(-2.0, timeout=timedelta(seconds=10))
-                    if last_walk_end - last_walk_start > timedelta(seconds=20): # if we went more than 20 secs, try to continue a step to the left
-                        self.try_step_around()
-                    else:
-                        self.bus.publish('driving_recovery', False)
-
-                    self.inException = False
-
-                    print ("Time elapsed since start of previous leg: %d sec" % (last_walk_end.total_seconds()-last_walk_start.total_seconds()))
-                    if last_walk_end - last_walk_start > timedelta(seconds=20):
-                        # if last step only ran short time before bumper, time for a large random turn
-                        # if it ran long time, maybe worth trying going in the same direction
-                        continue
-                    additional_turn = 30
-
-                    # next random walk direction should be between 30 and 150 degrees
-                    # (no need to go straight back or keep going forward)
-                    # if part of virtual bumper handling, add 30 degrees to avoid the obstacle more forcefully
-
-                deg_angle = self.rand.randrange(30 + additional_turn, 150 + additional_turn)
-                deg_sign = self.rand.randint(0,1)
-                if deg_sign:
-                    deg_angle = -deg_angle
-                try:
-                    self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
-                    self.turn(math.radians(deg_angle), timeout=timedelta(seconds=30))
-                except ChangeDriverException as e:
-                    continue
-
-                except VirtualBumperException:
-                    self.inException = True
-                    print(self.sim_time, "Turn Virtual Bumper!")
-                    self.virtual_bumper = None
-                    if self.current_driver is not None:
-                        # probably didn't throw in previous turn but during self driving
-                        self.go_straight(-2.0, timeout=timedelta(seconds=10))
-                        self.try_step_around()
-                    self.turn(math.radians(-deg_angle), timeout=timedelta(seconds=30))
-                    self.inException = False
-                    self.bus.publish('driving_recovery', False)
-        except BusShutdownException:
-            pass
+    def wait_for_init(self):
+        print('Wait for definition of last_position and yaw')
+        while self.sim_time is None or self.last_position is None or self.yaw is None:
+            self.update()
+        print('done at', self.sim_time)
 
 # vim: expandtab sw=4 ts=4

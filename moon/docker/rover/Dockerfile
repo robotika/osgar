@@ -14,4 +14,4 @@ RUN echo "source /srcp2-competitors/ros_workspace/install/setup.bash" >> /root/.
 
 ENTRYPOINT ["./osgar/moon/docker/rover/entrypoint.bash"]
 
-CMD ["./osgar/moon/docker/rover/run_solution.bash"]
+CMD ["/bin/bash"]
