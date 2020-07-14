@@ -134,13 +134,13 @@ def draw(foreground, pose, scan, poses=[], image=None, bbox=None, callback=None,
 
         foreground.blit(cameraView, (0, 0))
 
-        if bbox is not None:
-            assert len(bbox) > 5, bbox
-            name, x, y, width, height = bbox[:5]
+        for b in bbox:
+            assert len(b) > 5, b
+            name, x, y, width, height = b[:5]
             color = (0, 255, 0)
             rect = pygame.Rect(x, y, width, height)
             pygame.draw.rect(image, color, rect, 2)
-        
+
     if callback is not None:
         debug_poly = []
         callback(scan, debug_poly)
@@ -225,7 +225,7 @@ class Framer:
         self.bbox_id = None
         self.joint_id = None
         self.keyframes_id = None
-        self.title_id = None
+        self.title_id = []
         names = lookup_stream_names(filepath)
         if lidar_name is not None:
             self.lidar_id = names.index(lidar_name) + 1
@@ -246,7 +246,9 @@ class Framer:
         if keyframes_name is not None:
             self.keyframes_id = names.index(keyframes_name) + 1
         if title_name is not None:
-            self.title_id = names.index(title_name) + 1
+            title_list = title_name.split(",")
+            for ttn in title_list:
+                self.title_id.append(names.index(ttn) + 1)
 
     def __enter__(self):
         self.log.__enter__()
@@ -289,7 +291,8 @@ class Framer:
 
 
     def _step(self, direction):
-        self.bbox = None
+        self.bbox = []
+        self.title = []
         if (self.current + direction) >= len(self.log):
             self.log.grow()
         while self.current + direction >= 0 and self.current + direction < len(self.log):
@@ -297,10 +300,10 @@ class Framer:
             timestamp, stream_id, data = self.log[self.current]
             if stream_id == self.keyframes_id:
                 self.keyframe = True
-            if stream_id == self.title_id:
-                self.title = deserialize(data)
+            if stream_id in self.title_id:
+                self.title.append(deserialize(data))
             if stream_id == self.bbox_id:
-                self.bbox = deserialize(data)
+                self.bbox.append(deserialize(data))
             if stream_id == self.lidar_id:
                 self.scan = deserialize(data)
                 keyframe = self.keyframe
@@ -418,8 +421,8 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
 
         while True:
             caption = caption_filename + ": %s" % timestamp
-            if title is not None:
-                caption += ' (' + str(title) + ')'
+            for t in title:
+                caption += ' (' + str(t) + ')'
             if paused:
                 caption += ' (PAUSED)'
             if frames_step > 0:
@@ -440,7 +443,7 @@ def lidarview(gen, caption_filename, callback=False, out_video=None, jump=None):
                  callback=callback)
             screen.blit(background, (0, 0))
             screen.blit(foreground, (0, 0))
-            pygame.display.flip() 
+            pygame.display.flip()
 
             if out_video is not None:
                 # https://stackoverflow.com/questions/53101698/how-to-convert-a-pygame-image-to-open-cv-image/53108946#53108946
@@ -619,4 +622,4 @@ def main(args_in=None, startswith=None):
 if __name__ == "__main__":
     main()
 
-# vim: expandtab sw=4 ts=4 
+# vim: expandtab sw=4 ts=4
