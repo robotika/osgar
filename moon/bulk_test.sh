@@ -47,6 +47,16 @@ while getopts "r:t:s:f:l:hw:" opt; do
     esac
 done
 
+if (docker ps | grep -q rover); then
+    echo "OSGAR docker already running, exiting"
+    exit 1
+fi
+
+if (docker ps | grep -q scheducation); then
+    echo "SRCP2 docker already running, exiting"
+    exit 1
+fi
+
 now=$(date +"%m%d%Y_%H%M")
 log_dir="bulklogs_${now}"
 mkdir ${log_dir}
