@@ -331,7 +331,7 @@ class SpaceRoboticsChallenge(MoonNode):
         # recovered enough at this point to switch to another driver (in case you see cubesat while doing the 3m drive or the final turn)
         self.bus.publish('driving_recovery', False)
 
-        self.go_straight(3.0, timeout=timedelta(seconds=20))
+        self.go_straight(5.0, timeout=timedelta(seconds=20))
         self.turn(math.radians(-90), timeout=timedelta(seconds=10))
 
     def wait_for_init(self):

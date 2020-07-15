@@ -18,6 +18,8 @@ CAMERA_FOCAL_LENGTH = 381
 CAMERA_WIDTH = 640
 CAMERA_HEIGHT = 480
 
+CAMERA_BASELINE = 0.5 # distance between lenses
+
 CAMERA_ANGLE_DRIVING = 0.1
 CAMERA_ANGLE_LOOKING = 0.5
 CAMERA_ANGLE_HOMEBASE = 0.25 # look up while circling around homebase to avoid fake reflections from surrounding terrain
@@ -384,7 +386,6 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                                     if response == 'ok':
                                         print("app: Apriori object reported correctly")
                                         self.cubesat_success = True
-                                        # time to start looking for homebase; TODO queue 360 look around as base is somewhere near
                                         self.object_reached("cubesat")
                                         self.follow_object(['homebase'])
                                     else:
@@ -529,6 +530,10 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 homebase_cx, homebase_cy, homebase_radius = best_fit_circle(x_l, y_l)
                 # print ("Center: [%f,%f], radius: %f" % (homebase_cx, homebase_cy, homebase_radius))
 
+                # since we are looking through left camera, cy will be calculated relative to the camera
+                # need it relative to the center of the robot
+                homebase_cy -= CAMERA_BASELINE / 2
+
                 right_dist = median_dist(data[midindex-8:midindex-6])
                 left_dist = median_dist(data[midindex+6:midindex+8])
                 self.basemarker_left_history.append(left_dist)
@@ -624,31 +629,48 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 # alternatively, sweep once without immediately reacting to matches but note match angles
                 # then turn back to the direction of the top priority match
 
-                try:
-                    self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
-                    with LidarCollisionMonitor(self):
-                        if self.current_driver is None and not self.brakes_on:
+                if self.current_driver is None and not self.brakes_on:
+                    try:
+                        self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
+                        with LidarCollisionMonitor(self):
                             # start each straight stretch by looking around first
                             # if cubesat already found, we are looking for homebase, no need to lift camera as much
                             self.set_cam_angle(CAMERA_ANGLE_DRIVING if self.cubesat_success else CAMERA_ANGLE_LOOKING)
                             self.turn(math.radians(360), timeout=timedelta(seconds=20))
-                        else:
+                    except ChangeDriverException as e:
+                        print(self.sim_time, "Turn interrupted by driver: %s" % e)
+                        continue
+                        # proceed to straight line drive where we wait; straight line exception handling is better applicable for follow-object drive
+                    except (VirtualBumperException, LidarCollisionException)  as e:
+                        self.inException = True
+                        self.set_cam_angle(CAMERA_ANGLE_DRIVING)
+                        print(self.sim_time, "Turn 360 degrees Virtual Bumper!")
+                        self.virtual_bumper = None
+                        # recovery from an exception while turning CCW is to turn CW somewhat
+                        deg_angle = self.rand.randrange(-180, -90)
+                        self.turn(math.radians(deg_angle), timeout=timedelta(seconds=10))
+                        self.inException = False
+                        self.bus.publish('driving_recovery', False)
+
+                else:
+                    try:
+                        self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
+                        with LidarCollisionMonitor(self):
                             self.wait(timedelta(minutes=2)) # allow for self driving, then timeout
-                except ChangeDriverException as e:
-                    print(self.sim_time, "Turn interrupted by driver: %s" % e)
-                    continue
-                except (VirtualBumperException, LidarCollisionException):
-                    self.inException = True
-                    self.set_cam_angle(CAMERA_ANGLE_DRIVING)
-                    print(self.sim_time, "Turn Virtual Bumper!")
-                    # TODO: if detector takes over driving within initial turn, rover may be actually going straight at this moment
-                    # also, it may be simple timeout, not a crash
-                    self.virtual_bumper = None
-                    # recovery from an exception while turning CCW is to turn CW somewhat
-                    deg_angle = self.rand.randrange(-180, -90)
-                    self.turn(math.radians(deg_angle), timeout=timedelta(seconds=10))
-                    self.inException = False
-                    self.bus.publish('driving_recovery', False)
+                    except ChangeDriverException as e:
+                        # if driver lost, start by turning 360; if driver changed, wait here again
+                        continue
+                    except (VirtualBumperException, LidarCollisionException) as e:
+                        print(self.sim_time, "Follow-object Virtual Bumper")
+                        self.inException = True
+                        print(self.sim_time, repr(e))
+                        last_walk_end = self.sim_time
+                        self.virtual_bumper = None
+                        self.set_cam_angle(CAMERA_ANGLE_DRIVING)
+                        self.go_straight(-2.0, timeout=timedelta(seconds=10)) # this should be reasonably safe, we just came from there
+                        self.try_step_around()
+                        self.inException = False
+                        self.bus.publish('driving_recovery', False)
 
                 # GO STRAIGHT
                 try:
