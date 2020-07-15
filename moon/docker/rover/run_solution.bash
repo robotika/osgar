@@ -16,7 +16,7 @@ while getopts hr: arg; do
 		    JSONFILES=("moon-round3.json")
 		    ROVERSCRIPTS=("rospy_scout_round3.py --robot_name=scout_1 --push_port=5555 --pull_port=5556 --reqrep_port=5557")
 		;;
-		
+
 	    esac
 	    ;;
 	h)
@@ -71,7 +71,7 @@ function shutdown {
     for p in ${ROS_PIDS[@]}; do
 	kill $p
     done
-    
+
     wait
     exit
 }
@@ -92,4 +92,3 @@ for r in ${ROS_PIDS[@]}; do
     wait $r
 done
 wait
-
