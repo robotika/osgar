@@ -1,6 +1,6 @@
 FROM robotika/subt-base:2020-05-26
 
-ADD http://osgar.robotika.cz/subt/model/mdnet0.64.64.13.4.relu.pth ./src/osgar/subt/model/
+ADD http://osgar.robotika.cz/subt/model/mdnet0.64.64.13.4.relu.pth .
 
 RUN sudo apt-get update && sudo apt install -y ros-melodic-teleop-twist-keyboard
 
