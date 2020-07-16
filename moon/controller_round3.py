@@ -114,6 +114,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         self.basemarker_radius = None
         self.centering = False
         self.going_around_count = 0
+        self.full_360_scan = False
+        self.full_360_objects = {}
 
         self.last_attempt_timestamp = None
 
@@ -272,6 +274,13 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         bbox_size = (data[3] + data[4]) / 2 # calculate avegage in case of substantially non square matches
         img_x, img_y, img_w, img_h = data[1:5]
         nr_of_black = data[4]
+
+
+        if self.full_360_scan:
+            if artifact_type not in self.full_360_objects.keys():
+                self.full_360_objects[artifact_type] = []
+            self.full_360_objects[artifact_type].append(self.yaw)
+            return
 
 #        print ("Artf: %s %d %d %d %d %d" % (artifact_type, img_x, img_y, img_w, img_h, nr_of_black))
 
@@ -630,6 +639,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 # then turn back to the direction of the top priority match
 
                 if self.current_driver is None and not self.brakes_on:
+                    if len(self.objects_to_follow) > 1:
+                        self.full_360_scan = True
                     try:
                         self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
                         with LidarCollisionMonitor(self):
@@ -639,6 +650,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                             self.turn(math.radians(360), timeout=timedelta(seconds=20))
                     except ChangeDriverException as e:
                         print(self.sim_time, "Turn interrupted by driver: %s" % e)
+                        self.full_360_scan = False
+                        self.full_360_objects = {}
                         continue
                         # proceed to straight line drive where we wait; straight line exception handling is better applicable for follow-object drive
                     except (VirtualBumperException, LidarCollisionException)  as e:
@@ -651,6 +664,20 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                         self.turn(math.radians(deg_angle), timeout=timedelta(seconds=10))
                         self.inException = False
                         self.bus.publish('driving_recovery', False)
+                    if len(self.objects_to_follow) > 1:
+                        print(self.sim_time, "app: 360deg scan: " + str([[a, median(self.full_360_objects[a])] for a in self.full_360_objects.keys()]))
+                        for o in self.objects_to_follow:
+                            if o in self.full_360_objects.keys():
+                                try:
+                                    self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
+                                    with LidarCollisionMonitor(self):
+                                        self.turn(median(self.full_360_objects[o]) - self.yaw, timeout=timedelta(seconds=20))
+                                except:
+                                    # in case it gets stuck turning, just hand over driving to main without completing the desired turn
+                                    pass
+                                break
+                        self.full_360_scan = False
+                        self.full_360_objects = {}
 
                 else:
                     try:
