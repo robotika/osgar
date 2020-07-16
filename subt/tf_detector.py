@@ -14,8 +14,8 @@ class TfDetector:
         self.model = self.model.signatures['serving_default']
 #        print(self.model.inputs)
         self.model.output_dtypes
-        self.artf_names = np.array(["backpack", "survivor", "phone", "rope", "helmet"])
-        self.min_scores = np.array([0.2, 0.2, 0.2, 0.2, 0.2])
+        self.artf_names = np.array(["backpack", "survivor", "phone", "rope", "helmet", "robot"])
+        self.min_scores = np.array([0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
 
 
     def detect(self, img):
