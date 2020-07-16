@@ -120,12 +120,13 @@ class ThreadedPublisher:
         self.output_thread.join(timeout)
 
     def run_input(self):
-        while self.bus.is_alive():
+        for i in range(10):
             self.bus.publish('raw', b'data from outside')
-            print("step")
+            if not self.bus.is_alive():
+                return
 
     def run_output(self):
-        for i in range(10):
+        while True:
             dt, channel, data = self.bus.listen()
 
 
