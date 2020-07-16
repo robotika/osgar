@@ -101,6 +101,34 @@ class PublisherListener:
             dt = self.bus.publish(self.output_name, i)
             #print(self.bus.name, dt, channel, value)
 
+
+class ThreadedPublisher:
+    def __init__(self, config, bus):
+        self.bus = bus
+        self.bus.register('raw')
+        self.input_thread = None
+        self.output_thread = None
+
+    def start(self):
+        self.input_thread = Thread(target=self.run_input)
+        self.output_thread = Thread(target=self.run_output)
+        self.input_thread.start()
+        self.output_thread.start()
+
+    def join(self, timeout=None):
+        self.input_thread.join(timeout)
+        self.output_thread.join(timeout)
+
+    def run_input(self):
+        while self.bus.is_alive():
+            self.bus.publish('raw', b'data from outside')
+            print("step")
+
+    def run_output(self):
+        for i in range(10):
+            dt, channel, data = self.bus.listen()
+
+
 class NoQuit:
     def __init__(self, config, bus):
         self.bus = bus
@@ -167,6 +195,16 @@ class Test(unittest.TestCase):
                 "init": { "output": f"count{i}" }
             }
         record(config, log_filename='publisher.log')
+
+    def test_publisher_threaded(self):
+        config = { 'version': 2, 'robot': { 'modules': {}, 'links': [] } }
+        config['robot']['modules']['publisher-threaded'] = {
+            "driver": "osgar.test_zmqrouter:ThreadedPublisher",
+        }
+        record(config, log_filename='publisher-threaded.log', duration_sec=3)
+        with osgar.logger.LogReader(self.tempdir/"publisher-threaded.log", only_stream_id=1) as log:
+            count = sum(1 for _ in log)
+            self.assertEqual(count, 10)
 
     def test_compress(self):
         config = { 'version': 2, 'robot': { 'modules': {}, 'links': [] } }
