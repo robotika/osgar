@@ -142,7 +142,7 @@ class SpaceRoboticsChallenge(MoonNode):
 
     def on_response(self, data):
         token, response = data
-        print(self.sim_time, "controller:response received: token=%s, response=%s" % (token, response))
+        #print(self.sim_time, "controller:response received: token=%s, response=%s" % (token, response))
         callback = self.requests[token]
         self.requests.pop(token)
         if callback is not None:
@@ -152,7 +152,7 @@ class SpaceRoboticsChallenge(MoonNode):
         """Send ROS Service Request from a single place"""
         token = hex(self.rand.getrandbits(128))
         self.requests[token] = callback
-        print(self.sim_time, "controller:send_request:token: %s, command: %s" % (token, cmd))
+        #print(self.sim_time, "controller:send_request:token: %s, command: %s" % (token, cmd))
         self.publish('request', [token, cmd])
 
     def set_cam_angle(self, angle):
@@ -331,7 +331,7 @@ class SpaceRoboticsChallenge(MoonNode):
         # recovered enough at this point to switch to another driver (in case you see cubesat while doing the 3m drive or the final turn)
         self.bus.publish('driving_recovery', False)
 
-        self.go_straight(3.0, timeout=timedelta(seconds=20))
+        self.go_straight(5.0, timeout=timedelta(seconds=20))
         self.turn(math.radians(-90), timeout=timedelta(seconds=10))
 
     def wait_for_init(self):
