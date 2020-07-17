@@ -27,7 +27,7 @@ class ArtifactTest(unittest.TestCase):
                     continue
                 if not comp_one(d, t[i]):
                     continue
-                if abs(d[5] - t[i][5]) > 200:
+                if abs(d[5] - t[i][5]) > 400:
                     continue
                 return True
             return False
