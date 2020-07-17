@@ -311,6 +311,8 @@ class Framer:
                 self.scan2 = deserialize(data)
             elif stream_id == self.camera_id:
                 self.image = get_image(deserialize(data))
+                # bounding boxes associated with an image are stored after the image in the log
+                # therefore, we need to continue reading the log past the image in order to gathering its bounding box data
                 current = self.current
                 while current + direction >= 0 and current + direction < len(self.log):
                     current += direction
