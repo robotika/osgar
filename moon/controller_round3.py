@@ -107,7 +107,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         self.cubesat_reached = False
         self.cubesat_success = False
 
-        self.basemarker_centered = False
+        self.basemarker_angle = None
         self.basemarker_left_history = []
         self.basemarker_right_history = []
         self.basemarker_whole_scan_history = []
@@ -177,7 +177,6 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                             self.set_cam_angle(CAMERA_ANGLE_HOMEBASE)
                             self.current_driver = "basemarker"
                             self.homebase_arrival_success = True
-                            self.going_around_count += 1
                             self.follow_object(['basemarker'])
 
                         else:
@@ -439,13 +438,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                         self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
 
                 elif self.currently_following_object['object_type'] == 'basemarker':
-                    if center_x < (CAMERA_WIDTH/2 - 5): # if marker to the left
-                        self.basemarker_centered = False
-                    elif center_x > (CAMERA_WIDTH/2 + 5):
-                        self.basemarker_centered = False
-                    else:
-                        print(self.sim_time, "app: basemarker centered")
-                        self.basemarker_centered = True
+                    self.basemarker_angle = math.atan( (CAMERA_WIDTH / 2 - center_x ) / float(CAMERA_FOCAL_LENGTH))
 
 
 
@@ -471,7 +464,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
             print (self.sim_time, "No longer tracking %s" % self.currently_following_object['object_type'])
             self.currently_following_object['timestamp'] = None
             self.currently_following_object['object_type'] = None
-            self.basemarker_centered = False
+            self.basemarker_angle = None
             if self.current_driver != "basemarker": # do not change drivers when basemarker gets out of view because going around will bring it again
                 self.on_driving_control(None) # do this last as it raises exception
 
@@ -502,7 +495,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     print (self.sim_time, "app: No longer going around homebase")
                     self.currently_following_object['timestamp'] = None
                     self.currently_following_object['object_type'] = None
-                    self.basemarker_centered = False
+                    self.basemarker_angle = None
                     self.basemarker_right_history = self.basemarker_left_history = []
                     self.follow_object(['homebase'])
                     self.on_driving_control(None) # do this last as it possibly raises exception
@@ -528,6 +521,10 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     x = rho * math.cos(phi)
                     y = rho * math.sin(phi)
                     return(x, y)
+                def cart2pol(x, y):
+                    rho = np.sqrt(x**2 + y**2)
+                    phi = np.arctan2(y, x)
+                    return(rho, phi)
 
                 x_l = []
                 y_l = []
@@ -559,7 +556,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
 
                 # print (self.sim_time, "app: Min dist front: %f, dist left=%f, right=%f" % (straight_ahead_dist, left_dist, right_dist))
 
-                if self.basemarker_centered and left_dist < 6 and abs(homebase_cy) < 0.1: # cos 20 = dist_r / dist _l is the max ratio in order to be at most 10 degrees off; also needs to be closer than 6m
+                if self.basemarker_angle is not None and abs(self.basemarker_angle) < 0.06 and left_dist < 6 and abs(homebase_cy) < 0.1: # cos 20 = dist_r / dist _l is the max ratio in order to be at most 10 degrees off; also needs to be closer than 6m
                     self.publish("desired_movement", [0, -9000, 0])
                     self.object_reached('basemarker')
                     return
@@ -571,6 +568,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     self.centering = False
 
                 # if seeing basemarker and homebase center is not straight ahead OR if looking past homebase in one of the directions, turn in place to adjust
+                # -1 means going right, 1 going left
                 circle_direction = 1 if self.going_around_count % 2 == 0 else -1
                 if (self.currently_following_object['object_type'] == 'basemarker' and homebase_cy < -0.2) or left_dist > 10:
                     self.centering = True
@@ -591,6 +589,10 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 else:
                     # print ("driving radius: %f" % self.basemarker_radius)
                     # negative radius turns to the right
+                    if self.currently_following_object['object_type'] == 'basemarker' and self.basemarker_angle is not None:
+                        (rho, phi) = cart2pol(homebase_cx, homebase_cy)
+                        print("Angles: %f %f" % (self.basemarker_angle, phi))
+                        circle_direction = -1 if self.basemarker_angle < phi else 1
                     self.publish("desired_movement", [-(HOMEBASE_KEEP_DISTANCE + HOMEBASE_RADIUS), -9000, circle_direction * SPEED_ON])
 
 
