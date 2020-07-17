@@ -219,7 +219,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         # plot 2D points: https://www.desmos.com/calculator/mhq4hsncnh
         # plot 3D points: https://technology.cpm.org/general/3dgraph/
 
-        observed_values = [(23.5, 30.7), (26, 28.9), (27.5, 24.5), (28, 21.35), (29.5, 20.5), (41,18.3), (45,15.5), (51, 15.1), (58.5, 12), (62, 11.9)]
+        observed_values = [(294, 33.5), (370, 28.9), (396, 27.9), (499, 25.4), (565, 26), (589, 25.8), (661, 25.4), (958, 20), (1258, 17.5), (1635, 15.35), (2103, 13.56)]
 
         t1 = None
 
@@ -272,7 +272,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         center_y = data[2] + data[4] / 2
         bbox_size = (data[3] + data[4]) / 2 # calculate avegage in case of substantially non square matches
         img_x, img_y, img_w, img_h = data[1:5]
-        nr_of_black = data[4]
+        nr_of_nonblack = data[5]
 
 
         if self.full_360_scan:
@@ -281,7 +281,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
             self.full_360_objects[artifact_type].append(self.yaw)
             return
 
-#        print ("Artf: %s %d %d %d %d %d" % (artifact_type, img_x, img_y, img_w, img_h, nr_of_black))
+#        print ("Artf: %s %d %d %d %d %d" % (artifact_type, img_x, img_y, img_w, img_h, nr_of_nonblack))
 
         # TODO if detection during turning on the spot, instead of driving straight steering a little, turn back to the direction where the detection happened first
 
@@ -369,7 +369,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                                 angle_x = math.atan( (CAMERA_WIDTH / 2 - (img_x + img_w/2) ) / float(CAMERA_FOCAL_LENGTH))
                                 angle_y = math.atan( (CAMERA_HEIGHT / 2 - (img_y + img_h/2) ) / float(CAMERA_FOCAL_LENGTH))
 
-                                distance = self.interpolate_distance((img_w + img_h) / 2)
+                                distance = self.interpolate_distance(nr_of_nonblack)
                                 ax = self.nasa_yaw + angle_x
                                 ay = self.nasa_pitch + angle_y
 
