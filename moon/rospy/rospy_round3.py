@@ -3,6 +3,7 @@
   Wait for all necessary ROS sensors
   this is Python 2.7 code
 """
+from functools import partial
 
 import rospy
 from rospy_base import RospyBase, RospyBaseReqRep, RospyBasePushPull
@@ -18,7 +19,7 @@ class RospyRound3PushPull(RospyBasePushPull):
 
     def register_handlers(self):
         super(RospyRound3PushPull, self).register_handlers()
-        rospy.Subscriber('/qual_3_score', Qual3ScoringMsg, self.callback_topic, '/qual_3_score')
+        rospy.Subscriber('/qual_3_score', Qual3ScoringMsg, partial(self.callback_topic, rate=1000), '/qual_3_score')
 
 class RospyRound3ReqRep(RospyBaseReqRep):
 
@@ -89,6 +90,6 @@ class RospyRound3Helper(RospyBase):
 
 class RospyRound3(RospyRound3Helper):
     pass
-        
+
 
 # vim: expandtab sw=4 ts=4
