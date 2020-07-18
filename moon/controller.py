@@ -79,6 +79,9 @@ class SpaceRoboticsChallenge(MoonNode):
         super().__init__(config, bus)
         bus.register("desired_speed", "artf_xyz", "artf_cmd", "pose2d", "pose3d", "driving_recovery", "request", "cmd")
 
+        self.joint_name = None
+        self.sensor_joint_position = None
+
         self.last_position = None
         self.max_speed = 1.0  # oficial max speed is 1.5m/s
         self.max_angular_speed = math.radians(60)
@@ -157,6 +160,7 @@ class SpaceRoboticsChallenge(MoonNode):
 
     def set_cam_angle(self, angle):
         self.send_request('set_cam_angle %f\n' % angle)
+        angle = min(math.pi / 4.0, max(-math.pi / 8.0, angle))
         self.camera_angle = angle
         print (self.sim_time, "app: Camera angle set to: %f" % angle)
         self.camera_change_triggered_time = self.sim_time
@@ -210,7 +214,8 @@ class SpaceRoboticsChallenge(MoonNode):
         pass
 
     def on_joint_position(self, data):
-        pass
+        assert self.joint_name is not None
+        self.sensor_joint_position = data[self.joint_name.index(b'sensor_joint')]
 
     def on_rot(self, data):
         # use of on_rot is deprecated, will be replaced by on_orientation
@@ -232,7 +237,7 @@ class SpaceRoboticsChallenge(MoonNode):
 
         if self.use_gimbal:
             # maintain camera level
-            cam_angle = self.camera_angle + self.pitch
+            cam_angle = min(math.pi / 4.0, max(-math.pi / 8.0, self.camera_angle + self.pitch))
             self.publish('cmd', b'set_cam_angle %f' % cam_angle)
 
         if not self.inException and abs(self.pitch) > 0.6:
