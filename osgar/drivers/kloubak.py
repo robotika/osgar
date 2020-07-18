@@ -246,6 +246,7 @@ class RobotKloubak(Node):
         setup_global_const(config)
 
         # commands
+        self.original_desired_speed = 0.0 # m/s
         self.desired_speed = 0.0  # m/s
         self.desired_angular_speed = 0.0
         self.v_fl = self.v_fr = self.v_rl = self.v_rr = 0  # values in m/s
@@ -272,6 +273,7 @@ class RobotKloubak(Node):
         self.downdrops_front = None  # array of downdrop sensors
         self.downdrops_rear = None
         self.can_errors = 0  # count errors instead of assert
+        self.timestamp_before = None # timestamp of previous can message
 
         # new per axis encoders
         self.epoch = None  # unknown
@@ -705,6 +707,13 @@ class RobotKloubak(Node):
 
     def slot_can(self, timestamp, data):
         self.time = timestamp
+        # ramp, attempt to fluent change of desired speed
+        if self.original_desired_speed != self.desired_speed and self.timestamp_before:
+            speed_diff = self.original_desired_speed - self.desired_speed
+            time_diff = timestamp - self.timestamp_before
+            speed_change = min(2 * time_diff.total_seconds(), abs(speed_diff)) # keep acceleration +- 2 m/s^2
+            self.desired_speed = self.desired_speed + math.copysign(speed_change, speed_diff)
+
         if self.num_axis == 3:
             self.update_drive_three_axles(timestamp, data)
 
@@ -719,9 +728,14 @@ class RobotKloubak(Node):
         else:
             assert False, self.num_axis  # 2 or 3 are supported only
 
+        self.timestamp_before = timestamp
+
 
     def slot_desired_speed(self, timestamp, data):
-        self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
+        self.original_desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
+        # keep min speed +-0.25 m/s
+        if self.original_desired_speed != 0 and abs(self.original_desired_speed) < 0.25:
+            self.original_desired_speed = math.copysign(0.25, self.original_desired_speed)
 
     def run(self):
         try:
