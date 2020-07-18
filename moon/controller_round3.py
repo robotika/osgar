@@ -42,6 +42,16 @@ SKIP_HOMEBASE_SUCCESS = False # do not require successful homebase arrival repor
 
 ATTEMPT_DELAY = timedelta(seconds=30)
 
+def pol2cart(rho, phi):
+    x = rho * math.cos(phi)
+    y = rho * math.sin(phi)
+    return(x, y)
+
+def cart2pol(x, y):
+    rho = np.sqrt(x**2 + y**2)
+    phi = np.arctan2(y, x)
+    return(rho, phi)
+
 def min_dist(laser_data):
     if len(laser_data) > 0:
         # remove ultra near reflections and unlimited values == 0
@@ -219,7 +229,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         # plot 2D points: https://www.desmos.com/calculator/mhq4hsncnh
         # plot 3D points: https://technology.cpm.org/general/3dgraph/
 
-        observed_values = [(294, 33.5), (370, 28.9), (396, 27.9), (499, 25.4), (565, 26), (589, 25.8), (661, 25.4), (958, 20), (1258, 17.5), (1635, 15.35), (2103, 13.56)]
+        observed_values = [(294, 33.5), (370, 28.9), (396, 27.9), (499, 25.4), (565, 26), (589, 25.8), (661, 25.4), (958, 20), (1258, 17.5), (1635, 15.35), (2103, 13.56), (4594, 9.7)]
 
         t1 = None
 
@@ -317,7 +327,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     if (
                             bbox_size > 25 and
                             img_y < 40 and
-                            self.camera_angle > 0.8 * CAMERA_ANGLE_LOOKING and
+                            abs(self.sensor_joint_position - (CAMERA_ANGLE_LOOKING + self.pitch)) < 0.1 and # camera is close to 'looking up' position
                             CUBESAT_MIN_EDGE_DISTANCE < img_x < (CAMERA_WIDTH - CUBESAT_MIN_EDGE_DISTANCE - bbox_size)
                     ):
                         # box 25 pixels represents distance about 27m which is as close as we can possibly get for cubesats with high altitude
@@ -366,19 +376,22 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                                 print (self.sim_time, "app: True pose received: xyz=[%f,%f,%f], roll=%f, pitch=%f, yaw=%f" % (origin[0],origin[1],origin[2],self.nasa_roll, self.nasa_pitch, self.nasa_yaw))
 
                                 print(self.sim_time, "app: Final frame x=%d y=%d w=%d h=%d, nonblack=%d" % (data[1], data[2], data[3], data[4], data[5]))
-                                angle_x = math.atan( (CAMERA_WIDTH / 2 - (img_x + img_w/2) ) / float(CAMERA_FOCAL_LENGTH))
-                                angle_y = math.atan( (CAMERA_HEIGHT / 2 - (img_y + img_h/2) ) / float(CAMERA_FOCAL_LENGTH))
+                                screen_x = (CAMERA_WIDTH / 2 - (img_x + img_w/2) )
+                                screen_y = (CAMERA_HEIGHT / 2 - (img_y + img_h/2) )
+
+                                (rho, phi) = cart2pol(screen_x, screen_y)
+                                phi += self.nasa_roll
+                                (screen_x, screen_y) = pol2cart(rho, phi)
+
+                                angle_x = math.atan( screen_x / float(CAMERA_FOCAL_LENGTH))
+                                angle_y = math.atan( screen_y / float(CAMERA_FOCAL_LENGTH))
 
                                 distance = self.interpolate_distance(nr_of_nonblack)
                                 ax = self.nasa_yaw + angle_x
                                 ay = self.nasa_pitch + angle_y
 
-                                if self.use_gimbal:
-                                    # gimbal changes the actual angle dynamically so pitch needs to be offset
-                                    ay += min(math.pi / 4.0, max(-math.pi / 8.0, self.camera_angle - self.nasa_pitch))
-                                else:
-                                    ay += self.camera_angle
-
+                                print (self.sim_time, "app: Camera angle adjustment: %f" % self.sensor_joint_position)
+                                ay += self.sensor_joint_position
 
                                 x, y, z = self.nasa_xyz
                                 print("Using pose: xyz=[%f %f %f] orientation=[%f %f %f]" % (x, y, z, self.nasa_roll, self.nasa_pitch, self.nasa_yaw))
@@ -517,14 +530,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     # if in basemarker mode, looking at homebase but lidar shows no hits, it's a noisy lidar scan, ignore
                     return
 
-                def pol2cart(rho, phi):
-                    x = rho * math.cos(phi)
-                    y = rho * math.sin(phi)
-                    return(x, y)
-                def cart2pol(x, y):
-                    rho = np.sqrt(x**2 + y**2)
-                    phi = np.arctan2(y, x)
-                    return(rho, phi)
+
 
                 x_l = []
                 y_l = []
@@ -591,7 +597,6 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     # negative radius turns to the right
                     if self.currently_following_object['object_type'] == 'basemarker' and self.basemarker_angle is not None:
                         (rho, phi) = cart2pol(homebase_cx, homebase_cy)
-                        print("Angles: %f %f" % (self.basemarker_angle, phi))
                         circle_direction = -1 if self.basemarker_angle < phi else 1
                     self.publish("desired_movement", [-(HOMEBASE_KEEP_DISTANCE + HOMEBASE_RADIUS), -9000, circle_direction * SPEED_ON])
 
@@ -714,6 +719,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 except ChangeDriverException as e:
                     continue
                 except (VirtualBumperException, LidarCollisionException) as e:
+                    print(self.sim_time, "Go Straight or Follow-object Virtual Bumper")
                     self.inException = True
                     # TODO: crashes if an exception (e.g., excess pitch) occurs while handling an exception (e.g., virtual/lidar bump)
                     print(self.sim_time, repr(e))
@@ -755,7 +761,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 except (VirtualBumperException, LidarCollisionException):
                     self.inException = True
                     self.set_cam_angle(CAMERA_ANGLE_DRIVING)
-                    print(self.sim_time, "Turn Virtual Bumper!")
+                    print(self.sim_time, "Random Turn Virtual Bumper!")
                     self.virtual_bumper = None
                     if self.current_driver is not None:
                         # probably didn't throw in previous turn but during self driving
