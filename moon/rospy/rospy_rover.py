@@ -21,7 +21,7 @@ from geometry_msgs.msg import Twist, Point
 
 # SRCP2 specific
 
-from srcp2_msgs.srv import (ToggleLightSrv, BrakeRoverSrv, LocalizationSrv)
+from srcp2_msgs.srv import (ToggleLightSrv, BrakeRoverSrv, LocalizationSrv, ResetModelSrv)
 
 
 class RospyRoverPushPull(RospyBasePushPull):
@@ -163,8 +163,14 @@ class RospyRoverReqRep(RospyBaseReqRep):
 
             elif message_type == "set_brakes":
                 is_on = message.split(" ")[1].startswith("on")
-                print ("rospy_rover: Setting brakes to: %r" % is_on)
-                self.brakes(is_on)
+                brake_torque = 100.0 if is_on else 0.0
+                print ("rospy_rover: Setting brakes to: %f" % brake_torque)
+                self.brakes(brake_torque)
+                return 'OK'
+
+            elif message_type == "reset_model":
+                print ("rospy_rover: Resetting model")
+                self.reset_model(True)
                 return 'OK'
 
             elif message_type == "request_origin":
@@ -197,6 +203,8 @@ class RospyRoverReqRep(RospyBaseReqRep):
         self.light_up_msg = Float64()
 
         self.brakes = rospy.ServiceProxy('/' + self.robot_name + '/brake_rover', BrakeRoverSrv)
+
+        self.reset_model = rospy.ServiceProxy('/' + self.robot_name + '/reset_model', ResetModelSrv)
 
 
 class RospyRoverHelper(RospyBase):
