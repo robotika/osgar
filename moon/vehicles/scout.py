@@ -29,7 +29,7 @@ class Scout(Rover):
         # called by incoming volatile sensor report (among other sources)
         # 0 vol_type, 1 distance_to, 2 vol_index
         artifact_type = data[0]  # meters ... TODO distinguish CubeSat, volatiles, ProcessingPlant
-        if artifact_type in ['ice', 'ethene', 'methane', 'methanol', 'carbon_dio', 'ammonia', 'hydrogen_sul', 'sulfur_dio']:
+        if artifact_type in ['ice', 'ethene', 'methane', 'carbon_mono', 'carbon_dio', 'ammonia', 'hydrogen_sul', 'sulfur_dio']:
             distance_to = data[1]
             vol_index = data[2]
 

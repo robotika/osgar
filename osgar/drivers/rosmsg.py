@@ -390,7 +390,7 @@ def parse_topic(topic_type, data):
         # _slot_types = ['int32','int32','int32[8]']
         return list(struct.unpack_from('<II', data, pos))  # only score and calls
     elif topic_type == 'srcp2_msgs/Qual2ScoringMsg':
-        assert len(data) == 139, (len(data), data)
+        assert len(data) == 142, (len(data), data)
         # __slots__ = ['vol_type', 'points_per_type', 'num_of_dumps', 'total_score']
         # _slot_types = ['string[8]', 'int32[8]', 'int32', 'float32']
         # let's ignore names of volatile types

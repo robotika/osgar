@@ -107,13 +107,15 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         self.cubesat_reached = False
         self.cubesat_success = False
 
-        self.basemarker_centered = False
+        self.basemarker_angle = None
         self.basemarker_left_history = []
         self.basemarker_right_history = []
         self.basemarker_whole_scan_history = []
         self.basemarker_radius = None
         self.centering = False
         self.going_around_count = 0
+        self.full_360_scan = False
+        self.full_360_objects = {}
 
         self.last_attempt_timestamp = None
 
@@ -175,7 +177,6 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                             self.set_cam_angle(CAMERA_ANGLE_HOMEBASE)
                             self.current_driver = "basemarker"
                             self.homebase_arrival_success = True
-                            self.going_around_count += 1
                             self.follow_object(['basemarker'])
 
                         else:
@@ -218,7 +219,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         # plot 2D points: https://www.desmos.com/calculator/mhq4hsncnh
         # plot 3D points: https://technology.cpm.org/general/3dgraph/
 
-        observed_values = [(23.5, 30.7), (27.5, 24.5), (28, 21.35), (29.5, 20.5), (41,18.3), (45,15.5), (51, 15.1), (58.5, 12), (62, 11.9)]
+        observed_values = [(23.5, 30.7), (26, 28.9), (27.5, 24.5), (28, 21.35), (29.5, 20.5), (41,18.3), (45,15.5), (51, 15.1), (58.5, 12), (62, 11.9)]
 
         t1 = None
 
@@ -272,6 +273,13 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         bbox_size = (data[3] + data[4]) / 2 # calculate avegage in case of substantially non square matches
         img_x, img_y, img_w, img_h = data[1:5]
         nr_of_black = data[4]
+
+
+        if self.full_360_scan:
+            if artifact_type not in self.full_360_objects.keys():
+                self.full_360_objects[artifact_type] = []
+            self.full_360_objects[artifact_type].append(self.yaw)
+            return
 
 #        print ("Artf: %s %d %d %d %d %d" % (artifact_type, img_x, img_y, img_w, img_h, nr_of_black))
 
@@ -430,13 +438,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                         self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
 
                 elif self.currently_following_object['object_type'] == 'basemarker':
-                    if center_x < (CAMERA_WIDTH/2 - 5): # if marker to the left
-                        self.basemarker_centered = False
-                    elif center_x > (CAMERA_WIDTH/2 + 5):
-                        self.basemarker_centered = False
-                    else:
-                        print(self.sim_time, "app: basemarker centered")
-                        self.basemarker_centered = True
+                    self.basemarker_angle = math.atan( (CAMERA_WIDTH / 2 - center_x ) / float(CAMERA_FOCAL_LENGTH))
 
 
 
@@ -462,7 +464,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
             print (self.sim_time, "No longer tracking %s" % self.currently_following_object['object_type'])
             self.currently_following_object['timestamp'] = None
             self.currently_following_object['object_type'] = None
-            self.basemarker_centered = False
+            self.basemarker_angle = None
             if self.current_driver != "basemarker": # do not change drivers when basemarker gets out of view because going around will bring it again
                 self.on_driving_control(None) # do this last as it raises exception
 
@@ -493,7 +495,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     print (self.sim_time, "app: No longer going around homebase")
                     self.currently_following_object['timestamp'] = None
                     self.currently_following_object['object_type'] = None
-                    self.basemarker_centered = False
+                    self.basemarker_angle = None
                     self.basemarker_right_history = self.basemarker_left_history = []
                     self.follow_object(['homebase'])
                     self.on_driving_control(None) # do this last as it possibly raises exception
@@ -519,6 +521,10 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     x = rho * math.cos(phi)
                     y = rho * math.sin(phi)
                     return(x, y)
+                def cart2pol(x, y):
+                    rho = np.sqrt(x**2 + y**2)
+                    phi = np.arctan2(y, x)
+                    return(rho, phi)
 
                 x_l = []
                 y_l = []
@@ -550,7 +556,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
 
                 # print (self.sim_time, "app: Min dist front: %f, dist left=%f, right=%f" % (straight_ahead_dist, left_dist, right_dist))
 
-                if self.basemarker_centered and left_dist < 6 and abs(homebase_cy) < 0.1: # cos 20 = dist_r / dist _l is the max ratio in order to be at most 10 degrees off; also needs to be closer than 6m
+                if self.basemarker_angle is not None and abs(self.basemarker_angle) < 0.06 and left_dist < 6 and abs(homebase_cy) < 0.1: # cos 20 = dist_r / dist _l is the max ratio in order to be at most 10 degrees off; also needs to be closer than 6m
                     self.publish("desired_movement", [0, -9000, 0])
                     self.object_reached('basemarker')
                     return
@@ -562,6 +568,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     self.centering = False
 
                 # if seeing basemarker and homebase center is not straight ahead OR if looking past homebase in one of the directions, turn in place to adjust
+                # -1 means going right, 1 going left
                 circle_direction = 1 if self.going_around_count % 2 == 0 else -1
                 if (self.currently_following_object['object_type'] == 'basemarker' and homebase_cy < -0.2) or left_dist > 10:
                     self.centering = True
@@ -582,6 +589,10 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 else:
                     # print ("driving radius: %f" % self.basemarker_radius)
                     # negative radius turns to the right
+                    if self.currently_following_object['object_type'] == 'basemarker' and self.basemarker_angle is not None:
+                        (rho, phi) = cart2pol(homebase_cx, homebase_cy)
+                        print("Angles: %f %f" % (self.basemarker_angle, phi))
+                        circle_direction = -1 if self.basemarker_angle < phi else 1
                     self.publish("desired_movement", [-(HOMEBASE_KEEP_DISTANCE + HOMEBASE_RADIUS), -9000, circle_direction * SPEED_ON])
 
 
@@ -631,6 +642,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 # then turn back to the direction of the top priority match
 
                 if self.current_driver is None and not self.brakes_on:
+                    if len(self.objects_to_follow) > 1:
+                        self.full_360_scan = True
                     try:
                         self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
                         with LidarCollisionMonitor(self):
@@ -640,6 +653,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                             self.turn(math.radians(360), timeout=timedelta(seconds=20))
                     except ChangeDriverException as e:
                         print(self.sim_time, "Turn interrupted by driver: %s" % e)
+                        self.full_360_scan = False
+                        self.full_360_objects = {}
                         continue
                         # proceed to straight line drive where we wait; straight line exception handling is better applicable for follow-object drive
                     except (VirtualBumperException, LidarCollisionException)  as e:
@@ -652,6 +667,20 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                         self.turn(math.radians(deg_angle), timeout=timedelta(seconds=10))
                         self.inException = False
                         self.bus.publish('driving_recovery', False)
+                    if len(self.objects_to_follow) > 1:
+                        print(self.sim_time, "app: 360deg scan: " + str([[a, median(self.full_360_objects[a])] for a in self.full_360_objects.keys()]))
+                        for o in self.objects_to_follow:
+                            if o in self.full_360_objects.keys():
+                                try:
+                                    self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
+                                    with LidarCollisionMonitor(self):
+                                        self.turn(median(self.full_360_objects[o]) - self.yaw, timeout=timedelta(seconds=20))
+                                except:
+                                    # in case it gets stuck turning, just hand over driving to main without completing the desired turn
+                                    pass
+                                break
+                        self.full_360_scan = False
+                        self.full_360_objects = {}
 
                 else:
                     try:
