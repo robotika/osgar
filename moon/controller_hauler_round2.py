@@ -60,6 +60,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
     def run(self):
         try:
             self.wait_for_init()
+            self.set_light_intensity("1.0")
             self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
 
             while True:
@@ -93,7 +94,10 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         center_y = data[2] + data[4] / 2
         bbox_size = (data[3] + data[4]) / 2 # calculate avegage in case of substantially non square matches
         img_x, img_y, img_w, img_h = data[1:5]
-        nr_of_black = data[4]
+        nr_of_black = data[5]
+
+        if self.sim_time is None:
+            return
 
         if self.straight_ahead_distance is None:
             return

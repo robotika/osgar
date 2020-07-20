@@ -168,6 +168,12 @@ class RospyRoverReqRep(RospyBaseReqRep):
                 self.brakes(brake_torque)
                 return 'OK'
 
+            elif message_type == "set_light_intensity":
+                light_level = message.split(" ")[1]
+                print ("rospy_rover: Setting light intensity to: %s" % light_level)
+                self.lights(light_level)
+                return 'OK'
+
             elif message_type == "reset_model":
                 print ("rospy_rover: Resetting model")
                 self.reset_model(True)
@@ -196,8 +202,7 @@ class RospyRoverReqRep(RospyBaseReqRep):
 
         QSIZE = 10
 
-        lights_on = rospy.ServiceProxy('/' + self.robot_name + '/toggle_light', ToggleLightSrv)
-        lights_on('high')
+        self.lights = rospy.ServiceProxy('/' + self.robot_name + '/toggle_light', ToggleLightSrv)
 
         self.light_up_pub = rospy.Publisher('/' + self.robot_name + '/sensor_controller/command', Float64, queue_size=QSIZE, latch=True)
         self.light_up_msg = Float64()
