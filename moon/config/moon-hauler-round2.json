@@ -77,6 +77,8 @@
               ["rosmsg.joint_position", "hauler.joint_position"],
               ["rosmsg.joint_velocity", "hauler.joint_velocity"],
               ["rosmsg.joint_effort", "hauler.joint_effort"],
+              ["rosmsg.sim_clock", "hauler.sim_clock"],
+              ["rosmsg.sim_clock", "app.sim_clock"],
               ["rosmsg.left_image", "detector.left_image"],
               ["rosmsg.right_image", "detector.right_image"],
               ["app.desired_speed", "hauler.desired_speed"],
