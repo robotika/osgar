@@ -235,11 +235,11 @@ class SpaceRoboticsChallenge(MoonNode):
             cam_angle = self.camera_angle + self.pitch
             self.publish('cmd', b'set_cam_angle %f' % cam_angle)
 
-        if not self.inException and self.pitch < -0.6:
+        if not self.inException and abs(self.pitch) > 0.6:
             # TODO pitch can also go the other way if we back into an obstacle
             # TODO: robot can also roll if it runs on a side of a rock while already on a slope
             self.bus.publish('driving_recovery', True)
-            print (self.sim_time, "app: Excess pitch, going back down")
+            print (self.sim_time, "app: Excess pitch, going back")
             raise VirtualBumperException()
 
     def update(self):
@@ -294,7 +294,7 @@ class SpaceRoboticsChallenge(MoonNode):
             start_time = self.sim_time
             while self.sim_time - start_time < timedelta(seconds=2):
                 self.update()
-            print(self.sim_time, 'stop at', self.sim_time - start_time)
+            #print(self.sim_time, 'stop at', self.sim_time - start_time)
 
     def wait(self, dt):  # TODO refactor to some common class
         while self.sim_time is None:
