@@ -95,8 +95,6 @@ now=$(date +"%m%d%Y_%H%M")
 log_dir="${LOG_DIR_PREFIX}/bulklogs_${now}"
 mkdir ${log_dir}
 
-
-
 echo "Round: ${ROUND}, Score: ${SCORE}; Fail String: ${FAIL_STRING}; Seed range: ${RANGE_START}-${RANGE_END}; Repeat seeds: ${REPEAT_SEED}; Timeout(min): `expr ${TIMEOUT} / 60`; Unsuccessful logs only: ${UNSUCCESS_LOGS_ONLY}; Log dir: ${log_dir}"
 
 for i in $(seq $RANGE_START $RANGE_END)

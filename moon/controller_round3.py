@@ -284,7 +284,6 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         img_x, img_y, img_w, img_h = data[1:5]
         nr_of_nonblack = data[5]
 
-
         if self.full_360_scan:
             if artifact_type not in self.full_360_objects.keys():
                 self.full_360_objects[artifact_type] = []
@@ -529,8 +528,6 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 if min_index is None or max_index is None or max_index - min_index < 3:
                     # if in basemarker mode, looking at homebase but lidar shows no hits, it's a noisy lidar scan, ignore
                     return
-
-
 
                 x_l = []
                 y_l = []
