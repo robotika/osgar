@@ -17,7 +17,7 @@ import rospy
 from std_msgs.msg import *  # Float64, JointState
 from sensor_msgs.msg import *
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Twist, Point
+from geometry_msgs.msg import Twist, Point, PoseStamped
 
 # SRCP2 specific
 
@@ -45,6 +45,7 @@ class RospyRoverPushPull(RospyBasePushPull):
         rospy.Subscriber('/' + self.robot_name + '/joint_states', JointState, self.callback_topic, '/' + self.robot_name + '/joint_states')
         rospy.Subscriber('/' + self.robot_name + '/laser/scan', LaserScan, self.callback_topic, '/' + self.robot_name + '/laser/scan')
         rospy.Subscriber('/' + self.robot_name + '/imu', Imu, self.callback_topic, '/' + self.robot_name + '/imu')
+        rospy.Subscriber('/' + self.robot_name + '/openvslam/camera_pose', PoseStamped, self.callback_topic, '/' + self.robot_name + '/openvslam/pose')
 
         QSIZE = 10
 

@@ -39,7 +39,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
 
         try:
             self.wait_for_init()
-            self.set_light_intensity("1.0")
+            self.set_light_intensity("0.1")
             last_walk_start = 0.0
             start_time = self.sim_time
             while self.sim_time - start_time < timedelta(minutes=40):

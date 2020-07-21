@@ -102,6 +102,10 @@ class SpaceRoboticsChallenge(MoonNode):
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.xyz = (0, 0, 0)  # 3D position for mapping artifacts
         self.xyz_quat = [0, 0, 0]
+
+        self.vslam_xyz = None
+        self.vslam_quat = None
+
         self.offset = (0, 0, 0)
         self.use_gimbal = True # try to keep the camera on level as we go over obstacles
         self.yaw_history = []
@@ -174,6 +178,10 @@ class SpaceRoboticsChallenge(MoonNode):
     def on_driving_recovery(self, data):
         self.in_driving_recovery = data
         print (self.sim_time, "Driving recovery changed to: %r" % data)
+
+    def on_vslam_pose(self, data):
+        self.vslam_xyz = data[0]
+        self.vslam_quat = data[1]
 
     def on_pose2d(self, data):
         x, y, heading = data
@@ -256,6 +264,7 @@ class SpaceRoboticsChallenge(MoonNode):
                 self.last_status_timestamp = self.sim_time
                 x, y, z = self.xyz
                 print (self.sim_time, "Loc: [%f %f %f] [%f %f %f]; Driver: %s; Score: %d" % (x, y, z, self.roll, self.pitch, self.yaw, self.current_driver, self.score))
+
 
         channel = super().update()
         return channel

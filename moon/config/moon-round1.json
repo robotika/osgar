@@ -48,6 +48,7 @@
               ["/scout_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage", "left_image"],
               ["/scout_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage", "right_image"],
               ["/scout_1/imu", "sensor_msgs/Imu", "orientation"],
+              ["/scout_1/openvslam/pose", "geometry_msgs/PoseStamped", "vslam_pose"],
               ["/scout_1/laser/scan", "sensor_msgs/LaserScan", "scan"]
             ]
           }
@@ -65,6 +66,7 @@
               ["rosmsg.rot", "app.rot"],
               ["rosmsg.orientation", "app.orientation"],
               ["rosmsg.scan", "app.scan"],
+              ["rosmsg.vslam_pose", "app.vslam_pose"],
               ["rosmsg./scout_1/volatile_sensor", "scout.volatile"],
               ["rosmsg./qual_1_score", "app.score"],
               ["rosmsg.joint_name", "scout.joint_name"],
