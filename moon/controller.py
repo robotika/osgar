@@ -137,14 +137,13 @@ class SpaceRoboticsChallenge(MoonNode):
         self.origin_quat = quaternion.identity()
         self.start_pose = None
         self.yaw, self.pitch, self.roll = 0, 0, 0
-        self.xyz = (0, 0, 0)  # 3D position for mapping artifacts
-        self.xyz_quat = [0, 0, 0]
+        self.xyz = None
+        self.xyz_quat = None
 
         self.latest_vslam_xyz = None # VSLAM internal pose
         self.latest_vslam_quat = None  # VSLAM internal pose
         self.vslam_rot_matrix = None
         self.vslam_tra_matrix = None
-        self.vslam_xyz = None # NASA coordinates
 
         self.offset = (0, 0, 0)
         self.use_gimbal = True # try to keep the camera on level as we go over obstacles
@@ -238,6 +237,8 @@ class SpaceRoboticsChallenge(MoonNode):
             self.vslam_tra_matrix = translationToMatrix(vslam_xyz_offset)
 
 
+    # NOTE: ONLY subscribe to one of the VSLAM or POSE2D streams for your pose and virtual bumper
+    # TODO: apply fusion of odometry and VSLAM (e.g, if VSLAM is lost, update pose from odometry meanwhile)
     def on_vslam_pose(self, data):
         if math.isnan(data[0][0]):
             if self.vslam_rot_matrix is not None and not self.inException:
@@ -255,8 +256,17 @@ class SpaceRoboticsChallenge(MoonNode):
             # calculate
             v = np.asmatrix(np.array([self.latest_vslam_xyz[0], self.latest_vslam_xyz[1], self.latest_vslam_xyz[2], 1]))
             m = np.dot(self.vslam_tra_matrix, np.dot(self.vslam_rot_matrix, v.T))
-            self.vslam_xyz = [m[0,0], m[1,0], m[2,0]]
-            #print ("VSLAM pos: " + str(self.vslam_xyz))
+            self.xyz = [m[0,0], m[1,0], m[2,0]]
+
+            print ("VSLAM xyz: " + str(self.xyz))
+
+            self.last_position = (self.xyz[0], self.xyz[1], self.yaw) # yaw from IMU
+            if self.virtual_bumper is not None:
+                self.virtual_bumper.update_pose(self.sim_time, self.last_position)
+                if not self.inException and self.virtual_bumper.collision():
+                    self.bus.publish('driving_recovery', True)
+                    raise VirtualBumperException()
+
 
     def on_pose2d(self, data):
         x, y, heading = data
@@ -335,9 +345,9 @@ class SpaceRoboticsChallenge(MoonNode):
         if self.sim_time is not None:
             if self.last_status_timestamp is None:
                 self.last_status_timestamp = self.sim_time
-            elif self.sim_time - self.last_status_timestamp > timedelta(seconds=8) and self.vslam_xyz is not None:
+            elif self.sim_time - self.last_status_timestamp > timedelta(seconds=8) and self.xyz is not None:
                 self.last_status_timestamp = self.sim_time
-                x, y, z = self.vslam_xyz
+                x, y, z = self.xyz
                 print (self.sim_time, "Loc: [%f %f %f] [%f %f %f]; Driver: %s; Score: %d" % (x, y, z, self.roll, self.pitch, self.yaw, self.current_driver, self.score))
 
 
