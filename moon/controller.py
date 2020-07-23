@@ -2,12 +2,16 @@
   Space Robotics Challenge 2
 """
 import math
+import numpy as np
+
 from random import Random
 from datetime import timedelta
 from statistics import median
 
 from osgar.bus import BusShutdownException
 from osgar.lib import quaternion
+from osgar.lib.quaternion import euler_zyx
+
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.lib.virtual_bumper import VirtualBumper
 
@@ -15,13 +19,46 @@ from subt.local_planner import LocalPlanner
 
 from moon.moonnode import MoonNode
 
-
 class ChangeDriverException(Exception):
     pass
 
 class VirtualBumperException(Exception):
     pass
 
+def eulerAnglesToRotationMatrix(theta) :
+
+    R_x = np.array([[1,         0,                  0,                   0 ],
+                    [0,         math.cos(theta[0]), -math.sin(theta[0]), 0 ],
+                    [0,         math.sin(theta[0]), math.cos(theta[0]),  0 ],
+                    [0,         0,                  0,                   1 ]
+                    ])
+
+
+
+    R_y = np.array([[math.cos(theta[1]),    0,      math.sin(theta[1]), 0 ],
+                    [0,                     1,      0,                  0 ],
+                    [-math.sin(theta[1]),   0,      math.cos(theta[1]), 0 ],
+                    [0,                     0,      0,                  1 ]
+                    ])
+
+    R_z = np.array([[math.cos(theta[2]),    -math.sin(theta[2]),    0, 0],
+                    [math.sin(theta[2]),    math.cos(theta[2]),     0, 0],
+                    [0,                     0,                      1, 0],
+                    [0,                     0,                      0, 1]
+                    ])
+
+
+    R = np.dot(R_z, np.dot( R_y, R_x ))
+
+    return R
+
+def translationToMatrix(v):
+    return np.asmatrix(np.array(
+        [[1, 0, 0, 0],
+         [0, 1, 0, 0],
+         [0, 0, 1, 0],
+         [v[0],v[1],v[2],1]]
+    ))
 
 def distance(pose1, pose2):
     return math.hypot(pose1[0] - pose2[0], pose1[1] - pose2[1])
@@ -103,8 +140,11 @@ class SpaceRoboticsChallenge(MoonNode):
         self.xyz = (0, 0, 0)  # 3D position for mapping artifacts
         self.xyz_quat = [0, 0, 0]
 
-        self.vslam_xyz = None
-        self.vslam_quat = None
+        self.latest_vslam_xyz = None # VSLAM internal pose
+        self.latest_vslam_quat = None  # VSLAM internal pose
+        self.vslam_rot_matrix = None
+        self.vslam_tra_matrix = None
+        self.vslam_xyz = None # NASA coordinates
 
         self.offset = (0, 0, 0)
         self.use_gimbal = True # try to keep the camera on level as we go over obstacles
@@ -179,9 +219,43 @@ class SpaceRoboticsChallenge(MoonNode):
         self.in_driving_recovery = data
         print (self.sim_time, "Driving recovery changed to: %r" % data)
 
+    def register_origin(self, message):
+        print ("controller round 1: origin received: %s" % message)
+        if message.split()[0] == 'origin':
+            origin = [float(x) for x in message.split()[1:]]
+            initial_xyz = origin[:3]
+            initial_quat = origin[3:]
+            initial_rpy = euler_zyx(initial_quat)
+
+            latest_vslam_rpy = euler_zyx(self.latest_vslam_quat)
+
+            vslam_xyz_offset = [initial_xyz[0] - self.latest_vslam_xyz[0],
+                                self.latest_vslam_xyz[1] - initial_xyz[1],
+                                self.latest_vslam_xyz[2] - initial_xyz[2]]
+            vslam_rpy_offset = [a-b for a,b in zip(initial_rpy, latest_vslam_rpy)]
+            print("XYZ OFFSET: " + str(vslam_xyz_offset))
+            print("RPY OFFSET: " + str(vslam_rpy_offset))
+            self.vslam_rot_matrix = np.asmatrix(eulerAnglesToRotationMatrix(vslam_rpy_offset))
+            self.vslam_tra_matrix = translationToMatrix(vslam_xyz_offset)
+
+
+
     def on_vslam_pose(self, data):
-        self.vslam_xyz = data[0]
-        self.vslam_quat = data[1]
+        if math.isnan(data[0][0]):
+            if self.vslam_rot_matrix is not None and not self.inException:
+                raise LidarCollisionException
+            return
+
+        self.latest_vslam_xyz = (-data[0][0], -data[0][1], data[0][2])
+        self.latest_vslam_quat = data[1]
+
+        if self.vslam_rot_matrix is None:
+            self.send_request('request_origin', self.register_origin)
+        else:
+            # calculate
+            v = np.asmatrix(np.append(np.array(self.latest_vslam_xyz), [1]))
+            m = ((v.dot(self.vslam_rot_matrix)).dot(self.vslam_tra_matrix)).dot(self.vslam_rot_matrix.I)
+            self.vslam_xyz = [m[0,0], m[0,1], m[0,2]]
 
     def on_pose2d(self, data):
         x, y, heading = data
@@ -262,7 +336,7 @@ class SpaceRoboticsChallenge(MoonNode):
                 self.last_status_timestamp = self.sim_time
             elif self.sim_time - self.last_status_timestamp > timedelta(seconds=8):
                 self.last_status_timestamp = self.sim_time
-                x, y, z = self.xyz
+                x, y, z = self.vslam_xyz
                 print (self.sim_time, "Loc: [%f %f %f] [%f %f %f]; Driver: %s; Score: %d" % (x, y, z, self.roll, self.pitch, self.yaw, self.current_driver, self.score))
 
 

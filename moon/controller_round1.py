@@ -6,19 +6,21 @@ from datetime import timedelta
 
 from osgar.bus import BusShutdownException
 from osgar.lib import quaternion
+from osgar.lib.quaternion import euler_zyx
+
 from osgar.lib.virtual_bumper import VirtualBumper
 
 from moon.controller import (SpaceRoboticsChallenge, ChangeDriverException, VirtualBumperException,
                              LidarCollisionException, LidarCollisionMonitor)
 
-
 class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        self.use_gimbal = False
 
     def on_object_reached(self, data):
         object_type = data
-        x,y,z = self.xyz
+        x,y,z = self.vslam_xyz
         print(self.sim_time, "app: Object %s reached" % object_type)
 
 
@@ -33,9 +35,11 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
         self.send_request('artf %s %f %f 0.0' % (object_type, x, y), process_volatile_response)
 
     def run(self):
-        def register_origin(message):
-            print ("controller round 1: origin received: %s" % message)
-        self.send_request('request_origin', register_origin)
+
+        dist = [5,10, 20, 30, 50]
+        dist_index = 0
+        dist_counter = 0
+        DIST_THRES = 20
 
         try:
             self.wait_for_init()
@@ -49,7 +53,11 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                     self.virtual_bumper = VirtualBumper(timedelta(seconds=4), 0.1)
                     with LidarCollisionMonitor(self):
                         if self.current_driver is None and not self.brakes_on:
-                            self.go_straight(50.0, timeout=timedelta(minutes=2))
+                            self.go_straight(dist[dist_index], timeout=timedelta(minutes=2))
+                            dist_counter += 1
+                            if dist_counter > DIST_THRES:
+                                dist_counter = 0
+                                dist_index += 1
                         else:
                             self.wait(timedelta(minutes=2)) # allow for self driving, then timeout
                     self.update()
@@ -87,11 +95,12 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                     deg_angle = -deg_angle
                 try:
                     self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
-                    self.turn(math.radians(deg_angle), timeout=timedelta(seconds=30))
+                    with LidarCollisionMonitor(self):
+                        self.turn(math.radians(deg_angle), timeout=timedelta(seconds=30))
                 except ChangeDriverException as e:
                     continue
 
-                except VirtualBumperException:
+                except (VirtualBumperException, LidarCollisionException):
                     self.inException = True
                     print(self.sim_time, "Turn Virtual Bumper!")
                     self.virtual_bumper = None
