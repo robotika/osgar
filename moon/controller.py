@@ -171,6 +171,10 @@ class SpaceRoboticsChallenge(MoonNode):
         self.send_request('set_brakes %s\n' % ('on' if on else 'off'))
         print (self.sim_time, "app: Brakes set to: %s" % on)
 
+    def set_light_intensity(self, intensity):
+        self.send_request('set_light_intensity %s\n' % intensity)
+        print (self.sim_time, "app: Light intensity set to: %s" % intensity)
+
     def on_driving_recovery(self, data):
         self.in_driving_recovery = data
         print (self.sim_time, "Driving recovery changed to: %r" % data)
