@@ -18,7 +18,7 @@ class RospyRound1PushPull(RospyBasePushPull):
     def register_handlers(self):
         super(RospyRound1PushPull, self).register_handlers()
 
-        rospy.Subscriber('/qual_1_score', Qual1ScoringMsg, partial(self.callback_topic, rate=1000), '/qual_1_score')
+        rospy.Subscriber('/qual_1_score', Qual1ScoringMsg, partial(self.callback_topic, rate=50), '/qual_1_score')
 
 class RospyRound1ReqRep(RospyBaseReqRep):
     pass

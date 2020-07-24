@@ -159,8 +159,8 @@ class SpaceRoboticsChallenge(MoonNode):
         self.publish('request', [token, cmd])
 
     def set_cam_angle(self, angle):
-        self.send_request('set_cam_angle %f\n' % angle)
         angle = min(math.pi / 4.0, max(-math.pi / 8.0, angle))
+        self.send_request('set_cam_angle %f\n' % angle)
         self.camera_angle = angle
         print (self.sim_time, "app: Camera angle set to: %f" % angle)
         self.camera_change_triggered_time = self.sim_time
