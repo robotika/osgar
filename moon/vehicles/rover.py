@@ -76,7 +76,7 @@ CRAB_ROLL_ANGLE = 0.78
 class Rover(MoonNode):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('cmd', 'pose2d')
+        bus.register('cmd', 'odo_pose')
 
         # general driving parameters
         # radius: radius of circle to drive around, "inf" if going straight; 0 if turning round in place
@@ -159,7 +159,7 @@ class Rover(MoonNode):
         x += math.cos(heading) * dist
         y += math.sin(heading) * dist
         heading += angle
-        self.bus.publish('pose2d', [round(x * 1000),
+        self.bus.publish('odo_pose', [round(x * 1000),
                                     round(y * 1000),
                                     round(math.degrees(heading) * 100)])
         self.prev_position = data

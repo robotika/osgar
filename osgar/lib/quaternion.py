@@ -45,6 +45,12 @@ def normalize(quaternion):
         x0, y0, z0, w0 = x0/k, y0/k, z0/k, w0/k
     return [x0, y0, z0, w0]
 
+def euler_to_quaternion(yaw, pitch, roll):
+    qx = math.sin(roll/2) * math.cos(pitch/2) * math.cos(yaw/2) - math.cos(roll/2) * math.sin(pitch/2) * math.sin(yaw/2)
+    qy = math.cos(roll/2) * math.sin(pitch/2) * math.cos(yaw/2) + math.sin(roll/2) * math.cos(pitch/2) * math.sin(yaw/2)
+    qz = math.cos(roll/2) * math.cos(pitch/2) * math.sin(yaw/2) - math.sin(roll/2) * math.sin(pitch/2) * math.cos(yaw/2)
+    qw = math.cos(roll/2) * math.cos(pitch/2) * math.cos(yaw/2) + math.sin(roll/2) * math.sin(pitch/2) * math.sin(yaw/2)
+    return [qx, qy, qz, qw]
 
 def euler_zyx(quaternion):
     x0, y0, z0, w0 = normalize(quaternion)
