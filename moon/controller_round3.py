@@ -333,13 +333,12 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                             self.objects_to_follow.remove('homebase') # do not immediately follow homebase if it was secondary to give main a chance to report cubesat
 
                         def process_origin(message):
+                            self.register_origin(message)
                             nonlocal data
                             if message.split()[0] == 'origin':
                                 origin = [float(x) for x in message.split()[1:]]
                                 self.xyz = origin[:3]
                                 qx, qy, qz, qw = origin[3:]
-
-                                self.publish('pose3d', [self.xyz, origin[3:]])
 
                                 print(self.sim_time, "Origin received, internal position updated")
                                 # robot should be stopped right now (using brakes once available)

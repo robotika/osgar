@@ -18,25 +18,35 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
         super().__init__(config, bus)
         self.use_gimbal = False
 
+    def process_volatile_response(self, response):
+        print(self.sim_time, "app: Volatile report response: %s" % response)
+        if response == 'ok':
+            pass
+        else:
+            # do nothing, ie keep going around and try to match the view
+            pass
+
     def on_object_reached(self, data):
         object_type = data
-        x,y,z = self.vslam_xyz
-        print(self.sim_time, "app: Object %s reached" % object_type)
 
+        def register_and_report(message):
+            self.register_origin(message)
+            x,y,z = self.xyz
+            print(self.sim_time, "app: Object %s reached" % object_type)
+            self.send_request('artf %s %f %f 0.0' % (object_type, x, y), self.process_volatile_response)
 
-        def process_volatile_response(response):
-            print(self.sim_time, "app: Volatile report response: %s" % response)
-            if response == 'ok':
-                pass
-            else:
-                # do nothing, ie keep going around and try to match the view
-                pass
-
-        self.send_request('artf %s %f %f 0.0' % (object_type, x, y), process_volatile_response)
+        if self.tf['vslam']['trans_matrix'] is None:
+            if self.sim_time - self.tf['vslam']['timestamp'] < timedelta(milliseconds=300):
+                # VSLAM tracking is fresh enough, proceed with localization, otherwise ignore this object for now
+                self.send_request('request_origin', register_and_report)
+        else:
+            x,y,z = self.xyz
+            print(self.sim_time, "app: Object %s reached" % object_type)
+            self.send_request('artf %s %f %f 0.0' % (object_type, x, y), self.process_volatile_response)
 
     def run(self):
 
-        dist = [5,10, 20, 30, 50]
+        dist = [10, 20, 30, 50]
         dist_index = 0
         dist_counter = 0
         DIST_THRES = 20
@@ -55,7 +65,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                         if self.current_driver is None and not self.brakes_on:
                             self.go_straight(dist[dist_index], timeout=timedelta(minutes=2))
                             dist_counter += 1
-                            if dist_counter > DIST_THRES:
+                            if dist_counter > DIST_THRES and dist_index < len(dist) - 1:
                                 dist_counter = 0
                                 dist_index += 1
                         else:
@@ -108,7 +118,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                         # probably didn't throw in previous turn but during self driving
                         self.go_straight(-2.0, timeout=timedelta(seconds=10))
                         self.try_step_around()
-                    self.turn(math.radians(-deg_angle), timeout=timedelta(seconds=30))
+                    self.turn(math.radians(-deg_angle/2), timeout=timedelta(seconds=30))
                     self.inException = False
                     self.bus.publish('driving_recovery', False)
         except BusShutdownException:

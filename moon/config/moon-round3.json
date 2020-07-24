@@ -5,7 +5,7 @@
       "app": {
         "driver": "moon.controller_round3:SpaceRoboticsChallengeRound3",
         "in": ["pose2d", "driving_control", "driving_recovery"],
-        "out": ["desired_speed", "artf_xyz", "artf_cmd", "pose3d", "driving_recovery"],
+        "out": ["desired_speed", "driving_recovery"],
         "init": {}
       },
       "transmitter": {
@@ -39,7 +39,7 @@
       "rosmsg": {
         "driver": "rosmsg",
         "in": ["raw", "desired_speed", "tick", "stdout"],
-        "out": ["rot", "acc", "scan", "image", "pose2d", "sim_clock", "cmd"],
+        "out": ["rot", "acc", "scan", "image", "sim_clock", "cmd"],
         "init": {
           "topics": [
             ["/scout_1/joint_states", "sensor_msgs/JointState"],
@@ -90,7 +90,7 @@
       ["rpc.response", "app.response"],
       ["scout.cmd", "transmitter.raw"],
       ["app.cmd", "transmitter.raw"],
-      ["scout.pose2d", "app.pose2d"]
+      ["scout.odo_pose", "app.odo_pose"]
     ]
   }
 }
