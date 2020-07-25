@@ -140,6 +140,7 @@ class SpaceRoboticsChallenge(MoonNode):
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.xyz = None
         self.xyz_quat = None
+        self.yaw_offset = 0
 
         self.tf = {
             'vslam': {
@@ -239,6 +240,7 @@ class SpaceRoboticsChallenge(MoonNode):
 
             self.xyz = initial_xyz
             self.xyz_quat = initial_quat
+            self.yaw_offset = normalizeAnglePIPI(self.yaw - initial_rpy[2])
 
             # note: if VSLAM is not tracking at time of register_origin call, the latest reported position will be inaccurate and VSLAM won't work
             if self.tf['vslam']['latest_quat'] is not None:
@@ -255,7 +257,6 @@ class SpaceRoboticsChallenge(MoonNode):
 
             if self.tf['odo']['latest_quat'] is not None:
                 latest_odo_rpy = euler_zyx(self.tf['odo']['latest_quat']) # will be rearranged after offset calculation
-                odo_xyz_offset = [a-b for a,b in zip(initial_xyz, self.tf['odo']['latest_xyz'])]
                 odo_rpy_offset = [a-b for a,b in zip(initial_rpy, latest_odo_rpy)]
                 odo_rpy_offset = [odo_rpy_offset[2], odo_rpy_offset[1], odo_rpy_offset[0]] #rearrange angles to correct RPY order
                 print(self.sim_time, "ODO RPY offset: " + str(odo_rpy_offset))
@@ -285,17 +286,16 @@ class SpaceRoboticsChallenge(MoonNode):
         #print("VSLAM XYZ:" + str(self.tf['vslam']['latest_xyz']))
         #print("VSLAM RPY:" + str(euler_zyx(data[1])))
 
-        if self.tf['vslam']['trans_matrix'] is not None:
-            # calculate
+        # request origin and start tracking in correct coordinates as soon as first mapping lock occurs
+        # TODO: another pose may arrive while this request is still being processed (not a big deal, just a ROS error message)
+        if self.tf['vslam']['trans_matrix'] is None:
+            self.send_request('request_origin', self.register_origin)
+        else:
             v = np.asmatrix(np.array([self.tf['vslam']['latest_xyz'][0], self.tf['vslam']['latest_xyz'][1], self.tf['vslam']['latest_xyz'][2], 1]))
             m = np.dot(self.tf['vslam']['trans_matrix'], v.T)
             self.xyz = [m[0,0], m[1,0], m[2,0]]
             # TODO: update quat also, will need to calculate using offset from the initial position
             # self.xyz_quat = ....
-        else:
-            # if tracking before transformation was establish, report in internal coordinate system
-            # (difference of locations is used for the purposes of Virtual Bumpers)
-            self.xyz = self.tf['vslam']['latest_xyz']
 
         #print ("[VSLAM] xyz: " + str(self.xyz))
 
@@ -366,7 +366,7 @@ class SpaceRoboticsChallenge(MoonNode):
             self.pitch_history.pop(0)
             self.roll_history.pop(0)
 
-        self.yaw = median(self.yaw_history)
+        self.yaw = normalizeAnglePIPI(median(self.yaw_history) - self.yaw_offset)
         self.pitch = median(self.pitch_history)
         self.roll = median(self.roll_history)
 

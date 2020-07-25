@@ -35,11 +35,11 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
             print(self.sim_time, "app: Object %s reached" % object_type)
             self.send_request('artf %s %f %f 0.0' % (object_type, x, y), self.process_volatile_response)
 
-        if self.tf['vslam']['trans_matrix'] is None:
-            if self.sim_time - self.tf['vslam']['timestamp'] < timedelta(milliseconds=300):
-                # VSLAM tracking is fresh enough, proceed with localization, otherwise ignore this object for now
-                self.send_request('request_origin', register_and_report)
-        else:
+        if (
+                self.tf['vslam']['trans_matrix'] is not None and
+                self.tf['vslam']['timestamp'] is not None and
+                self.sim_time - self.tf['vslam']['timestamp'] < timedelta(milliseconds=300)
+        ):
             x,y,z = self.xyz
             print(self.sim_time, "app: Object %s reached" % object_type)
             self.send_request('artf %s %f %f 0.0' % (object_type, x, y), self.process_volatile_response)
@@ -70,6 +70,15 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                                 dist_index += 1
                         else:
                             self.wait(timedelta(minutes=2)) # allow for self driving, then timeout
+
+                        # if further than 25m from the center, turn back
+                        # will not use correct coordinates until true_pose is requested
+                        # until then, it will use the robot spawning place as the center which is fine
+                        if math.hypot(self.xyz[0], self.xyz[1]) > 25:
+                            print(self.sim_time, "app: too far from center, turning towards center")
+                            angle = math.atan2(self.xyz[1], self.xyz[0]) - self.yaw
+                            self.turn(angle, timeout=timedelta(seconds=10))
+                            continue
                     self.update()
                 except ChangeDriverException as e:
                     continue
