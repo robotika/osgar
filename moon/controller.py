@@ -259,25 +259,24 @@ class SpaceRoboticsChallenge(MoonNode):
 
 
     def calculate_best_pose(self):
-        # try to take an average of all (both really) odo sources; works well while rover is not slipping
-        # TODO: detect rover slip and update position from VSLAM when that happens?
-        def avg(a):
-            return sum(a) / len(a)
+        # if VSLAM active, report its position either in internal or global coordinates depending on whether origin was established yet
+        # otherwise use ODO position (internal or global)
 
-        x = []
-        y = []
-        z = []
-        for k, obj in self.tf.items():
-            if obj['trans_matrix'] is not None and obj['timestamp'] is not None and self.sim_time - obj['timestamp'] < timedelta(milliseconds=300):
-                v = np.asmatrix(np.array([obj['latest_xyz'][0], obj['latest_xyz'][1], obj['latest_xyz'][2], 1]))
-                m = np.dot(obj['trans_matrix'], v.T)
-                x.append(m[0,0])
-                y.append(m[1,0])
-                z.append(m[2,0])
-        if len(x) == 0:
-            self.xyz = self.tf['odo']['latest_xyz']
+        if self.tf['vslam']['timestamp'] is not None and self.sim_time - self.tf['vslam']['timestamp'] < timedelta(milliseconds=300):
+            if self.tf['vslam']['trans_matrix'] is not None:
+                v = np.asmatrix(np.array([self.tf['vslam']['latest_xyz'][0], self.tf['vslam']['latest_xyz'][1], self.tf['vslam']['latest_xyz'][2], 1]))
+                m = np.dot(self.tf['vslam']['trans_matrix'], v.T)
+                self.xyz = [m[0,0], m[1,0], m[2,0]]
+            else:
+                self.xyz = self.tf['odo']['latest_xyz']
+
         else:
-            self.xyz = [avg(x), avg(y), avg(z)]
+            if self.tf['odo']['trans_matrix'] is not None:
+                v = np.asmatrix(np.array([self.tf['odo']['latest_xyz'][0], self.tf['odo']['latest_xyz'][1], self.tf['odo']['latest_xyz'][2], 1]))
+                m = np.dot(self.tf['odo']['trans_matrix'], v.T)
+                self.xyz = [m[0,0], m[1,0], m[2,0]]
+            else:
+                self.xyz = self.tf['odo']['latest_xyz']
 
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_pose(self.sim_time, (self.xyz[0], self.xyz[1], self.yaw))
