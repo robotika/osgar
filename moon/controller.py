@@ -119,7 +119,7 @@ class SpaceRoboticsChallenge(MoonNode):
         self.joint_name = None
         self.sensor_joint_position = None
 
-        self.last_position = None
+        self.last_position = None # 2D pose (x, y, heading) in rover coordinates, used for local operations (go 10m)
         self.max_speed = 1.0  # oficial max speed is 1.5m/s
         self.max_angular_speed = math.radians(60)
 
@@ -242,34 +242,54 @@ class SpaceRoboticsChallenge(MoonNode):
             self.xyz_quat = initial_quat
             self.yaw_offset = normalizeAnglePIPI(self.yaw - initial_rpy[2])
 
+            for k, obj in self.tf.items():
             # note: if VSLAM is not tracking at time of register_origin call, the latest reported position will be inaccurate and VSLAM won't work
-            if self.tf['vslam']['latest_quat'] is not None:
-                latest_vslam_rpy = euler_zyx(self.tf['vslam']['latest_quat']) # will be rearranged after offset calculation
-                vslam_rpy_offset = [a-b for a,b in zip(initial_rpy, latest_vslam_rpy)]
-                vslam_rpy_offset = [vslam_rpy_offset[2], vslam_rpy_offset[1], vslam_rpy_offset[0]] #rearrange angles to correct RPY order
-                print(self.sim_time, "VSLAM RPY offset: " + str(vslam_rpy_offset))
-                rot_matrix = np.asmatrix(eulerAnglesToRotationMatrix(vslam_rpy_offset))
+                if obj['latest_quat'] is not None:
+                    latest_rpy = euler_zyx(obj['latest_quat']) # will be rearranged after offset calculation
+                    rpy_offset = [a-b for a,b in zip(initial_rpy, latest_rpy)]
+                    rpy_offset.reverse()
+                    print(self.sim_time, "%s RPY offset: %s" % (k, str(rpy_offset)))
+                    rot_matrix = np.asmatrix(eulerAnglesToRotationMatrix(rpy_offset))
 
-                vslam_xyz_offset = translationToMatrix(self.tf['vslam']['latest_xyz'])
-                orig_xyz_offset = translationToMatrix(initial_xyz)
+                    xyz_offset = translationToMatrix(obj['latest_xyz'])
+                    orig_xyz_offset = translationToMatrix(initial_xyz)
 
-                self.tf['vslam']['trans_matrix'] = np.dot(orig_xyz_offset, np.dot(rot_matrix, vslam_xyz_offset.I))
+                    obj['trans_matrix'] = np.dot(orig_xyz_offset, np.dot(rot_matrix, xyz_offset.I))
 
-            if self.tf['odo']['latest_quat'] is not None:
-                latest_odo_rpy = euler_zyx(self.tf['odo']['latest_quat']) # will be rearranged after offset calculation
-                odo_rpy_offset = [a-b for a,b in zip(initial_rpy, latest_odo_rpy)]
-                odo_rpy_offset = [odo_rpy_offset[2], odo_rpy_offset[1], odo_rpy_offset[0]] #rearrange angles to correct RPY order
-                print(self.sim_time, "ODO RPY offset: " + str(odo_rpy_offset))
-                rot_matrix = np.asmatrix(eulerAnglesToRotationMatrix(odo_rpy_offset))
 
-                odo_xyz_offset = translationToMatrix(self.tf['odo']['latest_xyz'])
-                orig_xyz_offset = translationToMatrix(initial_xyz)
 
-                self.tf['odo']['trans_matrix'] = np.dot(orig_xyz_offset, np.dot(rot_matrix, odo_xyz_offset.I))
+    def calculate_best_pose(self):
+        # try to take an average of all (both really) odo sources; works well while rover is not slipping
+        # TODO: detect rover slip and update position from VSLAM when that happens?
+        def avg(a):
+            return sum(a) / len(a)
 
+        x = []
+        y = []
+        z = []
+        for k, obj in self.tf.items():
+            if obj['trans_matrix'] is not None and obj['timestamp'] is not None and self.sim_time - obj['timestamp'] < timedelta(milliseconds=300):
+                v = np.asmatrix(np.array([obj['latest_xyz'][0], obj['latest_xyz'][1], obj['latest_xyz'][2], 1]))
+                m = np.dot(obj['trans_matrix'], v.T)
+                x.append(m[0,0])
+                y.append(m[1,0])
+                z.append(m[2,0])
+        if len(x) == 0:
+            self.xyz = self.tf['odo']['latest_xyz']
+        else:
+            self.xyz = [avg(x), avg(y), avg(z)]
+
+        if self.virtual_bumper is not None:
+            self.virtual_bumper.update_pose(self.sim_time, (self.xyz[0], self.xyz[1], self.yaw))
+            if not self.inException and self.virtual_bumper.collision():
+                self.bus.publish('driving_recovery', True)
+                raise VirtualBumperException()
 
 
     def on_vslam_pose(self, data):
+        if self.sim_time is None or self.last_position is None or self.yaw is None:
+            return
+
         if math.isnan(data[0][0]): # VSLAM not tracking
             if self.tf['vslam']['trans_matrix'] is not None and not self.inException: # it was tracking so it is lost, go back and re-acquire lock
                 raise LidarCollisionException
@@ -280,34 +300,13 @@ class SpaceRoboticsChallenge(MoonNode):
         self.tf['vslam']['timestamp'] = self.sim_time
 
         #print("Internal VSLAM: " + str(self.tf['vslam']['latest_xyz']) + str(self.tf['vslam']['latest_quat']))
-        if self.sim_time is None or self.last_position is None or self.yaw is None:
-            return
-
         #print("VSLAM XYZ:" + str(self.tf['vslam']['latest_xyz']))
         #print("VSLAM RPY:" + str(euler_zyx(data[1])))
 
-        # request origin and start tracking in correct coordinates as soon as first mapping lock occurs
-        # TODO: another pose may arrive while this request is still being processed (not a big deal, just a ROS error message)
-        if self.tf['vslam']['trans_matrix'] is None:
-            self.send_request('request_origin', self.register_origin)
-        else:
-            v = np.asmatrix(np.array([self.tf['vslam']['latest_xyz'][0], self.tf['vslam']['latest_xyz'][1], self.tf['vslam']['latest_xyz'][2], 1]))
-            m = np.dot(self.tf['vslam']['trans_matrix'], v.T)
-            self.xyz = [m[0,0], m[1,0], m[2,0]]
-            # TODO: update quat also, will need to calculate using offset from the initial position
-            # self.xyz_quat = ....
-
-        #print ("[VSLAM] xyz: " + str(self.xyz))
-
-        self.last_position = (self.xyz[0], self.xyz[1], self.yaw) # yaw from IMU, pose in global coordinates
-        if self.virtual_bumper is not None:
-            self.virtual_bumper.update_pose(self.sim_time, self.last_position)
-            if not self.inException and self.virtual_bumper.collision():
-                self.bus.publish('driving_recovery', True)
-                raise VirtualBumperException()
-
+        self.calculate_best_pose()
 
     def on_odo_pose(self, data):
+        # TODO: sync odo and vslam poses
         x, y, heading = data
         pose = (x / 1000.0, y / 1000.0, math.radians(heading / 100.0))
         if self.last_position is not None:
@@ -318,6 +317,8 @@ class SpaceRoboticsChallenge(MoonNode):
                 dist = -dist
         else:
             dist = 0.0
+        self.last_position = pose
+
         x, y, z = self.tf['odo']['latest_xyz']
         x += math.cos(self.pitch) * math.cos(self.yaw) * dist
         y += math.cos(self.pitch) * math.sin(self.yaw) * dist
@@ -326,17 +327,8 @@ class SpaceRoboticsChallenge(MoonNode):
         self.tf['odo']['latest_quat'] = euler_to_quaternion(self.yaw, self.pitch, self.roll)
         self.tf['odo']['timestamp'] = self.sim_time
 
-        # if VSLAM is lost, keep providing location through odo
-        # TODO: when VSLAM is up, should it override/refresh ODO pose?
-        if self.tf['vslam']['timestamp'] is None or (self.sim_time - self.tf['vslam']['timestamp'] > timedelta(milliseconds=300)):
-            self.last_position = pose
-            self.xyz = (x, y, z)
+        self.calculate_best_pose()
 
-            if self.virtual_bumper is not None:
-                self.virtual_bumper.update_pose(self.sim_time, pose) # in rover coordinates
-                if not self.inException and self.virtual_bumper.collision():
-                    self.bus.publish('driving_recovery', True)
-                    raise VirtualBumperException()
 
     def on_driving_control(self, data):
         # someone else took over driving
@@ -391,9 +383,17 @@ class SpaceRoboticsChallenge(MoonNode):
             elif self.sim_time - self.last_status_timestamp > timedelta(seconds=8) and self.xyz is not None:
                 self.last_status_timestamp = self.sim_time
                 x, y, z = self.xyz
-                pose_src = "ODO" if self.tf['vslam']['timestamp'] is None or self.sim_time - self.tf['vslam']['timestamp'] > timedelta(milliseconds=300) else "VSLAM"
-                print (self.sim_time, "Loc[%s]: [%f %f %f] [%f %f %f]; Driver: %s; Score: %d" % (pose_src, x, y, z, self.roll, self.pitch, self.yaw, self.current_driver, self.score))
-
+                print("---------------------------------------------------------")
+                print (self.sim_time, "RPY: [%f %f %f]; Driver: %s; Score: %d" % (self.roll, self.pitch, self.yaw, self.current_driver, self.score))
+                print ("Loc[best]: [%f %f %f]" % (x, y, z))
+                for k, obj in self.tf.items():
+                    if obj['trans_matrix'] is not None and self.sim_time - obj['timestamp'] < timedelta(milliseconds=300):
+                        x, y, z = obj['latest_xyz']
+                        v = np.asmatrix(np.array([x, y, z, 1]))
+                        m = np.dot(obj['trans_matrix'], v.T)
+                        x,y,z = [m[0,0], m[1,0], m[2,0]]
+                        print ("Loc[%s]: [%f %f %f]" % (k, x, y, z))
+                print("---------------------------------------------------------")
 
         channel = super().update()
         return channel

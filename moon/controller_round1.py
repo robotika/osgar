@@ -18,6 +18,16 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
         super().__init__(config, bus)
         self.use_gimbal = False
 
+    def on_vslam_pose(self, data):
+        if self.sim_time is None or self.last_position is None or self.yaw is None:
+            return
+        super().on_vslam_pose(data)
+        if not math.isnan(data[0][0]) and self.tf['vslam']['trans_matrix'] is None:
+            # request origin and start tracking in correct coordinates as soon as first mapping lock occurs
+            # TODO: another pose may arrive while this request is still being processed (not a big deal, just a ROS error message)
+            self.send_request('request_origin', self.register_origin)
+
+
     def process_volatile_response(self, response):
         print(self.sim_time, "app: Volatile report response: %s" % response)
         if response == 'ok':
