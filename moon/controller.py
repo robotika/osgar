@@ -19,6 +19,10 @@ from subt.local_planner import LocalPlanner
 
 from moon.moonnode import MoonNode
 
+SPEED_ON = 10 # only +/0/- matters
+TURN_RADIUS = 8 # radius of circle when turning
+GO_STRAIGHT = float("inf")
+
 class ChangeDriverException(Exception):
     pass
 
@@ -114,7 +118,7 @@ class LidarCollisionMonitor:
 class SpaceRoboticsChallenge(MoonNode):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register("desired_speed", "driving_recovery", "request", "cmd")
+        bus.register("desired_speed", "desired_movement", "driving_recovery", "request", "cmd")
 
         self.joint_name = None
         self.sensor_joint_position = None
@@ -240,7 +244,7 @@ class SpaceRoboticsChallenge(MoonNode):
 
             self.xyz = initial_xyz
             self.xyz_quat = initial_quat
-            self.yaw_offset = normalizeAnglePIPI(self.yaw - initial_rpy[2])
+            self.yaw_offset = self.yaw - initial_rpy[0]
 
             for k, obj in self.tf.items():
             # note: if VSLAM is not tracking at time of register_origin call, the latest reported position will be inaccurate and VSLAM won't work
@@ -309,7 +313,7 @@ class SpaceRoboticsChallenge(MoonNode):
         x, y, heading = data
         pose = (x / 1000.0, y / 1000.0, math.radians(heading / 100.0))
         if self.last_position is not None:
-            dist = math.hypot(pose[0] - self.last_position[0], pose[1] - self.last_position[1])
+            dist = distance(pose, self.last_position)
             direction = ((pose[0] - self.last_position[0]) * math.cos(self.last_position[2]) +
                          (pose[1] - self.last_position[1]) * math.sin(self.last_position[2]))
             if direction < 0:
@@ -319,8 +323,8 @@ class SpaceRoboticsChallenge(MoonNode):
         self.last_position = pose
 
         x, y, z = self.tf['odo']['latest_xyz']
-        x += math.cos(self.pitch) * math.cos(self.yaw) * dist
-        y += math.cos(self.pitch) * math.sin(self.yaw) * dist
+        x += math.cos(self.pitch) * math.cos(math.radians(heading / 100.0)) * dist
+        y += math.cos(self.pitch) * math.sin(math.radians(heading / 100.0)) * dist
         z += math.sin(self.pitch) * dist
         self.tf['odo']['latest_xyz'] = x, y, z
         self.tf['odo']['latest_quat'] = euler_to_quaternion(self.yaw, self.pitch, self.roll)
@@ -396,6 +400,30 @@ class SpaceRoboticsChallenge(MoonNode):
 
         channel = super().update()
         return channel
+
+    def go_to_location(self, x, y, timeout=None):
+        print(self.sim_time, "go_to_location [%.1f,%.1f] (speed: %.1f)" % (x, y, self.max_speed))
+        start_time = self.sim_time
+        angle_diff = normalizeAnglePIPI(math.atan2(y - self.xyz[1], x - self.xyz[0]) - self.yaw)
+        self.turn(angle_diff, timeout=timedelta(seconds=15))
+
+        # while we are further than 0.5m but still following the right direction (angle diff < 90deg)
+        angle_diff = normalizeAnglePIPI(math.atan2(y - self.xyz[1], x - self.xyz[0]) - self.yaw)
+        while distance([x,y], self.xyz) > 0.5 and abs(angle_diff) < math.pi/4:
+            angle_diff = normalizeAnglePIPI(math.atan2(y - self.xyz[1], x - self.xyz[0]) - self.yaw)
+            if angle_diff > 0.1:
+                turn = TURN_RADIUS
+            elif angle_diff < -0.1:
+                turn = -TURN_RADIUS
+            else:
+                turn = GO_STRAIGHT
+            self.publish("desired_movement", [turn, 0, SPEED_ON])
+            self.update()
+            if timeout is not None and self.sim_time - start_time > timeout:
+                print("go_to_locaton timeout ended at [%.1f,%.1f]" % (self.xyz[0], self.xyz[1]))
+                break
+        self.publish("desired_movement", [0, 0, 0])
+        print(self.sim_time, "go_to_location ended at [%.1f,%.1f]" % (self.xyz[0], self.xyz[1]))
 
     def go_straight(self, how_far, timeout=None):
         print(self.sim_time, "go_straight %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position)
