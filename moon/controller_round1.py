@@ -68,9 +68,9 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
             sweep_steps.append([20, -20+2*(i+1)])
             sweep_steps.append([-20, -20+2*(i+1)])
 
-
         try:
             self.wait_for_init()
+            start_time = self.sim_time
             self.set_light_intensity("0.1")
 
             # TODO add 'try' or wait otherwise
