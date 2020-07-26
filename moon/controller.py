@@ -79,6 +79,9 @@ class SpaceRoboticsChallenge(MoonNode):
         super().__init__(config, bus)
         bus.register("desired_speed", "artf_xyz", "artf_cmd", "pose2d", "pose3d", "driving_recovery", "request", "cmd")
 
+        self.joint_name = None
+        self.sensor_joint_position = None
+
         self.last_position = None
         self.max_speed = 1.0  # oficial max speed is 1.5m/s
         self.max_angular_speed = math.radians(60)
@@ -142,7 +145,7 @@ class SpaceRoboticsChallenge(MoonNode):
 
     def on_response(self, data):
         token, response = data
-        print(self.sim_time, "controller:response received: token=%s, response=%s" % (token, response))
+        #print(self.sim_time, "controller:response received: token=%s, response=%s" % (token, response))
         callback = self.requests[token]
         self.requests.pop(token)
         if callback is not None:
@@ -152,10 +155,11 @@ class SpaceRoboticsChallenge(MoonNode):
         """Send ROS Service Request from a single place"""
         token = hex(self.rand.getrandbits(128))
         self.requests[token] = callback
-        print(self.sim_time, "controller:send_request:token: %s, command: %s" % (token, cmd))
+        #print(self.sim_time, "controller:send_request:token: %s, command: %s" % (token, cmd))
         self.publish('request', [token, cmd])
 
     def set_cam_angle(self, angle):
+        angle = min(math.pi / 4.0, max(-math.pi / 8.0, angle))
         self.send_request('set_cam_angle %f\n' % angle)
         self.camera_angle = angle
         print (self.sim_time, "app: Camera angle set to: %f" % angle)
@@ -166,6 +170,10 @@ class SpaceRoboticsChallenge(MoonNode):
         self.brakes_on = on
         self.send_request('set_brakes %s\n' % ('on' if on else 'off'))
         print (self.sim_time, "app: Brakes set to: %s" % on)
+
+    def set_light_intensity(self, intensity):
+        self.send_request('set_light_intensity %s\n' % intensity)
+        print (self.sim_time, "app: Light intensity set to: %s" % intensity)
 
     def on_driving_recovery(self, data):
         self.in_driving_recovery = data
@@ -210,7 +218,8 @@ class SpaceRoboticsChallenge(MoonNode):
         pass
 
     def on_joint_position(self, data):
-        pass
+        assert self.joint_name is not None
+        self.sensor_joint_position = data[self.joint_name.index(b'sensor_joint')]
 
     def on_rot(self, data):
         # use of on_rot is deprecated, will be replaced by on_orientation
@@ -232,14 +241,14 @@ class SpaceRoboticsChallenge(MoonNode):
 
         if self.use_gimbal:
             # maintain camera level
-            cam_angle = self.camera_angle + self.pitch
+            cam_angle = min(math.pi / 4.0, max(-math.pi / 8.0, self.camera_angle + self.pitch))
             self.publish('cmd', b'set_cam_angle %f' % cam_angle)
 
-        if not self.inException and self.pitch < -0.6:
+        if not self.inException and abs(self.pitch) > 0.6:
             # TODO pitch can also go the other way if we back into an obstacle
             # TODO: robot can also roll if it runs on a side of a rock while already on a slope
             self.bus.publish('driving_recovery', True)
-            print (self.sim_time, "app: Excess pitch, going back down")
+            print (self.sim_time, "app: Excess pitch, going back")
             raise VirtualBumperException()
 
     def update(self):
@@ -294,7 +303,7 @@ class SpaceRoboticsChallenge(MoonNode):
             start_time = self.sim_time
             while self.sim_time - start_time < timedelta(seconds=2):
                 self.update()
-            print(self.sim_time, 'stop at', self.sim_time - start_time)
+            #print(self.sim_time, 'stop at', self.sim_time - start_time)
 
     def wait(self, dt):  # TODO refactor to some common class
         while self.sim_time is None:
@@ -331,7 +340,7 @@ class SpaceRoboticsChallenge(MoonNode):
         # recovered enough at this point to switch to another driver (in case you see cubesat while doing the 3m drive or the final turn)
         self.bus.publish('driving_recovery', False)
 
-        self.go_straight(3.0, timeout=timedelta(seconds=20))
+        self.go_straight(5.0, timeout=timedelta(seconds=20))
         self.turn(math.radians(-90), timeout=timedelta(seconds=10))
 
     def wait_for_init(self):

@@ -6,6 +6,7 @@
 import sys
 import rospy
 import yaml
+from functools import partial
 
 from rospy_base import RospyBase, RospyBaseReqRep, RospyBasePushPull
 from srcp2_msgs.srv import Qual2VolatilesSrv
@@ -15,7 +16,7 @@ class RospyRound2PushPull(RospyBasePushPull):
 
     def register_handlers(self):
         super(RospyRound2PushPull, self).register_handlers()
-        rospy.Subscriber('/qual_2_score', Qual2ScoringMsg, self.callback_topic, '/qual_2_score')
+        rospy.Subscriber('/qual_2_score', Qual2ScoringMsg, partial(self.callback_topic, rate=1000), '/qual_2_score')
 
 
 class RospyRound2ReqRep(RospyBaseReqRep):
@@ -36,9 +37,9 @@ class RospyRound2ReqRep(RospyBaseReqRep):
                 return ''
         else:
             return result
-        
+
 class RospyRound2(RospyBase):
-    pass        
-       
+    pass
+
 
 # vim: expandtab sw=4 ts=4

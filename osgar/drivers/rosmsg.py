@@ -382,15 +382,15 @@ def parse_bucket(data):
 def parse_topic(topic_type, data):
     """parse general topic"""
     if topic_type == 'srcp2_msgs/Qual1ScoringMsg':
-        assert len(data) == 44, (len(data), data)
+        assert len(data) == 8, (len(data), data)
         size = struct.unpack_from('<I', data)[0]
         pos = 4
-        assert size == 40, size
-        # __slots__ = ['score','calls','total_of_types']
-        # _slot_types = ['int32','int32','int32[8]']
-        return list(struct.unpack_from('<II', data, pos))  # only score and calls
+        assert size == 4, size
+        # __slots__ = ['score']
+        # _slot_types = ['int32']
+        return struct.unpack_from('<I', data, pos)
     elif topic_type == 'srcp2_msgs/Qual2ScoringMsg':
-        assert len(data) == 139, (len(data), data)
+        assert len(data) == 142, (len(data), data)
         # __slots__ = ['vol_type', 'points_per_type', 'num_of_dumps', 'total_score']
         # _slot_types = ['string[8]', 'int32[8]', 'int32', 'float32']
         # let's ignore names of volatile types

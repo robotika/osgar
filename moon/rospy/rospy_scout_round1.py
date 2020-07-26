@@ -29,7 +29,7 @@ class RospyScoutRound1ReqRep(RospyScoutReqRep, RospyRound1ReqRep):
                 s = message.split()[1:]  # ignore "artf" prefix
                 vol_type = s[0]
 
-                if vol_type in ['ice', 'ethene', 'methane', 'methanol', 'carbon_dio', 'ammonia', 'hydrogen_sul', 'sulfur_dio']:
+                if vol_type in ['ice', 'ethene', 'methane', 'carbon_mono', 'carbon_dio', 'ammonia', 'hydrogen_sul', 'sulfur_dio']:
                     # Task 1
                     x, y, z = [float(a) for a in s[1:]]
                     pose = Point(x, y, z)
@@ -55,7 +55,7 @@ class RospyScoutRound1ReqRep(RospyScoutReqRep, RospyRound1ReqRep):
 
 class RospyScoutRound1(RospyScout, RospyRound1):
     pass
-        
+
 if __name__ == '__main__':
     rs = RospyScoutRound1()
     rs.launch(RospyScoutRound1PushPull, RospyScoutRound1ReqRep, sys.argv[1:])

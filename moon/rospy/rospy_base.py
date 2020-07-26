@@ -48,6 +48,7 @@ class RospyBasePushPull(Thread):
         self.g_socket = None
         self.g_lock = RLock()
         self.prev_time = None
+        self.downsample_topic_count = {}
 
     def setup_sockets(self, context=None):
 
@@ -75,7 +76,7 @@ class RospyBasePushPull(Thread):
             self.g_socket.send(data)
 
     def callback_clock(self, data):
-        if (self.prev_time is not None and 
+        if (self.prev_time is not None and
                 self.prev_time.nsecs//100000000 != data.clock.nsecs//100000000):
             # run at 10Hz, i.e. every 100ms
             s1 = BytesIO()
@@ -85,7 +86,12 @@ class RospyBasePushPull(Thread):
             self.socket_send(header + to_send)
         self.prev_time = data.clock
 
-    def callback_topic(self, data, topic_name):
+    def callback_topic(self, data, topic_name, rate=1):
+        if topic_name not in self.downsample_topic_count.keys():
+            self.downsample_topic_count[topic_name] = 0
+        self.downsample_topic_count[topic_name] += 1
+        if self.downsample_topic_count[topic_name] % rate != 0:
+            return
         s1 = BytesIO()
         data.serialize(s1)
         to_send = s1.getvalue()
