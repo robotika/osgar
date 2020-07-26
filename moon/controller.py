@@ -26,6 +26,12 @@ GO_STRAIGHT = float("inf")
 class ChangeDriverException(Exception):
     pass
 
+class VSLAMLostException(Exception):
+    pass
+
+class VSLAMFoundException(Exception):
+    pass
+
 class VirtualBumperException(Exception):
     pass
 
@@ -118,7 +124,7 @@ class LidarCollisionMonitor:
 class SpaceRoboticsChallenge(MoonNode):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register("desired_speed", "desired_movement", "driving_recovery", "request", "cmd")
+        bus.register("desired_speed", "desired_movement", "driving_recovery", "request", "cmd", "pose2d")
 
         self.joint_name = None
         self.sensor_joint_position = None
@@ -288,6 +294,9 @@ class SpaceRoboticsChallenge(MoonNode):
             else:
                 self.xyz = self.tf['odo']['latest_xyz']
 
+
+        self.publish("pose2d", [round(1000*self.xyz[0]), round(1000*self.xyz[1]), round(100*math.degrees(self.yaw))])
+
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_pose(self.sim_time, (self.xyz[0], self.xyz[1], self.yaw))
             if not self.inException and self.virtual_bumper.collision():
@@ -298,10 +307,7 @@ class SpaceRoboticsChallenge(MoonNode):
     def on_vslam_pose(self, data):
         if self.sim_time is None or self.last_position is None or self.yaw is None:
             return
-
         if math.isnan(data[0][0]): # VSLAM not tracking
-#            if self.tf['vslam']['trans_matrix'] is not None and not self.inException: # it was tracking so it is lost, go back and re-acquire lock
-#                raise LidarCollisionException
             return
 
         self.tf['vslam']['latest_xyz'] = data[0]
@@ -315,9 +321,8 @@ class SpaceRoboticsChallenge(MoonNode):
         self.calculate_best_pose()
 
     def on_odo_pose(self, data):
-        # TODO: sync odo and vslam poses
         x, y, heading = data
-        pose = (x / 1000.0, y / 1000.0, math.radians(heading / 100.0))
+        pose = (x / 1000.0, y / 1000.0, math.radians(heading / 100.0)) # TODO: use IMU instead of wheels
         if self.last_position is not None:
             dist = distance(pose, self.last_position)
             direction = ((pose[0] - self.last_position[0]) * math.cos(self.last_position[2]) +
