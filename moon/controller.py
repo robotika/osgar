@@ -271,6 +271,12 @@ class SpaceRoboticsChallenge(MoonNode):
                 v = np.asmatrix(np.array([self.tf['vslam']['latest_xyz'][0], self.tf['vslam']['latest_xyz'][1], self.tf['vslam']['latest_xyz'][2], 1]))
                 m = np.dot(self.tf['vslam']['trans_matrix'], v.T)
                 self.xyz = [m[0,0], m[1,0], m[2,0]]
+
+                # use VSLAM pose to update ODO pose
+                v = np.asmatrix(np.asarray([self.xyz[0], self.xyz[1], self.xyz[2], 1]))
+                odo =  np.dot(self.tf['odo']['trans_matrix'].I, v.T)
+                self.tf['odo']['latest_xyz'] = [odo[0,0], odo[1,0], odo[2,0]]
+
             else:
                 self.xyz = self.tf['odo']['latest_xyz']
 
@@ -294,8 +300,8 @@ class SpaceRoboticsChallenge(MoonNode):
             return
 
         if math.isnan(data[0][0]): # VSLAM not tracking
-            if self.tf['vslam']['trans_matrix'] is not None and not self.inException: # it was tracking so it is lost, go back and re-acquire lock
-                raise LidarCollisionException
+#            if self.tf['vslam']['trans_matrix'] is not None and not self.inException: # it was tracking so it is lost, go back and re-acquire lock
+#                raise LidarCollisionException
             return
 
         self.tf['vslam']['latest_xyz'] = data[0]
@@ -323,8 +329,8 @@ class SpaceRoboticsChallenge(MoonNode):
         self.last_position = pose
 
         x, y, z = self.tf['odo']['latest_xyz']
-        x += math.cos(self.pitch) * math.cos(math.radians(heading / 100.0)) * dist
-        y += math.cos(self.pitch) * math.sin(math.radians(heading / 100.0)) * dist
+        x += math.cos(self.pitch) * math.cos(pose[2]) * dist
+        y += math.cos(self.pitch) * math.sin(pose[2]) * dist
         z += math.sin(self.pitch) * dist
         self.tf['odo']['latest_xyz'] = x, y, z
         self.tf['odo']['latest_quat'] = euler_to_quaternion(self.yaw, self.pitch, self.roll)
@@ -403,6 +409,11 @@ class SpaceRoboticsChallenge(MoonNode):
 
     def go_to_location(self, x, y, timeout=None):
         print(self.sim_time, "go_to_location [%.1f,%.1f] (speed: %.1f)" % (x, y, self.max_speed))
+
+        if timeout is None:
+            dist = distance([x,y], self.xyz)
+            timeout = timedelta(seconds=2*dist) # 30m should take at most 60 seconds
+
         start_time = self.sim_time
         angle_diff = normalizeAnglePIPI(math.atan2(y - self.xyz[1], x - self.xyz[0]) - self.yaw)
         self.turn(angle_diff, timeout=timedelta(seconds=15))
