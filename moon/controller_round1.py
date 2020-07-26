@@ -11,7 +11,7 @@ from osgar.lib.quaternion import euler_zyx
 
 from osgar.lib.virtual_bumper import VirtualBumper
 
-from moon.controller import (SpaceRoboticsChallenge, VirtualBumperException,
+from moon.controller import (SpaceRoboticsChallenge, VirtualBumperException, ChangeDriverException,  VSLAMLostException, VSLAMFoundException,
                              LidarCollisionException, LidarCollisionMonitor)
 
 class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
@@ -21,12 +21,26 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
 
         self.volatile_queue = [] # each element is an array [index, name x, y]
         self.volatile_last_submit_time = None
+        self.processing_plant_found = False
+        self.vslam_reset_at = None
+        self.returning_to_base = False
 
     def on_vslam_pose(self, data):
+        super().on_vslam_pose(data)
+
         if self.sim_time is None or self.last_position is None or self.yaw is None:
             return
-        super().on_vslam_pose(data)
-        if not math.isnan(data[0][0]) and self.tf['vslam']['trans_matrix'] is None:
+
+        if math.isnan(data[0][0]): # VSLAM not tracking
+            if self.tf['vslam']['trans_matrix'] is not None and not self.inException and not self.returning_to_base: # it was tracking so it is lost, go back and re-acquire lock
+                raise VSLAMLostException
+            return
+
+        if not math.isnan(data[0][0]) and not self.inException and self.returning_to_base:
+            self.returning_to_base = False
+            raise VSLAMFoundException
+
+        if self.vslam_reset_at is not None and self.sim_time - self.vslam_reset_at > timedelta(seconds=3) and not math.isnan(data[0][0]) and self.tf['vslam']['trans_matrix'] is None:
             # request origin and start tracking in correct coordinates as soon as first mapping lock occurs
             # TODO: another pose may arrive while this request is still being processed (not a big deal, just a ROS error message)
             self.send_request('request_origin', self.register_origin)
@@ -55,6 +69,13 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
             self.volatile_last_submit_time = self.sim_time
             self.send_request('artf %s %f %f 0.0' % (vol[1], vol[2], vol[3]), partial(self.process_volatile_response, vol_index=vol[0]))
 
+    def on_artf(self, data):
+        artifact_type = data[0]
+        if artifact_type == "homebase" and not self.processing_plant_found:
+            self.processing_plant_found = True
+            raise ChangeDriverException
+
+
     def on_object_reached(self, data):
         object_type, object_index = data
 
@@ -65,8 +86,8 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
         ):
             x,y,z = self.xyz
             print(self.sim_time, "app: Object %s[%d] reached at [%.1f,%.1f], queueing up 9 around" % (object_type, object_index, x, y))
-            for i in range(-2,2,2):
-                for j in range(-2,2,2):
+            for i in range(-2,4,2): # -2, 0, 2
+                for j in range(-2,4,2):
                     self.volatile_queue.append([object_index, object_type, x + i, y + j])
 
     def run(self):
@@ -85,6 +106,9 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
             sweep_steps.append([20, -20+2*(i+1)])
             sweep_steps.append([-20, -20+2*(i+1)])
 
+        def set_homebase_found(response):
+            self.vslam_reset_at = self.sim_time
+
         try:
             self.wait_for_init()
             start_time = self.sim_time
@@ -93,17 +117,42 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
             # TODO add 'try' or wait otherwise
             # TODO: drive around to build a basic map around starting point first
             # call request_origin after some basic map was built and stabilized
-            self.go_straight(1, timeout=timedelta(minutes=2))
+            try:
+                self.turn(math.radians(360), timeout=timedelta(seconds=40))
+            except ChangeDriverException as e:
+                self.send_speed_cmd(0.0, 0.0)
+            finally:
+                self.send_request('vslam_reset', set_homebase_found)
+
+            while self.tf['vslam']['trans_matrix'] is None:
+                self.update()
+
+            try:
+                self.go_to_location(-11,-10) # good view all around from here
+
+            except:
+                pass
 
             while self.sim_time - start_time < timedelta(minutes=40):
                 try:
                     self.virtual_bumper = VirtualBumper(timedelta(seconds=4), 0.1)
                     with LidarCollisionMonitor(self):
+                        self.turn(math.radians(90), timeout=timedelta(seconds=40))
+                        self.turn(math.radians(-180), timeout=timedelta(seconds=40))
+                        self.turn(math.radians(90), timeout=timedelta(seconds=40))
+                        self.turn(math.radians(-180), timeout=timedelta(seconds=40))
+
                         self.go_to_location(sweep_steps[current_sweep_step][0], sweep_steps[current_sweep_step][1])
                         # if completed or timed out, move on; if exception, try again
                         current_sweep_step += 1
                         continue
-
+                except VSLAMLostException as e:
+                    self.returning_to_base = True
+                    sweep_steps.insert(current_sweep_step, [-11,-10])
+                    continue
+                except VSLAMFoundException as e:
+                    current_sweep_step += 1
+                    continue
                 except (VirtualBumperException, LidarCollisionException) as e:
                     self.inException = True
                     print(self.sim_time, repr(e))
