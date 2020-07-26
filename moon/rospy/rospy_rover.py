@@ -180,6 +180,12 @@ class RospyRoverReqRep(RospyBaseReqRep):
                 self.reset_model(True)
                 return 'OK'
 
+            elif message_type == "vslam_reset":
+                print ("rospy_rover: Resetting VSLAM map")
+                self.vslam_command_msg.data = "reset"
+                self.vslam_command_pub.publish(self.vslam_command_msg)
+                return 'OK'
+
             elif message_type == "request_origin":
                 print "rospy_rover: Requesting true pose"
                 try:
@@ -207,6 +213,9 @@ class RospyRoverReqRep(RospyBaseReqRep):
 
         self.light_up_pub = rospy.Publisher('/' + self.robot_name + '/sensor_controller/command', Float64, queue_size=QSIZE, latch=True)
         self.light_up_msg = Float64()
+
+        self.vslam_command_pub = rospy.Publisher('/vslam/command', String, queue_size=1, latch=True)
+        self.vslam_command_msg = String()
 
         self.brakes = rospy.ServiceProxy('/' + self.robot_name + '/brake_rover', BrakeRoverSrv)
 
