@@ -52,7 +52,7 @@ class Scout(Rover):
                 # the best known distance was in reference to mutual position of the sensor and the volatile
                 print (self.sim_time, "Volatile detection, starting to go further, reporting")
 
-                self.bus.publish('object_reached', artifact_type)
+                self.bus.publish('object_reached', [artifact_type, vol_index])
             else:
                 self.last_volatile_distance = None
     #            print ("Previously visited volatile %d, not reporting" % vol_index)
