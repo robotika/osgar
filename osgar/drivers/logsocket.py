@@ -160,7 +160,11 @@ class LogUDP(LogSocket):
     def __init__(self, config, bus):
         soc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         LogSocket.__init__(self, soc, config, bus)
-        self.socket.bind(('', self.pair[1]))
+        try:
+            self.socket.bind(('', self.pair[1]))
+        except OSError as e:
+            if e.errno == 98: # [Errno 98] Address already in use
+                self.socket.connect(('', self.pair[1]))
 
     def _send(self, data):
         self.socket.sendto(data, self.pair)
