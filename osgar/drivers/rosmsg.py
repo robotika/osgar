@@ -589,6 +589,10 @@ class ROSMsgParser(Thread):
         cmd = b'request_origin'
         self.bus.publish('cmd', cmd)
 
+    def slot_broadcast(self, timestamp, data):
+        cmd = b'broadcast ' + data  # data should be already type bytes
+        self.bus.publish('cmd', cmd)
+
     def run(self):
         try:
             while True:
@@ -601,6 +605,8 @@ class ROSMsgParser(Thread):
                     self.slot_stdout(timestamp, data)
                 elif channel == 'request_origin':
                     self.slot_request_origin(timestamp, data)
+                elif channel == 'broadcast':
+                    self.slot_broadcast(timestamp, data)
                 else:
                     assert False, channel  # unsupported input channel
         except BusShutdownException:
