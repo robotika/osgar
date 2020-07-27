@@ -254,6 +254,16 @@ class Controller
     return true;
   }
 
+  public: bool broadcast(std::string& serializedData)
+  {
+    if (!this->client->SendTo(serializedData, subt::kBroadcast))
+    {
+      ROS_ERROR("CommsClient failed to broadcast serialized data.");
+      return false;
+    }
+    return true;
+  }
+
   std::thread m_receiveZmq;
 
   static void receiveZmqThread(Controller * self);
@@ -545,6 +555,16 @@ void Controller::receiveZmqThread(Controller * self)
       {
         ROS_INFO("ERROR! - failed to parse received artifact info");
       }
+    }
+    else if(strncmp(buffer, "broadcast ", 10) == 0)
+    {
+        std::string content(buffer + 10);
+        if(self->broadcast(content))
+        {
+          ROS_INFO("MD BROADCAST SUCCESS\n");
+        }
+        else
+          ROS_INFO("MD BROADCAST FAILURE\n");
     }
     else
     {
