@@ -174,6 +174,13 @@ void sendOriginError(std::string& name)
   zmq_send(g_responder, buf, size, 0);
 }
 
+void sendReceivedMessage(const std::string &srcAddress, const std::string &data)
+{
+  char buf[10000];  // the limit for messages is 4k?
+  int size = sprintf(buf, "radio %s %s", srcAddress.c_str(), data.c_str());
+  zmq_send(g_responder, buf, size, 0);
+}
+
 
 /// \brief. Example control class, running as a ROS node to control a robot.
 class Controller
@@ -309,6 +316,7 @@ void Controller::CommClientCallback(const std::string &_srcAddress,
   // Add code to handle communication callbacks.
   ROS_INFO("Message from [%s] to [%s] on port [%u]:\n [%s]", _srcAddress.c_str(),
       _dstAddress.c_str(), _dstPort, res.DebugString().c_str());
+  sendReceivedMessage(_srcAddress, _data);
 }
 
 /////////////////////////////////////////////////
