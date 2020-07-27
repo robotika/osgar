@@ -152,6 +152,7 @@ class SpaceRoboticsChallenge(MoonNode):
         self.xyz_quat = None
         self.yaw_offset = 0
 
+        self.true_pose = False
         self.tf = {
             'vslam': {
                 'trans_matrix': None,
@@ -265,6 +266,7 @@ class SpaceRoboticsChallenge(MoonNode):
                     orig_xyz_offset = translationToMatrix(initial_xyz)
 
                     obj['trans_matrix'] = np.dot(orig_xyz_offset, np.dot(rot_matrix, xyz_offset.I))
+            self.true_pose = True
 
 
 
