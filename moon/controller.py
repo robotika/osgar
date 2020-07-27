@@ -447,7 +447,9 @@ class SpaceRoboticsChallenge(MoonNode):
             else:
                 turn = GO_STRAIGHT
             self.publish("desired_movement", [turn, 0, direction])
-            self.update()
+
+            self.wait(timedelta(milliseconds=50))
+
             if timeout is not None and self.sim_time - start_time > timeout:
                 print("go_to_location timeout ended at [%.1f,%.1f]" % (self.xyz[0], self.xyz[1]))
                 break
@@ -466,7 +468,7 @@ class SpaceRoboticsChallenge(MoonNode):
         self.virtual_bumper.update_desired_speed(self.max_speed, 0)
         while distance(start_pose, self.xyz) < abs(how_far):
             self.publish("desired_movement", [100, -9000, math.copysign(how_far, SPEED_ON)])
-            self.update()
+            self.wait(timedelta(milliseconds=100))
             if timeout is not None and self.sim_time - start_time > timeout:
                 print("go_sideways - timeout at %.1fm" % distance(start_pose, self.xyz))
                 break
