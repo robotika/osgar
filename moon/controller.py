@@ -414,34 +414,65 @@ class SpaceRoboticsChallenge(MoonNode):
         channel = super().update()
         return channel
 
-    def go_to_location(self, x, y, timeout=None):
-        print(self.sim_time, "go_to_location [%.1f,%.1f] (speed: %.1f)" % (x, y, self.max_speed))
+    def go_to_location(self, x, y, direction, timeout=None):
+        assert(direction == -1 or direction == 1, "Invalid direction")
+        # direction: 1 forward, -1 backward
+        print(self.sim_time, "go_to_location [%.1f,%.1f] (speed: %.1f)" % (x, y, math.copysign(self.max_speed, direction)))
+
+
+        def get_angle_diff():
+            angle_diff = normalizeAnglePIPI(math.atan2(y - self.xyz[1], x - self.xyz[0]) - self.yaw)
+            if direction < 0:
+                angle_diff = - math.pi + angle_diff
+
+            return normalizeAnglePIPI(angle_diff)
 
         if timeout is None:
             dist = distance([x,y], self.xyz)
-            timeout = timedelta(seconds=2*dist) # 30m should take at most 60 seconds
+            timeout = timedelta(seconds=2*dist / self.max_speed) # 30m should take at most 60 seconds
 
         start_time = self.sim_time
-        angle_diff = normalizeAnglePIPI(math.atan2(y - self.xyz[1], x - self.xyz[0]) - self.yaw)
+        angle_diff = get_angle_diff()
         self.turn(angle_diff, timeout=timedelta(seconds=15))
 
         # while we are further than 0.5m but still following the right direction (angle diff < 90deg)
-        angle_diff = normalizeAnglePIPI(math.atan2(y - self.xyz[1], x - self.xyz[0]) - self.yaw)
+        angle_diff = get_angle_diff()
+        self.virtual_bumper.update_desired_speed(self.max_speed, 0) # NOTE: ignoring angular speed
         while distance([x,y], self.xyz) > 0.5 and abs(angle_diff) < math.pi/4:
-            angle_diff = normalizeAnglePIPI(math.atan2(y - self.xyz[1], x - self.xyz[0]) - self.yaw)
+            angle_diff = get_angle_diff()
             if angle_diff > 0.1:
-                turn = TURN_RADIUS
+                turn = TURN_RADIUS * direction
             elif angle_diff < -0.1:
-                turn = -TURN_RADIUS
+                turn = -TURN_RADIUS * direction
             else:
                 turn = GO_STRAIGHT
-            self.publish("desired_movement", [turn, 0, SPEED_ON])
+            self.publish("desired_movement", [turn, 0, direction])
             self.update()
             if timeout is not None and self.sim_time - start_time > timeout:
-                print("go_to_locaton timeout ended at [%.1f,%.1f]" % (self.xyz[0], self.xyz[1]))
+                print("go_to_location timeout ended at [%.1f,%.1f]" % (self.xyz[0], self.xyz[1]))
                 break
-        self.publish("desired_movement", [0, 0, 0])
-        print(self.sim_time, "go_to_location ended at [%.1f,%.1f]" % (self.xyz[0], self.xyz[1]))
+        self.send_speed_cmd(0.0, 0.0)
+        print(self.sim_time, "go_to_location [%.1f,%.1f] ended at [%.1f,%.1f]" % (x, y, self.xyz[0], self.xyz[1]))
+
+    def move_sideways(self, how_far, view_direction=None, timeout=None): # how_far: left is positive, right is negative
+        print(self.sim_time, "move_sideways %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position)
+        if timeout is None:
+            timeout = timedelta(seconds=4 + 2*how_far / self.max_speed) # add 4 sec for wheel setup
+        if view_direction is not None:
+            self.turn(normalizeAnglePIPI(view_direction - self.yaw), timeout=timedelta(seconds=10))
+
+        start_pose = self.xyz
+        start_time = self.sim_time
+        self.virtual_bumper.update_desired_speed(self.max_speed, 0)
+        while distance(start_pose, self.xyz) < abs(how_far):
+            self.publish("desired_movement", [100, -9000, math.copysign(how_far, SPEED_ON)])
+            self.update()
+            if timeout is not None and self.sim_time - start_time > timeout:
+                print("go_sideways - timeout at %.1fm" % distance(start_pose, self.xyz))
+                break
+        self.send_speed_cmd(0.0, 0.0)
+        print(self.sim_time, "move sideways ended at [%.1f,%.1f]" % (self.xyz[0], self.xyz[1]))
+
 
     def go_straight(self, how_far, timeout=None):
         print(self.sim_time, "go_straight %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position)
@@ -459,7 +490,8 @@ class SpaceRoboticsChallenge(MoonNode):
         self.send_speed_cmd(0.0, 0.0)
 
     def turn(self, angle, with_stop=True, speed=0.0, timeout=None):
-        print(self.sim_time, "turn %.1f" % math.degrees(angle))
+        # positive turn - counterclockwise
+        print(self.sim_time, "turn %.1f deg from %.1f deg" % (math.degrees(angle), math.degrees(self.yaw)))
         if angle >= 0:
             self.send_speed_cmd(speed, self.max_angular_speed)
         else:
