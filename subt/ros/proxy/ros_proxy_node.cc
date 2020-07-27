@@ -84,10 +84,10 @@ void initZeroMQ()
 }
 
 // int zmq_send (void *socket, void *buf, size_t len, int flags);
-void protected_zmq_send(void *socket, void *buf, size_t len, int flags)
+int protected_zmq_send(void *socket, const void *buf, size_t len, int flags)
 {
   const std::lock_guard<std::mutex> lock(g_zmq_mutex);
-  zmq_send(socket, buf, len, flags);
+  return zmq_send(socket, buf, len, flags);
 }
 
 void clockCallback(const rosgraph_msgs::Clock::ConstPtr& msg)
