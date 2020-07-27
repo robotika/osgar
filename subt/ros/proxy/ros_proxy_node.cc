@@ -23,6 +23,7 @@
 #include <chrono>
 #include <thread>
 #include <fstream>
+#include <mutex>
 
 #include <geometry_msgs/Twist.h>
 #include <rosgraph_msgs/Clock.h>
@@ -69,6 +70,8 @@ int g_countReceives = 0;
 void *g_context;
 void *g_responder;
 
+std::mutex g_zmq_mutex;
+
 void initZeroMQ()
 {
   g_context = zmq_ctx_new ();
@@ -80,12 +83,19 @@ void initZeroMQ()
   }
 }
 
+// int zmq_send (void *socket, void *buf, size_t len, int flags);
+void protected_zmq_send(void *socket, void *buf, size_t len, int flags)
+{
+  const std::lock_guard<std::mutex> lock(g_zmq_mutex);
+  zmq_send(socket, buf, len, flags);
+}
+
 void clockCallback(const rosgraph_msgs::Clock::ConstPtr& msg)
 {
   ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
   if(g_clockPrevSec != msg->clock.sec)
   {
-    zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
+    protected_zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
     g_clockPrevSec = msg->clock.sec;
   }
   if(g_countClock % 1000 == 0)
@@ -96,7 +106,7 @@ void clockCallback(const rosgraph_msgs::Clock::ConstPtr& msg)
 void scanCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
 {
   ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
+  protected_zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
   if(g_countScan % 100 == 0)
     ROS_INFO("received Scan %d", g_countScan);
   g_countScan++;
@@ -105,7 +115,7 @@ void scanCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
 void imageCallback(const sensor_msgs::CompressedImage::ConstPtr& msg)
 {
   ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
+  protected_zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
   if(g_countImage % 100 == 0)
     ROS_INFO("received Image %d", g_countImage);
   g_countImage++;
@@ -114,7 +124,7 @@ void imageCallback(const sensor_msgs::CompressedImage::ConstPtr& msg)
 void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
 {
   ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
+  protected_zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
   if(g_countOdom % 100 == 0)
     ROS_INFO("received Odom %d", g_countOdom);
   g_countOdom++;
@@ -123,7 +133,7 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
 void gasCallback(const std_msgs::Bool::ConstPtr& msg)
 {
   ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
+  protected_zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
   if(g_countGas % 100 == 0)
     ROS_INFO("received Gas %d", g_countGas);
   g_countGas++;
@@ -138,7 +148,7 @@ void depthCallback(const sensor_msgs::Image::ConstPtr& msg)
   size_t i;
   for(i = 0; i < size; i++)
     s += buf[i];
-  zmq_send(g_responder, s.c_str(), size + 5, 0);
+  protected_zmq_send(g_responder, s.c_str(), size + 5, 0);
   if(g_countDepth % 100 == 0)
     ROS_INFO("received Depth %d", g_countDepth);
   g_countDepth++;
@@ -153,7 +163,7 @@ void pointsCallback(const sensor_msgs::PointCloud2::ConstPtr& msg)
   size_t i;
   for(i = 0; i < size; i++)
     s += buf[i];
-  zmq_send(g_responder, s.c_str(), size + 6, 0);
+  protected_zmq_send(g_responder, s.c_str(), size + 6, 0);
   if(g_countPoints % 100 == 0)
     ROS_INFO("received Points %d", g_countPoints);
   g_countPoints++;
@@ -164,21 +174,21 @@ void sendOrigin(std::string& name, double x, double y, double z,
 {
   char buf[1000];
   int size = sprintf(buf, "origin %s %lf %lf %lf  %lf %lf %lf %lf", name.c_str(), x, y, z, qx, qy, qz, qw);
-  zmq_send(g_responder, buf, size, 0);
+  protected_zmq_send(g_responder, buf, size, 0);
 }
 
 void sendOriginError(std::string& name)
 {
   char buf[1000];
   int size = sprintf(buf, "origin %s ERROR", name.c_str());
-  zmq_send(g_responder, buf, size, 0);
+  protected_zmq_send(g_responder, buf, size, 0);
 }
 
 void sendReceivedMessage(const std::string &srcAddress, const std::string &data)
 {
   char buf[10000];  // the limit for messages is 4k?
   int size = sprintf(buf, "radio %s %s", srcAddress.c_str(), data.c_str());
-  zmq_send(g_responder, buf, size, 0);
+  protected_zmq_send(g_responder, buf, size, 0);
 }
 
 
