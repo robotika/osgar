@@ -225,7 +225,6 @@ class Rover(MoonNode):
 
             else:
                 # TODO: if large change of 'steering' values, allow time to apply before turning on 'effort'
-                camera_angle = math.pi * (self.drive_camera_angle / 100.0) / 180.0
                 fl = fr = rl = rr = 0.0
 
                 e = 40 if self.drive_speed > 0 else -40
@@ -239,7 +238,9 @@ class Rover(MoonNode):
                     rl = sign * -WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) + signed_width)
                     rr = sign * -WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) - signed_width)
 
-                    if camera_angle > 0:
+                    if self.drive_camera_angle == 0:
+                        pass
+                    elif self.drive_camera_angle == 9000:
                         if self.drive_radius > 0:
                             temp = rr
                             rr = -math.pi/2 + fr
@@ -254,7 +255,7 @@ class Rover(MoonNode):
                             fl = -math.pi/2 + rl
                             rl = -math.pi/2 + temp
                             effort = [e, -e, e, -e]
-                    elif camera_angle < 0:
+                    elif self.drive_camera_angle == -9000:
                         if self.drive_radius > 0:
                             temp = rr
                             rr = math.pi/2 + rl
@@ -269,7 +270,12 @@ class Rover(MoonNode):
                             fl = math.pi/2 + fr
                             fr = -math.pi/2 + temp
                             effort = [e, -e, e, -e]
+                    else:
+                        assert False, "Unsupported angle: " + str(self.drive_camera_angle)
 
+                else: # if driving straight but camera at an angle, point all wheels in the same direction for crab movement
+                    angle = math.radians(self.drive_camera_angle / 100.0)
+                    rr = fr = fl = rl = angle
 
                 if self.drive_camera_angle == 0:
                     # during normal driving, steer against slope proportionately to the steepness of the slope
