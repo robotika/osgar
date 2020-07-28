@@ -85,11 +85,7 @@ class Rover(MoonNode):
         # when turning in place, positive speed turns counterclockwise, negative clockwise
         self.drive_radius = float("inf") # in degrees * 100
         self.drive_camera_angle = 0  # in degrees * 100
-        self.drive_speed = 0 # 0 and non-zero only for now
-
-
-        self.desired_linear_speed = 0.0  # m/s
-        self.desired_angular_speed = 0.0
+        self.drive_speed = 0 # -1000 to 1000 (0.. stop, 1000 maximum feasible speed given the type of motion)
 
         self.joint_name = None  # updated via Node.update()
         self.debug_arr = []
@@ -114,7 +110,7 @@ class Rover(MoonNode):
             self.drive_radius = self.drive_speed = 0
         elif angular != 0:
             self.drive_radius = 0 # turn in place
-            self.drive_speed =  math.copysign(10, angular)
+            self.drive_speed = 1000 * angular / (100 * 60) # max angular speed is 60 deg/sec, value provided in 100 multiple
         else: # linear is non-zero
             self.drive_radius = float("inf") # going straight
             self.drive_speed = linear
@@ -125,7 +121,7 @@ class Rover(MoonNode):
         # rover will go forward in a circle given:
         # circle radius (m) (use float("inf") to go straight)
         # angle between the center of the circle and the direction of the camera (angle in 100*degrees, positive if center to the left of the camera); NOTE: currently only the sign matters and will result in looking left and right 90 degrees respectively
-        # linear speed (1000*m/s) NOTE: speed only considers the sign for going forward, backward or stop
+        # drive_speed: linear speed in 1000* m/s
         self.drive_radius, self.drive_camera_angle, self.drive_speed = data
 
     def on_rot(self, data):
@@ -145,12 +141,11 @@ class Rover(MoonNode):
         diff = [b - a for a, b in zip(self.prev_position, data)]
 
         assert b'bl_wheel_joint' in self.joint_name, self.joint_name
-        if self.desired_linear_speed >= 0:
-            name = b'bl_wheel_joint'
-            name2 = b'br_wheel_joint'
-        else:
-            name = b'fl_wheel_joint'
-            name2 = b'fr_wheel_joint'
+        # measure odometry from rear wheels
+        name = b'bl_wheel_joint'
+        name2 = b'br_wheel_joint'
+        # name = b'fl_wheel_joint'
+        # name2 = b'fr_wheel_joint'
         left = WHEEL_RADIUS * diff[self.joint_name.index(name)]
         right = WHEEL_RADIUS * diff[self.joint_name.index(name2)]
         dist = (left + right)/2
@@ -198,7 +193,8 @@ class Rover(MoonNode):
 
         elif self.drive_radius == 0:
             # turning in place if radius is 0 but speed is non-zero
-            e = 30
+            e = 30 * abs(self.drive_speed) / 1000.0 # 30 is max for turning in place
+
             if self.drive_speed > 0:
                 # turn left
                 effort = [-e, e, -e, e]
@@ -227,7 +223,7 @@ class Rover(MoonNode):
                 # TODO: if large change of 'steering' values, allow time to apply before turning on 'effort'
                 fl = fr = rl = rr = 0.0
 
-                e = 40 if self.drive_speed > 0 else -40
+                e = 80 * self.drive_speed / 1000.0
                 effort = [e, e, e, e]
 
                 if not math.isinf(self.drive_radius):
@@ -294,6 +290,7 @@ class Rover(MoonNode):
                             abs(self.prev_position[self.joint_name.index(b'fl_steering_arm_joint')] - fl) > 0.2 or
                             abs(self.prev_position[self.joint_name.index(b'fr_steering_arm_joint')] - fr) > 0.2
                     ):
+                        # TODO: it may be helpful to brake here too so that the robot doesn't roll away while wheels turning
                         effort = [0.0,]*4
         return steering, effort
 
