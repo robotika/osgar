@@ -19,7 +19,6 @@ from subt.local_planner import LocalPlanner
 
 from moon.moonnode import MoonNode
 
-SPEED_ON = 10 # only +/0/- matters
 TURN_RADIUS = 8 # radius of circle when turning
 GO_STRAIGHT = float("inf")
 
@@ -86,10 +85,10 @@ class LidarCollisionException(Exception):
 
 
 class LidarCollisionMonitor:
-    def __init__(self, robot):
+    def __init__(self, robot, threshold_distance=1200):
         self.robot = robot
         self.scan_history = []
-        self.threshold_distance = 1200 #1.2m
+        self.threshold_distance = threshold_distance #1.2m
         self.min_hits = 10 # we have to see at least 10 points nearer than threshold
 
     def update(self, robot, channel):
@@ -97,6 +96,7 @@ class LidarCollisionMonitor:
             # measure distance only in 66 degree angle (about the width of the robot 1.5m ahead)
             # NASA Lidar 150degrees wide, 100 samples
             # robot is ~2.21m wide (~1.2m x 2 with wiggle room)
+            # TODO: rework using lidar processing from main class
 
             collision_view = robot.scan[70:110]
             self.scan_history.append(collision_view)
@@ -151,6 +151,14 @@ class SpaceRoboticsChallenge(MoonNode):
         self.xyz = None
         self.xyz_quat = None
         self.yaw_offset = 0
+
+        # obstacle distance toolkit
+        self.scan_distance_to_obstacle = 15000 # 15m min distance in front of robot
+        self.scan_history = []
+        self.scan_min_window = 10 # we have to see at least 10 points nearer than threshold
+        self.scan_nr_kept = 3 # we have to see at least 10 points nearer than threshold
+
+        self.default_effort_level = 1000 # default is max speed
 
         self.true_pose = False
         self.tf = {
@@ -354,7 +362,19 @@ class SpaceRoboticsChallenge(MoonNode):
         self.score = data[0]
 
     def on_scan(self, data):
-        pass
+        # measure distance only in 66 degree angle (about the width of the robot 1.5m ahead)
+        # NASA Lidar 150degrees wide, 100 samples
+        # robot is ~2.21m wide (~1.2m x 2 with wiggle room)
+        collision_view = [x if x > 10 else 15000 for x in data[70:110]]
+        self.scan_history.append(collision_view)
+        if len(self.scan_history) > self.scan_nr_kept:
+            self.scan_history.pop(0)
+
+        median_scan = []
+        for j in range(len(collision_view)):
+            median_scan.append(median([self.scan_history[i][j] for i in range(len(self.scan_history))]))
+        median_scan.sort();
+        self.scan_distance_to_obstacle = median(median_scan[:self.scan_min_window])
 
     def on_joint_position(self, data):
         assert self.joint_name is not None
@@ -414,52 +434,52 @@ class SpaceRoboticsChallenge(MoonNode):
         channel = super().update()
         return channel
 
-    def go_to_location(self, x, y, direction, timeout=None):
-        assert(direction == -1 or direction == 1, "Invalid direction")
-        # direction: 1 forward, -1 backward
-        print(self.sim_time, "go_to_location [%.1f,%.1f] (speed: %.1f)" % (x, y, math.copysign(self.max_speed, direction)))
+    def get_angle_diff(self, destination, direction):
+        angle_diff = normalizeAnglePIPI(math.atan2(destination[1] - self.xyz[1], destination[0] - self.xyz[0]) - self.yaw)
+        if direction < 0:
+            angle_diff = - math.pi + angle_diff
 
+        return normalizeAnglePIPI(angle_diff)
 
-        def get_angle_diff():
-            angle_diff = normalizeAnglePIPI(math.atan2(y - self.xyz[1], x - self.xyz[0]) - self.yaw)
-            if direction < 0:
-                angle_diff = - math.pi + angle_diff
-
-            return normalizeAnglePIPI(angle_diff)
+    def go_to_location(self, x, y, speed, timeout=None):
+        # speed: + forward, - backward
+        print(self.sim_time, "go_to_location [%.1f,%.1f] (speed: %.1f)" % (x, y, math.copysign(self.max_speed, speed)))
 
         if timeout is None:
             dist = distance([x,y], self.xyz)
             timeout = timedelta(seconds=2*dist / self.max_speed) # 30m should take at most 60 seconds
 
         start_time = self.sim_time
-        angle_diff = get_angle_diff()
+        angle_diff = self.get_angle_diff([x,y],speed)
         self.turn(angle_diff, timeout=timedelta(seconds=15))
 
-        # while we are further than 0.5m but still following the right direction (angle diff < 90deg)
-        angle_diff = get_angle_diff()
+        # while we are further than 1m but still following the right direction (angle diff < 90deg)
+        angle_diff = self.get_angle_diff([x,y],speed)
         self.virtual_bumper.update_desired_speed(self.max_speed, 0) # NOTE: ignoring angular speed
-        while distance([x,y], self.xyz) > 0.5 and abs(angle_diff) < math.pi/4:
-            angle_diff = get_angle_diff()
-            if angle_diff > 0.1:
-                turn = TURN_RADIUS * direction
-            elif angle_diff < -0.1:
-                turn = -TURN_RADIUS * direction
+        while distance([x,y], self.xyz) > 1 and abs(angle_diff) < math.pi/2:
+            angle_diff = self.get_angle_diff([x,y],speed)
+            dist = distance([x,y], self.xyz) # do not turn just before arrival
+            if angle_diff > 0.1 and dist > 3:
+                turn = TURN_RADIUS * math.copysign(1, speed)
+            elif angle_diff < -0.1 and dist > 3:
+                turn = -TURN_RADIUS * math.copysign(1, speed)
             else:
                 turn = GO_STRAIGHT
-            self.publish("desired_movement", [turn, 0, direction])
+            self.publish("desired_movement", [turn, 0, speed])
 
             self.wait(timedelta(milliseconds=50))
+            angle_diff = self.get_angle_diff([x,y],speed) # update angle again after wait just before the while loop
 
             if timeout is not None and self.sim_time - start_time > timeout:
                 print("go_to_location timeout ended at [%.1f,%.1f]" % (self.xyz[0], self.xyz[1]))
                 break
         self.send_speed_cmd(0.0, 0.0)
-        print(self.sim_time, "go_to_location [%.1f,%.1f] ended at [%.1f,%.1f]" % (x, y, self.xyz[0], self.xyz[1]))
+        print(self.sim_time, "go_to_location [%.1f,%.1f] ended at [%.1f,%.1f], yaw=%.2f, angle_diff=%f" % (x, y, self.xyz[0], self.xyz[1], self.yaw, angle_diff))
 
     def move_sideways(self, how_far, view_direction=None, timeout=None): # how_far: left is positive, right is negative
         print(self.sim_time, "move_sideways %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position)
         if timeout is None:
-            timeout = timedelta(seconds=4 + 2*how_far / self.max_speed) # add 4 sec for wheel setup
+            timeout = timedelta(seconds=4 + 2*abs(how_far) / self.max_speed) # add 4 sec for wheel setup
         if view_direction is not None:
             self.turn(normalizeAnglePIPI(view_direction - self.yaw), timeout=timedelta(seconds=10))
 
@@ -467,7 +487,7 @@ class SpaceRoboticsChallenge(MoonNode):
         start_time = self.sim_time
         self.virtual_bumper.update_desired_speed(self.max_speed, 0)
         while distance(start_pose, self.xyz) < abs(how_far):
-            self.publish("desired_movement", [100, -9000, math.copysign(how_far, SPEED_ON)])
+            self.publish("desired_movement", [1000, -9000, math.copysign(self.default_effort_level, how_far)]) # 1000m radius is almost straight
             self.wait(timedelta(milliseconds=100))
             if timeout is not None and self.sim_time - start_time > timeout:
                 print("go_sideways - timeout at %.1fm" % distance(start_pose, self.xyz))
@@ -478,6 +498,9 @@ class SpaceRoboticsChallenge(MoonNode):
 
     def go_straight(self, how_far, timeout=None):
         print(self.sim_time, "go_straight %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position)
+        if timeout is None:
+            timeout = timedelta(seconds=2*abs(how_far) / self.max_speed)
+
         start_pose = self.last_position
         if how_far >= 0:
             self.send_speed_cmd(self.max_speed, 0.0)
@@ -524,27 +547,52 @@ class SpaceRoboticsChallenge(MoonNode):
         while self.sim_time - start_sim_time < dt:
             self.update()
 
-    def go_safely(self, desired_direction):
-        safety, safe_direction = self.local_planner.recommend(desired_direction)
-        desired_angular_speed = 0.9 * safe_direction
-        size = len(self.scan)
-        dist = min_dist(self.scan[size//3:2*size//3])
-#        print(safe_direction, safety, dist)
-        if dist < self.min_safe_dist:
-            desired_speed = self.max_speed * (dist - self.dangerous_dist) / (self.min_safe_dist - self.dangerous_dist)
-        else:
-            desired_speed = self.max_speed
-        desired_speed = desired_speed * (1.0 - self.safety_turning_coeff * min(self.max_angular_speed, abs(desired_angular_speed)) / self.max_angular_speed)
-        self.send_speed_cmd(desired_speed, desired_angular_speed)
-        return safety
+    def lidar_drive_around(self, direction=1):
+        print(self.sim_time, "lidar_drive_around (speed: %.1f)" % (self.max_speed))
+        timeout = timedelta(seconds=10) # add 4 sec for wheel setup
 
-    def random_walk(self, timeout):
+        start_pose = self.xyz
         start_time = self.sim_time
-        while self.sim_time - start_time < timeout:
-            if self.update() == 'scan':
-                self.go_safely(0.0)
+        self.virtual_bumper.update_desired_speed(self.max_speed, 0)
+        while self.scan_distance_to_obstacle < 4000: # 4m
+            self.publish("desired_movement", [GO_STRAIGHT, 7500, math.copysign(self.default_effort_level, direction)]) # 1000m radius is almost straight
+            self.wait(timedelta(milliseconds=100))
+            if timeout is not None and self.sim_time - start_time > timeout:
+                print("lidar_drive_around - timeout at %.1fm" % distance(start_pose, self.xyz))
+                break
 
+    def drive_around_rock(self, how_far, view_direction=None, timeout=None):
+        # go around a rock to the left while keeping to look forward
+        # view_direction - if present, first turn in place to point in that direction
+        # TODO: use lidar to go around as much as needed
+        print(self.sim_time, "go_around_a_rock %.1f (speed: %.1f)" % (how_far, self.max_speed))
+        if timeout is None:
+            timeout = timedelta(seconds=4 + 2*abs(how_far) / self.max_speed) # add 4 sec for wheel setup
+        if view_direction is not None:
+            self.turn(normalizeAnglePIPI(view_direction - self.yaw), timeout=timedelta(seconds=10))
+
+        start_pose = self.xyz
+        start_time = self.sim_time
+        self.virtual_bumper.update_desired_speed(self.max_speed, 0)
+        while distance(start_pose, self.xyz) < abs(how_far):
+            self.publish("desired_movement", [GO_STRAIGHT, 7500, -math.copysign(self.default_effort_level, how_far)]) # 1000m radius is almost straight
+            self.wait(timedelta(milliseconds=100))
+            if timeout is not None and self.sim_time - start_time > timeout:
+                print("go_around_a_rock - timeout at %.1fm" % distance(start_pose, self.xyz))
+                break
+        self.go_straight(math.copysign(abs(how_far) + 5, how_far)) # TODO: rock size estimate
+        # TODO: maybe going back not needed, hand over to main routine, we presumably already cleared the obstacle
+        start_pose = self.xyz
+        start_time = self.sim_time
+        while distance(start_pose, self.xyz) < abs(how_far):
+            self.publish("desired_movement", [GO_STRAIGHT, -7500, -math.copysign(self.default_effort_level, how_far)]) # 1000m radius is almost straight
+            self.wait(timedelta(milliseconds=100))
+            if timeout is not None and self.sim_time - start_time > timeout:
+                print("go_around_a_rock - timeout at %.1fm" % distance(start_pose, self.xyz))
+                break
         self.send_speed_cmd(0.0, 0.0)
+        print(self.sim_time, "go_around_a_rock ended at [%.1f,%.1f]" % (self.xyz[0], self.xyz[1]))
+
 
     def try_step_around(self):
         self.turn(math.radians(90), timeout=timedelta(seconds=10))
@@ -552,7 +600,7 @@ class SpaceRoboticsChallenge(MoonNode):
         # recovered enough at this point to switch to another driver (in case you see cubesat while doing the 3m drive or the final turn)
         self.bus.publish('driving_recovery', False)
 
-        self.go_straight(5.0, timeout=timedelta(seconds=20))
+        self.go_straight(5.0)
         self.turn(math.radians(-90), timeout=timedelta(seconds=10))
 
     def wait_for_init(self):
