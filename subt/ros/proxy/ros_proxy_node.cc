@@ -273,6 +273,10 @@ class Controller
 
   public: bool broadcast(std::string& serializedData)
   {
+    if (this->client == 0) {
+        ROS_INFO_STREAM("no client");
+        return false;
+    }
     if (!this->client->SendTo(serializedData, subt::kBroadcast))
     {
       ROS_ERROR("CommsClient failed to broadcast serialized data.");
@@ -577,6 +581,7 @@ void Controller::receiveZmqThread(Controller * self)
     else if(strncmp(buffer, "broadcast ", 10) == 0)
     {
         std::string content(buffer + 10);
+        ROS_INFO_STREAM("BROADCAST RECEIVED " << content);
         if(self->broadcast(content))
         {
           ROS_INFO("MD BROADCAST SUCCESS\n");
