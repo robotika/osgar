@@ -19,7 +19,7 @@ class RospyRound3PushPull(RospyBasePushPull):
 
     def register_handlers(self):
         super(RospyRound3PushPull, self).register_handlers()
-        rospy.Subscriber('/qual_3_score', Qual3ScoringMsg, partial(self.callback_topic, rate=1000), '/qual_3_score')
+        rospy.Subscriber('/qual_3_score', Qual3ScoringMsg, partial(self.callback_topic, rate=50), '/qual_3_score')
 
 class RospyRound3ReqRep(RospyBaseReqRep):
 
