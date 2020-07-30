@@ -208,7 +208,8 @@ if __name__ == "__main__":
                     print(member.name, "->", rosout_name)
                     with open(os.path.join(os.path.dirname(args.filename), rosout_name), 'wb') as f:
                         f.write(tar.extractfile(member).read())
-                elif (member.name in ['score.yml', 'server_console.log'] or member.name.startswith('subt_urban_') or
+                elif (member.name in ['server_console.log'] or member.name.endswith('.yml') or
+                      member.name.startswith('subt_urban_') or member.name.startswith('subt_cave_') or
                       (member.name.startswith('state.tlog') and args.all)):
                     print(member.name)
                     with open(os.path.join(os.path.dirname(args.filename), member.name.replace(':', '_')), 'wb') as f:
