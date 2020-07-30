@@ -580,7 +580,7 @@ void Controller::receiveZmqThread(Controller * self)
     }
     else if(strncmp(buffer, "broadcast ", 10) == 0)
     {
-        std::string content(buffer + 10, size - 10);  // allow sending binary data
+        std::string content(buffer + 10);
         ROS_INFO_STREAM("BROADCAST RECEIVED " << content);
         if(self->broadcast(content))
         {
