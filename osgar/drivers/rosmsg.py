@@ -382,15 +382,15 @@ def parse_bucket(data):
 def parse_topic(topic_type, data):
     """parse general topic"""
     if topic_type == 'srcp2_msgs/Qual1ScoringMsg':
-        assert len(data) == 44, (len(data), data)
+        assert len(data) == 8, (len(data), data)
         size = struct.unpack_from('<I', data)[0]
         pos = 4
-        assert size == 40, size
-        # __slots__ = ['score','calls','total_of_types']
-        # _slot_types = ['int32','int32','int32[8]']
-        return list(struct.unpack_from('<II', data, pos))  # only score and calls
+        assert size == 4, size
+        # __slots__ = ['score']
+        # _slot_types = ['int32']
+        return struct.unpack_from('<I', data, pos)
     elif topic_type == 'srcp2_msgs/Qual2ScoringMsg':
-        assert len(data) == 139, (len(data), data)
+        assert len(data) == 142, (len(data), data)
         # __slots__ = ['vol_type', 'points_per_type', 'num_of_dumps', 'total_score']
         # _slot_types = ['string[8]', 'int32[8]', 'int32', 'float32']
         # let's ignore names of volatile types
@@ -427,7 +427,7 @@ class ROSMsgParser(Thread):
         Thread.__init__(self)
         self.setDaemon(True)
         outputs = ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "sim_clock", "cmd", "origin", "gas_detected",
-                   "depth:gz", "t265_rot", "orientation", "debug",
+                   "depth:gz", "t265_rot", "orientation", "debug", "radio",
                     "joint_name", "joint_position", "joint_velocity", "joint_effort"]
         self.topics = config.get('topics', [])
         for row in self.topics:
@@ -491,6 +491,12 @@ class ROSMsgParser(Thread):
         if data.startswith(b'depth'):
             depth = parse_raw_image(data[5:])
             self.bus.publish('depth', depth)
+            return
+        if data.startswith(b'radio '):
+            s = data[6:].split(b' ')
+            addr = s[0]
+            msg = b' '.join(s[1:])
+            self.bus.publish('radio', [addr, msg])
             return
         if data.startswith(b'points'):
             return
@@ -589,6 +595,10 @@ class ROSMsgParser(Thread):
         cmd = b'request_origin'
         self.bus.publish('cmd', cmd)
 
+    def slot_broadcast(self, timestamp, data):
+        cmd = b'broadcast ' + data  # data should be already type bytes
+        self.bus.publish('cmd', cmd)
+
     def run(self):
         try:
             while True:
@@ -601,6 +611,8 @@ class ROSMsgParser(Thread):
                     self.slot_stdout(timestamp, data)
                 elif channel == 'request_origin':
                     self.slot_request_origin(timestamp, data)
+                elif channel == 'broadcast':
+                    self.slot_broadcast(timestamp, data)
                 else:
                     assert False, channel  # unsupported input channel
         except BusShutdownException:

@@ -33,11 +33,20 @@ class ArtifactDetector(Node):
                 'subsequent_detects_required': 3
                 },
             {
+                'artefact_name': 'homebase',
+                'detector_type': 'classifier',
+                'classifier': cv2.CascadeClassifier(str(curdir/'xml/homebase.xml')),
+                'min_size': 20,
+                'max_size': 400,
+                'subsequent_detects_required': 3
+                },
+            {
                 'artefact_name': 'basemarker',
                 'detector_type': 'colormatch',
                 'mser': cv2.MSER_create(_min_area=100),
                 'min_size': 50,
                 'max_size': 500,
+                'min_y': 200, # lower edge of the bbox must below this
                 'pixel_count_threshold': 100,
                 'bbox_union_count': 1,
                 'hue_max_difference': 10,
@@ -50,6 +59,7 @@ class ArtifactDetector(Node):
                 'mser': cv2.MSER_create(_min_area=400),
                 'min_size': 20,
                 'max_size': 700,
+                'min_y': None,
                 'pixel_count_threshold': 400,
                 'bbox_union_count': 5,
                 'hue_max_difference': 10,
@@ -62,6 +72,7 @@ class ArtifactDetector(Node):
                 'mser': cv2.MSER_create(_min_area=100),
                 'min_size': 20,
                 'max_size': 700,
+                'min_y': None,
                 'pixel_count_threshold': 500,
                 'bbox_union_count': 3,
                 'hue_max_difference': 5,
@@ -129,6 +140,7 @@ class ArtifactDetector(Node):
         hsv = cv2.cvtColor(limg, cv2.COLOR_BGR2HSV)
         hsv_blurred = cv2.medianBlur(hsv,5) # some frames have noise, need to blur otherwise threshold doesn't work
 
+        objects_detected = []
         for c in self.detectors:
             if c['artefact_name'] not in self.detect_sequences:
                 self.detect_sequences[c['artefact_name']] = 0
@@ -158,25 +170,23 @@ class ArtifactDetector(Node):
                     if (
                             match_count > c['pixel_count_threshold'] and
                             w >= c['min_size'] and h >= c['min_size'] and
-                            w <= c['max_size'] and h <= c['max_size']
+                            w <= c['max_size'] and h <= c['max_size'] and
+                            (c['min_y'] is None or y + h >= c['min_y'])
                     ):
                         # print ("%s match count: %d; [%d %d %d %d]" % (c['artefact_name'], match_count, x, y, w, h))
+                        objects_detected.append(c['artefact_name'])
                         if self.detect_sequences[c['artefact_name']] < c['subsequent_detects_required']:
                             # do not act until you have detections in a row
                             self.detect_sequences[c['artefact_name']] += 1
                         else:
                             results.append((c['artefact_name'], int(x), int(y), int(w), int(h), int(match_count)))
-                    else:
-                        self.detect_sequences[c['artefact_name']] = 0
-                else:
-                    self.detect_sequences[c['artefact_name']] = 0
-
 
             if c['detector_type'] == 'classifier':
                 lfound = c['classifier'].detectMultiScale(limg_rgb, minSize =(c['min_size'], c['min_size']),  maxSize =(c['max_size'], c['max_size']))
                 rfound = c['classifier'].detectMultiScale(rimg_rgb, minSize =(c['min_size'], c['min_size']),  maxSize =(c['max_size'], c['max_size']))
 
                 if len(lfound) > 0 and len(rfound) > 0: # only report if both cameras see it
+                    objects_detected.append(c['artefact_name'])
                     if self.detect_sequences[c['artefact_name']] < c['subsequent_detects_required']: # do not act until you have detections in a row
                         self.detect_sequences[c['artefact_name']] += 1
                     else:
@@ -193,8 +203,10 @@ class ArtifactDetector(Node):
     #                    print(self.time, "Post: %d %d %d %d" % (x+nx,y+ny,nw,nh))
 
                         results.append((c['artefact_name'], int(x+nx), int(y+ny), int(nw), int(nh), int(nonzerocount)))
-                else:
-                    self.detect_sequences[c['artefact_name']] = 0
+
+        for artefact_name in self.detect_sequences.keys():
+            if artefact_name not in objects_detected:
+                self.detect_sequences[artefact_name] = 0
 
         return results
 

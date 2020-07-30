@@ -300,10 +300,8 @@ class Framer:
             timestamp, stream_id, data = self.log[self.current]
             if stream_id == self.keyframes_id:
                 self.keyframe = True
-            if stream_id in self.title_id:
+            if stream_id in self.title_id and stream_id != self.bbox_id:
                 self.title.append(deserialize(data))
-            if stream_id == self.bbox_id:
-                self.bbox.append(deserialize(data))
             if stream_id == self.lidar_id:
                 self.scan = deserialize(data)
                 keyframe = self.keyframe
@@ -313,6 +311,18 @@ class Framer:
                 self.scan2 = deserialize(data)
             elif stream_id == self.camera_id:
                 self.image = get_image(deserialize(data))
+                # bounding boxes associated with an image are stored after the image in the log
+                # therefore, we need to continue reading the log past the image in order to gathering its bounding box data
+                current = self.current
+                while current + direction >= 0 and current + direction < len(self.log):
+                    current += direction
+                    _, new_stream_id, new_data = self.log[current]
+                    if new_stream_id == self.bbox_id:
+                        self.bbox.append(deserialize(new_data))
+                    if new_stream_id in self.title_id:
+                        self.title.append(deserialize(new_data))
+                    if new_stream_id == self.camera_id:
+                        break
                 if self.lidar_id is None:
                     keyframe = self.keyframe
                     self.keyframe = False
