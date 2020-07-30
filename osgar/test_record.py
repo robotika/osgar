@@ -35,6 +35,16 @@ class RecorderTest(unittest.TestCase):
         with Recorder(config=empty_config, logger=MagicMock()) as recorder:
             pass
 
+    def test_missing_init(self):
+        # init section for modules is now optional
+        mini_config = {'modules': {
+            "dummy": {
+                "driver": "osgar.test_record:Sleeper"
+            },
+        }, 'links':[]}
+        with Recorder(config=mini_config, logger=MagicMock()) as recorder:
+            pass
+
     def test_config(self):
         with patch('osgar.drivers.logserial.serial.Serial') as mock:
             instance = mock.return_value

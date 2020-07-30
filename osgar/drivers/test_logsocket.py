@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock, call
 
 from osgar.drivers.logsocket import LogTCPStaticIP as LogTCP, LogTCPDynamicIP, LogTCPServer, LogUDP, LogHTTP
 from osgar.bus import Bus
-
+import osgar.node
 
 class LogSocketTest(unittest.TestCase):
 
@@ -147,5 +147,50 @@ class LogSocketTest(unittest.TestCase):
             self.assertEqual(
                     len(instance.__enter__.return_value.read.call_args_list),
                     1)  # it should be just one call and sleep
+
+
+class Echo(osgar.node.Node):
+    def __init__(self, config, bus):
+        super().__init__(config, bus)
+        bus.register('raw0', 'raw1')
+        self.data = config['data']
+
+    def run(self):
+        self.bus.sleep(0.1) # give other nodes a chance to enter listen call
+        self.bus.publish('raw0', self.data)
+        dt, channel, data = self.bus.listen()
+        assert data == b'ok'
+        self.bus.publish('raw1', self.data)
+        dt, channel, data = self.bus.listen()
+        assert data == b'ok'
+
+
+if __name__ == "__main__":
+    import os
+    os.environ['OSGAR_LOGS'] = '.'
+    from osgar.zmqrouter import record
+    config = {'version': 2, 'robot': {'modules': {}, 'links': []}}
+    config['robot']['modules'] = {
+        "0": {
+            "driver": "udp",
+            "init": {"host": "127.0.0.1", "port": 9111, "timeout": 0.5},
+        },
+        "1": {
+            "driver": "udp",
+            "init": {"host": "127.0.0.1", "port": 9111, "timeout": 0.5},
+        },
+        "echo": {
+            "driver": "osgar.drivers.test_logsocket:Echo",
+            "init": {"data": b"ok" }
+        },
+    }
+    config['robot']['links'] = [
+        ['echo.raw0', '0.raw'],
+        ['1.raw', 'echo.stdout'],
+        ['echo.raw1', '1.raw'],
+        ['0.raw', 'echo.stdout']
+    ]
+    record(config, log_filename='logzeromq-zmqrouter.log')
+
 
 # vim: expandtab sw=4 ts=4

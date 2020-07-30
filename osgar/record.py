@@ -24,7 +24,7 @@ class Recorder:
         self.bus = Bus(logger)
         for module_name, module_config in config['modules'].items():
             klass = get_class_by_name(module_config['driver'])
-            self.modules[module_name] = klass(module_config['init'], bus=self.bus.handle(module_name))
+            self.modules[module_name] = klass(module_config.get('init', {}), bus=self.bus.handle(module_name))
 
         for sender, receiver in config['links']:
             self.bus.connect(sender, receiver, self.modules)

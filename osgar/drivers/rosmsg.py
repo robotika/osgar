@@ -451,7 +451,7 @@ class ROSMsgParser(Thread):
         Thread.__init__(self)
         self.setDaemon(True)
         outputs = ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "sim_clock", "cmd", "origin", "gas_detected",
-                   "depth:gz", "t265_rot", "orientation", "debug",
+                   "depth:gz", "t265_rot", "orientation", "debug", "radio",
                     "joint_name", "joint_position", "joint_velocity", "joint_effort"]
         self.topics = config.get('topics', [])
         for row in self.topics:
@@ -515,6 +515,12 @@ class ROSMsgParser(Thread):
         if data.startswith(b'depth'):
             depth = parse_raw_image(data[5:])
             self.bus.publish('depth', depth)
+            return
+        if data.startswith(b'radio '):
+            s = data[6:].split(b' ')
+            addr = s[0]
+            msg = b' '.join(s[1:])
+            self.bus.publish('radio', [addr, msg])
             return
         if data.startswith(b'points'):
             return
@@ -613,6 +619,10 @@ class ROSMsgParser(Thread):
         cmd = b'request_origin'
         self.bus.publish('cmd', cmd)
 
+    def slot_broadcast(self, timestamp, data):
+        cmd = b'broadcast ' + data  # data should be already type bytes
+        self.bus.publish('cmd', cmd)
+
     def run(self):
         try:
             while True:
@@ -625,6 +635,8 @@ class ROSMsgParser(Thread):
                     self.slot_stdout(timestamp, data)
                 elif channel == 'request_origin':
                     self.slot_request_origin(timestamp, data)
+                elif channel == 'broadcast':
+                    self.slot_broadcast(timestamp, data)
                 else:
                     assert False, channel  # unsupported input channel
         except BusShutdownException:
