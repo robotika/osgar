@@ -4,7 +4,6 @@
 import math
 import numpy as np
 
-from random import Random
 from datetime import timedelta
 from statistics import median
 
@@ -124,7 +123,7 @@ class LidarCollisionMonitor:
 class SpaceRoboticsChallenge(MoonNode):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register("desired_speed", "desired_movement", "driving_recovery", "request", "cmd", "pose2d")
+        bus.register("desired_speed", "desired_movement", "driving_recovery", "cmd", "pose2d")
 
         self.joint_name = None
         self.sensor_joint_position = None
@@ -196,9 +195,6 @@ class SpaceRoboticsChallenge(MoonNode):
         self.last_status_timestamp = None
 
         self.virtual_bumper = None
-        self.rand = Random(0)
-
-        self.requests = {}
 
     def register(self, callback):
         self.monitors.append(callback)
@@ -212,21 +208,6 @@ class SpaceRoboticsChallenge(MoonNode):
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_desired_speed(speed, angular_speed)
         self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
-
-    def on_response(self, data):
-        token, response = data
-        #print(self.sim_time, "controller:response received: token=%s, response=%s" % (token, response))
-        callback = self.requests[token]
-        self.requests.pop(token)
-        if callback is not None:
-            callback(response)
-
-    def send_request(self, cmd, callback=None):
-        """Send ROS Service Request from a single place"""
-        token = hex(self.rand.getrandbits(128))
-        self.requests[token] = callback
-        #print(self.sim_time, "controller:send_request:token: %s, command: %s" % (token, cmd))
-        self.publish('request', [token, cmd])
 
     def set_cam_angle(self, angle):
         angle = min(math.pi / 4.0, max(-math.pi / 8.0, angle))
