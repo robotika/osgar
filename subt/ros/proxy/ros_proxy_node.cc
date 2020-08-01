@@ -14,11 +14,11 @@
  * limitations under the License.
  *
 */
-// Another attempt based on subt_seed_node.cc
+// TEAMBASE attempt based on subt_seed_node.cc
 // Goal:
-//   - handle all artifacts, ROS communication
+//   - handle ROS communication
 //   - send speed commands
-//   - redirect Odom, Scan and Image messages to Python3 (via ZeroMQ?)
+//   - redirect clock messages to Python3 (via ZeroMQ)
 
 #include <chrono>
 #include <thread>
@@ -57,12 +57,6 @@
 
 int g_countClock = 0;
 uint32_t g_clockPrevSec = 0;
-int g_countScan = 0;
-int g_countImage = 0;
-int g_countOdom = 0;
-int g_countGas = 0;
-int g_countDepth = 0;
-int g_countPoints = 0;
 
 int g_countUpdates = 0;
 int g_countReceives = 0;
@@ -103,87 +97,6 @@ void clockCallback(const rosgraph_msgs::Clock::ConstPtr& msg)
   g_countClock++;
 }
 
-void scanCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
-{
-  ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  protected_zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
-  if(g_countScan % 100 == 0)
-    ROS_INFO("received Scan %d", g_countScan);
-  g_countScan++;
-}
-
-void imageCallback(const sensor_msgs::CompressedImage::ConstPtr& msg)
-{
-  ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  protected_zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
-  if(g_countImage % 100 == 0)
-    ROS_INFO("received Image %d", g_countImage);
-  g_countImage++;
-}
-
-void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
-{
-  ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  protected_zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
-  if(g_countOdom % 100 == 0)
-    ROS_INFO("received Odom %d", g_countOdom);
-  g_countOdom++;
-}
-
-void gasCallback(const std_msgs::Bool::ConstPtr& msg)
-{
-  ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  protected_zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
-  if(g_countGas % 100 == 0)
-    ROS_INFO("received Gas %d", g_countGas);
-  g_countGas++;
-}
-
-void depthCallback(const sensor_msgs::Image::ConstPtr& msg)
-{
-  ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  std::string s("depth");
-  unsigned char *buf = sm.buf.get();
-  size_t size = sm.num_bytes;
-  size_t i;
-  for(i = 0; i < size; i++)
-    s += buf[i];
-  protected_zmq_send(g_responder, s.c_str(), size + 5, 0);
-  if(g_countDepth % 100 == 0)
-    ROS_INFO("received Depth %d", g_countDepth);
-  g_countDepth++;
-}
-
-void pointsCallback(const sensor_msgs::PointCloud2::ConstPtr& msg)
-{
-  ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  std::string s("points");
-  unsigned char *buf = sm.buf.get();
-  size_t size = sm.num_bytes;
-  size_t i;
-  for(i = 0; i < size; i++)
-    s += buf[i];
-  protected_zmq_send(g_responder, s.c_str(), size + 6, 0);
-  if(g_countPoints % 100 == 0)
-    ROS_INFO("received Points %d", g_countPoints);
-  g_countPoints++;
-}
-
-void sendOrigin(std::string& name, double x, double y, double z,
-                double qx, double qy, double qz, double qw)
-{
-  char buf[1000];
-  int size = sprintf(buf, "origin %s %lf %lf %lf  %lf %lf %lf %lf", name.c_str(), x, y, z, qx, qy, qz, qw);
-  protected_zmq_send(g_responder, buf, size, 0);
-}
-
-void sendOriginError(std::string& name)
-{
-  char buf[1000];
-  int size = sprintf(buf, "origin %s ERROR", name.c_str());
-  protected_zmq_send(g_responder, buf, size, 0);
-}
-
 void sendReceivedMessage(const std::string &srcAddress, const std::string &data)
 {
   char buf[10000];  // the limit for messages is 4k?
@@ -216,32 +129,13 @@ class Controller
 
   private: ros::NodeHandle n;
 
-  /// \brief publisher to send cmd_vel
-  public: ros::Publisher velPub;
-
   /// \brief Communication client.
   private: std::unique_ptr<subt::CommsClient> client;
 
-  /// \brief Client to request pose from origin.
-  ros::ServiceClient originClient;
-
-  /// \brief Service to request pose from origin.
-  subt_msgs::PoseFromArtifact originSrv;
-
   ros::Subscriber subClock;
-  ros::Subscriber subScan;
-  ros::Subscriber subImage;
-  ros::Subscriber subImage2;  // workaround for two identical topics with different name
-  ros::Subscriber subOdom;
-  ros::Subscriber subGas;
-  ros::Subscriber subDepth;
-  ros::Subscriber subPoints;
 
   /// \brief Timer that trigger the update function.
   private: ros::Timer updateTimer;
-
-  /// \brief True if robot has arrived at destination.
-  public: bool arrived{false};
 
   /// \brief True if started.
   private: bool started{false};
@@ -251,8 +145,6 @@ class Controller
 
   /// \brief Name of this robot.
   private: std::string name;
-
-  private: double prev_dist2{0.0};
 
   public: bool ReportArtifact(subt::msgs::Artifact& artifact)
   {
@@ -295,17 +187,12 @@ Controller::Controller(const std::string &_name)
 {
   this->name = _name;
 
-  ROS_INFO("Waiting for /clock, /subt/start, and /subt/pose_from_artifact_origin");
+  ROS_INFO("Waiting for /clock, /subt/start");
 
   ros::topic::waitForMessage<rosgraph_msgs::Clock>("/clock", this->n);
 
   // Wait for the start service to be ready.
   ros::service::waitForService("/subt/start", -1);
-  ros::service::waitForService("/subt/pose_from_artifact_origin", -1);
-
-  // Waiting from some message related to robot so that we know the robot is already in the simulation
-  ROS_INFO_STREAM("Waiting for " << this->name << "/front/depth");
-  ros::topic::waitForMessage<sensor_msgs::Image>(this->name + "/front/depth", this->n);
 
   ROS_INFO_STREAM("Sleeping 1 simulated second to let simulation start up");
   ros::Duration(1).sleep();
@@ -363,73 +250,10 @@ void Controller::Update(const ros::TimerEvent&)
       this->client.reset(new subt::CommsClient(this->name));
       this->client->Bind(&Controller::CommClientCallback, this);
 
-      // Create a cmd_vel publisher to control a vehicle.
-      this->velPub = this->n.advertise<geometry_msgs::Twist>(
-          this->name + "/cmd_vel", 1);
-
       this->subClock  = n.subscribe("/clock", 1000, clockCallback);
-      this->subScan = n.subscribe(this->name + "/front_scan", 1000, scanCallback);
-      this->subImage = n.subscribe(this->name + "/front/image_raw/compressed", 1000, imageCallback);
-      this->subImage2 = n.subscribe(this->name + "/image_raw/compressed", 1000, imageCallback);
-      this->subOdom = n.subscribe(this->name + "/odom", 1000, odomCallback);
-      this->subGas = n.subscribe(this->name + "/gas_detected", 1000, gasCallback);
-
-      // Robot specific sensors
-      this->subDepth = n.subscribe(this->name + "/front/depth", 1000, depthCallback);  // RGBD camera
-      this->subPoints = n.subscribe(this->name + "/points", 1000, pointsCallback);  // 3D Lidar (Velodyne)
-
-      // Create a cmd_vel publisher to control a vehicle.
-      this->originClient = this->n.serviceClient<subt_msgs::PoseFromArtifact>(
-          "/subt/pose_from_artifact_origin", true);
-      this->originSrv.request.robot_name.data = this->name;
     }
     else
       return;
-  }
-
-  if (this->arrived) {
-    this->updateTimer.stop();
-    return;
-  }
-
-  bool call = this->originClient.call(this->originSrv);
-  // Query current robot position w.r.t. entrance
-  if (!call || !this->originSrv.response.success)
-  {
-    ROS_ERROR("Failed to call pose_from_artifact_origin service, \
-robot may not exist, be outside staging area, or the service is \
-not available.");
-
-    sendOriginError(this->name);
-    this->arrived = true; // give up ... is it good idea?
-    this->updateTimer.stop();
-
-    // Stop robot
-    geometry_msgs::Twist msg;
-    this->velPub.publish(msg);
-    return;
-  }
-
-  auto pose = this->originSrv.response.pose.pose;
-  // send position to Python3 code
-  sendOrigin(this->name, pose.position.x, pose.position.y, pose.position.z,
-             pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w);
-
-  // Distance to goal
-  double dist = sqrt(pose.position.x * pose.position.x + pose.position.y * pose.position.y);
-
-  if(abs(prev_dist2 - dist) > 1.0)
-  {
-    ROS_INFO_STREAM("MD robot pose " << pose.position.x << " " << pose.position.y << " dist=" << dist);
-    prev_dist2 = dist;
-  }
-
-  // Arrived
-  if (dist < 0.3 || pose.position.x >= -0.3)
-  {
-    this->arrived = true;
-    this->updateTimer.stop();
-    ROS_INFO("Arrived at entrance!");
   }
 }
 
@@ -555,11 +379,6 @@ void Controller::receiveZmqThread(Controller * self)
     {
       ROS_INFO("Python3: %s", buffer);
     }
-    else if(strncmp(buffer, "request_origin", 14) == 0)
-    {
-      self->arrived = false;  // re-enable origin query
-      self->updateTimer.start();
-    }
     else if(strncmp(buffer, "artf ", 5) == 0)
     {
       subt::msgs::Artifact artifact;
@@ -589,22 +408,6 @@ void Controller::receiveZmqThread(Controller * self)
         else
           ROS_INFO("MD BROADCAST FAILURE\n");
     }
-    else
-    {
-      double speed, angular_speed;
-      int c = sscanf(buffer, "cmd_vel %lf %lf", &speed, &angular_speed);
-      if(c == 2)
-      {
-        msg.linear.x = speed;
-        msg.angular.z = angular_speed;
-        self->velPub.publish(msg);
-      }
-      else
-      {
-        ROS_INFO_STREAM("MD bad parsing" << c << " " << buffer);
-        break;
-      }
-    }
   }
   ROS_INFO("zmq receive thread finished");
   zmq_close(requester);
@@ -623,7 +426,7 @@ int main(int argc, char** argv)
   std::string robot_name = argv[1];
   ros::init(argc, argv, robot_name);
 
-  ROS_INFO_STREAM("Starting robotika solution for robot " << robot_name);
+  ROS_INFO_STREAM("Starting robotika TEAMBASE solution for robot " << robot_name);
 
   initZeroMQ();
 
