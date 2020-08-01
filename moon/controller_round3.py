@@ -110,7 +110,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         super().__init__(config, bus)
         bus.register("desired_movement")
 
-        self.default_effort_level = 600
+        self.default_effort_level = 500
 
         self.cubesat_location = None
         self.homebase_arrival_success = False
