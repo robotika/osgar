@@ -153,6 +153,8 @@ class SpaceRoboticsChallenge(MoonNode):
 
         # obstacle distance toolkit
         self.scan_distance_to_obstacle = 15000 # 15m min distance in front of robot
+        self.scan_avg_distance_left = 15000
+        self.scan_avg_distance_right = 15000
         self.scan_history = []
         self.scan_min_window = 10 # we have to see at least 10 points nearer than threshold
         self.scan_nr_kept = 3 # we have to see at least 10 points nearer than threshold
@@ -354,6 +356,10 @@ class SpaceRoboticsChallenge(MoonNode):
         median_scan = []
         for j in range(len(collision_view)):
             median_scan.append(median([self.scan_history[i][j] for i in range(len(self.scan_history))]))
+
+        self.scan_avg_distance_left = sum(median_scan[len(median_scan)//2:]) / 20
+        self.scan_avg_distance_right = sum(median_scan[:len(median_scan)//2]) / 20
+
         median_scan.sort();
         self.scan_distance_to_obstacle = median(median_scan[:self.scan_min_window])
 
@@ -528,9 +534,16 @@ class SpaceRoboticsChallenge(MoonNode):
         while self.sim_time - start_sim_time < dt:
             self.update()
 
-    def lidar_drive_around(self, direction=1):
+    def lidar_drive_around(self, direction=None):
+        # direction: only sign counts, positive will step around to the left, negative to the right
         print(self.sim_time, "lidar_drive_around (speed: %.1f)" % (self.max_speed))
         timeout = timedelta(seconds=10) # add 4 sec for wheel setup
+
+        # if more close points to the left, go right and vice versa
+        if direction is None:
+            direction = 1 if self.scan_avg_distance_left > self.scan_avg_distance_right else -1
+
+        print("avg left: %f avg right: %f" % (self.scan_avg_distance_left, self.scan_avg_distance_right))
 
         start_pose = self.xyz
         start_time = self.sim_time
