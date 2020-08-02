@@ -97,6 +97,7 @@ class Rover(MoonNode):
         self.yaw = 0.0
         self.yaw_offset = None
         self.in_driving_recovery = False
+        self.steering_wait_start = None
 
         self.motor_pid = [MotorPID(p=40.0) for __ in WHEEL_NAMES]  # TODO tune PID params
 
@@ -258,25 +259,32 @@ class Rover(MoonNode):
                 angle = math.radians(self.drive_camera_angle / 100.0)
                 rr = fr = fl = rl = angle
 
-            if self.drive_camera_angle == 0:
-                # during normal driving, steer against slope proportionately to the steepness of the slope
-                fl += self.roll
-                fr += self.roll
-                rl += self.roll
-                rr += self.roll
-
             steering = [fl, fr, rl, rr]
 
             # stay put while joint angles are catching up
             if self.drive_camera_angle != 0 and self.prev_position is not None and not self.in_driving_recovery:
                 if (
-                        abs(self.prev_position[self.joint_name.index(b'bl_steering_arm_joint')] - rl) > 0.2 or
-                        abs(self.prev_position[self.joint_name.index(b'br_steering_arm_joint')] - rr) > 0.2 or
-                        abs(self.prev_position[self.joint_name.index(b'fl_steering_arm_joint')] - fl) > 0.2 or
-                        abs(self.prev_position[self.joint_name.index(b'fr_steering_arm_joint')] - fr) > 0.2
+                        (
+                            abs(self.prev_position[self.joint_name.index(b'bl_steering_arm_joint')] - rl) > 0.2 or
+                            abs(self.prev_position[self.joint_name.index(b'br_steering_arm_joint')] - rr) > 0.2 or
+                            abs(self.prev_position[self.joint_name.index(b'fl_steering_arm_joint')] - fl) > 0.2 or
+                            abs(self.prev_position[self.joint_name.index(b'fr_steering_arm_joint')] - fr) > 0.2
+                        ) and (
+                            self.steering_wait_start is None or
+                            self.sim_time - self.steering_wait_start <= timedelta(milliseconds=1500)
+                        )
                 ):
-                    # TODO: it may be helpful to brake here too so that the robot doesn't roll away while wheels turning
+                    if self.steering_wait_start is None:
+                        self.steering_wait_start = self.sim_time
+                        self.send_request('set_brakes 20')
+                    # brake while steering angles are changing so that the robot doesn't roll away while wheels turning meanwhile
+                    # use braking force 20 Nm/rad which should prevent sliding but can be overcome by motor effort
                     effort = [0.0,]*4
+
+        if self.steering_wait_start is not None and self.sim_time - self.steering_wait_start > timedelta(milliseconds=1500):
+            self.send_request('set_brakes off')
+            self.steering_wait_start = None
+
         return steering, effort
 
     def draw(self):
