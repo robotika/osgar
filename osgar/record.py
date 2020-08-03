@@ -85,7 +85,7 @@ def main(record=record):
     parser.add_argument('config', nargs='+', help='configuration file')
     parser.add_argument('--note', help='add description')
     parser.add_argument('--duration', help='recording duration (sec), default infinite', type=float)
-    parser_run.add_argument('--log', help='force record log filename')
+    parser.add_argument('--log', help='force record log filename')
     parser.add_argument('--application', help='import string to application', default=None)
     args = parser.parse_args()
 
