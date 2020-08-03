@@ -41,7 +41,7 @@
           "init": {
             "downsample": 2
           }
-      },
+      }
     },
     "links": [["app.stdout", "rosmsg.stdout"],
 
