@@ -98,6 +98,7 @@ class Rover(MoonNode):
         self.yaw_offset = None
         self.in_driving_recovery = False
         self.steering_wait_start = None
+        self.steering_wait_last_engaged = None
 
         self.motor_pid = [MotorPID(p=40.0) for __ in WHEEL_NAMES]  # TODO tune PID params
 
@@ -272,8 +273,12 @@ class Rover(MoonNode):
                         ) and (
                             self.steering_wait_start is None or
                             self.sim_time - self.steering_wait_start <= timedelta(milliseconds=1500)
+                        ) and (
+                             self.steering_wait_last_engaged is None or
+                             self.sim_time - self.steering_wait_last_engaged > timedelta(seconds=5)
                         )
                 ):
+                    self.steering_wait_last_engaged = self.sim_time
                     if self.steering_wait_start is None:
                         self.steering_wait_start = self.sim_time
                         self.send_request('set_brakes 20')
