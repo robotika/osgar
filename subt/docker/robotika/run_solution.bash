@@ -28,11 +28,17 @@ done
 echo "Robot name is '$ROBOT_NAME'"
 ROBOT_DESCRIPTION=$(rosparam get /$ROBOT_NAME/robot_description)
 grep -q ssci_x4_sensor_config <<< $ROBOT_DESCRIPTION && IS_X4=true || IS_X4=false
+grep -q TeamBase <<< $ROBOT_DESCRIPTION && IS_TEAMBASE=true || IS_TEAMBASE=false
 if $IS_X4
 then
     echo "Robot is X4 drone"    
     LAUNCH_FILE="robot drone_keyboard.launch"
     CONFIG_FILE="zmq-subt-x4.json"
+elif $IS_TEAMBASE
+then
+    echo "Robot is TEAMBASE"
+    LAUNCH_FILE="proxy sim.launch"
+    CONFIG_FILE="zmq-teambase.json"
 else
     echo "Robot is X2 wheeled robot"
     LAUNCH_FILE="proxy sim.launch"
