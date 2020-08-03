@@ -38,7 +38,7 @@ elif $IS_TEAMBASE
 then
     echo "Robot is TEAMBASE"
     LAUNCH_FILE="proxy sim.launch"
-    CONFIG_FILE="zmq-teambase.json"
+    CONFIG_FILE="zmq-subt-teambase.json"
 else
     echo "Robot is X2 wheeled robot"
     LAUNCH_FILE="proxy sim.launch"
