@@ -59,7 +59,14 @@ PYTHON=/osgar-ws/env/bin/python3
 rosrun proxy sendlog.py $LOG_FILE &
 
 echo "Starting osgar"
-$PYTHON -m subt run $CONFIG_FILE --log $LOG_FILE --side auto --walldist 0.8 --speed 1.0 --note "run_solution.bash"
+if $IS_TEAMBASE
+then
+    $PYTHON -m osgar.record $CONFIG_FILE --log $LOG_FILE --note "run teambase"
+else
+    $PYTHON -m subt run $CONFIG_FILE --log $LOG_FILE --side auto --walldist 0.8 --speed 1.0 --note "run_solution.bash"
+fi
+
+
 
 echo "Sleep and finish"
 sleep 30
