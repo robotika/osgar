@@ -42,6 +42,10 @@ add_executable(ros_proxy ros_proxy_node.cc)
 add_dependencies(ros_proxy ${catkin_EXPORTED_TARGETS})
 target_link_libraries(ros_proxy ${catkin_LIBRARIES} -lzmq)
 
+add_executable(ros_proxy_teambase ros_proxy_teambase.cc)
+add_dependencies(ros_proxy_teambase ${catkin_EXPORTED_TARGETS})
+target_link_libraries(ros_proxy_teambase ${catkin_LIBRARIES} -lzmq)
+
 ###########
 ## Tests ##
 ###########
