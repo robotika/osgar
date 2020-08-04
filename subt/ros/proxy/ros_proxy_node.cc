@@ -51,6 +51,7 @@
 #include <zmq.h>
 #include <assert.h>
 
+const uint32_t BROADCAST_PORT = 4142u; // default is 4100 and collides with artifact messages
 
 #define ROSBAG_SIZE_LIMIT 3000000000L  // 3GB
 
@@ -277,7 +278,7 @@ class Controller
         ROS_INFO_STREAM("no client");
         return false;
     }
-    if (!this->client->SendTo(serializedData, subt::kBroadcast))
+    if (!this->client->SendTo(serializedData, subt::kBroadcast, BROADCAST_PORT))
     {
       ROS_ERROR("CommsClient failed to broadcast serialized data.");
       return false;
@@ -361,7 +362,7 @@ void Controller::Update(const ros::TimerEvent&)
     {
       // Create subt communication client
       this->client.reset(new subt::CommsClient(this->name));
-      this->client->Bind(&Controller::CommClientCallback, this);
+      this->client->Bind(&Controller::CommClientCallback, this, "", BROADCAST_PORT);
 
       // Create a cmd_vel publisher to control a vehicle.
       this->velPub = this->n.advertise<geometry_msgs::Twist>(
