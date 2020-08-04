@@ -209,8 +209,6 @@ class SpaceRoboticsChallenge(MoonNode):
         self.monitors.remove(callback)
 
     def send_speed_cmd(self, speed, angular_speed):
-        if self.virtual_bumper is not None:
-            self.virtual_bumper.update_desired_speed(speed, angular_speed)
         self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
 
     def set_cam_angle(self, angle):
@@ -298,6 +296,10 @@ class SpaceRoboticsChallenge(MoonNode):
                 self.bus.publish('driving_recovery', True)
                 raise VirtualBumperException()
 
+    def on_desired_speeds(self, data):
+        linear_speed, angular_speed = data
+        if self.virtual_bumper is not None:
+            self.virtual_bumper.update_desired_speed(linear_speed, angular_speed)
 
     def on_vslam_pose(self, data):
         if self.sim_time is None or self.last_position is None or self.yaw is None:
@@ -448,7 +450,6 @@ class SpaceRoboticsChallenge(MoonNode):
 
         # while we are further than 1m but still following the right direction (angle diff < 90deg)
         angle_diff = self.get_angle_diff(pos,speed)
-        self.virtual_bumper.update_desired_speed(self.max_speed, 0) # NOTE: ignoring angular speed
         while distance(pos, self.xyz) > 1 and abs(angle_diff) < math.pi/2:
             angle_diff = self.get_angle_diff(pos,speed)
             dist = distance(pos, self.xyz) # do not turn just before arrival
@@ -474,13 +475,14 @@ class SpaceRoboticsChallenge(MoonNode):
         if timeout is None:
             timeout = timedelta(seconds=4 + 2*abs(how_far) / self.max_speed) # add 4 sec for wheel setup
         if view_direction is not None:
-            self.turn(normalizeAnglePIPI(view_direction - self.yaw), timeout=timedelta(seconds=10))
+            angle_diff = normalizeAnglePIPI(view_direction - self.yaw)
+            if abs(angle_diff) > math.radians(10): # only turn if difference more than 10deg
+                self.turn(angle_diff, timeout=timedelta(seconds=10))
 
         start_pose = self.xyz
         start_time = self.sim_time
-        self.virtual_bumper.update_desired_speed(self.max_speed, 0)
         while distance(start_pose, self.xyz) < abs(how_far):
-            self.publish("desired_movement", [1000, -9000, math.copysign(self.default_effort_level, how_far)]) # 1000m radius is almost straight
+            self.publish("desired_movement", [GO_STRAIGHT, -9000, -math.copysign(self.default_effort_level, how_far)])
             self.wait(timedelta(milliseconds=100))
             if timeout is not None and self.sim_time - start_time > timeout:
                 print("go_sideways - timeout at %.1fm" % distance(start_pose, self.xyz))
@@ -528,10 +530,9 @@ class SpaceRoboticsChallenge(MoonNode):
                 break
         if with_stop:
             self.send_speed_cmd(0.0, 0.0)
-            start_time = self.sim_time
-            while self.sim_time - start_time < timedelta(seconds=2):
-                self.update()
-            #print(self.sim_time, 'stop at', self.sim_time - start_time)
+            self.set_brakes(True)
+            self.wait(timedelta(milliseconds=200))
+            self.set_brakes(False)
 
     def wait(self, dt):  # TODO refactor to some common class
         while self.sim_time is None:
@@ -551,7 +552,6 @@ class SpaceRoboticsChallenge(MoonNode):
 
         start_pose = self.xyz
         start_time = self.sim_time
-        self.virtual_bumper.update_desired_speed(self.max_speed, 0)
         while self.scan_distance_to_obstacle < 4000: # 4m
             self.publish("desired_movement", [GO_STRAIGHT, 6500, math.copysign(self.default_effort_level, direction)]) # 1000m radius is almost straight
             self.wait(timedelta(milliseconds=100))
@@ -571,7 +571,6 @@ class SpaceRoboticsChallenge(MoonNode):
 
         start_pose = self.xyz
         start_time = self.sim_time
-        self.virtual_bumper.update_desired_speed(self.max_speed, 0)
         while distance(start_pose, self.xyz) < abs(how_far):
             self.publish("desired_movement", [GO_STRAIGHT, 7500, -math.copysign(self.default_effort_level, how_far)]) # 1000m radius is almost straight
             self.wait(timedelta(milliseconds=100))
