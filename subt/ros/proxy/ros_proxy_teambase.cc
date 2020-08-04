@@ -66,6 +66,9 @@ void *g_responder;
 
 std::mutex g_zmq_mutex;
 
+std::unique_ptr<subt::CommsClient> g_client;
+
+
 void initZeroMQ()
 {
   g_context = zmq_ctx_new ();
@@ -104,109 +107,10 @@ void sendReceivedMessage(const std::string &srcAddress, const std::string &data)
   protected_zmq_send(g_responder, buf, size, 0);
 }
 
-
-/// \brief. Example control class, running as a ROS node to control a robot.
-class Controller
-{
-  /// \brief Constructor.
-  /// The controller uses the given name as a prefix of its topics, e.g.,
-  /// "/x1/cmd_vel" if _name is specified as "x1".
-  /// \param[in] _name Name of the robot.
-  public: Controller(const std::string &_name);
-
-  public: void Update(const ros::TimerEvent&);
-
-  /// \brief Callback function for message from other comm clients.
-  /// \param[in] _srcAddress The address of the robot who sent the packet.
-  /// \param[in] _dstAddress The address of the robot who received the packet.
-  /// \param[in] _dstPort The destination port.
-  /// \param[in] _data The contents the packet holds.
-  private: void CommClientCallback(const std::string &_srcAddress,
-                                   const std::string &_dstAddress,
-                                   const uint32_t _dstPort,
-                                   const std::string &_data);
-
-
-  private: ros::NodeHandle n;
-
-  /// \brief Communication client.
-  private: std::unique_ptr<subt::CommsClient> client;
-
-  ros::Subscriber subClock;
-
-  /// \brief Timer that trigger the update function.
-  private: ros::Timer updateTimer;
-
-  /// \brief True if started.
-  private: bool started{false};
-
-  /// \brief Last time a comms message to another robot was sent.
-  private: std::chrono::time_point<std::chrono::system_clock> lastMsgSentTime;
-
-  /// \brief Name of this robot.
-  private: std::string name;
-
-  public: bool ReportArtifact(subt::msgs::Artifact& artifact)
-  {
-    std::string serializedData;
-    if (!artifact.SerializeToString(&serializedData))
-    {
-      ROS_ERROR("ReportArtifact(): Error serializing message [%s]",
-          artifact.DebugString().c_str());
-      return false;
-    }
-    else if (!this->client->SendTo(serializedData, subt::kBaseStationName))
-    {
-      ROS_ERROR("CommsClient failed to Send serialized data.");
-      return false;
-    }
-    return true;
-  }
-
-  public: bool broadcast(std::string& serializedData)
-  {
-    if (this->client == 0) {
-        ROS_INFO_STREAM("no client");
-        return false;
-    }
-    if (!this->client->SendTo(serializedData, subt::kBroadcast))
-    {
-      ROS_ERROR("CommsClient failed to broadcast serialized data.");
-      return false;
-    }
-    return true;
-  }
-
-  std::thread m_receiveZmq;
-
-  static void receiveZmqThread(Controller * self);
-};
-
-/////////////////////////////////////////////////
-Controller::Controller(const std::string &_name)
-{
-  this->name = _name;
-
-  ROS_INFO("Waiting for /clock, /subt/start");
-
-  ros::topic::waitForMessage<rosgraph_msgs::Clock>("/clock", this->n);
-
-  // Wait for the start service to be ready.
-  ros::service::waitForService("/subt/start", -1);
-
-  ROS_INFO_STREAM("Sleeping 1 simulated second to let simulation start up");
-  ros::Duration(1).sleep();
-  ROS_INFO_STREAM("Simulation hopefully up and running");
-
-  this->updateTimer = this->n.createTimer(ros::Duration(0.05), &Controller::Update, this);
-  this->m_receiveZmq = std::thread(Controller::receiveZmqThread, this);
-}
-
-/////////////////////////////////////////////////
-void Controller::CommClientCallback(const std::string &_srcAddress,
-                                    const std::string &_dstAddress,
-                                    const uint32_t _dstPort,
-                                    const std::string &_data)
+void commClientCallback(const std::string &_srcAddress,
+                        const std::string &_dstAddress,
+                        const uint32_t _dstPort,
+                        const std::string &_data)
 {
   subt::msgs::ArtifactScore res;
   if (!res.ParseFromString(_data))
@@ -220,44 +124,42 @@ void Controller::CommClientCallback(const std::string &_srcAddress,
   sendReceivedMessage(_srcAddress, _data);
 }
 
-/////////////////////////////////////////////////
-void Controller::Update(const ros::TimerEvent&)
+bool reportArtifact(subt::msgs::Artifact& artifact)
 {
-  if(g_countUpdates % 100 == 0) {
-    ROS_INFO("update count %d", g_countUpdates);
+  if (g_client == 0) {
+      ROS_INFO_STREAM("no client");
+      return false;
   }
-  g_countUpdates++;
 
-  if (!this->started)
+  std::string serializedData;
+  if (!artifact.SerializeToString(&serializedData))
   {
-    // Send start signal
-    std_srvs::SetBool::Request req;
-    std_srvs::SetBool::Response res;
-    req.data = true;
-    if (!ros::service::call("/subt/start", req, res))
-    {
-      ROS_ERROR("Unable to send start signal.");
-    }
-    else
-    {
-      ROS_INFO("Sent start signal.");
-      this->started = true;
-    }
-
-    if (this->started)
-    {
-      // Create subt communication client
-      this->client.reset(new subt::CommsClient(this->name));
-      this->client->Bind(&Controller::CommClientCallback, this);
-
-      this->subClock  = n.subscribe("/clock", 1000, clockCallback);
-    }
-    else
-      return;
+    ROS_ERROR("ReportArtifact(): Error serializing message [%s]",
+        artifact.DebugString().c_str());
+    return false;
   }
+  else if (g_client->SendTo(serializedData, subt::kBaseStationName))
+  {
+    ROS_ERROR("CommsClient failed to Send serialized data.");
+    return false;
+  }
+  return true;
 }
 
-/////////////////////////////////////////////////
+bool broadcast(std::string& serializedData)
+{
+  if (g_client == 0) {
+      ROS_INFO_STREAM("no client");
+      return false;
+  }
+  if (g_client->SendTo(serializedData, subt::kBroadcast))
+  {
+    ROS_ERROR("CommsClient failed to broadcast serialized data.");
+    return false;
+  }
+  return true;
+}
+
 bool parseArtf(char *input_str, subt::msgs::Artifact& artifact)
 {
   double x, y, z;
@@ -341,7 +243,7 @@ bool parseArtf(char *input_str, subt::msgs::Artifact& artifact)
 }
 
 /////////////////////////////////////////////////
-void Controller::receiveZmqThread(Controller * self)
+void receiveZmqThread()
 {
   void * contextIn = zmq_ctx_new ();
   void * requester = zmq_socket (contextIn, ZMQ_PULL);  // use "Pipeline pattern" to receive all data from Python3
@@ -385,7 +287,7 @@ void Controller::receiveZmqThread(Controller * self)
       ROS_INFO("artf: %s", buffer);
       if(parseArtf(buffer + 5, artifact)) // skip initial prefix "artf "
       {
-        if(self->ReportArtifact(artifact))
+        if(reportArtifact(artifact))
         {
           ROS_INFO("MD SUCCESS\n");
         }
@@ -401,7 +303,7 @@ void Controller::receiveZmqThread(Controller * self)
     {
         std::string content(buffer + 10);
         ROS_INFO_STREAM("BROADCAST RECEIVED " << content);
-        if(self->broadcast(content))
+        if(broadcast(content))
         {
           ROS_INFO("MD BROADCAST SUCCESS\n");
         }
@@ -428,9 +330,30 @@ int main(int argc, char** argv)
 
   ROS_INFO_STREAM("Starting robotika TEAMBASE solution for robot " << robot_name);
 
+
+
   initZeroMQ();
 
-  Controller controller(robot_name);
+  g_client.reset(new subt::CommsClient(robot_name));
+  g_client->Bind(&commClientCallback);
+
+  ros::NodeHandle n;
+  ros::Subscriber subClock;
+  subClock  = n.subscribe("/clock", 1000, clockCallback);
+
+  ROS_INFO("Waiting for /clock, /subt/start");
+  ros::topic::waitForMessage<rosgraph_msgs::Clock>("/clock", n);
+
+  // Wait for the start service to be ready.
+  ros::service::waitForService("/subt/start", -1);
+
+  ROS_INFO_STREAM("Sleeping 1 simulated second to let simulation start up");
+  ros::Duration(1).sleep();
+  ROS_INFO_STREAM("Simulation hopefully up and running");
+
+  std::thread receiveZmq;
+  receiveZmq = std::thread(receiveZmqThread);
+
   ros::spin();
   return 0;
 }
