@@ -27,10 +27,7 @@
 
 #include <subt_msgs/PoseFromArtifact.h>
 #include <ros/ros.h>
-#include <std_srvs/SetBool.h>
 #include <rosgraph_msgs/Clock.h>
-#include <std_msgs/String.h>
-#include <std_msgs/Bool.h>
 
 #include <string>
 #include <stdlib.h>     /* abs */
@@ -247,7 +244,6 @@ void receiveZmqThread()
 
   ROS_INFO("zmq receive thread started");
 
-  geometry_msgs::Twist msg;
   char buffer[10000];
   int size;
 
