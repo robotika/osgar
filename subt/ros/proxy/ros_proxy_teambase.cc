@@ -25,14 +25,6 @@
 #include <fstream>
 #include <mutex>
 
-#include <geometry_msgs/Twist.h>
-#include <rosgraph_msgs/Clock.h>
-#include <sensor_msgs/LaserScan.h>
-#include <sensor_msgs/CompressedImage.h>
-#include <nav_msgs/Odometry.h>
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/PointCloud2.h>
-
 #include <subt_msgs/PoseFromArtifact.h>
 #include <ros/ros.h>
 #include <std_srvs/SetBool.h>
@@ -52,13 +44,9 @@
 #include <assert.h>
 
 
-#define ROSBAG_SIZE_LIMIT 3000000000L  // 3GB
-
-
 int g_countClock = 0;
 uint32_t g_clockPrevSec = 0;
 
-int g_countUpdates = 0;
 int g_countReceives = 0;
 
 void *g_context;
@@ -329,8 +317,6 @@ int main(int argc, char** argv)
   ros::init(argc, argv, robot_name);
 
   ROS_INFO_STREAM("Starting robotika TEAMBASE solution for robot " << robot_name);
-
-
 
   initZeroMQ();
 
