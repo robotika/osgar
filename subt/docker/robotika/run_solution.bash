@@ -26,7 +26,14 @@ while [ -z "$ROBOT_NAME" ]; do
     sleep 0.5
 done
 echo "Robot name is '$ROBOT_NAME'"
-ROBOT_DESCRIPTION=$(rosparam get /$ROBOT_NAME/robot_description)
+
+echo "Waiting for robot description"
+while [ -z "$ROBOT_DESCRIPTION" ]; do
+    ROBOT_DESCRIPTION=$(rosparam get /$ROBOT_NAME/robot_description)
+    sleep 0.5
+done
+echo "Robot description is '$ROBOT_DESCRIPTION'"
+
 grep -q ssci_x4_sensor_config <<< $ROBOT_DESCRIPTION && IS_X4=true || IS_X4=false
 grep -q TeamBase <<< $ROBOT_DESCRIPTION && IS_TEAMBASE=true || IS_TEAMBASE=false
 if $IS_X4
