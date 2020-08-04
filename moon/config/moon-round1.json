@@ -95,7 +95,8 @@
               ["scout.cmd", "transmitter.raw"],
               ["app.cmd", "transmitter.raw"],
               ["scout.object_reached", "app.object_reached"],
-              ["scout.odo_pose", "app.odo_pose"]
+              ["scout.odo_pose", "app.odo_pose"],
+              ["scout.desired_speeds", "app.desired_speeds"]
     ]
   }
 }

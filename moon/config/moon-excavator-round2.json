@@ -84,7 +84,8 @@
               ["excavator.cmd", "transmitter.raw"],
               ["app.cmd", "transmitter.raw"],
               ["excavator.bucket_cmd", "transmitter.raw"],
-              ["excavator.pose2d", "app.pose2d"]
+              ["excavator.pose2d", "app.pose2d"],
+              ["excavator.desired_speeds", "app.desired_speeds"]
     ]
   }
 }

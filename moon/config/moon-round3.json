@@ -92,7 +92,8 @@
       ["rpc.response", "app.response"],
       ["scout.cmd", "transmitter.raw"],
       ["app.cmd", "transmitter.raw"],
-      ["scout.odo_pose", "app.odo_pose"]
+      ["scout.odo_pose", "app.odo_pose"],
+      ["scout.desired_speeds", "app.desired_speeds"]
     ]
   }
 }
