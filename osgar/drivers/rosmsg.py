@@ -439,6 +439,8 @@ def parse_topic(topic_type, data):
         return parse_posestamped(data)
     elif topic_type == 'sensor_msgs/Imu':
         return parse_imu(data)
+    elif topic_type == 'std_msgs/Bool':
+        return parse_bool(data)
     elif topic_type == 'sensor_msgs/CompressedImage':
         image = parse_jpeg_image(data)  # , dump_filename='nasa.jpg')
         return image
