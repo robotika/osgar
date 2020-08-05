@@ -40,6 +40,7 @@
 #include <zmq.h>
 #include <assert.h>
 
+const uint32_t BROADCAST_PORT = 4142u; // default is 4100 and collides with artifact messages
 
 int g_countClock = 0;
 uint32_t g_clockPrevSec = 0;
@@ -137,7 +138,7 @@ bool broadcast(std::string& serializedData)
       ROS_INFO_STREAM("no client");
       return false;
   }
-  if (g_client->SendTo(serializedData, subt::kBroadcast))
+  if (g_client->SendTo(serializedData, subt::kBroadcast, BROADCAST_PORT))
   {
     ROS_ERROR("CommsClient failed to broadcast serialized data.");
     return false;
@@ -317,7 +318,7 @@ int main(int argc, char** argv)
   initZeroMQ();
 
   g_client.reset(new subt::CommsClient(robot_name));
-  g_client->Bind(&commClientCallback);
+  g_client->Bind(&commClientCallback, "", BROADCAST_PORT);
 
   ros::NodeHandle n;
   ros::Subscriber subClock;
