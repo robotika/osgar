@@ -508,6 +508,10 @@ class ROSMsgParser(Thread):
 
         self.joint_name = None  # unknown
 
+    def publish_desired_speed(self):
+        cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
+        self.bus.publish('cmd', cmd)
+
     def get_packet(self):
         data = self._buf
         if len(data) < 4:
@@ -578,8 +582,7 @@ class ROSMsgParser(Thread):
                                      for angle in rot])
 
             #workaround for not existing /clock on MOBoS
-            cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
-            self.bus.publish('cmd', cmd)
+            self.publish_desired_speed()
 
         elif frame_id.endswith(b'/base_link/imu_sensor'):  # self.topic_type == 'std_msgs/Imu':
             acc, rot, orientation = parse_imu(packet)
@@ -596,8 +599,7 @@ class ROSMsgParser(Thread):
 
             ms = self.timestamp_nsec//1000000
             if self.timestamp_sec > 0 and ms % 50 == 0:  # 20Hz
-                cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
-                self.bus.publish('cmd', cmd)
+                self.publish_desired_speed()
         elif frame_id.endswith(b'/gas_detected'):
             # send only status change
             if self.gas_detected != parse_bool(packet):

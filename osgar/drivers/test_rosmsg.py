@@ -138,4 +138,16 @@ class ROSMsgParserTest(unittest.TestCase):
         r.slot_raw(timestamp=None, data=data)
         bus.publish.assert_called_with('radio', [b'X30F60R', b'[0, 100, 30]\n'])
 
+    def test_publish_desired_speed(self):
+        data = b'\x08\x00\x00\x00\x02\x00\x00\x00\x00\x06\x81\x14'  # clock as 8 bytes
+        bus = MagicMock()
+        r = ROSMsgParser(config={}, bus=bus)
+        r.slot_raw(timestamp=None, data=data)
+        bus.publish.assert_called_with('sim_time_sec', 2)
+
+        data = b'\x08\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00'  # clock 3s
+        r.slot_raw(timestamp=None, data=data)
+        # ... asserting that the last call has been made in a particular way
+        bus.publish.assert_called_with('cmd', b'cmd_vel 0.000000 0.000000')
+
 # vim: expandtab sw=4 ts=4
