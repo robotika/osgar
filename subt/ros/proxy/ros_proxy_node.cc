@@ -602,8 +602,25 @@ void Controller::receiveZmqThread(Controller * self)
       }
       else
       {
-        ROS_INFO_STREAM("MD bad parsing" << c << " " << buffer);
-        break;
+        double sx, sy, sz;
+        double ax, ay, az;
+
+        int c = sscanf(buffer, "cmd_vel_3d %lf %lf %lf %lf %lf %lf", &sx, &sy, &sz, &ax, &ay, &az);
+        if(c == 6)
+        {
+          msg.linear.x = sx;
+          msg.linear.y = sy;
+          msg.linear.z = sz;
+          msg.angular.x = ax;
+          msg.angular.y = ay;
+          msg.angular.z = az;
+          self->velPub.publish(msg);
+        }
+        else
+        {
+          ROS_INFO_STREAM("MD bad parsing" << c << " " << buffer);
+          break;
+        }
       }
     }
   }
