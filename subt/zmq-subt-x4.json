@@ -86,10 +86,10 @@
               ["receiver.raw", "rosmsg.raw"],
               ["rosmsg.cmd", "transmitter.raw"],
 
-              ["rosmsg.rot", "app.rot"],
+              ["rospy.rot", "app.rot"],
+              ["rospy.acc", "app.acc"],
+              ["rospy.orientation", "app.orientation"],
               ["rospy.rot", "depth2scan.rot"],
-              ["rosmsg.acc", "app.acc"],
-              ["rosmsg.orientation", "app.orientation"],
 
               ["rosmsg.scan", "detector.scan"],
               ["rosmsg.scan", "depth2scan.scan"],
