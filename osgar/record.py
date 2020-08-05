@@ -85,12 +85,13 @@ def main(record=record):
     parser.add_argument('config', nargs='+', help='configuration file')
     parser.add_argument('--note', help='add description')
     parser.add_argument('--duration', help='recording duration (sec), default infinite', type=float)
+    parser.add_argument('--log', help='force record log filename')
     parser.add_argument('--application', help='import string to application', default=None)
     args = parser.parse_args()
 
     prefix = os.path.basename(args.config[0]).split('.')[0] + '-'
     cfg = config_load(*args.config, application=args.application)
-    record(cfg, log_prefix=prefix, duration_sec=args.duration)
+    record(cfg, log_prefix=prefix, duration_sec=args.duration, log_filename=args.log)
 
 if __name__ == "__main__":
     main()
