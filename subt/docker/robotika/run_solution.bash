@@ -26,13 +26,26 @@ while [ -z "$ROBOT_NAME" ]; do
     sleep 0.5
 done
 echo "Robot name is '$ROBOT_NAME'"
-ROBOT_DESCRIPTION=$(rosparam get /$ROBOT_NAME/robot_description)
+
+echo "Waiting for robot description"
+while [ -z "$ROBOT_DESCRIPTION" ]; do
+    ROBOT_DESCRIPTION=$(rosparam get /$ROBOT_NAME/robot_description)
+    sleep 0.5
+done
+echo "Robot description is '$ROBOT_DESCRIPTION'"
+
 grep -q ssci_x4_sensor_config <<< $ROBOT_DESCRIPTION && IS_X4=true || IS_X4=false
+grep -q TeamBase <<< $ROBOT_DESCRIPTION && IS_TEAMBASE=true || IS_TEAMBASE=false
 if $IS_X4
 then
     echo "Robot is X4 drone"    
     LAUNCH_FILE="robot drone_keyboard.launch"
     CONFIG_FILE="zmq-subt-x4.json"
+elif $IS_TEAMBASE
+then
+    echo "Robot is TEAMBASE"
+    LAUNCH_FILE="proxy teambase.launch"
+    CONFIG_FILE="zmq-subt-teambase.json"
 else
     echo "Robot is X2 wheeled robot"
     LAUNCH_FILE="proxy sim.launch"
@@ -53,7 +66,14 @@ PYTHON=/osgar-ws/env/bin/python3
 rosrun proxy sendlog.py $LOG_FILE &
 
 echo "Starting osgar"
-$PYTHON -m subt run $CONFIG_FILE --log $LOG_FILE --side auto --walldist 0.8 --speed 1.0 --note "run_solution.bash"
+if $IS_TEAMBASE
+then
+    $PYTHON -m osgar.record $CONFIG_FILE --log $LOG_FILE --note "run teambase"
+else
+    $PYTHON -m subt run $CONFIG_FILE --log $LOG_FILE --side auto --walldist 0.8 --speed 1.0 --note "run_solution.bash"
+fi
+
+
 
 echo "Sleep and finish"
 sleep 30
