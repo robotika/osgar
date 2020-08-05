@@ -11,7 +11,7 @@ import rospy
 import zmq
 import msgpack
 
-from sensor_msgs.msg import Imu
+from sensor_msgs.msg import Imu, LaserScan
 
 
 def py3round(f):
@@ -66,13 +66,25 @@ class main:
         rospy.init_node('imu2osgar', log_level=rospy.DEBUG)
         rospy.loginfo("waiting for {}".format(imu_name))
         rospy.wait_for_message(imu_name, Imu)
+        # drone specific code
+        top_scan_name = '/'+robot_name+'/top_scan'
+        rospy.loginfo("waiting for {}".format(top_scan_name))
+        rospy.wait_for_message(top_scan_name, LaserScan)
+        bottom_scan_name = '/'+robot_name+'/bottom_scan'
+        rospy.loginfo("waiting for {}".format(bottom_scan_name))
+        rospy.wait_for_message(bottom_scan_name, LaserScan)
+        # end drone specific code
         rospy.sleep(2)
         self.imu_count = 0
+        self.top_scan_count = 0
+        self.bottom_scan_count = 0
 
         # start
         self.bus = Bus()
-        self.bus.register('rot', 'acc', 'orientation')
+        self.bus.register('rot', 'acc', 'orientation', 'top_scan', 'bottom_scan')
         rospy.Subscriber(imu_name, Imu, self.imu)
+        rospy.Subscriber(top_scan_name, LaserScan, self.top_scan)
+        rospy.Subscriber(bottom_scan_name, LaserScan, self.bottom_scan)
         rospy.spin()
 
     def imu(self, msg):
@@ -101,6 +113,14 @@ class main:
         #    acc,
         #]
         #self.bus.publish('imu', data)
+
+    def top_scan(self, msg):
+        self.top_scan_count += 1
+        rospy.loginfo_throttle(10, "top_scan callback: {}".format(self.top_scan_count))
+
+    def bottom_scan(self, msg):
+        self.bottom_scan_count += 1
+        rospy.loginfo_throttle(10, "bottom_scan callback: {}".format(self.bottom_scan_count))
 
 
 if __name__ == '__main__':
