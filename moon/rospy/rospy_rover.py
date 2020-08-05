@@ -46,6 +46,7 @@ class RospyRoverPushPull(RospyBasePushPull):
         rospy.Subscriber('/' + self.robot_name + '/laser/scan', LaserScan, self.callback_topic, '/' + self.robot_name + '/laser/scan')
         rospy.Subscriber('/' + self.robot_name + '/imu', Imu, self.callback_topic, '/' + self.robot_name + '/imu')
         rospy.Subscriber('/' + self.robot_name + '/openvslam/camera_pose', PoseStamped, self.callback_topic, '/' + self.robot_name + '/openvslam/pose')
+        rospy.Subscriber('/' + self.robot_name + '/openvslam/enabled', Bool, self.callback_topic, '/' + self.robot_name + '/openvslam/enabled')
 
         QSIZE = 10
 
@@ -219,7 +220,7 @@ class RospyRoverReqRep(RospyBaseReqRep):
         self.light_up_pub = rospy.Publisher('/' + self.robot_name + '/sensor_controller/command', Float64, queue_size=QSIZE, latch=True)
         self.light_up_msg = Float64()
 
-        self.vslam_command_pub = rospy.Publisher('/vslam/command', String, queue_size=1, latch=True)
+        self.vslam_command_pub = rospy.Publisher('/' + self.robot_name + '/vslam/command', String, queue_size=1, latch=True)
         self.vslam_command_msg = String()
 
         self.brakes = rospy.ServiceProxy('/' + self.robot_name + '/brake_rover', BrakeRoverSrv)

@@ -27,6 +27,12 @@ class ChangeDriverException(Exception):
 class VSLAMLostException(Exception):
     pass
 
+class VSLAMDisabledException(Exception):
+    pass
+
+class VSLAMEnabledException(Exception):
+    pass
+
 class VSLAMFoundException(Exception):
     pass
 
@@ -301,6 +307,9 @@ class SpaceRoboticsChallenge(MoonNode):
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_desired_speed(linear_speed, angular_speed)
 
+    def on_vslam_enabled(self, data):
+        pass
+
     def on_vslam_pose(self, data):
         if self.sim_time is None or self.last_position is None or self.yaw is None:
             return
@@ -530,9 +539,13 @@ class SpaceRoboticsChallenge(MoonNode):
                 break
         if with_stop:
             self.send_speed_cmd(0.0, 0.0)
+            # disable exceptions during wait or rover may brake forever
+            wasException = self.inException
+            self.inException = True
             self.set_brakes(True)
             self.wait(timedelta(milliseconds=200))
             self.set_brakes(False)
+            self.inException = wasException
 
     def wait(self, dt):  # TODO refactor to some common class
         while self.sim_time is None:

@@ -14,7 +14,7 @@ from osgar.lib.quaternion import euler_zyx
 from osgar.lib.virtual_bumper import VirtualBumper
 
 from moon.controller import (distance, SpaceRoboticsChallenge, VirtualBumperException, ChangeDriverException,  VSLAMLostException, VSLAMFoundException,
-                             LidarCollisionException, LidarCollisionMonitor)
+                             VSLAMEnabledException, VSLAMDisabledException, LidarCollisionException, LidarCollisionMonitor)
 
 def pol2cart(rho, phi):
     x = rho * math.cos(phi)
@@ -36,6 +36,20 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
         self.vslam_valid = False
         self.returning_to_base = False
         self.vslam_fail_start = None
+        self.vslam_is_enabled = False
+
+    def on_vslam_enabled(self, data):
+        super().on_vslam_enabled(data)
+        if self.vslam_is_enabled != data:
+            self.vslam_is_enabled = data
+
+            if self.sim_time is None or self.last_position is None or self.yaw is None:
+                return
+
+            if self.vslam_is_enabled:
+                raise VSLAMEnabledException
+            else:
+                raise VSLAMDisabledException
 
     def on_vslam_pose(self, data):
         super().on_vslam_pose(data)
@@ -207,12 +221,16 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
         start_time = self.sim_time
 
         last_exception = self.sim_time
+        wait_for_mapping = False
         while current_sweep_step < len(sweep_steps) and self.sim_time - start_time < timedelta(minutes=60):
             ex = None
             angle_diff = 0
             speed = 0
             pos = None
             try:
+                while wait_for_mapping:
+                    self.wait(timedelta(seconds=1))
+
                 self.virtual_bumper = VirtualBumper(timedelta(seconds=3), 0.2) # radius of "stuck" area; a little more as the robot flexes
                 with LidarCollisionMonitor(self, 1500): # some distance needed not to lose tracking when seeing only obstacle up front
                     pos, op, speed = sweep_steps[current_sweep_step]
@@ -230,8 +248,17 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                     elif op == "side":
                         self.move_sideways(3, view_direction=0) # look towards 0deg
                     current_sweep_step += 1
+            except VSLAMEnabledException as e:
+                print(self.sim_time, "VSLAM: mapping re-enabled")
+                self.set_brakes(False)
+                wait_for_mapping = False
+            except VSLAMDisabledException as e:
+                print(self.sim_time, "VSLAM: mapping disabled, waiting")
+                self.send_speed_cmd(0.0, 0.0)
+                self.set_brakes(True)
+                wait_for_mapping = True
             except VSLAMLostException as e:
-                print("VSLAM lost")
+                print(self.sim_time, "VSLAM lost")
                 self.inException = True
                 if ex == "turn":
                     self.turn(-angle_diff, timeout=timedelta(seconds=15))
@@ -243,7 +270,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                     current_sweep_step += 1
             except VSLAMFoundException as e:
                 self.returning_to_base = False
-                print("VSLAM found")
+                print(self.sim_time, "VSLAM found")
             except LidarCollisionException as e:
                 print(self.sim_time, "Lidar: stepping back from the obstacle...")
                 self.inException = True
@@ -315,6 +342,8 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                 self.turn(math.radians(360), timeout=timedelta(seconds=40))
             except ChangeDriverException as e:
                 self.send_speed_cmd(0.0, 0.0)
+            except:
+                pass
             finally:
                 self.send_request('vslam_reset', set_homebase_found)
 
