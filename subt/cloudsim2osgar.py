@@ -81,9 +81,16 @@ class main:
 
         # start
         self.bus = Bus()
-        self.bus.register('rot', 'acc', 'orientation', 'top_scan', 'bottom_scan')
+        self.bus.register('rot', 'acc', 'orientation')
         rospy.Subscriber(imu_name, Imu, self.imu)
+
+        # experiment with separate bus for each thread/topic/callback
+        self.bus2 = Bus()
+        self.bus2.register('top_scan')
         rospy.Subscriber(top_scan_name, LaserScan, self.top_scan)
+
+        self.bus3 = Bus()
+        self.bus3.register('bottom_scan')
         rospy.Subscriber(bottom_scan_name, LaserScan, self.bottom_scan)
         rospy.spin()
 
@@ -117,10 +124,12 @@ class main:
     def top_scan(self, msg):
         self.top_scan_count += 1
         rospy.loginfo_throttle(10, "top_scan callback: {}".format(self.top_scan_count))
+        self.bus2.publish('top_scan', msg.ranges)
 
     def bottom_scan(self, msg):
         self.bottom_scan_count += 1
         rospy.loginfo_throttle(10, "bottom_scan callback: {}".format(self.bottom_scan_count))
+        self.bus3.publish('bottom_scan', msg.ranges)
 
 
 if __name__ == '__main__':
