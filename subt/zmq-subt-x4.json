@@ -74,7 +74,7 @@
       "rospy": {
           "driver": "subt.pull:Pull",
 	      "init": {
-	        "outputs": ["rot", "acc", "orientation"]
+	        "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan"]
 	      }
       }
     },
