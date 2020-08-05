@@ -49,7 +49,7 @@
           }
       },
       "drone": {
-          "drive": "subt.drone:Drone",
+          "driver": "subt.drone:Drone",
           "in": ["desired_speed"],
           "out": ["desired_speed_3d"],
           "init": {
