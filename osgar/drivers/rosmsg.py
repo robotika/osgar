@@ -504,12 +504,17 @@ class ROSMsgParser(Thread):
 
         self.desired_speed = 0.0  # m/s
         self.desired_angular_speed = 0.0
+        # alternative 3D speed description used in ROS Twist message
+        self.desired_speed_3d, self.desired_angular_speed_3d = None, None
         self.gas_detected = None  # this SubT Virtual specific :-(
 
         self.joint_name = None  # unknown
 
     def publish_desired_speed(self):
-        cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
+        if self.desired_speed is not None:
+            cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
+        else:
+            cmd = b'cmd_vel_3d %f %f %f %f %f %f' % tuple(self.desired_speed_3d + self.desired_angular_speed_3d)
         self.bus.publish('cmd', cmd)
 
     def get_packet(self):
@@ -641,6 +646,10 @@ class ROSMsgParser(Thread):
     def slot_desired_speed(self, timestamp, data):
         self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
 
+    def slot_desired_speed_3d(self, timestamp, data):
+        self.desired_speed, self.desired_angular_speed = None, None
+        self.desired_speed_3d, self.desired_angular_speed_3d = data
+
     def slot_stdout(self, timestamp, data):
         cmd = b'stdout ' + bytes(data, 'utf-8')  # redirect to ROS_INFO
         self.bus.publish('cmd', cmd)
@@ -661,6 +670,8 @@ class ROSMsgParser(Thread):
                     self.slot_raw(timestamp, data)
                 elif channel == 'desired_speed':
                     self.slot_desired_speed(timestamp, data)
+                elif channel == 'desired_speed_3d':
+                    self.slot_desired_speed_3d(timestamp, data)
                 elif channel == 'stdout':
                     self.slot_stdout(timestamp, data)
                 elif channel == 'request_origin':
