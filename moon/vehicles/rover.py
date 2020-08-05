@@ -265,6 +265,7 @@ class Rover(MoonNode):
 
             steering = [fl, fr, rl, rr]
 
+        WAIT_TO_STEER_MS = 8000
         # stay put while joint angles are catching up
         if (
                 self.drive_camera_angle != 0 and
@@ -278,28 +279,34 @@ class Rover(MoonNode):
                     abs(self.prev_position[self.joint_name.index(b'fr_steering_arm_joint')] - steering[1]) > 0.2
             ):
                 if (
-                        (self.steering_wait_start is None or self.sim_time - self.steering_wait_start <= timedelta(milliseconds=3000)) and
+                        (self.steering_wait_start is None or self.sim_time - self.steering_wait_start <= timedelta(milliseconds=WAIT_TO_STEER_MS)) and
 
                         (self.steering_wait_repeat is None or self.sim_time - self.steering_wait_repeat > timedelta(milliseconds=1000))
                 ):
                     if self.steering_wait_start is None:
                         self.steering_wait_start = self.sim_time
-                        self.send_request('set_brakes 20')
+                        self.send_request('set_brakes 10')
                     # brake while steering angles are changing so that the robot doesn't roll away while wheels turning meanwhile
                     # use braking force 20 Nm/rad which should prevent sliding but can be overcome by motor effort
                     effort = [0.0,]*4
-            else:
+                else:
+                    pass # angles are not reached but attempt timed out, do not change 'effort'
+
+            else: # angles are reached
+                if self.steering_wait_start is not None:
+                    self.send_request('set_brakes off')
+                    self.steering_wait_start = None # angles were reached successfully, can wait any time again
                 self.steering_wait_repeat = None # angles were reached successfully, can wait any time again
 
-
-        if self.steering_wait_start is not None and self.sim_time - self.steering_wait_start > timedelta(milliseconds=1500):
+        # if attempt to steer without effort timed out, brakes off, start instant repeat prevention timer
+        if self.steering_wait_start is not None and self.sim_time - self.steering_wait_start > timedelta(milliseconds=WAIT_TO_STEER_MS):
             self.send_request('set_brakes off')
             self.steering_wait_start = None
             self.steering_wait_repeat = self.sim_time
 
         effort_sum = sum([abs(x) for x in effort])
         self.bus.publish('desired_speeds', [self.drive_speed / 1000.0 if effort_sum > 0 and movement_type == 'linear' else 0.0,
-                                            math.copysign(math.radians(60), self.drive_speed) if effort_sum > 0 and movement_type == 'angular' else 0.0])
+                                            math.copysign(math.radians(30), self.drive_speed) if effort_sum > 0 and movement_type == 'angular' else 0.0])
 
         return steering, effort
 
