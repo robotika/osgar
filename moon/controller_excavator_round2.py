@@ -88,7 +88,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 dist, ind = spatial.KDTree(vol_list).query(self.xyz[0:2], k=len(vol_list))
 
                 for i in range(len(dist)):
-                    if abs(self.get_angle_diff(vol_list[ind[i]])) > math.pi/2:
+                    if abs(self.get_angle_diff(vol_list[ind[i]])) > 3*math.pi/4 or dist[i] < 10:
                         print (self.sim_time, "excavator: Distance distance: %f, index: %d in opposite direction, skipping" % (dist[i], ind[i]))
                         continue
 
@@ -100,7 +100,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             #self.turn(angle_diff, timeout=timedelta(seconds=15))
                             self.go_to_location(vol_list[ind[i]], self.default_effort_level, offset=-1, full_turn=True)
 
-                        self.send_request('external_command hauler_1 goto ' + str(self.xyz)) #TODO: possibly instruct on angle also
+                        self.send_request('external_command hauler_1 goto %.1f %.1f' % (self.xyz[0], self.xyz[1]))
                         print ("---- NEXT VOLATILE ----")
                         #self.wait(timedelta(seconds=10))
                         #vol_list.pop(index)
@@ -115,7 +115,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             self.publish("bucket_dig", [(-math.pi / 2 + i * 2*math.pi / DIG_SAMPLE_COUNT) % (2*math.pi), 'append'])
 
                         sample_start = self.sim_time
-                        while found_angle is None and self.sim_time - sample_start < timedelta(seconds=60):
+                        while found_angle is None and self.sim_time - sample_start < timedelta(seconds=120):
                             # give sampler 60 seconds to find the volatile, otherwise time out
                             while self.volatile_dug_up[1] == 100:
                                 self.wait(timedelta(milliseconds=300))
