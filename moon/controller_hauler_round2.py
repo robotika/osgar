@@ -16,7 +16,6 @@ from osgar.lib.virtual_bumper import VirtualBumper
 CAMERA_WIDTH = 640
 CAMERA_HEIGHT = 480
 
-SPEED_ON = 10 # only +/0/- matters
 TURN_ON = 10 # radius of circle when turning
 GO_STRAIGHT = float("inf")
 
@@ -56,11 +55,15 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         self.approaching = False
         self.last_rover_timestamp = False
         self.rover_angle = None
+        self.use_gimbal = False
+
 
     def run(self):
         try:
             self.wait_for_init()
-            self.set_light_intensity("1.0")
+            #self.wait(timedelta(seconds=5))
+            self.go_straight(-10) # just get out of the way for now
+            self.set_light_intensity("0.5")
             self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
 
             while True:
@@ -115,7 +118,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                     # TODO: may be following moving robot within the approach distance envelope for more than 15 secs
                     # then it would give up control before lining up behind a digging robot
                     self.approaching = True
-                    self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
+                    self.publish("desired_movement", [GO_STRAIGHT, 0, self.default_effort_level])
 
                 if self.approaching:
                     if self.straight_ahead_distance < 0.3:
@@ -124,13 +127,13 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                 else:
                     # if too close, move back no matter what
                     if self.straight_ahead_distance < 0.5:
-                        self.publish("desired_movement", [GO_STRAIGHT, 0, -SPEED_ON])
+                        self.publish("desired_movement", [GO_STRAIGHT, 0, -self.default_effort_level])
 
                     if self.straight_ahead_distance < 1.5:
                         if self.rover_angle > 0.2:
-                            self.publish("desired_movement", [0, 0, SPEED_ON])
+                            self.publish("desired_movement", [0, 0, self.default_effort_level])
                         elif self.rover_angle < -0.2:
-                            self.publish("desired_movement", [0, 0, -SPEED_ON])
+                            self.publish("desired_movement", [0, 0, -self.default_effort_level])
                         else:
                             # centered and between 0.5 and 2m distant
                             self.publish("desired_movement", [0, 0, 0])
@@ -140,15 +143,15 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                         # else if bbox off center turn while moving
                         # else (bbox in center) go straight
                         if center_x < CAMERA_WIDTH/4:
-                            self.publish("desired_movement", [0, 0, SPEED_ON])
+                            self.publish("desired_movement", [0, 0, self.default_effort_level])
                         elif center_x < (CAMERA_WIDTH/2 - 20):
-                            self.publish("desired_movement", [TURN_ON, 0, SPEED_ON])
+                            self.publish("desired_movement", [TURN_ON, 0, self.default_effort_level])
                         elif center_x > 3*CAMERA_WIDTH/4:
-                            self.publish("desired_movement", [0, 0, -SPEED_ON])
+                            self.publish("desired_movement", [0, 0, -self.default_effort_level])
                         elif center_x > (CAMERA_WIDTH/2 + 20):
-                            self.publish("desired_movement", [-TURN_ON, 0, SPEED_ON])
+                            self.publish("desired_movement", [-TURN_ON, 0, self.default_effort_level])
                         else:
-                            self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
+                            self.publish("desired_movement", [GO_STRAIGHT, 0, self.default_effort_level])
 
 
     def on_scan(self, data):
