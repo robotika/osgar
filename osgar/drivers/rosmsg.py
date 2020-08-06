@@ -427,6 +427,13 @@ def parse_topic(topic_type, data):
         # __slots__ = ['score','calls']
         # _slot_types = ['int32','int32']
         return list(struct.unpack_from('<II', data, pos))  # score and calls
+    elif topic_type == 'std_msgs/String':
+        size = struct.unpack_from('<I', data)[0]
+        pos = 4
+        msg_len = struct.unpack_from('<I', data, pos)[0]
+        pos += 4
+        string = data[pos:pos+msg_len]
+        return string.decode('ascii')
     elif topic_type == 'srcp2_msgs/ExcavatorMsg':
         return parse_bucket(data)
     elif topic_type == 'sensor_msgs/JointState':
