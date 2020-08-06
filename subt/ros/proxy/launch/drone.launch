@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="robot_name" />
+  <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)" output="screen" />
+</launch>
