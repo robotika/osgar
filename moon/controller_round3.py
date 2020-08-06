@@ -32,7 +32,6 @@ HOMEBASE_RADIUS = 4 # radius of the homebase structure (i.e, estimated 8m diamet
 MAX_BASEMARKER_DISTANCE_HISTORY = 20 # do not act on a single lidar measurement, look at this many at a time and pick the min value
 MAX_BASEMARKER_DISTANCE = 15
 
-SPEED_ON = 10 # only +/0/- matters
 TURN_ON = 8 # radius of circle when turning
 GO_STRAIGHT = float("inf")
 
@@ -110,6 +109,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("desired_movement")
+
+        self.default_effort_level = 800
 
         self.cubesat_location = None
         self.homebase_arrival_success = False
@@ -342,13 +343,12 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                             self.objects_to_follow.remove('homebase') # do not immediately follow homebase if it was secondary to give main a chance to report cubesat
 
                         def process_origin(message):
+                            self.register_origin(message)
                             nonlocal data
                             if message.split()[0] == 'origin':
                                 origin = [float(x) for x in message.split()[1:]]
                                 self.xyz = origin[:3]
                                 qx, qy, qz, qw = origin[3:]
-
-                                self.publish('pose3d', [self.xyz, origin[3:]])
 
                                 print(self.sim_time, "Origin received, internal position updated")
                                 # robot should be stopped right now (using brakes once available)
@@ -428,26 +428,26 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
 
                     elif center_x < 200: # if cubesat near left edge, turn left
                         if img_y > 20: # if far enough from top, go straight too, otherwise turn in place
-                            self.publish("desired_movement", [TURN_ON, 0, SPEED_ON])
+                            self.publish("desired_movement", [TURN_ON, 0, self.default_effort_level])
                         else:
-                            self.publish("desired_movement", [0, 0, SPEED_ON])
+                            self.publish("desired_movement", [0, 0, self.default_effort_level])
                     elif center_x > 440:
                         if img_y > 20: # if far enough from top, go straight too, otherwise turn in place
-                            self.publish("desired_movement", [-TURN_ON, 0, SPEED_ON])
+                            self.publish("desired_movement", [-TURN_ON, 0, self.default_effort_level])
                         else:
-                            self.publish("desired_movement", [0, 0, -SPEED_ON])
+                            self.publish("desired_movement", [0, 0, -self.default_effort_level])
                     else:
                         # bbox is ahead but too small or position not near the edge, continue straight
-                        self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
+                        self.publish("desired_movement", [GO_STRAIGHT, 0, self.default_effort_level])
 
 
                 elif self.currently_following_object['object_type'] == 'homebase':
                     if center_x < (CAMERA_WIDTH/2 - 20): # if homebase to the left, steer left
-                        self.publish("desired_movement", [TURN_ON, 0, SPEED_ON])
+                        self.publish("desired_movement", [TURN_ON, 0, self.default_effort_level])
                     elif center_x > (CAMERA_WIDTH/2 + 20):
-                        self.publish("desired_movement", [-TURN_ON, 0, SPEED_ON])
+                        self.publish("desired_movement", [-TURN_ON, 0, self.default_effort_level])
                     else: # if centered, keep going straight
-                        self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
+                        self.publish("desired_movement", [GO_STRAIGHT, 0, self.default_effort_level])
 
                 elif self.currently_following_object['object_type'] == 'basemarker':
                     self.basemarker_angle = math.atan( (CAMERA_WIDTH / 2 - center_x ) / float(CAMERA_FOCAL_LENGTH))
@@ -472,7 +472,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 self.sim_time - self.currently_following_object['timestamp'] > self.object_timeouts[self.currently_following_object['object_type']]
 
         ):
-            self.publish("desired_movement", [GO_STRAIGHT, 0, SPEED_ON])
+            self.publish("desired_movement", [GO_STRAIGHT, 0, self.default_effort_level])
             print (self.sim_time, "No longer tracking %s" % self.currently_following_object['object_type'])
             self.currently_following_object['timestamp'] = None
             self.currently_following_object['object_type'] = None
@@ -575,27 +575,27 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 circle_direction = 1 if self.going_around_count % 2 == 0 else -1
                 if (self.currently_following_object['object_type'] == 'basemarker' and homebase_cy < -0.2) or left_dist > 10:
                     self.centering = True
-                    self.publish("desired_movement", [0, -9000, -SPEED_ON])
+                    self.publish("desired_movement", [0, -9000, -self.default_effort_level])
                 elif (self.currently_following_object['object_type'] == 'basemarker' and homebase_cy > 0.2) or right_dist > 10:
                     self.centering = True
-                    self.publish("desired_movement", [0, -9000, SPEED_ON])
+                    self.publish("desired_movement", [0, -9000, self.default_effort_level])
                 elif left_dist < 1.5 or right_dist < 1.5:
-                    self.publish("desired_movement", [GO_STRAIGHT, -9000, -SPEED_ON])
+                    self.publish("desired_movement", [GO_STRAIGHT, -9000, -self.default_effort_level])
                 elif left_dist > HOMEBASE_KEEP_DISTANCE + 1 or right_dist > HOMEBASE_KEEP_DISTANCE + 1:
-                    self.publish("desired_movement", [GO_STRAIGHT, -9000, SPEED_ON])
+                    self.publish("desired_movement", [GO_STRAIGHT, -9000, self.default_effort_level])
                 elif homebase_cy < -1:
                     self.centering = True
-                    self.publish("desired_movement", [0, -9000, -SPEED_ON])
+                    self.publish("desired_movement", [0, -9000, -self.default_effort_level])
                 elif homebase_cy > 1:
                     self.centering = True
-                    self.publish("desired_movement", [0, -9000, SPEED_ON])
+                    self.publish("desired_movement", [0, -9000, self.default_effort_level])
                 else:
                     # print ("driving radius: %f" % self.basemarker_radius)
                     # negative radius turns to the right
                     if self.currently_following_object['object_type'] == 'basemarker' and self.basemarker_angle is not None:
                         (rho, phi) = cart2pol(homebase_cx, homebase_cy)
                         circle_direction = -1 if self.basemarker_angle < phi else 1
-                    self.publish("desired_movement", [-(HOMEBASE_KEEP_DISTANCE + HOMEBASE_RADIUS), -9000, circle_direction * SPEED_ON])
+                    self.publish("desired_movement", [-(HOMEBASE_KEEP_DISTANCE + HOMEBASE_RADIUS), -9000, circle_direction * self.default_effort_level])
 
 
 

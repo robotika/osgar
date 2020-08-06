@@ -181,6 +181,28 @@ def parse_laser(data):
     return scan
 
 
+def parse_posestamped(data):
+    size = struct.unpack_from('<I', data)[0]
+    pos = 4
+    seq, timestamp_sec, timestamp_nsec, frame_id_size = struct.unpack_from('<IIII', data, pos)
+    pos += 4 + 4 + 4 + 4
+    frame_id = data[pos:pos+frame_id_size]
+#    print(frame_id, timestamp_sec, timestamp_nsec)
+    pos += frame_id_size
+    # http://docs.ros.org/melodic/api/geometry_msgs/html/msg/PoseStamped.html
+    # http://docs.ros.org/melodic/api/geometry_msgs/html/msg/Quaternion.html
+
+    x, y, z = struct.unpack_from('<ddd', data, pos)
+    pos += 3 * 8
+    ori = struct.unpack_from('<dddd', data, pos)
+    pos += 4 * 8
+
+    #q0, q1, q2, q3 = ori  # quaternion
+    #ax =  math.atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2))
+    #ay =  math.asin(2*(q0*q2-q3*q1))
+    #az =  math.atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3))
+    return (x, y, z), (ori)
+
 def parse_odom(data):
     # http://docs.ros.org/melodic/api/nav_msgs/html/msg/Odometry.html
     size = struct.unpack_from('<I', data)[0]
@@ -413,8 +435,12 @@ def parse_topic(topic_type, data):
         return parse_volatile(data)
     elif topic_type == 'sensor_msgs/LaserScan':
         return parse_laser(data)
+    elif topic_type == 'geometry_msgs/PoseStamped':
+        return parse_posestamped(data)
     elif topic_type == 'sensor_msgs/Imu':
         return parse_imu(data)
+    elif topic_type == 'std_msgs/Bool':
+        return parse_bool(data)
     elif topic_type == 'sensor_msgs/CompressedImage':
         image = parse_jpeg_image(data)  # , dump_filename='nasa.jpg')
         return image

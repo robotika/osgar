@@ -76,7 +76,7 @@ CRAB_ROLL_ANGLE = 0.78
 class Rover(MoonNode):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('cmd', 'pose2d')
+        bus.register('cmd', 'odo_pose', 'desired_speeds')
 
         # general driving parameters
         # radius: radius of circle to drive around, "inf" if going straight; 0 if turning round in place
@@ -85,11 +85,7 @@ class Rover(MoonNode):
         # when turning in place, positive speed turns counterclockwise, negative clockwise
         self.drive_radius = float("inf") # in degrees * 100
         self.drive_camera_angle = 0  # in degrees * 100
-        self.drive_speed = 0 # 0 and non-zero only for now
-
-
-        self.desired_linear_speed = 0.0  # m/s
-        self.desired_angular_speed = 0.0
+        self.drive_speed = 0 # -1000 to 1000 (0.. stop, 1000 maximum feasible speed given the type of motion)
 
         self.joint_name = None  # updated via Node.update()
         self.debug_arr = []
@@ -101,6 +97,8 @@ class Rover(MoonNode):
         self.yaw = 0.0
         self.yaw_offset = None
         self.in_driving_recovery = False
+        self.steering_wait_start = None
+        self.steering_wait_repeat = None
 
         self.motor_pid = [MotorPID(p=40.0) for __ in WHEEL_NAMES]  # TODO tune PID params
 
@@ -114,18 +112,17 @@ class Rover(MoonNode):
             self.drive_radius = self.drive_speed = 0
         elif angular != 0:
             self.drive_radius = 0 # turn in place
-            self.drive_speed =  math.copysign(10, angular)
+            self.drive_speed = 1000 * angular / (100 * 60) # max angular speed is 60 deg/sec, value provided in 100 multiple
         else: # linear is non-zero
             self.drive_radius = float("inf") # going straight
             self.drive_speed = linear
         self.drive_camera_angle = 0 # only 0, positive (looking left 90 degrees when going forward) and negative (right) are supported
 
-
     def on_desired_movement(self, data):
         # rover will go forward in a circle given:
         # circle radius (m) (use float("inf") to go straight)
         # angle between the center of the circle and the direction of the camera (angle in 100*degrees, positive if center to the left of the camera); NOTE: currently only the sign matters and will result in looking left and right 90 degrees respectively
-        # linear speed (1000*m/s) NOTE: speed only considers the sign for going forward, backward or stop
+        # drive_speed: linear speed in 1000* m/s
         self.drive_radius, self.drive_camera_angle, self.drive_speed = data
 
     def on_rot(self, data):
@@ -145,12 +142,11 @@ class Rover(MoonNode):
         diff = [b - a for a, b in zip(self.prev_position, data)]
 
         assert b'bl_wheel_joint' in self.joint_name, self.joint_name
-        if self.desired_linear_speed >= 0:
-            name = b'bl_wheel_joint'
-            name2 = b'br_wheel_joint'
-        else:
-            name = b'fl_wheel_joint'
-            name2 = b'fr_wheel_joint'
+        # measure odometry from rear wheels
+        name = b'bl_wheel_joint'
+        name2 = b'br_wheel_joint'
+        # name = b'fl_wheel_joint'
+        # name2 = b'fr_wheel_joint'
         left = WHEEL_RADIUS * diff[self.joint_name.index(name)]
         right = WHEEL_RADIUS * diff[self.joint_name.index(name2)]
         dist = (left + right)/2
@@ -159,7 +155,7 @@ class Rover(MoonNode):
         x += math.cos(heading) * dist
         y += math.sin(heading) * dist
         heading += angle
-        self.bus.publish('pose2d', [round(x * 1000),
+        self.bus.publish('odo_pose', [round(x * 1000),
                                     round(y * 1000),
                                     round(math.degrees(heading) * 100)])
         self.prev_position = data
@@ -191,6 +187,7 @@ class Rover(MoonNode):
         self.bus.publish('cmd', cmd)
 
     def get_steering_and_effort(self):
+        movement_type = 'none'
         steering = [0.0,] * 4
 
         if self.drive_speed == 0:
@@ -199,6 +196,8 @@ class Rover(MoonNode):
         elif self.drive_radius == 0:
             # turning in place if radius is 0 but speed is non-zero
             e = 30
+            movement_type = 'angular'
+
             if self.drive_speed > 0:
                 # turn left
                 effort = [-e, e, -e, e]
@@ -209,86 +208,106 @@ class Rover(MoonNode):
                 steering = [-CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE,-CRAB_ROLL_ANGLE]
 
         else:
+            movement_type = 'linear'
 
-            # if pitch too steep, turn diagonally a try to climb this way being able to handle larger pitch
-            if self.pitch > 0.3:
-                # TODO: try to maintain wheel orientation up (wheels turning straight up even if body turns)
-                if self.roll > 0:
-                    #steering = [3*-self.roll,3*-self.roll,0.0, 0.0]
+            # TODO: if large change of 'steering' values, allow time to apply before turning on 'effort'
+            fl = fr = rl = rr = 0.0
 
-                    steering = [-CRAB_ROLL_ANGLE,-CRAB_ROLL_ANGLE,-CRAB_ROLL_ANGLE,-CRAB_ROLL_ANGLE]
-                else:
-                    #steering = [3*-self.roll,3*-self.roll,0.0, 0.0]
-                    steering = [CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE]
-                e = e2 = 120
-                effort = [e, e, e, e]
+            e = 80 * self.drive_speed / 1000.0
+            effort = [e, e, e, e]
 
-            else:
-                # TODO: if large change of 'steering' values, allow time to apply before turning on 'effort'
-                camera_angle = math.pi * (self.drive_camera_angle / 100.0) / 180.0
-                fl = fr = rl = rr = 0.0
-
-                e = 40 if self.drive_speed > 0 else -40
-                effort = [e, e, e, e]
-
-                if not math.isinf(self.drive_radius):
-                    sign = 1 if self.drive_radius > 0 else -1
-                    signed_width = -math.copysign(WHEEL_SEPARATION_WIDTH/2.0, self.drive_radius)
-                    fl = sign * WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) + signed_width) # + if outer
-                    fr = sign * WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) - signed_width)
-                    rl = sign * -WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) + signed_width)
-                    rr = sign * -WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) - signed_width)
-
-                    if camera_angle > 0:
-                        if self.drive_radius > 0:
-                            temp = rr
-                            rr = -math.pi/2 + fr
-                            fr = -math.pi/2 + fl
-                            fl = math.pi/2 + rl
-                            rl = math.pi/2 + temp
-                            effort = [-e, e, -e, e]
-                        else:
-                            temp = rr
-                            rr = math.pi/2 + fr
-                            fr = math.pi/2 + fl
-                            fl = -math.pi/2 + rl
-                            rl = -math.pi/2 + temp
-                            effort = [e, -e, e, -e]
-                    elif camera_angle < 0:
-                        if self.drive_radius > 0:
-                            temp = rr
-                            rr = math.pi/2 + rl
-                            rl = -math.pi/2 + fl
-                            fl = -math.pi/2 + fr
-                            fr = math.pi/2 + temp
-                            effort = [-e, e, -e, e]
-                        else:
-                            temp = rr
-                            rr = -math.pi/2 + rl
-                            rl = math.pi/2 + fl
-                            fl = math.pi/2 + fr
-                            fr = -math.pi/2 + temp
-                            effort = [e, -e, e, -e]
-
+            if not math.isinf(self.drive_radius):
+                sign = 1 if self.drive_radius > 0 else -1
+                signed_width = -math.copysign(WHEEL_SEPARATION_WIDTH/2.0, self.drive_radius)
+                fl = sign * WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) + signed_width) # + if outer
+                fr = sign * WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) - signed_width)
+                rl = sign * -WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) + signed_width)
+                rr = sign * -WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) - signed_width)
 
                 if self.drive_camera_angle == 0:
-                    # during normal driving, steer against slope proportionately to the steepness of the slope
-                    fl += self.roll
-                    fr += self.roll
-                    rl += self.roll
-                    rr += self.roll
+                    pass
+                elif self.drive_camera_angle == 9000:
+                    if self.drive_radius > 0:
+                        temp = rr
+                        rr = -math.pi/2 + fr
+                        fr = -math.pi/2 + fl
+                        fl = math.pi/2 + rl
+                        rl = math.pi/2 + temp
+                        effort = [-e, e, -e, e]
+                    else:
+                        temp = rr
+                        rr = math.pi/2 + fr
+                        fr = math.pi/2 + fl
+                        fl = -math.pi/2 + rl
+                        rl = -math.pi/2 + temp
+                        effort = [e, -e, e, -e]
+                elif self.drive_camera_angle == -9000:
+                    if self.drive_radius > 0:
+                        temp = rr
+                        rr = math.pi/2 + rl
+                        rl = -math.pi/2 + fl
+                        fl = -math.pi/2 + fr
+                        fr = math.pi/2 + temp
+                        effort = [-e, e, -e, e]
+                    else:
+                        temp = rr
+                        rr = -math.pi/2 + rl
+                        rl = math.pi/2 + fl
+                        fl = math.pi/2 + fr
+                        fr = -math.pi/2 + temp
+                        effort = [e, -e, e, -e]
+                else:
+                    assert False, "Unsupported angle: " + str(self.drive_camera_angle)
 
-                steering = [fl, fr, rl, rr]
+            else: # if driving straight but camera at an angle, point all wheels in the same direction for crab movement
+                angle = math.radians(self.drive_camera_angle / 100.0)
+                rr = fr = fl = rl = angle
 
-                # stay put while joint angles are catching up
-                if self.drive_camera_angle != 0 and self.prev_position is not None and not self.in_driving_recovery:
-                    if (
-                            abs(self.prev_position[self.joint_name.index(b'bl_steering_arm_joint')] - rl) > 0.2 or
-                            abs(self.prev_position[self.joint_name.index(b'br_steering_arm_joint')] - rr) > 0.2 or
-                            abs(self.prev_position[self.joint_name.index(b'fl_steering_arm_joint')] - fl) > 0.2 or
-                            abs(self.prev_position[self.joint_name.index(b'fr_steering_arm_joint')] - fr) > 0.2
-                    ):
-                        effort = [0.0,]*4
+            steering = [fl, fr, rl, rr]
+
+        WAIT_TO_STEER_MS = 8000
+        # stay put while joint angles are catching up
+        if (
+                self.drive_camera_angle != 0 and
+                self.prev_position is not None and
+                not self.in_driving_recovery
+        ):
+            if (
+                    abs(self.prev_position[self.joint_name.index(b'bl_steering_arm_joint')] - steering[2]) > 0.2 or
+                    abs(self.prev_position[self.joint_name.index(b'br_steering_arm_joint')] - steering[3]) > 0.2 or
+                    abs(self.prev_position[self.joint_name.index(b'fl_steering_arm_joint')] - steering[0]) > 0.2 or
+                    abs(self.prev_position[self.joint_name.index(b'fr_steering_arm_joint')] - steering[1]) > 0.2
+            ):
+                if (
+                        (self.steering_wait_start is None or self.sim_time - self.steering_wait_start <= timedelta(milliseconds=WAIT_TO_STEER_MS)) and
+
+                        (self.steering_wait_repeat is None or self.sim_time - self.steering_wait_repeat > timedelta(milliseconds=1000))
+                ):
+                    if self.steering_wait_start is None:
+                        self.steering_wait_start = self.sim_time
+                        self.send_request('set_brakes 10')
+                    # brake while steering angles are changing so that the robot doesn't roll away while wheels turning meanwhile
+                    # use braking force 20 Nm/rad which should prevent sliding but can be overcome by motor effort
+                    effort = [0.0,]*4
+                else:
+                    pass # angles are not reached but attempt timed out, do not change 'effort'
+
+            else: # angles are reached
+                if self.steering_wait_start is not None:
+                    self.send_request('set_brakes off')
+                    self.steering_wait_start = None # angles were reached successfully, can wait any time again
+                self.steering_wait_repeat = None # angles were reached successfully, can wait any time again
+
+        # if attempt to steer without effort timed out, brakes off, start instant repeat prevention timer
+        if self.steering_wait_start is not None and self.sim_time - self.steering_wait_start > timedelta(milliseconds=WAIT_TO_STEER_MS):
+            self.send_request('set_brakes off')
+            self.steering_wait_start = None
+            self.steering_wait_repeat = self.sim_time
+
+        effort_sum = sum([abs(x) for x in effort])
+        self.bus.publish('desired_speeds', [self.drive_speed / 1000.0 if effort_sum > 0 and movement_type == 'linear' else 0.0,
+                                            math.copysign(math.radians(30), self.drive_speed) if effort_sum > 0 and movement_type == 'angular' else 0.0])
+
         return steering, effort
 
     def draw(self):

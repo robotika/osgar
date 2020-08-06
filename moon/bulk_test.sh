@@ -20,7 +20,9 @@ LOG_DIR_PREFIX="."
 
 REPEAT_SEED=1
 
-while getopts "r:t:s:f:l:hw:ud:p:" opt; do
+VSLAM=0
+
+while getopts "r:t:s:f:l:hw:ud:p:v" opt; do
     case ${opt} in
         h)
             echo "Usage:"
@@ -33,6 +35,7 @@ while getopts "r:t:s:f:l:hw:ud:p:" opt; do
             echo " -u .. only record unsuccessful run logs"
             echo " -d <log dir prefix>"
             echo " -p <times to repeat each seed>"
+            echo " -v <launch VSLAM docker>"
             exit 0
             ;;
         r)
@@ -61,6 +64,9 @@ while getopts "r:t:s:f:l:hw:ud:p:" opt; do
             ;;
         p)
             REPEAT_SEED=$OPTARG
+            ;;
+        v)
+            VSLAM=1
             ;;
     esac
 done
@@ -111,6 +117,12 @@ do
         # wait for SRCP2 simulator to start
         sleep ${SRCP2_WAIT}
 
+        if [[ $VSLAM -eq 1 ]]; then
+           docker run --init --network=host --rm --name openvslam -t openvslam-rospublish >& /dev/null &
+           vslam_id=`docker image ls | grep openvslam | head -1 | awk '{print $3}'`
+           echo "Running OpenVSLAM image ${vslam_id}" >> ${log_file}
+        fi
+
         osgar_image_id=`docker image ls | grep rover | grep latest | awk '{print $3}'`
         srcp2_image_id=`docker image ls | grep comp | head -1 | awk '{print $3}'`
         echo "Running OSGAR image ${osgar_image_id}" >> ${log_file}
@@ -130,6 +142,11 @@ do
         fi
 
         docker kill nasa-rover >& /dev/null
+
+        if [[ $VSLAM -eq 1 ]]; then
+           docker kill openvslam >& /dev/null
+        fi
+
         docker kill srcp2-simulation >& /dev/null
     done
 done

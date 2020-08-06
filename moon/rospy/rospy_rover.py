@@ -17,7 +17,7 @@ import rospy
 from std_msgs.msg import *  # Float64, JointState
 from sensor_msgs.msg import *
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Twist, Point
+from geometry_msgs.msg import Twist, Point, PoseStamped
 
 # SRCP2 specific
 
@@ -45,6 +45,8 @@ class RospyRoverPushPull(RospyBasePushPull):
         rospy.Subscriber('/' + self.robot_name + '/joint_states', JointState, self.callback_topic, '/' + self.robot_name + '/joint_states')
         rospy.Subscriber('/' + self.robot_name + '/laser/scan', LaserScan, self.callback_topic, '/' + self.robot_name + '/laser/scan')
         rospy.Subscriber('/' + self.robot_name + '/imu', Imu, self.callback_topic, '/' + self.robot_name + '/imu')
+        rospy.Subscriber('/' + self.robot_name + '/openvslam/camera_pose', PoseStamped, self.callback_topic, '/' + self.robot_name + '/openvslam/pose')
+        rospy.Subscriber('/' + self.robot_name + '/openvslam/enabled', Bool, self.callback_topic, '/' + self.robot_name + '/openvslam/enabled')
 
         QSIZE = 10
 
@@ -162,8 +164,13 @@ class RospyRoverReqRep(RospyBaseReqRep):
                 return 'OK'
 
             elif message_type == "set_brakes":
-                is_on = message.split(" ")[1].startswith("on")
-                brake_torque = 1000.0 if is_on else 0.0
+                val = message.split(" ")[1]
+                if val.startswith("on"):
+                    brake_torque = 500.0
+                elif val.startswith("off"):
+                    brake_torque = 0.0
+                else:
+                    brake_torque = float(val)
                 print ("rospy_rover: Setting brakes to: %f" % brake_torque)
                 self.brakes(brake_torque)
                 return 'OK'
@@ -177,6 +184,12 @@ class RospyRoverReqRep(RospyBaseReqRep):
             elif message_type == "reset_model":
                 print ("rospy_rover: Resetting model")
                 self.reset_model(True)
+                return 'OK'
+
+            elif message_type == "vslam_reset":
+                print ("rospy_rover: Resetting VSLAM map")
+                self.vslam_command_msg.data = "reset"
+                self.vslam_command_pub.publish(self.vslam_command_msg)
                 return 'OK'
 
             elif message_type == "request_origin":
@@ -206,6 +219,9 @@ class RospyRoverReqRep(RospyBaseReqRep):
 
         self.light_up_pub = rospy.Publisher('/' + self.robot_name + '/sensor_controller/command', Float64, queue_size=QSIZE, latch=True)
         self.light_up_msg = Float64()
+
+        self.vslam_command_pub = rospy.Publisher('/' + self.robot_name + '/vslam/command', String, queue_size=1, latch=True)
+        self.vslam_command_msg = String()
 
         self.brakes = rospy.ServiceProxy('/' + self.robot_name + '/brake_rover', BrakeRoverSrv)
 
