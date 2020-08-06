@@ -100,6 +100,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             #self.turn(angle_diff, timeout=timedelta(seconds=15))
                             self.go_to_location(vol_list[ind[i]], self.default_effort_level, offset=-1, full_turn=True)
 
+                        self.send_request('external_command hauler_1 goto ' + str(self.xyz)) #TODO: possibly instruct on angle also
                         print ("---- NEXT VOLATILE ----")
                         #self.wait(timedelta(seconds=10))
                         #vol_list.pop(index)

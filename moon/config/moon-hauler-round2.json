@@ -50,6 +50,7 @@
               ["/hauler_1/imu", "sensor_msgs/Imu", "orientation"],
               ["/hauler_1/openvslam/pose", "geometry_msgs/PoseStamped", "vslam_pose"],
               ["/hauler_1/openvslam/enabled", "std_msgs/Bool", "vslam_enabled"],
+              ["/osgar/broadcast", "std_msgs/String", "osgar_broadcast"],
               ["/hauler_1/laser/scan", "sensor_msgs/LaserScan", "scan"]
             ]
           }
@@ -74,6 +75,7 @@
               ["rosmsg.rot", "app.rot"],
               ["rosmsg.rot", "hauler.rot"],
               ["rosmsg.scan", "app.scan"],
+              ["rosmsg.osgar_broadcast", "app.osgar_broadcast"],
               ["rosmsg.vslam_pose", "app.vslam_pose"],
               ["rosmsg.vslam_enabled", "app.vslam_enabled"],
               ["rosmsg./qual_2_score", "app.score"],

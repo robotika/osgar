@@ -57,17 +57,19 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         self.rover_angle = None
         self.use_gimbal = False
 
+        self.last_excavator_pose = None
+
 
     def run(self):
         try:
             self.wait_for_init()
             #self.wait(timedelta(seconds=5))
-            self.go_straight(-10) # just get out of the way for now
             self.set_light_intensity("0.5")
             self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
 
             while True:
                 try:
+                    self.go_straight(-10) # just get out of the way for now
                     print("Turning")
                     self.turn(math.radians(360), timeout=timedelta(seconds=30))
                 except ChangeDriverException as e:
@@ -88,6 +90,9 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
             pass
 
         print("HAULER END")
+
+    def on_osgar_broadcast(self, data):
+        print("Received external_command: %s" % str(data))
 
     def on_artf(self, data):
         # vol_type, x, y, w, h
