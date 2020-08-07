@@ -29,14 +29,8 @@ from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.node import Node
 from moon.vehicles.rover import Rover
 
-def angle_distance(alpha, beta):
-    phi = abs(beta - alpha) % (2*math.pi)
-    if phi > math.pi:
-        phi = 360 - phi
-    return phi
-
 def rad_close(a,b):
-    return [angle_distance(a[i],b[i]) < 0.1 for i in range(len(a))]
+    return [abs(normalizeAnglePIPI(x-y)) < 0.1 for x,y in zip(a,b)]
 
 def rad_array_close(a, b):
     res = all(rad_close(a,b))
@@ -58,16 +52,16 @@ class Excavator(Rover):
         self.arm_joint_names = [b'mount_joint', b'basearm_joint', b'distalarm_joint', b'bucket_joint']
         self.bucket_scoop_sequence = (
             # [<seconds to execute>, [mount, base, distal, bucket]]
-            [12, [-0.6, -0.8, 3.2], [-0.47, -0.26, 3.2]], # get above scooping position
-            [4, [ 0.4, 1.0, 1.9], [0.55, 0.73, 1.85]], # lower to scooping position
-            [2, [ 0.4, 1.0, 3.2], [0.6, 0.63, 3.04]], # scoop volatiles
-            [8, [ -0.6, -0.8, 3.9], [-0.48, -0.35, 3.85]] # lift up bucket with volatiles
+            [12, [-0.6, -0.8, 3.2]], # get above scooping position
+            [4, [ 1.0, -1.0, 1.9]], # lower to scooping position
+            [2, [ 0.4, 0.8, 3.2]], # scoop volatiles
+            [8, [ -0.6, -0.4, 3.9]] # lift up bucket with volatiles
             )
         self.bucket_drop_sequence = (
-            [12, [-0.6, -0.8, 3.9], [-0.48, -0.35, 3.85]], # turn towards dropping position
-            [4, [-0.3, -0.8, 3.9], [-0.13, -0.38, 3.84]], # extend arm
-            [4, [-0.3, -0.8, 0], [-0.12, -0.26, 0.02]], # drop
-            [4, [-0.6, -0.8, 3.2], [-0.47, -0.26, 3.2]] # back to neutral/travel position
+            [12, [-0.6, -0.4, 3.9]], # turn towards dropping position
+            [4, [-0.3, -0.8, 3.9]], # extend arm
+            [4, [-0.3, -0.8, 3]], # drop
+            [4, [-0.6, -0.8, 3.2]] # back to neutral/travel position
         )
         self.bucket_last_status_timestamp = None
 
@@ -81,7 +75,7 @@ class Excavator(Rover):
 
     def on_bucket_dig(self, data):
         dig_angle, queue_action = data
-        dig = [[duration, [dig_angle, *step], [dig_angle, *target]] for duration, step, target in self.bucket_scoop_sequence]
+        dig = [[duration, [dig_angle, *step]] for duration, step in self.bucket_scoop_sequence]
         if queue_action == 'reset':
             self.execute_bucket_queue = dig
             self.scoop_time = None
@@ -94,7 +88,7 @@ class Excavator(Rover):
 
     def on_bucket_drop(self, data):
         drop_angle, queue_action = data
-        drop = [[duration, [drop_angle, *step], [drop_angle, *target]] for duration, step, target in self.bucket_drop_sequence]
+        drop = [[duration, [drop_angle, *step]] for duration, step in self.bucket_drop_sequence]
         if queue_action == 'reset':
             self.execute_bucket_queue = drop
             self.scoop_time = None
@@ -123,8 +117,8 @@ class Excavator(Rover):
                         rad_array_close(self.target_arm_position, self.current_arm_position)
                      )
             ):
-                duration, bucket_params, bucket_targets = self.execute_bucket_queue.pop(0)
-                self.target_arm_position = bucket_targets
+                duration, bucket_params = self.execute_bucket_queue.pop(0)
+                self.target_arm_position = bucket_params
 #                print ("bucket_position %f %f %f " % (bucket_params[0], bucket_params[1],bucket_params[2]))
                 self.send_bucket_position(bucket_params)
                 self.scoop_time = self.sim_time + timedelta(seconds=duration)

@@ -440,28 +440,29 @@ class SpaceRoboticsChallenge(MoonNode):
         channel = super().update()
         return channel
 
-    def get_angle_diff(self, destination, direction):
+    def get_angle_diff(self, destination, direction=1):
         angle_diff = normalizeAnglePIPI(math.atan2(destination[1] - self.xyz[1], destination[0] - self.xyz[0]) - self.yaw)
         if direction < 0:
             angle_diff = - math.pi + angle_diff
 
         return normalizeAnglePIPI(angle_diff)
 
-    def go_to_location(self, pos, speed, timeout=None):
+    def go_to_location(self, pos, speed, offset=0.0, full_turn=False, timeout=None):
         # speed: + forward, - backward
+        # offset: stop before (-) or past (+) the actual destination (e.g., to keep the destination in front of the robot)
         print(self.sim_time, "go_to_location [%.1f,%.1f] (speed: %.1f)" % (pos[0], pos[1], math.copysign(self.max_speed, speed)))
 
         if timeout is None:
             dist = distance(pos, self.xyz)
-            timeout = timedelta(seconds=2*dist / self.max_speed) # 30m should take at most 60 seconds
+            timeout = timedelta(seconds=(10 if full_turn else 0) + 2*dist / self.max_speed) # 30m should take at most 60 seconds, unless turning heavily, then add the amount of time it takes to turn around
 
         start_time = self.sim_time
 
         # while we are further than 1m but still following the right direction (angle diff < 90deg)
         angle_diff = self.get_angle_diff(pos,speed)
-        while distance(pos, self.xyz) > 1 and abs(angle_diff) < math.pi/2:
+        while distance(pos, self.xyz)+offset > 1 and (full_turn or abs(angle_diff) < math.pi/2):
             angle_diff = self.get_angle_diff(pos,speed)
-            dist = distance(pos, self.xyz) # do not turn just before arrival
+            dist = distance(pos, self.xyz)+offset # do not turn just before arrival
             if angle_diff > 0.1 and dist > 3:
                 turn = TURN_RADIUS * math.copysign(1, speed)
             elif angle_diff < -0.1 and dist > 3:
