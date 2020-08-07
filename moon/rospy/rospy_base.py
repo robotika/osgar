@@ -19,7 +19,7 @@ import sys, getopt
 
 import rospy
 from rosgraph_msgs.msg import Clock
-from std_msgs.msg import *
+from std_msgs.msg import String
 
 interrupted = False
 
