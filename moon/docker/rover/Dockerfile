@@ -196,6 +196,8 @@ COPY ./openvslam/orb_vocab /openvslam/
 COPY ./srcp2-competitors /srcp2-competitors/
 COPY ./osgar /osgar/
 
+RUN echo "source /opt/ros/melodic/setup.bash" >> /root/.bashrc
+
 # OpenVSLAM
 WORKDIR /openvslam/
 RUN set -x && \
