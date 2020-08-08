@@ -580,9 +580,11 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     self.centering = True
                     self.publish("desired_movement", [0, -9000, self.default_effort_level])
                 elif left_dist < 1.5 or right_dist < 1.5:
-                    self.publish("desired_movement", [GO_STRAIGHT, -9000, -self.default_effort_level])
+                    # if distance is closer than 1.5m, pull back
+                    self.publish("desired_movement", [GO_STRAIGHT, 0, -self.default_effort_level])
                 elif left_dist > HOMEBASE_KEEP_DISTANCE + 1 or right_dist > HOMEBASE_KEEP_DISTANCE + 1:
-                    self.publish("desired_movement", [GO_STRAIGHT, -9000, self.default_effort_level])
+                    # if distance further than 1m more than optimal, come closer
+                    self.publish("desired_movement", [GO_STRAIGHT, 0, self.default_effort_level])
                 elif homebase_cy < -1:
                     self.centering = True
                     self.publish("desired_movement", [0, -9000, -self.default_effort_level])
