@@ -567,7 +567,7 @@ class SpaceRoboticsChallenge(MoonNode):
         start_pose = self.xyz
         start_time = self.sim_time
         while self.scan_distance_to_obstacle < 4000: # 4m
-            self.publish("desired_movement", [GO_STRAIGHT, 6500, math.copysign(self.default_effort_level, direction)]) # 1000m radius is almost straight
+            self.publish("desired_movement", [GO_STRAIGHT, -math.copysign(6500, direction), -self.default_effort_level]) # 1000m radius is almost straight
             self.wait(timedelta(milliseconds=100))
             if timeout is not None and self.sim_time - start_time > timeout:
                 print("lidar_drive_around - timeout at %.1fm" % distance(start_pose, self.xyz))
