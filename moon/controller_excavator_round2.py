@@ -45,7 +45,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             # TODO: another pose may arrive while this request is still being processed (not a big deal, just a ROS error message)
             self.send_request('request_origin', self.register_origin)
 
-
     def run(self):
 
         def process_volatiles(vol_string):
@@ -73,11 +72,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             # wait for interface to wake up before trying to move arm
             self.publish("bucket_drop", [math.pi, 'reset'])
 
-            try:
-                self.go_straight(-3)
-            except:
-                pass
-
             self.send_request('vslam_reset', vslam_reset_time)
 
             while vol_list is None or not self.true_pose:
@@ -96,11 +90,20 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         print(self.sim_time, "excavator: Pursuing distance: %f, index: %d" % (dist[i], ind[i]))
                         self.virtual_bumper = VirtualBumper(timedelta(seconds=3), 0.2) # radius of "stuck" area; a little more as the robot flexes
                         with LidarCollisionMonitor(self, 2500): # some distance needed not to lose tracking when seeing only obstacle up front
-                            #angle_diff = self.get_angle_diff(vol_list[index],-1) # 1 means get angle for going forward
+                            # turning in place probably not desirable because hauler behind may be in the way, may need to send it away first
+                            #angle_diff = self.get_angle_diff(vol_list[ind[i]])
                             #self.turn(angle_diff, timeout=timedelta(seconds=15))
                             self.go_to_location(vol_list[ind[i]], self.default_effort_level, offset=-1, full_turn=True)
 
-                        self.send_request('external_command hauler_1 goto %.1f %.1f' % (self.xyz[0], self.xyz[1]))
+
+                        # calculate position 10m behind excavator to send hauler to, hauler will continue visually from there
+                        v = np.asmatrix(np.asarray([self.xyz[0], self.xyz[1], 1]))
+                        c, s = np.cos(self.yaw), np.sin(self.yaw)
+                        R = np.asmatrix(np.array(((c, -s, 0), (s, c, 0), (0, 0, 1))))
+                        T = np.asmatrix(np.array(((1, 0, -10),(0, 1, 0),(0, 0, 1))))
+                        pos =  np.dot(R, np.dot(T, np.dot(R.I, v.T)))
+                        self.send_request('external_command hauler_1 goto %.1f %.1f' % (pos[0], pos[1]))
+
                         print ("---- NEXT VOLATILE ----")
                         #self.wait(timedelta(seconds=10))
                         #vol_list.pop(index)
