@@ -3,6 +3,7 @@
 """
 import math
 import numpy as np
+import io
 
 from datetime import timedelta
 from statistics import median
@@ -38,6 +39,57 @@ class VSLAMFoundException(Exception):
 
 class VirtualBumperException(Exception):
     pass
+
+def pol2cart(rho, phi):
+    x = rho * math.cos(phi)
+    y = rho * math.sin(phi)
+    return(x, y)
+
+def cart2pol(x, y):
+    rho = np.sqrt(x**2 + y**2)
+    phi = np.arctan2(y, x)
+    return(rho, phi)
+
+def best_fit_circle(x_l, y_l):
+    # Best Fit Circle https://goodcalculators.com/best-fit-circle-least-squares-calculator/
+    # receive 180 scan samples, first and last 40 are discarded, remaining 100 samples represent 2.6rad view
+    # samples are supposed to form a circle which this routine calculates
+
+    nop = len(x_l)
+    x = np.array(x_l)
+    y = np.array(y_l)
+
+    x_y = np.multiply(x,y)
+    x_2 = np.square(x)
+    y_2 = np.square(y)
+
+    x_2_plus_y_2 = np.add(x_2,y_2)
+    x__x_2_plus_y_2 = np.multiply(x,x_2_plus_y_2)
+    y__x_2_plus_y_2 = np.multiply(y,x_2_plus_y_2)
+
+    sum_x = x.sum(dtype=float)
+    sum_y = y.sum(dtype=float)
+    sum_x_2 = x_2.sum(dtype=float)
+    sum_y_2 = y_2.sum(dtype=float)
+    sum_x_y = x_y.sum(dtype=float)
+    sum_x_2_plus_y_2 = x_2_plus_y_2.sum(dtype=float)
+    sum_x__x_2_plus_y_2 = x__x_2_plus_y_2.sum(dtype=float)
+    sum_y__x_2_plus_y_2 = y__x_2_plus_y_2.sum(dtype=float)
+
+    m3b3 = np.array([[sum_x_2,sum_x_y,sum_x],
+            [sum_x_y,sum_y_2,sum_y],
+            [sum_x,sum_y,nop]])
+    invm3b3 = np.linalg.inv(m3b3)
+    m3b1 = np.array([sum_x__x_2_plus_y_2,sum_y__x_2_plus_y_2,sum_x_2_plus_y_2])
+    A=np.dot(invm3b3,m3b1)[0]
+    B=np.dot(invm3b3,m3b1)[1]
+    C=np.dot(invm3b3,m3b1)[2]
+    homebase_cx = A/2
+    homebase_cy = B/2
+    homebase_radius = np.sqrt(4*C+A**2+B**2)/2
+
+    return(homebase_cx, homebase_cy, homebase_radius)
+
 
 def eulerAnglesToRotationMatrix(theta) :
     # TODO: correctness of signs in R_x and R_y has not been verified
@@ -125,11 +177,18 @@ class LidarCollisionMonitor:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.robot.unregister(self.callback)
 
+def ps(*args, **kwargs):
+    output = io.StringIO()
+    print(*args, file=output, **kwargs)
+    contents = output.getvalue()
+    output.close()
+    return contents
 
 class SpaceRoboticsChallenge(MoonNode):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("desired_speed", "desired_movement", "driving_recovery", "cmd", "pose2d")
+        self.robot_name = "scout_1"
 
         self.joint_name = None
         self.sensor_joint_position = None
@@ -425,17 +484,19 @@ class SpaceRoboticsChallenge(MoonNode):
             elif self.sim_time - self.last_status_timestamp > timedelta(seconds=8) and self.xyz is not None:
                 self.last_status_timestamp = self.sim_time
                 x, y, z = self.xyz
-                print("---------------------------------------------------------")
-                print (self.sim_time, "RPY: [%f %f %f]; Driver: %s; Score: %d" % (self.roll, self.pitch, self.yaw, self.current_driver, self.score))
-                print ("Loc[best]: [%f %f %f]" % (x, y, z))
+                s = ps("---------------------------------------------------------")
+                s += ps(self.sim_time, "%s:" % self.robot_name)
+                s += ps("RPY: [%f %f %f]; Driver: %s; Score: %d" % (self.roll, self.pitch, self.yaw, self.current_driver, self.score))
+                s += ps("Loc[best]: [%f %f %f]" % (x, y, z))
                 for k, obj in self.tf.items():
                     if obj['trans_matrix'] is not None and self.sim_time - obj['timestamp'] < timedelta(milliseconds=300):
                         x, y, z = obj['latest_xyz']
                         v = np.asmatrix(np.array([x, y, z, 1]))
                         m = np.dot(obj['trans_matrix'], v.T)
                         x,y,z = [m[0,0], m[1,0], m[2,0]]
-                        print ("Loc[%s]: [%f %f %f]" % (k, x, y, z))
-                print("---------------------------------------------------------")
+                        s += ps("Loc[%s]: [%f %f %f]" % (k, x, y, z))
+                s += ("---------------------------------------------------------")
+                print(s)
 
         channel = super().update()
         return channel
