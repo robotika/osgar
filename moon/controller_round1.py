@@ -345,6 +345,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
             except:
                 pass
             finally:
+                self.processing_plant_found = True
                 self.send_request('vslam_reset', set_homebase_found)
 
             while not self.true_pose:
