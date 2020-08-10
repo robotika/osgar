@@ -12,6 +12,7 @@ from osgar.bus import BusShutdownException
 from moon.controller import SpaceRoboticsChallenge, ChangeDriverException, VirtualBumperException, min_dist, LidarCollisionException, LidarCollisionMonitor
 from osgar.lib.quaternion import euler_zyx
 from osgar.lib.virtual_bumper import VirtualBumper
+from osgar.lib.mathex import normalizeAnglePIPI
 
 CAMERA_WIDTH = 640
 CAMERA_HEIGHT = 480
@@ -47,74 +48,101 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("desired_movement")
+        self.robot_name = "hauler_1"
 
-
-        self.tracking_excavator = False
-        self.straight_ahead_distance = None
-        self.approach_distance_timestamp = None
-        self.approaching = False
-        self.last_rover_timestamp = False
         self.rover_angle = None
         self.use_gimbal = False
         self.vslam_reset_at = None
         self.goto = None
+        self.finish_visually = False
+        self.arrived_message_sent = False
 
-        self.last_excavator_pose = None
 
-
-    def run(self):
-
+    def on_osgar_broadcast(self, data):
         def vslam_reset_time(response):
             self.vslam_reset_at = self.sim_time
 
+        print("Received external_command: %s" % str(data))
+        message_target = data.split(" ")[0]
+        if message_target == "hauler_1":
+            command = data.split(" ")[1]
+            if command == "goto":
+                # x, y, heading
+                self.goto = [float(n) for n in data.split(" ")[2:5]]
+                self.send_request('vslam_reset', vslam_reset_time)
 
+    def run(self):
 
         try:
             self.wait_for_init()
             #self.wait(timedelta(seconds=5))
-            self.set_light_intensity("0.5")
+            self.set_light_intensity("0.3")
 
-            self.send_request('vslam_reset', vslam_reset_time)
+            self.set_brakes(False)
+
+            while not self.true_pose:
+                self.wait(timedelta(seconds=1))
 
             self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
 
+            # 3 modes: 1) going to location 2) following rover visually 3) waiting for instructions to go to location
+
             while True:
-                try:
-                    if self.goto is not None:
-                        self.go_to_location(self.goto, self.default_effort_level, offset=-1, full_turn=True)
+
+
+                if self.goto is not None:
+                    try:
+                        with LidarCollisionMonitor(self, 1500):
+                            angle_diff = self.get_angle_diff(self.goto, 1)
+                            if abs(angle_diff) < math.pi/2:
+                                self.turn(angle_diff)
+                                self.go_to_location(self.goto, self.default_effort_level, full_turn=True)
+                            else:
+                                angle_diff = self.get_angle_diff(self.goto, -1)
+                                self.turn(angle_diff)
+                                self.go_to_location(self.goto, -self.default_effort_level, full_turn=True)
+
+                            self.turn(normalizeAnglePIPI(self.goto[2] - self.yaw))
                         self.goto = None
-                    else:
-                        while True:
-                            self.wait(timedelta(seconds=1))
+                        self.finish_visually = True
+                        self.set_cam_angle(-0.15)
+
+
+                    except ChangeDriverException as e:
+                        print("Driver changed during goto?")
+                    except LidarCollisionException as e: #TODO: long follow of obstacle causes loss, go along under steeper angle
+                        print(self.sim_time, self.robot_name, "Lidar")
+                        self.inException = True
+                        self.lidar_drive_around()
+                        self.inException = False
+                        continue
+                    except VirtualBumperException as e:
+                        self.send_speed_cmd(0.0, 0.0)
+                        print(self.sim_time, "Bumper")
+                        self.inException = True
+                        self.go_straight(-1) # go 1m in opposite direction
+                        self.drive_around_rock(6) # assume 6m the most needed
+                        self.inException = False
+                        continue
+                try:
+                    self.wait(timedelta(seconds=1))
                 except ChangeDriverException as e:
                     print("Driver changed to go to location")
-                except LidarCollisionException as e: #TODO: long follow of obstacle causes loss, go along under steeper angle
-                    print(self.sim_time, "Lidar")
-                    self.inException = True
-                    self.lidar_drive_around()
-                    self.inException = False
-                except VirtualBumperException as e:
+                except VirtualBumperException as e: # if bumper while following (e.g, blocked by a rock)
                     self.send_speed_cmd(0.0, 0.0)
                     print(self.sim_time, "Bumper")
                     self.inException = True
                     self.go_straight(-1) # go 1m in opposite direction
                     self.drive_around_rock(6) # assume 6m the most needed
                     self.inException = False
+                    continue
+
+
 
         except BusShutdownException:
             pass
 
         print("HAULER END")
-
-    def on_osgar_broadcast(self, data):
-        print("Received external_command: %s" % str(data))
-        message_target = data.split(" ")[0]
-        if message_target == "hauler_1":
-            command = data.split(" ")[1]
-            if command == "goto":
-                self.goto = [float(n) for n in data.split(" ")[2:4]]
-                raise ChangeDriverException
-
 
     def on_vslam_pose(self, data):
         super().on_vslam_pose(data)
@@ -129,98 +157,61 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
 
 
     def on_artf(self, data):
-        return
-        # vol_type, x, y, w, h
-        # coordinates are pixels of bounding box
+
+        if not self.finish_visually:
+            return
+
         artifact_type = data[0]
         center_x = data[1] + data[3] / 2
         center_y = data[2] + data[4] / 2
-        bbox_size = (data[3] + data[4]) / 2 # calculate avegage in case of substantially non square matches
-        img_x, img_y, img_w, img_h = data[1:5]
-        nr_of_black = data[5]
 
         if self.sim_time is None:
-            return
-
-        if self.straight_ahead_distance is None:
             return
 
         if artifact_type == "rover":
             self.last_rover_timestamp = self.sim_time
 
-            if not self.tracking_excavator and self.straight_ahead_distance < 8:
-                self.tracking_excavator = True
-                raise ChangeDriverException
-
-            if self.tracking_excavator and not self.brakes_on:
-                if self.approach_distance_timestamp is not None and self.sim_time - self.approach_distance_timestamp > timedelta(seconds=15):
-                    # if was in approach bracket more than X secs, approach
-                    # TODO: may be following moving robot within the approach distance envelope for more than 15 secs
-                    # then it would give up control before lining up behind a digging robot
-                    self.approaching = True
-                    self.publish("desired_movement", [GO_STRAIGHT, 0, self.default_effort_level])
-
-                if self.approaching:
-                    if self.straight_ahead_distance < 0.3:
-                        self.set_brakes(True)
-
+            if self.scan_distance_to_obstacle < 800:
+                if abs(self.rover_angle) > 0.2:
+                    self.publish("desired_movement", [GO_STRAIGHT, -math.copysign(7500, self.rover_angle), -self.default_effort_level])
+#                if self.rover_angle > 0.2:
+#                    self.publish("desired_movement", [0, 0, self.default_effort_level])
+#                elif self.rover_angle < -0.2:
+#                    self.publish("desired_movement", [0, 0, -self.default_effort_level])
                 else:
-                    # if too close, move back no matter what
-                    if self.straight_ahead_distance < 0.5:
-                        self.publish("desired_movement", [GO_STRAIGHT, 0, -self.default_effort_level])
+                    # centered and between 0.5 and 2m distant
+                    self.publish("desired_movement", [0, 0, 0])
 
-                    if self.straight_ahead_distance < 1.5:
-                        if self.rover_angle > 0.2:
-                            self.publish("desired_movement", [0, 0, self.default_effort_level])
-                        elif self.rover_angle < -0.2:
-                            self.publish("desired_movement", [0, 0, -self.default_effort_level])
-                        else:
-                            # centered and between 0.5 and 2m distant
-                            self.publish("desired_movement", [0, 0, 0])
-
-                    else:
-                        # if bbox center in left or right quarter, turn in place
-                        # else if bbox off center turn while moving
-                        # else (bbox in center) go straight
-                        if center_x < CAMERA_WIDTH/4:
-                            self.publish("desired_movement", [0, 0, self.default_effort_level])
-                        elif center_x < (CAMERA_WIDTH/2 - 20):
-                            self.publish("desired_movement", [TURN_ON, 0, self.default_effort_level])
-                        elif center_x > 3*CAMERA_WIDTH/4:
-                            self.publish("desired_movement", [0, 0, -self.default_effort_level])
-                        elif center_x > (CAMERA_WIDTH/2 + 20):
-                            self.publish("desired_movement", [-TURN_ON, 0, self.default_effort_level])
-                        else:
-                            self.publish("desired_movement", [GO_STRAIGHT, 0, self.default_effort_level])
+            else:
+                # if bbox center in left or right quarter, turn in place
+                # else if bbox off center turn while moving
+                # else (bbox in center) go straight
+                if center_x < CAMERA_WIDTH/4:
+                    self.publish("desired_movement", [0, 0, self.default_effort_level])
+                elif center_x < (CAMERA_WIDTH/2 - 20):
+                    self.publish("desired_movement", [TURN_ON, 0, self.default_effort_level])
+                elif center_x > 3*CAMERA_WIDTH/4:
+                    self.publish("desired_movement", [0, 0, -self.default_effort_level])
+                elif center_x > (CAMERA_WIDTH/2 + 20):
+                    self.publish("desired_movement", [-TURN_ON, 0, self.default_effort_level])
+                else:
+                    self.publish("desired_movement", [GO_STRAIGHT, 0, self.default_effort_level])
 
 
     def on_scan(self, data):
         assert len(data) == 180
         super().on_scan(data)
-        return
 
-        # if we lose sight of rover for more than X seconds, it means it left and we should release brakes and look for it
-        # doesn't work super well because up real close, especially when aligned well, we do not see enough orange to idenfity rover
-        # will need robot-to-robot communication for best results
-        if (
-                self.tracking_excavator and
-                self.last_rover_timestamp is not None and
-                self.sim_time is not None and
-                self.sim_time - self.last_rover_timestamp > timedelta(seconds=30)
-        ):
-            self.set_brakes(False)
-            self.tracking_excavator = False
-            raise ChangeDriverException
+        if not self.finish_visually:
+            return
 
-        midindex = len(data) // 2
-        self.straight_ahead_distance = min_dist(data[midindex-20:midindex+20])
-#        print(self.straight_ahead_distance)
-        # if first time distance in bracket, mark timestamp
-        # if leaves bracket, reset to None
-        if self.approach_distance_timestamp is None and 0.5 < self.straight_ahead_distance < 2:
-            self.approach_distance_timestamp = self.sim_time
-        elif 0.5 > self.straight_ahead_distance or self.straight_ahead_distance > 2:
-            self.approach_distance_timestamp = None
+        if self.scan_distance_to_obstacle < 800:
+            if not self.arrived_message_sent:
+                print(self.sim_time, self.robot_name, "Sending arrived message to excavator")
+                self.send_request('external_command excavator_1 arrived')
+                self.arrived_message_sent = True
+
+            self.publish("desired_movement", [0, 0, 0])
 
         self.rover_angle = rover_center_angle(data)
 
