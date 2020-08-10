@@ -12,6 +12,7 @@ from osgar.bus import BusShutdownException
 from moon.controller import distance, SpaceRoboticsChallenge, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor
 from osgar.lib.virtual_bumper import VirtualBumper
 from osgar.lib.quaternion import euler_zyx
+from osgar.lib.mathex import normalizeAnglePIPI
 
 DIG_SAMPLE_COUNT = 12
 DIG_GOOD_LOCATION_MASS = 10
@@ -27,6 +28,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         self.use_gimbal = False
         self.robot_name = "excavator_1"
         self.hauler_ready = False
+        self.volatile_reached = False
 
     def on_osgar_broadcast(self, data):
         print(self.sim_time, self.robot_name, "Received external_command: %s" % str(data))
@@ -35,6 +37,12 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             command = data.split(" ")[1]
             if command == "arrived":
                 self.hauler_ready = True
+                if not self.volatile_reached:
+                    self.send_request('external_command hauler_1 follow')
+
+
+
+
 
     def on_bucket_info(self, bucket_status):
         self.volatile_dug_up = bucket_status
@@ -84,6 +92,10 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             # wait for interface to wake up before trying to move arm
             self.publish("bucket_drop", [math.pi, 'reset'])
 
+            while self.mount_angle is None or abs(normalizeAnglePIPI(math.pi - self.mount_angle)) > 0.2:
+                self.wait(timedelta(seconds=1))
+
+
             self.send_request('vslam_reset', vslam_reset_time)
 
             while vol_list is None or not self.true_pose:
@@ -93,7 +105,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             v = np.asmatrix(np.asarray([self.xyz[0], self.xyz[1], 1]))
             c, s = np.cos(self.yaw), np.sin(self.yaw)
             R = np.asmatrix(np.array(((c, -s, 0), (s, c, 0), (0, 0, 1))))
-            T = np.asmatrix(np.array(((1, 0, -6),(0, 1, 0),(0, 0, 1))))
+            T = np.asmatrix(np.array(((1, 0, -8),(0, 1, 0),(0, 0, 1))))
             pos =  np.dot(R, np.dot(T, np.dot(R.I, v.T)))
             self.send_request('external_command hauler_1 goto %.1f %.1f %.2f' % (pos[0], pos[1], self.yaw))
 
@@ -118,13 +130,14 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
 
                     try:
-                        print(self.sim_time, self.robot_name, "excavator: Pursuing volatile index: %d at distance: %f" % (ind[i], dist[i]))
+                        print(self.sim_time, self.robot_name, "excavator: Pursuing volatile [%.1f,%.1f] at distance: %f" % (vol_list[ind[i]][0],vol_list[ind[i]][1], dist[i]))
                         self.virtual_bumper = VirtualBumper(timedelta(seconds=3), 0.2) # radius of "stuck" area; a little more as the robot flexes
                         with LidarCollisionMonitor(self, 1500): # some distance needed not to lose tracking when seeing only obstacle up front
                             # turning in place probably not desirable because hauler behind may be in the way, may need to send it away first
                             #angle_diff = self.get_angle_diff(vol_list[ind[i]])
                             #self.turn(angle_diff, timeout=timedelta(seconds=15))
                             self.go_to_location(vol_list[ind[i]], self.default_effort_level, offset=-2, full_turn=True) # extra offset for sliding
+                            self.send_request('external_command hauler_1 approach')
                             break
 
                     except LidarCollisionException as e: #TODO: long follow of obstacle causes loss, go along under steeper angle
@@ -158,7 +171,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 #self.wait(timedelta(seconds=3))
                 #self.set_brakes(False)
                 #continue
-
+                self.volatile_reached = True
 
                 found_angle = None
                 angular_sample_increment = 3*math.pi/2 / DIG_SAMPLE_COUNT # will be sampling 270 degrees (excepting 90deg behind the rover)
@@ -198,7 +211,11 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     scoop_all(found_angle)
 
                 self.publish("bucket_drop", [math.pi, 'reset'])
+                self.send_request('external_command hauler_1 backout')
+
                 self.set_brakes(False)
+
+                self.volatile_reached = False
 
                 vol_list.pop(ind[i])# once scooping finished or given up on, remove volatile from list
 
