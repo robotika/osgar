@@ -9,7 +9,7 @@ from datetime import timedelta
 
 from osgar.bus import BusShutdownException
 
-from moon.controller import SpaceRoboticsChallenge, ChangeDriverException, VirtualBumperException, min_dist, LidarCollisionException, LidarCollisionMonitor
+from moon.controller import ps, SpaceRoboticsChallenge, ChangeDriverException, VirtualBumperException, min_dist, LidarCollisionException, LidarCollisionMonitor
 from osgar.lib.quaternion import euler_zyx
 from osgar.lib.virtual_bumper import VirtualBumper
 from osgar.lib.mathex import normalizeAnglePIPI
@@ -58,15 +58,16 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         self.arrived_message_sent = False
         self.target_excavator_distance = 2000
         self.objects_in_view = {}
+        self.bin_content = None
 
 
     def on_osgar_broadcast(self, data):
         def vslam_reset_time(response):
             self.vslam_reset_at = self.sim_time
 
-        print(self.sim_time, self.robot_name, "Received external_command: %s" % str(data))
         message_target = data.split(" ")[0]
-        if message_target == "hauler_1":
+        if message_target == self.robot_name:
+            print(self.sim_time, self.robot_name, "Received external_command: %s" % str(data))
             command = data.split(" ")[1]
             if command == "goto":
                 # x, y, heading
@@ -82,6 +83,12 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                 self.arrived_message_sent = False
             else:
                 print(self.sim_time, self.robot_name, "Invalid broadcast command")
+
+    def get_extra_status(self):
+        return "Bin: " + str([[a,b] for a,b in zip(self.bin_content[0], self.bin_content[1])])
+
+    def on_bin_info(self, data):
+        self.bin_content = data
 
     def run(self):
 

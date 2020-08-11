@@ -474,6 +474,8 @@ class SpaceRoboticsChallenge(MoonNode):
             self.last_reset_model = self.sim_time
             self.send_request('reset_model')
 
+    def get_extra_status(self):
+        return ""
 
     def update(self):
 
@@ -495,7 +497,8 @@ class SpaceRoboticsChallenge(MoonNode):
                         m = np.dot(obj['trans_matrix'], v.T)
                         x,y,z = [m[0,0], m[1,0], m[2,0]]
                         s += ps("Loc[%s]: [%f %f %f]" % (k, x, y, z))
-                s += ("---------------------------------------------------------")
+                s += self.get_extra_status()
+                s += ("\n---------------------------------------------------------")
                 print(s)
 
         channel = super().update()

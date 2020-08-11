@@ -80,7 +80,6 @@
               ["rosmsg.joint_effort", "excavator.joint_effort"],
               ["rosmsg.sim_clock", "excavator.sim_clock"],
               ["rosmsg.sim_clock", "app.sim_clock"],
-              ["rosmsg./excavator_1/bucket_info", "excavator.bucket_info"],
               ["rosmsg./excavator_1/bucket_info", "app.bucket_info"],
               ["app.desired_speed", "excavator.desired_speed"],
               ["app.desired_movement", "excavator.desired_movement"],

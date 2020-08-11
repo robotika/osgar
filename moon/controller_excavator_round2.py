@@ -9,7 +9,7 @@ import traceback
 
 from osgar.bus import BusShutdownException
 
-from moon.controller import distance, SpaceRoboticsChallenge, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor
+from moon.controller import ps, distance, SpaceRoboticsChallenge, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor
 from osgar.lib.virtual_bumper import VirtualBumper
 from osgar.lib.quaternion import euler_zyx
 from osgar.lib.mathex import normalizeAnglePIPI
@@ -31,9 +31,9 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         self.volatile_reached = False
 
     def on_osgar_broadcast(self, data):
-        print(self.sim_time, self.robot_name, "Received external_command: %s" % str(data))
         message_target = data.split(" ")[0]
         if message_target == self.robot_name:
+            print(self.sim_time, self.robot_name, "Received external_command: %s" % str(data))
             command = data.split(" ")[1]
             if command == "arrived":
                 self.hauler_ready = True
@@ -42,9 +42,14 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
 
 
-
+    def get_extra_status(self):
+        if self.volatile_dug_up[1] == 100:
+            return "Bucket empty"
+        else:
+            return ps("Bucket content: Type: %s idx: %d mass: %f" % (self.volatile_dug_up[0], self.volatile_dug_up[1], self.volatile_dug_up[2]))
 
     def on_bucket_info(self, bucket_status):
+        #[0] .. type ('ice'); [1] .. index (100=nothing); [2] .. mass
         self.volatile_dug_up = bucket_status
 
     def on_joint_position(self, data):
@@ -176,16 +181,18 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 found_angle = None
                 angular_sample_increment = 3*math.pi/2 / DIG_SAMPLE_COUNT # will be sampling 270 degrees (excepting 90deg behind the rover)
                 for j in range(DIG_SAMPLE_COUNT // 2):
-                    self.publish("bucket_dig", [-j * angular_sample_increment, 'append'])
+                    self.publish("bucket_dig", [0.03 + -j * angular_sample_increment, 'append'])
                 for j in range(1, DIG_SAMPLE_COUNT // 2):
-                    self.publish("bucket_dig", [j * angular_sample_increment, 'append'])
+                    self.publish("bucket_dig", [0.03 + j * angular_sample_increment, 'append'])
                 self.publish("bucket_drop", [math.pi, 'append'])
 
                 sample_start = self.sim_time
+                accum = 0
                 while found_angle is None and self.sim_time - sample_start < timedelta(seconds=140):
                     # TODO instead of/in addition to timeout, trigger exit by bucket reaching reset position
                     self.wait(timedelta(milliseconds=300))
                     if self.volatile_dug_up[1] != 100:
+                        accum += self.volatile_dug_up[2]
                         if self.volatile_dug_up[2] > DIG_GOOD_LOCATION_MASS:
                             found_angle = self.mount_angle
                         # go for volatile drop (to hauler), wait until finished
@@ -194,15 +201,21 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             self.wait(timedelta(milliseconds=300))
 
                 def scoop_all(angle):
+                    nonlocal accum
                     while True:
                         dig_start = self.sim_time
                         self.publish("bucket_dig", [angle, 'reset'])
                         while self.volatile_dug_up[1] == 100:
                             self.wait(timedelta(milliseconds=300))
-                            if self.sim_time - dig_start > timedelta(seconds=20):
+                            if self.sim_time - dig_start > timedelta(seconds=40):
                                 # move bucket out of the way and continue to next volatile
                                 self.publish("bucket_drop", [math.pi, 'append'])
                                 return
+                        accum += self.volatile_dug_up[2]
+                        if abs(accum - 100.0) < 0.1:
+                            print(self.sim_time, self.robot_name, "Volatile amount %.2f transfered, terminating" % accum)
+                            # TODO: assumes 100 to be total volatile at location, actual total reported initially, parse and match instead
+                            return
                         self.publish("bucket_drop", [math.pi, 'append'])
                         while self.volatile_dug_up[1] != 100:
                             self.wait(timedelta(milliseconds=300))
@@ -211,6 +224,11 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     scoop_all(found_angle)
 
                 self.publish("bucket_drop", [math.pi, 'reset'])
+
+                # wait for bucket to be dropped and/or position reset before moving on
+                while self.volatile_dug_up[1] != 100 or (self.mount_angle is None or abs(normalizeAnglePIPI(math.pi - self.mount_angle)) > 0.2):
+                    self.wait(timedelta(seconds=1))
+
                 self.send_request('external_command hauler_1 backout')
 
                 self.set_brakes(False)
