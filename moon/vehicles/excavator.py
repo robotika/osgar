@@ -52,7 +52,7 @@ class Excavator(Rover):
         self.bucket_scoop_sequence = (
             # [<seconds to execute>, [mount, base, distal, bucket]]
             # note, even though target angles are in range, the movement may be obstructed by another part of the robot (e.g, camera)
-            [20, [-0.6, -0.8, 3.2]], # get above scooping position
+            [20, [-0.6, -0.8, 3.2]], # get above scooping position #TODO: no need to move this high, however, need to swing through front of the robot not to hit hauler
             [20, [ 0.66, -1.0, 1.9]], # lower to scooping position
             [20, [ 0.4, 0.8, 3.2]], # scoop volatiles
             [20, [-0.6, -0.2, 3.92]] # lift up bucket with volatiles
@@ -67,8 +67,8 @@ class Excavator(Rover):
 
     def send_bucket_position(self, bucket_params):
         mount, basearm, distalarm, bucket = bucket_params
-        if 0.4 <= abs(mount) <= 1.25:
-            distalarm = max(0.15, distalarm)
+        if 0.4 <= abs(mount) <= 1.25 or 1.85 <= abs(mount) <= 2.75:
+            distalarm = min(0.15, distalarm)
         self.target_arm_position = [mount, basearm, distalarm, bucket]
         s = '%f %f %f %f\n' % (mount, basearm, distalarm, bucket)
         self.publish('bucket_cmd', bytes('bucket_position ' + s, encoding='ascii'))
