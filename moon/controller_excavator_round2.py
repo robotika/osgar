@@ -85,7 +85,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
             self.set_brakes(False)
 
-            self.set_cam_angle(-0.08)
+            self.set_cam_angle(-0.05)
             self.set_light_intensity("0.1")
 
             self.send_request('get_volatile_locations', process_volatiles)
@@ -121,12 +121,13 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 dist, ind = spatial.KDTree(vol_list).query([0,0], k=len(vol_list))
 
                 for i in range(len(dist)):
-                    if dist[i] < 5: # too close
-                        print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d, skipping" % (i, dist[i], ind[i]))
+                    d = distance(self.xyz, vol_list[ind[i]])
+                    if  d < 5: # too close/just did it
+                        print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d, skipping" % (i, d, ind[i]))
                         continue
 
-                    if abs(self.get_angle_diff(vol_list[ind[i]])) > 3*math.pi/4 and dist[i] < 10:
-                        print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d in opposite direction, skipping" % (i, dist[i], ind[i]))
+                    if abs(self.get_angle_diff(vol_list[ind[i]])) > 3*math.pi/4 and d < 10:
+                        print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d in opposite direction, skipping" % (i, d, ind[i]))
                         continue
                     if -3*math.pi/4 < math.atan2(vol_list[ind[i]][1] - self.xyz[1], vol_list[ind[i]][0] - self.xyz[0]) < -math.pi/4:
                         print (self.sim_time, self.robot_name, "%d: Too much away from the sun, shadow interference" % i)
@@ -138,7 +139,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
 
                     try:
-                        print(self.sim_time, self.robot_name, "excavator: Pursuing volatile [%.1f,%.1f] at distance: %f" % (vol_list[ind[i]][0],vol_list[ind[i]][1], dist[i]))
+                        print(self.sim_time, self.robot_name, "excavator: Pursuing volatile [%.1f,%.1f] at distance: %f" % (vol_list[ind[i]][0],vol_list[ind[i]][1], d))
                         self.virtual_bumper = VirtualBumper(timedelta(seconds=3), 0.2) # radius of "stuck" area; a little more as the robot flexes
                         with LidarCollisionMonitor(self, 1500): # some distance needed not to lose tracking when seeing only obstacle up front
                             # turning in place probably not desirable because hauler behind may be in the way, may need to send it away first
@@ -163,8 +164,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             break
                         self.inException = True
                         self.go_straight(-1) # go 1m in opposite direction
-                        self.turn(self.get_angle_diff(vol_list[ind[i]]), timeout=timedelta(seconds=15))
-                        self.drive_around_rock(6) # assume 6m the most needed
+                        angle_diff = self.get_angle_diff(vol_list[ind[i]])
+                        self.drive_around_rock(-math.copysign(5, angle_diff)) # assume 6m the most needed
                         self.inException = False
 
                 if i == len(dist) - 1:
@@ -203,8 +204,9 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     if self.volatile_dug_up[1] != 100:
                         # we found first volatile
 
+                        if best_angle is None or self.volatile_dug_up[2] > accum:
+                            best_angle = self.mount_angle
                         accum += self.volatile_dug_up[2]
-                        best_angle = self.mount_angle
                         if self.volatile_dug_up[2] > DIG_GOOD_LOCATION_MASS:
                             found_angle = self.mount_angle
                         # go for volatile drop (to hauler), wait until finished
@@ -232,7 +234,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         while self.volatile_dug_up[1] != 100:
                             self.wait(timedelta(milliseconds=300))
 
-                if found_angle is None:
+                if found_angle is None and best_angle is not None and accum >= 3.0:
+                    # do not attempt to collect all if initial amount too low, would take too long
                     found_angle = best_angle
                 if found_angle is not None:
                     if scoop_all(found_angle):
