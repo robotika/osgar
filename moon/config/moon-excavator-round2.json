@@ -6,7 +6,9 @@
           "driver": "moon.controller_excavator_round2:SpaceRoboticsChallengeExcavatorRound2",
           "in": ["odo_pose"],
           "out": ["desired_speed", "artf_cmd", "request_origin", "bucket_cmd"],
-          "init": {}
+          "init": {
+              "debug": true
+          }
       },
       "transmitter": {
           "driver": "zeromq",

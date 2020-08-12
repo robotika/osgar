@@ -20,6 +20,7 @@ from subt.local_planner import LocalPlanner
 from moon.moonnode import MoonNode
 
 TURN_RADIUS = 8 # radius of circle when turning
+AVOID_RADIUS = 8 # radius to use when going around an obstacle (this means it will not rush to go back to the same direction once it disappears off lidar)
 GO_STRAIGHT = float("inf")
 
 class ChangeDriverException(Exception):
@@ -197,6 +198,7 @@ class SpaceRoboticsChallenge(MoonNode):
         self.max_speed = 1.0  # oficial max speed is 1.5m/s
         self.max_angular_speed = math.radians(60)
 
+        self.debug = config.get('debug', False)
         self.min_safe_dist = config.get('min_safe_dist', 2.0)
         self.dangerous_dist = config.get('dangerous_dist', 1.5)
         self.safety_turning_coeff = config.get('safety_turning_coeff', 0.8)
@@ -223,6 +225,9 @@ class SpaceRoboticsChallenge(MoonNode):
         self.scan_history = []
         self.scan_min_window = 10 # we have to see at least 10 points nearer than threshold
         self.scan_nr_kept = 3 # we have to see at least 10 points nearer than threshold
+
+        self.avoidance_start = None
+        self.avoidance_turn = 0.0
 
         self.default_effort_level = 1000 # default is max speed
 
@@ -420,10 +425,12 @@ class SpaceRoboticsChallenge(MoonNode):
         # measure distance only in 66 degree angle (about the width of the robot 1.5m ahead)
         # NASA Lidar 150degrees wide, 100 samples
         # robot is ~2.21m wide (~1.2m x 2 with wiggle room)
-        collision_view = [x if x > 10 else 15000 for x in data[70:110]]
+        collision_view = [x if x > 10 else 15000 for x in data[60:120]]
         self.scan_history.append(collision_view)
         if len(self.scan_history) > self.scan_nr_kept:
             self.scan_history.pop(0)
+        else:
+            return
 
         median_scan = []
         for j in range(len(collision_view)):
@@ -516,8 +523,8 @@ class SpaceRoboticsChallenge(MoonNode):
         # offset: stop before (-) or past (+) the actual destination (e.g., to keep the destination in front of the robot)
         print(self.sim_time, self.robot_name, "go_to_location [%.1f,%.1f] (speed: %.1f)" % (pos[0], pos[1], math.copysign(self.max_speed, speed)))
 
+        dist = distance(pos, self.xyz)+offset
         if timeout is None:
-            dist = distance(pos, self.xyz)
             timeout = timedelta(seconds=(10 if full_turn else 0) + 2*dist / self.max_speed) # 30m should take at most 60 seconds, unless turning heavily, then add the amount of time it takes to turn around
 
         start_time = self.sim_time
@@ -527,9 +534,36 @@ class SpaceRoboticsChallenge(MoonNode):
         while distance(pos, self.xyz)+offset > 1 and (full_turn or abs(angle_diff) < math.pi/2):
             angle_diff = self.get_angle_diff(pos,speed)
             dist = distance(pos, self.xyz)+offset # do not turn just before arrival
-            if angle_diff > 0.1 and dist > 3:
+
+
+            if speed > 0 and dist > 5 and (self.scan_distance_to_obstacle < 4000 or (self.avoidance_start is not None and self.sim_time - self.avoidance_start < timedelta(milliseconds=2000))):
+                # do not avoid obstacles when real close
+                if self.scan_distance_to_obstacle < 4000:
+                    self.avoidance_start = self.sim_time
+                    if self.scan_avg_distance_left < self.scan_avg_distance_right: # obstacle is more on the left
+                        self.avoidance_turn = -AVOID_RADIUS
+                    else:
+                        self.avoidance_turn = AVOID_RADIUS
+                    turn = self.avoidance_turn
+                    if (self.debug):
+                        print(self.sim_time, self.robot_name, "Seeing object, turning, distance %d" % self.scan_distance_to_obstacle)
+
+                elif self.avoidance_start is not None and self.sim_time - self.avoidance_start < timedelta(milliseconds=500):
+                    if (self.debug):
+                        print(self.sim_time, self.robot_name, "Still turning")
+                    turn = self.avoidance_turn # keep turning 0.5s after obstacle no longer visible
+
+                elif self.avoidance_start is not None and self.sim_time - self.avoidance_start < timedelta(milliseconds=2000):
+                    if (self.debug):
+                        print(self.sim_time, self.robot_name, "Going straight")
+                    turn = GO_STRAIGHT # go straight additional 1s after no longer turning
+                else:
+                    print("SHOULDNT BE HERE")
+
+
+            elif angle_diff > 0.1 and dist > 1:
                 turn = TURN_RADIUS * math.copysign(1, speed)
-            elif angle_diff < -0.1 and dist > 3:
+            elif angle_diff < -0.1 and dist > 1:
                 turn = -TURN_RADIUS * math.copysign(1, speed)
             else:
                 turn = GO_STRAIGHT
@@ -638,7 +672,8 @@ class SpaceRoboticsChallenge(MoonNode):
                 break
 
     def drive_around_rock(self, how_far, view_direction=None, timeout=None):
-        # go around a rock to the left while keeping to look forward
+        # go around a rock with 'how_far' clearance, if how_far positive, it goes around to the left, negative means right
+        # will keeping to look forward (i.e, movement is sideways)
         # view_direction - if present, first turn in place to point in that direction
         # TODO: use lidar to go around as much as needed
         print(self.sim_time, self.robot_name, "go_around_a_rock %.1f (speed: %.1f)" % (how_far, self.max_speed))
