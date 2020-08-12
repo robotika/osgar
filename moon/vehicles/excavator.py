@@ -51,21 +51,25 @@ class Excavator(Rover):
         self.arm_joint_names = [b'mount_joint', b'basearm_joint', b'distalarm_joint', b'bucket_joint']
         self.bucket_scoop_sequence = (
             # [<seconds to execute>, [mount, base, distal, bucket]]
-            [12, [-0.6, -0.8, 3.2]], # get above scooping position
-            [4, [ 1.0, -1.0, 1.9]], # lower to scooping position
-            [2, [ 0.4, 0.8, 3.2]], # scoop volatiles
-            [8, [ -0.6, -0.2, 3.92]] # lift up bucket with volatiles
+            # note, even though target angles are in range, the movement may be obstructed by another part of the robot (e.g, camera)
+            [20, [-0.6, -0.8, 3.2]], # get above scooping position
+            [20, [ 0.66, -1.0, 1.9]], # lower to scooping position
+            [20, [ 0.4, 0.8, 3.2]], # scoop volatiles
+            [20, [-0.6, -0.2, 3.92]] # lift up bucket with volatiles
             )
         self.bucket_drop_sequence = (
-            [12, [-0.6, -0.2, 3.92]], # turn towards dropping position
-            [4, [-0.3, -0.8, 3.92]], # extend arm
-            [4, [-0.3, -0.8, 3]], # drop
-            [4, [-0.6, -0.8, 3.2]] # back to neutral/travel position
+            [20, [-0.6, -0.2, 3.92]], # turn towards dropping position
+            [20, [-0.3, -0.8, 3.92]], # extend arm
+            [20, [-0.3, -0.8, 3]], # drop
+            [20, [-0.6, -0.8, 3.2]] # back to neutral/travel position
         )
         self.bucket_last_status_timestamp = None
 
     def send_bucket_position(self, bucket_params):
         mount, basearm, distalarm, bucket = bucket_params
+        if 0.4 <= abs(mount) <= 1.25:
+            distalarm = max(0.15, distalarm)
+        self.target_arm_position = [mount, basearm, distalarm, bucket]
         s = '%f %f %f %f\n' % (mount, basearm, distalarm, bucket)
         self.publish('bucket_cmd', bytes('bucket_position ' + s, encoding='ascii'))
 
@@ -114,7 +118,6 @@ class Excavator(Rover):
                      )
             ):
                 duration, bucket_params = self.execute_bucket_queue.pop(0)
-                self.target_arm_position = bucket_params
 #                print ("bucket_position %f %f %f " % (bucket_params[0], bucket_params[1],bucket_params[2]))
                 self.send_bucket_position(bucket_params)
                 self.scoop_time = self.sim_time + timedelta(seconds=duration)
