@@ -73,7 +73,7 @@ class ArtifactDetector(Node):
                 'min_size': 20,
                 'max_size': 700,
                 'min_y': None,
-                'pixel_count_threshold': 500,
+                'pixel_count_threshold': 250,
                 'bbox_union_count': 3,
                 'hue_max_difference': 5,
                 'hue_match': 29, # from RGB FFA616
