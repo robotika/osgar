@@ -121,8 +121,12 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 dist, ind = spatial.KDTree(vol_list).query([0,0], k=len(vol_list))
 
                 for i in range(len(dist)):
+                    if dist[i] < 5: # too close
+                        print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d, skipping" % (i, dist[i], ind[i]))
+                        continue
+
                     if abs(self.get_angle_diff(vol_list[ind[i]])) > 3*math.pi/4 and dist[i] < 10:
-                        print (self.sim_time, self.robot_name, "%d: excavator: Distance distance: %f, index: %d in opposite direction, skipping" % (i, dist[i], ind[i]))
+                        print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d in opposite direction, skipping" % (i, dist[i], ind[i]))
                         continue
                     if -3*math.pi/4 < math.atan2(vol_list[ind[i]][1] - self.xyz[1], vol_list[ind[i]][0] - self.xyz[0]) < -math.pi/4:
                         print (self.sim_time, self.robot_name, "%d: Too much away from the sun, shadow interference" % i)
@@ -140,7 +144,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             # turning in place probably not desirable because hauler behind may be in the way, may need to send it away first
                             #angle_diff = self.get_angle_diff(vol_list[ind[i]])
                             #self.turn(angle_diff, timeout=timedelta(seconds=15))
-                            self.go_to_location(vol_list[ind[i]], self.default_effort_level, offset=-2, full_turn=True) # extra offset for sliding
+                            self.go_to_location(vol_list[ind[i]], self.default_effort_level, offset=-2, timeout=timedelta(minutes=5), full_turn=True) # extra offset for sliding
                             self.send_request('external_command hauler_1 approach')
                             self.hauler_ready = False
                             break
@@ -184,20 +188,23 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     self.wait(timedelta(seconds=1))
 
                 found_angle = None
-                mount_angle_sequence = [-0.15, 0.15, 0.45, -0.45, -0.8, 0.8, 1.2, -1.2, -1.5, 1.5, 1.9, -1.9]
+                best_angle = None
+                # mount 0.4-1.25 or 1.85-2.75 means we can't reach under the vehicle because of the wheels
+                mount_angle_sequence = [0.0, 0.39, -0.39, -0.83, 0.83, 1.26, -1.26, -1.55, 1.55, 1.84, -1.84, -2.2, 2.2, 2.6, -2.6]
                 for a in mount_angle_sequence:
                     self.publish("bucket_dig", [a, 'append'])
                 self.publish("bucket_drop", [math.pi, 'append'])
 
                 sample_start = self.sim_time
                 accum = 0
-                while found_angle is None and self.sim_time - sample_start < timedelta(seconds=140):
+                while found_angle is None and self.sim_time - sample_start < timedelta(seconds=200):
                     # TODO instead of/in addition to timeout, trigger exit by bucket reaching reset position
                     self.wait(timedelta(milliseconds=300))
                     if self.volatile_dug_up[1] != 100:
                         # we found first volatile
 
                         accum += self.volatile_dug_up[2]
+                        best_angle = self.mount_angle
                         if self.volatile_dug_up[2] > DIG_GOOD_LOCATION_MASS:
                             found_angle = self.mount_angle
                         # go for volatile drop (to hauler), wait until finished
@@ -212,21 +219,24 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         self.publish("bucket_dig", [angle, 'reset'])
                         while self.volatile_dug_up[1] == 100:
                             self.wait(timedelta(milliseconds=300))
-                            if self.sim_time - dig_start > timedelta(seconds=40):
+                            if self.sim_time - dig_start > timedelta(seconds=40): # TODO: timeout needs to be adjusted to the ultimate digging plan
                                 # move bucket out of the way and continue to next volatile
                                 self.publish("bucket_drop", [math.pi, 'append'])
-                                return
+                                return False
                         accum += self.volatile_dug_up[2]
                         if abs(accum - 100.0) < 0.1:
                             print(self.sim_time, self.robot_name, "Volatile amount %.2f transfered, terminating" % accum)
                             # TODO: assumes 100 to be total volatile at location, actual total reported initially, parse and match instead
-                            return
+                            return True
                         self.publish("bucket_drop", [math.pi, 'append'])
                         while self.volatile_dug_up[1] != 100:
                             self.wait(timedelta(milliseconds=300))
 
+                if found_angle is None:
+                    found_angle = best_angle
                 if found_angle is not None:
-                    scoop_all(found_angle)
+                    if scoop_all(found_angle):
+                        vol_list.pop(ind[i])# once scooping finished or given up on, remove volatile from list
 
                 self.publish("bucket_drop", [math.pi, 'reset'])
 
@@ -234,13 +244,12 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 while self.volatile_dug_up[1] != 100 or (self.mount_angle is None or abs(normalizeAnglePIPI(math.pi - self.mount_angle)) > 0.2):
                     self.wait(timedelta(seconds=1))
 
-                self.send_request('external_command hauler_1 backout')
+                self.send_request('external_command hauler_1 follow')
 
                 self.set_brakes(False)
 
                 self.volatile_reached = False
 
-                vol_list.pop(ind[i])# once scooping finished or given up on, remove volatile from list
 
 
         except BusShutdownException:
