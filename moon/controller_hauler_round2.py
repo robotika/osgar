@@ -19,6 +19,8 @@ CAMERA_HEIGHT = 480
 
 TURN_ON = 10 # radius of circle when turning
 GO_STRAIGHT = float("inf")
+EXCAVATOR_DRIVING_GAP = 1500
+EXCAVATOR_DIGGING_GAP = 800
 
 def rover_center_angle(laser_data):
     # positive to the left, negative to the right
@@ -56,7 +58,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         self.goto = None
         self.finish_visually = False
         self.arrived_message_sent = False
-        self.target_excavator_distance = 2000
+        self.target_excavator_distance = EXCAVATOR_DRIVING_GAP
         self.objects_in_view = {}
         self.bin_content = None
 
@@ -75,11 +77,12 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                 self.send_request('vslam_reset', vslam_reset_time)
             elif command == "approach":
                 self.arrived_message_sent = False
-                self.target_excavator_distance = 800
+                self.target_excavator_distance = EXCAVATOR_DIGGING_GAP
             elif command == "backout":
                 self.arrived_message_sent = False
-                self.target_excavator_distance = 3000
+                self.target_excavator_distance = EXCAVATOR_DRIVING_GAP
             elif command == "follow":
+                self.target_excavator_distance = EXCAVATOR_DRIVING_GAP
                 self.arrived_message_sent = False
             else:
                 print(self.sim_time, self.robot_name, "Invalid broadcast command")
@@ -227,6 +230,8 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
 
         if not self.finish_visually:
             return
+
+        # TODO: avoid obstacles when following (too tight turns)
 
         if 'rover' in self.objects_in_view.keys() and self.target_excavator_distance - 100 < self.scan_distance_to_obstacle < self.target_excavator_distance + 100:
             if not self.arrived_message_sent:
