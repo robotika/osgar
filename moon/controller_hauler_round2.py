@@ -17,7 +17,7 @@ from osgar.lib.mathex import normalizeAnglePIPI
 CAMERA_WIDTH = 640
 CAMERA_HEIGHT = 480
 
-TURN_ON = 10 # radius of circle when turning
+TURN_ON = 12 # radius of circle when turning
 GO_STRAIGHT = float("inf")
 EXCAVATOR_DRIVING_GAP = 1500
 EXCAVATOR_DIGGING_GAP = 800
@@ -117,7 +117,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                         with LidarCollisionMonitor(self, 2000):
                             angle_diff = self.get_angle_diff(self.goto, 1)
                             self.turn(angle_diff)
-                            self.go_to_location(self.goto, self.default_effort_level, full_turn=True, timeout=timedelta(minutes=2))
+                            self.go_to_location(self.goto, self.default_effort_level, full_turn=False, timeout=timedelta(minutes=2))
                             self.turn(normalizeAnglePIPI(self.goto[2] - self.yaw))
                         self.goto = None
                         self.finish_visually = True
