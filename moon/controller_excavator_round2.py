@@ -14,7 +14,6 @@ from osgar.lib.virtual_bumper import VirtualBumper
 from osgar.lib.quaternion import euler_zyx
 from osgar.lib.mathex import normalizeAnglePIPI
 
-DIG_SAMPLE_COUNT = 12
 DIG_GOOD_LOCATION_MASS = 10
 
 class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
@@ -86,7 +85,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
             self.set_brakes(False)
 
-            self.set_cam_angle(0.0)
+            self.set_cam_angle(-0.08)
             self.set_light_intensity("0.1")
 
             self.send_request('get_volatile_locations', process_volatiles)
@@ -143,6 +142,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             #self.turn(angle_diff, timeout=timedelta(seconds=15))
                             self.go_to_location(vol_list[ind[i]], self.default_effort_level, offset=-2, full_turn=True) # extra offset for sliding
                             self.send_request('external_command hauler_1 approach')
+                            self.hauler_ready = False
                             break
 
                     except LidarCollisionException as e: #TODO: long follow of obstacle causes loss, go along under steeper angle
@@ -178,12 +178,15 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 #continue
                 self.volatile_reached = True
 
+                # TODO: could look for volatile while waiting
+                # wait for hauler to start following, will receive osgar broadcast when done
+                while not self.hauler_ready:
+                    self.wait(timedelta(seconds=1))
+
                 found_angle = None
-                angular_sample_increment = 3*math.pi/2 / DIG_SAMPLE_COUNT # will be sampling 270 degrees (excepting 90deg behind the rover)
-                for j in range(DIG_SAMPLE_COUNT // 2):
-                    self.publish("bucket_dig", [0.03 + -j * angular_sample_increment, 'append'])
-                for j in range(1, DIG_SAMPLE_COUNT // 2):
-                    self.publish("bucket_dig", [0.03 + j * angular_sample_increment, 'append'])
+                mount_angle_sequence = [-0.15, 0.15, 0.45, -0.45, -0.8, 0.8, 1.2, -1.2, -1.5, 1.5, 1.9, -1.9]
+                for a in mount_angle_sequence:
+                    self.publish("bucket_dig", [a, 'append'])
                 self.publish("bucket_drop", [math.pi, 'append'])
 
                 sample_start = self.sim_time
@@ -192,6 +195,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     # TODO instead of/in addition to timeout, trigger exit by bucket reaching reset position
                     self.wait(timedelta(milliseconds=300))
                     if self.volatile_dug_up[1] != 100:
+                        # we found first volatile
+
                         accum += self.volatile_dug_up[2]
                         if self.volatile_dug_up[2] > DIG_GOOD_LOCATION_MASS:
                             found_angle = self.mount_angle
