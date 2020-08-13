@@ -38,7 +38,7 @@ ROBOT_PIDS=()
 ROS_PIDS=()
 echo "Start robot solution"
 export OSGAR_LOGS=`pwd`
-cd osgar
+cd /osgar
 for s in ${JSONFILES[@]}; do
     echo "starting recording of $s"
     python3 -m osgar.record --duration 2700 moon/config/$s --note "collect some ROS data" &
@@ -59,7 +59,7 @@ export ROSCONSOLE_CONFIG_FILE="${samedir}/rosconsole.config"
 
 for ((i=0; i < ${#ROVERSCRIPTS[@]}; i++)) do
     echo "Starting script '${ROVERSCRIPTS[$i]}'"
-    python ./osgar/moon/rospy/${ROVERSCRIPTS[$i]} &
+    python /osgar/moon/rospy/${ROVERSCRIPTS[$i]} &
     ROS_PIDS+=($!)
 done
 
