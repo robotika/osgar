@@ -6,7 +6,9 @@
           "driver": "moon.controller_hauler_round2:SpaceRoboticsChallengeHaulerRound2",
           "in": ["odo_pose"],
           "out": ["desired_speed", "artf_cmd", "request_origin"],
-          "init": {}
+          "init": {
+              "debug": true
+          }
       },
       "transmitter": {
           "driver": "zeromq",
@@ -68,6 +70,7 @@
         "in": [],
         "out": [],
         "init": {
+            "artefacts": ["rover"]
         }
       }
     },

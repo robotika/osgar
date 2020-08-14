@@ -23,6 +23,7 @@ class ArtifactDetector(Node):
         self.scan = None  # should laster initialize super()
         self.depth = None  # more precise definiton of depth image
         self.width = None  # detect from incoming images
+        self.look_for_artefacts = config.get('artefacts', [])
         self.detectors = [
             {
                 'artefact_name': 'cubesat',
@@ -70,10 +71,10 @@ class ArtifactDetector(Node):
                 'artefact_name': 'rover',
                 'detector_type': 'colormatch',
                 'mser': cv2.MSER_create(_min_area=100),
-                'min_size': 20,
+                'min_size': 10,
                 'max_size': 700,
                 'min_y': None,
-                'pixel_count_threshold': 250,
+                'pixel_count_threshold': 150,
                 'bbox_union_count': 3,
                 'hue_max_difference': 5,
                 'hue_match': 29, # from RGB FFA616
@@ -142,6 +143,9 @@ class ArtifactDetector(Node):
 
         objects_detected = []
         for c in self.detectors:
+            if c['artefact_name'] not in self.look_for_artefacts:
+                continue
+
             if c['artefact_name'] not in self.detect_sequences:
                 self.detect_sequences[c['artefact_name']] = 0
 
