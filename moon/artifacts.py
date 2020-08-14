@@ -14,6 +14,13 @@ from osgar.bus import BusShutdownException
 
 curdir = Path(__file__).parent
 
+def union(a,b):
+  x = min(a[0], b[0])
+  y = min(a[1], b[1])
+  w = max(a[0]+a[2], b[0]+b[2]) - x
+  h = max(a[1]+a[3], b[1]+b[3]) - y
+  return (x, y, w, h)
+
 class ArtifactDetector(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
@@ -160,15 +167,7 @@ class ArtifactDetector(Node):
                     sb = sorted(bboxes, key = box_area, reverse = True)[:c['bbox_union_count']]
                     bbox = sb[0]
                     for b in sb[1:]:
-                        if b[0] < bbox[0]:
-                            bbox[0] = b[0]
-                        if b[1] < bbox[1]:
-                            bbox[1] =b[1]
-                        if b[0] + b[2] > bbox[0] + bbox[2]:
-                            bbox[2] = b[0] + b[2] - bbox[0]
-                        if b[1] + b[3] > bbox[1] + bbox[3]:
-                            bbox[3] = b[1] + b[3] - bbox[1]
-
+                        bbox = union(bbox,b)
                     x, y, w, h = bbox
                     match_count = cv2.countNonZero(mask[y:y+h,x:x+w])
                     if (
