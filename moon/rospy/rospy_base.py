@@ -19,6 +19,7 @@ import sys, getopt
 
 import rospy
 from rosgraph_msgs.msg import Clock
+from std_msgs.msg import String
 
 interrupted = False
 
@@ -66,6 +67,7 @@ class RospyBasePushPull(Thread):
 
     def register_handlers(self):
         rospy.Subscriber('/clock', Clock, self.callback_clock)
+        rospy.Subscriber('/osgar/broadcast', String, self.callback_topic, '/osgar/broadcast')
 
     def process_message(self, message):
         pass
@@ -135,10 +137,18 @@ class RospyBaseReqRep(Thread):
         self.reqrep_socket.bind('tcp://127.0.0.1:' + self.REQREP_PORT)
 
     def process_message(self, message):
+        message_type = message.split(" ")[0]
+        if message_type == "external_command":
+            command = message[17:]
+            print ("rospy_base: Sending external command: <%s>" % command)
+            self.osgar_broadcast_msg.data = command
+            self.osgar_broadcast_pub.publish(self.osgar_broadcast_msg)
+            return 'OK'
         return ''
 
     def register_handlers(self):
-        pass
+        self.osgar_broadcast_pub = rospy.Publisher('/osgar/broadcast', String, queue_size=1, latch=True)
+        self.osgar_broadcast_msg = String()
 
     def run(self):
         while True:
