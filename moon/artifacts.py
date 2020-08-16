@@ -17,11 +17,11 @@ from moon.moonnode import MoonNode
 curdir = Path(__file__).parent
 
 def union(a,b):
-  x = min(a[0], b[0])
-  y = min(a[1], b[1])
-  w = max(a[0]+a[2], b[0]+b[2]) - x
-  h = max(a[1]+a[3], b[1]+b[3]) - y
-  return (x, y, w, h)
+    x = min(a[0], b[0])
+    y = min(a[1], b[1])
+    w = max(a[0]+a[2], b[0]+b[2]) - x
+    h = max(a[1]+a[3], b[1]+b[3]) - y
+    return (x, y, w, h)
 
 class ArtifactDetector(MoonNode):
     def __init__(self, config, bus):
@@ -35,7 +35,7 @@ class ArtifactDetector(MoonNode):
         self.look_for_artefacts = config.get('artefacts', [])
 
         window_size = 5
-        min_disp = 48
+        min_disp = 16
         num_disp = 192-min_disp
         blockSize = window_size
         uniquenessRatio = 7
@@ -45,15 +45,15 @@ class ArtifactDetector(MoonNode):
         P1 = 8*3*window_size**2
         P2 = 32 * 3 * window_size ** 2
         self.stereo_calc = cv2.StereoSGBM_create(
-          minDisparity = min_disp,
-          numDisparities = num_disp,
-          blockSize = window_size,
-          uniquenessRatio = uniquenessRatio,
-          speckleRange = speckleRange,
-          speckleWindowSize = speckleWindowSize,
-          disp12MaxDiff = disp12MaxDiff,
-          P1 = P1,
-          P2 = P2
+            minDisparity = min_disp,
+            numDisparities = num_disp,
+            blockSize = window_size,
+            uniquenessRatio = uniquenessRatio,
+            speckleRange = speckleRange,
+            speckleWindowSize = speckleWindowSize,
+            disp12MaxDiff = disp12MaxDiff,
+            P1 = P1,
+            P2 = P2
         )
         WIDTH=640
         HEIGHT=480
@@ -138,6 +138,8 @@ class ArtifactDetector(MoonNode):
         while self.left_image is None or self.right_image is None or self.left_seq != self.right_seq:
             self.time, channel, data = self.listen()
             image, seq = data
+            if (self.debug):
+                print(self.sim_time, "Artefact image: %s %d" % (channel, seq))
             if channel == "left_image":
                 self.left_image = image
                 self.left_seq = seq
@@ -236,11 +238,11 @@ class ArtifactDetector(MoonNode):
                             if len(distances_clean) == 0:
                               distances_clean = distances
                               # print("Artf cleaned: min %.1f median: %.1f" % (min(final_list), median(final_list)))
-                            dist = max(0.0, median(distances_clean) - 1.0) # subtract about half length of the rover
+                            dist = max(0.0, min(distances_clean)) # subtract about half length of the rover
                             if (self.debug):
                                 print(self.sim_time, "Artefact distance: %.1f" % (dist))
                             # NOTE: when the artifact is barely in the picture (and computation not possible), distance 9.7 seems to be returned, TODO: return special value?
-                            results.append((c['artefact_name'], int(x), int(y), int(w), int(h), int(match_count), dist))
+                            results.append((c['artefact_name'], int(x), int(y), int(w), int(h), int(match_count), float(dist)))
 
             if c['detector_type'] == 'classifier':
                 lfound = c['classifier'].detectMultiScale(limg_rgb, minSize =(c['min_size'], c['min_size']),  maxSize =(c['max_size'], c['max_size']))
