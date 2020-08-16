@@ -18,16 +18,12 @@
 #
 
 # Builds a Docker image.
-PROCNR=1
-while getopts hp: arg; do
+while getopts h arg; do
     case $arg in
-	p)
-	    PROCNR=$OPTARG
-            ;;
         h)
             echo "Usage: $0 [-p <number of processors to use>] <directory-name>"
             exit 1
-            ;;            
+            ;;
     esac
 done
 
@@ -52,7 +48,7 @@ image_plus_tag=$image_name:$(date +%Y_%m_%d_%H%M)
 shift
 
 
-docker build --rm -t $image_plus_tag -f $DIR/$image_name/Dockerfile ${HOME}/space-challenge/ --build-arg NUM_THREADS=$PROCNR
+docker build --rm -t $image_plus_tag -f $DIR/$image_name/Dockerfile ${HOME}/space-challenge/ --build-arg NUM_THREADS=$(nproc)
 docker tag $image_plus_tag $image_name:latest
 #docker tag $image_plus_tag $image_name:$hg_id
 
