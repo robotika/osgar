@@ -222,6 +222,7 @@ class SpaceRoboticsChallenge(MoonNode):
         self.scan_avg_distance_left = 15000
         self.scan_avg_distance_right = 15000
         self.scan_history = []
+        self.median_scan = []
         self.scan_min_window = 10 # we have to see at least 10 points nearer than threshold
         self.scan_nr_kept = 3 # we have to see at least 10 points nearer than threshold
 
@@ -435,6 +436,7 @@ class SpaceRoboticsChallenge(MoonNode):
         median_scan = []
         for j in range(len(collision_view)):
             median_scan.append(median([self.scan_history[i][j] for i in range(len(self.scan_history))]))
+        self.median_scan = median_scan
 
         # measure distance only in 66 degree angle (about the width of the robot 1.5m ahead)
         self.scan_avg_distance_left = sum(median_scan[len(median_scan)//2:len(median_scan)//2 + 20]) / 20
