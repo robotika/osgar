@@ -86,7 +86,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             self.set_brakes(False)
 
             self.set_cam_angle(-0.05)
-            self.set_light_intensity("0.1")
+            self.set_light_intensity("0.4")
 
             self.send_request('get_volatile_locations', process_volatiles)
 
@@ -143,10 +143,10 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         self.virtual_bumper = VirtualBumper(timedelta(seconds=3), 0.2) # radius of "stuck" area; a little more as the robot flexes
                         with LidarCollisionMonitor(self, 1500): # some distance needed not to lose tracking when seeing only obstacle up front
                             # turning in place probably not desirable because hauler behind may be in the way, may need to send it away first
-                            #angle_diff = self.get_angle_diff(vol_list[ind[i]])
-                            #self.turn(angle_diff, timeout=timedelta(seconds=15))
-                            self.go_to_location(vol_list[ind[i]], self.default_effort_level, offset=-2, timeout=timedelta(minutes=5), full_turn=True) # extra offset for sliding
-                            self.send_request('external_command hauler_1 approach')
+                            angle_diff = self.get_angle_diff(vol_list[ind[i]])
+                            self.turn(math.copysign(min(abs(angle_diff),math.pi/4),angle_diff), timeout=timedelta(seconds=15))
+                            self.go_to_location(vol_list[ind[i]], self.default_effort_level, offset=-0.5, timeout=timedelta(minutes=5), full_turn=True) # extra offset for sliding
+                            self.send_request('external_command hauler_1 approach %f' % self.yaw) # TODO: due to skidding, this yaw may still change after sending
                             self.hauler_ready = False
                             break
 
@@ -186,7 +186,15 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 # TODO: could look for volatile while waiting
                 # wait for hauler to start following, will receive osgar broadcast when done
                 while not self.hauler_ready:
-                    self.wait(timedelta(seconds=1))
+                    try:
+                        self.wait(timedelta(seconds=1))
+                    except:
+                        # excess pitch or other exception could happen but we are stopped so should stabilize
+                        pass
+
+                #self.volatile_reached = False # TEST
+                #self.send_request('external_command hauler_1 backout') # Testing
+                #continue # testing
 
                 found_angle = None
                 best_angle = None
@@ -226,7 +234,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                 self.publish("bucket_drop", [math.pi, 'append'])
                                 return False
                         accum += self.volatile_dug_up[2]
-                        if abs(accum - 100.0) < 0.1:
+                        if abs(accum - 100.0) < 0.0001:
                             print(self.sim_time, self.robot_name, "Volatile amount %.2f transfered, terminating" % accum)
                             # TODO: assumes 100 to be total volatile at location, actual total reported initially, parse and match instead
                             return True
