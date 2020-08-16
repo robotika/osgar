@@ -18,24 +18,32 @@
 #
 
 # Builds a Docker image.
+PROCNR=1
+while getopts hp: arg; do
+    case $arg in
+	p)
+	    PROCNR=$OPTARG
+            ;;
+        h)
+            echo "Usage: $0 [-p <number of processors to use>] <directory-name>"
+            exit 1
+            ;;            
+    esac
+done
 
-if [ $# -eq 0 ]
-then
-    echo "Usage: $0 directory-name"
-    exit 1
-fi
+DIR_ARG=${@:$OPTIND:1}
 
 # get path to current directory
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-if [ ! -d $DIR/$1 ]
+if [ ! -d $DIR/$DIR_ARG ]
 then
   echo "image-name must be a directory in the same folder as this script"
   exit 2
 fi
 
 user_id=$(id -u)
-image_name=$(basename $1)
+image_name=$(basename $DIR_ARG)
 image_plus_tag=$image_name:$(date +%Y_%m_%d_%H%M)
 # mercurial adds a + symbol if there are uncomitted changes in the repo
 # that will break docker tag syntax
@@ -44,7 +52,7 @@ image_plus_tag=$image_name:$(date +%Y_%m_%d_%H%M)
 shift
 
 
-docker build --rm -t $image_plus_tag -f $DIR/$image_name/Dockerfile ${HOME}/space-challenge/
+docker build --rm -t $image_plus_tag -f $DIR/$image_name/Dockerfile ${HOME}/space-challenge/ --build-arg NUM_THREADS=$PROCNR
 docker tag $image_plus_tag $image_name:latest
 #docker tag $image_plus_tag $image_name:$hg_id
 
