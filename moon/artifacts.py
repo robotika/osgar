@@ -23,7 +23,7 @@ def union(a,b):
     h = max(a[1]+a[3], b[1]+b[3]) - y
     return (x, y, w, h)
 
-class ArtifactDetector(MoonNode):
+class ArtifactDetector(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("artf", "dropped")
@@ -134,18 +134,12 @@ class ArtifactDetector(MoonNode):
 
     def waitForImage(self):
         self.left_image = self.right_image = None
-        self.left_seq = self.right_seq = 0
-        while self.left_image is None or self.right_image is None or self.left_seq != self.right_seq:
+        while self.left_image is None or self.right_image is None:
             self.time, channel, data = self.listen()
-            image, seq = data
-            if (self.debug):
-                print(self.sim_time, "Artefact image: %s %d" % (channel, seq))
             if channel == "left_image":
-                self.left_image = image
-                self.left_seq = seq
-            else: # right image
-                self.right_image = image
-                self.right_seq = seq
+                self.left_image = data
+            elif channel == "right_image":
+                self.right_image = data
         return self.time
 
     def run(self):
@@ -239,8 +233,6 @@ class ArtifactDetector(MoonNode):
                               distances_clean = distances
                               # print("Artf cleaned: min %.1f median: %.1f" % (min(final_list), median(final_list)))
                             dist = max(0.0, min(distances_clean)) # subtract about half length of the rover
-                            if (self.debug):
-                                print(self.sim_time, "Artefact distance: %.1f" % (dist))
                             # NOTE: when the artifact is barely in the picture (and computation not possible), distance 9.7 seems to be returned, TODO: return special value?
                             results.append((c['artefact_name'], int(x), int(y), int(w), int(h), int(match_count), float(dist)))
 
