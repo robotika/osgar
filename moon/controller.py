@@ -198,7 +198,6 @@ class SpaceRoboticsChallenge(MoonNode):
         self.max_speed = 1.0  # oficial max speed is 1.5m/s
         self.max_angular_speed = math.radians(60)
 
-        self.debug = config.get('debug', False)
         self.min_safe_dist = config.get('min_safe_dist', 2.0)
         self.dangerous_dist = config.get('dangerous_dist', 1.5)
         self.safety_turning_coeff = config.get('safety_turning_coeff', 0.8)
@@ -422,10 +421,11 @@ class SpaceRoboticsChallenge(MoonNode):
         self.score = data[0]
 
     def on_scan(self, data):
-        # measure distance only in 66 degree angle (about the width of the robot 1.5m ahead)
+        # data is 180 samples, first and last 40 are 0
         # NASA Lidar 150degrees wide, 100 samples
         # robot is ~2.21m wide (~1.2m x 2 with wiggle room)
-        collision_view = [x if x > 10 else 15000 for x in data[60:120]]
+        # 40 samples represents 60 degrees (1.0472rad)
+        collision_view = [x if x > 10 else 15000 for x in data]
         self.scan_history.append(collision_view)
         if len(self.scan_history) > self.scan_nr_kept:
             self.scan_history.pop(0)
@@ -436,11 +436,12 @@ class SpaceRoboticsChallenge(MoonNode):
         for j in range(len(collision_view)):
             median_scan.append(median([self.scan_history[i][j] for i in range(len(self.scan_history))]))
 
-        self.scan_avg_distance_left = sum(median_scan[len(median_scan)//2:]) / 20
-        self.scan_avg_distance_right = sum(median_scan[:len(median_scan)//2]) / 20
-
-        median_scan.sort();
-        self.scan_distance_to_obstacle = median(median_scan[:self.scan_min_window])
+        # measure distance only in 66 degree angle (about the width of the robot 1.5m ahead)
+        self.scan_avg_distance_left = sum(median_scan[len(median_scan)//2:len(median_scan)//2 + 20]) / 20
+        self.scan_avg_distance_right = sum(median_scan[len(median_scan)//2 - 20:len(median_scan)//2]) / 20
+        before_robot = median_scan[len(median_scan)//2 - 20:len(median_scan)//2 + 20]
+        before_robot.sort();
+        self.scan_distance_to_obstacle = median(before_robot[:self.scan_min_window])
 
     def on_joint_position(self, data):
         assert self.joint_name is not None
@@ -518,10 +519,10 @@ class SpaceRoboticsChallenge(MoonNode):
 
         return normalizeAnglePIPI(angle_diff)
 
-    def go_to_location(self, pos, speed, offset=0.0, full_turn=False, timeout=None):
+    def go_to_location(self, pos, desired_speed, offset=0.0, full_turn=False, timeout=None):
         # speed: + forward, - backward
         # offset: stop before (-) or past (+) the actual destination (e.g., to keep the destination in front of the robot)
-        print(self.sim_time, self.robot_name, "go_to_location [%.1f,%.1f] (speed: %.1f)" % (pos[0], pos[1], math.copysign(self.max_speed, speed)))
+        print(self.sim_time, self.robot_name, "go_to_location [%.1f,%.1f] (speed: %.1f)" % (pos[0], pos[1], math.copysign(self.max_speed, desired_speed)))
 
         dist = distance(pos, self.xyz)+offset
         if timeout is None:
@@ -530,11 +531,13 @@ class SpaceRoboticsChallenge(MoonNode):
         start_time = self.sim_time
 
         # while we are further than 1m but still following the right direction (angle diff < 90deg)
-        angle_diff = self.get_angle_diff(pos,speed)
+        angle_diff = self.get_angle_diff(pos,desired_speed)
         while distance(pos, self.xyz)+offset > 1 and (full_turn or abs(angle_diff) < math.pi/2):
-            angle_diff = self.get_angle_diff(pos,speed)
+            angle_diff = self.get_angle_diff(pos,desired_speed)
             dist = distance(pos, self.xyz)+offset # do not turn just before arrival
 
+
+            speed = desired_speed if dist > 4 else 0.6 * desired_speed
 
             if speed > 0 and dist > 5 and (self.scan_distance_to_obstacle < 4000 or (self.avoidance_start is not None and self.sim_time - self.avoidance_start < timedelta(milliseconds=2000))):
                 # do not avoid obstacles when real close
@@ -690,6 +693,10 @@ class SpaceRoboticsChallenge(MoonNode):
             if timeout is not None and self.sim_time - start_time > timeout:
                 print(self.sim_time, self.robot_name, "go_around_a_rock - timeout at %.1fm" % distance(start_pose, self.xyz))
                 break
+
+        self.send_speed_cmd(0.0, 0.0) # TEST
+        return # TEST TODO: this will end rock bypass routine right after side-step
+
         self.go_straight(math.copysign(abs(how_far) + 5, how_far)) # TODO: rock size estimate
         # TODO: maybe going back not needed, hand over to main routine, we presumably already cleared the obstacle
         start_pose = self.xyz
