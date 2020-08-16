@@ -133,7 +133,7 @@ def parse_jpeg_image(data, dump_filename=None):
     if dump_filename is not None:
         with open(dump_filename, 'wb') as f:
             f.write(data[pos:])
-    return data[pos:]
+    return [data[pos:], seq]
 
 
 def parse_laser(data):
@@ -468,8 +468,10 @@ def parse_topic(topic_type, data):
     elif topic_type == 'std_msgs/Bool':
         return parse_bool(data)
     elif topic_type == 'sensor_msgs/CompressedImage':
-        image = parse_jpeg_image(data)  # , dump_filename='nasa.jpg')
+        image,_ = parse_jpeg_image(data)  # , dump_filename='nasa.jpg')
         return image
+    elif topic_type == 'sensor_msgs/CompressedImageSeq':
+        return parse_jpeg_image(data)  # , dump_filename='nasa.jpg')
     else:
         assert False, topic_type
 
@@ -563,7 +565,7 @@ class ROSMsgParser(Thread):
         #    pdb.set_trace()
         if frame_id.endswith(b'/base_link/camera_front') or frame_id.endswith(b'camera_color_optical_frame'):
             # used to be self.topic_type == 'sensor_msgs/CompressedImage'
-            self.bus.publish('image', parse_jpeg_image(packet))
+            self.bus.publish('image', parse_jpeg_image(packet)[0])
         elif frame_id.endswith(b'base_link/front_laser'):  # self.topic_type == 'sensor_msgs/LaserScan':
             self.count += 1
             if self.count % self.downsample != 0:
