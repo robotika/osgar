@@ -232,7 +232,7 @@ RUN python -m pip install pyzmq
 
 RUN /usr/bin/python3 -m pip install scikit-build
 RUN /usr/bin/python3 -m pip install msgpack pyzmq shapely scipy
-RUN /usr/bin/python3 -m pip install --install-option="-j$(nproc)" "opencv-python>3.4.2,<4"
+RUN /usr/bin/python3 -m pip install --install-option="-j$(nproc)" "opencv-python>=3.4.10,<3.4.11"
 
 WORKDIR /
 ENTRYPOINT ["/osgar/moon/docker/rover/entrypoint.bash"]
