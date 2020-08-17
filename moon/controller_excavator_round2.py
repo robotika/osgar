@@ -146,6 +146,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             angle_diff = self.get_angle_diff(vol_list[ind[i]])
                             self.turn(math.copysign(min(abs(angle_diff),math.pi/4),angle_diff), timeout=timedelta(seconds=15))
                             self.go_to_location(vol_list[ind[i]], self.default_effort_level, offset=-0.5, timeout=timedelta(minutes=5), full_turn=True) # extra offset for sliding
+                            self.wait(timedelta(seconds=2)) # wait to come to a stop
                             self.send_request('external_command hauler_1 approach %f' % self.yaw) # TODO: due to skidding, this yaw may still change after sending
                             self.hauler_ready = False
                             break
