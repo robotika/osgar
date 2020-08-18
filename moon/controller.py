@@ -4,6 +4,7 @@
 import math
 import numpy as np
 import io
+from random import getrandbits
 
 from datetime import timedelta
 from statistics import median
@@ -227,7 +228,7 @@ class SpaceRoboticsChallenge(MoonNode):
         self.scan_nr_kept = 3 # we have to see at least 10 points nearer than threshold
 
         self.avoidance_start = None
-        self.avoidance_turn = 0.0
+        self.avoidance_turn = None
 
         self.default_effort_level = 1000 # default is max speed
 
@@ -472,7 +473,7 @@ class SpaceRoboticsChallenge(MoonNode):
             cam_angle = min(math.pi / 4.0, max(-math.pi / 8.0, self.camera_angle + self.pitch))
             self.publish('cmd', b'set_cam_angle %f' % cam_angle)
 
-        if not self.inException and (abs(self.pitch) > 0.6 or abs(self.roll) > math.pi/4):
+        if not self.inException and (abs(self.pitch) > 0.9 or abs(self.roll) > math.pi/4):
             # TODO pitch can also go the other way if we back into an obstacle
             # TODO: robot can also roll if it runs on a side of a rock while already on a slope
             self.bus.publish('driving_recovery', True)
@@ -521,7 +522,7 @@ class SpaceRoboticsChallenge(MoonNode):
 
         return normalizeAnglePIPI(angle_diff)
 
-    def go_to_location(self, pos, desired_speed, offset=0.0, full_turn=False, timeout=None):
+    def go_to_location(self, pos, desired_speed, offset=0.0, full_turn=False, timeout=None, with_stop=True, tolerance=1.0):
         # speed: + forward, - backward
         # offset: stop before (-) or past (+) the actual destination (e.g., to keep the destination in front of the robot)
         print(self.sim_time, self.robot_name, "go_to_location [%.1f,%.1f] (speed: %.1f)" % (pos[0], pos[1], math.copysign(self.max_speed, desired_speed)))
@@ -534,21 +535,24 @@ class SpaceRoboticsChallenge(MoonNode):
 
         # while we are further than 1m but still following the right direction (angle diff < 90deg)
         angle_diff = self.get_angle_diff(pos,desired_speed)
-        while distance(pos, self.xyz)+offset > 1 and (full_turn or abs(angle_diff) < math.pi/2):
+        while distance(pos, self.xyz)+offset > tolerance and (full_turn or abs(angle_diff) < math.pi/2):
             angle_diff = self.get_angle_diff(pos,desired_speed)
             dist = distance(pos, self.xyz)+offset # do not turn just before arrival
 
 
-            speed = desired_speed if dist > 4 else 0.6 * desired_speed
+            speed = desired_speed if dist > 4 or not with_stop else 0.6 * desired_speed
 
             if speed > 0 and dist > 5 and (self.scan_distance_to_obstacle < 4000 or (self.avoidance_start is not None and self.sim_time - self.avoidance_start < timedelta(milliseconds=2000))):
                 # do not avoid obstacles when real close
                 if self.scan_distance_to_obstacle < 4000:
                     self.avoidance_start = self.sim_time
-                    if self.scan_avg_distance_left < self.scan_avg_distance_right: # obstacle is more on the left
-                        self.avoidance_turn = -AVOID_RADIUS
-                    else:
-                        self.avoidance_turn = AVOID_RADIUS
+                    if self.avoidance_turn is None:
+                        if self.scan_avg_distance_left < 0.8 * self.scan_avg_distance_right:
+                            self.avoidance_turn = -AVOID_RADIUS
+                        elif  self.scan_avg_distance_left * 0.8 > self.scan_avg_distance_right:
+                            self.avoidance_turn = AVOID_RADIUS
+                        else:
+                            self.avoidance_turn = AVOID_RADIUS if getrandbits(1) == 0 else -AVOID_RADIUS
                     turn = self.avoidance_turn
                     if (self.debug):
                         print(self.sim_time, self.robot_name, "Seeing object, turning, distance %d" % self.scan_distance_to_obstacle)
@@ -562,6 +566,7 @@ class SpaceRoboticsChallenge(MoonNode):
                     if (self.debug):
                         print(self.sim_time, self.robot_name, "Going straight")
                     turn = GO_STRAIGHT # go straight additional 1s after no longer turning
+                    self.avoidance_turn = None
                 else:
                     print("SHOULDNT BE HERE")
 
@@ -580,7 +585,8 @@ class SpaceRoboticsChallenge(MoonNode):
             if timeout is not None and self.sim_time - start_time > timeout:
                 print(self.sim_time, self.robot_name, "go_to_location timeout ended at [%.1f,%.1f]" % (self.xyz[0], self.xyz[1]))
                 break
-        self.send_speed_cmd(0.0, 0.0)
+        if with_stop:
+            self.send_speed_cmd(0.0, 0.0)
         print(self.sim_time, self.robot_name, "go_to_location [%.1f,%.1f] ended at [%.1f,%.1f], yaw=%.2f, angle_diff=%f" % (pos[0], pos[1], self.xyz[0], self.xyz[1], self.yaw, angle_diff))
 
     def move_sideways(self, how_far, view_direction=None, timeout=None): # how_far: left is positive, right is negative
@@ -663,14 +669,19 @@ class SpaceRoboticsChallenge(MoonNode):
         print(self.sim_time, self.robot_name, "lidar_drive_around (speed: %.1f)" % (self.max_speed))
         timeout = timedelta(seconds=10) # add 4 sec for wheel setup
 
-        # if more close points to the left, go right and vice versa
+        # if substantially more close points to the left, go right and vice versa; if similar, go in one direction at random (avoids getting stuck)
         if direction is None:
-            direction = 1 if self.scan_avg_distance_left > self.scan_avg_distance_right else -1
+            if self.scan_avg_distance_left < 0.8 * self.scan_avg_distance_right:
+                direction = -1
+            elif  self.scan_avg_distance_left * 0.8 > self.scan_avg_distance_right:
+                direction = 1
+            else:
+                direction = 1 if getrandbits(1) == 0 else -1
 
         start_pose = self.xyz
         start_time = self.sim_time
         while self.scan_distance_to_obstacle < 4000: # 4m
-            self.publish("desired_movement", [GO_STRAIGHT, -math.copysign(6500, direction), -self.default_effort_level]) # 1000m radius is almost straight
+            self.publish("desired_movement", [GO_STRAIGHT, -math.copysign(5500, direction), -self.default_effort_level]) # 1000m radius is almost straight
             self.wait(timedelta(milliseconds=100))
             if timeout is not None and self.sim_time - start_time > timeout:
                 print(self.sim_time, self.robot_name, "lidar_drive_around - timeout at %.1fm" % distance(start_pose, self.xyz))
