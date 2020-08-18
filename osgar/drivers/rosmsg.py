@@ -411,6 +411,25 @@ def parse_topic(topic_type, data):
         # __slots__ = ['score']
         # _slot_types = ['int32']
         return struct.unpack_from('<I', data, pos)
+    elif topic_type == 'srcp2_msgs/HaulerMsg':
+        assert len(data) == 134, (len(data), data)
+        # vol_type: [ice, ethene, methane, carbon_mono, carbon_dio, ammonia, hydrogen_sul, sulfur_dio]
+        # mass_per_type: [0.0, 0.0, 0.0, 0.0, 0.0, 70.26217651367188, 0.0, 0.0]
+        vol_type_arr = []
+        mass_arr = []
+        size = struct.unpack_from('<I', data)[0]
+        pos = 4
+        for i in range(8):
+            vol_type_len = struct.unpack_from('<I', data, pos)[0]
+            pos += 4
+            vol_type = data[pos:pos+vol_type_len]
+            vol_type_arr.append(vol_type.decode('ascii'))
+            pos += vol_type_len
+        for i in range(8):
+            mass = struct.unpack_from('<f', data, pos)[0]
+            mass_arr.append(mass)
+            pos += 4
+        return [vol_type_arr, mass_arr]
     elif topic_type == 'srcp2_msgs/Qual2ScoringMsg':
         assert len(data) == 142, (len(data), data)
         # __slots__ = ['vol_type', 'points_per_type', 'num_of_dumps', 'total_score']

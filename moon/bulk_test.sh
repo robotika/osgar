@@ -118,9 +118,17 @@ do
         sleep ${SRCP2_WAIT}
 
         if [[ $VSLAM -eq 1 ]]; then
-           docker run --init --network=host --rm --name openvslam -t openvslam-rospublish >& /dev/null &
-           vslam_id=`docker image ls | grep openvslam | head -1 | awk '{print $3}'`
-           echo "Running OpenVSLAM image ${vslam_id}" >> ${log_file}
+            if [[ $ROUND -eq 2 ]]; then
+                docker run --init --network=host --rm --name openvslam1 -t openvslam-rospublish -r excavator_1 >& /dev/null &
+                docker run --init --network=host --rm --name openvslam2 -t openvslam-rospublish -r hauler_1 >& /dev/null &
+                vslam1_id=`docker image ls | grep openvslam1 | head -1 | awk '{print $3}'`
+                vslam2_id=`docker image ls | grep openvslam2 | head -1 | awk '{print $3}'`
+                echo "Running OpenVSLAM images ${vslam1_id} and ${vslam1_id}" >> ${log_file}
+            else
+                docker run --init --network=host --rm --name openvslam -t openvslam-rospublish >& /dev/null &
+                vslam_id=`docker image ls | grep openvslam | head -1 | awk '{print $3}'`
+                echo "Running OpenVSLAM image ${vslam_id}" >> ${log_file}
+            fi
         fi
 
         osgar_image_id=`docker image ls | grep rover | grep latest | awk '{print $3}'`
@@ -144,7 +152,12 @@ do
         docker kill nasa-rover >& /dev/null
 
         if [[ $VSLAM -eq 1 ]]; then
-           docker kill openvslam >& /dev/null
+            if [[ $ROUND -eq 2 ]]; then
+                docker kill openvslam1 >& /dev/null
+                docker kill openvslam2 >& /dev/null
+            else
+                docker kill openvslam >& /dev/null
+            fi
         fi
 
         docker kill srcp2-simulation >& /dev/null

@@ -16,6 +16,7 @@ class MoonNode(Node):
         self.sim_time = None
         self.monitors = []
         self.requests = {}
+        self.debug = config.get('debug', False)
 
     def on_sim_clock(self, data):
         self.sim_time = timedelta(seconds=data[0], microseconds=data[1])

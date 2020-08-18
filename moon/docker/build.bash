@@ -18,16 +18,17 @@
 #
 
 # Builds a Docker image.
-PROCNR=1
-while getopts hp: arg; do
+while getopts h arg; do
     case $arg in
-	p)
-	    PROCNR=$OPTARG
-            ;;
         h)
-            echo "Usage: $0 [-p <number of processors to use>] <directory-name>"
+            echo "Usage: $0 <directory-name>"
+            echo "Requires the following folders to be present in $HOME/space-challenge/"
+            echo "* srcp2-competitors from https://gitlab.com/scheducation/srcp2-competitors/"
+            echo "* openvslam/openvslam from https://github.com/frantisekbrabec/openvslam/, branch subscribe_stereo_camera"
+            echo "* openvslam/orb_vocab/orb_vocab.dbow2"
+            echo "* osgar .. this repository"
             exit 1
-            ;;            
+            ;;
     esac
 done
 
@@ -42,6 +43,11 @@ then
   exit 2
 fi
 
+if [[ ! -d $HOME/space-challenge/srcp2-competitors || ! -f $HOME/space-challenge/openvslam/orb_vocab/orb_vocab.dbow2 || ! -d $HOME/space-challenge/openvslam/openvslam || ! -d $HOME/space-challenge/osgar  ]]; then
+    echo "Required folders and/or files missing from staging directory, run with -h switch for help"
+    exit 2
+fi
+
 user_id=$(id -u)
 image_name=$(basename $DIR_ARG)
 image_plus_tag=$image_name:$(date +%Y_%m_%d_%H%M)
@@ -52,7 +58,7 @@ image_plus_tag=$image_name:$(date +%Y_%m_%d_%H%M)
 shift
 
 
-docker build --rm -t $image_plus_tag -f $DIR/$image_name/Dockerfile ${HOME}/space-challenge/ --build-arg NUM_THREADS=$PROCNR
+docker build --rm -t $image_plus_tag -f $DIR/$image_name/Dockerfile ${HOME}/space-challenge/ --build-arg NUM_THREADS=$(nproc)
 docker tag $image_plus_tag $image_name:latest
 #docker tag $image_plus_tag $image_name:$hg_id
 

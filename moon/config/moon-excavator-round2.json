@@ -6,7 +6,9 @@
           "driver": "moon.controller_excavator_round2:SpaceRoboticsChallengeExcavatorRound2",
           "in": ["odo_pose"],
           "out": ["desired_speed", "artf_cmd", "request_origin", "bucket_cmd"],
-          "init": {}
+          "init": {
+              "debug": true
+          }
       },
       "transmitter": {
           "driver": "zeromq",
@@ -50,6 +52,7 @@
               ["/excavator_1/imu", "sensor_msgs/Imu", "orientation"],
               ["/excavator_1/openvslam/pose", "geometry_msgs/PoseStamped", "vslam_pose"],
               ["/excavator_1/openvslam/enabled", "std_msgs/Bool", "vslam_enabled"],
+              ["/osgar/broadcast", "std_msgs/String", "osgar_broadcast"],
               ["/excavator_1/laser/scan", "sensor_msgs/LaserScan", "scan"]
             ]
           }
@@ -67,6 +70,7 @@
               ["rosmsg.rot", "app.rot"],
               ["rosmsg.rot", "excavator.rot"],
               ["rosmsg.scan", "app.scan"],
+              ["rosmsg.osgar_broadcast", "app.osgar_broadcast"],
               ["rosmsg.vslam_pose", "app.vslam_pose"],
               ["rosmsg.vslam_enabled", "app.vslam_enabled"],
               ["rosmsg./qual_2_score", "app.score"],
@@ -78,7 +82,6 @@
               ["rosmsg.joint_effort", "excavator.joint_effort"],
               ["rosmsg.sim_clock", "excavator.sim_clock"],
               ["rosmsg.sim_clock", "app.sim_clock"],
-              ["rosmsg./excavator_1/bucket_info", "excavator.bucket_info"],
               ["rosmsg./excavator_1/bucket_info", "app.bucket_info"],
               ["app.desired_speed", "excavator.desired_speed"],
               ["app.desired_movement", "excavator.desired_movement"],

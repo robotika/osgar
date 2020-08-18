@@ -196,7 +196,7 @@ COPY ./openvslam/orb_vocab /openvslam/
 COPY ./srcp2-competitors /srcp2-competitors/
 COPY ./osgar /osgar/
 
-RUN echo "source /opt/ros/melodic/setup.bash" >> /root/.bashrc
+RUN echo "source /openvslam/ros/1/devel/setup.bash" >> /root/.bashrc
 
 # OpenVSLAM
 WORKDIR /openvslam/
@@ -217,7 +217,7 @@ RUN set -x && \
 
 # OpenVSLAMROS
 WORKDIR /openvslam/ros/1/
-RUN /bin/bash -c '. /srcp2-competitors/ros_workspace/install/setup.bash; cd /openvslam/ros/1/; catkin_make \
+RUN /bin/bash -c 'source /srcp2-competitors/ros_workspace/install/setup.bash; cd /openvslam/ros/1/; catkin_make \
     -DBUILD_WITH_MARCH_NATIVE=ON \
     -DUSE_PANGOLIN_VIEWER=OFF \
     -DUSE_SOCKET_PUBLISHER=OFF \
@@ -230,7 +230,9 @@ SHELL ["/bin/bash", "-c"]
 RUN apt-get update && apt-get install -y python-pip python3-pip openssh-client vim less
 RUN python -m pip install pyzmq
 
-RUN /usr/bin/python3 -m pip install --user --no-cache-dir msgpack "opencv-python>3.4.2,<4" pyzmq shapely scipy
+RUN /usr/bin/python3 -m pip install scikit-build
+RUN /usr/bin/python3 -m pip install msgpack pyzmq shapely scipy
+RUN /usr/bin/python3 -m pip install --install-option="-j$(nproc)" "opencv-python>=3.4.10,<3.4.11"
 
 WORKDIR /
 ENTRYPOINT ["/osgar/moon/docker/rover/entrypoint.bash"]
