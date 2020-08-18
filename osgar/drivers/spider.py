@@ -9,15 +9,8 @@ from threading import Thread
 from osgar.bus import BusShutdownException
 
 
-CAN_BRIDGE_READY = b'\xfe\x10'  # CAN bridge is ready to accept configuration commands
-CAN_BRIDGE_SYNC = b'\xFF'*10    # CAN bridge synchronization bytes
-CAN_SPEED_1MB = b'\xfe\x57'     # configure CAN bridge to communicate on 1Mb CAN network
-CAN_BRIDGE_START = b'\xfe\x31'  # start bridge
-
-
-def CAN_packet(msg_id, data):
-    header = [(msg_id>>3) & 0xff, (msg_id<<5) & 0xe0 | (len(data) & 0xf)]
-    return bytes(header + data)
+def CAN_triplet(msg_id, data):
+    return [msg_id, bytes(data), 0]  # flags=0, i.e basic addressing
 
 
 class Spider(Thread):
@@ -27,9 +20,6 @@ class Spider(Thread):
         self.setDaemon(True)
 
         self.bus = bus
-        self.buf = b''
-
-        self.can_bridge_initialized = False
         self.status_word = None  # not defined yet
         self.wheel_angles = None  # four wheel angles as received via CAN
         self.zero_steering = None  # zero position of all 4 wheels
@@ -38,22 +28,7 @@ class Spider(Thread):
         self.alive = 0  # toggle with 128
         self.desired_angle = None  # in Spider mode desired weels direction
         self.desired_speed = None
-
-    @staticmethod
-    def split_buffer(data):
-        # skip 0xFF prefix bytes (CAN bridge control bytes)
-        data = data.lstrip(b'\xff')
-
-        if len(data) >= 2:
-            # see https://en.wikipedia.org/wiki/CAN_bus
-            header = data[:2]
-            rtr = (header[1] >> 4) & 0x1  # Remote transmission request
-            size = (header[1]) & 0x0f
-            if rtr:
-                return data[2:], header
-            elif len(data) >= 2 + size:
-                return data[2+size:], data[:2+size]
-        return data, b''  # no complete packet available yet
+        self.verbose = False  # TODO node
 
     @staticmethod
     def fix_range(value):
@@ -64,16 +39,11 @@ class Spider(Thread):
             value -= 512
         return value
 
-    def process_packet(self, packet, verbose=False):
-        if packet == CAN_BRIDGE_READY:
-            self.bus.publish('can', CAN_BRIDGE_SYNC)
-            self.bus.publish('can', CAN_SPEED_1MB)
-            self.bus.publish('can', CAN_BRIDGE_START)
-            self.can_bridge_initialized = True
-            return None
-
-        if len(packet) >= 2:
-            msg_id = ((packet[0]) << 3) | (((packet[1]) >> 5) & 0x1f)
+    def process_packet(self, data, verbose=False):
+        msg_id, packet, flags = data
+        if True:  #len(packet) >= 2:
+#            msg_id = ((packet[0]) << 3) | (((packet[1]) >> 5) & 0x1f)
+            packet = b'XX' + packet  # hack for backward compatibility
             if verbose:
                 print(hex(msg_id), packet[2:])
             if msg_id == 0x200:
@@ -122,11 +92,10 @@ class Spider(Thread):
         try:
             while True:
                 dt, channel, data = self.bus.listen()
-                if channel == 'raw':
-                    if len(data) > 0:
-                        for status in self.process_gen(data):
-                            if status is not None:
-                                self.bus.publish('status', status)
+                if channel == 'can':
+                    status = self.process_packet(data, verbose=self.verbose)
+                    if status is not None:
+                        self.bus.publish('status', status)
                 elif channel == 'move':
                     self.desired_speed, self.desired_angle = data
                 else:
@@ -138,7 +107,7 @@ class Spider(Thread):
         self.bus.shutdown()
 
     def send(self, data):
-        if self.can_bridge_initialized:
+        if True:  #self.can_bridge_initialized:
             speed, angular_speed = data
             if speed > 0:
                 if self.status_word is None or self.status_word & 0x10 != 0:
@@ -159,15 +128,15 @@ class Spider(Thread):
                     else:
                         angle_cmd = 0
                 if speed >= 10:
-                    packet = CAN_packet(0x401, [0x80 + 127, angle_cmd])
+                    packet = CAN_triplet(0x401, [0x80 + 127, angle_cmd])
                 else:
-                    packet = CAN_packet(0x401, [0x80 + 80, angle_cmd])
+                    packet = CAN_triplet(0x401, [0x80 + 80, angle_cmd])
             else:
-                packet = CAN_packet(0x401, [0, 0])  # STOP packet
+                packet = CAN_triplet(0x401, [0, 0])  # STOP packet
             self.bus.publish('can', packet)
 
             # alive
-            packet = CAN_packet(0x400, [self.status_cmd, self.alive])
+            packet = CAN_triplet(0x400, [self.status_cmd, self.alive])
             self.bus.publish('can', packet)
             self.alive = 128 - self.alive
         else:
