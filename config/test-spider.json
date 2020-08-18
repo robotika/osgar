@@ -4,11 +4,17 @@
     "modules": {
       "spider": {
           "driver": "spider",
-          "in": ["raw"],
+          "in": ["can"],
           "out": ["can"],
           "init": {}
       },
-      "spider_serial": {
+      "can": {
+          "driver": "can",
+          "in": ["raw", "can"],
+          "out": ["can", "raw"],
+          "init": {}
+      },
+      "serial": {
           "driver": "serial",
           "in": ["raw"],
           "out": ["raw"],
@@ -16,7 +22,9 @@
                    "rtscts":true, "reset":true}
       }
     },
-    "links": [["spider_serial.raw", "spider.raw"], 
-              ["spider.can", "spider_serial.raw"]]
+    "links": [["spider.can", "can.can"],
+              ["can.can", "spider.can"],
+              ["serial.raw", "can.raw"], 
+              ["can.can", "serial.raw"]]
   }
 }
