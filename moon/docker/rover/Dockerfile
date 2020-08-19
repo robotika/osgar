@@ -235,12 +235,21 @@ RUN /usr/bin/python3 -m pip install msgpack pyzmq shapely scipy
 RUN /usr/bin/python3 -m pip install --install-option="-j$(nproc)" "opencv-python>=3.4.10,<3.4.11"
 
 RUN mkdir -p /rover_workspace/src
-COPY ./osgar/moon/ros_workspace /rover_workspace
+
+# Alien Control
+WORKDIR /rover_workspace/src
+RUN set -x && \
+  git clone https://github.com/frantisekbrabec/aliencontrol.git
+
+COPY ./osgar/moon/ros_launchfiles /rover_workspace/src/aliencontrol/launch
 RUN chmod 777 /rover_workspace
+
+
 
 RUN rm -rf /rover_workspace/devel
 RUN rm -rf /rover_workspace/build
 RUN  /bin/bash -c "source /openvslam/ros/1/devel/setup.bash; cd /rover_workspace; catkin_make"
+
 
 WORKDIR /
 ENTRYPOINT ["/osgar/moon/docker/rover/entrypoint.bash"]
