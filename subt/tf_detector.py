@@ -85,7 +85,8 @@ class TfDetector:
             scores = scores[mask]
             classes = classes[mask]
             bboxes = raw_dict['detection_boxes'][0, :].numpy()[mask]
-            bboxes = bboxes*np.array([rows, cols, rows, cols])
+            bboxes = bboxes[:, [1, 0, 3, 2]]
+            bboxes = bboxes*np.array([cols, rows, cols, rows])
             bboxes = bboxes.astype('int32')
             classes_names = ARTF_NAME[classes]
 
@@ -99,7 +100,7 @@ class TfDetector:
         if detection:
             num_detections = detection['num_detections']
             for ii in range(num_detections):
-                y, x, h, w = detection['bboxes'][ii]
+                x, y, w, h = detection['bboxes'][ii]
                 score = detection['scores'][ii]
                 name = detection['classes_names'][ii]
                 cv2.rectangle(img, (x, y), (w, h), (255, 0, 0), thickness=2)
