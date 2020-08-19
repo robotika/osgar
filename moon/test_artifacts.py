@@ -31,7 +31,7 @@ class ArtifactTest(unittest.TestCase):
                     continue
                 if len(d) != len(t[i]):
                     continue
-                if len(d) == 7 and d[6] != t[i][6]:
+                if len(d) == 7 and abs(d[6] - t[i][6]) > 1: #distance difference more than 1m
                     continue
                 return True
             return False
@@ -47,7 +47,7 @@ class ArtifactTest(unittest.TestCase):
     def test_artifacts(self):
 
         bus = MagicMock()
-        config = {"artefacts": ["rover","cubesat","homebase", "basemarker"]}
+        config = {"estimate_distance": True, "artefacts": ["rover","cubesat","homebase", "basemarker"]}
         detector = ArtifactDetector(config, bus)
         for i in range(len(detector.detectors)):
             detector.detectors[i]["subsequent_detects_required"] = 0

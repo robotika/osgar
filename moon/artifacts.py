@@ -33,6 +33,7 @@ class ArtifactDetector(Node):
         self.depth = None  # more precise definiton of depth image
         self.width = None  # detect from incoming images
         self.look_for_artefacts = config.get('artefacts', [])
+        self.estimate_distance = config.get('estimate_distance', False)
 
         window_size = 5
         min_disp = 16
@@ -217,23 +218,24 @@ class ArtifactDetector(Node):
                             # do not act until you have detections in a row
                             self.detect_sequences[c['artefact_name']] += 1
                         else:
-                            disp = self.stereo_calc.compute(limg_rgb, rimg_rgb).astype(np.float32) / 16.0
-                            points = cv2.reprojectImageTo3D(disp, self.Q)
-                            matching_points = points[mask != 0]
-                            distances = matching_points[:,2] # third column are Z coords (distances)
+                            if self.estimate_distance:
+                                disp = self.stereo_calc.compute(limg_rgb, rimg_rgb).astype(np.float32) / 16.0
+                                points = cv2.reprojectImageTo3D(disp, self.Q)
+                                matching_points = points[mask != 0]
+                                distances = matching_points[:,2] # third column are Z coords (distances)
 
+                                mean = np.mean(distances)
+                                sd = np.std(distances)
+                                distances_clean = [x for x in distances if (x > mean - 2 * sd)]
+                                distances_clean = [x for x in distances_clean if (x < mean + 2 * sd)]
 
-                            mean = np.mean(distances)
-                            sd = np.std(distances)
-                            distances_clean = [x for x in distances if (x > mean - 2 * sd)]
-                            distances_clean = [x for x in distances_clean if (x < mean + 2 * sd)]
-
-                            #print("Artf distance: min %.1f median: %.1f" % (min(distances), median(distances)))
-                            if len(distances_clean) == 0:
-                              distances_clean = distances
-                              # print("Artf cleaned: min %.1f median: %.1f" % (min(final_list), median(final_list)))
-                            dist = max(0.0, min(distances_clean)) # subtract about half length of the rover
-                            # NOTE: when the artifact is barely in the picture (and computation not possible), distance 9.7 seems to be returned, TODO: return special value?
+                                #print("Artf distance: min %.1f median: %.1f" % (min(distances), median(distances)))
+                                if len(distances_clean) == 0:
+                                  distances_clean = distances
+                                  # print("Artf cleaned: min %.1f median: %.1f" % (min(final_list), median(final_list)))
+                                dist = max(0.0, min(distances_clean)) # subtract about half length of the rover
+                            else:
+                                dist = 0.0
                             results.append((c['artefact_name'], int(x), int(y), int(w), int(h), int(match_count), float(dist)))
 
             if c['detector_type'] == 'classifier':

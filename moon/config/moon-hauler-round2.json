@@ -70,7 +70,8 @@
         "in": [],
         "out": [],
         "init": {
-            "artefacts": ["rover"]
+            "artefacts": ["rover"],
+            "estimate_distance": true
         }
       }
     },
