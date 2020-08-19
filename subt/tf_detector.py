@@ -1,21 +1,71 @@
 """Artefacts detection via tensorflow"""
 
 import os
-import tensorflow as tf
 import numpy as np
 import cv2
 
 # Directory with files saved_model.pb and saved_model.pbtxt
 MODEL_DIR = "subt/tf_models"
+# Files for CvDetector
+PATH_TO_PB_GRAPH = "subt/tf_models/frozen_inference_graph.pb"
+PATH_TO_CV_GRAPH = "subt/tf_models/cv_graph.pbtxt"
+
+ARTF_NAME = np.array(["backpack", "survivor", "phone", "rope", "helmet", "robot"])
+MIN_SCORES = np.array([0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
+
+
+class CvDetector:
+    def __init__(self):
+        self.cvNet = cv2.dnn.readNetFromTensorflow(PATH_TO_PB_GRAPH, PATH_TO_CV_GRAPH)
+
+    def detect(self, img):
+        rows = img.shape[0]
+        cols = img.shape[1]
+        # The size parameter should correspond with model
+        self.cvNet.setInput(cv2.dnn.blobFromImage(img, size=(640, 320), swapRB=True, crop=False))
+        cvOut = self.cvNet.forward()
+
+        scores = cvOut[0, 0, :, 2]
+        classes = cvOut[0, 0, :, 1]
+        classes = classes.astype('int32')
+        mask = MIN_SCORES[classes] < scores
+
+        num_detections = np.count_nonzero(mask)
+        if num_detections > 0:
+            scores = scores[mask]
+            classes = classes[mask]
+            bboxes = cvOut[0, 0, :, 3:][mask]
+            bboxes = bboxes*np.array([cols, rows, cols, rows])
+            bboxes = bboxes.astype('int32')
+            classes_names = ARTF_NAME[classes]
+
+            return { 'bboxes': bboxes, 'classes_names': classes_names, 'scores': scores, 'num_detections': num_detections }
+
+        return None
+
+
+    def run_on_image(self, img):
+        detection = self.detect(img)
+        if detection:
+            num_detections = detection['num_detections']
+            for ii in range(num_detections):
+                x, y, w, h = detection['bboxes'][ii]
+                score = detection['scores'][ii]
+                name = detection['classes_names'][ii]
+                cv2.rectangle(img, (x, y), (w, h), (255, 0, 0), thickness=2)
+                cv2.putText(img, "%s %0.3f " % (name, score), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1,
+                            cv2.LINE_AA)
+        return img
+
 
 class TfDetector:
     def __init__(self):
+        import tensorflow as tf
+        global tf
         self.model = tf.saved_model.load(MODEL_DIR)
         self.model = self.model.signatures['serving_default']
 #        print(self.model.inputs)
         self.model.output_dtypes
-        self.artf_names = np.array(["backpack", "survivor", "phone", "rope", "helmet", "robot"])
-        self.min_scores = np.array([0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
 
 
     def detect(self, img):
@@ -28,7 +78,7 @@ class TfDetector:
         scores = raw_dict['detection_scores'][0, :].numpy()
         classes = raw_dict['detection_classes'][0, :].numpy() - 1
         classes = classes.astype('int32')
-        mask = self.min_scores[classes] < scores
+        mask = MIN_SCORES[classes] < scores
 
         num_detections = np.count_nonzero(mask)
         if num_detections > 0:
@@ -37,7 +87,7 @@ class TfDetector:
             bboxes = raw_dict['detection_boxes'][0, :].numpy()[mask]
             bboxes = bboxes*np.array([rows, cols, rows, cols])
             bboxes = bboxes.astype('int32')
-            classes_names = self.artf_names[classes]
+            classes_names = ARTF_NAME[classes]
 
             return { 'bboxes': bboxes, 'classes_names': classes_names, 'scores': scores, 'num_detections': num_detections }
 
@@ -64,9 +114,14 @@ if __name__ == "__main__":
     parser.add_argument('--path', help='path to log file, image or directory wit images')
     parser.add_argument('--stream', help='image stream', default='camera.raw')
     parser.add_argument('--cam', help='test with notebook camera', action='store_true')
+    parser.add_argument('--cv', help='run opencv detector', action='store_true')
     args = parser.parse_args()
 
-    detector = TfDetector()
+    if args.cv:
+        detector = CvDetector()
+    else:
+        detector = TfDetector()
+
     if args.cam:
         cam = cv2.VideoCapture(0)
         while True:
