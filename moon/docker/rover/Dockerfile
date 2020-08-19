@@ -190,17 +190,13 @@ RUN set -x && \
   apt-get autoremove -y -qq && \
   rm -rf /var/lib/apt/lists/*
 
-# Copy sources to workspace
-COPY ./openvslam/openvslam /openvslam/
-COPY ./openvslam/orb_vocab /openvslam/
-COPY ./srcp2-competitors /srcp2-competitors/
-COPY ./osgar /osgar/
-
-RUN echo "source /openvslam/ros/1/devel/setup.bash" >> /root/.bashrc
-
 # OpenVSLAM
-WORKDIR /openvslam/
+WORKDIR /
+ARG OPENVSLAM_COMMIT=026827ebd59825de42463f853e910e9ccb44f0ef
 RUN set -x && \
+  git clone https://github.com/frantisekbrabec/openvslam.git && \
+  cd openvslam && \
+  git checkout ${OPENVSLAM_COMMIT} && \
   mkdir -p build && \
   cd build && \
   cmake \
@@ -215,6 +211,10 @@ RUN set -x && \
   rm -rf CMakeCache.txt CMakeFiles Makefile cmake_install.cmake example src && \
   chmod -R 777 ./*
 
+# Copy sources to workspace
+COPY ./srcp2-competitors /srcp2-competitors/
+COPY ./osgar /osgar/
+
 # OpenVSLAMROS
 WORKDIR /openvslam/ros/1/
 RUN /bin/bash -c 'source /srcp2-competitors/ros_workspace/install/setup.bash; cd /openvslam/ros/1/; catkin_make \
@@ -225,7 +225,6 @@ RUN /bin/bash -c 'source /srcp2-competitors/ros_workspace/install/setup.bash; cd
     -DBOW_FRAMEWORK=DBoW2'
 
 SHELL ["/bin/bash", "-c"]
-
 
 RUN apt-get update && apt-get install -y python-pip python3-pip openssh-client vim less
 RUN python -m pip install pyzmq
@@ -244,12 +243,11 @@ RUN set -x && \
 COPY ./osgar/moon/ros_launchfiles /rover_workspace/src/aliencontrol/launch
 RUN chmod 777 /rover_workspace
 
-
-
 RUN rm -rf /rover_workspace/devel
 RUN rm -rf /rover_workspace/build
 RUN  /bin/bash -c "source /openvslam/ros/1/devel/setup.bash; cd /rover_workspace; catkin_make"
 
+RUN echo "source /rover_workspace/devel/setup.bash" >> /root/.bashrc
 
 WORKDIR /
 ENTRYPOINT ["/osgar/moon/docker/rover/entrypoint.bash"]
