@@ -57,7 +57,7 @@ def record(config, log_prefix=None, log_filename=None, duration_sec=None):
                 modules[module_name] = subprocess.Popen([sys.executable, "-c", program])
 
             try:
-                router.register_nodes(modules.keys(), timeout=datetime.timedelta(seconds=1))
+                router.register_nodes(modules.keys(), timeout=datetime.timedelta(seconds=10))
                 links =  config['robot']['links']
                 for link_from, link_to in links:
                     router.connect(link_from, link_to)
