@@ -65,7 +65,8 @@
         "driver": "moon.artifacts:ArtifactDetector",
         "in": [],
         "out": [],
-        "init": {
+          "init": {
+            "artefacts": ["homebase"]
         }
       }
     },

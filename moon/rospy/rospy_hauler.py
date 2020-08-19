@@ -8,9 +8,13 @@ import sys
 import rospy
 
 from rospy_rover import RospyRover, RospyRoverReqRep, RospyRoverPushPull
+from srcp2_msgs.msg import HaulerMsg
 
 class RospyHaulerPushPull(RospyRoverPushPull):
-    pass
+
+    def register_handlers(self):
+        super(RospyHaulerPushPull, self).register_handlers()
+        rospy.Subscriber('/' + self.robot_name + '/bin_info', HaulerMsg, self.callback_topic, '/' + self.robot_name + '/bin_info')
 
 class RospyHaulerReqRep(RospyRoverReqRep):
     pass

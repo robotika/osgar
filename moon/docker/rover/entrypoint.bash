@@ -1,5 +1,6 @@
 #!/bin/bash
+set -e
 
-source /rover_workspace/install/setup.bash
+source /rover_workspace/devel/setup.bash
 
 exec "$@"

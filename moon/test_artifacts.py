@@ -29,12 +29,16 @@ class ArtifactTest(unittest.TestCase):
                     continue
                 if abs(d[5] - t[i][5]) > 400:
                     continue
+                if len(d) != len(t[i]):
+                    continue
+                if len(d) == 7 and d[6] != t[i][6]:
+                    continue
                 return True
             return False
 
         self.assertEqual(len(detected), len(valid))
         for i in range(len(valid)):
-            self.assertEqual(len(detected[i]), 6)
+            self.assertGreaterEqual(len(detected[i]), 6) # color matches have 7 fields (+distance), classifier matches 6
             if not comp_tuple(detected[i], valid[i]):
                 return False
         return True
@@ -43,7 +47,7 @@ class ArtifactTest(unittest.TestCase):
     def test_artifacts(self):
 
         bus = MagicMock()
-        config = {}
+        config = {"artefacts": ["rover","cubesat","homebase", "basemarker"]}
         detector = ArtifactDetector(config, bus)
         for i in range(len(detector.detectors)):
             detector.detectors[i]["subsequent_detects_required"] = 0
@@ -51,12 +55,13 @@ class ArtifactTest(unittest.TestCase):
         with open(str(curdir/'test_data/cube_homebase.jpg'), mode='rb') as img_h:
             img = img_h.read()
 
+        # TODO: artifact now also calculates distance from stereo images, use stereo images for unittest
         # classifier detector returns one of two matches for this image, allow both
-        self.assertTrue(self.is_in_test(detector.detect(img, img), [[('cubesat', 143, 24, 35, 40, 356)], [('homebase', 180, 185, 93, 93, 6264), ('homebase', 176, 140, 117, 114, 7158)], [('homebase', 202, 163, 71, 41, 1594)]]))
+        self.assertTrue(self.is_in_test(detector.detect(img, img), [[('cubesat', 143, 24, 35, 40, 356)], [('homebase', 180, 185, 93, 93, 6264), ('homebase', 176, 140, 117, 114, 7158)], [('homebase', 202, 163, 71, 41, 1594, 1.126901388168335)]]))
 
         with open(str(curdir/'test_data/basemarker.jpg'), mode='rb') as img_h:
             img = img_h.read()
-        self.assertTrue(self.is_in_test(detector.detect(img, img), [[('basemarker', 122, 174, 135, 104, 3848)], [('homebase', 1, 1, 349, 286, 8370)], [('rover', 314, 1, 84, 198, 9558)]]))
+        self.assertTrue(self.is_in_test(detector.detect(img, img), [[('basemarker', 122, 174, 135, 104, 3848, 3.896986246109009)], [('homebase', 1, 1, 428, 286, 13775, 1.5621232986450195)], [('rover', 313, 1, 116, 283, 19043, 0.9582036137580872)]]))
 
 
 # vim: expandtab sw=4 ts=4

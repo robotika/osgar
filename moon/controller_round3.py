@@ -10,7 +10,7 @@ import numpy as np
 import moon.controller
 from osgar.bus import BusShutdownException
 
-from moon.controller import SpaceRoboticsChallenge, ChangeDriverException, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor
+from moon.controller import pol2cart, cart2pol, best_fit_circle, SpaceRoboticsChallenge, ChangeDriverException, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor
 from osgar.lib.virtual_bumper import VirtualBumper
 
 
@@ -41,15 +41,6 @@ SKIP_HOMEBASE_SUCCESS = False # do not require successful homebase arrival repor
 
 ATTEMPT_DELAY = timedelta(seconds=30)
 
-def pol2cart(rho, phi):
-    x = rho * math.cos(phi)
-    y = rho * math.sin(phi)
-    return(x, y)
-
-def cart2pol(x, y):
-    rho = np.sqrt(x**2 + y**2)
-    phi = np.arctan2(y, x)
-    return(rho, phi)
 
 def min_dist(laser_data):
     if len(laser_data) > 0:
@@ -65,45 +56,6 @@ def median_dist(laser_data):
         return median(laser_data)/1000.0
     return 0
 
-def best_fit_circle(x_l, y_l):
-    # Best Fit Circle https://goodcalculators.com/best-fit-circle-least-squares-calculator/
-    # receive 180 scan samples, first and last 40 are discarded, remaining 100 samples represent 2.6rad view
-    # samples are supposed to form a circle which this routine calculates
-
-    nop = len(x_l)
-    x = np.array(x_l)
-    y = np.array(y_l)
-
-    x_y = np.multiply(x,y)
-    x_2 = np.square(x)
-    y_2 = np.square(y)
-
-    x_2_plus_y_2 = np.add(x_2,y_2)
-    x__x_2_plus_y_2 = np.multiply(x,x_2_plus_y_2)
-    y__x_2_plus_y_2 = np.multiply(y,x_2_plus_y_2)
-
-    sum_x = x.sum(dtype=float)
-    sum_y = y.sum(dtype=float)
-    sum_x_2 = x_2.sum(dtype=float)
-    sum_y_2 = y_2.sum(dtype=float)
-    sum_x_y = x_y.sum(dtype=float)
-    sum_x_2_plus_y_2 = x_2_plus_y_2.sum(dtype=float)
-    sum_x__x_2_plus_y_2 = x__x_2_plus_y_2.sum(dtype=float)
-    sum_y__x_2_plus_y_2 = y__x_2_plus_y_2.sum(dtype=float)
-
-    m3b3 = np.array([[sum_x_2,sum_x_y,sum_x],
-            [sum_x_y,sum_y_2,sum_y],
-            [sum_x,sum_y,nop]])
-    invm3b3 = np.linalg.inv(m3b3)
-    m3b1 = np.array([sum_x__x_2_plus_y_2,sum_y__x_2_plus_y_2,sum_x_2_plus_y_2])
-    A=np.dot(invm3b3,m3b1)[0]
-    B=np.dot(invm3b3,m3b1)[1]
-    C=np.dot(invm3b3,m3b1)[2]
-    homebase_cx = A/2
-    homebase_cy = B/2
-    homebase_radius = np.sqrt(4*C+A**2+B**2)/2
-
-    return(homebase_cx, homebase_cy, homebase_radius)
 
 class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
     def __init__(self, config, bus):
@@ -580,9 +532,11 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     self.centering = True
                     self.publish("desired_movement", [0, -9000, self.default_effort_level])
                 elif left_dist < 1.5 or right_dist < 1.5:
-                    self.publish("desired_movement", [GO_STRAIGHT, -9000, -self.default_effort_level])
+                    # if distance is closer than 1.5m, pull back
+                    self.publish("desired_movement", [GO_STRAIGHT, 0, -self.default_effort_level])
                 elif left_dist > HOMEBASE_KEEP_DISTANCE + 1 or right_dist > HOMEBASE_KEEP_DISTANCE + 1:
-                    self.publish("desired_movement", [GO_STRAIGHT, -9000, self.default_effort_level])
+                    # if distance further than 1m more than optimal, come closer
+                    self.publish("desired_movement", [GO_STRAIGHT, 0, self.default_effort_level])
                 elif homebase_cy < -1:
                     self.centering = True
                     self.publish("desired_movement", [0, -9000, -self.default_effort_level])

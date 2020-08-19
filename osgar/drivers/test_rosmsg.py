@@ -109,6 +109,10 @@ class ROSMsgParserTest(unittest.TestCase):
         data = b'\x16\x00\x00\x00\n\x00\x00\x00sulfur_dio\x1b\x00\x00\x00\xd3\xa7\xabA'
         self.assertEqual(parse_bucket(data), ['sulfur_dio', 27, 21.456945419311523])
 
+    def test_parse_bin(self):
+        data = b'\x82\x00\x00\x00\x03\x00\x00\x00ice\x06\x00\x00\x00ethene\x07\x00\x00\x00methane\x0b\x00\x00\x00carbon_mono\n\x00\x00\x00carbon_dio\x07\x00\x00\x00ammonia\x0c\x00\x00\x00hydrogen_sul\n\x00\x00\x00sulfur_dio\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+        self.assertEqual(parse_topic('srcp2_msgs/HaulerMsg', data), [['ice', 'ethene', 'methane', 'carbon_mono', 'carbon_dio', 'ammonia', 'hydrogen_sul', 'sulfur_dio'], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]])
+
     def test_parse_posestamped(self):
         data = b"K\x00\x00\x00\x16\x01\x00\x00s\x06\x00\x00@O\xa86\x03\x00\x00\x00map\xcb\x80M+\xc9\xcf\xce?\xb8\xb5\x9c\x04\xfb\x98\xbb\xbfp\xbb\x0e\xe8'U\xd1\xbfa`9&\x83F\x84\xbf\xce\xf7O\x9f\x90e\xbe\xbf\xf7,N\xba\xd7\xcf\xb0?\x8b\xc3D\xf5\xd4\xb3\xef?"
         self.assertEqual(parse_posestamped(data), ((0.24071611990348737, -0.10780304777718797, -0.2708225027262676), (-0.00990011654282358, -0.11873725785696296, 0.06567142771216426, 0.9907021322634234)))
