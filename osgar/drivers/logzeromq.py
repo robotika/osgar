@@ -88,7 +88,7 @@ class LogZeroMQ:
                 socket.send_string(request)
                 while self.bus.is_alive():
                     try:
-                        resp = socket.recv()
+                        resp = socket.recv().decode('ascii')
                         self.bus.publish('response', [token, resp])
                         break
                     except zmq.error.Again:

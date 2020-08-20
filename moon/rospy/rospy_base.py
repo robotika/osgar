@@ -19,6 +19,7 @@ import sys, getopt
 
 import rospy
 from rosgraph_msgs.msg import Clock
+from std_msgs.msg import String
 
 interrupted = False
 
@@ -48,6 +49,7 @@ class RospyBasePushPull(Thread):
         self.g_socket = None
         self.g_lock = RLock()
         self.prev_time = None
+        self.downsample_topic_count = {}
 
     def setup_sockets(self, context=None):
 
@@ -65,6 +67,7 @@ class RospyBasePushPull(Thread):
 
     def register_handlers(self):
         rospy.Subscriber('/clock', Clock, self.callback_clock)
+        rospy.Subscriber('/osgar/broadcast', String, self.callback_topic, '/osgar/broadcast')
 
     def process_message(self, message):
         pass
@@ -74,19 +77,8 @@ class RospyBasePushPull(Thread):
         with self.g_lock:
             self.g_socket.send(data)
 
-    def callback(self, data, topic_name):
-        # rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
-        # print(rospy.get_caller_id(), data)
-
-        # https://answers.ros.org/question/303115/serialize-ros-message-and-pass-it/
-        s1 = BytesIO()
-        data.serialize(s1)
-        to_send = s1.getvalue()
-        header = struct.pack('<I', len(to_send))
-        self.socket_send(topic_name + '\0' + header + to_send)
-
     def callback_clock(self, data):
-        if (self.prev_time is not None and 
+        if (self.prev_time is not None and
                 self.prev_time.nsecs//100000000 != data.clock.nsecs//100000000):
             # run at 10Hz, i.e. every 100ms
             s1 = BytesIO()
@@ -96,7 +88,12 @@ class RospyBasePushPull(Thread):
             self.socket_send(header + to_send)
         self.prev_time = data.clock
 
-    def callback_topic(self, data, topic_name):
+    def callback_topic(self, data, topic_name, rate=1):
+        if topic_name not in self.downsample_topic_count.keys():
+            self.downsample_topic_count[topic_name] = 0
+        self.downsample_topic_count[topic_name] += 1
+        if self.downsample_topic_count[topic_name] % rate != 0:
+            return
         s1 = BytesIO()
         data.serialize(s1)
         to_send = s1.getvalue()
@@ -140,10 +137,18 @@ class RospyBaseReqRep(Thread):
         self.reqrep_socket.bind('tcp://127.0.0.1:' + self.REQREP_PORT)
 
     def process_message(self, message):
+        message_type = message.split(" ")[0]
+        if message_type == "external_command":
+            command = message[17:]
+            print ("rospy_base: Sending external command: <%s>" % command)
+            self.osgar_broadcast_msg.data = command
+            self.osgar_broadcast_pub.publish(self.osgar_broadcast_msg)
+            return 'OK'
         return ''
 
     def register_handlers(self):
-        pass
+        self.osgar_broadcast_pub = rospy.Publisher('/osgar/broadcast', String, queue_size=1, latch=True)
+        self.osgar_broadcast_msg = String()
 
     def run(self):
         while True:

@@ -4,9 +4,11 @@
     "modules": {
       "app": {
           "driver": "moon.controller_excavator_round2:SpaceRoboticsChallengeExcavatorRound2",
-          "in": ["pose2d"],
-          "out": ["desired_speed", "artf_xyz", "artf_cmd", "pose3d", "request_origin", "bucket_cmd"],
-          "init": {}
+          "in": ["odo_pose"],
+          "out": ["desired_speed", "artf_cmd", "request_origin", "bucket_cmd"],
+          "init": {
+              "debug": true
+          }
       },
       "transmitter": {
           "driver": "zeromq",
@@ -38,8 +40,8 @@
       },
       "rosmsg": {
           "driver": "rosmsg",
-          "in": ["slot_raw", "desired_speed", "tick", "stdout"],
-          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_clock", "cmd"],
+          "in": ["raw", "desired_speed", "tick", "stdout"],
+          "out": ["rot", "acc", "scan", "image", "sim_clock", "cmd", "origin"],
           "init": {
             "topics": [
               ["/excavator_1/bucket_info", "srcp2_msgs/ExcavatorMsg"],
@@ -48,6 +50,9 @@
               ["/excavator_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage", "left_image"],
               ["/excavator_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage", "right_image"],
               ["/excavator_1/imu", "sensor_msgs/Imu", "orientation"],
+              ["/excavator_1/openvslam/pose", "geometry_msgs/PoseStamped", "vslam_pose"],
+              ["/excavator_1/openvslam/enabled", "std_msgs/Bool", "vslam_enabled"],
+              ["/osgar/broadcast", "std_msgs/String", "osgar_broadcast"],
               ["/excavator_1/laser/scan", "sensor_msgs/LaserScan", "scan"]
             ]
           }
@@ -65,6 +70,9 @@
               ["rosmsg.rot", "app.rot"],
               ["rosmsg.rot", "excavator.rot"],
               ["rosmsg.scan", "app.scan"],
+              ["rosmsg.osgar_broadcast", "app.osgar_broadcast"],
+              ["rosmsg.vslam_pose", "app.vslam_pose"],
+              ["rosmsg.vslam_enabled", "app.vslam_enabled"],
               ["rosmsg./qual_2_score", "app.score"],
               ["rosmsg.joint_name", "excavator.joint_name"],
               ["rosmsg.joint_name", "app.joint_name"],
@@ -74,16 +82,20 @@
               ["rosmsg.joint_effort", "excavator.joint_effort"],
               ["rosmsg.sim_clock", "excavator.sim_clock"],
               ["rosmsg.sim_clock", "app.sim_clock"],
-              ["rosmsg./excavator_1/bucket_info", "excavator.bucket_info"],
               ["rosmsg./excavator_1/bucket_info", "app.bucket_info"],
               ["app.desired_speed", "excavator.desired_speed"],
+              ["app.desired_movement", "excavator.desired_movement"],
               ["app.bucket_dig", "excavator.bucket_dig"],
               ["app.bucket_drop", "excavator.bucket_drop"],
               ["app.request", "rpc.request"],
+              ["excavator.request", "rpc.request"],
               ["rpc.response", "app.response"],
+              ["rpc.response", "excavator.response"],
               ["excavator.cmd", "transmitter.raw"],
+              ["app.cmd", "transmitter.raw"],
               ["excavator.bucket_cmd", "transmitter.raw"],
-              ["excavator.pose2d", "app.pose2d"]
+              ["excavator.odo_pose", "app.odo_pose"],
+              ["excavator.desired_speeds", "app.desired_speeds"]
     ]
   }
 }

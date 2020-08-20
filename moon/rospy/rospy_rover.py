@@ -17,11 +17,11 @@ import rospy
 from std_msgs.msg import *  # Float64, JointState
 from sensor_msgs.msg import *
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Twist, Point
+from geometry_msgs.msg import Twist, Point, PoseStamped
 
 # SRCP2 specific
 
-from srcp2_msgs.srv import (ToggleLightSrv, BrakeRoverSrv, LocalizationSrv)
+from srcp2_msgs.srv import (ToggleLightSrv, BrakeRoverSrv, LocalizationSrv, ResetModelSrv)
 
 
 class RospyRoverPushPull(RospyBasePushPull):
@@ -39,25 +39,14 @@ class RospyRoverPushPull(RospyBasePushPull):
         self.WHEEL_SEPARATION_WIDTH = 1.87325  # meters
         self.WHEEL_SEPARATION_HEIGHT = 1.5748  # meters
 
-        self.FILTER_ODOM_NTH = 1  #n - every nth message shall be sent to osgar
-        self.FILTER_CAMERA_NTH = 4 #n - every nth message shall be sent to osgar
-        self.FILTER_DEPTH_NTH = 1  #n - every nth message shall be sent to osgar
-
-        self.g_odom_counter = 0
-        self.g_depth_counter = 0
-        self.g_camera_counter = 0
-
     def register_handlers(self):
         super(RospyRoverPushPull, self).register_handlers()
 
-    #    rospy.init_node('listener', anonymous=True)
-    #    rospy.Subscriber('/odom', Odometry, callback_odom)
-
         rospy.Subscriber('/' + self.robot_name + '/joint_states', JointState, self.callback_topic, '/' + self.robot_name + '/joint_states')
-        rospy.Subscriber('/' + self.robot_name + '/laser/scan', LaserScan, self.callback, '/' + self.robot_name + '/laser/scan')
-        rospy.Subscriber('/' + self.robot_name + '/imu', Imu, self.callback_imu, '/' + self.robot_name + '/imu')
-    #    rospy.Subscriber('/' + self.robot_name + '/camera/left/image_raw', Image, callback_depth)
-    #    rospy.Subscriber('/image', CompressedImage, callback_camera)
+        rospy.Subscriber('/' + self.robot_name + '/laser/scan', LaserScan, self.callback_topic, '/' + self.robot_name + '/laser/scan')
+        rospy.Subscriber('/' + self.robot_name + '/imu', Imu, self.callback_topic, '/' + self.robot_name + '/imu')
+        rospy.Subscriber('/' + self.robot_name + '/openvslam/camera_pose', PoseStamped, self.callback_topic, '/' + self.robot_name + '/openvslam/pose')
+        rospy.Subscriber('/' + self.robot_name + '/openvslam/enabled', Bool, self.callback_topic, '/' + self.robot_name + '/openvslam/enabled')
 
         QSIZE = 10
 
@@ -87,7 +76,6 @@ class RospyRoverPushPull(RospyBasePushPull):
 
         self.light_up_pub = rospy.Publisher('/' + self.robot_name + '/sensor_controller/command', Float64, queue_size=QSIZE, latch=True)
         self.light_up_msg = Float64()
-
 
     def process_message(self, message):
         super(RospyRoverPushPull, self).process_message(message)
@@ -149,61 +137,6 @@ class RospyRoverPushPull(RospyBasePushPull):
             # may be picked up by a subclass
             pass
 
-    def callback_imu(self, data, topic_name):
-        s1 = BytesIO()
-        data.serialize(s1)
-        to_send = s1.getvalue()
-        header = struct.pack('<I', len(to_send))
-        self.socket_send(topic_name + '\0' + header + to_send)
-
-
-    def callback_odom(self, data):
-        # rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
-        # print(rospy.get_caller_id(), data)
-
-        # https://answers.ros.org/question/303115/serialize-ros-message-and-pass-it/
-        if self.g_odom_counter >= self.FILTER_ODOM_NTH:
-            s1 = BytesIO()
-            data.serialize(s1)
-            to_send = s1.getvalue()
-            header = struct.pack('<I', len(to_send))
-            self.socket_send(header + to_send)
-            g_odom_counter = 0
-        else:
-            g_odom_counter += 1
-
-
-    def callback_depth(self, data):
-        # rospy.loginfo(rospy.get_caller_id() + "I heard depth data")
-        # print(rospy.get_caller_id(), data)
-
-        # https://answers.ros.org/question/303115/serialize-ros-message-and-pass-it/
-        if self.g_depth_counter >= self.FILTER_DEPTH_NTH:
-            s1 = BytesIO()
-            data.serialize(s1)
-            to_send = s1.getvalue()
-            header = struct.pack('<I', len(to_send))
-            self.socket_send("depth" + header + to_send)
-            self.g_depth_counter = 0
-        else:
-            g_depth_counter += 1
-
-
-    def callback_camera(self, data):
-        # rospy.loginfo(rospy.get_caller_id() + "I heard depth data")
-        # print(rospy.get_caller_id(), data)
-
-        # https://answers.ros.org/question/303115/serialize-ros-message-and-pass-it/
-        if self.g_camera_counter >= self.FILTER_CAMERA_NTH:
-            s1 = BytesIO()
-            data.serialize(s1)
-            to_send = s1.getvalue()
-            header = struct.pack('<I', len(to_send))
-            self.socket_send(header + to_send)
-            self.g_camera_counter = 0
-        else:
-            self.g_camera_counter += 1
-
 
 class RospyRoverReqRep(RospyBaseReqRep):
     def __init__(self, argv):
@@ -231,9 +164,32 @@ class RospyRoverReqRep(RospyBaseReqRep):
                 return 'OK'
 
             elif message_type == "set_brakes":
-                is_on = message.split(" ")[1].startswith("on")
-                print ("rospy_rover: Setting brakes to: %r" % is_on)
-                self.brakes(is_on)
+                val = message.split(" ")[1]
+                if val.startswith("on"):
+                    brake_torque = 500.0
+                elif val.startswith("off"):
+                    brake_torque = 0.0
+                else:
+                    brake_torque = float(val)
+                print ("rospy_rover: Setting brakes to: %f" % brake_torque)
+                self.brakes(brake_torque)
+                return 'OK'
+
+            elif message_type == "set_light_intensity":
+                light_level = message.split(" ")[1]
+                print ("rospy_rover: Setting light intensity to: %s" % light_level)
+                self.lights(light_level)
+                return 'OK'
+
+            elif message_type == "reset_model":
+                print ("rospy_rover: Resetting model")
+                self.reset_model(True)
+                return 'OK'
+
+            elif message_type == "vslam_reset":
+                print ("rospy_rover: Resetting VSLAM map")
+                self.vslam_command_msg.data = "reset"
+                self.vslam_command_pub.publish(self.vslam_command_msg)
                 return 'OK'
 
             elif message_type == "request_origin":
@@ -259,13 +215,17 @@ class RospyRoverReqRep(RospyBaseReqRep):
 
         QSIZE = 10
 
-        lights_on = rospy.ServiceProxy('/' + self.robot_name + '/toggle_light', ToggleLightSrv)
-        lights_on('high')
+        self.lights = rospy.ServiceProxy('/' + self.robot_name + '/toggle_light', ToggleLightSrv)
 
         self.light_up_pub = rospy.Publisher('/' + self.robot_name + '/sensor_controller/command', Float64, queue_size=QSIZE, latch=True)
         self.light_up_msg = Float64()
 
+        self.vslam_command_pub = rospy.Publisher('/' + self.robot_name + '/vslam/command', String, queue_size=1, latch=True)
+        self.vslam_command_msg = String()
+
         self.brakes = rospy.ServiceProxy('/' + self.robot_name + '/brake_rover', BrakeRoverSrv)
+
+        self.reset_model = rospy.ServiceProxy('/' + self.robot_name + '/reset_model', ResetModelSrv)
 
 
 class RospyRoverHelper(RospyBase):

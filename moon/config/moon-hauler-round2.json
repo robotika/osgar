@@ -4,9 +4,11 @@
     "modules": {
       "app": {
           "driver": "moon.controller_hauler_round2:SpaceRoboticsChallengeHaulerRound2",
-          "in": ["pose2d"],
-          "out": ["desired_speed", "artf_xyz", "artf_cmd", "pose3d", "request_origin"],
-          "init": {}
+          "in": ["odo_pose"],
+          "out": ["desired_speed", "artf_cmd", "request_origin"],
+          "init": {
+              "debug": true
+          }
       },
       "transmitter": {
           "driver": "zeromq",
@@ -38,10 +40,9 @@
       },
       "rosmsg": {
           "driver": "rosmsg",
-          "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
-          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_clock", "cmd", "origin"],
+          "in": ["raw", "desired_speed", "tick", "stdout"],
+          "out": ["rot", "acc", "scan", "image", "sim_clock", "cmd", "origin"],
           "init": {
-            "downsample": 2,
             "topics": [
               ["/hauler_1/bin_info", "srcp2_msgs/HaulerMsg"],
               ["/hauler_1/joint_states", "sensor_msgs/JointState"],
@@ -49,6 +50,10 @@
               ["/hauler_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage", "left_image"],
               ["/hauler_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage", "right_image"],
               ["/hauler_1/imu", "sensor_msgs/Imu", "orientation"],
+              ["/hauler_1/bin_info", "srcp2_msgs/HaulerMsg", "bin_info"],
+              ["/hauler_1/openvslam/pose", "geometry_msgs/PoseStamped", "vslam_pose"],
+              ["/hauler_1/openvslam/enabled", "std_msgs/Bool", "vslam_enabled"],
+              ["/osgar/broadcast", "std_msgs/String", "osgar_broadcast"],
               ["/hauler_1/laser/scan", "sensor_msgs/LaserScan", "scan"]
             ]
           }
@@ -65,6 +70,7 @@
         "in": [],
         "out": [],
         "init": {
+            "artefacts": ["rover"]
         }
       }
     },
@@ -73,20 +79,29 @@
               ["rosmsg.rot", "app.rot"],
               ["rosmsg.rot", "hauler.rot"],
               ["rosmsg.scan", "app.scan"],
+              ["rosmsg.bin_info", "app.bin_info"],
+              ["rosmsg.osgar_broadcast", "app.osgar_broadcast"],
+              ["rosmsg.vslam_pose", "app.vslam_pose"],
+              ["rosmsg.vslam_enabled", "app.vslam_enabled"],
               ["rosmsg./qual_2_score", "app.score"],
               ["rosmsg.joint_name", "hauler.joint_name"],
               ["rosmsg.joint_position", "hauler.joint_position"],
               ["rosmsg.joint_velocity", "hauler.joint_velocity"],
               ["rosmsg.joint_effort", "hauler.joint_effort"],
+              ["rosmsg.sim_clock", "hauler.sim_clock"],
+              ["rosmsg.sim_clock", "app.sim_clock"],
               ["rosmsg.left_image", "detector.left_image"],
               ["rosmsg.right_image", "detector.right_image"],
               ["app.desired_speed", "hauler.desired_speed"],
               ["app.desired_movement", "hauler.desired_movement"],
               ["app.request", "rpc.request"],
+              ["hauler.request", "rpc.request"],
               ["rpc.response", "app.response"],
               ["detector.artf", "app.artf"],
               ["hauler.cmd", "transmitter.raw"],
-              ["hauler.pose2d", "app.pose2d"]
+              ["app.cmd", "transmitter.raw"],
+              ["hauler.odo_pose", "app.odo_pose"],
+              ["hauler.desired_speeds", "app.desired_speeds"]
     ]
   }
 }

@@ -9,11 +9,11 @@ import traceback
 
 from osgar.bus import BusShutdownException
 
-from moon.controller import SpaceRoboticsChallenge, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor
+from moon.controller import ps, distance, SpaceRoboticsChallenge, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor
 from osgar.lib.virtual_bumper import VirtualBumper
 from osgar.lib.quaternion import euler_zyx
+from osgar.lib.mathex import normalizeAnglePIPI
 
-DIG_SAMPLE_COUNT = 12
 DIG_GOOD_LOCATION_MASS = 10
 
 class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
@@ -22,181 +22,246 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         bus.register("bucket_dig", "bucket_drop")
         self.volatile_dug_up = None
         self.mount_angle = None
+        self.vol_list = None
+        self.vslam_reset_at = None
+        self.use_gimbal = False
+        self.robot_name = "excavator_1"
+        self.hauler_ready = False
+        self.volatile_reached = False
+
+    def on_osgar_broadcast(self, data):
+        message_target = data.split(" ")[0]
+        if message_target == self.robot_name:
+            print(self.sim_time, self.robot_name, "Received external_command: %s" % str(data))
+            command = data.split(" ")[1]
+            if command == "arrived":
+                self.hauler_ready = True
+                if not self.volatile_reached:
+                    self.send_request('external_command hauler_1 follow')
+
+
+
+    def get_extra_status(self):
+        if self.volatile_dug_up[1] == 100:
+            return "Bucket empty"
+        else:
+            return ps("Bucket content: Type: %s idx: %d mass: %f" % (self.volatile_dug_up[0], self.volatile_dug_up[1], self.volatile_dug_up[2]))
 
     def on_bucket_info(self, bucket_status):
+        #[0] .. type ('ice'); [1] .. index (100=nothing); [2] .. mass
         self.volatile_dug_up = bucket_status
 
     def on_joint_position(self, data):
         super().on_joint_position(data)
         self.mount_angle = data[self.joint_name.index(b'mount_joint')]
 
+    def on_vslam_pose(self, data):
+        super().on_vslam_pose(data)
+
+        if self.sim_time is None or self.last_position is None or self.yaw is None:
+            return
+
+        if self.vslam_reset_at is not None and self.sim_time - self.vslam_reset_at > timedelta(seconds=3) and not math.isnan(data[0][0]) and self.tf['vslam']['trans_matrix'] is None:
+            # request origin and start tracking in correct coordinates as soon as first mapping lock occurs
+            # TODO: another pose may arrive while this request is still being processed (not a big deal, just a ROS error message)
+            self.send_request('request_origin', self.register_origin)
+
     def run(self):
 
-        def pose_distance(pose1, pose2):
-            return math.hypot(pose1[0] - pose2[0], pose1[1] - pose2[1])
+        def process_volatiles(vol_string):
+            nonlocal vol_list
 
-
-        try:
-            print('Wait for definition of last_position and yaw')
-            while self.sim_time is None or self.last_position is None or self.yaw is None:
-                self.update()  # define self.time
-            print('done at', self.sim_time)
-
-            vol_string = self.send_request('get_volatile_locations').decode('ascii')
+            print (self.sim_time, self.robot_name, "main-excavator-round2: Volatiles: %s" % vol_string)
             vol_list_one = vol_string.split(',')
             vol_list = [list(map(float, s.split())) for s in vol_list_one]
 
-            # robots face each other, turn away as not to trigger collision
+        def vslam_reset_time(response):
+            self.vslam_reset_at = self.sim_time
+
+        vol_list = None
+
+        try:
+            self.wait_for_init()
+
+            self.set_brakes(False)
+
+            self.set_cam_angle(-0.05)
+            self.set_light_intensity("0.4")
+
+            self.send_request('get_volatile_locations', process_volatiles)
+
             # move bucket to the back so that it does not interfere with lidar
-            # TODO: find better position/move for driving
+            # TODO: is there a better position to stash the bucket for driving?
+
             # wait for interface to wake up before trying to move arm
-            self.wait(timedelta(seconds=1))
             self.publish("bucket_drop", [math.pi, 'reset'])
-            self.wait(timedelta(seconds=1))
-            self.turn(math.pi/2, timeout=timedelta(seconds=10))
 
-            message = self.send_request('request_origin').decode("ascii")
-            if message.split()[0] == 'origin':
-                origin = [float(x) for x in message.split()[1:]]
+            while self.mount_angle is None or abs(normalizeAnglePIPI(math.pi - self.mount_angle)) > 0.2:
+                self.wait(timedelta(seconds=1))
 
-                xyz = origin[:3]
-                quat = origin[3:]
 
-                rx = xyz[0]
-                ry = xyz[1]
-                yaw = euler_zyx(quat)[0]
-            else:
-                xyz = [0,]*3
-                quat = [0,0,0,1]
+            self.send_request('vslam_reset', vslam_reset_time)
 
-                rx = 10
-                ry = 10
-                yaw = 0
+            while vol_list is None or not self.true_pose:
+                self.wait(timedelta(seconds=1))
+
+            # calculate position behind the excavator to send hauler to, hauler will continue visually from there
+            v = np.asmatrix(np.asarray([self.xyz[0], self.xyz[1], 1]))
+            c, s = np.cos(self.yaw), np.sin(self.yaw)
+            R = np.asmatrix(np.array(((c, -s, 0), (s, c, 0), (0, 0, 1))))
+            T = np.asmatrix(np.array(((1, 0, -8),(0, 1, 0),(0, 0, 1))))
+            pos =  np.dot(R, np.dot(T, np.dot(R.I, v.T)))
+            self.send_request('external_command hauler_1 goto %.1f %.1f %.2f' % (pos[0], pos[1], self.yaw))
+
+            # wait for hauler to start following, will receive osgar broadcast when done
+            while not self.hauler_ready:
+                self.wait(timedelta(seconds=1))
 
             while len(vol_list) > 0:
+                dist, ind = spatial.KDTree(vol_list).query([0,0], k=len(vol_list))
 
-                def make_unprotected_move(step):
-                    move, value = step
-                    if move == 'go_straight':
-                        self.go_straight(value, timeout=timedelta(seconds=abs(value*4)))
-                    else:
-                        self.turn(value, timeout=timedelta(seconds=10))
+                for i in range(len(dist)):
+                    d = distance(self.xyz, vol_list[ind[i]])
+                    if  d < 5: # too close/just did it
+                        print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d, skipping" % (i, d, ind[i]))
+                        continue
 
-                def drive_step(next_step):
-                    queue = [next_step]
-                    in_exception = False
-                    while len(queue) > 0:
-                        one_step = queue.pop(0)
-                        move, value = one_step
-                        if move == "in_exception":
-                            in_exception = value
-                            continue
-                        starting_pose = self.last_position
-                        starting_yaw = self.yaw
-                        if not in_exception:
-                            self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
-                            try:
-                                with LidarCollisionMonitor(self):
-                                    make_unprotected_move(one_step)
-                            except (VirtualBumperException, LidarCollisionException) as e:
-                                in_exception = True
-                                self.virtual_bumper = None
-                                print(self.sim_time, "excavator_controller exception in %s: %s" % (move, str(e)))
-                                traceback.print_exc()
-                                recovery_queue = []
-                                if move == "go_straight":
-                                    distance_covered = pose_distance(starting_pose, self.last_position)
-                                    print(self.sim_time, "excavator_controller exception: distance covered so far: %f" % distance_covered)
-                                    recovery_queue.append(("turn", math.radians(90)))
-                                    recovery_queue.append(("go_straight", -1))
-                                    recovery_queue.append(("go_straight", 5.0))
-                                    recovery_queue.append(("in_exception", False))
-                                    recovery_queue.append(("turn", math.radians(-90)))
-                                    recovery_queue.append(("go_straight", 9.0))
-                                    recovery_queue.append(("turn", math.radians(-90)))
-                                    recovery_queue.append(("go_straight", 5.0))
-                                    recovery_queue.append(("turn", math.radians(90)))
-                                    recovery_queue.append(("go_straight", value - distance_covered - 8))
-                                else:
-                                    recovery_queue.append(("go_straight", -1))
-                                    recovery_queue.append(("turn", math.radians(value - (self.yaw - starting_yaw))))
-                                    recovery_queue.append(("in_exception", False))
-                                    recovery_queue.append(("go_straight", 1))
-                                queue = recovery_queue + queue
+                    if abs(self.get_angle_diff(vol_list[ind[i]])) > 3*math.pi/4 and d < 10:
+                        print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d in opposite direction, skipping" % (i, d, ind[i]))
+                        continue
+                    if -3*math.pi/4 < math.atan2(vol_list[ind[i]][1] - self.xyz[1], vol_list[ind[i]][0] - self.xyz[0]) < -math.pi/4:
+                        print (self.sim_time, self.robot_name, "%d: Too much away from the sun, shadow interference" % i)
+                        continue
 
-                        else:
-                            make_unprotected_move(one_step)
+#                    if distance([0,0], vol_list[ind[i]]) > 35:
+#                        print (self.sim_time, self.robot_name, "%d: Too far from center" % i)
+#                        continue
 
-                distance, index = spatial.KDTree(vol_list).query([rx,ry])
-                print ("Dist: %f, index: %d" % (distance, index))
 
-                angle = math.atan2(vol_list[index][1] - ry, vol_list[index][0] - rx)
-                angle_diff = angle - yaw
+                    try:
+                        print(self.sim_time, self.robot_name, "excavator: Pursuing volatile [%.1f,%.1f] at distance: %f" % (vol_list[ind[i]][0],vol_list[ind[i]][1], d))
+                        self.virtual_bumper = VirtualBumper(timedelta(seconds=3), 0.2) # radius of "stuck" area; a little more as the robot flexes
+                        with LidarCollisionMonitor(self, 1500): # some distance needed not to lose tracking when seeing only obstacle up front
+                            # turning in place probably not desirable because hauler behind may be in the way, may need to send it away first
+                            angle_diff = self.get_angle_diff(vol_list[ind[i]])
+                            self.turn(math.copysign(min(abs(angle_diff),math.pi/4),angle_diff), timeout=timedelta(seconds=15))
+                            self.go_to_location(vol_list[ind[i]], self.default_effort_level, offset=-0.5, timeout=timedelta(minutes=5), full_turn=True) # extra offset for sliding
+                            self.wait(timedelta(seconds=2)) # wait to come to a stop
+                            self.send_request('external_command hauler_1 approach %f' % self.yaw) # TODO: due to skidding, this yaw may still change after sending
+                            self.hauler_ready = False
+                            break
 
-                # set up future robot position for the next volatile
-                # TODO: adjust based on actual direction of volatile scooped
-                rx = vol_list[index][0]
-                ry = vol_list[index][1]
-                yaw = angle
-                vol_list.pop(index)
+                    except LidarCollisionException as e: #TODO: long follow of obstacle causes loss, go along under steeper angle
+                        print(self.sim_time, self.robot_name, "Lidar")
+                        if distance(self.xyz, vol_list[ind[i]]) < 1:
+                            break
+                        self.inException = True
+                        self.lidar_drive_around()
+                        self.inException = False
+                    except VirtualBumperException as e:
+                        self.send_speed_cmd(0.0, 0.0)
+                        print(self.sim_time, self.robot_name, "Bumper")
+                        if distance(self.xyz, vol_list[ind[i]]) < 1:
+                            break
+                        self.inException = True
+                        self.go_straight(-1) # go 1m in opposite direction
+                        angle_diff = self.get_angle_diff(vol_list[ind[i]])
+                        self.drive_around_rock(-math.copysign(5, angle_diff)) # assume 6m the most needed
+                        self.inException = False
 
-                try:
+                if i == len(dist) - 1:
+                    print("***************** VOLATILES EXHAUSTED ****************************")
+                    break
 
-                    turn_angle = angle_diff % (2*math.pi)
-                    if turn_angle > math.pi:
-                        turn_angle = -(2*math.pi - turn_angle)
-                    drive_step(("turn", turn_angle))
+                self.send_speed_cmd(0.0, 0.0)
 
-                    # -2.5: target the volatile to be in front of the vehicle
-                    # hauler may also push excavator forward a little bit too
-                    desired_travel_distance = distance - 2.5
-                    drive_step(("go_straight", desired_travel_distance))
+                print ("---- VOLATILE REACHED ----")
+                #self.wait(timedelta(seconds=10))
+                #vol_list.pop(index)
+                self.set_brakes(True)
+                #self.wait(timedelta(seconds=3))
+                #self.set_brakes(False)
+                #continue
+                self.volatile_reached = True
 
-                    print ("---- NEXT VOLATILE ----")
-                    #self.wait(timedelta(seconds=10))
-                    #continue
+                # TODO: could look for volatile while waiting
+                # wait for hauler to start following, will receive osgar broadcast when done
+                while not self.hauler_ready:
+                    try:
+                        self.wait(timedelta(seconds=1))
+                    except:
+                        # excess pitch or other exception could happen but we are stopped so should stabilize
+                        pass
 
-                    self.set_brakes(True)
+                #self.volatile_reached = False # TEST
+                #self.send_request('external_command hauler_1 backout') # Testing
+                #continue # testing
 
-                    found_angle = None
-                    for i in range(DIG_SAMPLE_COUNT):
-                        self.publish("bucket_dig", [(-math.pi / 2 + i * 2*math.pi / DIG_SAMPLE_COUNT) % (2*math.pi), 'append'])
+                found_angle = None
+                best_angle = None
+                # mount 0.4-1.25 or 1.85-2.75 means we can't reach under the vehicle because of the wheels
+                mount_angle_sequence = [0.0, 0.39, -0.39, -0.83, 0.83, 1.26, -1.26, -1.55, 1.55, 1.84, -1.84, -2.2, 2.2, 2.6, -2.6]
+                for a in mount_angle_sequence:
+                    self.publish("bucket_dig", [a, 'append'])
+                self.publish("bucket_drop", [math.pi, 'append'])
 
-                    while found_angle is None:
-                        # TODO: add timeout, try something else if no volatile found
-                        while self.volatile_dug_up[1] == 100:
-                            self.wait(timedelta(milliseconds=300))
+                sample_start = self.sim_time
+                accum = 0
+                while found_angle is None and self.sim_time - sample_start < timedelta(seconds=200):
+                    # TODO instead of/in addition to timeout, trigger exit by bucket reaching reset position
+                    self.wait(timedelta(milliseconds=300))
+                    if self.volatile_dug_up[1] != 100:
+                        # we found first volatile
+
+                        if best_angle is None or self.volatile_dug_up[2] > accum:
+                            best_angle = self.mount_angle
+                        accum += self.volatile_dug_up[2]
                         if self.volatile_dug_up[2] > DIG_GOOD_LOCATION_MASS:
                             found_angle = self.mount_angle
-
                         # go for volatile drop (to hauler), wait until finished
                         self.publish("bucket_drop", [math.pi, 'prepend'])
                         while self.volatile_dug_up[1] != 100:
                             self.wait(timedelta(milliseconds=300))
 
-                    def scoop_all(angle):
-                        while True:
-                            dig_start = self.sim_time
-                            self.publish("bucket_dig", [angle, 'reset'])
-                            while self.volatile_dug_up[1] == 100:
-                                self.wait(timedelta(milliseconds=300))
-                                if self.sim_time - dig_start > timedelta(seconds=20):
-                                    # move bucket out of the way and continue to next volatile
-                                    self.publish("bucket_drop", [math.pi, 'append'])
-                                    return
-                            self.publish("bucket_drop", [math.pi, 'append'])
-                            while self.volatile_dug_up[1] != 100:
-                                self.wait(timedelta(milliseconds=300))
+                def scoop_all(angle):
+                    nonlocal accum
+                    while True:
+                        dig_start = self.sim_time
+                        self.publish("bucket_dig", [angle, 'reset'])
+                        while self.volatile_dug_up[1] == 100:
+                            self.wait(timedelta(milliseconds=300))
+                            if self.sim_time - dig_start > timedelta(seconds=40): # TODO: timeout needs to be adjusted to the ultimate digging plan
+                                # move bucket out of the way and continue to next volatile
+                                self.publish("bucket_drop", [math.pi, 'append'])
+                                return False
+                        accum += self.volatile_dug_up[2]
+                        if abs(accum - 100.0) < 0.0001:
+                            print(self.sim_time, self.robot_name, "Volatile amount %.2f transfered, terminating" % accum)
+                            # TODO: assumes 100 to be total volatile at location, actual total reported initially, parse and match instead
+                            return True
+                        self.publish("bucket_drop", [math.pi, 'append'])
+                        while self.volatile_dug_up[1] != 100:
+                            self.wait(timedelta(milliseconds=300))
 
-                    scoop_all(found_angle)
+                if found_angle is None and best_angle is not None and accum >= 3.0:
+                    # do not attempt to collect all if initial amount too low, would take too long
+                    found_angle = best_angle
+                if found_angle is not None:
+                    if scoop_all(found_angle):
+                        vol_list.pop(ind[i])# once scooping finished or given up on, remove volatile from list
 
-                    self.set_brakes(False)
-                    # move away from hauler to be able to turn
-                    # TODO: adjust driving accordingly
-                    drive_step(("go_straight", 0.3))
+                self.publish("bucket_drop", [math.pi, 'reset'])
 
-                except VirtualBumperException:
-                    pass
+                # wait for bucket to be dropped and/or position reset before moving on
+                while self.volatile_dug_up[1] != 100 or (self.mount_angle is None or abs(normalizeAnglePIPI(math.pi - self.mount_angle)) > 0.2):
+                    self.wait(timedelta(seconds=1))
+
+                self.send_request('external_command hauler_1 follow')
+
+                self.set_brakes(False)
+
+                self.volatile_reached = False
+
 
 
         except BusShutdownException:

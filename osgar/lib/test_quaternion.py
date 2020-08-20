@@ -1,10 +1,10 @@
 import math
-import unittest
+from osgar.lib.unittest import TestCase
 
 from . import quaternion
 
 
-class QuaternionTest(unittest.TestCase):
+class QuaternionTest(TestCase):
 
     def test_multiply(self):
         qa = [0, 0, 0, 1]
@@ -24,30 +24,22 @@ class QuaternionTest(unittest.TestCase):
         q = [ 0, 0, 0.7071068, 0.7071068 ]
         actual = quaternion.rotate_vector(v, q)
         expected = [0, 1, 0]
-        self.assertAlmostEqual(expected[0], actual[0], places=6)
-        self.assertAlmostEqual(expected[1], actual[1], places=6)
-        self.assertAlmostEqual(expected[2], actual[2], places=6)
+        self.assertListAlmostEqual(expected, actual, delta=1e-6)
 
         actual = quaternion.rotate_vector(expected, q)
         expected = [-1, 0, 0]
-        self.assertAlmostEqual(expected[0], actual[0], places=6)
-        self.assertAlmostEqual(expected[1], actual[1], places=6)
-        self.assertAlmostEqual(expected[2], actual[2], places=6)
+        self.assertListAlmostEqual(expected, actual, delta=1e-6)
 
     def test_from_axis_angle(self):
         actual = quaternion.from_axis_angle((0,0,1), math.radians(90))
         expected = [0, 0, 0.7071068, 0.7071068]
-        self.assertAlmostEqual(expected[0], actual[0], places=6)
-        self.assertAlmostEqual(expected[1], actual[1], places=6)
-        self.assertAlmostEqual(expected[2], actual[2], places=6)
-        self.assertAlmostEqual(expected[3], actual[3], places=6)
+        self.assertListAlmostEqual(expected, actual)
 
     def test_quaterion_internal_normalization(self):
         q = (0.02089575225593203, -0.6597655110187111, 0.381406681115162, -0.7726979260818011)
         angles = quaternion.euler_zyx(q)
-        self.assertAlmostEqual(angles[0], -1.5436762)
-        self.assertAlmostEqual(angles[1], 1.0194396)
-        self.assertAlmostEqual(angles[2], -1.0505728)
+        expected = [-1.5436762, 1.0194396, -1.0505728]
+        self.assertListAlmostEqual(angles, expected)
 
     def test_rotation_matrix(self):
         from collections import namedtuple
@@ -56,13 +48,30 @@ class QuaternionTest(unittest.TestCase):
             T([ 0, 0, 0.7071068, 0.7071068 ], [[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]),
             T([ 0, 0.7071068, 0, 0.7071068 ], [[0.0, 0.0, 1.0], [0.0,  1.0,  0.0], [-1.0, 0.0, 0.0]]),
             T([ 0.7071068, 0, 0, 0.7071068 ], [[1.0,  0.0,  0.0], [0.0,  0.0, -1.0], [0.0, 1.0, 0.0 ]]),
-            T([ 0.5, 0.5, 0, 0.7071068 ], [[0.5, 0.5, 0.7071068], [0.5, 0.5, -0.7071068], [-0.7071068, 0.7071068, 0.0]])
+            T([ 0.5, 0.5, 0, 0.7071068 ], [[0.5, 0.5, 0.7071068], [0.5, 0.5, -0.7071068], [-0.7071068, 0.7071068, 0.0]]),
+            T([ 0, 0, 1, 0 ], [[-1.0, -0.0,  0.0], [0.0000000, -1.0,  0.0], [0.0,  0.0,  1.0]]),
         ]
         for i, t in enumerate(tests):
-            with self.subTest(test=i):
+            with self.subTest(test=i, kind="to matrix"):
                 actual = quaternion.rotation_matrix(t.q)
                 for row in range(len(actual)):
                     for col in range(len(actual[0])):
                         self.assertAlmostEqual(t.matrix[row][col], actual[row][col], places=6, msg=(row, col))
+
+        for i, t in enumerate(tests):
+            with self.subTest(test=i, kind="from matrix"):
+                q = quaternion.from_rotation_matrix(t.matrix)
+                self.assertListAlmostEqual(q, t.q)
+
+
+    def test_rotation_matrix_random(self):
+        from random import Random
+        r = Random(0).random
+        for i in range(1000):
+            with self.subTest(test=i):
+                q = quaternion.normalize([r(), r(), r(), r()])
+                rotmat = quaternion.rotation_matrix(q)
+                qq = quaternion.from_rotation_matrix(rotmat)
+                self.assertListAlmostEqual(q, qq)
 
 # vim: expandtab sw=4 ts=4

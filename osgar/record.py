@@ -24,12 +24,13 @@ class Recorder:
         self.bus = Bus(logger)
         for module_name, module_config in config['modules'].items():
             klass = get_class_by_name(module_config['driver'])
-            self.modules[module_name] = klass(module_config['init'], bus=self.bus.handle(module_name))
+            self.modules[module_name] = klass(module_config.get('init', {}), bus=self.bus.handle(module_name))
 
         for sender, receiver in config['links']:
             self.bus.connect(sender, receiver, self.modules)
 
         signal.signal(signal.SIGINT, self.request_stop)
+        g_logger.info("SIGINT handler installed")
 
     def __enter__(self):
         for module in self.modules.values():
@@ -84,12 +85,13 @@ def main(record=record):
     parser.add_argument('config', nargs='+', help='configuration file')
     parser.add_argument('--note', help='add description')
     parser.add_argument('--duration', help='recording duration (sec), default infinite', type=float)
+    parser.add_argument('--log', help='force record log filename')
     parser.add_argument('--application', help='import string to application', default=None)
     args = parser.parse_args()
 
     prefix = os.path.basename(args.config[0]).split('.')[0] + '-'
     cfg = config_load(*args.config, application=args.application)
-    record(cfg, log_prefix=prefix, duration_sec=args.duration)
+    record(cfg, log_prefix=prefix, duration_sec=args.duration, log_filename=args.log)
 
 if __name__ == "__main__":
     main()

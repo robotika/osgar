@@ -15,6 +15,9 @@
             "virtual_world": true
           }
       },
+      "localization": {
+        "driver": "subt.odoimuloc:Localization"
+      },
       "detector": {
           "driver": "subt.artf_node:ArtifactDetectorDNN",
           "in": ["image", "scan"],
@@ -65,6 +68,14 @@
 	      "init": {
 	        "outputs": ["rot", "acc", "orientation"]
 	      }
+      },
+      "lora": {
+          "driver": "lora",
+          "in": ["raw", "pose2d"],
+          "out": ["raw", "cmd"],
+          "init": {
+            "device_id": 1
+          }
       }
     },
     "links": [["app.desired_speed", "rosmsg.desired_speed"],
@@ -72,13 +83,16 @@
               ["app.request_origin", "rosmsg.request_origin"],
               ["rosmsg.origin", "app.origin"],
 
+              ["rosmsg.origin",     "localization.origin"],
+              ["rosmsg.pose2d",     "localization.odom"],
+              ["rospy.orientation", "localization.orientation"],
+
               ["receiver.raw", "rosmsg.raw"],
               ["rosmsg.cmd", "transmitter.raw"],
 
               ["rospy.rot", "app.rot"],
               ["rospy.rot", "depth2scan.rot"],
               ["rospy.acc", "app.acc"],
-              ["rospy.orientation", "app.orientation"],
 
               ["rosmsg.scan", "detector.scan"],
               ["rosmsg.scan", "depth2scan.scan"],
@@ -94,6 +108,11 @@
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
 
               ["rosmsg.gas_detected", "detector.gas_detected"],
+
+              ["app.pose2d", "lora.pose2d"],
+              ["lora.cmd", "app.cmd"],
+              ["app.artf_xyz", "lora.artf"],
+              ["lora.raw", "rosmsg.broadcast"],
 
               ["detector.artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],

@@ -4,6 +4,7 @@
 from datetime import timedelta
 import os
 from io import StringIO
+from statistics import median
 
 import cv2
 import numpy as np
@@ -11,8 +12,16 @@ from pathlib import Path
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
+from moon.moonnode import MoonNode
 
 curdir = Path(__file__).parent
+
+def union(a,b):
+    x = min(a[0], b[0])
+    y = min(a[1], b[1])
+    w = max(a[0]+a[2], b[0]+b[2]) - x
+    h = max(a[1]+a[3], b[1]+b[3]) - y
+    return (x, y, w, h)
 
 class ArtifactDetector(Node):
     def __init__(self, config, bus):
@@ -23,6 +32,38 @@ class ArtifactDetector(Node):
         self.scan = None  # should laster initialize super()
         self.depth = None  # more precise definiton of depth image
         self.width = None  # detect from incoming images
+        self.look_for_artefacts = config.get('artefacts', [])
+
+        window_size = 5
+        min_disp = 16
+        num_disp = 192-min_disp
+        blockSize = window_size
+        uniquenessRatio = 7
+        speckleRange = 3
+        speckleWindowSize = 75
+        disp12MaxDiff = 200
+        P1 = 8*3*window_size**2
+        P2 = 32 * 3 * window_size ** 2
+        self.stereo_calc = cv2.StereoSGBM_create(
+            minDisparity = min_disp,
+            numDisparities = num_disp,
+            blockSize = window_size,
+            uniquenessRatio = uniquenessRatio,
+            speckleRange = speckleRange,
+            speckleWindowSize = speckleWindowSize,
+            disp12MaxDiff = disp12MaxDiff,
+            P1 = P1,
+            P2 = P2
+        )
+        WIDTH=640
+        HEIGHT=480
+        FOCAL_LENGTH=381
+        BASELINE=0.42 # meters
+        self.Q = np.float32([[1, 0, 0, -0.5*WIDTH],
+                             [0,-1, 0,  0.5*HEIGHT], # turn points 180 deg around x-axis,
+                             [0, 0, 0,     FOCAL_LENGTH], # so that y-axis looks up
+                             [0, 0, 1/0.42,      0]])
+
         self.detectors = [
             {
                 'artefact_name': 'cubesat',
@@ -33,11 +74,20 @@ class ArtifactDetector(Node):
                 'subsequent_detects_required': 3
                 },
             {
+                'artefact_name': 'homebase',
+                'detector_type': 'classifier',
+                'classifier': cv2.CascadeClassifier(str(curdir/'xml/homebase.xml')),
+                'min_size': 20,
+                'max_size': 400,
+                'subsequent_detects_required': 3
+                },
+            {
                 'artefact_name': 'basemarker',
                 'detector_type': 'colormatch',
                 'mser': cv2.MSER_create(_min_area=100),
                 'min_size': 50,
                 'max_size': 500,
+                'min_y': 200, # lower edge of the bbox must below this
                 'pixel_count_threshold': 100,
                 'bbox_union_count': 1,
                 'hue_max_difference': 10,
@@ -50,6 +100,7 @@ class ArtifactDetector(Node):
                 'mser': cv2.MSER_create(_min_area=400),
                 'min_size': 20,
                 'max_size': 700,
+                'min_y': None,
                 'pixel_count_threshold': 400,
                 'bbox_union_count': 5,
                 'hue_max_difference': 10,
@@ -60,12 +111,13 @@ class ArtifactDetector(Node):
                 'artefact_name': 'rover',
                 'detector_type': 'colormatch',
                 'mser': cv2.MSER_create(_min_area=100),
-                'min_size': 20,
+                'min_size': 10,
                 'max_size': 700,
-                'pixel_count_threshold': 500,
+                'min_y': None,
+                'pixel_count_threshold': 150,
                 'bbox_union_count': 3,
                 'hue_max_difference': 5,
-                'hue_match': 29, # from RGB FFA616
+                'hue_match': 26, # from RGB FFA616
                 'subsequent_detects_required': 3
             }
         ]
@@ -86,7 +138,7 @@ class ArtifactDetector(Node):
             self.time, channel, data = self.listen()
             if channel == "left_image":
                 self.left_image = data
-            else:
+            elif channel == "right_image":
                 self.right_image = data
         return self.time
 
@@ -98,6 +150,7 @@ class ArtifactDetector(Node):
                 dropped = -1
                 timestamp = now
                 while timestamp <= now:
+                    # this thread is always running but wait and drop images if simulation is slower
                     timestamp = self.waitForImage()
                     dropped += 1
                 self.detect_and_publish(self.left_image, self.right_image)
@@ -129,7 +182,11 @@ class ArtifactDetector(Node):
         hsv = cv2.cvtColor(limg, cv2.COLOR_BGR2HSV)
         hsv_blurred = cv2.medianBlur(hsv,5) # some frames have noise, need to blur otherwise threshold doesn't work
 
+        objects_detected = []
         for c in self.detectors:
+            if c['artefact_name'] not in self.look_for_artefacts:
+                continue
+
             if c['artefact_name'] not in self.detect_sequences:
                 self.detect_sequences[c['artefact_name']] = 0
 
@@ -139,44 +196,52 @@ class ArtifactDetector(Node):
                 # Threshold the HSV image to get only the matching colors
                 mask = cv2.inRange(hsv_blurred, lower_hue, upper_hue)
 
+
                 _, bboxes = c['mser'].detectRegions(mask)
                 if len(bboxes) > 0:
                     sb = sorted(bboxes, key = box_area, reverse = True)[:c['bbox_union_count']]
                     bbox = sb[0]
                     for b in sb[1:]:
-                        if b[0] < bbox[0]:
-                            bbox[0] = b[0]
-                        if b[1] < bbox[1]:
-                            bbox[1] =b[1]
-                        if b[0] + b[2] > bbox[0] + bbox[2]:
-                            bbox[2] = b[0] + b[2] - bbox[0]
-                        if b[1] + b[3] > bbox[1] + bbox[3]:
-                            bbox[3] = b[1] + b[3] - bbox[1]
-
+                        bbox = union(bbox,b)
                     x, y, w, h = bbox
                     match_count = cv2.countNonZero(mask[y:y+h,x:x+w])
                     if (
                             match_count > c['pixel_count_threshold'] and
                             w >= c['min_size'] and h >= c['min_size'] and
-                            w <= c['max_size'] and h <= c['max_size']
+                            w <= c['max_size'] and h <= c['max_size'] and
+                            (c['min_y'] is None or y + h >= c['min_y'])
                     ):
                         # print ("%s match count: %d; [%d %d %d %d]" % (c['artefact_name'], match_count, x, y, w, h))
+                        objects_detected.append(c['artefact_name'])
                         if self.detect_sequences[c['artefact_name']] < c['subsequent_detects_required']:
                             # do not act until you have detections in a row
                             self.detect_sequences[c['artefact_name']] += 1
                         else:
-                            results.append((c['artefact_name'], int(x), int(y), int(w), int(h), int(match_count)))
-                    else:
-                        self.detect_sequences[c['artefact_name']] = 0
-                else:
-                    self.detect_sequences[c['artefact_name']] = 0
+                            disp = self.stereo_calc.compute(limg_rgb, rimg_rgb).astype(np.float32) / 16.0
+                            points = cv2.reprojectImageTo3D(disp, self.Q)
+                            matching_points = points[mask != 0]
+                            distances = matching_points[:,2] # third column are Z coords (distances)
 
+
+                            mean = np.mean(distances)
+                            sd = np.std(distances)
+                            distances_clean = [x for x in distances if (x > mean - 2 * sd)]
+                            distances_clean = [x for x in distances_clean if (x < mean + 2 * sd)]
+
+                            #print("Artf distance: min %.1f median: %.1f" % (min(distances), median(distances)))
+                            if len(distances_clean) == 0:
+                              distances_clean = distances
+                              # print("Artf cleaned: min %.1f median: %.1f" % (min(final_list), median(final_list)))
+                            dist = max(0.0, min(distances_clean)) # subtract about half length of the rover
+                            # NOTE: when the artifact is barely in the picture (and computation not possible), distance 9.7 seems to be returned, TODO: return special value?
+                            results.append((c['artefact_name'], int(x), int(y), int(w), int(h), int(match_count), float(dist)))
 
             if c['detector_type'] == 'classifier':
                 lfound = c['classifier'].detectMultiScale(limg_rgb, minSize =(c['min_size'], c['min_size']),  maxSize =(c['max_size'], c['max_size']))
                 rfound = c['classifier'].detectMultiScale(rimg_rgb, minSize =(c['min_size'], c['min_size']),  maxSize =(c['max_size'], c['max_size']))
 
                 if len(lfound) > 0 and len(rfound) > 0: # only report if both cameras see it
+                    objects_detected.append(c['artefact_name'])
                     if self.detect_sequences[c['artefact_name']] < c['subsequent_detects_required']: # do not act until you have detections in a row
                         self.detect_sequences[c['artefact_name']] += 1
                     else:
@@ -193,8 +258,10 @@ class ArtifactDetector(Node):
     #                    print(self.time, "Post: %d %d %d %d" % (x+nx,y+ny,nw,nh))
 
                         results.append((c['artefact_name'], int(x+nx), int(y+ny), int(nw), int(nh), int(nonzerocount)))
-                else:
-                    self.detect_sequences[c['artefact_name']] = 0
+
+        for artefact_name in self.detect_sequences.keys():
+            if artefact_name not in objects_detected:
+                self.detect_sequences[artefact_name] = 0
 
         return results
 

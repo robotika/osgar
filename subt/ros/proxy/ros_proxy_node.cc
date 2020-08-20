@@ -23,6 +23,7 @@
 #include <chrono>
 #include <thread>
 #include <fstream>
+#include <mutex>
 
 #include <geometry_msgs/Twist.h>
 #include <rosgraph_msgs/Clock.h>
@@ -50,6 +51,7 @@
 #include <zmq.h>
 #include <assert.h>
 
+const uint32_t BROADCAST_PORT = 4142u; // default is 4100 and collides with artifact messages
 
 #define ROSBAG_SIZE_LIMIT 3000000000L  // 3GB
 
@@ -69,6 +71,8 @@ int g_countReceives = 0;
 void *g_context;
 void *g_responder;
 
+std::mutex g_zmq_mutex;
+
 void initZeroMQ()
 {
   g_context = zmq_ctx_new ();
@@ -80,12 +84,19 @@ void initZeroMQ()
   }
 }
 
+// int zmq_send (void *socket, void *buf, size_t len, int flags);
+int protected_zmq_send(void *socket, const void *buf, size_t len, int flags)
+{
+  const std::lock_guard<std::mutex> lock(g_zmq_mutex);
+  return zmq_send(socket, buf, len, flags);
+}
+
 void clockCallback(const rosgraph_msgs::Clock::ConstPtr& msg)
 {
   ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
   if(g_clockPrevSec != msg->clock.sec)
   {
-    zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
+    protected_zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
     g_clockPrevSec = msg->clock.sec;
   }
   if(g_countClock % 1000 == 0)
@@ -96,7 +107,7 @@ void clockCallback(const rosgraph_msgs::Clock::ConstPtr& msg)
 void scanCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
 {
   ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
+  protected_zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
   if(g_countScan % 100 == 0)
     ROS_INFO("received Scan %d", g_countScan);
   g_countScan++;
@@ -105,7 +116,7 @@ void scanCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
 void imageCallback(const sensor_msgs::CompressedImage::ConstPtr& msg)
 {
   ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
+  protected_zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
   if(g_countImage % 100 == 0)
     ROS_INFO("received Image %d", g_countImage);
   g_countImage++;
@@ -114,7 +125,7 @@ void imageCallback(const sensor_msgs::CompressedImage::ConstPtr& msg)
 void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
 {
   ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
+  protected_zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
   if(g_countOdom % 100 == 0)
     ROS_INFO("received Odom %d", g_countOdom);
   g_countOdom++;
@@ -123,7 +134,7 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
 void gasCallback(const std_msgs::Bool::ConstPtr& msg)
 {
   ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
+  protected_zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
   if(g_countGas % 100 == 0)
     ROS_INFO("received Gas %d", g_countGas);
   g_countGas++;
@@ -138,7 +149,7 @@ void depthCallback(const sensor_msgs::Image::ConstPtr& msg)
   size_t i;
   for(i = 0; i < size; i++)
     s += buf[i];
-  zmq_send(g_responder, s.c_str(), size + 5, 0);
+  protected_zmq_send(g_responder, s.c_str(), size + 5, 0);
   if(g_countDepth % 100 == 0)
     ROS_INFO("received Depth %d", g_countDepth);
   g_countDepth++;
@@ -153,7 +164,7 @@ void pointsCallback(const sensor_msgs::PointCloud2::ConstPtr& msg)
   size_t i;
   for(i = 0; i < size; i++)
     s += buf[i];
-  zmq_send(g_responder, s.c_str(), size + 6, 0);
+  protected_zmq_send(g_responder, s.c_str(), size + 6, 0);
   if(g_countPoints % 100 == 0)
     ROS_INFO("received Points %d", g_countPoints);
   g_countPoints++;
@@ -164,14 +175,21 @@ void sendOrigin(std::string& name, double x, double y, double z,
 {
   char buf[1000];
   int size = sprintf(buf, "origin %s %lf %lf %lf  %lf %lf %lf %lf", name.c_str(), x, y, z, qx, qy, qz, qw);
-  zmq_send(g_responder, buf, size, 0);
+  protected_zmq_send(g_responder, buf, size, 0);
 }
 
 void sendOriginError(std::string& name)
 {
   char buf[1000];
   int size = sprintf(buf, "origin %s ERROR", name.c_str());
-  zmq_send(g_responder, buf, size, 0);
+  protected_zmq_send(g_responder, buf, size, 0);
+}
+
+void sendReceivedMessage(const std::string &srcAddress, const std::string &data)
+{
+  char buf[10000];  // the limit for messages is 4k?
+  int size = sprintf(buf, "radio %s %s", srcAddress.c_str(), data.c_str());
+  protected_zmq_send(g_responder, buf, size, 0);
 }
 
 
@@ -254,6 +272,20 @@ class Controller
     return true;
   }
 
+  public: bool broadcast(std::string& serializedData)
+  {
+    if (this->client == 0) {
+        ROS_INFO_STREAM("no client");
+        return false;
+    }
+    if (!this->client->SendTo(serializedData, subt::kBroadcast, BROADCAST_PORT))
+    {
+      ROS_ERROR("CommsClient failed to broadcast serialized data.");
+      return false;
+    }
+    return true;
+  }
+
   std::thread m_receiveZmq;
 
   static void receiveZmqThread(Controller * self);
@@ -299,6 +331,7 @@ void Controller::CommClientCallback(const std::string &_srcAddress,
   // Add code to handle communication callbacks.
   ROS_INFO("Message from [%s] to [%s] on port [%u]:\n [%s]", _srcAddress.c_str(),
       _dstAddress.c_str(), _dstPort, res.DebugString().c_str());
+  sendReceivedMessage(_srcAddress, _data);
 }
 
 /////////////////////////////////////////////////
@@ -329,7 +362,7 @@ void Controller::Update(const ros::TimerEvent&)
     {
       // Create subt communication client
       this->client.reset(new subt::CommsClient(this->name));
-      this->client->Bind(&Controller::CommClientCallback, this);
+      this->client->Bind(&Controller::CommClientCallback, this, "", BROADCAST_PORT);
 
       // Create a cmd_vel publisher to control a vehicle.
       this->velPub = this->n.advertise<geometry_msgs::Twist>(
@@ -545,6 +578,17 @@ void Controller::receiveZmqThread(Controller * self)
       {
         ROS_INFO("ERROR! - failed to parse received artifact info");
       }
+    }
+    else if(strncmp(buffer, "broadcast ", 10) == 0)
+    {
+        std::string content(buffer + 10);
+        ROS_INFO_STREAM("BROADCAST RECEIVED " << content);
+        if(self->broadcast(content))
+        {
+          ROS_INFO("MD BROADCAST SUCCESS\n");
+        }
+        else
+          ROS_INFO("MD BROADCAST FAILURE\n");
     }
     else
     {
