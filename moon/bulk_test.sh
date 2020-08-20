@@ -84,12 +84,12 @@ fi
 SUCCESS_STRING="Score: ${SCORE}"
 case ${ROUND} in
     1)
-        FAIL_STRING="<none>"
-        FAIL_SWITCH=""
+        FAIL_STRING="Sleep and finish"
+        FAIL_SWITCH="-e \"${FAIL_STRING}\""
         ;;
     2)
-        FAIL_STRING="<none>"
-        FAIL_SWITCH=""
+        FAIL_STRING="Sleep and finish"
+        FAIL_SWITCH="-e \"${FAIL_STRING}\""
         ;;
     3)
         FAIL_STRING="object location incorrect"
@@ -136,7 +136,7 @@ do
         echo "Running OSGAR image ${osgar_image_id}" >> ${log_file}
         echo "Running SRCP2 image ${srcp2_image_id}" >> ${log_file}
 
-        timeout $TIMEOUT sh -c "( docker run --rm --network=host -t --name nasa-rover rover:latest /osgar/moon/docker/rover/run_solution.bash -r $ROUND &) | tee -a ${log_file} | grep -m 1 ${FAIL_SWITCH} -e \"${SUCCESS_STRING}\""
+        timeout $TIMEOUT sh -c "( docker run --rm --network=host -t --name nasa-rover rover:latest /osgar/moon/docker/rover/run_solution.bash -r $ROUND &) 2>&1 | tee -a ${log_file} | grep -m 1 ${FAIL_SWITCH} -e \"${SUCCESS_STRING}\""
         # timeout exit status 124 means the timeout limit was reached
         timeout_status=$?
         grep -q "${SUCCESS_STRING}" < ${log_file}
