@@ -22,11 +22,17 @@ class CvDetector:
         rows = img.shape[0]
         cols = img.shape[1]
         # The size parameter should correspond with model
-        self.cvNet.setInput(cv2.dnn.blobFromImage(img, size=(640, 320), swapRB=True, crop=False))
+        # ssd_inception_v2
+        self.cvNet.setInput(cv2.dnn.blobFromImage(img, size=(300, 300), swapRB=True, crop=False))
+        # faster_rcnn_resnet50
+#        self.cvNet.setInput(cv2.dnn.blobFromImage(img, size=(640, 320), swapRB=True, crop=False))
         cvOut = self.cvNet.forward()
 
         scores = cvOut[0, 0, :, 2]
-        classes = cvOut[0, 0, :, 1]
+        # ssd_inception_v2
+        classes = cvOut[0, 0, :, 1]-1
+        # faster_rcnn_resnet50
+#        classes = cvOut[0, 0, :, 1]
         classes = classes.astype('int32')
         mask = MIN_SCORES[classes] < scores
 
