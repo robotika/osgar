@@ -146,16 +146,24 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
 
     def circular_pattern(self):
         current_sweep_step = 0
+        ARRIVAL_TOLERANCE = 5
+        CIRCLE_SEGMENTS = 10
         sweep_steps = []
-        HOMEPOINT = self.xyz
+        #HOMEPOINT = self.xyz # where the drive started and we know the location well
+        CENTERPOINT = [3,0] # where to start the circle from
+        HOMEPOINT = [-10,-10] # central area, good for regrouping
+        print(self.sim_time, "Home coordinates: %.1f, %.1f" % (HOMEPOINT[0], HOMEPOINT[1]))
 
-        sweep_steps.append([[-10,-10], self.default_effort_level, False])
+
+        #sweep_steps.append(["turn", [math.radians(360)]])
+        sweep_steps.append(["goto", False, [HOMEPOINT, self.default_effort_level, False]])
+        # sweep_steps.append(["turn", False, [math.radians(360)]]) # more likely to break vslam than help
 
         # go around the main crater in circles
-        for rad in range(13,55,3): # create a little overlap not to miss anything
-            for i in range(10):
-                x,y = pol2cart(rad, 2 * math.pi - i * 2 * math.pi / 10)
-                sweep_steps.append([[x,y], self.default_effort_level, False])
+        for rad in range(13,55,2): # create a little overlap not to miss anything
+            for i in range(CIRCLE_SEGMENTS):
+                x,y = pol2cart(rad, 2 * math.pi - i * 2 * math.pi / CIRCLE_SEGMENTS)
+                sweep_steps.append(["goto", False, [[x + CENTERPOINT[0], y + CENTERPOINT[1]], self.default_effort_level, False]])
 
         # sweep the hilly center in stripes (~10 mins), circle would include too many turns
         # for i in range(-13, 13, 3):
@@ -179,12 +187,29 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                     self.wait(timedelta(seconds=1))
                 self.virtual_bumper = VirtualBumper(timedelta(seconds=5), 0.2) # radius of "stuck" area; a little more as the robot flexes
                 with LidarCollisionMonitor(self, 1200): # some distance needed not to lose tracking when seeing only obstacle up front
-                    pos, speed, self.returning_to_base = sweep_steps[current_sweep_step]
-                    print(self.sim_time, "Driving radius: %.1f" % distance(HOMEPOINT, pos))
-                    self.go_to_location(pos, speed, full_turn=True, with_stop=False, tolerance=2)
+                    op, self.inException, params = sweep_steps[current_sweep_step]
+                    if op == "goto":
+                        pos, speed, self.returning_to_base = params
+                        print(self.sim_time, "Driving radius: %.1f" % distance(CENTERPOINT, pos))
+                        self.go_to_location(pos, speed, full_turn=True, with_stop=False, tolerance=ARRIVAL_TOLERANCE, avoid_obstacles_close_to_destination=True)
+                    elif op == "turn":
+                        angle, self.returning_to_base = params
+                        self.turn(angle, timeout=timedelta(seconds=20))
+                    elif op == "straight": # TODO: if interrupted, it will repeat the whole distance when recovered
+                        dist, self.returning_to_base = params
+                        self.go_straight(dist)
+                    elif op == "rock":
+                        self.drive_around_rock(6) # assume 6m the most needed
+                    elif op == "lidar":
+                         self.lidar_drive_around()
+                    else:
+                        assert False, "Invalid command"
                     current_sweep_step += 1
             except VSLAMLostException as e:
                 print("VSLAM lost")
+                sweep_steps.insert(current_sweep_step, ["turn", False, [math.radians(360), True]])
+                continue
+
                 self.inException = True
 
                 try:
@@ -206,7 +231,12 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                 self.inException = False
                 if not self.vslam_valid: # if vslam still not valid after backtracking, go towards center
                     self.returning_to_base = True
-                    sweep_steps.insert(current_sweep_step, [HOMEPOINT, self.default_effort_level, True])
+                    # sweep_steps.insert(current_sweep_step, ["goto", [HOMEPOINT, self.default_effort_level, True]])
+                    anglediff = self.get_angle_diff(HOMEPOINT)
+                    # queue in reverse order
+                    sweep_steps.insert(current_sweep_step, ["straight", False, [distance(self.xyz, HOMEPOINT), True]])
+                    sweep_steps.insert(current_sweep_step, ["turn", False, [anglediff, True]])
+                    #TODO: to go to homebase, measure angle and distance and then go straight instead of following localization, ignore all vslam info
                 else:
                     print("VSLAM found after stepping back")
             except VSLAMFoundException as e:
@@ -215,6 +245,8 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                 current_sweep_step += 1
             except VSLAMEnabledException as e:
                 print(self.sim_time, "VSLAM: mapping re-enabled")
+                # rover often loses precision after pausing, go back to center to re-localize
+                # sweep_steps.insert(current_sweep_step, ["goto", [HOMEPOINT, self.default_effort_level, False]]) # can't go every time
                 wait_for_mapping = False
             except VSLAMDisabledException as e:
                 print(self.sim_time, "VSLAM: mapping disabled, waiting")
@@ -222,67 +254,17 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                 wait_for_mapping = True
             except LidarCollisionException as e: #TODO: long follow of obstacle causes loss, go along under steeper angle
                 print(self.sim_time, "Lidar")
-                if distance(self.xyz, pos) < 5:
+                if distance(self.xyz, pos) < ARRIVAL_TOLERANCE:
                     current_sweep_step += 1
                     continue
-                self.inException = True
-                try:
-                    self.lidar_drive_around(direction=-1)
-                except VSLAMDisabledException as e:
-                    print(self.sim_time, "VSLAM: mapping disabled, waiting")
-                    self.send_speed_cmd(0.0, 0.0)
-                    wait_for_mapping = True
-                except VSLAMEnabledException as e:
-                    print(self.sim_time, "VSLAM: mapping re-enabled")
-                    wait_for_mapping = False
-                except VSLAMFoundException as e:
-                    print("VSLAM found on way to base")
-                    self.returning_to_base = False
-                    current_sweep_step += 1
-                except:
-                    pass
-                finally:
-                    self.inException = False
-                # continue to previous target from a position next to the rock
-                #current_sweep_step += 1
+                sweep_steps.insert(current_sweep_step, ["lidar", True, []])
             except VirtualBumperException as e:
-                self.send_speed_cmd(0.0, 0.0)
                 print(self.sim_time, "Bumper")
-                if distance(self.xyz, pos) < 5:
+                if distance(self.xyz, pos) < ARRIVAL_TOLERANCE:
                     current_sweep_step += 1
                     continue
-                self.inException = True
-                try:
-                    # evasion pattern:
-                    # 1) pull back 0.5m so we can maneuver;
-                    self.go_straight(math.copysign(1, -speed), timeout=timedelta(seconds=10)) # go 1m in opposite direction
-                    # 2) turn back to original direction (in case the bump changed direction)
-                    self.turn(self.get_angle_diff(pos, speed), timeout=timedelta(seconds=15))
-                    # 3) go away on diagonal in opposite direction
-                    # 4) go forward fixed distance in original direction to avoid a boulder (distance = max size of boulder plus cos of diagonal)
-                    # 5) go back in on diagonal in opposite direction
-                    # 6) turn control over to original plan
-                    self.drive_around_rock(math.copysign(6,  speed)) # assume 6m the most needed
-                except VSLAMDisabledException as e:
-                    print(self.sim_time, "VSLAM: mapping disabled, waiting")
-                    self.send_speed_cmd(0.0, 0.0)
-                    wait_for_mapping = True
-                except VSLAMEnabledException as e:
-                    print(self.sim_time, "VSLAM: mapping re-enabled")
-                    wait_for_mapping = False
-                except VSLAMFoundException as e:
-                    print("VSLAM found on way to base")
-                    self.returning_to_base = False
-                    current_sweep_step += 1
-                except VSLAMLostException as e:
-                    print("VSLAM lost")
-                    self.returning_to_base = True
-                    sweep_steps.insert(current_sweep_step, [HOMEPOINT, self.default_effort_level, True])
-                except:
-                    pass
-                finally:
-                    self.inException = False
-                #current_sweep_step += 1
+                sweep_steps.insert(current_sweep_step, ["rock", True, []])
+                sweep_steps.insert(current_sweep_step, ["straight", True, [-1, False]])
 
     def stripe_to_obstacle_pattern(self):
         # sweep the hilly center in stripes (~10 mins), circle would include too many turns
@@ -395,6 +377,8 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
             try:
                 self.turn(math.radians(360), timeout=timedelta(seconds=20))
             except ChangeDriverException as e:
+                pass
+            except:
                 pass
 
             self.processing_plant_found = True
