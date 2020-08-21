@@ -479,7 +479,7 @@ class SpaceRoboticsChallenge(MoonNode):
         if abs(self.roll) > math.pi/2 and (self.last_reset_model is None or self.sim_time - self.last_reset_model > timedelta(seconds=15)):
             # if roll is more than 90deg, robot is upside down
             self.last_reset_model = self.sim_time
-            self.send_request('reset_model')
+            # self.send_request('reset_model')
 
     def get_extra_status(self):
         return ""
