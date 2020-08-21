@@ -7,6 +7,16 @@ from datetime import timedelta
 
 from osgar.node import Node
 
+
+def get_direction(x_diff, y_diff):
+    if x_diff == 0:
+        return math.copysign(math.pi/2, y_diff)
+    phi = math.atan(y_diff / x_diff)
+    if x_diff < 0:
+        return math.copysign(math.pi, y_diff) + phi
+    return phi
+
+
 class Robotour(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
@@ -44,14 +54,16 @@ class Robotour(Node):
         start_time = self.time
         while self.time - start_time < timedelta(seconds=20):
             x, y, heading = self.pose
-            destination_dist = math.hypot(self.destination[0] - x, self.destination[1] - y )
+            y_diff = self.destination[1] - y
+            x_diff = self.destination[0] - x
+            destination_dist = math.hypot(x_diff, y_diff )
             if destination_dist < 1:
                 print("Destination reached")
                 break
-            if y != 0:
-                angular_speed = heading + math.atan(y / x)
-            else:
-                angular_speed = heading
+
+            direction = get_direction(x_diff, y_diff)
+
+            angular_speed = direction - heading
             self.send_speed_cmd(self.speed, angular_speed)
             self.update()
 
