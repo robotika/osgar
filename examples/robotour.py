@@ -10,6 +10,7 @@ from osgar.node import Node
 class Robotour(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register('desired_speed')
         self.speed = config['max_speed']
         self.pose = [0, 0, 0]
         self.verbose = False
@@ -47,7 +48,10 @@ class Robotour(Node):
             if destination_dist < 1:
                 print("Destination reached")
                 break
-            angular_speed = heading + math.atan(x/y)
+            if y != 0:
+                angular_speed = heading + math.atan(x / y)
+            else:
+                angular_speed = heading
             self.send_speed_cmd(self.speed, angular_speed)
             self.update()
 
