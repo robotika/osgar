@@ -6,7 +6,7 @@
           "driver": "moon.controller_round1:SpaceRoboticsChallengeRound1",
           "in": ["odo_pose", "driving_control"],
           "out": ["desired_speed", "artf_xyz", "artf_cmd", "pose3d", "driving_recovery"],
-          "init": {}
+          "init": {"debug": false}
       },
       "transmitter": {
           "driver": "zeromq",

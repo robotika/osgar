@@ -16,12 +16,10 @@ from osgar.lib.quaternion import euler_zyx, euler_to_quaternion
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.lib.virtual_bumper import VirtualBumper
 
-from subt.local_planner import LocalPlanner
-
 from moon.moonnode import MoonNode
 
 TURN_RADIUS = 8 # radius of circle when turning
-AVOID_RADIUS = 8 # radius to use when going around an obstacle (this means it will not rush to go back to the same direction once it disappears off lidar)
+AVOID_RADIUS = 6 # radius to use when going around an obstacle (this means it will not rush to go back to the same direction once it disappears off lidar)
 GO_STRAIGHT = float("inf")
 
 class ChangeDriverException(Exception):
@@ -199,19 +197,6 @@ class SpaceRoboticsChallenge(MoonNode):
         self.max_speed = 1.0  # oficial max speed is 1.5m/s
         self.max_angular_speed = math.radians(60)
 
-        self.min_safe_dist = config.get('min_safe_dist', 2.0)
-        self.dangerous_dist = config.get('dangerous_dist', 1.5)
-        self.safety_turning_coeff = config.get('safety_turning_coeff', 0.8)
-        scan_subsample = config.get('scan_subsample', 1)
-        obstacle_influence = config.get('obstacle_influence', 0.8)
-        direction_adherence = math.radians(config.get('direction_adherence', 90))
-        self.local_planner = LocalPlanner(
-                obstacle_influence=obstacle_influence,
-                direction_adherence=direction_adherence,
-                max_obstacle_distance=4.0,
-                scan_subsample=scan_subsample,
-                max_considered_obstacles=100)
-
         # best (fusion) values
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.xyz = None
@@ -229,6 +214,7 @@ class SpaceRoboticsChallenge(MoonNode):
 
         self.avoidance_start = None
         self.avoidance_turn = None
+        self.steering_angle = 0.0
 
         self.default_effort_level = 1000 # default is max speed
 
@@ -368,7 +354,8 @@ class SpaceRoboticsChallenge(MoonNode):
                 raise VirtualBumperException()
 
     def on_desired_speeds(self, data):
-        linear_speed, angular_speed = data
+        linear_speed, angular_speed, steering_angle = data
+        self.steering_angle = steering_angle
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_desired_speed(linear_speed, angular_speed)
 
@@ -439,10 +426,19 @@ class SpaceRoboticsChallenge(MoonNode):
             median_scan.append(median([self.scan_history[i][j] for i in range(len(self.scan_history))]))
         self.median_scan = median_scan
 
-        # measure distance only in 66 degree angle (about the width of the robot 1.5m ahead)
-        self.scan_avg_distance_left = sum(median_scan[len(median_scan)//2:len(median_scan)//2 + 20]) / 20
-        self.scan_avg_distance_right = sum(median_scan[len(median_scan)//2 - 20:len(median_scan)//2]) / 20
-        before_robot = median_scan[len(median_scan)//2 - 20:len(median_scan)//2 + 20]
+        # measure distance only in 66 degree angle (about the width of the robot 1.5m)
+        # however, don't look just ahead (camera angle) or direction of wheels (steering angle)
+        # look further in the direction wheels are turned
+        midpoint = int(max(50, min(130, 40 + 50 + 2 * self.steering_angle / 0.0262626260519)))
+        if midpoint < 60:
+            sample_size = midpoint - 40
+        elif midpoint > 130:
+            sample_size = 140 - midpoint
+        else:
+            sample_size = 20
+        self.scan_avg_distance_left = sum(median_scan[midpoint:midpoint + sample_size]) / sample_size
+        self.scan_avg_distance_right = sum(median_scan[midpoint - sample_size:midpoint]) / sample_size
+        before_robot = median_scan[midpoint - sample_size:midpoint + sample_size]
         before_robot.sort();
         self.scan_distance_to_obstacle = median(before_robot[:self.scan_min_window])
 
@@ -473,7 +469,7 @@ class SpaceRoboticsChallenge(MoonNode):
             cam_angle = min(math.pi / 4.0, max(-math.pi / 8.0, self.camera_angle + self.pitch))
             self.publish('cmd', b'set_cam_angle %f' % cam_angle)
 
-        if not self.inException and (abs(self.pitch) > 0.9 or abs(self.roll) > math.pi/4):
+        if self.virtual_bumper is not None and not self.inException and (abs(self.pitch) > 0.9 or abs(self.roll) > math.pi/4):
             # TODO pitch can also go the other way if we back into an obstacle
             # TODO: robot can also roll if it runs on a side of a rock while already on a slope
             self.bus.publish('driving_recovery', True)
@@ -522,7 +518,7 @@ class SpaceRoboticsChallenge(MoonNode):
 
         return normalizeAnglePIPI(angle_diff)
 
-    def go_to_location(self, pos, desired_speed, offset=0.0, full_turn=False, timeout=None, with_stop=True, tolerance=1.0):
+    def go_to_location(self, pos, desired_speed, offset=0.0, full_turn=False, timeout=None, with_stop=True, tolerance=1.0, avoid_obstacles_close_to_destination=False):
         # speed: + forward, - backward
         # offset: stop before (-) or past (+) the actual destination (e.g., to keep the destination in front of the robot)
         print(self.sim_time, self.robot_name, "go_to_location [%.1f,%.1f] (speed: %.1f)" % (pos[0], pos[1], math.copysign(self.max_speed, desired_speed)))
@@ -537,36 +533,42 @@ class SpaceRoboticsChallenge(MoonNode):
         angle_diff = self.get_angle_diff(pos,desired_speed)
         while distance(pos, self.xyz)+offset > tolerance and (full_turn or abs(angle_diff) < math.pi/2):
             angle_diff = self.get_angle_diff(pos,desired_speed)
-            dist = distance(pos, self.xyz)+offset # do not turn just before arrival
+            dist = distance(pos, self.xyz)+offset # do not turn just before arrival; means will push through hilly area but bump into rocks
 
 
             speed = desired_speed if dist > 4 or not with_stop else 0.6 * desired_speed
 
-            if speed > 0 and dist > 5 and (self.scan_distance_to_obstacle < 4000 or (self.avoidance_start is not None and self.sim_time - self.avoidance_start < timedelta(milliseconds=2000))):
-                # do not avoid obstacles when real close
+            if self.debug:
+                print(self.sim_time, self.robot_name, "Distance ahead: %.1f, Left avg distance: %.1f, Right avg distance: %.1f" % (self.scan_distance_to_obstacle, self.scan_avg_distance_left, self.scan_avg_distance_right))
+
+            if self.avoidance_start is not None and self.sim_time - self.avoidance_start > timedelta(milliseconds=600):
+                # at the end of steering, we are prepared to handle new obstacle
+                self.avoidance_turn = None
+
+            if speed > 0 and (avoid_obstacles_close_to_destination or dist > 5) and (self.scan_distance_to_obstacle < 4000 or (self.avoidance_start is not None and self.sim_time - self.avoidance_start < timedelta(milliseconds=2000))):
+                # optionally do not avoid obstacles when real close to destination - if destination is a volatile, you know the obstacle is just a bump
                 if self.scan_distance_to_obstacle < 4000:
                     self.avoidance_start = self.sim_time
-                    if self.avoidance_turn is None:
-                        if self.scan_avg_distance_left < 0.8 * self.scan_avg_distance_right:
-                            self.avoidance_turn = -AVOID_RADIUS
-                        elif  self.scan_avg_distance_left * 0.8 > self.scan_avg_distance_right:
-                            self.avoidance_turn = AVOID_RADIUS
-                        else:
+                    if self.scan_avg_distance_left < 0.8 * self.scan_avg_distance_right:
+                        self.avoidance_turn = -AVOID_RADIUS # steer to the right
+                    elif self.scan_avg_distance_left * 0.8 > self.scan_avg_distance_right:
+                        self.avoidance_turn = AVOID_RADIUS
+                    else:
+                        if self.avoidance_turn is None:
                             self.avoidance_turn = AVOID_RADIUS if getrandbits(1) == 0 else -AVOID_RADIUS
                     turn = self.avoidance_turn
                     if (self.debug):
-                        print(self.sim_time, self.robot_name, "Seeing object, turning, distance %d" % self.scan_distance_to_obstacle)
+                        print(self.sim_time, self.robot_name, "Seeing object, turning: %d, distance %d" % (turn, self.scan_distance_to_obstacle))
 
-                elif self.avoidance_start is not None and self.sim_time - self.avoidance_start < timedelta(milliseconds=500):
-                    if (self.debug):
+                elif self.avoidance_start is not None and self.sim_time - self.avoidance_start < timedelta(milliseconds=600):
+                    if self.debug:
                         print(self.sim_time, self.robot_name, "Still turning")
                     turn = self.avoidance_turn # keep turning 0.5s after obstacle no longer visible
 
-                elif self.avoidance_start is not None and self.sim_time - self.avoidance_start < timedelta(milliseconds=2000):
-                    if (self.debug):
+                elif self.avoidance_start is not None and self.sim_time - self.avoidance_start < timedelta(milliseconds=3000):
+                    if self.debug:
                         print(self.sim_time, self.robot_name, "Going straight")
                     turn = GO_STRAIGHT # go straight additional 1s after no longer turning
-                    self.avoidance_turn = None
                 else:
                     print("SHOULDNT BE HERE")
 
@@ -736,7 +738,10 @@ class SpaceRoboticsChallenge(MoonNode):
     def wait_for_init(self):
         print(self.robot_name, 'Wait for definition of last_position and yaw')
         while self.sim_time is None or self.last_position is None or self.yaw is None:
-            self.update()
+            try:
+                self.update()
+            except:
+                pass
         print(self.robot_name, 'done at', self.sim_time)
 
 # vim: expandtab sw=4 ts=4
