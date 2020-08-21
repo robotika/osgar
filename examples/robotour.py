@@ -49,7 +49,7 @@ class Robotour(Node):
                 print("Destination reached")
                 break
             if y != 0:
-                angular_speed = heading + math.atan(x / y)
+                angular_speed = heading + math.atan(y / x)
             else:
                 angular_speed = heading
             self.send_speed_cmd(self.speed, angular_speed)
