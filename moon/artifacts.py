@@ -88,7 +88,7 @@ class ArtifactDetector(Node):
                 'mser': cv2.MSER_create(_min_area=100),
                 'min_size': 50,
                 'max_size': 500,
-                'min_y': 200, # lower edge of the bbox must below this
+                'min_y': 300, # visually lower edge of the bbox must below this (ie the y+h>min_y)
                 'pixel_count_threshold': 100,
                 'bbox_union_count': 1,
                 'hue_max_difference': 10,

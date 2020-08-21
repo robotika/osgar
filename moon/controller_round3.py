@@ -75,7 +75,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
         self.basemarker_right_history = []
         self.basemarker_whole_scan_history = []
         self.basemarker_radius = None
-        self.centering = False
+        self.centering = None
         self.going_around_count = 0
         self.full_360_scan = False
         self.full_360_objects = {}
@@ -155,6 +155,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     self.set_cam_angle(CAMERA_ANGLE_HOMEBASE)
                     self.current_driver = "basemarker"
                     self.going_around_count += 1
+                    if self.debug:
+                        print(self.sim_time, "Reached homebase again, setting circulation direction to %s" % ("left" if self.going_around_count % 2 == 0 else "right"))
                     self.follow_object(['basemarker'])
 
             else:
@@ -457,6 +459,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 if 'homebase' not in self.objects_in_view.keys():
                     # lost contact with homebase, try approach again
                     print (self.sim_time, "app: No longer going around homebase")
+                    self.centering = None
                     self.currently_following_object['timestamp'] = None
                     self.currently_following_object['object_type'] = None
                     self.basemarker_angle = None
@@ -479,6 +482,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
 
                 if min_index is None or max_index is None or max_index - min_index < 3:
                     # if in basemarker mode, looking at homebase but lidar shows no hits, it's a noisy lidar scan, ignore
+                    if self.debug:
+                        print(self.sim_time, "No lidar hits closer than 5m, abandoning circle calculations")
                     return
 
                 x_l = []
@@ -489,7 +494,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     y_l.append(y)
 
                 homebase_cx, homebase_cy, homebase_radius = best_fit_circle(x_l, y_l)
-                # print ("Center: [%f,%f], radius: %f" % (homebase_cx, homebase_cy, homebase_radius))
+                if self.debug:
+                    print (self.sim_time, "Homebase center: [%f,%f], radius: %f" % (homebase_cx, homebase_cy, homebase_radius))
 
                 # since we are looking through left camera, cy will be calculated relative to the camera
                 # need it relative to the center of the robot
@@ -517,20 +523,23 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     return
 
                 # if re-centering rover towards the homebase, keep turning until very close to centered (as opposed to within the target range)
-                if self.centering and abs(homebase_cy > 0.1):
+                if self.centering is not None and abs(homebase_cy > 0.1):
+                    self.publish("desired_movement", self.centering)
+                    if self.debug:
+                        print(self.sim_time, "Recentering: continue previous movement command")
                     return
                 else:
-                    self.centering = False
+                    self.centering = None
 
                 # if seeing basemarker and homebase center is not straight ahead OR if looking past homebase in one of the directions, turn in place to adjust
                 # -1 means going right, 1 going left
                 circle_direction = 1 if self.going_around_count % 2 == 0 else -1
                 if (self.currently_following_object['object_type'] == 'basemarker' and homebase_cy < -0.2) or left_dist > 10:
-                    self.centering = True
-                    self.publish("desired_movement", [0, -9000, -self.default_effort_level])
+                    self.centering = [0, -9000, -self.default_effort_level]
+                    self.publish("desired_movement", self.centering)
                 elif (self.currently_following_object['object_type'] == 'basemarker' and homebase_cy > 0.2) or right_dist > 10:
-                    self.centering = True
-                    self.publish("desired_movement", [0, -9000, self.default_effort_level])
+                    self.centering = [0, -9000, self.default_effort_level]
+                    self.publish("desired_movement", self.centering)
                 elif left_dist < 1.5 or right_dist < 1.5:
                     # if distance is closer than 1.5m, pull back
                     self.publish("desired_movement", [GO_STRAIGHT, 0, -self.default_effort_level])
@@ -538,11 +547,11 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                     # if distance further than 1m more than optimal, come closer
                     self.publish("desired_movement", [GO_STRAIGHT, 0, self.default_effort_level])
                 elif homebase_cy < -1:
-                    self.centering = True
-                    self.publish("desired_movement", [0, -9000, -self.default_effort_level])
+                    self.centering = [0, -9000, -self.default_effort_level]
+                    self.publish("desired_movement", self.centering)
                 elif homebase_cy > 1:
-                    self.centering = True
-                    self.publish("desired_movement", [0, -9000, self.default_effort_level])
+                    self.centering = [0, -9000, self.default_effort_level]
+                    self.publish("desired_movement", self.centering)
                 else:
                     # print ("driving radius: %f" % self.basemarker_radius)
                     # negative radius turns to the right
