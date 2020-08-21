@@ -25,6 +25,6 @@
     "links": [["spider.can", "can.can"],
               ["can.can", "spider.can"],
               ["serial.raw", "can.raw"], 
-              ["can.can", "serial.raw"]]
+              ["can.raw", "serial.raw"]]
   }
 }
