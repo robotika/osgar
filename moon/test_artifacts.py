@@ -61,7 +61,7 @@ class ArtifactTest(unittest.TestCase):
 
         with open(str(curdir/'test_data/basemarker.jpg'), mode='rb') as img_h:
             img = img_h.read()
-        self.assertTrue(self.is_in_test(detector.detect(img, img), [[('basemarker', 122, 174, 135, 104, 3848, 3.896986246109009)], [('homebase', 1, 1, 428, 286, 13775, 1.5621232986450195)], [('rover', 313, 1, 116, 283, 19043, 0.9582036137580872)]]))
+        self.assertTrue(self.is_in_test(detector.detect(img, img), [[('basemarker', 122, 240, 135, 38, 2080, 6.632953643798828)], [('homebase', 1, 1, 428, 286, 13775, 1.5621232986450195)], [('rover', 313, 1, 116, 283, 19043, 0.9582036137580872)]]))
 
 
 # vim: expandtab sw=4 ts=4
