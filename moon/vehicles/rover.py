@@ -61,13 +61,8 @@ from datetime import timedelta
 
 from osgar.lib.mathex import normalizeAnglePIPI
 
-from moon.moonnode import MoonNode
+from moon.moonnode import MoonNode, WHEEL_RADIUS, WHEEL_SEPARATION_WIDTH, WHEEL_SEPARATION_LENGTH
 from moon.motorpid import MotorPID
-
-
-WHEEL_RADIUS = 0.275  # meters
-WHEEL_SEPARATION_WIDTH = 1.87325  # meters
-WHEEL_SEPARATION_LENGTH = 1.5748  # meters
 
 WHEEL_NAMES = ['fl', 'fr', 'bl', 'br']
 

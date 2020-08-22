@@ -12,13 +12,7 @@ from osgar.bus import BusShutdownException
 
 from moon.controller import pol2cart, cart2pol, best_fit_circle, SpaceRoboticsChallenge, ChangeDriverException, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor
 from osgar.lib.virtual_bumper import VirtualBumper
-
-
-CAMERA_FOCAL_LENGTH = 381
-CAMERA_WIDTH = 640
-CAMERA_HEIGHT = 480
-
-CAMERA_BASELINE = 0.41 # distance between lenses
+from moon.moonnode import CAMERA_WIDTH, CAMERA_HEIGHT, CAMERA_FOCAL_LENGTH, CAMERA_BASELINE
 
 CAMERA_ANGLE_DRIVING = 0.1
 CAMERA_ANGLE_LOOKING = 0.5
