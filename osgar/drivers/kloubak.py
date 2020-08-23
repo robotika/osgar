@@ -417,6 +417,7 @@ class RobotKloubak(Node):
                 self.prev_joins_angle = self.last_join_angle
                 return False
             join_angle_diff = self.last_join_angle - self.prev_joins_angle
+            self.prev_joins_angle = self.last_join_angle
             if self.desired_speed >= 0:
                 ret, pose, motion = self.compute_pose(diff[INDEX_REAR_LEFT], diff[INDEX_REAR_RIGHT], join_angle_diff)
             else:
@@ -428,6 +429,7 @@ class RobotKloubak(Node):
                 self.prev_joins_angle = self.last_join_angle + self.last_join_angle2
                 return False
             join_angle_diff = self.last_join_angle + self.last_join_angle2 - self.prev_joins_angle
+            self.prev_joins_angle = self.last_join_angle + self.last_join_angle2
             if self.desired_speed >= 0:
                 ret, pose, motion = self.compute_pose(diff[INDEX_REAR_K3_LEFT], diff[INDEX_REAR_K3_RIGHT], join_angle_diff)
             else:
@@ -437,7 +439,6 @@ class RobotKloubak(Node):
 
         if ret:
             self.pose = pose
-            print(self.pose)
 
         if self.verbose and ret and self.last_join_angle is not None:
 #            self.debug_odo.append((self.time.total_seconds(), motion[0], motion_rear[0]))
