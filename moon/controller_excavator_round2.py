@@ -136,7 +136,10 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
             # wait for hauler to start following, will receive osgar broadcast when done
             while not self.hauler_ready:
-                self.wait(timedelta(seconds=1))
+                try:
+                    self.wait(timedelta(seconds=1))
+                except:
+                    pass
 
             # reset again in case hauler was driving in front of excavator
             self.vslam_reset_at = None
@@ -160,9 +163,9 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     if abs(self.get_angle_diff(vol_list[ind[i]])) > 3*math.pi/4 and d < 10:
                         print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d in opposite direction, skipping" % (i, d, ind[i]))
                         continue
-                    if -3*math.pi/4 < math.atan2(vol_list[ind[i]][1] - self.xyz[1], vol_list[ind[i]][0] - self.xyz[0]) < -math.pi/4:
-                        print (self.sim_time, self.robot_name, "%d: Too much away from the sun, shadow interference" % i)
-                        continue
+#                    if -3*math.pi/4 < math.atan2(vol_list[ind[i]][1] - self.xyz[1], vol_list[ind[i]][0] - self.xyz[0]) < -math.pi/4:
+#                        print (self.sim_time, self.robot_name, "%d: Too much away from the sun, shadow interference" % i)
+#                        continue
 
 #                    if distance([0,0], vol_list[ind[i]]) > 35:
 #                        print (self.sim_time, self.robot_name, "%d: Too far from center" % i)
@@ -209,6 +212,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         print(self.sim_time, self.robot_name, "VSLAM: mapping re-enabled")
                         wait_for_mapping = False
                     except WaitRequestedException as e:
+                        self.send_speed_cmd(0.0, 0.0)
                         wait_for_hauler_requested = True
                         print(self.sim_time, self.robot_name, "Hauler requested to wait")
                     except ResumeRequestedException as e:
