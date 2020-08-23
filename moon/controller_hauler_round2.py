@@ -21,6 +21,9 @@ GO_STRAIGHT = float("inf")
 EXCAVATOR_DRIVING_GAP = 2.200 # can't be further or every bump will look like the excavator on lidar given the camera must be tilted down so that rover is visible up close
 EXCAVATOR_DIGGING_GAP = 0.9 # we should see the arm in the middle, not the back of the rover
 
+class ExcavatorLostException(Exception):
+    pass
+
 class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
     def __init__(self, config, bus):
         super().__init__(config, bus)
@@ -44,7 +47,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         self.aligned_at = None
         self.target_excavator_distance = EXCAVATOR_DRIVING_GAP
         self.scan_driving_phase = "yaw"
-
+        self.excavator_waiting = False
 
 
     def on_osgar_broadcast(self, data):
@@ -126,7 +129,11 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                         self.drive_around_rock(6) # assume 6m the most needed
                         self.inException = False
                         continue
+
                 try:
+                    if self.excavator_waiting:
+                        self.turn(math.radians(360)) # TODO: not exception-proof
+
                     if self.rover_distance > 5 and self.driving_mode != "approach":
                         with LidarCollisionMonitor(self, 1000):
                             self.wait(timedelta(seconds=1))
@@ -134,12 +141,18 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                             self.wait(timedelta(seconds=1))
                 except LidarCollisionException as e: #TODO: long follow of obstacle causes loss, go along under steeper angle
                     print(self.sim_time, self.robot_name, "Lidar while following/waiting, distance: %.1f" % self.rover_distance)
+                    self.excavator_waiting = True
+                    self.send_request('external_command excavator_1 wait')
                     self.inException = True
-                    self.lidar_drive_around()  # TODO: if we lose visual of excavator, will keep going and never find, maybe turn 360
-                    self.send_speed_cmd(0.0, 0.0)
-                    self.turn(math.radians(360)) # TODO: not exception-proof
+
+                    try:
+                        self.lidar_drive_around()  # TODO: if we lose visual of excavator, will keep going and never find, maybe turn 360
+                    except ExcavatorLostException as e:
+                        self.excavator_waiting = True
+                        self.send_request('external_command excavator_1 wait')
+
                     self.inException = False
-                    continue
+                    self.send_speed_cmd(0.0, 0.0)
                 except ChangeDriverException as e:
                     print(self.sim_time, self.robot_name, "Driver changed to go to location")
                 except VirtualBumperException as e: # if bumper while following (e.g, blocked by a rock)
@@ -148,12 +161,18 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                     self.send_speed_cmd(0.0, 0.0)
                     print(self.sim_time, self.robot_name, "Bumper")
                     self.inException = True
-                    self.go_straight(-1) # go 1m in opposite direction
-                    self.drive_around_rock(4) # assume 6m the most needed
+
+                    try:
+                        self.go_straight(-1) # go 1m in opposite direction
+                        self.drive_around_rock(4) # assume 6m the most needed
+                    except ExcavatorLostException as e:
+                        self.excavator_waiting = True
+                        self.send_request('external_command excavator_1 wait')
+
                     self.inException = False
-                    continue
-
-
+                except ExcavatorLostException as e:
+                    self.excavator_waiting = True
+                    self.send_request('external_command excavator_1 wait')
 
         except BusShutdownException:
             pass
@@ -193,6 +212,10 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         }
 
         if artifact_type == "rover":
+            if self.excavator_waiting:
+                self.send_request('external_command excavator_1 resume')
+                self.excavator_waiting = False
+
             if artf_distance < 1.3:
                 self.rover_distance = self.scan_distance_to_obstacle/1000.0 # for distance less than 1.3m, rely on lidar for distance
             else:
@@ -203,61 +226,52 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
             screen_x2 = (CAMERA_WIDTH / 2 - img_x2)
             angle_x1 = math.atan( screen_x1 / float(CAMERA_FOCAL_LENGTH))
             angle_x2 = math.atan( screen_x2 / float(CAMERA_FOCAL_LENGTH))
-            # does not work at close proximity as only a portion of the robot may be visible centering around that portion
-            #TODO: adjust for left camera
             angle_offset = math.atan( (CAMERA_BASELINE / 2) / (self.rover_distance + 1.1))
             self.rover_angle = (angle_x1 + angle_x2) / 2 + angle_offset
-
-            #if self.rover_distance < 2500 and not self.cam_lowered: #if closer to rover than 2m, look down to help lidar
-            #    self.set_cam_angle(-0.1)
-            #    self.cam_lowered = True
-            #elif self.rover_distance >= 2700 and self.cam_lowered:
-            #    self.set_cam_angle(-0.1)
-            #    self.cam_lowered = False
 
 
 #            if (self.debug):
 #                print (self.sim_time, self.robot_name, "Rover angle: %.2f dist: %d" % (angle_x, self.rover_distance))
 
+        if not self.inException and not self.arrived_message_sent and not self.scan_driving:
+            if self.rover_distance > 4 and self.scan_distance_to_obstacle < 4000:
+                turn = self.get_avoidance_turn()
+                self.publish("desired_movement", [turn, 0, self.default_effort_level])
+            elif (
+                artifact_type == "excavator_arm" or (artifact_type == "rover" and "excavator_arm" not in self.objects_in_view.keys())
+            ):
+                # drive visually until both in 'arrival' mode and at target distance
+                self.last_rover_timestamp = self.sim_time
 
-        if (
-                (artifact_type == "excavator_arm" or (artifact_type == "rover" and "excavator_arm" not in self.objects_in_view.keys())) and
-                not self.inException and
-                not self.arrived_message_sent and
-                not self.scan_driving
-        ):
-            # drive visually until both in 'arrival' mode and at target distance
-            self.last_rover_timestamp = self.sim_time
+                direction = 1 if self.target_excavator_distance < self.rover_distance else -1
 
-            direction = 1 if self.target_excavator_distance < self.rover_distance else -1
+                # if hauler is within 1m of something (presumably excavator), regardless of target distance from excavator, move sideways to center
+                # if bbox center in left or right quarter, turn in place
+                # else if bbox off center turn while moving
+                # else (bbox in center) go straight
 
-            # if hauler is within 1m of something (presumably excavator), regardless of target distance from excavator, move sideways to center
-            # if bbox center in left or right quarter, turn in place
-            # else if bbox off center turn while moving
-            # else (bbox in center) go straight
-
-            # TODO: if hauler approaches on a diagonal, it may not get close enough to switch to lidar driving
-            if center_x < CAMERA_WIDTH/4:
-                if (self.debug):
-                    print(self.sim_time, self.robot_name, "Visual drive: Turning in place left, obstacle dist: %d, rover dist: %.1f" % (self.scan_distance_to_obstacle, self.rover_distance))
-                self.publish("desired_movement", [TURN_ON/2, 0, self.default_effort_level])
-            elif center_x < (CAMERA_WIDTH/2 - 20):
-                if (self.debug):
-                    print(self.sim_time, self.robot_name, "Visual drive: steering left, rover distance: %d,%.1f" % (self.scan_distance_to_obstacle, self.rover_distance))
-                self.publish("desired_movement", [TURN_ON, 0, direction * self.default_effort_level])
-            elif center_x > 3*CAMERA_WIDTH/4:
-                if (self.debug):
-                    print(self.sim_time, self.robot_name, "Visual drive: Turning in place right, rover distance: %d,%.1f" % (self.scan_distance_to_obstacle, self.rover_distance))
-                self.publish("desired_movement", [-TURN_ON/2, 0, self.default_effort_level])
-            elif center_x > (CAMERA_WIDTH/2 + 20):
-                if (self.debug):
-                    print(self.sim_time, self.robot_name, "Visual drive: steering right, rover distance: %d,%.1f" % (self.scan_distance_to_obstacle, self.rover_distance))
-                self.publish("desired_movement", [-TURN_ON, 0, direction * self.default_effort_level])
-            else:
-                speed = self.default_effort_level if self.rover_distance > 5 else 0.5 * self.default_effort_level
-                if (self.debug):
-                    print(self.sim_time, self.robot_name, "Visual drive: going straight, rover distance: %d,%.1f" % (self.scan_distance_to_obstacle, self.rover_distance))
-                self.publish("desired_movement", [GO_STRAIGHT, 0, direction * speed])
+                # TODO: if hauler approaches on a diagonal, it may not get close enough to switch to lidar driving
+                if center_x < CAMERA_WIDTH/4:
+                    if (self.debug):
+                        print(self.sim_time, self.robot_name, "Visual drive: Turning in place left, obstacle dist: %d, rover dist: %.1f" % (self.scan_distance_to_obstacle, self.rover_distance))
+                    self.publish("desired_movement", [TURN_ON/2, 0, self.default_effort_level])
+                elif center_x < (CAMERA_WIDTH/2 - 20):
+                    if (self.debug):
+                        print(self.sim_time, self.robot_name, "Visual drive: steering left, rover distance: %d,%.1f" % (self.scan_distance_to_obstacle, self.rover_distance))
+                    self.publish("desired_movement", [TURN_ON, 0, direction * self.default_effort_level])
+                elif center_x > 3*CAMERA_WIDTH/4:
+                    if (self.debug):
+                        print(self.sim_time, self.robot_name, "Visual drive: Turning in place right, rover distance: %d,%.1f" % (self.scan_distance_to_obstacle, self.rover_distance))
+                    self.publish("desired_movement", [-TURN_ON/2, 0, self.default_effort_level])
+                elif center_x > (CAMERA_WIDTH/2 + 20):
+                    if (self.debug):
+                        print(self.sim_time, self.robot_name, "Visual drive: steering right, rover distance: %d,%.1f" % (self.scan_distance_to_obstacle, self.rover_distance))
+                    self.publish("desired_movement", [-TURN_ON, 0, direction * self.default_effort_level])
+                else:
+                    speed = self.default_effort_level if self.rover_distance > 5 else 0.5 * self.default_effort_level
+                    if (self.debug):
+                        print(self.sim_time, self.robot_name, "Visual drive: going straight, rover distance: %d,%.1f" % (self.scan_distance_to_obstacle, self.rover_distance))
+                    self.publish("desired_movement", [GO_STRAIGHT, 0, direction * speed])
 
 
     def on_scan(self, data):
@@ -268,9 +282,11 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         for artf in delete_in_view:
             del self.objects_in_view[artf]
             if artf == "rover":
+                self.rover_distance = 15
                 if (self.debug):
                     print(self.sim_time, self.robot_name, "Expiring rover view and resetting distance to 15m")
-                self.rover_distance = 15
+                if not self.arrived_message_sent:
+                    raise ExcavatorLostException
 
         if not self.finish_visually:
             return
