@@ -277,7 +277,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         self.publish("bucket_dig", [angle, 'reset'])
                         while self.volatile_dug_up[1] == 100:
                             self.wait(timedelta(milliseconds=300))
-                            if self.sim_time - dig_start > timedelta(seconds=40): # TODO: timeout needs to be adjusted to the ultimate digging plan
+                            if self.sim_time - dig_start > timedelta(seconds=50): # TODO: timeout needs to be adjusted to the ultimate digging plan
                                 # move bucket out of the way and continue to next volatile
                                 self.publish("bucket_drop", [math.pi, 'append'])
                                 return False
