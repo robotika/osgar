@@ -19,7 +19,7 @@ from moon.moonnode import CAMERA_WIDTH, CAMERA_HEIGHT, CAMERA_FOCAL_LENGTH, CAME
 TURN_ON = 12 # radius of circle when turning
 GO_STRAIGHT = float("inf")
 EXCAVATOR_DRIVING_GAP = 2.200 # can't be further or every bump will look like the excavator on lidar given the camera must be tilted down so that rover is visible up close
-EXCAVATOR_DIGGING_GAP = 1.0 # we should see the arm in the middle, not the back of the rover
+EXCAVATOR_DIGGING_GAP = 0.9 # we should see the arm in the middle, not the back of the rover
 
 class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
     def __init__(self, config, bus):
@@ -103,14 +103,12 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                         with LidarCollisionMonitor(self, 1000):
                             angle_diff = self.get_angle_diff(self.goto, 1)
                             self.turn(angle_diff)
-                            self.go_to_location(self.goto, self.default_effort_level, full_turn=False, timeout=timedelta(minutes=2))
+                            self.go_to_location(self.goto, self.default_effort_level, full_turn=False, avoid_obstacles_close_to_destination=True, timeout=timedelta(minutes=2))
                             self.turn(normalizeAnglePIPI(self.goto[2] - self.yaw))
                         self.goto = None
                         self.finish_visually = True
                         self.set_cam_angle(-0.1)
                         self.set_light_intensity("0.2")
-
-
 
                     except ChangeDriverException as e:
                         print(self.sim_time, self.robot_name, "Driver changed during goto?")
@@ -287,7 +285,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
             if self.excavator_yaw is None: # within requested distance and no outstanding yaw, report
                 if (
                         self.driving_mode == "approach" and min(self.rover_distance, self.scan_distance_to_obstacle/1000.0) < self.target_excavator_distance or
-                        self.driving_mode != "approach" and abs(self.rover_distance - self.target_excavator_distance) < 0.100
+                        self.driving_mode != "approach" and abs(self.rover_distance - self.target_excavator_distance) < 0.3
                 ):
                     self.publish("desired_movement", [0, 0, 0])
                     print(self.sim_time, self.robot_name, "Sending arrived message to excavator")
