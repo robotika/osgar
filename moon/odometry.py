@@ -1,6 +1,12 @@
 """
   Odometry - handle odometry for Moon rovers
 """
+import math
+
+# TODO remove duplicity from moon\vehicles\rover.py !!!
+WHEEL_RADIUS = 0.275  # meters
+WHEEL_SEPARATION_WIDTH = 1.87325  # meters
+
 
 class Odometry:
     def __init__(self):
@@ -8,7 +14,7 @@ class Odometry:
         self.prev_position = None
 
     def update_joint_position(self, names, data):
-        self.joint_names = names
+        self.joint_name = names
         assert self.joint_name is not None
         if self.prev_position is None:
             self.prev_position = data
