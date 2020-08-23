@@ -7,6 +7,9 @@ import math
 from datetime import timedelta
 import traceback
 
+from shapely.geometry import Point, LineString
+from shapely.geometry.polygon import Polygon
+
 from osgar.bus import BusShutdownException
 
 from moon.controller import ps, distance, SpaceRoboticsChallenge, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor, VSLAMEnabledException, VSLAMDisabledException
@@ -15,6 +18,10 @@ from osgar.lib.quaternion import euler_zyx
 from osgar.lib.mathex import normalizeAnglePIPI
 
 DIG_GOOD_LOCATION_MASS = 10
+
+SAFE_POLYGON = Polygon([
+    (65,20),(65,-35),(45,-35),(45,-55),(-65,-55),(-65,-42),(-25,-42),(-25,-5),(-65,-5),(-65,25),(-40,30),(-36,55),(-10,55),(-10,31),(16,31),(16,55),(40,55),(40,20)
+])
 
 class WaitRequestedException(Exception):
     pass
@@ -147,82 +154,93 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             while self.vslam_reset_at is None or self.sim_time - self.vslam_reset_at < timedelta(seconds=3):
                 self.wait(timedelta(seconds=1))
 
-            wait_for_mapping = False
-            wait_for_hauler_requested = False
             self.virtual_bumper = VirtualBumper(timedelta(seconds=3), 0.2) # radius of "stuck" area; a little more as the robot flexes
 
             while len(vol_list) > 0:
-                dist, ind = spatial.KDTree(vol_list).query([3,-3], k=len(vol_list))
+                dist, ind = spatial.KDTree(vol_list).query(self.xyz[:2], k=len(vol_list))
 
-                for i in range(len(dist)):
-                    d = distance(self.xyz, vol_list[ind[i]])
-                    if  d < 5: # too close/just did it
-                        print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d, skipping" % (i, d, ind[i]))
-                        continue
+                def pursue_volatile():
+                    nonlocal dist, ind
 
-                    if abs(self.get_angle_diff(vol_list[ind[i]])) > 3*math.pi/4 and d < 10:
-                        print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d in opposite direction, skipping" % (i, d, ind[i]))
-                        continue
-#                    if -3*math.pi/4 < math.atan2(vol_list[ind[i]][1] - self.xyz[1], vol_list[ind[i]][0] - self.xyz[0]) < -math.pi/4:
-#                        print (self.sim_time, self.robot_name, "%d: Too much away from the sun, shadow interference" % i)
-#                        continue
+                    for i in range(len(dist)):
+                        d = distance(self.xyz, vol_list[ind[i]])
+                        if  d < 5: # too close/just did it
+                            print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d, skipping" % (i, d, ind[i]))
+                            continue
 
-#                    if distance([0,0], vol_list[ind[i]]) > 35:
-#                        print (self.sim_time, self.robot_name, "%d: Too far from center" % i)
-#                        continue
+                        if abs(self.get_angle_diff(vol_list[ind[i]])) > 3*math.pi/4 and d < 10:
+                            print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d in opposite direction, skipping" % (i, d, ind[i]))
+                            continue
+                        if not SAFE_POLYGON.contains(LineString([
+                                (self.xyz[0],self.xyz[1]),
+                                (vol_list[ind[i]][0], vol_list[ind[i]][1])
+                        ])):
+                            print (self.sim_time, self.robot_name, "%d: excavator: Path to index %d not safe, skipping" % (i, ind[i]))
+                            continue
+    #                    if -3*math.pi/4 < math.atan2(vol_list[ind[i]][1] - self.xyz[1], vol_list[ind[i]][0] - self.xyz[0]) < -math.pi/4:
+    #                        print (self.sim_time, self.robot_name, "%d: Too much away from the sun, shadow interference" % i)
+    #                        continue
 
+    #                    if distance([0,0], vol_list[ind[i]]) > 35:
+    #                        print (self.sim_time, self.robot_name, "%d: Too far from center" % i)
+    #                        continue
 
-                    try:
-                        print(self.sim_time, self.robot_name, "excavator: Pursuing volatile [%.1f,%.1f] at distance: %f" % (vol_list[ind[i]][0],vol_list[ind[i]][1], d))
-                        while wait_for_mapping or wait_for_hauler_requested:
-                            self.wait(timedelta(seconds=1))
-
-                        with LidarCollisionMonitor(self, 1500): # some distance needed not to lose tracking when seeing only obstacle up front
-                            # turning in place probably not desirable because hauler behind may be in the way, may need to send it away first
-                            angle_diff = self.get_angle_diff(vol_list[ind[i]])
-                            self.turn(math.copysign(min(abs(angle_diff),math.pi/4),angle_diff), timeout=timedelta(seconds=15))
-                            self.go_to_location(vol_list[ind[i]], self.default_effort_level, offset=-0.5, timeout=timedelta(minutes=5), full_turn=True) # extra offset for sliding
-                            self.wait(timedelta(seconds=2)) # wait to come to a stop
-                            self.send_request('external_command hauler_1 approach %f' % self.yaw) # TODO: due to skidding, this yaw may still change after sending
-                            self.hauler_ready = False
-                            break
-
-                    except LidarCollisionException as e: #TODO: long follow of obstacle causes loss, go along under steeper angle
-                        print(self.sim_time, self.robot_name, "Lidar")
-                        if distance(self.xyz, vol_list[ind[i]]) < 1:
-                            break
-                        self.inException = True
-                        self.lidar_drive_around()
-                        self.inException = False
-                    except VirtualBumperException as e:
-                        self.send_speed_cmd(0.0, 0.0)
-                        print(self.sim_time, self.robot_name, "Bumper")
-                        if distance(self.xyz, vol_list[ind[i]]) < 1:
-                            break
-                        self.inException = True
-                        self.go_straight(-1) # go 1m in opposite direction
-                        angle_diff = self.get_angle_diff(vol_list[ind[i]])
-                        self.drive_around_rock(-math.copysign(5, angle_diff)) # assume 6m the most needed
-                        self.inException = False
-                    except VSLAMDisabledException as e:
-                        print(self.sim_time, self.robot_name, "VSLAM: mapping disabled, waiting")
-                        self.send_speed_cmd(0.0, 0.0)
-                        wait_for_mapping = True
-                    except VSLAMEnabledException as e:
-                        print(self.sim_time, self.robot_name, "VSLAM: mapping re-enabled")
                         wait_for_mapping = False
-                    except WaitRequestedException as e:
-                        self.send_speed_cmd(0.0, 0.0)
-                        wait_for_hauler_requested = True
-                        print(self.sim_time, self.robot_name, "Hauler requested to wait")
-                    except ResumeRequestedException as e:
                         wait_for_hauler_requested = False
-                        print(self.sim_time, self.robot_name, "Hauler wants to resume")
+                        while True:
+                            try:
+                                print(self.sim_time, self.robot_name, "excavator: Pursuing volatile [%.1f,%.1f] at distance: %f" % (vol_list[ind[i]][0],vol_list[ind[i]][1], d))
+                                while wait_for_mapping or wait_for_hauler_requested:
+                                    self.wait(timedelta(seconds=1))
 
+                                with LidarCollisionMonitor(self, 1500): # some distance needed not to lose tracking when seeing only obstacle up front
+                                    # turning in place probably not desirable because hauler behind may be in the way, may need to send it away first
+                                    angle_diff = self.get_angle_diff(vol_list[ind[i]])
+                                    self.turn(math.copysign(min(abs(angle_diff),math.pi/4),angle_diff), timeout=timedelta(seconds=15))
+                                    self.go_to_location(vol_list[ind[i]], self.default_effort_level, offset=-0.5, timeout=timedelta(minutes=5), full_turn=True) # extra offset for sliding
+                                    self.wait(timedelta(seconds=2)) # wait to come to a stop
+                                    self.send_request('external_command hauler_1 approach %f' % self.yaw) # TODO: due to skidding, this yaw may still change after sending
+                                    self.hauler_ready = False
+                                    return ind[i] #arrived
 
-                if i == len(dist) - 1:
+                            except LidarCollisionException as e: #TODO: long follow of obstacle causes loss, go along under steeper angle
+                                print(self.sim_time, self.robot_name, "Lidar")
+                                if distance(self.xyz, vol_list[ind[i]]) < 1:
+                                    return ind[i] #arrived
+                                self.inException = True
+                                self.lidar_drive_around()
+                                self.inException = False
+                            except VirtualBumperException as e:
+                                self.send_speed_cmd(0.0, 0.0)
+                                print(self.sim_time, self.robot_name, "Bumper")
+                                if distance(self.xyz, vol_list[ind[i]]) < 1:
+                                    return ind[i] # arrived
+                                self.inException = True
+                                self.go_straight(-1) # go 1m in opposite direction
+                                angle_diff = self.get_angle_diff(vol_list[ind[i]])
+                                self.drive_around_rock(-math.copysign(5, angle_diff)) # assume 6m the most needed
+                                self.inException = False
+                            except VSLAMDisabledException as e:
+                                print(self.sim_time, self.robot_name, "VSLAM: mapping disabled, waiting")
+                                self.send_speed_cmd(0.0, 0.0)
+                                wait_for_mapping = True
+                            except VSLAMEnabledException as e:
+                                print(self.sim_time, self.robot_name, "VSLAM: mapping re-enabled")
+                                wait_for_mapping = False
+                            except WaitRequestedException as e:
+                                self.send_speed_cmd(0.0, 0.0)
+                                wait_for_hauler_requested = True
+                                print(self.sim_time, self.robot_name, "Hauler requested to wait")
+                            except ResumeRequestedException as e:
+                                wait_for_hauler_requested = False
+                                print(self.sim_time, self.robot_name, "Hauler wants to resume")
+
                     print("***************** VOLATILES EXHAUSTED ****************************")
-                    break
+                    return None
+
+                picked_up_index = pursue_volatile()
+                if picked_up_index is None:
+                    return # quitting, maybe we can do more
 
                 self.send_speed_cmd(0.0, 0.0)
 
@@ -299,7 +317,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     found_angle = best_angle
                 if found_angle is not None:
                     if scoop_all(found_angle):
-                        vol_list.pop(ind[i])# once scooping finished or given up on, remove volatile from list
+                        vol_list.pop(picked_up_index)# once scooping finished or given up on, remove volatile from list
 
                 self.publish("bucket_drop", [math.pi, 'reset'])
 
