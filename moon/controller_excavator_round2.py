@@ -9,12 +9,17 @@ import traceback
 
 from osgar.bus import BusShutdownException
 
-from moon.controller import ps, distance, SpaceRoboticsChallenge, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor
+from moon.controller import ps, distance, SpaceRoboticsChallenge, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor, VSLAMEnabledException, VSLAMDisabledException
 from osgar.lib.virtual_bumper import VirtualBumper
 from osgar.lib.quaternion import euler_zyx
 from osgar.lib.mathex import normalizeAnglePIPI
 
 DIG_GOOD_LOCATION_MASS = 10
+
+class WaitRequestedException(Exception):
+    pass
+class ResumeRequestedException(Exception):
+    pass
 
 class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
     def __init__(self, config, bus):
@@ -28,6 +33,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         self.robot_name = "excavator_1"
         self.hauler_ready = False
         self.volatile_reached = False
+        self.vslam_is_enabled = False
 
     def on_osgar_broadcast(self, data):
         message_target = data.split(" ")[0]
@@ -38,8 +44,23 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 self.hauler_ready = True
                 if not self.volatile_reached:
                     self.send_request('external_command hauler_1 follow')
+            if command == "wait":
+                raise WaitRequestedException
+            if command == "resume":
+                raise ResumeRequestedException
 
+    def on_vslam_enabled(self, data):
+        super().on_vslam_enabled(data)
+        if self.vslam_is_enabled != data:
+            self.vslam_is_enabled = data
 
+            if not self.true_pose or self.sim_time is None or self.last_position is None or self.yaw is None:
+                return
+
+            if self.vslam_is_enabled:
+                raise VSLAMEnabledException
+            else:
+                raise VSLAMDisabledException
 
     def get_extra_status(self):
         if self.volatile_dug_up[1] == 100:
@@ -117,8 +138,18 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             while not self.hauler_ready:
                 self.wait(timedelta(seconds=1))
 
+            # reset again in case hauler was driving in front of excavator
+            self.vslam_reset_at = None
+            self.send_request('vslam_reset', vslam_reset_time)
+            while self.vslam_reset_at is None or self.sim_time - self.vslam_reset_at < timedelta(seconds=3):
+                self.wait(timedelta(seconds=1))
+
+            wait_for_mapping = False
+            wait_for_hauler_requested = False
+            self.virtual_bumper = VirtualBumper(timedelta(seconds=3), 0.2) # radius of "stuck" area; a little more as the robot flexes
+
             while len(vol_list) > 0:
-                dist, ind = spatial.KDTree(vol_list).query([0,0], k=len(vol_list))
+                dist, ind = spatial.KDTree(vol_list).query([3,-3], k=len(vol_list))
 
                 for i in range(len(dist)):
                     d = distance(self.xyz, vol_list[ind[i]])
@@ -140,7 +171,9 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
                     try:
                         print(self.sim_time, self.robot_name, "excavator: Pursuing volatile [%.1f,%.1f] at distance: %f" % (vol_list[ind[i]][0],vol_list[ind[i]][1], d))
-                        self.virtual_bumper = VirtualBumper(timedelta(seconds=3), 0.2) # radius of "stuck" area; a little more as the robot flexes
+                        while wait_for_mapping or wait_for_hauler_requested:
+                            self.wait(timedelta(seconds=1))
+
                         with LidarCollisionMonitor(self, 1500): # some distance needed not to lose tracking when seeing only obstacle up front
                             # turning in place probably not desirable because hauler behind may be in the way, may need to send it away first
                             angle_diff = self.get_angle_diff(vol_list[ind[i]])
@@ -168,6 +201,20 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         angle_diff = self.get_angle_diff(vol_list[ind[i]])
                         self.drive_around_rock(-math.copysign(5, angle_diff)) # assume 6m the most needed
                         self.inException = False
+                    except VSLAMDisabledException as e:
+                        print(self.sim_time, self.robot_name, "VSLAM: mapping disabled, waiting")
+                        self.send_speed_cmd(0.0, 0.0)
+                        wait_for_mapping = True
+                    except VSLAMEnabledException as e:
+                        print(self.sim_time, self.robot_name, "VSLAM: mapping re-enabled")
+                        wait_for_mapping = False
+                    except WaitRequestedException as e:
+                        wait_for_hauler_requested = True
+                        print(self.sim_time, self.robot_name, "Hauler requested to wait")
+                    except ResumeRequestedException as e:
+                        wait_for_hauler_requested = False
+                        print(self.sim_time, self.robot_name, "Hauler wants to resume")
+
 
                 if i == len(dist) - 1:
                     print("***************** VOLATILES EXHAUSTED ****************************")
