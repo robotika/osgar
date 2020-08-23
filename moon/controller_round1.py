@@ -133,15 +133,15 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
         ):
             x,y,z = self.xyz
             print(self.sim_time, "app: Object %s[%d] reached at [%.1f,%.1f], queueing up 19 around" % (object_type, object_index, x, y))
-            heapq.heappush(self.volatile_queue, (1, [object_index, object_type, x, y]))
+            heapq.heappush(self.volatile_queue, (self.sim_time.total_seconds(), [object_index, object_type, x, y]))
             for i in range(6):
                 x_d,y_d = pol2cart(3.46, math.radians(i * 60))
-                heapq.heappush(self.volatile_queue, (2, [object_index, object_type, x+x_d, y+y_d]))
+                heapq.heappush(self.volatile_queue, (3600 + self.sim_time.total_seconds(), [object_index, object_type, x+x_d, y+y_d]))
                  # https://www.researchgate.net/figure/Minimum-overlap-of-circles-covering-an-area_fig2_256607366
                  # Minimum overlap of circles covering an area; r= 3.46 (=2* r * cos(30)); step 60 degrees, 6x
             for i in range(12):
                 x_d,y_d = pol2cart(2*3.46, math.radians(30 + i * 60))
-                heapq.heappush(self.volatile_queue, (3, [object_index, object_type, x+x_d, y+y_d]))
+                heapq.heappush(self.volatile_queue, (7200 + self.sim_time.total_seconds(), [object_index, object_type, x+x_d, y+y_d]))
 
 
     def circular_pattern(self):
@@ -150,7 +150,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
         CIRCLE_SEGMENTS = 10
         sweep_steps = []
         #HOMEPOINT = self.xyz # where the drive started and we know the location well
-        CENTERPOINT = [3,0] # where to start the circle from
+        CENTERPOINT = [3,-3] # where to start the circle from
         HOMEPOINT = [-10,-10] # central area, good for regrouping
         print(self.sim_time, "Home coordinates: %.1f, %.1f" % (HOMEPOINT[0], HOMEPOINT[1]))
 
@@ -180,12 +180,13 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
 
         start_time = self.sim_time
         wait_for_mapping = False
+
+        self.virtual_bumper = VirtualBumper(timedelta(seconds=5), 0.2) # radius of "stuck" area; a little more as the robot flexes
         while current_sweep_step < len(sweep_steps) and self.sim_time - start_time < timedelta(minutes=60):
             ex = None
             try:
                 while wait_for_mapping:
                     self.wait(timedelta(seconds=1))
-                self.virtual_bumper = VirtualBumper(timedelta(seconds=5), 0.2) # radius of "stuck" area; a little more as the robot flexes
                 with LidarCollisionMonitor(self, 1200): # some distance needed not to lose tracking when seeing only obstacle up front
                     op, self.inException, params = sweep_steps[current_sweep_step]
                     if op == "goto":
