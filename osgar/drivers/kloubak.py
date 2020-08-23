@@ -268,6 +268,7 @@ class RobotKloubak(Node):
         self.last_encoders_16bit = None  # raw readings
         self.last_join_angle = None  # join angle in radians
         self.last_join_angle2 = None  # # join2 angle in radians
+        self.prev_joins_angle = None  # angle between front and rear axle, used for heading
         self.voltage = None
         self.downdrops_front = None  # array of downdrop sensors
         self.downdrops_rear = None
@@ -380,7 +381,7 @@ class RobotKloubak(Node):
         if self.verbose:
             self.count_arr.append([self.time.total_seconds()] + self.count)
 
-    def compute_pose(self, left, right):
+    def compute_pose(self, left, right, join_angle_diff):
         """Update internal pose with 'dt' step"""
         if left is None or right is None:
             return False, None, None
@@ -390,7 +391,7 @@ class RobotKloubak(Node):
         metricR = ENC_SCALE * right
 
         dist = (metricL + metricR)/2.0
-        angle = (metricR - metricL)/WHEEL_DISTANCE
+        angle = (metricR - metricL)/WHEEL_DISTANCE + join_angle_diff
 
         # advance robot by given distance and angle
         if abs(angle) < 0.0000001:  # EPS
@@ -410,20 +411,33 @@ class RobotKloubak(Node):
         diff = [e - prev for e, prev in zip(self.encoders, self.last_pose_encoders)]
         self.last_pose_encoders = self.encoders
         if self.num_axis == 2:
+            if self.last_join_angle is None:
+                return False
+            if self.prev_joins_angle is None:
+                self.prev_joins_angle = self.last_join_angle
+                return False
+            join_angle_diff = self.last_join_angle - self.prev_joins_angle
             if self.desired_speed >= 0:
-                ret, pose, motion = self.compute_pose(diff[INDEX_REAR_LEFT], diff[INDEX_REAR_RIGHT])
+                ret, pose, motion = self.compute_pose(diff[INDEX_REAR_LEFT], diff[INDEX_REAR_RIGHT], join_angle_diff)
             else:
-                ret, pose, motion = self.compute_pose(diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT])
+                ret, pose, motion = self.compute_pose(diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT], -join_angle_diff)
         elif self.num_axis == 3:
+            if self.last_join_angle is None or self.last_join_angle2 is None:
+                return False
+            if self.prev_joins_angle is None:
+                self.prev_joins_angle = self.last_join_angle + self.last_join_angle2
+                return False
+            join_angle_diff = self.last_join_angle + self.last_join_angle2 - self.prev_joins_angle
             if self.desired_speed >= 0:
-                ret, pose, motion = self.compute_pose(diff[INDEX_REAR_K3_LEFT], diff[INDEX_REAR_K3_RIGHT])
+                ret, pose, motion = self.compute_pose(diff[INDEX_REAR_K3_LEFT], diff[INDEX_REAR_K3_RIGHT], join_angle_diff)
             else:
-                ret, pose, motion = self.compute_pose(diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT])
+                ret, pose, motion = self.compute_pose(diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT], -join_angle_diff)
         else:
             assert False, self.num_axis  # 2 or 3 are supported only
 
         if ret:
             self.pose = pose
+            print(self.pose)
 
         if self.verbose and ret and self.last_join_angle is not None:
 #            self.debug_odo.append((self.time.total_seconds(), motion[0], motion_rear[0]))
