@@ -35,7 +35,7 @@ class Odometry:
         x += math.cos(heading) * dist
         y += math.sin(heading) * dist
         heading += angle
-        self.prev_position = data
+        self.prev_position = data[:]
         self.pose2d = x, y, heading
         return self.pose2d
 
