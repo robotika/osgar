@@ -49,8 +49,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             command = data.split(" ")[1]
             if command == "arrived":
                 self.hauler_ready = True
-                if not self.volatile_reached:
-                    self.send_request('external_command hauler_1 follow')
             if command == "wait":
                 raise WaitRequestedException
             if command == "resume":
@@ -197,7 +195,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                     # turning in place probably not desirable because hauler behind may be in the way, may need to send it away first
                                     angle_diff = self.get_angle_diff(vol_list[ind[i]])
                                     self.turn(math.copysign(min(abs(angle_diff),math.pi/4),angle_diff), timeout=timedelta(seconds=15))
-                                    self.go_to_location(vol_list[ind[i]], self.default_effort_level, offset=-0.5, timeout=timedelta(minutes=5), full_turn=True) # extra offset for sliding
+                                    # ideal position is 0.5m in front of the excavator
+                                    self.go_to_location(vol_list[ind[i]], self.default_effort_level, offset=-1.5, timeout=timedelta(minutes=5), full_turn=True) # extra offset for sliding
                                     self.wait(timedelta(seconds=2)) # wait to come to a stop
                                     self.send_request('external_command hauler_1 approach %f' % self.yaw) # TODO: due to skidding, this yaw may still change after sending
                                     self.hauler_ready = False

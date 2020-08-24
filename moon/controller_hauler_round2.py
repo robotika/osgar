@@ -66,9 +66,6 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
             elif command == "approach":
                 self.arrived_message_sent = False
                 self.excavator_yaw = float(data.split(" ")[2])
-            elif command == "backout":
-                self.arrived_message_sent = False
-                self.target_excavator_distance = EXCAVATOR_DRIVING_GAP
             elif command == "follow":
                 self.target_excavator_distance = EXCAVATOR_DRIVING_GAP
                 self.arrived_message_sent = False
@@ -108,6 +105,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                             self.turn(angle_diff)
                             self.go_to_location(self.goto, self.default_effort_level, full_turn=False, avoid_obstacles_close_to_destination=True, timeout=timedelta(minutes=2))
                             self.turn(normalizeAnglePIPI(self.goto[2] - self.yaw))
+                        self.send_request('external_command excavator_1 arrived')
                         self.goto = None
                         self.finish_visually = True
                         self.set_cam_angle(-0.1)
@@ -291,18 +289,13 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         if not self.finish_visually:
             return
 
-
         # TODO: avoid obstacles when following (too tight turns)
 
-        if 'rover' in self.objects_in_view.keys() and not self.arrived_message_sent and not self.inException:
-            # TODO: Use rover_distance instead?
+        if 'rover' in self.objects_in_view.keys() and self.driving_mode == "approach" and not self.arrived_message_sent and not self.inException:
             # TODO: sometimes we are near rover but don't see its distance
             # other times, we see a rover and its distance but stuck behind a rock
             if self.excavator_yaw is None: # within requested distance and no outstanding yaw, report
-                if (
-                        self.driving_mode == "approach" and min(self.rover_distance, self.scan_distance_to_obstacle/1000.0) < self.target_excavator_distance or
-                        self.driving_mode != "approach" and abs(self.rover_distance - self.target_excavator_distance) < 0.3
-                ):
+                if min(self.rover_distance, self.scan_distance_to_obstacle/1000.0) < self.target_excavator_distance:
                     self.publish("desired_movement", [0, 0, 0])
                     print(self.sim_time, self.robot_name, "Sending arrived message to excavator")
                     self.send_request('external_command excavator_1 arrived')
