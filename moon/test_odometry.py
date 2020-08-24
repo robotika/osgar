@@ -1,4 +1,5 @@
 import unittest
+import math
 
 from moon.odometry import Odometry
 
@@ -29,9 +30,52 @@ class MoonOdometryTest(unittest.TestCase):
         data[names.index(b'bl_wheel_joint')] += 1.0
         data[names.index(b'br_wheel_joint')] += 1.0
         odom.update_joint_position(names, data)
-        self.assertAlmostEqual(odom.pose2d[0], 0.275)
-        self.assertAlmostEqual(odom.pose2d[1], 0)
+        self.assertAlmostEqual(odom.pose2d[0], 0.275/2)
+        self.assertAlmostEqual(odom.pose2d[1], 0, 4)
         self.assertAlmostEqual(odom.pose2d[2], 0)
+
+    def test_is_crab_step(self):
+        odom = Odometry()
+        self.assertTrue(odom.is_crab_step([0, 0, 0, 0]))
+        a = math.radians(45)
+        self.assertFalse(odom.is_crab_step([a, a, -a, -a]))
+
+    def test_steering(self):
+        odom = Odometry()
+        self.assertEqual(odom.pose2d, (0, 0, 0))
+
+        names = [b'bl_arm_joint', b'bl_steering_arm_joint', b'bl_wheel_joint',
+                b'br_arm_joint', b'br_steering_arm_joint', b'br_wheel_joint',
+                b'fl_arm_joint', b'fl_steering_arm_joint', b'fl_wheel_joint',
+                b'fr_arm_joint', b'fr_steering_arm_joint', b'fr_wheel_joint',
+                b'sensor_joint']
+
+        data = [0.0, 0.0, 10.0,
+                0.0, 0.0, 10.0,
+                0.0, 0.0, 10.0,
+                0.0, 0.0, 10.0,
+                0.0]
+
+        odom.update_joint_position(names, data)
+        self.assertEqual(odom.pose2d, (0, 0, 0))
+
+        data = [0.0, 0.0, 11.0,
+                0.0, 0.0, 11.0,
+                0.0, 0.0, 11.0,
+                0.0, 0.0, 11.0,
+                0.0]
+
+        odom.update_joint_position(names, data)
+        self.assertEqual(odom.pose2d, (0.275, 0, 0))
+
+        a90 = math.radians(90)
+        data = [0.0, a90, 12.0,
+                0.0, a90, 12.0,
+                0.0, a90, 12.0,
+                0.0, a90, 12.0,
+                0.0]
+        odom.update_joint_position(names, data)
+        self.assertEqual(odom.pose2d, (0.275, 0.275, 0))
 
 # vim: expandtab sw=4 ts=4
 
