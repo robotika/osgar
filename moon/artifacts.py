@@ -81,7 +81,6 @@ class ArtifactDetector(Node):
             {
                 'artefact_name': 'basemarker',
                 'detector_type': 'colormatch',
-                'mser': cv2.MSER_create(_min_area=100),
                 'min_size': 10,
                 'max_size': 500,
                 'mask': [CAMERA_HEIGHT//2,  CAMERA_HEIGHT, 0, CAMERA_WIDTH], # [Y,X] order, look only in lower half of the screen (avoid solar panels)
@@ -94,7 +93,6 @@ class ArtifactDetector(Node):
             {
                 'artefact_name': 'homebase',
                 'detector_type': 'colormatch',
-                'mser': cv2.MSER_create(_min_area=400),
                 'min_size': 20,
                 'max_size': 700,
                 'mask': None,
@@ -107,7 +105,6 @@ class ArtifactDetector(Node):
             {
                 'artefact_name': 'rover',
                 'detector_type': 'colormatch',
-                'mser': cv2.MSER_create(_min_area=100),
                 'min_size': 10,
                 'max_size': 700,
                 'mask': None,
@@ -120,7 +117,6 @@ class ArtifactDetector(Node):
             {
                 'artefact_name': 'excavator_arm',
                 'detector_type': 'colormatch',
-                'mser': cv2.MSER_create(_min_area=100),
                 'min_size': 10,
                 'max_size': 700,
                 'mask': [0,  120, 0, CAMERA_WIDTH], # [Y,X] order
@@ -210,7 +206,13 @@ class ArtifactDetector(Node):
                     m[c['mask'][0]:c['mask'][1],c['mask'][2]:c['mask'][3]] = 255
                     mask &= m
 
-                _, bboxes = c['mser'].detectRegions(mask)
+                bboxes = []
+                _, contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                for cont in contours:
+                    contours_poly = cv2.approxPolyDP(cont, 3, True)
+                    x,y,w,h = cv2.boundingRect(contours_poly)
+                    bboxes.append([int(x),int(y),int(w),int(h)])
+
                 if len(bboxes) > 0:
                     sb = sorted(bboxes, key = box_area, reverse = True)[:c['bbox_union_count']]
                     bbox = sb[0]
