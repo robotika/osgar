@@ -15,11 +15,17 @@ class Odometry:
         self.pose2d = 0, 0, 0
         self.prev_position = None
         self.crab_limit = math.radians(5)
+        self.turn_in_place_limit = math.radians(30)
 
     def is_crab_step(self, steering):
         avg = sum(steering)/4
         offset = max([abs(s - avg) for s in steering])
         return offset < self.crab_limit
+
+    def is_turn_in_place(self, steering):
+        fl, fr, bl, br = steering
+        lim = self.turn_in_place_limit
+        return fl < -lim and fr > lim and bl < -lim and br > lim
 
     def update_joint_position(self, names, data):
         self.joint_name = names
@@ -40,6 +46,8 @@ class Odometry:
             x += math.cos(heading + angle) * dist
             y += math.sin(heading + angle) * dist
             # expected no change of heading
+        elif self.is_turn_in_place(steering):
+            pass  # assert data  # not tested
         else:
             # measure odometry from rear wheels
             name = b'bl_wheel_joint'

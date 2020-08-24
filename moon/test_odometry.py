@@ -77,5 +77,11 @@ class MoonOdometryTest(unittest.TestCase):
         odom.update_joint_position(names, data)
         self.assertEqual(odom.pose2d, (0.275, 0.275, 0))
 
+    def test_is_turn_in_place(self):
+        odom = Odometry()
+        self.assertFalse(odom.is_turn_in_place([0, 0, 0, 0]))
+        a = math.radians(45)
+        self.assertTrue(odom.is_turn_in_place([-a, a, -a, a]))
+
 # vim: expandtab sw=4 ts=4
 
