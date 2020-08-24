@@ -207,7 +207,20 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                 if distance(self.xyz, vol_list[ind[i]]) < 1:
                                     return ind[i] #arrived
                                 self.inException = True
-                                self.lidar_drive_around()
+                                try:
+                                    self.lidar_drive_around()
+                                except WaitRequestedException as e:
+                                    self.send_speed_cmd(0.0, 0.0)
+                                    wait_for_hauler_requested = True
+                                    print(self.sim_time, self.robot_name, "Hauler requested to wait")
+                                except VSLAMDisabledException as e:
+                                    print(self.sim_time, self.robot_name, "VSLAM: mapping disabled, waiting")
+                                    self.send_speed_cmd(0.0, 0.0)
+                                    wait_for_mapping = True
+                                except VSLAMEnabledException as e:
+                                    print(self.sim_time, self.robot_name, "VSLAM: mapping re-enabled")
+                                    wait_for_mapping = False
+
                                 self.inException = False
                             except VirtualBumperException as e:
                                 self.send_speed_cmd(0.0, 0.0)
@@ -215,9 +228,22 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                 if distance(self.xyz, vol_list[ind[i]]) < 1:
                                     return ind[i] # arrived
                                 self.inException = True
-                                self.go_straight(-1) # go 1m in opposite direction
-                                angle_diff = self.get_angle_diff(vol_list[ind[i]])
-                                self.drive_around_rock(-math.copysign(5, angle_diff)) # assume 6m the most needed
+                                try:
+                                    self.go_straight(-1) # go 1m in opposite direction
+                                    angle_diff = self.get_angle_diff(vol_list[ind[i]])
+                                    self.drive_around_rock(-math.copysign(5, angle_diff)) # assume 6m the most needed
+                                except WaitRequestedException as e:
+                                    self.send_speed_cmd(0.0, 0.0)
+                                    wait_for_hauler_requested = True
+                                    print(self.sim_time, self.robot_name, "Hauler requested to wait")
+                                except VSLAMDisabledException as e:
+                                    print(self.sim_time, self.robot_name, "VSLAM: mapping disabled, waiting")
+                                    self.send_speed_cmd(0.0, 0.0)
+                                    wait_for_mapping = True
+                                except VSLAMEnabledException as e:
+                                    print(self.sim_time, self.robot_name, "VSLAM: mapping re-enabled")
+                                    wait_for_mapping = False
+
                                 self.inException = False
                             except VSLAMDisabledException as e:
                                 print(self.sim_time, self.robot_name, "VSLAM: mapping disabled, waiting")
