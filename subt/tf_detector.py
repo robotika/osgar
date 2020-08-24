@@ -11,7 +11,7 @@ PATH_TO_PB_GRAPH = "subt/tf_models/frozen_inference_graph.pb"
 PATH_TO_CV_GRAPH = "subt/tf_models/cv_graph.pbtxt"
 
 ARTF_NAME = np.array(["backpack", "survivor", "phone", "rope", "helmet", "robot"])
-MIN_SCORES = np.array([0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
+MIN_SCORES = np.array([0.2, 0.2, 0.2, 0.5, 0.3, 0.2])
 
 
 class CvDetector:
@@ -59,7 +59,7 @@ class CvDetector:
                 score = detection['scores'][ii]
                 name = detection['classes_names'][ii]
                 cv2.rectangle(img, (x, y), (w, h), (255, 0, 0), thickness=2)
-                cv2.putText(img, "%s %0.3f " % (name, score), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1,
+                cv2.putText(img, "%s %0.3f " % (name, score), (min(x, 520), max(20, y)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1,
                             cv2.LINE_AA)
         return img
 
@@ -110,7 +110,7 @@ class TfDetector:
                 score = detection['scores'][ii]
                 name = detection['classes_names'][ii]
                 cv2.rectangle(img, (x, y), (w, h), (255, 0, 0), thickness=2)
-                cv2.putText(img, "%s %0.3f " %(name, score), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1,
+                cv2.putText(img, "%s %0.3f " %(name, score), (min(x, 520), max(20, y)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1,
                             cv2.LINE_AA)
         return img
 
