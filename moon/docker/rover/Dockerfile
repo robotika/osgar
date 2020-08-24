@@ -245,6 +245,10 @@ RUN chmod 777 /rover_workspace
 
 RUN rm -rf /rover_workspace/devel
 RUN rm -rf /rover_workspace/build
+RUN rm -rf /osgar/.git
+RUN rm -rf /osgar/.github
+RUN rm -rf /osgar/research_scripts
+RUN rm -rf /osgar/disparity_images
 RUN  /bin/bash -c "source /openvslam/ros/1/devel/setup.bash; cd /rover_workspace; catkin_make"
 
 RUN echo "source /rover_workspace/devel/setup.bash" >> /root/.bashrc
