@@ -145,7 +145,7 @@ do
             for f in $(docker exec -it nasa-rover /bin/bash -c "ls /*.log"); do
                 f=`echo $f | sed 's/\r//g'`
                 readarray -d . -t strarr <<< "$f"
-                docker cp nasa-rover:$f ${log_dir}/${strarr[0]}-seed_${i}_run_${j}.${strarr[1]};
+                docker cp nasa-rover:$f ${log_dir}/${strarr[0]}-seed_${i}_run_${j}.olog;
             done
         fi
 
