@@ -236,6 +236,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     if len(goto_path) > 0:
                         wait_for_mapping = False
                         wait_for_hauler_requested = False
+                        ARRIVAL_TOLERANCE = 1 # if we are within 1m of target, stop
                         while True:
                             try:
                                 print(self.sim_time, self.robot_name, "excavator: Pursuing volatile [%.1f,%.1f] at distance: %f" % (vol_list[ind[i]][0],vol_list[ind[i]][1], d))
@@ -244,16 +245,18 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
                                 with LidarCollisionMonitor(self, 1500): # some distance needed not to lose tracking when seeing only obstacle up front
                                     # turning in place probably not desirable because hauler behind may be in the way, may need to send it away first
-                                    angle_diff = self.get_angle_diff(vol_list[ind[i]])
-                                    self.turn(math.copysign(min(abs(angle_diff),math.pi/4),angle_diff), timeout=timedelta(seconds=15))
+                                    if distance(self.xyz, vol_list[ind[i]]) > ARRIVAL_TOLERANCE: # only turn if we are further than 2m, if closer, it probably means there was an exception while we were already on location
+                                        angle_diff = self.get_angle_diff(vol_list[ind[i]])
+                                        self.turn(math.copysign(min(abs(angle_diff),math.pi/4),angle_diff), timeout=timedelta(seconds=15))
                                     # ideal position is 0.5m in front of the excavator
                                     # TODO: fine-tune offset and tolerance given slipping
                                     while len(goto_path) > 1:
                                         self.go_to_location(goto_path[0], self.default_effort_level, tolerance=8.0, full_turn=True) # extra offset for sliding
                                         goto_path.pop(0)
                                     # extra offset for sliding? the coordinates are with respect to the camera so the volatile is ideally only 0.5m in front
-                                    self.go_to_location(goto_path[0], self.default_effort_level, offset=-0.5, timeout=timedelta(minutes=5), full_turn=True)
-                                    goto_path.pop(0)
+                                    if len(goto_path) == 1:
+                                        self.go_to_location(goto_path[0], self.default_effort_level, tolerance=ARRIVAL_TOLERANCE, offset=-0.5, timeout=timedelta(minutes=5), full_turn=True)
+                                        goto_path.pop(0)
 
                                     self.wait(timedelta(seconds=2)) # wait to come to a stop
                                     self.send_request('external_command hauler_1 approach %f' % self.yaw) # TODO: due to skidding, this yaw may still change after sending
