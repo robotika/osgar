@@ -25,7 +25,7 @@ class Odometry:
     def is_turn_in_place(self, steering):
         fl, fr, bl, br = steering
         lim = self.turn_in_place_limit
-        return fl < -lim and fr > lim and bl < -lim and br > lim
+        return fl < -lim and fr > lim and bl > lim and br < -lim
 
     def update_joint_position(self, names, data):
         self.joint_name = names
