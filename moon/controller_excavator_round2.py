@@ -19,6 +19,7 @@ from osgar.lib.mathex import normalizeAnglePIPI
 
 DIG_GOOD_LOCATION_MASS = 10
 
+PREFERRED_POLYGON = Polygon([(40,20),(40, -35),(-25,-42),(-25,-5),(-10,31),(40,25)])
 SAFE_POLYGON = Polygon([
     (65,20),(65,-35),(45,-35),(45,-55),(-65,-55),(-65,-42),(-25,-42),(-25,-5),(-65,-5),(-65,25),(-40,30),(-36,55),(-10,55),(-10,31),(16,31),(16,55),(40,55),(40,20)
 ])
@@ -200,19 +201,39 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         if -3*math.pi/4 < math.atan2(vol_list[ind[i]][1] - self.xyz[1], vol_list[ind[i]][0] - self.xyz[0]) < -math.pi/4:
                             print (self.sim_time, self.robot_name, "%d: Too much away from the sun, shadow interference" % i)
                             continue
-                        if not SAFE_POLYGON.contains(LineString([
+                        if not PREFERRED_POLYGON.contains(LineString([
                                 (self.xyz[0],self.xyz[1]),
                                 (vol_list[ind[i]][0], vol_list[ind[i]][1])
                         ])):
-                            print (self.sim_time, self.robot_name, "%d: excavator: Path to index %d not safe, going through -10,-10, skipping" % (i, ind[i]))
-                            goto_path.append([-10,-10])
-
+                            print (self.sim_time, self.robot_name, "%d: excavator: Path to index %d not through preferred polygon, skipping" % (i, ind[i]))
+                            continue
                         goto_path.append(vol_list[ind[i]])
+                        break
 
-    #                    if distance([0,0], vol_list[ind[i]]) > 35:
-    #                        print (self.sim_time, self.robot_name, "%d: Too far from center" % i)
-    #                        continue
+                    if len(goto_path) == 0:
+                        for i in range(len(dist)):
+                            d = distance(self.xyz, vol_list[ind[i]])
+                            if  d < 5: # too close/just did it
+                                print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d, skipping" % (i, d, ind[i]))
+                                continue
 
+                            if abs(self.get_angle_diff(vol_list[ind[i]])) > 3*math.pi/4 and d < 10:
+                                print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d in opposite direction, skipping" % (i, d, ind[i]))
+                                continue
+                            if -3*math.pi/4 < math.atan2(vol_list[ind[i]][1] - self.xyz[1], vol_list[ind[i]][0] - self.xyz[0]) < -math.pi/4:
+                                print (self.sim_time, self.robot_name, "%d: Too much away from the sun, shadow interference" % i)
+                                continue
+                            if not SAFE_POLYGON.contains(LineString([
+                                    (self.xyz[0],self.xyz[1]),
+                                    (vol_list[ind[i]][0], vol_list[ind[i]][1])
+                            ])):
+                                print (self.sim_time, self.robot_name, "%d: excavator: Path to index %d not safe, going through -10,-10, skipping" % (i, ind[i]))
+                                goto_path.append([-10,-10])
+
+                            goto_path.append(vol_list[ind[i]])
+                            break
+
+                    if len(goto_path) > 0:
                         wait_for_mapping = False
                         wait_for_hauler_requested = False
                         while True:
@@ -302,9 +323,9 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             except ResumeRequestedException as e:
                                 wait_for_hauler_requested = False
                                 print(self.sim_time, self.robot_name, "Hauler wants to resume")
-
-                    print("***************** VOLATILES EXHAUSTED ****************************")
-                    return None
+                    else:
+                        print("***************** VOLATILES EXHAUSTED ****************************")
+                        return None
 
                 picked_up_index = pursue_volatile()
                 if picked_up_index is None:
