@@ -59,8 +59,8 @@ class Excavator(Rover):
             )
         self.bucket_drop_sequence = (
             [20, [-0.6, -0.2, 3.92]], # turn towards dropping position
-            [20, [0, -0.8, 3.92]], # extend arm
-            [20, [-0.3, -0.8, 3]], # drop
+            [10, [0, -0.8, 3.92]], # extend arm
+            [10, [-0.3, -0.8, 3]], # drop
             [20, [-0.6, -0.8, 3.2]] # back to neutral/travel position
         )
         self.bucket_last_status_timestamp = None
