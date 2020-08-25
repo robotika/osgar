@@ -6,6 +6,7 @@ import math
 # TODO remove duplicity from moon\vehicles\rover.py !!!
 WHEEL_RADIUS = 0.275  # meters
 WHEEL_SEPARATION_WIDTH = 1.87325  # meters
+WHEEL_SEPARATION_LENGTH = 1.5748  # meters
 
 WHEEL_NAMES = [b'fl', b'fr', b'bl', b'br']
 
@@ -37,9 +38,9 @@ class Odometry:
         steering = [data[names.index(n + b'_steering_arm_joint')]
                     for n in WHEEL_NAMES]
         x, y, heading = self.pose2d
+        drive = [diff[names.index(n + b'_wheel_joint')]
+                 for n in WHEEL_NAMES]
         if self.is_crab_step(steering):
-            drive = [diff[names.index(n + b'_wheel_joint')]
-                    for n in WHEEL_NAMES]
             dist = WHEEL_RADIUS * sum(drive)/4
             # TODO use rather abs min distance with sign
             angle = sum(steering)/4  # all wheels point the same direction
@@ -47,7 +48,11 @@ class Odometry:
             y += math.sin(heading + angle) * dist
             # expected no change of heading
         elif self.is_turn_in_place(steering):
-            pass  # assert data  # not tested
+            # not expected change in x and y coordinates
+            # average distance driven on wheel on the circle
+            dist = (-drive[0] + drive[1] - drive[2] + drive[3])/4
+            radius = math.hypot(WHEEL_SEPARATION_WIDTH/2, WHEEL_SEPARATION_LENGTH/2)
+            heading += dist/radius
         else:
             # measure odometry from rear wheels
             name = b'bl_wheel_joint'
