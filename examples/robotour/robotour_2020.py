@@ -20,8 +20,9 @@ def get_direction(x_diff, y_diff):
 
 
 def downsample_scan(scan):
+    scan = np.array(scan)
+    scan[scan < 10] = 9999
     scan = np.median(np.reshape(scan[:810], (3, 270)), axis=0)
-    scan[scan==0] = 9999
     return scan
 
 
@@ -82,6 +83,7 @@ class Robotour(Node):
 
     def navigate(self, direction):
         scan = self.last_scan/1000
+        #print(scan)
         # use max feasible direction
         #print(direction)
         direction = math.copysign(min(abs(direction), math.pi/2), direction)
@@ -89,6 +91,7 @@ class Robotour(Node):
         #print(direction_id)
 
         binarized = scan>1.2
+        #print(binarized)
         possible_directions = np.convolve(binarized, np.ones(80) / 80, mode="valid")
         possible_directions_idx = np.where(possible_directions == 1)[0] + 40
         #print(possible_directions_idx)
