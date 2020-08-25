@@ -292,9 +292,11 @@ class Rover(MoonNode):
     def draw(self):
         # for debugging
         import matplotlib.pyplot as plt
+        assert len(self.debug_arr) == len(self.odom.debug_arr), (len(self.debug_arr), len(self.odom.debug_arr))
         arr = self.debug_arr
         t = [a[0] for a in arr]
-        values = [a[1:] for a in arr]
+#        values = [a[1:] for a in arr]
+        values = self.odom.debug_arr
 
         line = plt.plot(t, values, '-', linewidth=2)
 
