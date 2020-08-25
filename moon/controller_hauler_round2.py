@@ -7,6 +7,7 @@ import numpy as np
 import math
 from datetime import timedelta
 from statistics import median
+from random import getrandbits
 
 from osgar.bus import BusShutdownException
 
