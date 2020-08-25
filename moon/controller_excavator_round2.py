@@ -50,6 +50,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             print(self.sim_time, self.robot_name, "Received external_command: %s" % str(data))
             command = data.split(" ")[1]
             if command == "arrived":
+                self.hauler_yaw = float(data.split(" ")[2])
                 self.hauler_ready = True
             if command == "wait":
                 raise WaitRequestedException
@@ -160,10 +161,14 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
             dir_angle = math.atan2(self.xyz[1] - self.hauler_orig_pose[1], self.xyz[0] - self.hauler_orig_pose[0])
             self.send_request('external_command hauler_1 turnto %f' % dir_angle)
-            try:
-                self.turn(normalizeAnglePIPI(dir_angle - self.yaw), timeout=timedelta(seconds=15))
-            except:
-                pass
+
+            # finish the turn no matter what
+            while True:
+                try:
+                    self.turn(normalizeAnglePIPI(dir_angle - self.yaw), timeout=timedelta(seconds=15))
+                    break
+                except:
+                    pass
 
             # wait for hauler to start following, will receive osgar broadcast when done
             while not self.hauler_ready:
@@ -255,7 +260,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                         goto_path.pop(0)
                                     # extra offset for sliding? the coordinates are with respect to the camera so the volatile is ideally only 0.5m in front
                                     if len(goto_path) == 1:
-                                        self.go_to_location(goto_path[0], self.default_effort_level, tolerance=ARRIVAL_TOLERANCE, offset=-0.5, timeout=timedelta(minutes=5), full_turn=True)
+                                        self.go_to_location(goto_path[0], self.default_effort_level, tolerance=ARRIVAL_TOLERANCE, offset=-1.5, timeout=timedelta(minutes=5), full_turn=True)
                                         goto_path.pop(0)
 
                                     self.wait(timedelta(seconds=2)) # wait to come to a stop
@@ -358,13 +363,15 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 #self.send_request('external_command hauler_1 backout') # Testing
                 #continue # testing
 
+
+                drop_angle = normalizeAnglePIPI(math.pi - normalizeAnglePIPI(self.yaw - self.hauler_yaw))
                 found_angle = None
                 best_angle = None
                 # mount 0.4-1.25 or 1.85-2.75 means we can't reach under the vehicle because of the wheels
                 mount_angle_sequence = [0.0, 0.39, -0.39, -0.83, 0.83, 1.26, -1.26, -1.55, 1.55, 1.84, -1.84, -2.2, 2.2, 2.6, -2.6]
                 for a in mount_angle_sequence:
                     self.publish("bucket_dig", [a, 'append'])
-                self.publish("bucket_drop", [math.pi, 'append'])
+                self.publish("bucket_drop", [drop_angle, 'append'])
 
                 sample_start = self.sim_time
                 accum = 0
@@ -383,7 +390,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         if self.volatile_dug_up[2] > DIG_GOOD_LOCATION_MASS:
                             found_angle = self.mount_angle
                         # go for volatile drop (to hauler), wait until finished
-                        self.publish("bucket_drop", [math.pi, 'prepend'])
+                        self.publish("bucket_drop", [drop_angle, 'prepend'])
                         while self.volatile_dug_up[1] != 100:
                             try:
                                 self.wait(timedelta(milliseconds=300))
@@ -402,14 +409,14 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                 pass
                             if self.sim_time - dig_start > timedelta(seconds=50): # TODO: timeout needs to be adjusted to the ultimate digging plan
                                 # move bucket out of the way and continue to next volatile
-                                self.publish("bucket_drop", [math.pi, 'append'])
+                                self.publish("bucket_drop", [drop_angle, 'append'])
                                 return False
                         accum += self.volatile_dug_up[2]
                         if abs(accum - 100.0) < 0.0001:
                             print(self.sim_time, self.robot_name, "Volatile amount %.2f transfered, terminating" % accum)
                             # TODO: assumes 100 to be total volatile at location, actual total reported initially, parse and match instead
                             return True
-                        self.publish("bucket_drop", [math.pi, 'append'])
+                        self.publish("bucket_drop", [drop_angle, 'append'])
                         while self.volatile_dug_up[1] != 100:
                             try:
                                 self.wait(timedelta(milliseconds=300))

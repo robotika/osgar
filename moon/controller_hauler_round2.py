@@ -132,7 +132,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                             self.turn(angle_diff)
                             self.go_to_location(self.goto, self.default_effort_level, full_turn=False, avoid_obstacles_close_to_destination=True, timeout=timedelta(minutes=2))
                             self.turn(normalizeAnglePIPI(self.goto[2] - self.yaw))
-                        self.send_request('external_command excavator_1 arrived')
+                        self.send_request('external_command excavator_1 arrived %.2f' % self.yaw)
                         self.goto = None
                         self.finish_visually = True
                         self.set_cam_angle(-0.1)
@@ -340,7 +340,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                 if min(self.rover_distance, self.scan_distance_to_obstacle/1000.0) < self.target_excavator_distance:
                     self.publish("desired_movement", [0, 0, 0])
                     print(self.sim_time, self.robot_name, "Sending arrived message to excavator")
-                    self.send_request('external_command excavator_1 arrived')
+                    self.send_request('external_command excavator_1 arrived %.2f' % self.yaw)
                     self.arrived_message_sent = True
                     self.excavator_yaw = None
                     self.scan_driving = False
