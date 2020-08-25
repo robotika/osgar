@@ -2,7 +2,7 @@ import collections
 import datetime
 import logging
 import signal
-import subprocess
+import multiprocessing
 import sys
 import threading
 import time
@@ -46,15 +46,19 @@ def child(name, module_config, log_level):
 
 def record(config, log_prefix=None, log_filename=None, duration_sec=None):
     g_logger.info("recording...")
+    try:
+        mp_context = multiprocessing.get_context("forkserver")
+    except ValueError:
+        mp_context = multiprocessing.get_context()
+    g_logger.info(mp_context.get_start_method())
     with osgar.logger.LogWriter(prefix=log_prefix, filename=log_filename, note=str(sys.argv)) as log:
         log.write(0, bytes(str(config), 'ascii'))
         g_logger.info(log.filename)
         with _Router(log) as router:
             modules = {}
-            s = sys.modules[__name__].__spec__
             for module_name, module_config in config['robot']['modules'].items():
-                program = f"import {s.name}; {s.name}.child('{module_name}', {module_config}, {logging.root.level})"
-                modules[module_name] = subprocess.Popen([sys.executable, "-c", program])
+                modules[module_name] = mp_context.Process(target=child, args=(module_name, module_config, logging.root.level))
+                modules[module_name].start()
 
             try:
                 router.register_nodes(modules.keys(), timeout=datetime.timedelta(seconds=1))
@@ -71,15 +75,14 @@ def record(config, log_prefix=None, log_filename=None, duration_sec=None):
                 router.request_stop(b"exception")
 
             for module in modules.values():
-                try:
-                    # always stop within 1s
-                    timeout = 1 - (router.now() - router.stopping).total_seconds()
-                    if timeout < 0:
-                        timeout = 0
-                    module.wait(timeout)
-                except subprocess.TimeoutExpired:
-                    module.kill()
-                    module.wait()
+                # always stop within 1s
+                timeout = 1 - (router.now() - router.stopping).total_seconds()
+                if timeout < 0:
+                    timeout = 0
+                module.join(timeout)
+                if module.exitcode is None:
+                    module.terminate()
+                module.join()
 
 
 class _Router:
