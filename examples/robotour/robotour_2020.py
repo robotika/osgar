@@ -33,8 +33,8 @@ class Robotour(Node):
         self.speed = config['max_speed']
         self.pose = [0, 0, 0]
         self.verbose = False
-        self.destination = [1.5, 1.5]
-        self.last_scan = None
+        self.destination = [3, 0]
+        self.new_scan = None
         self.dangerous_dist = 0.35
         self.min_safe_dist = 2
 
@@ -48,7 +48,7 @@ class Robotour(Node):
             self.pose = (x / 1000.0, y / 1000.0, math.radians(heading / 100.0))
         if channel == "scan":
             assert len(self.scan) == 811, len(self.scan)
-            self.last_scan = downsample_scan(self.scan)
+            self.new_scan = downsample_scan(self.scan)
 
 
     def send_speed_cmd(self, speed, angular_speed):
@@ -64,8 +64,8 @@ class Robotour(Node):
 
     def go_safely(self, desired_direction):
         angular_speed = desired_direction
-        size = len(self.last_scan)
-        dist = np.min(self.last_scan[size//3:2*size//3])/1000
+        size = len(self.new_scan)
+        dist = np.min(self.new_scan[size // 3:2 * size // 3]) / 1000
         if dist > self.min_safe_dist:
             self.send_speed_cmd(self.speed, angular_speed)
         else:
@@ -82,18 +82,15 @@ class Robotour(Node):
 
 
     def navigate(self, direction):
-        scan = self.last_scan/1000
-        #print(scan)
+        scan = self.new_scan / 1000
         # use max feasible direction
-        #print(direction)
         direction = math.copysign(min(abs(direction), math.pi/2), direction)
         direction_id = round(math.degrees(direction)) + 135
-        #print(direction_id)
 
         binarized = scan>1.2
         #print(binarized)
         possible_directions = np.convolve(binarized, np.ones(80) / 80, mode="valid")
-        possible_directions_idx = np.where(possible_directions == 1)[0] + 40
+        possible_directions_idx = np.where(possible_directions > 0.999)[0] + 40  # It should be ==1, strange behavior on the apu
         #print(possible_directions_idx)
         if len(possible_directions_idx) == 0:
             return None
@@ -101,7 +98,6 @@ class Robotour(Node):
         idx = np.argmin(abs(possible_directions_idx - direction_id))
         #print(idx)
         new_direction = possible_directions_idx[idx]
-        #print(new_direction)
         safe_direction = math.radians(new_direction - 135)
 
         return safe_direction
@@ -112,7 +108,7 @@ class Robotour(Node):
         print(self.time, "Go!")
         start_time = self.time
         while self.time - start_time < timedelta(seconds=20):
-            if self.last_scan is not None:
+            if self.new_scan is not None:
                 x, y, heading = self.pose
                 y_diff = self.destination[1] - y
                 x_diff = self.destination[0] - x
@@ -133,6 +129,7 @@ class Robotour(Node):
                 else:
                     print(self.time, "NO SAVE DIRECTION!!!")
                     self.send_speed_cmd(0, 0)
+            self.new_scan = None
             self.update()
 
         self.send_speed_cmd(0.0, 0.0)
