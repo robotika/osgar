@@ -50,7 +50,7 @@ class Odometry:
         elif self.is_turn_in_place(steering):
             # not expected change in x and y coordinates
             # average distance driven on wheel on the circle
-            dist = (-drive[0] + drive[1] - drive[2] + drive[3])/4
+            dist = WHEEL_RADIUS * (-drive[0] + drive[1] - drive[2] + drive[3])/4
             radius = math.hypot(WHEEL_SEPARATION_WIDTH/2, WHEEL_SEPARATION_LENGTH/2)
             heading += dist/radius
         else:
