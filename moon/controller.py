@@ -564,7 +564,7 @@ class SpaceRoboticsChallenge(MoonNode):
     def go_to_location(self, pos, desired_speed, offset=0.0, full_turn=False, timeout=None, with_stop=True, tolerance=1.0, avoid_obstacles_close_to_destination=False):
         # speed: + forward, - backward
         # offset: stop before (-) or past (+) the actual destination (e.g., to keep the destination in front of the robot)
-        print(self.sim_time, self.robot_name, "go_to_location [%.1f,%.1f] (speed: %.1f)" % (pos[0], pos[1], math.copysign(self.max_speed, desired_speed)))
+        print(self.sim_time, self.robot_name, "go_to_location [%.1f,%.1f] + offset %.1f (speed: %.1f)" % (pos[0], pos[1], offset, math.copysign(self.max_speed, desired_speed)))
 
         dist = distance(pos, self.xyz)+offset
         if timeout is None:
@@ -572,12 +572,15 @@ class SpaceRoboticsChallenge(MoonNode):
 
         start_time = self.sim_time
 
-        # while we are further than 1m but still following the right direction (angle diff < 90deg)
+        # while we are further than tolerance or while the distance from target is decreasing but still following the right direction (angle diff < 90deg)
         angle_diff = self.get_angle_diff(pos,desired_speed)
-        while distance(pos, self.xyz)+offset > tolerance and (full_turn or abs(angle_diff) < math.pi/2):
+        last_dist = distance(pos, self.xyz) + offset
+        while (distance(pos, self.xyz)+offset > tolerance or distance(pos, self.xyz)+offset < last_dist) and (full_turn or abs(angle_diff) < math.pi/2):
+            last_dist = distance(pos, self.xyz)+offset
+            if last_dist < 0:
+                break
             angle_diff = self.get_angle_diff(pos,desired_speed)
-            dist = distance(pos, self.xyz)+offset # do not turn just before arrival; means will push through hilly area but bump into rocks
-            speed = desired_speed if dist > 4 or not with_stop else 0.6 * desired_speed
+            speed = desired_speed if last_dist > 4 or not with_stop else 0.6 * desired_speed
 
             if self.debug:
                 print(self.sim_time, self.robot_name, "Distance ahead: %.1f, Left avg distance: %.1f, Right avg distance: %.1f" % (self.scan_distance_to_obstacle, self.scan_avg_distance_left, self.scan_avg_distance_right))
@@ -585,15 +588,15 @@ class SpaceRoboticsChallenge(MoonNode):
             turn = None
             if (
                     speed > 0 and
-                    (avoid_obstacles_close_to_destination or dist > 5) and
+                    (avoid_obstacles_close_to_destination or last_dist > 5) and
                     self.scan_distance_to_obstacle < 4000
             ):
                 turn = self.get_avoidance_turn()
 
             if turn is None:
-                if angle_diff > 0.1 and dist > 1:
+                if angle_diff > 0.1 and last_dist > 1:
                     turn = TURN_RADIUS * math.copysign(1, speed)
-                elif angle_diff < -0.1 and dist > 1:
+                elif angle_diff < -0.1 and last_dist > 1:
                     turn = -TURN_RADIUS * math.copysign(1, speed)
                 else:
                     turn = GO_STRAIGHT
