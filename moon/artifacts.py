@@ -110,7 +110,7 @@ class ArtifactDetector(Node):
                 'mask': None,
                 'pixel_count_threshold': 150,
                 'bbox_union_count': 3,
-                'hue_max_difference': 5,
+                'hue_max_difference': 1,
                 'hue_match': 26, # from RGB FFA616
                 'subsequent_detects_required': 3
             },
@@ -122,7 +122,7 @@ class ArtifactDetector(Node):
                 'mask': [0,  120, 0, CAMERA_WIDTH], # [Y,X] order
                 'pixel_count_threshold': 150,
                 'bbox_union_count': 3,
-                'hue_max_difference': 5,
+                'hue_max_difference': 1,
                 'hue_match': 26, # from RGB FFA616
                 'subsequent_detects_required': 3
             }
