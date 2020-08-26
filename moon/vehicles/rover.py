@@ -63,6 +63,7 @@ from osgar.lib.mathex import normalizeAnglePIPI
 
 from moon.moonnode import MoonNode
 from moon.motorpid import MotorPID
+from moon.odometry import Odometry
 
 
 WHEEL_RADIUS = 0.275  # meters
@@ -91,7 +92,7 @@ class Rover(MoonNode):
         self.debug_arr = []
         self.verbose = False
         self.prev_position = None
-        self.pose2d = 0, 0, 0
+        self.odom = Odometry()
         self.roll = 0.0
         self.pitch = 0.0
         self.yaw = 0.0
@@ -136,30 +137,12 @@ class Rover(MoonNode):
 
     def on_joint_position(self, data):
         assert self.joint_name is not None
-        if self.prev_position is None:
-            self.prev_position = data
-
-        diff = [b - a for a, b in zip(self.prev_position, data)]
-
-        assert b'bl_wheel_joint' in self.joint_name, self.joint_name
-        # measure odometry from rear wheels
-        name = b'bl_wheel_joint'
-        name2 = b'br_wheel_joint'
-        # name = b'fl_wheel_joint'
-        # name2 = b'fr_wheel_joint'
-        left = WHEEL_RADIUS * diff[self.joint_name.index(name)]
-        right = WHEEL_RADIUS * diff[self.joint_name.index(name2)]
-        dist = (left + right)/2
-        angle = (right - left)/WHEEL_SEPARATION_WIDTH
-        x, y, heading = self.pose2d
-        x += math.cos(heading) * dist
-        y += math.sin(heading) * dist
-        heading += angle
+        self.odom.update_joint_position(self.joint_name, data)
+        x, y, heading = self.odom.pose2d
         self.bus.publish('odo_pose', [round(x * 1000),
                                     round(y * 1000),
                                     round(math.degrees(heading) * 100)])
-        self.prev_position = data
-        self.pose2d = x, y, heading
+        self.prev_position = data  # TODO remove dependency
 
     def on_joint_velocity(self, data):
         assert self.joint_name is not None
