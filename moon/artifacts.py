@@ -240,8 +240,7 @@ class ArtifactDetector(Node):
 
                                 mean = np.mean(distances)
                                 sd = np.std(distances)
-                                distances_clean = [x for x in distances if (x > mean - 2 * sd)]
-                                distances_clean = [x for x in distances_clean if (x < mean + 2 * sd)]
+                                distances_clean = [x for x in distances if mean - 2 * sd < x < mean + 2 * sd]
 
                                 #print("Artf distance: min %.1f median: %.1f" % (min(distances), median(distances)))
                                 if len(distances_clean) == 0:
