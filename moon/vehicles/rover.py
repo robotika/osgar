@@ -69,6 +69,13 @@ WHEEL_NAMES = ['fl', 'fr', 'bl', 'br']
 
 CRAB_ROLL_ANGLE = 0.78
 
+
+def compute_steering_angle(pos, radius):
+    """compute steering angle for wheel at position "pos" for given (signed) radius"""
+    x, y = pos
+    r = radius + y
+    return math.atan2(x, r)
+
 class Rover(MoonNode):
     def __init__(self, config, bus):
         super().__init__(config, bus)
@@ -204,10 +211,10 @@ class Rover(MoonNode):
 #                rr = sign * -WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) - signed_width)
                 half_width = WHEEL_SEPARATION_WIDTH / 2
                 half_length = WHEEL_SEPARATION_LENGTH / 2
-                fl = compute_steering_angle((-half_width, half_length), self.drive_radius)
-                fr = compute_steering_angle((half_width, half_length), self.drive_radius)
-                rl = compute_steering_angle((-half_width, -half_length), self.drive_radius)
-                rr = compute_steering_angle((half_width, -half_length), self.drive_radius)
+                fl = compute_steering_angle((half_length, -half_width), self.drive_radius)
+                fr = compute_steering_angle((half_length, half_width), self.drive_radius)
+                rl = compute_steering_angle((-half_length, -half_width), self.drive_radius)
+                rr = compute_steering_angle((-half_length, half_width), self.drive_radius)
 
                 if self.drive_camera_angle == 0:
                     pass

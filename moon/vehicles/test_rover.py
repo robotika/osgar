@@ -1,7 +1,8 @@
 import unittest
 from unittest.mock import MagicMock
+import math
 
-from moon.vehicles.rover import Rover
+from moon.vehicles.rover import Rover, compute_steering_angle
 
 
 JOINT_NAME = [b'bl_arm_joint', b'bl_steering_arm_joint', b'bl_wheel_joint', 
@@ -27,6 +28,13 @@ class RoverTest(unittest.TestCase):
 
         rover.drive_speed = -500.0
         self.assertEqual(rover.get_steering_and_effort(), ([0.0, 0.0, 0.0, 0.0], [-40, -40, -40, -40]))
+
+    def test_compute_steering_angle(self):
+        self.assertEqual(compute_steering_angle((1, -1), 2), math.radians(45))
+
+        # triangle 3, 4, 5
+        self.assertAlmostEqual(compute_steering_angle((3, 0), 4), math.acos(4/5))
+
 
 # vim: expandtab sw=4 ts=4
 
