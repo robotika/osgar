@@ -207,7 +207,8 @@ class ArtifactDetector(Node):
                     mask &= m
 
                 bboxes = []
-                _, contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                contours = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                contours = contours[0] if len(contours) == 2 else contours[1]
                 for cont in contours:
                     contours_poly = cv2.approxPolyDP(cont, 3, True)
                     x,y,w,h = cv2.boundingRect(contours_poly)
