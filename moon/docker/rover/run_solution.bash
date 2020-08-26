@@ -41,12 +41,12 @@ ROBOT_PIDS=()
 ROS_PIDS=()
 DAEMON_PIDS=()
 
-echo "Start robot solution"
+echo "Start robot solution (2hr timeout)"
 export OSGAR_LOGS=`pwd`
 cd /osgar
 for s in ${JSONFILES[@]}; do
     echo "starting recording of $s"
-    python3 -m osgar.record --duration 2700 moon/config/$s --note "collect some ROS data" &
+    python3 -m osgar.record --duration 7200 moon/config/$s --note "collect some ROS data" &
     ROBOT_PIDS+=($!)
 done
 
