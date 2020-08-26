@@ -83,5 +83,12 @@ class MoonOdometryTest(unittest.TestCase):
         a = math.radians(45)
         self.assertTrue(odom.is_turn_in_place([-a, a, a, -a]))
 
+    def test_is_on_circle(self):
+        odom = Odometry()
+        a = math.radians(45)
+        self.assertFalse(odom.is_on_circle([a, a, a, a]))  # crab
+        b = math.atan2(1, 3)  # for rover approx 2x2m
+        self.assertTrue(odom.is_on_circle([a, b, -a, -b]))
+
 # vim: expandtab sw=4 ts=4
 

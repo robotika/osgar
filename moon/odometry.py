@@ -17,6 +17,7 @@ class Odometry:
         self.prev_position = None
         self.crab_limit = math.radians(5)
         self.turn_in_place_limit = math.radians(30)
+        self.circle_limit = math.radians(10)
         self.debug_arr = []
 
     def is_crab_step(self, steering):
@@ -28,6 +29,10 @@ class Odometry:
         fl, fr, bl, br = steering
         lim = self.turn_in_place_limit
         return fl < -lim and fr > lim and bl > lim and br < -lim
+
+    def is_on_circle(self, steering):
+        fl, fr, bl, br = steering
+        return abs(fl + bl) < self.circle_limit and abs(fr + br) < self.circle_limit
 
     def update_joint_position(self, names, data, verbose=False):
         self.joint_name = names
@@ -56,7 +61,10 @@ class Odometry:
             dist = WHEEL_RADIUS * (-drive[0] + drive[1] - drive[2] + drive[3])/4
             radius = math.hypot(WHEEL_SEPARATION_WIDTH/2, WHEEL_SEPARATION_LENGTH/2)
             heading += dist/radius
+        elif self.is_on_circle(steering):
+            pass
         else:
+            assert False, (steering, [d*WHEEL_RADIUS for d in drive])
             # measure odometry from rear wheels
             name = b'bl_wheel_joint'
             name2 = b'br_wheel_joint'
