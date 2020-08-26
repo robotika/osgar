@@ -140,7 +140,7 @@ class Rover(MoonNode):
         right_wheel_angle = b'fr_steering_arm_joint'
         self.steering_angle = (data[self.joint_name.index(left_wheel_angle)] + data[self.joint_name.index(right_wheel_angle)]) / 2.0
 
-        self.odom.update_joint_position(self.joint_name, data)
+        self.odom.update_joint_position(self.joint_name, data, verbose=self.verbose)
         x, y, heading = self.odom.pose2d
         self.bus.publish('odo_pose', [round(x * 1000),
                                     round(y * 1000),

@@ -12,12 +12,12 @@ WHEEL_NAMES = [b'fl', b'fr', b'bl', b'br']
 
 
 class Odometry:
-    def __init__(self, debug=True):
+    def __init__(self):
         self.pose2d = 0, 0, 0
         self.prev_position = None
         self.crab_limit = math.radians(5)
         self.turn_in_place_limit = math.radians(30)
-        self.debug_arr = [] if debug else None
+        self.debug_arr = []
 
     def is_crab_step(self, steering):
         avg = sum(steering)/4
@@ -29,7 +29,7 @@ class Odometry:
         lim = self.turn_in_place_limit
         return fl < -lim and fr > lim and bl > lim and br < -lim
 
-    def update_joint_position(self, names, data):
+    def update_joint_position(self, names, data, verbose=False):
         self.joint_name = names
         assert self.joint_name is not None
         if self.prev_position is None:
@@ -38,7 +38,7 @@ class Odometry:
         diff = [b - a for a, b in zip(self.prev_position, data)]
         steering = [data[names.index(n + b'_steering_arm_joint')]
                     for n in WHEEL_NAMES]
-        if self.debug_arr is not None:
+        if verbose:
             self.debug_arr.append(steering)
         x, y, heading = self.pose2d
         drive = [diff[names.index(n + b'_wheel_joint')]
