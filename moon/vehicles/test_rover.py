@@ -22,10 +22,10 @@ class RoverTest(unittest.TestCase):
         rover = Rover(config={}, bus=MagicMock())
         self.assertEqual(rover.get_steering_and_effort(), ([0.0, 0.0, 0.0, 0.0], [0, 0, 0, 0]))
 
-        rover.drive_speed = 1.0
+        rover.drive_speed = 500.0  # sigh, corresponds to 0.5m/s now
         self.assertEqual(rover.get_steering_and_effort(), ([0.0, 0.0, 0.0, 0.0], [40, 40, 40, 40]))
 
-        rover.drive_speed = -1.0
+        rover.drive_speed = -500.0
         self.assertEqual(rover.get_steering_and_effort(), ([0.0, 0.0, 0.0, 0.0], [-40, -40, -40, -40]))
 
 # vim: expandtab sw=4 ts=4
