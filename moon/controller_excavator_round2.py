@@ -258,9 +258,9 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                     while len(goto_path) > 1:
                                         self.go_to_location(goto_path[0], self.default_effort_level, tolerance=8.0, full_turn=True) # extra offset for sliding
                                         goto_path.pop(0)
-                                    # extra offset for sliding? the coordinates are with respect to the camera so the volatile is ideally only 0.5m in front
+                                    # extra offset for sliding?
                                     if len(goto_path) == 1:
-                                        self.go_to_location(goto_path[0], self.default_effort_level, tolerance=ARRIVAL_TOLERANCE, offset=-1.5, timeout=timedelta(minutes=5), full_turn=True)
+                                        self.go_to_location(goto_path[0], self.default_effort_level, offset=-1.5, full_turn=True, timeout=timedelta(minutes=5), tolerance=ARRIVAL_TOLERANCE)
                                         goto_path.pop(0)
 
                                     self.wait(timedelta(seconds=2)) # wait to come to a stop
@@ -374,8 +374,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 self.publish("bucket_drop", [drop_angle, 'append'])
 
                 sample_start = self.sim_time
-                accum = 0
-                while found_angle is None and self.sim_time - sample_start < timedelta(seconds=200):
+                accum = 0 # to check if we picked up 100.0 total and can finish
+                while found_angle is None and self.sim_time - sample_start < timedelta(seconds=220):
                     # TODO instead of/in addition to timeout, trigger exit by bucket reaching reset position
                     try:
                         self.wait(timedelta(milliseconds=300))
@@ -412,16 +412,16 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                 self.publish("bucket_drop", [drop_angle, 'append'])
                                 return False
                         accum += self.volatile_dug_up[2]
-                        if abs(accum - 100.0) < 0.0001:
-                            print(self.sim_time, self.robot_name, "Volatile amount %.2f transfered, terminating" % accum)
-                            # TODO: assumes 100 to be total volatile at location, actual total reported initially, parse and match instead
-                            return True
                         self.publish("bucket_drop", [drop_angle, 'append'])
                         while self.volatile_dug_up[1] != 100:
                             try:
                                 self.wait(timedelta(milliseconds=300))
                             except:
                                 pass
+                        if abs(accum - 100.0) < 0.0001:
+                            print(self.sim_time, self.robot_name, "Volatile amount %.2f transfered, terminating" % accum)
+                            # TODO: assumes 100 to be total volatile at location, actual total reported initially, parse and match instead
+                            return True
 
                 if found_angle is None and best_angle is not None and accum >= 3.0:
                     # do not attempt to collect all if initial amount too low, would take too long
