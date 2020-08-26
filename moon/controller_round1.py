@@ -226,6 +226,8 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                     print("VSLAM found on way to base")
                     self.returning_to_base = False
                     current_sweep_step += 1
+                except BusShutdownException:
+                    raise
                 except:
                     pass
 
@@ -379,6 +381,8 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                 self.turn(math.radians(360), timeout=timedelta(seconds=20))
             except ChangeDriverException as e:
                 pass
+            except BusShutdownException:
+                raise
             except:
                 pass
 

@@ -108,6 +108,8 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
             while self.turnto_angle is None:
                 try:
                     self.wait(timedelta(seconds=1))
+                except BusShutdownException:
+                    raise
                 except:
                     pass
             while True:
@@ -115,6 +117,8 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                     self.turn(normalizeAnglePIPI(self.turnto_angle - self.yaw), timeout=timedelta(seconds=15))
                     self.wait(timedelta(seconds=3))
                     break
+                except BusShutdownException:
+                    raise
                 except:
                     pass
 

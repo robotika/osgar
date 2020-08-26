@@ -131,6 +131,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             while self.mount_angle is None or abs(normalizeAnglePIPI(math.pi - self.mount_angle)) > 0.2:
                 try:
                     self.wait(timedelta(seconds=1))
+                except BusShutdownException:
+                    raise
                 except:
                     pass
 
@@ -139,6 +141,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             while vol_list is None or not self.true_pose:
                 try:
                     self.wait(timedelta(seconds=1))
+                except BusShutdownException:
+                    raise
                 except:
                     pass
 
@@ -156,6 +160,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             while self.hauler_orig_pose is None:
                 try:
                     self.wait(timedelta(seconds=1))
+                except BusShutdownException:
+                    raise
                 except:
                     pass
 
@@ -167,6 +173,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 try:
                     self.turn(normalizeAnglePIPI(dir_angle - self.yaw), timeout=timedelta(seconds=15))
                     break
+                except BusShutdownException:
+                    raise
                 except:
                     pass
 
@@ -174,6 +182,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             while not self.hauler_ready:
                 try:
                     self.wait(timedelta(seconds=1))
+                except BusShutdownException:
+                    raise
                 except:
                     pass
 
@@ -355,6 +365,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 while not self.hauler_ready:
                     try:
                         self.wait(timedelta(seconds=1))
+                    except BusShutdownException:
+                        raise
                     except:
                         # excess pitch or other exception could happen but we are stopped so should stabilize
                         pass
@@ -379,6 +391,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     # TODO instead of/in addition to timeout, trigger exit by bucket reaching reset position
                     try:
                         self.wait(timedelta(milliseconds=300))
+                    except BusShutdownException:
+                        raise
                     except:
                         pass
                     if self.volatile_dug_up[1] != 100:
@@ -394,6 +408,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         while self.volatile_dug_up[1] != 100:
                             try:
                                 self.wait(timedelta(milliseconds=300))
+                            except BusShutdownException:
+                                raise
                             except:
                                 pass
 
@@ -405,6 +421,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         while self.volatile_dug_up[1] == 100:
                             try:
                                 self.wait(timedelta(milliseconds=300))
+                            except BusShutdownException:
+                                raise
                             except:
                                 pass
                             if self.sim_time - dig_start > timedelta(seconds=50): # TODO: timeout needs to be adjusted to the ultimate digging plan
@@ -416,6 +434,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         while self.volatile_dug_up[1] != 100:
                             try:
                                 self.wait(timedelta(milliseconds=300))
+                            except BusShutdownException:
+                                raise
                             except:
                                 pass
                         if abs(accum - 100.0) < 0.0001:
@@ -436,6 +456,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 while self.volatile_dug_up[1] != 100 or (self.mount_angle is None or abs(normalizeAnglePIPI(math.pi - self.mount_angle)) > 0.2):
                     try:
                         self.wait(timedelta(seconds=1))
+                    except BusShutdownException:
+                        raise
                     except:
                         pass
 

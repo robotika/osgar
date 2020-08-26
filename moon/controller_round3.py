@@ -634,6 +634,8 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                                     self.virtual_bumper = VirtualBumper(timedelta(seconds=20), 0.1)
                                     with LidarCollisionMonitor(self):
                                         self.turn(median(self.full_360_objects[o]) - self.yaw, timeout=timedelta(seconds=20))
+                                except BusShutdownException:
+                                    raise
                                 except:
                                     # in case it gets stuck turning, just hand over driving to main without completing the desired turn
                                     pass

@@ -760,6 +760,8 @@ class SpaceRoboticsChallenge(MoonNode):
         while self.sim_time is None or self.last_position is None or self.yaw is None:
             try:
                 self.update()
+            except BusShutdownException:
+                raise
             except:
                 pass
         print(self.robot_name, 'done at', self.sim_time)
