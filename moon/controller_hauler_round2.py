@@ -334,7 +334,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                 if (self.debug):
                     print(self.sim_time, self.robot_name, "Expiring rover view and resetting distance to 15m")
                 if not self.arrived_message_sent:
-                    raise ExcavatorLostException
+                    raise ExcavatorLostException()
 
         if not self.finish_visually:
             return

@@ -45,9 +45,9 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                 return
 
             if self.vslam_is_enabled:
-                raise VSLAMEnabledException
+                raise VSLAMEnabledException()
             else:
-                raise VSLAMDisabledException
+                raise VSLAMDisabledException()
 
     def on_vslam_pose(self, data):
         super().on_vslam_pose(data)
@@ -66,7 +66,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                     self.vslam_fail_start = self.sim_time
                 elif self.sim_time - self.vslam_fail_start > timedelta(milliseconds=300):
                     self.vslam_fail_start = None
-                    raise VSLAMLostException
+                    raise VSLAMLostException()
             return
 
         self.vslam_fail_start = None
@@ -74,7 +74,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
         if not math.isnan(data[0][0]):
             self.vslam_valid = True
             if not self.inException and self.returning_to_base:
-                raise VSLAMFoundException
+                raise VSLAMFoundException()
 
         if self.vslam_reset_at is not None and self.processing_plant_found and self.sim_time - self.vslam_reset_at > timedelta(seconds=3) and not math.isnan(data[0][0]) and self.tf['vslam']['trans_matrix'] is None:
             # request origin and start tracking in correct coordinates as soon as first mapping lock occurs
@@ -120,7 +120,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
 
         if not self.processing_plant_found:
             self.processing_plant_found = True
-            raise ChangeDriverException
+            raise ChangeDriverException()
 
 
     def on_object_reached(self, data):

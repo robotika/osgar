@@ -53,9 +53,9 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 self.hauler_yaw = float(data.split(" ")[2])
                 self.hauler_ready = True
             if command == "wait":
-                raise WaitRequestedException
+                raise WaitRequestedException()
             if command == "resume":
-                raise ResumeRequestedException
+                raise ResumeRequestedException()
             if command == "pose":
                 self.hauler_orig_pose = [float(data.split(" ")[2]),float(data.split(" ")[3])]
 
@@ -69,9 +69,9 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 return
 
             if self.vslam_is_enabled:
-                raise VSLAMEnabledException
+                raise VSLAMEnabledException()
             else:
-                raise VSLAMDisabledException
+                raise VSLAMDisabledException()
 
     def get_extra_status(self):
         if self.volatile_dug_up[1] == 100:
