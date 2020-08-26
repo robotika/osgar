@@ -216,6 +216,11 @@ class Rover(MoonNode):
                 rl = compute_steering_angle((-half_length, -half_width), self.drive_radius)
                 rr = compute_steering_angle((-half_length, half_width), self.drive_radius)
 
+                rad_left = math.hypot(half_length, self.drive_radius - half_width)
+                rad_right = math.hypot(half_length, self.drive_radius + half_width)
+                val = e/max(rad_left, rad_right)  # for non-zero vehicle size max() has to be > 0
+                effort = [val*rad_left, val*rad_right, val*rad_left, val*rad_right]
+
                 if self.drive_camera_angle == 0:
                     pass
                 elif self.drive_camera_angle == 9000:
