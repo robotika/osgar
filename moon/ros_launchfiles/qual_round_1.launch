@@ -1,0 +1,5 @@
+<launch>
+ <node pkg="aliencontrol" type="aliencontrol" name="robotika_rover">
+    <param name="cmd" value="/osgar/moon/docker/rover/run_solution.bash -r 1"/>
+ </node>
+</launch>
