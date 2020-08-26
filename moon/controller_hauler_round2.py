@@ -17,7 +17,7 @@ from osgar.lib.virtual_bumper import VirtualBumper
 from osgar.lib.mathex import normalizeAnglePIPI
 from moon.moonnode import CAMERA_WIDTH, CAMERA_HEIGHT, CAMERA_FOCAL_LENGTH, CAMERA_BASELINE
 
-TURN_ON = 12 # radius of circle when turning
+TURN_ON = 8 # radius of circle when turning
 GO_STRAIGHT = float("inf")
 EXCAVATOR_DRIVING_GAP = 2.200 # can't be further or every bump will look like the excavator on lidar given the camera must be tilted down so that rover is visible up close
 EXCAVATOR_DIGGING_GAP = 0.95 # we should see the arm in the middle, not the back of the rover
@@ -51,6 +51,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         self.scan_driving_phase = "yaw"
         self.excavator_waiting = False
         self.turnto_angle = None
+        self.arrival_send_requested_at = None
 
     def vslam_reset_time(self, response):
         self.vslam_reset_at = self.sim_time
@@ -109,10 +110,13 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                     self.wait(timedelta(seconds=1))
                 except:
                     pass
-            try:
-                self.turn(normalizeAnglePIPI(self.turnto_angle - self.yaw), timeout=timedelta(seconds=15))
-            except:
-                pass
+            while True:
+                try:
+                    self.turn(normalizeAnglePIPI(self.turnto_angle - self.yaw), timeout=timedelta(seconds=15))
+                    self.wait(timedelta(seconds=3))
+                    break
+                except:
+                    pass
 
             self.finish_visually = True
 
@@ -331,6 +335,12 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         if not self.finish_visually:
             return
 
+        if self.arrival_send_requested_at is not None and self.sim_time - self.arrival_send_requested_at > timedelta(milliseconds=700):
+            self.arrival_send_requested_at = None
+            print(self.sim_time, self.robot_name, "Sending arrived message to excavator")
+            self.send_request('external_command excavator_1 arrived %.2f' % self.yaw)
+
+
         # TODO: avoid obstacles when following (too tight turns)
 
         if 'rover' in self.objects_in_view.keys() and (self.driving_mode == "approach" or self.driving_mode == "align" or self.driving_mode == "turnto") and not self.arrived_message_sent and not self.inException:
@@ -339,8 +349,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
             if self.excavator_yaw is None: # within requested distance and no outstanding yaw, report
                 if min(self.rover_distance, self.scan_distance_to_obstacle/1000.0) < self.target_excavator_distance:
                     self.publish("desired_movement", [0, 0, 0])
-                    print(self.sim_time, self.robot_name, "Sending arrived message to excavator")
-                    self.send_request('external_command excavator_1 arrived %.2f' % self.yaw)
+                    self.arrival_send_requested_at = self.sim_time
                     self.arrived_message_sent = True
                     self.excavator_yaw = None
                     self.scan_driving = False
