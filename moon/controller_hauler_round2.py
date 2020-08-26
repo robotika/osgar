@@ -17,7 +17,7 @@ from osgar.lib.virtual_bumper import VirtualBumper
 from osgar.lib.mathex import normalizeAnglePIPI
 from moon.moonnode import CAMERA_WIDTH, CAMERA_HEIGHT, CAMERA_FOCAL_LENGTH, CAMERA_BASELINE
 
-TURN_ON = 8 # radius of circle when turning
+TURN_ON = 12 # radius of circle when turning
 GO_STRAIGHT = float("inf")
 EXCAVATOR_DRIVING_GAP = 2.200 # can't be further or every bump will look like the excavator on lidar given the camera must be tilted down so that rover is visible up close
 EXCAVATOR_DIGGING_GAP = 0.95 # we should see the arm in the middle, not the back of the rover
@@ -298,7 +298,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                 elif center_x < CAMERA_WIDTH/4:
                     if (self.debug):
                         print(self.sim_time, self.robot_name, "Visual drive: Turning sharply left, obstacle dist: %d, rover dist: %.1f" % (self.scan_distance_to_obstacle, self.rover_distance))
-                    self.publish("desired_movement", [TURN_ON/2, 0, self.default_effort_level])
+                    self.publish("desired_movement", [TURN_ON/3, 0, self.default_effort_level])
                 elif center_x < (CAMERA_WIDTH/2 - 20):
                     if (self.debug):
                         print(self.sim_time, self.robot_name, "Visual drive: steering left, rover distance: %d,%.1f" % (self.scan_distance_to_obstacle, self.rover_distance))
@@ -306,7 +306,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                 elif center_x > 3*CAMERA_WIDTH/4:
                     if (self.debug):
                         print(self.sim_time, self.robot_name, "Visual drive: Turning sharply right, rover distance: %d,%.1f" % (self.scan_distance_to_obstacle, self.rover_distance))
-                    self.publish("desired_movement", [-TURN_ON/2, 0, self.default_effort_level])
+                    self.publish("desired_movement", [-TURN_ON/3, 0, self.default_effort_level])
                 elif center_x > (CAMERA_WIDTH/2 + 20):
                     if (self.debug):
                         print(self.sim_time, self.robot_name, "Visual drive: steering right, rover distance: %d,%.1f" % (self.scan_distance_to_obstacle, self.rover_distance))
@@ -357,7 +357,10 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                         print(self.sim_time, self.robot_name, "Arrival handling: distance %.1f, yaw: %.2f, rover angle: %.2f; stopping" % (self.rover_distance, self.yaw, self.rover_angle))
 
             if self.scan_driving or (abs(self.rover_distance - self.target_excavator_distance) < DISTANCE_TOLERANCE and self.excavator_yaw is not None): # within 1m from target, start adjusting angles
-                self.scan_driving = True
+                if not self.scan_driving:
+                    self.publish("desired_movement", [0, 0, 0])
+                    self.scan_driving = True
+
                 diff = normalizeAnglePIPI(self.yaw - self.excavator_yaw)
                 if (self.debug):
                     print(self.sim_time, self.robot_name, "Arrival handling: yaw difference: (%.2f - %.2f)= %.2f, rover angle: %.2f" % (self.yaw, self.excavator_yaw, diff, self.rover_angle))
