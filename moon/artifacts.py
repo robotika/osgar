@@ -245,8 +245,8 @@ class ArtifactDetector(Node):
 
                                 #print("Artf distance: min %.1f median: %.1f" % (min(distances), median(distances)))
                                 if len(distances_clean) == 0:
-                                  distances_clean = distances
-                                  # print("Artf cleaned: min %.1f median: %.1f" % (min(final_list), median(final_list)))
+                                    distances_clean = distances
+                                    # print("Artf cleaned: min %.1f median: %.1f" % (min(final_list), median(final_list)))
                                 dist = max(0.0, min(distances_clean)) # subtract about half length of the rover
                             else:
                                 dist = 0.0

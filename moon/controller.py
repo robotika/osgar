@@ -21,8 +21,8 @@ from moon.moonnode import MoonNode
 TURN_RADIUS = 8 # radius of circle when turning
 AVOID_RADIUS = 4 # radius to use when going around an obstacle (this means it will not rush to go back to the same direction once it disappears off lidar)
 GO_STRAIGHT = float("inf")
-AVOIDANCE_DURATION=3000 # milliseconds
-AVOIDANCE_TURN_DURATION=800
+AVOIDANCE_DURATION = 3000 # milliseconds
+AVOIDANCE_TURN_DURATION = 800
 
 class ChangeDriverException(Exception):
     pass
