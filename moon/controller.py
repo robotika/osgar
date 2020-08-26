@@ -19,7 +19,7 @@ from osgar.lib.virtual_bumper import VirtualBumper
 from moon.moonnode import MoonNode
 
 TURN_RADIUS = 8 # radius of circle when turning
-AVOID_RADIUS = 6 # radius to use when going around an obstacle (this means it will not rush to go back to the same direction once it disappears off lidar)
+AVOID_RADIUS = 4 # radius to use when going around an obstacle (this means it will not rush to go back to the same direction once it disappears off lidar)
 GO_STRAIGHT = float("inf")
 AVOIDANCE_DURATION=3000 # milliseconds
 AVOIDANCE_TURN_DURATION=800
@@ -588,8 +588,7 @@ class SpaceRoboticsChallenge(MoonNode):
             turn = None
             if (
                     speed > 0 and
-                    (avoid_obstacles_close_to_destination or last_dist > 5) and
-                    self.scan_distance_to_obstacle < 4000
+                    (avoid_obstacles_close_to_destination or last_dist > 5)
             ):
                 turn = self.get_avoidance_turn()
 
