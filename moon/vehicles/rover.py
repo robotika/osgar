@@ -196,12 +196,18 @@ class Rover(MoonNode):
             effort = [e, e, e, e]
 
             if not math.isinf(self.drive_radius):
-                sign = 1 if self.drive_radius > 0 else -1
-                signed_width = -math.copysign(WHEEL_SEPARATION_WIDTH/2.0, self.drive_radius)
-                fl = sign * WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) + signed_width) # + if outer
-                fr = sign * WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) - signed_width)
-                rl = sign * -WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) + signed_width)
-                rr = sign * -WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) - signed_width)
+#                sign = 1 if self.drive_radius > 0 else -1
+#                signed_width = -math.copysign(WHEEL_SEPARATION_WIDTH/2.0, self.drive_radius)
+#                fl = sign * WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) + signed_width) # + if outer
+#                fr = sign * WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) - signed_width)
+#                rl = sign * -WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) + signed_width)
+#                rr = sign * -WHEEL_SEPARATION_LENGTH / (abs(self.drive_radius) - signed_width)
+                half_width = WHEEL_SEPARATION_WIDTH / 2
+                half_length = WHEEL_SEPARATION_LENGTH / 2
+                fl = compute_steering_angle((-half_width, half_length), self.drive_radius)
+                fr = compute_steering_angle((half_width, half_length), self.drive_radius)
+                rl = compute_steering_angle((-half_width, -half_length), self.drive_radius)
+                rr = compute_steering_angle((half_width, -half_length), self.drive_radius)
 
                 if self.drive_camera_angle == 0:
                     pass
