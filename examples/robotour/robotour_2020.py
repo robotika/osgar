@@ -5,10 +5,8 @@ https://robotika.cz/competitions/robotour/2020/cs
 import math
 import numpy as np
 from datetime import timedelta
-import time
 
 from osgar.node import Node
-from osgar.lib.lidar_pts import equal_scans
 
 
 def get_direction(x_diff, y_diff):
@@ -23,7 +21,7 @@ def get_direction(x_diff, y_diff):
 def downsample_scan(scan):
     scan = np.array(scan)
     scan[scan < 10] = 9999
-    scan = np.median(np.reshape(scan[:810], (3, 270)), axis=0)
+    scan = np.median(np.reshape(scan[:810], (270, 3)), axis=1)
     return scan
 
 
@@ -38,8 +36,6 @@ class Robotour(Node):
         self.new_scan = None
         self.dangerous_dist = 0.35
         self.min_safe_dist = 2
-        self.ref_scan = None
-        self.ref_count = 0
 
 
     def update(self):
@@ -52,9 +48,6 @@ class Robotour(Node):
         if channel == "scan":
             assert len(self.scan) == 811, len(self.scan)
             self.new_scan = downsample_scan(self.scan)
-            if self.ref_scan is None or not equal_scans(self.scan, self.ref_scan, 200):
-                self.ref_scan = self.scan
-                self.ref_count += 1
 
 
     def send_speed_cmd(self, speed, angular_speed):
@@ -94,10 +87,8 @@ class Robotour(Node):
         direction_id = round(math.degrees(direction)) + 135
 
         binarized = scan>1.2
-        #print(binarized)
         possible_directions = np.convolve(binarized, np.ones(80) / 80, mode="valid")
         possible_directions_idx = np.where(possible_directions > 0.999)[0] + 40  # It should be ==1, strange behavior on the apu
-        #print(possible_directions_idx)
         if len(possible_directions_idx) == 0:
             return None
 
@@ -128,7 +119,7 @@ class Robotour(Node):
                 safe_direction = self.navigate(direction)
                 #print(time.time()-t0)
 
-                if safe_direction:
+                if safe_direction is not None:
                     #print(self.time, direction, safe_direction)
                     self.go_safely(safe_direction)
 
@@ -140,7 +131,6 @@ class Robotour(Node):
 
         self.send_speed_cmd(0.0, 0.0)
         self.wait(timedelta(seconds=2))
-        print(self.ref_count)
 
 
 if __name__ == "__main__":
