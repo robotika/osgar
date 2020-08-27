@@ -140,7 +140,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                  # https://www.researchgate.net/figure/Minimum-overlap-of-circles-covering-an-area_fig2_256607366
                  # Minimum overlap of circles covering an area; r= 3.46 (=2* r * cos(30)); step 60 degrees, 6x
             for i in range(12):
-                x_d,y_d = pol2cart(2*3.46, math.radians(30 + i * 60))
+                x_d,y_d = pol2cart(2*3.46 if i % 2 == 0 else 2*3, math.radians(i * 30))
                 heapq.heappush(self.volatile_queue, (7200 + self.sim_time.total_seconds(), [object_index, object_type, x+x_d, y+y_d]))
 
 
