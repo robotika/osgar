@@ -8,6 +8,7 @@ from datetime import timedelta
 import time
 
 from osgar.node import Node
+from osgar.lib.lidar_pts import equal_scans
 
 
 def get_direction(x_diff, y_diff):
@@ -37,6 +38,8 @@ class Robotour(Node):
         self.new_scan = None
         self.dangerous_dist = 0.35
         self.min_safe_dist = 2
+        self.ref_scan = None
+        self.ref_count = 0
 
 
     def update(self):
@@ -49,6 +52,9 @@ class Robotour(Node):
         if channel == "scan":
             assert len(self.scan) == 811, len(self.scan)
             self.new_scan = downsample_scan(self.scan)
+            if self.ref_scan is None or not equal_scans(self.scan, self.ref_scan, 200):
+                self.ref_scan = self.scan
+                self.ref_count += 1
 
 
     def send_speed_cmd(self, speed, angular_speed):
@@ -107,7 +113,7 @@ class Robotour(Node):
         self.update()  # define self.time
         print(self.time, "Go!")
         start_time = self.time
-        while self.time - start_time < timedelta(seconds=20):
+        while self.time - start_time < timedelta(seconds=60):
             if self.new_scan is not None:
                 x, y, heading = self.pose
                 y_diff = self.destination[1] - y
@@ -134,6 +140,7 @@ class Robotour(Node):
 
         self.send_speed_cmd(0.0, 0.0)
         self.wait(timedelta(seconds=2))
+        print(self.ref_count)
 
 
 if __name__ == "__main__":
