@@ -12,17 +12,17 @@ class RobotourTest(unittest.TestCase):
         self.assertEqual(get_direction(0, -1), math.radians(-90))
         self.assertEqual(get_direction(-1, 0), math.radians(180))
 
-    def test_nagate(self):
+    def test_navigate(self):
         scan = np.ones(270)
         scan[135:] = 3
         bus = MagicMock()
         r = Robotour(bus=bus, config={"max_speed": 0.5})
 
-        r.last_scan = scan*1000
+        r.new_scan = scan*1000
         self.assertEqual(r.navigate(math.pi), math.pi/2)
         self.assertEqual(r.navigate(0), 0.6981317007977318)
 
-        r.last_scan = scan[::-1] * 1000
+        r.new_scan = scan[::-1] * 1000
         self.assertEqual(r.navigate(0), -0.6981317007977318)
 
 
