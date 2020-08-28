@@ -381,7 +381,7 @@ class RobotKloubak(Node):
         if self.verbose:
             self.count_arr.append([self.time.total_seconds()] + self.count)
 
-    def compute_pose(self, left, right, join_angle_diff):
+    def compute_pose(self, left, right, join_angle_diff = 0):
         """Update internal pose with 'dt' step"""
         if left is None or right is None:
             return False, None, None
@@ -421,7 +421,7 @@ class RobotKloubak(Node):
             if self.desired_speed >= 0:
                 ret, pose, motion = self.compute_pose(diff[INDEX_REAR_LEFT], diff[INDEX_REAR_RIGHT], join_angle_diff)
             else:
-                ret, pose, motion = self.compute_pose(diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT], -join_angle_diff)
+                ret, pose, motion = self.compute_pose(diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT])
         elif self.num_axis == 3:
             if self.last_join_angle is None or self.last_join_angle2 is None:
                 return False
@@ -433,7 +433,7 @@ class RobotKloubak(Node):
             if self.desired_speed >= 0:
                 ret, pose, motion = self.compute_pose(diff[INDEX_REAR_K3_LEFT], diff[INDEX_REAR_K3_RIGHT], join_angle_diff)
             else:
-                ret, pose, motion = self.compute_pose(diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT], -join_angle_diff)
+                ret, pose, motion = self.compute_pose(diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT])
         else:
             assert False, self.num_axis  # 2 or 3 are supported only
 
