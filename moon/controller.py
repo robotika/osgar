@@ -2,6 +2,7 @@
   Space Robotics Challenge 2
 """
 import math
+from math import sqrt
 import numpy as np
 import io
 from random import getrandbits
@@ -130,6 +131,22 @@ def translationToMatrix(v):
 
 def distance(pose1, pose2):
     return math.hypot(pose1[0] - pose2[0], pose1[1] - pose2[1])
+
+def calc_tangents(C,r,P):
+    dx, dy = P[0]-C[0], P[1]-C[1]
+    dxr, dyr = -dy, dx
+    d = sqrt(dx**2+dy**2)
+    if d >= r :
+        rho = r/d
+        ad = rho**2
+        bd = rho*sqrt(1-rho**2)
+        T1 = [C[0] + ad*dx + bd*dxr, C[1] + ad*dy + bd*dyr]
+        T2 = [C[0] + ad*dx - bd*dxr, C[1] + ad*dy - bd*dyr]
+
+        if (d/r-1) < 1E-8:
+            print('controller.calc_tangents: P is on the circumference')
+        return [T1, T2]
+    print('controller.calc_tangents: P inside circle')
 
 
 def min_dist(laser_data):
@@ -440,8 +457,23 @@ class SpaceRoboticsChallenge(MoonNode):
             sample_size = 140 - midpoint
         else:
             sample_size = IDEAL_SAMPLE_SIZE
-        self.scan_avg_distance_left = sum(median_scan[midpoint:midpoint + sample_size]) / sample_size
-        self.scan_avg_distance_right = sum(median_scan[midpoint - sample_size:midpoint]) / sample_size
+
+        distances = median_scan[midpoint:midpoint + sample_size]
+        mean = np.mean(distances)
+        sd = np.std(distances)
+        d_clean = [x for x in distances if mean - 2 * sd < x < mean + 2 * sd]
+        #self.scan_avg_distance_left = sum(d_clean) / len(d_clean) if len(d_clean) > 1 else 15000
+        self.scan_avg_distance_left = min(d_clean) if len(d_clean) > 1 else 15000
+
+        distances = median_scan[midpoint - sample_size:midpoint]
+        mean = np.mean(distances)
+        sd = np.std(distances)
+        d_clean = [x for x in distances if mean - 2 * sd < x < mean + 2 * sd]
+        #self.scan_avg_distance_right = sum(d_clean) / len(d_clean) if len(d_clean) > 1 else 15000
+        self.scan_avg_distance_right = min(d_clean) if len(d_clean) > 1 else 15000
+
+        #self.scan_avg_distance_left = sum(median_scan[midpoint:midpoint + sample_size]) / sample_size
+        #self.scan_avg_distance_right = sum(median_scan[midpoint - sample_size:midpoint]) / sample_size
         before_robot = median_scan[midpoint - sample_size:midpoint + sample_size]
         before_robot.sort();
         self.scan_distance_to_obstacle = median(before_robot[:self.scan_min_window])
