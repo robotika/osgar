@@ -1,7 +1,6 @@
 """
   Space Robotics Challenge 2
 """
-from scipy import spatial
 import numpy as np
 import math
 from datetime import timedelta
