@@ -12,14 +12,14 @@ from shapely.geometry.polygon import Polygon
 
 from osgar.bus import BusShutdownException
 
-from moon.controller import ps, distance, SpaceRoboticsChallenge, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor, VSLAMEnabledException, VSLAMDisabledException
+from moon.controller import TURN_RADIUS, calc_tangents, pol2cart, ps, distance, SpaceRoboticsChallenge, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor, VSLAMEnabledException, VSLAMDisabledException
 from osgar.lib.virtual_bumper import VirtualBumper
 from osgar.lib.quaternion import euler_zyx
 from osgar.lib.mathex import normalizeAnglePIPI
 
 DIG_GOOD_LOCATION_MASS = 10
 
-PREFERRED_POLYGON = Polygon([(33,18),(42, -5),(29, -25), (6,-44), (-25,-33), (-25,-9),(-32,15),(-9,29)])
+PREFERRED_POLYGON = Polygon([(33,18),(42, -5),(29, -25), (6,-44), (-25,-33), (-25,-9),(-32,15),(-9,29)], [[(-2,10), (0, 14), (14,0), (4,-8)]])
 SAFE_POLYGON = Polygon([
     (65,20),(65,-35),(45,-35),(45,-55),(-65,-55),(-65,-42),(-25,-42),(-25,-5),(-65,-5),(-65,25),(-40,30),(-36,55),(-10,55),(-10,31),(16,31),(16,55),(40,55),(40,20)
 ])
@@ -98,14 +98,95 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             # TODO: another pose may arrive while this request is still being processed (not a big deal, just a ROS error message)
             self.send_request('request_origin', self.register_origin)
 
+    def get_next_volatile(self, vol_list):
+        # first, remove volatiles that we won't attempt - in unsafe areas, too close or in the direction of sun
+        accessible_volatiles = []
+        rover = np.asmatrix(np.asarray([self.xyz[0], self.xyz[1], 1]))
+        c, s = np.cos(self.yaw), np.sin(self.yaw)
+        R = np.asmatrix(np.array(((c, -s, 0), (s, c, 0), (0, 0, 1))))
+        TL = np.asmatrix(np.array(((1, 0, 0),(0, 1, -8),(0, 0, 1))))
+        TR = np.asmatrix(np.array(((1, 0, 0),(0, 1, 8),(0, 0, 1))))
+        pL =  np.dot(R, np.dot(TL, np.dot(R.I, rover.T)))
+        pR =  np.dot(R, np.dot(TR, np.dot(R.I, rover.T)))
+        turn_center_L = (float(pL[0]), float(pL[1]))
+        turn_center_R = (float(pR[0]), float(pR[1]))
+
+        for v in vol_list:
+
+            d = distance(self.xyz, v)
+            if not SAFE_POLYGON.contains(Point(v[0],v[1])):
+                print (self.sim_time, self.robot_name, "[%.1f,%.1f] not in safe area" % (v[0], v[1]))
+                continue
+            if (
+                    Point(turn_center_L[0],turn_center_L[1]).buffer(TURN_RADIUS+0.1).contains(Point(v[0],v[1])) or
+                    Point(turn_center_R[0],turn_center_R[1]).buffer(TURN_RADIUS+0.1).contains(Point(v[0],v[1]))
+            ): # within either circle we cannot turn into
+                print (self.sim_time, self.robot_name, "[%.1f,%.1f] within turn circles, distance: %f" % (v[0], v[1], d))
+                continue
+            if -3*math.pi/4 < math.atan2(v[1] - self.xyz[1], v[0] - self.xyz[0]) < -math.pi/4:
+                print (self.sim_time, self.robot_name, "[%.1f,%.1f] too much away from the sun, shadow interference" % (v[0], v[1]))
+                continue
+            accessible_volatiles.append(v)
+
+        # balance distance, angle and length of traversing non-preferred areas
+        # want to avoid non-preferred areas the most but if expose similar, choose volatile with shorter travel distance
+        # we are modelling an initial turn along a circle followed by straight drive to the destination
+        ranked_list = []
+
+        approx = 16
+        arc_len = math.pi/approx
+        arc_dist = 2 * math.pi * TURN_RADIUS / approx
+
+        # destination point outside turn circle per above test
+        for v in accessible_volatiles:
+            path_to_vol = []
+            c_angular_difference = self.get_angle_diff(v)
+            c_distance = distance(v, self.xyz)
+            turn_center = turn_center_L if c_angular_difference < 0 else turn_center_R
+            tangs = calc_tangents(turn_center, TURN_RADIUS, v)
+            tang1_v = np.asmatrix(np.asarray([tangs[0][0], tangs[0][1], 1]))
+            tang2_v = np.asmatrix(np.asarray([tangs[1][0], tangs[1][1], 1]))
+
+            i = 1;
+            while True:
+                phi = -math.copysign(math.pi/2, c_angular_difference) + self.yaw + math.copysign(i*arc_len, c_angular_difference)
+                i += 1
+                x,y = pol2cart(TURN_RADIUS, phi)
+                px = turn_center[0] + x
+                py = turn_center[1] + y
+                yw = phi - math.pi/2
+                path_to_vol.append((px, py))
+
+                rover_t =  np.asmatrix(np.array(((1, 0, px),(0, 1, py),(0, 0, 1))))
+                c, s = np.cos(yw), np.sin(yw)
+                rover_r = np.asmatrix(np.array(((c, -s, 0), (s, c, 0), (0, 0, 1))))
+                mat = np.dot(rover_r, rover_t.I)
+                m1 = np.dot(mat, tang1_v.T)
+                m2 = np.dot(mat, tang2_v.T)
+
+                if (
+                        (distance([m1[0,0], m1[1,0]], [0,0]) < arc_dist+0.1 and m1[0,0]>=-0.1) or
+                        (distance([m2[0,0], m2[1,0]], [0,0]) < arc_dist+0.1 and m2[0,0]>=-0.10)
+                ):
+                    break
+            path_to_vol.append((v[0],v[1]))
+            ls = LineString(path_to_vol).buffer(1)
+            c_nonpreferred_overlap =  ls.difference(PREFERRED_POLYGON).area
+
+            ranked_list.append([v, c_angular_difference, c_nonpreferred_overlap, c_distance])
+
+        ranked_list = sorted(ranked_list, key=lambda s: int(1+s[2]/10)*s[3]) # if non safe overlap similar, focus on distance
+        print (ranked_list)
+        return ranked_list[0][0]
+
     def run(self):
 
         def process_volatiles(vol_string):
             nonlocal vol_list
 
-            print (self.sim_time, self.robot_name, "main-excavator-round2: Volatiles: %s" % vol_string)
             vol_list_one = vol_string.split(',')
             vol_list = [list(map(float, s.split())) for s in vol_list_one]
+            print (self.sim_time, self.robot_name, "Volatiles (%d): " % len(vol_list), vol_list)
 
         def vslam_reset_time(response):
             self.vslam_reset_at = self.sim_time
@@ -197,157 +278,109 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
             self.virtual_bumper = VirtualBumper(timedelta(seconds=3), 0.2) # radius of "stuck" area; a little more as the robot flexes
 
-            while len(vol_list) > 0:
-                dist, ind = spatial.KDTree(vol_list).query(self.xyz[:2], k=len(vol_list))
 
-                def pursue_volatile():
-                    nonlocal dist, ind
+            def pursue_volatile(v):
+                goto_path = [v]
+                if not SAFE_POLYGON.contains(LineString([v, self.xyz[:2]])):
+                    goto_path = [-10,-10] + goto_path
+                wait_for_mapping = False
+                wait_for_hauler_requested = False
+                ARRIVAL_TOLERANCE = 1 # if we are within 1m of target, stop
+                while True:
+                    try:
+                        print(self.sim_time, self.robot_name, "excavator: Pursuing volatile [%.1f,%.1f]" % (v[0],v[1]))
+                        while wait_for_mapping or wait_for_hauler_requested:
+                            self.wait(timedelta(seconds=1))
 
-                    goto_path = []
-                    for i in range(len(dist)):
-                        d = distance(self.xyz, vol_list[ind[i]])
-                        if  d < 5: # too close/just did it
-                            print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d, skipping" % (i, d, ind[i]))
-                            continue
+                        with LidarCollisionMonitor(self, 1500): # some distance needed not to lose tracking when seeing only obstacle up front
+                            # turning in place probably not desirable because hauler behind may be in the way, may need to send it away first
+                            if distance(self.xyz, v) > ARRIVAL_TOLERANCE: # only turn if we are further than 2m, if closer, it probably means there was an exception while we were already on location
+                                angle_diff = self.get_angle_diff(v)
+                                #self.turn(math.copysign(min(abs(angle_diff),math.pi/4),angle_diff), timeout=timedelta(seconds=15))
+                            # ideal position is 0.5m in front of the excavator
+                            # TODO: fine-tune offset and tolerance given slipping
+                            while len(goto_path) > 1:
+                                self.go_to_location(goto_path[0], self.default_effort_level, tolerance=8.0, full_turn=True) # extra offset for sliding
+                                goto_path.pop(0)
+                            # extra offset for sliding?
+                            if len(goto_path) == 1:
+                                self.go_to_location(goto_path[0], self.default_effort_level, offset=-1.5, full_turn=True, timeout=timedelta(minutes=5), tolerance=ARRIVAL_TOLERANCE)
+                                goto_path.pop(0)
 
-                        if abs(self.get_angle_diff(vol_list[ind[i]])) > 3*math.pi/4 and d < 10:
-                            print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d in opposite direction, skipping" % (i, d, ind[i]))
-                            continue
-                        if -3*math.pi/4 < math.atan2(vol_list[ind[i]][1] - self.xyz[1], vol_list[ind[i]][0] - self.xyz[0]) < -math.pi/4:
-                            print (self.sim_time, self.robot_name, "%d: Too much away from the sun, shadow interference" % i)
-                            continue
-                        if not PREFERRED_POLYGON.contains(LineString([
-                                (self.xyz[0],self.xyz[1]),
-                                (vol_list[ind[i]][0], vol_list[ind[i]][1])
-                        ])):
-                            print (self.sim_time, self.robot_name, "%d: excavator: Path to index %d not through preferred polygon, skipping" % (i, ind[i]))
-                            continue
-                        goto_path.append(vol_list[ind[i]])
-                        break
+                            self.wait(timedelta(seconds=2)) # wait to come to a stop
+                            self.send_request('external_command hauler_1 approach %f' % self.yaw) # TODO: due to skidding, this yaw may still change after sending
+                            self.hauler_ready = False
+                            return v #arrived
 
-                    if len(goto_path) == 0:
-                        for i in range(len(dist)):
-                            d = distance(self.xyz, vol_list[ind[i]])
-                            if  d < 5: # too close/just did it
-                                print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d, skipping" % (i, d, ind[i]))
-                                continue
+                    except LidarCollisionException as e: #TODO: long follow of obstacle causes loss, go along under steeper angle
+                        print(self.sim_time, self.robot_name, "Lidar")
+                        if distance(self.xyz, v) < 1:
+                            return v #arrived
+                        self.inException = True
+                        try:
+                            self.lidar_drive_around()
+                        except ResumeRequestedException as e:
+                            wait_for_hauler_requested = False
+                            print(self.sim_time, self.robot_name, "Hauler wants to resume")
+                        except WaitRequestedException as e:
+                            self.send_speed_cmd(0.0, 0.0)
+                            wait_for_hauler_requested = True
+                            print(self.sim_time, self.robot_name, "Hauler requested to wait")
+                        except VSLAMDisabledException as e:
+                            print(self.sim_time, self.robot_name, "VSLAM: mapping disabled, waiting")
+                            self.send_speed_cmd(0.0, 0.0)
+                            wait_for_mapping = True
+                        except VSLAMEnabledException as e:
+                            print(self.sim_time, self.robot_name, "VSLAM: mapping re-enabled")
+                            wait_for_mapping = False
 
-                            if abs(self.get_angle_diff(vol_list[ind[i]])) > 3*math.pi/4 and d < 10:
-                                print (self.sim_time, self.robot_name, "%d: excavator: Distance: %f, index: %d in opposite direction, skipping" % (i, d, ind[i]))
-                                continue
-                            if -3*math.pi/4 < math.atan2(vol_list[ind[i]][1] - self.xyz[1], vol_list[ind[i]][0] - self.xyz[0]) < -math.pi/4:
-                                print (self.sim_time, self.robot_name, "%d: Too much away from the sun, shadow interference" % i)
-                                continue
-                            if not SAFE_POLYGON.contains(LineString([
-                                    (self.xyz[0],self.xyz[1]),
-                                    (vol_list[ind[i]][0], vol_list[ind[i]][1])
-                            ])):
-                                print (self.sim_time, self.robot_name, "%d: excavator: Path to index %d not safe, going through -10,-10, skipping" % (i, ind[i]))
-                                goto_path.append([-10,-10])
+                        self.inException = False
+                    except VirtualBumperException as e:
+                        self.send_speed_cmd(0.0, 0.0)
+                        print(self.sim_time, self.robot_name, "Bumper")
+                        if distance(self.xyz, v) < 1:
+                            return v # arrived
+                        self.inException = True
+                        try:
+                            self.go_straight(-1) # go 1m in opposite direction
+                            angle_diff = self.get_angle_diff(v)
+                            self.drive_around_rock(-math.copysign(5, angle_diff)) # assume 6m the most needed
+                        except ResumeRequestedException as e:
+                            wait_for_hauler_requested = False
+                            print(self.sim_time, self.robot_name, "Hauler wants to resume")
+                        except WaitRequestedException as e:
+                            self.send_speed_cmd(0.0, 0.0)
+                            wait_for_hauler_requested = True
+                            print(self.sim_time, self.robot_name, "Hauler requested to wait")
+                        except VSLAMDisabledException as e:
+                            print(self.sim_time, self.robot_name, "VSLAM: mapping disabled, waiting")
+                            self.send_speed_cmd(0.0, 0.0)
+                            wait_for_mapping = True
+                        except VSLAMEnabledException as e:
+                            print(self.sim_time, self.robot_name, "VSLAM: mapping re-enabled")
+                            wait_for_mapping = False
 
-                            goto_path.append(vol_list[ind[i]])
-                            break
-
-                    if len(goto_path) > 0:
+                        self.inException = False
+                    except VSLAMDisabledException as e:
+                        print(self.sim_time, self.robot_name, "VSLAM: mapping disabled, waiting")
+                        self.send_speed_cmd(0.0, 0.0)
+                        wait_for_mapping = True
+                    except VSLAMEnabledException as e:
+                        print(self.sim_time, self.robot_name, "VSLAM: mapping re-enabled")
                         wait_for_mapping = False
+                    except WaitRequestedException as e:
+                        self.send_speed_cmd(0.0, 0.0)
+                        wait_for_hauler_requested = True
+                        print(self.sim_time, self.robot_name, "Hauler requested to wait")
+                    except ResumeRequestedException as e:
                         wait_for_hauler_requested = False
-                        ARRIVAL_TOLERANCE = 1 # if we are within 1m of target, stop
-                        while True:
-                            try:
-                                print(self.sim_time, self.robot_name, "excavator: Pursuing volatile [%.1f,%.1f] at distance: %f" % (vol_list[ind[i]][0],vol_list[ind[i]][1], d))
-                                while wait_for_mapping or wait_for_hauler_requested:
-                                    self.wait(timedelta(seconds=1))
+                        print(self.sim_time, self.robot_name, "Hauler wants to resume")
 
-                                with LidarCollisionMonitor(self, 1500): # some distance needed not to lose tracking when seeing only obstacle up front
-                                    # turning in place probably not desirable because hauler behind may be in the way, may need to send it away first
-                                    if distance(self.xyz, vol_list[ind[i]]) > ARRIVAL_TOLERANCE: # only turn if we are further than 2m, if closer, it probably means there was an exception while we were already on location
-                                        angle_diff = self.get_angle_diff(vol_list[ind[i]])
-                                        self.turn(math.copysign(min(abs(angle_diff),math.pi/4),angle_diff), timeout=timedelta(seconds=15))
-                                    # ideal position is 0.5m in front of the excavator
-                                    # TODO: fine-tune offset and tolerance given slipping
-                                    while len(goto_path) > 1:
-                                        self.go_to_location(goto_path[0], self.default_effort_level, tolerance=8.0, full_turn=True) # extra offset for sliding
-                                        goto_path.pop(0)
-                                    # extra offset for sliding?
-                                    if len(goto_path) == 1:
-                                        self.go_to_location(goto_path[0], self.default_effort_level, offset=-1.5, full_turn=True, timeout=timedelta(minutes=5), tolerance=ARRIVAL_TOLERANCE)
-                                        goto_path.pop(0)
-
-                                    self.wait(timedelta(seconds=2)) # wait to come to a stop
-                                    self.send_request('external_command hauler_1 approach %f' % self.yaw) # TODO: due to skidding, this yaw may still change after sending
-                                    self.hauler_ready = False
-                                    return ind[i] #arrived
-
-                            except LidarCollisionException as e: #TODO: long follow of obstacle causes loss, go along under steeper angle
-                                print(self.sim_time, self.robot_name, "Lidar")
-                                if distance(self.xyz, vol_list[ind[i]]) < 1:
-                                    return ind[i] #arrived
-                                self.inException = True
-                                try:
-                                    self.lidar_drive_around()
-                                except ResumeRequestedException as e:
-                                    wait_for_hauler_requested = False
-                                    print(self.sim_time, self.robot_name, "Hauler wants to resume")
-                                except WaitRequestedException as e:
-                                    self.send_speed_cmd(0.0, 0.0)
-                                    wait_for_hauler_requested = True
-                                    print(self.sim_time, self.robot_name, "Hauler requested to wait")
-                                except VSLAMDisabledException as e:
-                                    print(self.sim_time, self.robot_name, "VSLAM: mapping disabled, waiting")
-                                    self.send_speed_cmd(0.0, 0.0)
-                                    wait_for_mapping = True
-                                except VSLAMEnabledException as e:
-                                    print(self.sim_time, self.robot_name, "VSLAM: mapping re-enabled")
-                                    wait_for_mapping = False
-
-                                self.inException = False
-                            except VirtualBumperException as e:
-                                self.send_speed_cmd(0.0, 0.0)
-                                print(self.sim_time, self.robot_name, "Bumper")
-                                if distance(self.xyz, vol_list[ind[i]]) < 1:
-                                    return ind[i] # arrived
-                                self.inException = True
-                                try:
-                                    self.go_straight(-1) # go 1m in opposite direction
-                                    angle_diff = self.get_angle_diff(vol_list[ind[i]])
-                                    self.drive_around_rock(-math.copysign(5, angle_diff)) # assume 6m the most needed
-                                except ResumeRequestedException as e:
-                                    wait_for_hauler_requested = False
-                                    print(self.sim_time, self.robot_name, "Hauler wants to resume")
-                                except WaitRequestedException as e:
-                                    self.send_speed_cmd(0.0, 0.0)
-                                    wait_for_hauler_requested = True
-                                    print(self.sim_time, self.robot_name, "Hauler requested to wait")
-                                except VSLAMDisabledException as e:
-                                    print(self.sim_time, self.robot_name, "VSLAM: mapping disabled, waiting")
-                                    self.send_speed_cmd(0.0, 0.0)
-                                    wait_for_mapping = True
-                                except VSLAMEnabledException as e:
-                                    print(self.sim_time, self.robot_name, "VSLAM: mapping re-enabled")
-                                    wait_for_mapping = False
-
-                                self.inException = False
-                            except VSLAMDisabledException as e:
-                                print(self.sim_time, self.robot_name, "VSLAM: mapping disabled, waiting")
-                                self.send_speed_cmd(0.0, 0.0)
-                                wait_for_mapping = True
-                            except VSLAMEnabledException as e:
-                                print(self.sim_time, self.robot_name, "VSLAM: mapping re-enabled")
-                                wait_for_mapping = False
-                            except WaitRequestedException as e:
-                                self.send_speed_cmd(0.0, 0.0)
-                                wait_for_hauler_requested = True
-                                print(self.sim_time, self.robot_name, "Hauler requested to wait")
-                            except ResumeRequestedException as e:
-                                wait_for_hauler_requested = False
-                                print(self.sim_time, self.robot_name, "Hauler wants to resume")
-                    else:
-                        print("***************** VOLATILES EXHAUSTED ****************************")
-                        return None
-
-                picked_up_index = pursue_volatile()
-                if picked_up_index is None:
-                    return # quitting, maybe we can do more
+            while len(vol_list) > 0:
+                v = self.get_next_volatile(vol_list)
+                if v is None:
+                    break
+                pursue_volatile(v)
 
                 self.send_speed_cmd(0.0, 0.0)
 
@@ -425,8 +458,10 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                 raise
                             except:
                                 pass
-                            if self.sim_time - dig_start > timedelta(seconds=50): # TODO: timeout needs to be adjusted to the ultimate digging plan
+                            if self.sim_time - dig_start > timedelta(seconds=120): # TODO: timeout needs to be adjusted to the ultimate digging plan
                                 # move bucket out of the way and continue to next volatile
+                                if self.debug:
+                                    print(self.sim_time, self.robot_name, "Arm movement timed out, terminating scooping")
                                 self.publish("bucket_drop", [drop_angle, 'append'])
                                 return False
                         accum += self.volatile_dug_up[2]
@@ -448,7 +483,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     found_angle = best_angle
                 if found_angle is not None:
                     if scoop_all(found_angle):
-                        vol_list.pop(picked_up_index)# once scooping finished or given up on, remove volatile from list
+                        vol_list.remove(v)# once scooping finished or given up on, remove volatile from list
 
                 self.publish("bucket_drop", [math.pi, 'reset'])
 
@@ -467,6 +502,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
                 self.volatile_reached = False
 
+            print("***************** VOLATILES EXHAUSTED ****************************")
 
 
         except BusShutdownException:
