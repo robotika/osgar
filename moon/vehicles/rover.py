@@ -61,14 +61,9 @@ from datetime import timedelta
 
 from osgar.lib.mathex import normalizeAnglePIPI
 
-from moon.moonnode import MoonNode
+from moon.moonnode import MoonNode, WHEEL_RADIUS, WHEEL_SEPARATION_WIDTH, WHEEL_SEPARATION_LENGTH
 from moon.motorpid import MotorPID
 from moon.odometry import Odometry
-
-
-WHEEL_RADIUS = 0.275  # meters
-WHEEL_SEPARATION_WIDTH = 1.87325  # meters
-WHEEL_SEPARATION_LENGTH = 1.5748  # meters
 
 WHEEL_NAMES = ['fl', 'fr', 'bl', 'br']
 
@@ -100,6 +95,7 @@ class Rover(MoonNode):
         self.in_driving_recovery = False
         self.steering_wait_start = None
         self.steering_wait_repeat = None
+        self.steering_angle = 0.0
 
         self.motor_pid = [MotorPID(p=40.0) for __ in WHEEL_NAMES]  # TODO tune PID params
 
@@ -136,7 +132,14 @@ class Rover(MoonNode):
         #print ("yaw: %f, pitch: %f, roll: %f" % (self.yaw, self.pitch, self.roll))
 
     def on_joint_position(self, data):
+        # TODO: this only works for going straight, possibly with turning
+        # this does not work at all for other types of moves such as going sideways
         assert self.joint_name is not None
+
+        left_wheel_angle = b'fl_steering_arm_joint'
+        right_wheel_angle = b'fr_steering_arm_joint'
+        self.steering_angle = (data[self.joint_name.index(left_wheel_angle)] + data[self.joint_name.index(right_wheel_angle)]) / 2.0
+
         self.odom.update_joint_position(self.joint_name, data)
         x, y, heading = self.odom.pose2d
         self.bus.publish('odo_pose', [round(x * 1000),
@@ -178,7 +181,7 @@ class Rover(MoonNode):
 
         elif self.drive_radius == 0:
             # turning in place if radius is 0 but speed is non-zero
-            e = 30
+            e = 40
             movement_type = 'angular'
 
             if self.drive_speed > 0:
@@ -288,8 +291,11 @@ class Rover(MoonNode):
             self.steering_wait_repeat = self.sim_time
 
         effort_sum = sum([abs(x) for x in effort])
-        self.bus.publish('desired_speeds', [self.drive_speed / 1000.0 if effort_sum > 0 and movement_type == 'linear' else 0.0,
-                                            math.copysign(math.radians(30), self.drive_speed) if effort_sum > 0 and movement_type == 'angular' else 0.0])
+        self.bus.publish('desired_speeds', [
+            self.drive_speed / 1000.0 if effort_sum > 0 and movement_type == 'linear' else 0.0,
+            math.copysign(math.radians(30), self.drive_speed) if effort_sum > 0 and movement_type == 'angular' else 0.0,
+            self.steering_angle
+        ])
 
         return steering, effort
 

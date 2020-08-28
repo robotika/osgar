@@ -59,8 +59,8 @@ class Excavator(Rover):
             )
         self.bucket_drop_sequence = (
             [20, [-0.6, -0.2, 3.92]], # turn towards dropping position
-            [20, [-0.3, -0.8, 3.92]], # extend arm
-            [20, [-0.3, -0.8, 3]], # drop
+            [10, [0, -0.8, 3.92]], # extend arm
+            [10, [-0.3, -0.8, 3]], # drop
             [20, [-0.6, -0.8, 3.2]] # back to neutral/travel position
         )
         self.bucket_last_status_timestamp = None
@@ -82,7 +82,8 @@ class Excavator(Rover):
         elif queue_action == 'append':
             self.execute_bucket_queue += dig
         elif queue_action == 'prepend':
-            self.execute_bucket_queue = dig + self.execute_bucket_queue
+            i = len(self.execute_bucket_queue) % 4
+            self.execute_bucket_queue[i:i] = dig
         else:
             assert False, "Dig command"
 
@@ -94,8 +95,9 @@ class Excavator(Rover):
             self.scoop_time = None
         elif queue_action == 'append':
             self.execute_bucket_queue += drop
-        elif queue_action == 'prepend':
-            self.execute_bucket_queue = drop + self.execute_bucket_queue
+        elif queue_action == 'prepend': # need to inject in between 4-step sequences, not in the middle of one
+            i = len(self.execute_bucket_queue) % 4
+            self.execute_bucket_queue[i:i] = drop
         else:
             assert False, "Drop command"
 

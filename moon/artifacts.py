@@ -12,7 +12,7 @@ from pathlib import Path
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
-from moon.moonnode import MoonNode
+from moon.moonnode import CAMERA_WIDTH, CAMERA_HEIGHT, CAMERA_FOCAL_LENGTH
 
 curdir = Path(__file__).parent
 
@@ -33,6 +33,7 @@ class ArtifactDetector(Node):
         self.depth = None  # more precise definiton of depth image
         self.width = None  # detect from incoming images
         self.look_for_artefacts = config.get('artefacts', [])
+        self.estimate_distance = config.get('estimate_distance', False)
 
         window_size = 5
         min_disp = 16
@@ -55,13 +56,9 @@ class ArtifactDetector(Node):
             P1 = P1,
             P2 = P2
         )
-        WIDTH=640
-        HEIGHT=480
-        FOCAL_LENGTH=381
-        BASELINE=0.42 # meters
-        self.Q = np.float32([[1, 0, 0, -0.5*WIDTH],
-                             [0,-1, 0,  0.5*HEIGHT], # turn points 180 deg around x-axis,
-                             [0, 0, 0,     FOCAL_LENGTH], # so that y-axis looks up
+        self.Q = np.float32([[1, 0, 0, -0.5*CAMERA_WIDTH],
+                             [0,-1, 0,  0.5*CAMERA_HEIGHT], # turn points 180 deg around x-axis,
+                             [0, 0, 0,     CAMERA_FOCAL_LENGTH], # so that y-axis looks up
                              [0, 0, 1/0.42,      0]])
 
         self.detectors = [
@@ -84,10 +81,9 @@ class ArtifactDetector(Node):
             {
                 'artefact_name': 'basemarker',
                 'detector_type': 'colormatch',
-                'mser': cv2.MSER_create(_min_area=100),
-                'min_size': 50,
+                'min_size': 10,
                 'max_size': 500,
-                'min_y': 200, # lower edge of the bbox must below this
+                'mask': [CAMERA_HEIGHT//2,  CAMERA_HEIGHT, 0, CAMERA_WIDTH], # [Y,X] order, look only in lower half of the screen (avoid solar panels)
                 'pixel_count_threshold': 100,
                 'bbox_union_count': 1,
                 'hue_max_difference': 10,
@@ -97,10 +93,9 @@ class ArtifactDetector(Node):
             {
                 'artefact_name': 'homebase',
                 'detector_type': 'colormatch',
-                'mser': cv2.MSER_create(_min_area=400),
                 'min_size': 20,
                 'max_size': 700,
-                'min_y': None,
+                'mask': None,
                 'pixel_count_threshold': 400,
                 'bbox_union_count': 5,
                 'hue_max_difference': 10,
@@ -110,13 +105,24 @@ class ArtifactDetector(Node):
             {
                 'artefact_name': 'rover',
                 'detector_type': 'colormatch',
-                'mser': cv2.MSER_create(_min_area=100),
                 'min_size': 10,
                 'max_size': 700,
-                'min_y': None,
+                'mask': None,
                 'pixel_count_threshold': 150,
                 'bbox_union_count': 3,
-                'hue_max_difference': 5,
+                'hue_max_difference': 1,
+                'hue_match': 26, # from RGB FFA616
+                'subsequent_detects_required': 3
+            },
+            {
+                'artefact_name': 'excavator_arm',
+                'detector_type': 'colormatch',
+                'min_size': 10,
+                'max_size': 700,
+                'mask': [0,  120, 0, CAMERA_WIDTH], # [Y,X] order
+                'pixel_count_threshold': 150,
+                'bbox_union_count': 3,
+                'hue_max_difference': 1,
                 'hue_match': 26, # from RGB FFA616
                 'subsequent_detects_required': 3
             }
@@ -195,9 +201,19 @@ class ArtifactDetector(Node):
                 upper_hue = np.array([c['hue_match'] + c['hue_max_difference'],255,255])
                 # Threshold the HSV image to get only the matching colors
                 mask = cv2.inRange(hsv_blurred, lower_hue, upper_hue)
+                if c['mask'] is not None:
+                    m = np.zeros([CAMERA_HEIGHT,CAMERA_WIDTH], dtype=np.uint8)
+                    m[c['mask'][0]:c['mask'][1],c['mask'][2]:c['mask'][3]] = 255
+                    mask &= m
 
+                bboxes = []
+                contours = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                contours = contours[0] if len(contours) == 2 else contours[1]
+                for cont in contours:
+                    contours_poly = cv2.approxPolyDP(cont, 3, True)
+                    x,y,w,h = cv2.boundingRect(contours_poly)
+                    bboxes.append([int(x),int(y),int(w),int(h)])
 
-                _, bboxes = c['mser'].detectRegions(mask)
                 if len(bboxes) > 0:
                     sb = sorted(bboxes, key = box_area, reverse = True)[:c['bbox_union_count']]
                     bbox = sb[0]
@@ -208,8 +224,7 @@ class ArtifactDetector(Node):
                     if (
                             match_count > c['pixel_count_threshold'] and
                             w >= c['min_size'] and h >= c['min_size'] and
-                            w <= c['max_size'] and h <= c['max_size'] and
-                            (c['min_y'] is None or y + h >= c['min_y'])
+                            w <= c['max_size'] and h <= c['max_size']
                     ):
                         # print ("%s match count: %d; [%d %d %d %d]" % (c['artefact_name'], match_count, x, y, w, h))
                         objects_detected.append(c['artefact_name'])
@@ -217,23 +232,23 @@ class ArtifactDetector(Node):
                             # do not act until you have detections in a row
                             self.detect_sequences[c['artefact_name']] += 1
                         else:
-                            disp = self.stereo_calc.compute(limg_rgb, rimg_rgb).astype(np.float32) / 16.0
-                            points = cv2.reprojectImageTo3D(disp, self.Q)
-                            matching_points = points[mask != 0]
-                            distances = matching_points[:,2] # third column are Z coords (distances)
+                            if self.estimate_distance:
+                                disp = self.stereo_calc.compute(limg_rgb, rimg_rgb).astype(np.float32) / 16.0
+                                points = cv2.reprojectImageTo3D(disp, self.Q)
+                                matching_points = points[mask != 0]
+                                distances = matching_points[:,2] # third column are Z coords (distances)
 
+                                mean = np.mean(distances)
+                                sd = np.std(distances)
+                                distances_clean = [x for x in distances if mean - 2 * sd < x < mean + 2 * sd]
 
-                            mean = np.mean(distances)
-                            sd = np.std(distances)
-                            distances_clean = [x for x in distances if (x > mean - 2 * sd)]
-                            distances_clean = [x for x in distances_clean if (x < mean + 2 * sd)]
-
-                            #print("Artf distance: min %.1f median: %.1f" % (min(distances), median(distances)))
-                            if len(distances_clean) == 0:
-                              distances_clean = distances
-                              # print("Artf cleaned: min %.1f median: %.1f" % (min(final_list), median(final_list)))
-                            dist = max(0.0, min(distances_clean)) # subtract about half length of the rover
-                            # NOTE: when the artifact is barely in the picture (and computation not possible), distance 9.7 seems to be returned, TODO: return special value?
+                                #print("Artf distance: min %.1f median: %.1f" % (min(distances), median(distances)))
+                                if len(distances_clean) == 0:
+                                    distances_clean = distances
+                                    # print("Artf cleaned: min %.1f median: %.1f" % (min(final_list), median(final_list)))
+                                dist = max(0.0, min(distances_clean)) # subtract about half length of the rover
+                            else:
+                                dist = 0.0
                             results.append((c['artefact_name'], int(x), int(y), int(w), int(h), int(match_count), float(dist)))
 
             if c['detector_type'] == 'classifier':

@@ -172,6 +172,8 @@ class RospyRoverReqRep(RospyBaseReqRep):
                 else:
                     brake_torque = float(val)
                 print ("rospy_rover: Setting brakes to: %f" % brake_torque)
+                # TEST: always brake 10
+                brake_torque = 10.0
                 self.brakes(brake_torque)
                 return 'OK'
 
