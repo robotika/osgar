@@ -7,7 +7,7 @@
           "in": ["odo_pose"],
           "out": ["desired_speed", "artf_cmd", "request_origin", "bucket_cmd"],
           "init": {
-              "debug": true
+              "debug": false
           }
       },
       "transmitter": {
@@ -63,6 +63,14 @@
           "out": [],
           "init": {
           }
+      },
+      "light_manager": {
+          "driver": "moon.light_manager:LightManager",
+          "in": [],
+          "out": [],
+          "init": {
+              "debug": false
+          }
       }
     },
     "links": [["receiver.raw", "rosmsg.raw"],
@@ -75,6 +83,7 @@
               ["rosmsg.vslam_enabled", "app.vslam_enabled"],
               ["rosmsg./qual_2_score", "app.score"],
               ["rosmsg.joint_name", "excavator.joint_name"],
+              ["rosmsg.left_image", "light_manager.left_image"],
               ["rosmsg.joint_name", "app.joint_name"],
               ["rosmsg.joint_position", "app.joint_position"],
               ["rosmsg.joint_position", "excavator.joint_position"],
@@ -89,8 +98,10 @@
               ["app.bucket_drop", "excavator.bucket_drop"],
               ["app.request", "rpc.request"],
               ["excavator.request", "rpc.request"],
+              ["light_manager.request", "rpc.request"],
               ["rpc.response", "app.response"],
               ["rpc.response", "excavator.response"],
+              ["rpc.response", "light_manager.response"],
               ["excavator.cmd", "transmitter.raw"],
               ["app.cmd", "transmitter.raw"],
               ["excavator.bucket_cmd", "transmitter.raw"],
