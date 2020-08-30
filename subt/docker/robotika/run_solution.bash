@@ -36,6 +36,7 @@ echo "Robot description is '$ROBOT_DESCRIPTION'"
 
 grep -q ssci_x4_sensor_config <<< $ROBOT_DESCRIPTION && IS_X4=true || IS_X4=false
 grep -q TeamBase <<< $ROBOT_DESCRIPTION && IS_TEAMBASE=true || IS_TEAMBASE=false
+grep -q robotika_freyja_sensor_config <<< $ROBOT_DESCRIPTION && IS_FREYJA=true || IS_FREYJA=false
 if $IS_X4
 then
     echo "Robot is X4 drone"    
@@ -46,6 +47,11 @@ then
     echo "Robot is TEAMBASE"
     LAUNCH_FILE="proxy teambase.launch"
     CONFIG_FILE="zmq-subt-teambase.json"
+elif $IS_FREYJA
+then
+    echo "Robot is Freyja"
+    LAUNCH_FILE="robot freyja.launch"
+    CONFIG_FILE="zmq-subt-x2.json"
 else
     echo "Robot is X2 wheeled robot"
     LAUNCH_FILE="proxy sim.launch"
