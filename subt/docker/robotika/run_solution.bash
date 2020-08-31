@@ -45,7 +45,7 @@ SPEED=1.0
 if $IS_X4
 then
     echo "Robot is X4 drone"    
-    LAUNCH_FILE="robot drone_keyboard.launch"
+    LAUNCH_FILE="robot x4.launch"
     CONFIG_FILES=("zmq-subt-x4.json")
 elif $IS_TEAMBASE
 then
