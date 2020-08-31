@@ -102,6 +102,7 @@ class Robotour(Node):
 
     def run(self):
         self.update()  # define self.time
+        self.wait(timedelta(seconds=10))  # waiting for QR code
         print(self.time, "Go!")
         start_time = self.time
         while self.time - start_time < timedelta(seconds=60):
