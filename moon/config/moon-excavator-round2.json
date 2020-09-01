@@ -71,7 +71,17 @@
           "init": {
               "debug": false
           }
+      },
+      "detector": {
+        "driver": "moon.artifacts:ArtifactDetector",
+        "in": [],
+        "out": [],
+        "init": {
+            "artefacts": ["rover"],
+            "estimate_distance": false
+        }
       }
+
     },
     "links": [["receiver.raw", "rosmsg.raw"],
               ["rosmsg.cmd", "transmitter.raw"],
@@ -83,7 +93,8 @@
               ["rosmsg.vslam_enabled", "app.vslam_enabled"],
               ["rosmsg./qual_2_score", "app.score"],
               ["rosmsg.joint_name", "excavator.joint_name"],
-              ["rosmsg.left_image", "light_manager.left_image"],
+              ["rosmsg.left_image", "detector.left_image"],
+              ["rosmsg.right_image", "detector.right_image"],
               ["rosmsg.joint_name", "app.joint_name"],
               ["rosmsg.joint_position", "app.joint_position"],
               ["rosmsg.joint_position", "excavator.joint_position"],
@@ -102,6 +113,7 @@
               ["rpc.response", "app.response"],
               ["rpc.response", "excavator.response"],
               ["rpc.response", "light_manager.response"],
+              ["detector.artf", "app.artf"],
               ["excavator.cmd", "transmitter.raw"],
               ["app.cmd", "transmitter.raw"],
               ["excavator.bucket_cmd", "transmitter.raw"],

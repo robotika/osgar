@@ -5,20 +5,22 @@ import numpy as np
 import math
 from datetime import timedelta
 import traceback
+from functools import cmp_to_key
 
 from shapely.geometry import Point, LineString
 from shapely.geometry.polygon import Polygon
+from statistics import median
 
 from osgar.bus import BusShutdownException
 
-from moon.controller import TURN_RADIUS, calc_tangents, pol2cart, ps, distance, SpaceRoboticsChallenge, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor, VSLAMEnabledException, VSLAMDisabledException
+from moon.controller import GO_STRAIGHT, TURN_RADIUS, calc_tangents, pol2cart, ps, distance, SpaceRoboticsChallenge, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor, VSLAMEnabledException, VSLAMDisabledException
 from osgar.lib.virtual_bumper import VirtualBumper
 from osgar.lib.quaternion import euler_zyx
 from osgar.lib.mathex import normalizeAnglePIPI
 
-DIG_GOOD_LOCATION_MASS = 10
+DIG_GOOD_LOCATION_MASS = 20
 
-PREFERRED_POLYGON = Polygon([(33,18),(42, -5),(29, -25), (6,-44), (-25,-33), (-25,-9),(-32,15),(-9,29)], [[(-2,10), (0, 14), (14,0), (4,-8)]])
+PREFERRED_POLYGON = Polygon([(33,18),(38, -5),(29, -25), (6,-42), (-25,-33), (-25,-9),(-32,15),(-9,29)], [[(-2,10), (0, 14), (14,0), (4,-8)]])
 SAFE_POLYGON = Polygon([
     (65,20),(65,-35),(45,-35),(45,-55),(-65,-55),(-65,-42),(-25,-42),(-25,-5),(-65,-5),(-65,25),(-40,30),(-36,55),(-10,55),(-10,31),(16,31),(16,55),(40,55),(40,20)
 ])
@@ -34,6 +36,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         bus.register("bucket_dig", "bucket_drop")
         self.volatile_dug_up = None
         self.mount_angle = None
+        self.distal_angle = None
         self.vol_list = None
         self.vslam_reset_at = None
         self.use_gimbal = False
@@ -42,6 +45,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         self.volatile_reached = False
         self.vslam_is_enabled = False
         self.hauler_orig_pose = None
+        self.full_360_objects = {}
+        self.first_distal_angle = None
 
     def on_osgar_broadcast(self, data):
         message_target = data.split(" ")[0]
@@ -81,10 +86,13 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
     def on_bucket_info(self, bucket_status):
         #[0] .. type ('ice'); [1] .. index (100=nothing); [2] .. mass
         self.volatile_dug_up = bucket_status
+        if self.first_distal_angle is None:
+            self.first_distal_angle = self.distal_angle
 
     def on_joint_position(self, data):
         super().on_joint_position(data)
         self.mount_angle = data[self.joint_name.index(b'mount_joint')]
+        self.distal_angle = data[self.joint_name.index(b'distalarm_joint')]
 
     def on_vslam_pose(self, data):
         super().on_vslam_pose(data)
@@ -174,9 +182,27 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
             ranked_list.append([v, c_angular_difference, c_nonpreferred_overlap, c_distance])
 
-        ranked_list = sorted(ranked_list, key=lambda s: int(1+s[2]/10)*s[3]) # if non safe overlap similar, focus on distance
-        print (ranked_list)
+        # ranked_list: [volatile, angle, area, distance]
+        def cmp(a,b):
+            return a[3]-b[3] if abs(a[2]-b[2]) < 10 else a[2]-b[2]
+
+        ranked_list = sorted(ranked_list, key=cmp_to_key(cmp)) # if non safe overlap similar, focus on distance
+        print (self.sim_time, self.robot_name, "List of volatiles in the order of suitability for traveling to: ", ranked_list)
         return ranked_list[0][0]
+
+
+
+    def on_artf(self, data):
+        artifact_type = data[0]
+
+        # can't use this before init and don't need once true pose has been set up
+        if self.sim_time is None or self.true_pose:
+            return
+
+        # NOTE: counting starts before turning, ie if hauler is visible in the beginning, it keeps getting hits
+        if artifact_type not in self.full_360_objects.keys():
+            self.full_360_objects[artifact_type] = []
+        self.full_360_objects[artifact_type].append(self.yaw)
 
     def run(self):
 
@@ -198,7 +224,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             self.set_brakes(False)
 
             self.set_cam_angle(-0.05)
-            self.set_light_intensity("0.4")
+            self.set_light_intensity("0.2")
 
             self.send_request('get_volatile_locations', process_volatiles)
 
@@ -215,6 +241,27 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     raise
                 except:
                     pass
+
+
+            # first, turn away from hauler
+            # turn 360deg until seen, mark angle where the bbox was the biggest, then turn 180deg from there (want to face away as much as possible)
+            # then, when hauler turns towards us (and follows?), it should have the same yaw which we can then share with it
+
+            while True:
+                try:
+                    self.turn(math.radians(30), ang_speed=0.8*self.max_angular_speed, with_stop=False) # get the turning stared
+                    self.full_360_objects = {}
+                    self.turn(math.radians(360), ang_speed=0.8*self.max_angular_speed, with_stop=False)
+                    turn_needed = normalizeAnglePIPI(math.pi + median(self.full_360_objects["rover"]) - self.yaw)
+                    # turn a little less to allow for extra turn after the effort was stopped
+                    self.turn(turn_needed if turn_needed >= 0 else (turn_needed + 2*math.pi))
+                    break
+                except BusShutdownException:
+                    raise
+                except:
+                    pass
+
+            self.set_light_intensity("0.4")
 
             self.send_request('vslam_reset', vslam_reset_time)
 
@@ -236,27 +283,29 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
             #self.send_request('external_command hauler_1 align %f' % self.yaw) # TODO: due to skidding, this yaw may still change
 
-            # wait for hauler to send pose
-            while self.hauler_orig_pose is None:
-                try:
-                    self.wait(timedelta(seconds=1))
-                except BusShutdownException:
-                    raise
-                except:
-                    pass
+            self.send_request('external_command hauler_1 set_yaw %f' % self.yaw) # tell hauler looking at rover is in 'yaw' direction
 
-            dir_angle = math.atan2(self.xyz[1] - self.hauler_orig_pose[1], self.xyz[0] - self.hauler_orig_pose[0])
-            self.send_request('external_command hauler_1 turnto %f' % dir_angle)
+            # wait for hauler to send pose
+            #while self.hauler_orig_pose is None:
+            #    try:
+            #        self.wait(timedelta(seconds=1))
+            #    except BusShutdownException:
+            #        raise
+            #    except:
+            #        pass
+
+            #dir_angle = math.atan2(self.xyz[1] - self.hauler_orig_pose[1], self.xyz[0] - self.hauler_orig_pose[0])
+            #self.send_request('external_command hauler_1 turnto %f' % dir_angle)
 
             # finish the turn no matter what
-            while True:
-                try:
-                    self.turn(normalizeAnglePIPI(dir_angle - self.yaw), timeout=timedelta(seconds=15))
-                    break
-                except BusShutdownException:
-                    raise
-                except:
-                    pass
+            #while True:
+            #    try:
+            #        self.turn(normalizeAnglePIPI(dir_angle - self.yaw), timeout=timedelta(seconds=15))
+            #        break
+            #    except BusShutdownException:
+            #        raise
+            #    except:
+            #        pass
 
             # wait for hauler to start following, will receive osgar broadcast when done
             while not self.hauler_ready:
@@ -266,14 +315,31 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     raise
                 except:
                     pass
+            self.hauler_ready = False
+            self.send_request('external_command hauler_1 approach %f' % self.yaw)
+
+            while not self.hauler_ready:
+                try:
+                    self.wait(timedelta(seconds=1))
+                except BusShutdownException:
+                    raise
+                except:
+                    pass
+            self.hauler_ready = False
 
             self.send_request('external_command hauler_1 follow')
+            #self.send_request('external_command hauler_1 set_yaw %f' % self.yaw) # tell hauler looking at rover is in 'yaw' direction
 
             # reset again in case hauler was driving in front of excavator CANT RESET IF WE MOVED (TURNED)
-            # self.vslam_reset_at = None
-            # self.send_request('vslam_reset', vslam_reset_time)
-            #while self.vslam_reset_at is None or self.sim_time - self.vslam_reset_at < timedelta(seconds=3):
-            #    self.wait(timedelta(seconds=1))
+            self.vslam_reset_at = None
+            self.send_request('vslam_reset', vslam_reset_time)
+            while self.vslam_reset_at is None or self.sim_time - self.vslam_reset_at < timedelta(seconds=3):
+                try:
+                    self.wait(timedelta(seconds=1))
+                except BusShutdownException:
+                    raise
+                except:
+                    pass
 
             self.virtual_bumper = VirtualBumper(timedelta(seconds=3), 0.2) # radius of "stuck" area; a little more as the robot flexes
 
@@ -407,31 +473,41 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 #self.send_request('external_command hauler_1 backout') # Testing
                 #continue # testing
 
-
-                drop_angle = normalizeAnglePIPI(math.pi - normalizeAnglePIPI(self.yaw - self.hauler_yaw))
+                drop_angle = math.pi # if yaw is just approximated, drop straigt back instead of at hauler yaw direction
+                #drop_angle = normalizeAnglePIPI(math.pi - normalizeAnglePIPI(self.yaw - self.hauler_yaw))
                 found_angle = None
-                best_angle = None
+
+                best_mount_angle = None
+                best_angle_volume = 0
+                best_distal_angle = None
+
                 # mount 0.4-1.25 or 1.85-2.75 means we can't reach under the vehicle because of the wheels
                 mount_angle_sequence = [0.0, 0.39, -0.39, -0.83, 0.83, 1.26, -1.26, -1.55, 1.55, 1.84, -1.84, -2.2, 2.2, 2.6, -2.6]
                 for a in mount_angle_sequence:
                     self.publish("bucket_dig", [a, 'append'])
                 self.publish("bucket_drop", [drop_angle, 'append'])
 
-                sample_start = self.sim_time
+                exit_time = self.sim_time + timedelta(seconds=250)
                 accum = 0 # to check if we picked up 100.0 total and can finish
-                while found_angle is None and self.sim_time - sample_start < timedelta(seconds=220):
+                while found_angle is None and self.sim_time < exit_time:
                     # TODO instead of/in addition to timeout, trigger exit by bucket reaching reset position
                     try:
-                        self.wait(timedelta(milliseconds=300))
+                        self.wait(timedelta(milliseconds=100))
                     except BusShutdownException:
                         raise
                     except:
                         pass
                     if self.volatile_dug_up[1] != 100:
-                        # we found first volatile
+                        # we found volatile
+                        if best_mount_angle is None:
+                            exit_time = self.sim_time + timedelta(seconds=80)
+                            self.publish("bucket_dig", [self.mount_angle - 0.3, 'prepend'])
+                            self.publish("bucket_dig", [self.mount_angle + 0.3, 'prepend']) # TODO: this plan doesn't end once these moves are executed, only with timeout
 
-                        if best_angle is None or self.volatile_dug_up[2] > accum:
-                            best_angle = self.mount_angle
+                        if best_mount_angle is None or self.volatile_dug_up[2] > best_angle_volume:
+                            best_distal_angle = self.first_distal_angle
+                            best_angle_volume = self.volatile_dug_up[2]
+                            best_mount_angle = self.mount_angle
                         accum += self.volatile_dug_up[2]
                         if self.volatile_dug_up[2] > DIG_GOOD_LOCATION_MASS:
                             found_angle = self.mount_angle
@@ -444,6 +520,68 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                 raise
                             except:
                                 pass
+                        self.first_distal_angle = None
+
+
+                if found_angle is None and best_mount_angle is not None:
+                    print(self.sim_time, self.robot_name, "Adjusting digging position: mount angle: %.2f, distal angle: %.2f" % (normalizeAnglePIPI(best_mount_angle), best_distal_angle))
+                    # if found an angle of a volatile but it's too far, come closer before digging
+                    # if distal arm was negative during volatile detection, volatile is away from rover; otherwise it is under the rover
+                    self.publish("bucket_drop", [math.pi, 'reset']) # first, stash arm and wait for it so that visual navigation doesn't confuse hauler
+                    try:
+                        self.wait(timedelta(seconds=10)) # TODO: wait for angles to match
+                    except BusShutdownException:
+                        raise
+                    except:
+                        pass
+
+                    self.send_request('external_command hauler_1 follow')
+                    try:
+                        self.wait(timedelta(seconds=3))
+                    except BusShutdownException:
+                        raise
+                    except:
+                        pass
+
+                    start_pose = self.xyz
+                    start_time = self.sim_time
+                    effort = self.default_effort_level/2 if best_distal_angle < 0.3 else self.default_effort_level/2
+                    if abs(normalizeAnglePIPI(best_mount_angle)) < math.pi/2:
+                        self.publish("desired_movement", [GO_STRAIGHT, int(100*math.degrees(normalizeAnglePIPI(best_mount_angle))), effort])
+                    else:
+                        self.publish("desired_movement", [GO_STRAIGHT, -int(100*math.degrees(normalizeAnglePIPI(best_mount_angle))), effort])
+
+                    while distance(start_pose, self.xyz) < 0.7:
+                        try:
+                            self.wait(timedelta(milliseconds=100))
+                        except BusShutdownException:
+                            raise
+                        except:
+                            pass
+
+                    self.publish("desired_movement", [0,0,0])
+
+                    # after coming to a stop at the target position, give hauler another time to stabilize some distance from excavator before going for approach
+                    try:
+                        self.wait(timedelta(seconds=3))
+                    except BusShutdownException:
+                        raise
+                    except:
+                        pass
+
+                    self.send_request('external_command hauler_1 approach %f' % self.yaw)
+
+                    self.hauler_ready = False
+                    while not self.hauler_ready:
+                        try:
+                            self.wait(timedelta(seconds=1))
+                        except BusShutdownException:
+                            raise
+                        except:
+                            pass
+
+                    found_angle = best_mount_angle
+
 
                 def scoop_all(angle):
                     nonlocal accum
@@ -474,12 +612,11 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                 pass
                         if abs(accum - 100.0) < 0.0001:
                             print(self.sim_time, self.robot_name, "Volatile amount %.2f transfered, terminating" % accum)
+                            # TODO: adjust transformation matrix using real location of the volatile
                             # TODO: assumes 100 to be total volatile at location, actual total reported initially, parse and match instead
                             return True
 
-                if found_angle is None and best_angle is not None and accum >= 3.0:
-                    # do not attempt to collect all if initial amount too low, would take too long
-                    found_angle = best_angle
+
                 if found_angle is not None:
                     if scoop_all(found_angle):
                         vol_list.remove(v)# once scooping finished or given up on, remove volatile from list

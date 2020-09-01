@@ -52,6 +52,8 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         self.excavator_waiting = False
         self.turnto_angle = None
         self.arrival_send_requested_at = None
+        self.set_yaw = None
+        self.full_360_objects = {}
 
     def vslam_reset_time(self, response):
         self.vslam_reset_at = self.sim_time
@@ -79,6 +81,8 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                 self.arrived_message_sent = False
             elif command == "turnto":
                 self.turnto_angle = float(data.split(" ")[2])
+            elif command == "set_yaw":
+                self.set_yaw = float(data.split(" ")[2])
             else:
                 print(self.sim_time, self.robot_name, "Invalid broadcast command")
 
@@ -93,40 +97,83 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         try:
             self.wait_for_init()
             #self.wait(timedelta(seconds=5))
-            self.set_light_intensity("0.4")
-            self.set_cam_angle(0.0) # when following visually, look straight
+            self.set_light_intensity("0.2")
+            self.set_cam_angle(-0.05)
 
             self.set_brakes(False)
 
-            self.send_request('vslam_reset', self.vslam_reset_time)
+            #self.send_request('vslam_reset', self.vslam_reset_time)
 
-            while not self.true_pose:
-                self.wait(timedelta(seconds=1))
+            #while not self.true_pose:
+            #    self.wait(timedelta(seconds=1))
 
-            self.send_request('external_command excavator_1 pose %.1f %.1f' % (self.xyz[0], self.xyz[1]))
+            #self.send_request('external_command excavator_1 pose %.1f %.1f' % (self.xyz[0], self.xyz[1]))
 
-            while self.turnto_angle is None:
+            #while self.turnto_angle is None:
+            #    try:
+            #        self.wait(timedelta(seconds=1))
+            #    except BusShutdownException:
+            #        raise
+            #    except:
+            #        pass
+            #while True:
+            #    try:
+            #        self.turn(normalizeAnglePIPI(self.turnto_angle - self.yaw), timeout=timedelta(seconds=15))
+            #        self.wait(timedelta(seconds=3))
+            #        break
+            #    except BusShutdownException:
+            #        raise
+            #    except:
+            #        pass
+
+            #while self.excavator_yaw is None: # waiting for align command
+            #    try:
+            #        self.wait(timedelta(seconds=1))
+            #    except BusShutdownException:
+            #        raise
+            #    except:
+            #        pass
+
+            while self.set_yaw is None:
                 try:
                     self.wait(timedelta(seconds=1))
                 except BusShutdownException:
                     raise
                 except:
                     pass
-            while True:
+
+            start_turn = self.sim_time
+            while self.sim_time - start_turn < timedelta(seconds=60):
                 try:
-                    self.turn(normalizeAnglePIPI(self.turnto_angle - self.yaw), timeout=timedelta(seconds=15))
-                    self.wait(timedelta(seconds=3))
+                    self.turn(math.radians(30), ang_speed=0.8*self.max_angular_speed, with_stop=False)
+                    self.full_360_objects = {}
+                    self.turn(math.radians(360), ang_speed=0.8*self.max_angular_speed, with_stop=False)
+                    if "rover" not in self.full_360_objects.keys() or len(self.full_360_objects["rover"]) == 0:
+                        print(self.sim_time, self.robot_name, "Excavator not found during 360 turn")
+                    else:
+                        turn_needed = normalizeAnglePIPI(median(self.full_360_objects["rover"]) - self.yaw)
+                        # turn a little less to allow for extra turn after the effort was stopped
+                        self.turn(turn_needed if turn_needed >= 0 else (turn_needed + 2*math.pi))
                     break
                 except BusShutdownException:
                     raise
-                except:
+                except Exception as e:
+                    print ("Exception while turning: ", e)
                     pass
+
+            self.set_light_intensity("0.4")
+            self.use_gimbal = True
+
+            print(self.sim_time, self.robot_name, "Sending arrived message to excavator")
+            self.send_request('external_command excavator_1 arrived %.2f' % self.set_yaw)
+            #self.set_yaw = None
+
 
             self.finish_visually = True
 
             self.excavator_waiting = True
 
-            self.virtual_bumper = VirtualBumper(timedelta(seconds=10), 0.1) # need generous timeout because sideways moves are not sensed by bumper
+            self.virtual_bumper = VirtualBumper(timedelta(seconds=30), 0.1) # TODO: need generous timeout because turning around or sideways moves are not sensed by bumper
 
             # 3 modes: 1) going to location 2) following rover visually 3) waiting for instructions to go to location
 
@@ -226,9 +273,6 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
 
     def on_artf(self, data):
 
-        if not self.finish_visually:
-            return
-
         artifact_type = data[0]
         center_x = data[1] + data[3] / 2
         center_y = data[2] + data[4] / 2
@@ -240,19 +284,29 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         if self.sim_time is None:
             return
 
+        if self.set_yaw is not None:
+            if artifact_type not in self.full_360_objects.keys():
+                self.full_360_objects[artifact_type] = []
+            self.full_360_objects[artifact_type].append(self.yaw)
+
+        if not self.finish_visually:
+            return
+
         self.objects_in_view[artifact_type] = {
-            "expiration": self.sim_time + timedelta(milliseconds=1000)
+            "expiration": self.sim_time + timedelta(milliseconds=1000),
+            "distance": artf_distance
         }
 
-        if artifact_type == "rover":
+        if artifact_type == "rover" or artifact_type == "excavator_arm":
             if self.excavator_waiting:
                 self.send_request('external_command excavator_1 resume')
                 self.excavator_waiting = False
 
+            # TODO: maybe just use min of stereo cam distances?
             if artf_distance < 1.3:
                 self.rover_distance = self.scan_distance_to_obstacle/1000.0 # for stereo camerra distance less than 1.3m, rely on lidar for distance
             else:
-                self.rover_distance = max(min(self.median_scan)/1000.0, artf_distance)
+                self.rover_distance = max(min(self.median_scan)/1000.0, min([self.objects_in_view[a]['distance'] for a in self.objects_in_view])) # TODO: ?????
 
         if artifact_type == "excavator_arm" or (artifact_type == "rover" and "excavator_arm" not in self.objects_in_view.keys()):
             screen_x1 = (CAMERA_WIDTH / 2 - img_x1)
@@ -329,18 +383,23 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         delete_in_view = [artf for artf in self.objects_in_view if self.objects_in_view[artf]['expiration'] < self.sim_time]
         for artf in delete_in_view:
             del self.objects_in_view[artf]
-            if artf == "rover":
-                self.rover_distance = 15
-                if (self.debug):
-                    print(self.sim_time, self.robot_name, "Expiring rover view and resetting distance to 15m")
-                if not self.arrived_message_sent:
-                    raise ExcavatorLostException()
+
+        if "rover" not in self.objects_in_view.keys() and "excavator_arm" not in self.objects_in_view.keys() and self.rover_distance < 15:
+            self.rover_distance = 15
+            if (self.debug):
+                print(self.sim_time, self.robot_name, "Expiring rover view and resetting distance to 15m")
+            if not self.arrived_message_sent:
+                raise ExcavatorLostException()
 
         if not self.finish_visually:
             return
 
-        if self.arrival_send_requested_at is not None and self.sim_time - self.arrival_send_requested_at > timedelta(milliseconds=700):
+        if self.arrival_send_requested_at is not None and self.sim_time - self.arrival_send_requested_at > timedelta(milliseconds=1500):
             self.arrival_send_requested_at = None
+            if self.set_yaw is not None:
+                print(self.sim_time, self.robot_name, "Internal yaw: %.2f, set yaw: %.2f, yaw offset: %.2f" % (self.yaw, self.set_yaw, self.yaw - self.set_yaw))
+                self.yaw_offset = self.yaw - self.set_yaw
+                self.set_yaw = None
             print(self.sim_time, self.robot_name, "Sending arrived message to excavator")
             self.send_request('external_command excavator_1 arrived %.2f' % self.yaw)
 
@@ -371,7 +430,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
 
 
                 if self.scan_driving_phase == "yaw":
-                    if abs(diff) > 0.15: # 10deg, don't bother otherwise
+                    if abs(diff) > 0.15 and self.set_yaw is None: # 10deg, don't bother otherwise; also, don't attempt to align before true pose is known
                             if (self.debug):
                                 print(self.sim_time, self.robot_name, "Arrival handling: moving on a curve")
                             self.publish("desired_movement", [-8, -9000, math.copysign(0.5 * self.default_effort_level, diff)])
@@ -380,7 +439,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                          self.scan_driving_phase = "behind"
 
                 if self.scan_driving_phase == "behind":
-                    if abs(self.rover_angle) > 0.12:
+                    if abs(self.rover_angle) > 0.12 and self.set_yaw is None:
                         if (self.debug):
                             print(self.sim_time, self.robot_name, "Arrival handling: moving sideways")
                         self.publish("desired_movement", [GO_STRAIGHT, -9000, -math.copysign(0.5 * self.default_effort_level, self.rover_angle)])
