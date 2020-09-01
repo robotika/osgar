@@ -13,12 +13,13 @@ from statistics import median
 
 from osgar.bus import BusShutdownException
 
-from moon.controller import GO_STRAIGHT, TURN_RADIUS, calc_tangents, pol2cart, ps, distance, SpaceRoboticsChallenge, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor, VSLAMEnabledException, VSLAMDisabledException
+from moon.controller import translationToMatrix, GO_STRAIGHT, TURN_RADIUS, calc_tangents, pol2cart, ps, distance, SpaceRoboticsChallenge, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor, VSLAMEnabledException, VSLAMDisabledException
 from osgar.lib.virtual_bumper import VirtualBumper
 from osgar.lib.quaternion import euler_zyx
 from osgar.lib.mathex import normalizeAnglePIPI
 
 DIG_GOOD_LOCATION_MASS = 20
+ARRIVAL_OFFSET = -1.5
 
 PREFERRED_POLYGON = Polygon([(33,18),(38, -5),(29, -25), (6,-42), (-25,-33), (-25,-9),(-32,15),(-9,29)], [[(-2,10), (0, 14), (14,0), (4,-8)]])
 SAFE_POLYGON = Polygon([
@@ -369,7 +370,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                 goto_path.pop(0)
                             # extra offset for sliding?
                             if len(goto_path) == 1:
-                                self.go_to_location(goto_path[0], self.default_effort_level, offset=-1.5, full_turn=True, timeout=timedelta(minutes=5), tolerance=ARRIVAL_TOLERANCE)
+                                self.go_to_location(goto_path[0], self.default_effort_level, offset=ARRIVAL_OFFSET, full_turn=True, timeout=timedelta(minutes=5), tolerance=ARRIVAL_TOLERANCE)
                                 goto_path.pop(0)
 
                             self.wait(timedelta(seconds=2)) # wait to come to a stop
@@ -620,6 +621,21 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 if found_angle is not None:
                     if scoop_all(found_angle):
                         vol_list.remove(v)# once scooping finished or given up on, remove volatile from list
+
+                        v = np.asmatrix(np.asarray([v[0], v[1], 1]))
+                        c, s = np.cos(self.yaw), np.sin(self.yaw)
+                        Rr = np.asmatrix(np.array(((c, -s, 0), (s, c, 0), (0, 0, 1))))
+
+                        # now in coord system WRT robot
+                        T = np.asmatrix(np.array(((1, 0, -abs(ARRIVAL_OFFSET)),(0, 1, 0),(0, 0, 1)))) # ARRIVAL OFFSET best scoooping distance from the center of robot
+                        c, s = np.cos(best_mount_angle), np.sin(best_mount_angle)
+                        Rv = np.asmatrix(np.array(((c, -s, 0), (s, c, 0), (0, 0, 1))))
+
+                        true_pos =  np.dot(Rr, np.dot(Rv, np.dot(T, np.dot(Rv.I, np.dot(Rr.I, v.T)))))
+
+                        m = translationToMatrix([float(true_pos[0])-self.xyz[0], float(true_pos[1])-self.xyz[1], 0.0])
+                        print(self.sim_time, self.robot_name, "Adjusting XY based on volatile location: from [%.1f,%.1f] to [%.1f,%.1f]" % (self.xyz[0], self.xyz[1], float(true_pos[0]), float(true_pos[1])))
+                        self.tf['vslam']['trans_matrix'] = np.dot(m, self.tf['vslam']['trans_matrix'])
 
                 self.publish("bucket_drop", [math.pi, 'reset'])
 
