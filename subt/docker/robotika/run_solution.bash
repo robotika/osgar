@@ -40,7 +40,7 @@ grep -q robotika_freyja_sensor_config <<< $ROBOT_DESCRIPTION && IS_FREYJA=true |
 
 # Defaults
 WALLDIST=0.8
-SPEED=0.1
+SPEED=1.0
 
 if $IS_X4
 then
