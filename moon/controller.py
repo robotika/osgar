@@ -682,19 +682,22 @@ class SpaceRoboticsChallenge(MoonNode):
                 break
         self.send_speed_cmd(0.0, 0.0)
 
-    def turn(self, angle, with_stop=True, speed=0.0, timeout=None):
+    def turn(self, angle, with_stop=True, speed=0.0, ang_speed=None, timeout=None):
         # positive turn - counterclockwise
         print(self.sim_time, self.robot_name, "turn %.1f deg from %.1f deg" % (math.degrees(angle), math.degrees(self.yaw)))
-        if angle >= 0:
-            self.send_speed_cmd(speed, self.max_angular_speed)
-        else:
-            self.send_speed_cmd(speed, -self.max_angular_speed)
+        self.send_speed_cmd(speed, math.copysign(ang_speed if ang_speed is not None else self.max_angular_speed, angle))
+
         start_time = self.sim_time
         # problem with accumulated angle
 
         sum_angle = 0.0
         prev_angle = self.yaw
+        slowdown_happened = False
         while abs(sum_angle) < abs(angle):
+            if with_stop and not slowdown_happened and abs(sum_angle) > abs(angle) - 0.35: # slow rotation down for the last 20deg to improve accuracy
+                self.send_speed_cmd(speed, math.copysign(self.max_angular_speed / 2.0, angle))
+                slowdown_happened = True
+
             self.update()
             sum_angle += normalizeAnglePIPI(self.yaw - prev_angle)
             prev_angle = self.yaw

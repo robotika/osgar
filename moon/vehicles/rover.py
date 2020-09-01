@@ -181,7 +181,7 @@ class Rover(MoonNode):
 
         elif self.drive_radius == 0:
             # turning in place if radius is 0 but speed is non-zero
-            e = 40
+            e = 40 * self.drive_speed / 1000.0
             movement_type = 'angular'
 
             if self.drive_speed > 0:
