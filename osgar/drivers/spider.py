@@ -79,6 +79,12 @@ class Spider(Thread):
                 val = struct.unpack_from('HHBBH', packet, 2)
                 if verbose:
                     print("User:", val[2]&0x7F, val[3]&0x7F, val)
+            elif msg_id == 0x2A0:
+                # encoders
+                assert len(packet) == 2 + 4, packet
+                val = struct.unpack_from('hh', packet, 2)
+                if verbose:
+                    print("Enc:", val)
 
     def process_gen(self, data, verbose=False):
         self.buf, packet = self.split_buffer(self.buf + data)
