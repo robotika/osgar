@@ -99,6 +99,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
             #self.wait(timedelta(seconds=5))
             self.set_light_intensity("0.2")
             self.set_cam_angle(-0.05)
+            self.use_gimbal = True
 
             self.set_brakes(False)
 
@@ -161,8 +162,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                     print ("Exception while turning: ", e)
                     pass
 
-            self.set_light_intensity("0.4")
-            self.use_gimbal = True
+            self.set_light_intensity("0.2")
 
             print(self.sim_time, self.robot_name, "Sending arrived message to excavator")
             self.send_request('external_command excavator_1 arrived %.2f' % self.set_yaw)
