@@ -20,7 +20,7 @@ from osgar.lib.mathex import normalizeAnglePIPI
 
 DIG_GOOD_LOCATION_MASS = 20
 ARRIVAL_OFFSET = -1.5
-
+DISTAL_THRESHOLD = -0.2
 PREFERRED_POLYGON = Polygon([(33,18),(38, -5),(29, -25), (6,-42), (-25,-33), (-25,-9),(-32,15),(-9,29)], [[(-2,10), (0, 14), (14,0), (4,-8)]])
 SAFE_POLYGON = Polygon([
     (65,20),(65,-35),(45,-35),(45,-55),(-65,-55),(-65,-42),(-25,-42),(-25,-5),(-65,-5),(-65,25),(-40,30),(-36,55),(-10,55),(-10,31),(16,31),(16,55),(40,55),(40,20)
@@ -87,7 +87,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
     def on_bucket_info(self, bucket_status):
         #[0] .. type ('ice'); [1] .. index (100=nothing); [2] .. mass
         self.volatile_dug_up = bucket_status
-        if self.first_distal_angle is None:
+        if self.first_distal_angle is None and bucket_status[1] != 100:
             self.first_distal_angle = self.distal_angle
 
     def on_joint_position(self, data):
@@ -321,7 +321,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
             while not self.hauler_ready:
                 try:
-                    self.wait(timedelta(seconds=1))
+                    self.wait(timedelta(seconds=3))
                 except BusShutdownException:
                     raise
                 except:
@@ -546,13 +546,13 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
                     start_pose = self.xyz
                     start_time = self.sim_time
-                    effort = self.default_effort_level/2 if best_distal_angle < 0.3 else self.default_effort_level/2
+                    effort = self.default_effort_level/2 if best_distal_angle < DISTAL_THRESHOLD else -self.default_effort_level/2
                     if abs(normalizeAnglePIPI(best_mount_angle)) < math.pi/2:
                         self.publish("desired_movement", [GO_STRAIGHT, int(100*math.degrees(normalizeAnglePIPI(best_mount_angle))), effort])
                     else:
                         self.publish("desired_movement", [GO_STRAIGHT, -int(100*math.degrees(normalizeAnglePIPI(best_mount_angle))), effort])
 
-                    while distance(start_pose, self.xyz) < 0.7:
+                    while distance(start_pose, self.xyz) < 0.7: # go 0.7m closer to volatile
                         try:
                             self.wait(timedelta(milliseconds=100))
                         except BusShutdownException:
@@ -582,7 +582,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             pass
 
                     found_angle = best_mount_angle
-
+                    # TODO: what if we can't dig anything up after the adjustment?
 
                 def scoop_all(angle):
                     nonlocal accum
