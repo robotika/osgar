@@ -183,15 +183,8 @@ class Rover(MoonNode):
             # turning in place if radius is 0 but speed is non-zero
             e = 40 * self.drive_speed / 1000.0
             movement_type = 'angular'
-
-            if self.drive_speed > 0:
-                # turn left
-                effort = [-e, e, -e, e]
-                steering = [-CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE,-CRAB_ROLL_ANGLE]
-            else: # drive speed < 0
-                # turn right
-                effort = [e, -e, e, -e]
-                steering = [-CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE,-CRAB_ROLL_ANGLE]
+            effort = [-e, e, -e, e]
+            steering = [-CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE,-CRAB_ROLL_ANGLE]
 
         else:
             movement_type = 'linear'
