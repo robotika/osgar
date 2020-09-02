@@ -18,7 +18,7 @@ from osgar.lib.virtual_bumper import VirtualBumper
 from osgar.lib.quaternion import euler_zyx
 from osgar.lib.mathex import normalizeAnglePIPI
 
-DIG_GOOD_LOCATION_MASS = 20
+DIG_GOOD_LOCATION_MASS = 10
 ARRIVAL_OFFSET = -1.5
 DISTAL_THRESHOLD = -0.2
 PREFERRED_POLYGON = Polygon([(33,18),(38, -5),(29, -25), (6,-42), (-25,-33), (-25,-9),(-32,15),(-9,29)])
@@ -506,11 +506,11 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         self.go_straight(attempt_offset)
                     except BusShutdownException:
                         raise
-                    except:
+                    except Exception as e:
                         # excess pitch or other exception could happen but we are stopped so should stabilize
-                        pass
+                        print(self.sim_time, self.robot_name, "Exception when adjusting linearly", str(e))
 
-                    # self.send_speed_cmd(0.0, 0.0)
+                    self.send_speed_cmd(0.0, 0.0)
 
                     print ("---- VOLATILE REACHED ----")
                     #self.wait(timedelta(seconds=10))
@@ -562,17 +562,22 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                 # we found volatile
                                 if best_mount_angle is None:
                                     # first time volatile: raise arm, bring hauler to the other side, drop load into bin
-                                    drop_angle = (self.mount_angle + math.pi) % (2*math.pi)
-                                    self.publish("bucket_dig", [drop_angle, 'standby']) # lift arm and clear rest of queue
+                                    #drop_angle = (self.mount_angle + math.pi) % (2*math.pi)
+
+                                    self.publish("bucket_dig", [self.mount_angle, 'standby']) # lift arm and clear rest of queue
                                     self.hauler_ready = False
                                     self.send_request('external_command hauler_1 approach %f' % normalizeAnglePIPI(self.yaw + self.mount_angle))
+                                    # NOTE: this approach may bump excavator, scoop volume may worsen
                                     while not self.hauler_ready:
                                         try:
-                                            self.wait(timedelta(seconds=1)) # wait to come to a stop
+                                            self.wait(timedelta(seconds=1))
                                         except BusShutdownException:
                                             raise
                                         except:
                                             pass
+                                    # wait for hauler to arrive, get its yaw, then we know which direction to drop
+                                    drop_angle = normalizeAnglePIPI(math.pi + (self.yaw - self.hauler_yaw) + self.mount_angle)
+                                    print(self.sim_time, self.robot_name, "Drop angle set to: %.2f" % drop_angle)
 
                                     exit_time = self.sim_time + timedelta(seconds=80)
                                     self.publish("bucket_drop", [drop_angle, 'append']) # this will be duplicated below but need to queue now or load would be lost by another dig happening first
@@ -602,9 +607,9 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         if found_angle is None and best_mount_angle is not None:
                             # didn't find good position (timeout) but found something - reposition and try again
                             reposition(best_mount_angle, best_distal_angle)
-                            self.publish("bucket_dig", [best_mount_angle - 0.3, 'append'])
-                            self.publish("bucket_dig", [best_mount_angle, 'append'])
-                            self.publish("bucket_dig", [best_mount_angle + 0.3, 'append']) # TODO: this plan doesn't end once these moves are executed, only
+                            # after repositioning, try again the whole circle starting with best angle first
+                            for a in mount_angle_sequence:
+                                self.publish("bucket_dig", [normalizeAnglePIPI(best_mount_angle + a), 'append'])
                         else: # found good position or found nothing at all
                             break
 
