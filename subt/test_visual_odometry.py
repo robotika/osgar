@@ -4,7 +4,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-import subt.visual_odometry3 as vo
+import subt.visual_odometry as vo
 
 curdir = Path(__file__).parent
 
