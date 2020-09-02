@@ -84,6 +84,10 @@ class Excavator(Rover):
         elif queue_action == 'prepend':
             i = len(self.execute_bucket_queue) % 4
             self.execute_bucket_queue[i:i] = dig
+        elif queue_action == 'standby': # finish existing action and clear rest of queue
+            self.scoop_time = None
+            i = len(self.execute_bucket_queue) % 4
+            self.execute_bucket_queue = self.execute_bucket_queue[:i]
         else:
             assert False, "Dig command"
 
