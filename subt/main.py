@@ -838,7 +838,7 @@ class SubTChallenge:
         self.wait(timedelta(seconds=10), use_sim_time=True)
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver66!")
+        self.stdout("SubT Challenge Ver67!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
