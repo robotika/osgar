@@ -23,10 +23,10 @@ from subt.local_planner import LocalPlanner
 from subt.trace import Trace, distance3D
 
 # safety limits for exploration and return home
-LIMIT_ROLL = math.radians(28)  # in Virtual Urban are ramps with 25deg slope
-LIMIT_PITCH = math.radians(28)
-RETURN_LIMIT_ROLL = math.radians(35)
-RETURN_LIMIT_PITCH = math.radians(35)
+DEFAULT_LIMIT_ROLL = 28  # degrees
+DEFAULT_LIMIT_PITCH = 28  # degrees
+DEFAULT_RETURN_LIMIT_ROLL = 35  # degrees
+DEFAULT_RETURN_LIMIT_PITCH = 35  # degrees
 
 # accepted LoRa commands
 LORA_GO_HOME_CMD = b'GoHome'
@@ -107,11 +107,17 @@ class SubTChallenge:
         self.dangerous_dist = config.get('dangerous_dist', 0.3)
         self.min_safe_dist = config.get('min_safe_dist', 0.75)
         self.safety_turning_coeff = config.get('safety_turning_coeff', 0.8)
+        self.limit_pitch = math.radians(config.get('limit_pitch', DEFAULT_LIMIT_PITCH))
+        self.limit_roll = math.radians(config.get('limit_roll', DEFAULT_LIMIT_ROLL))
+        self.return_limit_pitch = math.radians(config.get('return_limit_pitch', DEFAULT_RETURN_LIMIT_PITCH))
+        self.return_limit_roll = math.radians(config.get('return_limit_roll', DEFAULT_RETURN_LIMIT_ROLL))
         virtual_bumper_sec = config.get('virtual_bumper_sec')
         self.virtual_bumper = None
         if virtual_bumper_sec is not None:
             virtual_bumper_radius = config.get('virtual_bumper_radius', 0.1)
             self.virtual_bumper = VirtualBumper(timedelta(seconds=virtual_bumper_sec), virtual_bumper_radius)
+        self.speed_policy = config.get('speed_policy', 'always_forward')
+        assert(self.speed_policy in ['always_forward', 'conservative'])
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
         self.xyz = (0, 0, 0)  # 3D position for mapping artifacts
@@ -211,8 +217,12 @@ class SubTChallenge:
         size = len(self.scan)
         dist = min_dist(self.scan[size//3:2*size//3])
         if dist < self.min_safe_dist:  # 2.0:
-#            desired_speed = self.max_speed * (1.2/2.0) * (dist - 0.4) / 1.6
-            desired_speed = self.max_speed * (dist - self.dangerous_dist) / (self.min_safe_dist - self.dangerous_dist)
+            if self.speed_policy == 'conservative':
+                desired_speed = self.max_speed * (1.2/2.0) * (dist - 0.4) / 1.6
+            elif self.speed_policy == 'always_forward':
+                desired_speed = self.max_speed * (dist - self.dangerous_dist) / (self.min_safe_dist - self.dangerous_dist)
+            else:
+                assert(False)  # Unsupported speed policy.
         else:
             desired_speed = self.max_speed  # was 2.0
         desired_speed = desired_speed * (1.0 - self.safety_turning_coeff * min(self.max_angular_speed, abs(desired_angular_speed)) / self.max_angular_speed)
@@ -639,7 +649,7 @@ class SubTChallenge:
             print('Current timeout', timeout)
 
             dist, reason = self.follow_wall(radius=walldist, right_wall=right_wall, timeout=timeout, flipped=flipped,
-                                    pitch_limit=LIMIT_PITCH, roll_limit=LIMIT_ROLL)
+                                    pitch_limit=self.limit_pitch, roll_limit=self.limit_roll)
             total_dist += dist
             if reason is None or reason in [REASON_LORA,]:
                 break
@@ -657,10 +667,10 @@ class SubTChallenge:
             print(self.time, "Re-try because of", reason)
             for repeat in range(2):
                 self.follow_wall(radius=walldist, right_wall=not right_wall, timeout=timedelta(seconds=30), dist_limit=2.0,
-                    flipped=not flipped, pitch_limit=RETURN_LIMIT_PITCH, roll_limit=RETURN_LIMIT_ROLL)
+                    flipped=not flipped, pitch_limit=self.return_limit_pitch, roll_limit=self.return_limit_roll)
 
                 dist, reason = self.follow_wall(radius=walldist, right_wall=right_wall, timeout=timedelta(seconds=40), dist_limit=4.0,
-                                        pitch_limit=LIMIT_PITCH, roll_limit=LIMIT_ROLL, flipped=flipped)
+                                        pitch_limit=self.limit_pitch, roll_limit=self.limit_roll, flipped=flipped)
                 total_dist += dist
                 if reason is None:
                     break
@@ -692,7 +702,7 @@ class SubTChallenge:
                     print('Current timeout', timeout)
 
                     dist, reason = self.follow_wall(radius=walldist, right_wall=self.use_right_wall, timeout=timeout,
-                                            pitch_limit=LIMIT_PITCH, roll_limit=LIMIT_ROLL)
+                                            pitch_limit=self.limit_pitch, roll_limit=self.limit_roll)
                     total_dist += dist
                     if reason is None or reason in [REASON_LORA,]:
                         break
@@ -710,10 +720,10 @@ class SubTChallenge:
                     print(self.time, "Re-try because of", reason)
                     for repeat in range(2):
                         self.follow_wall(radius=walldist, right_wall=not self.use_right_wall, timeout=timedelta(seconds=30), dist_limit=2.0,
-                            flipped=allow_virtual_flip, pitch_limit=RETURN_LIMIT_PITCH, roll_limit=RETURN_LIMIT_ROLL)
+                            flipped=allow_virtual_flip, pitch_limit=self.return_limit_pitch, roll_limit=self.return_limit_roll)
 
                         dist, reason = self.follow_wall(radius=walldist, right_wall=self.use_right_wall, timeout=timedelta(seconds=40), dist_limit=4.0,
-                                                pitch_limit=LIMIT_PITCH, roll_limit=LIMIT_ROLL)
+                                                pitch_limit=self.limit_pitch, roll_limit=self.limit_roll)
                         total_dist += dist
                         if reason is None:
                             break
@@ -737,7 +747,7 @@ class SubTChallenge:
                         self.turn(math.radians(90), timeout=timedelta(seconds=20))
                         self.turn(math.radians(90), timeout=timedelta(seconds=20))
                     self.robust_follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=3*self.timeout, dist_limit=3*total_dist,
-                            flipped=allow_virtual_flip, pitch_limit=RETURN_LIMIT_PITCH, roll_limit=RETURN_LIMIT_ROLL)
+                            flipped=allow_virtual_flip, pitch_limit=self.return_limit_pitch, roll_limit=self.return_limit_roll)
                 if self.artifacts:
                     self.bus.publish('artf_xyz', [[artifact_data, round(x*1000), round(y*1000), round(z*1000)]
                                               for artifact_data, (x, y, z) in self.artifacts])
@@ -790,7 +800,7 @@ class SubTChallenge:
             print('Current timeout', timeout)
 
             dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,  # was radius=0.9
-                                timeout=timeout, pitch_limit=LIMIT_PITCH, roll_limit=None)
+                                timeout=timeout, pitch_limit=self.limit_pitch, roll_limit=None)
             self.collision_detector_enabled = False
             if reason == REASON_VIRTUAL_BUMPER:
                 assert self.virtual_bumper is not None
@@ -803,7 +813,7 @@ class SubTChallenge:
                 before_center = self.use_center
                 self.use_center = True
                 dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,  # was radius=0.9
-                                    timeout=timedelta(seconds=60), pitch_limit=LIMIT_PITCH, roll_limit=None)
+                                    timeout=timedelta(seconds=60), pitch_limit=self.limit_pitch, roll_limit=None)
                 self.use_center = before_center
                 if reason is None or reason != REASON_PITCH_LIMIT:
                     continue
@@ -828,7 +838,7 @@ class SubTChallenge:
         self.wait(timedelta(seconds=10), use_sim_time=True)
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver65!")
+        self.stdout("SubT Challenge Ver66!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()

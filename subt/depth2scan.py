@@ -150,8 +150,6 @@ def adjust_scan(scan, depth_scan, depth_params):
     return new_scan
 
 class DepthToScan(Node):
-    deg30 = int(30*720/270)
-
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("scan")
@@ -167,9 +165,8 @@ class DepthToScan(Node):
         assert channel in ["depth", "scan", "rot"], channel
 
         if channel == 'depth':
-            assert self.depth.shape == (360, 640), self.depth.shape
+            pass
         elif channel == 'scan':
-            assert len(self.scan) == 720, len(self.scan)
             if self.depth is None:
                 self.publish('scan', self.scan)
                 return channel  # when no depth data are available ...
