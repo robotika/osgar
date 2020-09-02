@@ -20,7 +20,7 @@ from moon.moonnode import CAMERA_WIDTH, CAMERA_HEIGHT, CAMERA_FOCAL_LENGTH, CAME
 TURN_ON = 12 # radius of circle when turning
 GO_STRAIGHT = float("inf")
 EXCAVATOR_DRIVING_GAP = 2.200 # can't be further or every bump will look like the excavator on lidar given the camera must be tilted down so that rover is visible up close
-EXCAVATOR_DIGGING_GAP = 0.95 # we should see the arm in the middle, not the back of the rover
+EXCAVATOR_DIGGING_GAP = 0.8 # we should see the arm in the middle, not the back of the rover
 DISTANCE_TOLERANCE = 0.3
 
 class ExcavatorLostException(Exception):
@@ -98,8 +98,8 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
             self.wait_for_init()
             #self.wait(timedelta(seconds=5))
             self.set_light_intensity("0.2")
-            self.set_cam_angle(-0.05)
-            self.use_gimbal = True
+            self.set_cam_angle(-0.1)
+            self.use_gimbal = False
 
             self.set_brakes(False)
 
@@ -406,7 +406,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
 
         # TODO: avoid obstacles when following (too tight turns)
 
-        if 'rover' in self.objects_in_view.keys() and (self.driving_mode == "approach" or self.driving_mode == "align" or self.driving_mode == "turnto") and not self.arrived_message_sent and not self.inException:
+        if ('rover' in self.objects_in_view.keys() or 'excavator_arm' in self.objects_in_view.keys()) and (self.driving_mode == "approach" or self.driving_mode == "align" or self.driving_mode == "turnto") and not self.arrived_message_sent and not self.inException:
             # TODO: sometimes we are near rover but don't see its distance
             # other times, we see a rover and its distance but stuck behind a rock
             if self.excavator_yaw is None: # within requested distance and no outstanding yaw, report
@@ -430,7 +430,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
 
 
                 if self.scan_driving_phase == "yaw":
-                    if abs(diff) > 0.15 and self.set_yaw is None: # 10deg, don't bother otherwise; also, don't attempt to align before true pose is known
+                    if abs(diff) > 0.12 and self.set_yaw is None: # 10deg, don't bother otherwise; also, don't attempt to align before true pose is known
                             if (self.debug):
                                 print(self.sim_time, self.robot_name, "Arrival handling: moving on a curve")
                             self.publish("desired_movement", [-8, -9000, math.copysign(0.5 * self.default_effort_level, diff)])
