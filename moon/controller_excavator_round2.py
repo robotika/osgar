@@ -576,7 +576,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                         except:
                                             pass
                                     # wait for hauler to arrive, get its yaw, then we know which direction to drop
-                                    drop_angle = normalizeAnglePIPI(math.pi + (self.yaw - self.hauler_yaw) + self.mount_angle)
+                                    drop_angle = normalizeAnglePIPI(math.pi - (self.hauler_yaw - self.yaw))
                                     print(self.sim_time, self.robot_name, "Drop angle set to: %.2f" % drop_angle)
 
                                     exit_time = self.sim_time + timedelta(seconds=80)
