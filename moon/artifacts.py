@@ -107,24 +107,24 @@ class ArtifactDetector(Node):
                 'detector_type': 'colormatch',
                 'min_size': 10,
                 'max_size': 700,
-                'mask': None,
+                'mask': [200, CAMERA_HEIGHT, 0, CAMERA_WIDTH], # [Y,X] order - only look in lower half of screen
                 'pixel_count_threshold': 150,
-                'bbox_union_count': 3,
+                'bbox_union_count': 10,
                 'hue_max_difference': 1,
                 'hue_match': 26, # from RGB FFA616
-                'subsequent_detects_required': 3
+                'subsequent_detects_required': 1
             },
             {
                 'artefact_name': 'excavator_arm',
                 'detector_type': 'colormatch',
                 'min_size': 10,
-                'max_size': 700,
+                'max_size': 200,
                 'mask': [0,  120, 0, CAMERA_WIDTH], # [Y,X] order
                 'pixel_count_threshold': 150,
                 'bbox_union_count': 3,
-                'hue_max_difference': 1,
-                'hue_match': 26, # from RGB FFA616
-                'subsequent_detects_required': 3
+                'hue_max_difference': 3,
+                'hue_match': 28, # from RGB FFA616
+                'subsequent_detects_required': 1
             }
         ]
         self.detect_sequences = {}
@@ -212,7 +212,8 @@ class ArtifactDetector(Node):
                 for cont in contours:
                     contours_poly = cv2.approxPolyDP(cont, 3, True)
                     x,y,w,h = cv2.boundingRect(contours_poly)
-                    bboxes.append([int(x),int(y),int(w),int(h)])
+                    if w > 1 or h > 1: # ignore isolated pixels
+                        bboxes.append([int(x),int(y),int(w),int(h)])
 
                 if len(bboxes) > 0:
                     sb = sorted(bboxes, key = box_area, reverse = True)[:c['bbox_union_count']]
