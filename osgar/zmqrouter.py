@@ -64,6 +64,9 @@ def record(config, log_prefix=None, log_filename=None, duration_sec=None):
                 duration = datetime.timedelta(seconds=duration_sec) if duration_sec else datetime.timedelta.max
                 router.run(duration=duration)
             except Exception as e:
+                (etype, evalue, tb) = sys.exc_info()
+                import traceback
+                traceback.print_tb(tb)
                 g_logger.error(str(e))
                 router.request_stop(b"exception")
 
@@ -187,14 +190,16 @@ class _Router:
                 yield (packet[0], *packet[2:]) # drop frame separator from REQ socket
 
     def listen(self, sender):
-        queue = self.nodes[sender]
+        assert sender.endswith(b'-listen')
+        node_name = sender[:-len(b'-listen')]
+        queue = self.nodes[node_name]
         if len(queue) == 0:
-            self.listening.add(sender)
+            self.listening.add(node_name)
         else:
             packet = queue.popleft()[1]
             assert packet[0] == sender, (packet[0], sender)
             self.socket.send_multipart(packet)
-            self.last_listen[sender] = self.now()
+            self.last_listen[node_name] = self.now()
 
     def publish(self, sender, channel, data):
         dt = self.now()
@@ -237,7 +242,7 @@ class _Router:
 
     def send(self, node_name, action, dt, *args):
         dt_uint32 = osgar.logger.format_timedelta(dt)
-        packet = [node_name, b"", action, dt_uint32, *args]
+        packet = [node_name+b'-listen', b"", action, dt_uint32, *args]
         if node_name in self.listening:
             self.listening.remove(node_name)
             self.socket.send_multipart(packet)
@@ -255,26 +260,30 @@ class _Router:
 
 class _Bus:
     def __init__(self, name):
-        self.lock = threading.RLock()
+        self.lock_publish = threading.Lock()
+        self.lock_listen = threading.Lock()
         self.name = name
         context = zmq.Context()
-        self.sock = context.socket(zmq.REQ)
-        self.sock.setsockopt_string(zmq.IDENTITY, name)
-        self.sock.connect(ENDPOINT)
+        self.sock_publish = context.socket(zmq.REQ)
+        self.sock_publish.setsockopt_string(zmq.IDENTITY, name)
+        self.sock_publish.connect(ENDPOINT)
+        self.sock_listen = context.socket(zmq.REQ)
+        self.sock_listen.setsockopt_string(zmq.IDENTITY, name+'-listen')
+        self.sock_listen.connect(ENDPOINT)
         self.parse_listen_dt = osgar.logger.timedelta_parser()
         self.parse_publish_dt = osgar.logger.timedelta_parser()
 
     def register(self, *outputs):
         bytes_outputs = list(bytes(o, 'ascii') for o in outputs)
-        with self.lock:
-            self.sock.send_multipart([b"register", *bytes_outputs])
-            resp = self.sock.recv()
+        with self.lock_publish:
+            self.sock_publish.send_multipart([b"register", *bytes_outputs])
+            resp = self.sock_publish.recv()
         assert resp == b'start'
 
     def listen(self):
-        with self.lock:
-            self.sock.send(b"listen")
-            action, dt, *args = self.sock.recv_multipart()
+        with self.lock_listen:
+            self.sock_listen.send(b"listen")
+            action, dt, *args = self.sock_listen.recv_multipart()
         if action == b"quit":
             raise self._quit()
         assert action == b"listen"
@@ -285,22 +294,22 @@ class _Bus:
 
     def publish(self, channel, data):
         raw = osgar.lib.serialize.serialize(data)
-        with self.lock:
-            self.sock.send_multipart([b"publish", bytes(channel, 'ascii'), raw])
-            resp, timestamp = self.sock.recv_multipart()
+        with self.lock_publish:
+            self.sock_publish.send_multipart([b"publish", bytes(channel, 'ascii'), raw])
+            resp, timestamp = self.sock_publish.recv_multipart()
         assert resp == b"publish"
         dt = self.parse_publish_dt(timestamp)
         return dt
 
     def request_stop(self):
-        with self.lock:
-            self.sock.send_multipart([b"request_stop"])
-            action, dt, *args = self.sock.recv_multipart()
+        with self.lock_publish:
+            self.sock_publish.send_multipart([b"request_stop"])
+            action, dt, *args = self.sock_publish.recv_multipart()
 
     def is_alive(self):
-        with self.lock:
-            self.sock.send_multipart([b"is_alive"])
-            resp, timestamp = self.sock.recv_multipart()
+        with self.lock_publish:
+            self.sock_publish.send_multipart([b"is_alive"])
+            resp, timestamp = self.sock_publish.recv_multipart()
         assert resp in [b"is_alive", b"quit"], resp
         if resp == b"quit":
             self._quit()

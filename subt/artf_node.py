@@ -48,7 +48,7 @@ class ArtifactDetectorDNN(Node):
         self.detector = self.create_detector()
 
     def create_detector(self):
-        model = os.path.join(os.path.dirname(__file__), 'model/mdnet0.64.64.13.4.relu.pth')
+        model = os.path.join(os.path.dirname(__file__), '../../../mdnet0.64.64.13.4.relu.pth')
         confidence_thresholds = {
             'survivor': 0.95,
             'backpack': 0.977,

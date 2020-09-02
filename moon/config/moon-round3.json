@@ -5,8 +5,10 @@
       "app": {
         "driver": "moon.controller_round3:SpaceRoboticsChallengeRound3",
         "in": ["pose2d", "driving_control", "driving_recovery"],
-        "out": ["desired_speed", "artf_xyz", "artf_cmd", "pose3d", "driving_recovery"],
-        "init": {}
+        "out": ["desired_speed", "driving_recovery"],
+          "init": {
+              "debug": false
+          }
       },
       "transmitter": {
         "driver": "zeromq",
@@ -39,7 +41,7 @@
       "rosmsg": {
         "driver": "rosmsg",
         "in": ["raw", "desired_speed", "tick", "stdout"],
-        "out": ["rot", "acc", "scan", "image", "pose2d", "sim_clock", "cmd"],
+        "out": ["rot", "acc", "scan", "image", "sim_clock", "cmd"],
         "init": {
           "topics": [
             ["/scout_1/joint_states", "sensor_msgs/JointState"],
@@ -47,6 +49,7 @@
             ["/scout_1/camera/left/image_raw/compressed", "sensor_msgs/CompressedImage", "left_image"],
             ["/scout_1/camera/right/image_raw/compressed", "sensor_msgs/CompressedImage", "right_image"],
             ["/scout_1/imu", "sensor_msgs/Imu", "orientation"],
+            ["/scout_1/openvslam/pose", "geometry_msgs/PoseStamped", "vslam_pose"],
             ["/scout_1/laser/scan", "sensor_msgs/LaserScan", "scan"]
           ]
         }
@@ -63,6 +66,7 @@
         "in": [],
         "out": [],
         "init": {
+            "artefacts": ["homebase", "cubesat", "basemarker"]
         }
       }
     },
@@ -71,9 +75,12 @@
       ["rosmsg.cmd", "transmitter.raw"],
       ["rosmsg.rot", "app.rot"],
       ["rosmsg.scan", "app.scan"],
+      ["rosmsg.vslam_pose", "app.vslam_pose"],
       ["rosmsg./qual_3_score", "app.score"],
       ["rosmsg.joint_name", "scout.joint_name"],
+      ["rosmsg.joint_name", "app.joint_name"],
       ["rosmsg.joint_position", "scout.joint_position"],
+      ["rosmsg.joint_position", "app.joint_position"],
       ["rosmsg.joint_velocity", "scout.joint_velocity"],
       ["rosmsg.joint_effort", "scout.joint_effort"],
       ["rosmsg.sim_clock", "scout.sim_clock"],
@@ -90,7 +97,8 @@
       ["rpc.response", "app.response"],
       ["scout.cmd", "transmitter.raw"],
       ["app.cmd", "transmitter.raw"],
-      ["scout.pose2d", "app.pose2d"]
+      ["scout.odo_pose", "app.odo_pose"],
+      ["scout.desired_speeds", "app.desired_speeds"]
     ]
   }
 }

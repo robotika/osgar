@@ -181,6 +181,28 @@ def parse_laser(data):
     return scan
 
 
+def parse_posestamped(data):
+    size = struct.unpack_from('<I', data)[0]
+    pos = 4
+    seq, timestamp_sec, timestamp_nsec, frame_id_size = struct.unpack_from('<IIII', data, pos)
+    pos += 4 + 4 + 4 + 4
+    frame_id = data[pos:pos+frame_id_size]
+#    print(frame_id, timestamp_sec, timestamp_nsec)
+    pos += frame_id_size
+    # http://docs.ros.org/melodic/api/geometry_msgs/html/msg/PoseStamped.html
+    # http://docs.ros.org/melodic/api/geometry_msgs/html/msg/Quaternion.html
+
+    x, y, z = struct.unpack_from('<ddd', data, pos)
+    pos += 3 * 8
+    ori = struct.unpack_from('<dddd', data, pos)
+    pos += 4 * 8
+
+    #q0, q1, q2, q3 = ori  # quaternion
+    #ax =  math.atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2))
+    #ay =  math.asin(2*(q0*q2-q3*q1))
+    #az =  math.atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3))
+    return (x, y, z), (ori)
+
 def parse_odom(data):
     # http://docs.ros.org/melodic/api/nav_msgs/html/msg/Odometry.html
     size = struct.unpack_from('<I', data)[0]
@@ -382,15 +404,34 @@ def parse_bucket(data):
 def parse_topic(topic_type, data):
     """parse general topic"""
     if topic_type == 'srcp2_msgs/Qual1ScoringMsg':
-        assert len(data) == 44, (len(data), data)
+        assert len(data) == 8, (len(data), data)
         size = struct.unpack_from('<I', data)[0]
         pos = 4
-        assert size == 40, size
-        # __slots__ = ['score','calls','total_of_types']
-        # _slot_types = ['int32','int32','int32[8]']
-        return list(struct.unpack_from('<II', data, pos))  # only score and calls
+        assert size == 4, size
+        # __slots__ = ['score']
+        # _slot_types = ['int32']
+        return struct.unpack_from('<I', data, pos)
+    elif topic_type == 'srcp2_msgs/HaulerMsg':
+        assert len(data) == 134, (len(data), data)
+        # vol_type: [ice, ethene, methane, carbon_mono, carbon_dio, ammonia, hydrogen_sul, sulfur_dio]
+        # mass_per_type: [0.0, 0.0, 0.0, 0.0, 0.0, 70.26217651367188, 0.0, 0.0]
+        vol_type_arr = []
+        mass_arr = []
+        size = struct.unpack_from('<I', data)[0]
+        pos = 4
+        for i in range(8):
+            vol_type_len = struct.unpack_from('<I', data, pos)[0]
+            pos += 4
+            vol_type = data[pos:pos+vol_type_len]
+            vol_type_arr.append(vol_type.decode('ascii'))
+            pos += vol_type_len
+        for i in range(8):
+            mass = struct.unpack_from('<f', data, pos)[0]
+            mass_arr.append(mass)
+            pos += 4
+        return [vol_type_arr, mass_arr]
     elif topic_type == 'srcp2_msgs/Qual2ScoringMsg':
-        assert len(data) == 139, (len(data), data)
+        assert len(data) == 142, (len(data), data)
         # __slots__ = ['vol_type', 'points_per_type', 'num_of_dumps', 'total_score']
         # _slot_types = ['string[8]', 'int32[8]', 'int32', 'float32']
         # let's ignore names of volatile types
@@ -405,6 +446,13 @@ def parse_topic(topic_type, data):
         # __slots__ = ['score','calls']
         # _slot_types = ['int32','int32']
         return list(struct.unpack_from('<II', data, pos))  # score and calls
+    elif topic_type == 'std_msgs/String':
+        size = struct.unpack_from('<I', data)[0]
+        pos = 4
+        msg_len = struct.unpack_from('<I', data, pos)[0]
+        pos += 4
+        string = data[pos:pos+msg_len]
+        return string.decode('ascii')
     elif topic_type == 'srcp2_msgs/ExcavatorMsg':
         return parse_bucket(data)
     elif topic_type == 'sensor_msgs/JointState':
@@ -413,8 +461,12 @@ def parse_topic(topic_type, data):
         return parse_volatile(data)
     elif topic_type == 'sensor_msgs/LaserScan':
         return parse_laser(data)
+    elif topic_type == 'geometry_msgs/PoseStamped':
+        return parse_posestamped(data)
     elif topic_type == 'sensor_msgs/Imu':
         return parse_imu(data)
+    elif topic_type == 'std_msgs/Bool':
+        return parse_bool(data)
     elif topic_type == 'sensor_msgs/CompressedImage':
         image = parse_jpeg_image(data)  # , dump_filename='nasa.jpg')
         return image
@@ -427,7 +479,7 @@ class ROSMsgParser(Thread):
         Thread.__init__(self)
         self.setDaemon(True)
         outputs = ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "sim_clock", "cmd", "origin", "gas_detected",
-                   "depth:gz", "t265_rot", "orientation", "debug",
+                   "depth:gz", "t265_rot", "orientation", "debug", "radio",
                     "joint_name", "joint_position", "joint_velocity", "joint_effort"]
         self.topics = config.get('topics', [])
         for row in self.topics:
@@ -492,6 +544,12 @@ class ROSMsgParser(Thread):
             depth = parse_raw_image(data[5:])
             self.bus.publish('depth', depth)
             return
+        if data.startswith(b'radio '):
+            s = data[6:].split(b' ')
+            addr = s[0]
+            msg = b' '.join(s[1:])
+            self.bus.publish('radio', [addr, msg])
+            return
         if data.startswith(b'points'):
             return
         if data.startswith(b'debug'):
@@ -506,7 +564,7 @@ class ROSMsgParser(Thread):
         if frame_id.endswith(b'/base_link/camera_front') or frame_id.endswith(b'camera_color_optical_frame'):
             # used to be self.topic_type == 'sensor_msgs/CompressedImage'
             self.bus.publish('image', parse_jpeg_image(packet))
-        elif frame_id.endswith(b'base_link/front_laser'):  # self.topic_type == 'sensor_msgs/LaserScan':
+        elif frame_id.endswith(b'base_link/front_laser') or frame_id.endswith(b'base_link/laser_front'):  # self.topic_type == 'sensor_msgs/LaserScan':
             self.count += 1
             if self.count % self.downsample != 0:
                 return
@@ -589,6 +647,10 @@ class ROSMsgParser(Thread):
         cmd = b'request_origin'
         self.bus.publish('cmd', cmd)
 
+    def slot_broadcast(self, timestamp, data):
+        cmd = b'broadcast ' + data  # data should be already type bytes
+        self.bus.publish('cmd', cmd)
+
     def run(self):
         try:
             while True:
@@ -601,6 +663,8 @@ class ROSMsgParser(Thread):
                     self.slot_stdout(timestamp, data)
                 elif channel == 'request_origin':
                     self.slot_request_origin(timestamp, data)
+                elif channel == 'broadcast':
+                    self.slot_broadcast(timestamp, data)
                 else:
                     assert False, channel  # unsupported input channel
         except BusShutdownException:
