@@ -438,7 +438,8 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
 
             if self.scan_driving or (abs(self.rover_distance - self.target_excavator_distance) < DISTANCE_TOLERANCE and self.excavator_yaw is not None): # within 1m from target, start adjusting angles
                 if not self.scan_driving:
-                    self.publish("desired_movement", [0, 0, 0])
+                    if self.set_yaw is None: # do not stop when doing initial excavator approach to bump and align better
+                        self.publish("desired_movement", [0, 0, 0])
                     self.scan_driving = True
 
                 diff = normalizeAnglePIPI(self.yaw - self.excavator_yaw)
@@ -470,7 +471,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                     if self.aligned_at is None:
                         self.aligned_at = self.sim_time
 
-                    if self.sim_time - self.aligned_at > timedelta(milliseconds=2500):
+                    if self.sim_time - self.aligned_at > timedelta(milliseconds=2500) or self.set_yaw is not None:
                         if self.driving_mode == "approach":
                             self.target_excavator_distance = EXCAVATOR_DIGGING_GAP
                         self.excavator_yaw = None
