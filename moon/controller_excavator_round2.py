@@ -13,7 +13,7 @@ from statistics import median
 
 from osgar.bus import BusShutdownException
 
-from moon.controller import translationToMatrix, GO_STRAIGHT, TURN_RADIUS, calc_tangents, pol2cart, ps, distance, SpaceRoboticsChallenge, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor, VSLAMEnabledException, VSLAMDisabledException
+from moon.controller import translationToMatrix, GO_STRAIGHT, TURN_RADIUS, calc_tangents, pol2cart, ps, distance, SpaceRoboticsChallenge, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor, VSLAMEnabledException, VSLAMDisabledException, VSLAMLostException, VSLAMFoundException
 from osgar.lib.virtual_bumper import VirtualBumper
 from osgar.lib.quaternion import euler_zyx
 from osgar.lib.mathex import normalizeAnglePIPI
@@ -25,6 +25,7 @@ PREFERRED_POLYGON = Polygon([(33,18),(38, -5),(29, -25), (6,-42), (-25,-33), (-2
 SAFE_POLYGON = Polygon([
     (65,20),(65,-35),(45,-35),(45,-55),(-65,-55),(-65,-42),(-25,-42),(-25,-5),(-65,-5),(-65,25),(-40,30),(-36,55),(-10,55),(-10,31),(16,31),(16,55),(40,55),(40,20)
 ])
+APPROACH_DISTANCE = 2.5
 
 class WaitRequestedException(Exception):
     pass
@@ -47,6 +48,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         self.hauler_orig_pose = None
         self.full_360_objects = {}
         self.first_distal_angle = None
+        self.hauler_pose_requested = False
 
     def on_osgar_broadcast(self, data):
         message_target = data.split(" ")[0]
@@ -60,6 +62,24 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 raise WaitRequestedException()
             if command == "resume":
                 raise ResumeRequestedException()
+            if command == "hauler_true_pose":
+                # assumes hauler finished approach as is behind excavator in self.yaw direction
+                self.hauler_pose_requested = True
+                print(self.sim_time, self.robot_name, "Origin of hauler received: ", str(data.split(" ")[2:]))
+                if data.split()[2] == 'origin':
+                    x,y = [float(n) for n in message.split()[3:5]]
+                    v = np.asmatrix(np.asarray([x, y, 1]))
+                    c, s = np.cos(self.hauler_yaw - self.yaw), np.sin(self.hauler_yaw - self.yaw)
+                    Rr = np.asmatrix(np.array(((c, -s, 0), (s, c, 0), (0, 0, 1))))
+                    T = np.asmatrix(np.array(((1, 0, APPROACH_DISTANCE),(0, 1, 0),(0, 0, 1)))) # ARRIVAL OFFSET best scoooping distance from the center of robot
+                    true_pos =  np.dot(Rr, np.dot(T, np.dot(Rr.I, v.T)))
+                    m = translationToMatrix([float(true_pos[0])-self.xyz[0], float(true_pos[1])-self.xyz[1], 0.0])
+                    print(self.sim_time, self.robot_name, "Adjusting XY based on hauler origin: from [%.1f,%.1f] to [%.1f,%.1f]" % (self.xyz[0], self.xyz[1], float(true_pos[0]), float(true_pos[1])))
+                    self.tf['vslam']['trans_matrix'] = np.dot(m, self.tf['vslam']['trans_matrix'])
+                    # TODO: if VSLAM is lost, reset
+                else:
+                    print(self.sim_time, self.robot_name, "Invalid origin format")
+
             if command == "pose":
                 self.hauler_orig_pose = [float(data.split(" ")[2]),float(data.split(" ")[3])]
 
@@ -566,7 +586,9 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
                                     self.publish("bucket_dig", [self.mount_angle, 'standby']) # lift arm and clear rest of queue
                                     self.hauler_ready = False
-                                    self.send_request('external_command hauler_1 approach %f' % normalizeAnglePIPI(self.yaw + self.mount_angle))
+                                    nma = normalizeAnglePIPI(self.mount_angle)
+                                    nma = max(-math.pi/2, min(math.pi/2, nma)) # only move around the back of the robot
+                                    self.send_request('external_command hauler_1 approach %f' % normalizeAnglePIPI(self.yaw + nma))
                                     # NOTE: this approach may bump excavator, scoop volume may worsen
                                     while not self.hauler_ready:
                                         try:
@@ -576,7 +598,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                         except:
                                             pass
                                     # wait for hauler to arrive, get its yaw, then we know which direction to drop
-                                    drop_angle = normalizeAnglePIPI(math.pi - (self.hauler_yaw - self.yaw))
+                                    drop_angle = normalizeAnglePIPI((self.hauler_yaw - self.yaw) - math.pi)
                                     print(self.sim_time, self.robot_name, "Drop angle set to: %.2f" % drop_angle)
 
                                     exit_time = self.sim_time + timedelta(seconds=80)
@@ -681,6 +703,27 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             pass
 
                     self.send_request('external_command hauler_1 follow') # re-follow after each 0,+2,-2 attempt
+                # end of for(0,+2,-4)
+
+                if accum == 0 and not self.hauler_pose_requested:
+                    self.send_request('external_command hauler_1 approach %f' % self.yaw)
+                    while not self.hauler_ready:
+                        try:
+                            self.wait(timedelta(seconds=1))
+                        except BusShutdownException:
+                            raise
+                        except:
+                            pass
+                    self.hauler_ready = False
+
+                    self.send_request('external_command hauler_1 request_true_pose')
+                    try:
+                        self.wait(timedelta(seconds=5)) # wait for pose to update (TODO: wait for a flag instead)
+                    except BusShutdownException:
+                        raise
+                    except:
+                        pass
+
                 self.send_request('external_command hauler_1 follow') # re-follow after each volatile
 
                 self.set_brakes(False)
