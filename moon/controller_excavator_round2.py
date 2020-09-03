@@ -14,9 +14,10 @@ from statistics import median
 
 from osgar.bus import BusShutdownException
 
-from moon.controller import translationToMatrix, GO_STRAIGHT, TURN_RADIUS, calc_tangents, pol2cart, ps, distance, SpaceRoboticsChallenge, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor, VSLAMEnabledException, VSLAMDisabledException, VSLAMLostException, VSLAMFoundException
+from moon.controller import eulerAnglesToRotationMatrix, translationToMatrix, GO_STRAIGHT, TURN_RADIUS, calc_tangents, pol2cart, ps, distance, SpaceRoboticsChallenge, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor, VSLAMEnabledException, VSLAMDisabledException, VSLAMLostException, VSLAMFoundException
 from osgar.lib.virtual_bumper import VirtualBumper
 from osgar.lib.quaternion import euler_zyx
+
 from osgar.lib.mathex import normalizeAnglePIPI
 
 DIG_GOOD_LOCATION_MASS = 10
@@ -52,6 +53,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         self.hauler_pose_requested = False
         self.auto_light_adjustment = False
         self.light_intensity = 0.0
+        self.vslam_fail_start = None
+        self.vslam_valid = False
 
     def on_osgar_broadcast(self, data):
         message_target = data.split(" ")[0]
@@ -70,16 +73,45 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 self.hauler_pose_requested = True
                 print(self.sim_time, self.robot_name, "Origin of hauler received: ", str(data.split(" ")[2:]))
                 if data.split()[2] == 'origin':
-                    x,y = [float(n) for n in message.split()[3:5]]
-                    v = np.asmatrix(np.asarray([x, y, 1]))
-                    c, s = np.cos(self.hauler_yaw - self.yaw), np.sin(self.hauler_yaw - self.yaw)
+                    origin = [float(x) for x in data.split()[3:]]
+                    initial_xyz = origin[:3]
+                    initial_quat = origin[3:]
+                    initial_rpy = euler_zyx(initial_quat) # note: this is not in roll, pitch, yaw order
+
+                    self.yaw_offset = self.yaw + self.yaw_offset - initial_rpy[0]
+
+                    v = np.asmatrix(np.asarray([initial_xyz[0], initial_xyz[1], 1]))
+                    c, s = np.cos(initial_rpy[0]), np.sin(initial_rpy[0])
                     Rr = np.asmatrix(np.array(((c, -s, 0), (s, c, 0), (0, 0, 1))))
-                    T = np.asmatrix(np.array(((1, 0, APPROACH_DISTANCE),(0, 1, 0),(0, 0, 1)))) # ARRIVAL OFFSET best scoooping distance from the center of robot
-                    true_pos =  np.dot(Rr, np.dot(T, np.dot(Rr.I, v.T)))
-                    m = translationToMatrix([float(true_pos[0])-self.xyz[0], float(true_pos[1])-self.xyz[1], 0.0])
-                    print(self.sim_time, self.robot_name, "Adjusting XY based on hauler origin: from [%.1f,%.1f] to [%.1f,%.1f]" % (self.xyz[0], self.xyz[1], float(true_pos[0]), float(true_pos[1])))
-                    self.tf['vslam']['trans_matrix'] = np.dot(m, self.tf['vslam']['trans_matrix'])
-                    # TODO: if VSLAM is lost, reset
+                    T = np.asmatrix(np.array(((1, 0, APPROACH_DISTANCE),(0, 1, 0),(0, 0, 1)))) # looking for location in front of origin
+                    ex_pos =  np.dot(Rr, np.dot(T, np.dot(Rr.I, v.T)))
+                    print(self.sim_time, self.robot_name, "Adjusting XY based on hauler origin: from [%.1f,%.1f] to [%.1f,%.1f]" % (self.xyz[0], self.xyz[1], float(ex_pos[0]), float(ex_pos[1])))
+
+                    if self.tf['vslam']['trans_matrix'] is not None:
+                        m = translationToMatrix([float(ex_pos[0])-self.xyz[0], float(ex_pos[1])-self.xyz[1], 0.0])
+                        self.tf['vslam']['trans_matrix'] = np.dot(m, self.tf['vslam']['trans_matrix'])
+                    else:
+                        ex_initial_xyz = [float(ex_pos[0]), float(ex_pos[1]), origin[2]]
+                        initial_rpy[0] = self.yaw # keep existing yaw
+
+                        self.xyz = ex_initial_xyz
+                        self.xyz_quat = initial_quat
+
+                        for k, obj in self.tf.items():
+                        # note: if VSLAM is not tracking at time of register_origin call, the latest reported position will be inaccurate and VSLAM won't work
+                            if obj['latest_quat'] is not None:
+                                latest_rpy = euler_zyx(obj['latest_quat']) # will be rearranged after offset calculation
+                                rpy_offset = [a-b for a,b in zip(initial_rpy, latest_rpy)]
+                                rpy_offset.reverse()
+                                print(self.sim_time, self.robot_name, "%s RPY offset: %s" % (k, str(rpy_offset)))
+                                rot_matrix = np.asmatrix(eulerAnglesToRotationMatrix(rpy_offset)) # TODO: save the original rot matrix
+
+                                xyz_offset = translationToMatrix(obj['latest_xyz'])
+                                orig_xyz_offset = translationToMatrix(initial_xyz)
+
+                                obj['trans_matrix'] = np.dot(orig_xyz_offset, np.dot(rot_matrix, xyz_offset.I))
+
+
                 else:
                     print(self.sim_time, self.robot_name, "Invalid origin format")
 
@@ -140,7 +172,20 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         if self.sim_time is None or self.last_position is None or self.yaw is None:
             return
 
-        if self.vslam_reset_at is not None and self.sim_time - self.vslam_reset_at > timedelta(seconds=3) and not math.isnan(data[0][0]) and self.tf['vslam']['trans_matrix'] is None:
+        if math.isnan(data[0][0]) and self.tf['vslam']['trans_matrix'] is not None and not self.hauler_pose_requested: # VSLAM not tracking and potential for re-tracking via hauler
+            self.vslam_valid = False
+            if self.vslam_fail_start is None:
+                self.vslam_fail_start = self.sim_time
+            elif self.sim_time - self.vslam_fail_start > timedelta(milliseconds=300):
+                self.vslam_fail_start = None
+                raise VSLAMLostException()
+            return
+
+        self.vslam_fail_start = None
+        if not math.isnan(data[0][0]):
+            self.vslam_valid = True
+
+        if not self.true_pose and self.vslam_reset_at is not None and self.sim_time - self.vslam_reset_at > timedelta(seconds=3) and not math.isnan(data[0][0]) and self.tf['vslam']['trans_matrix'] is None:
             # request origin and start tracking in correct coordinates as soon as first mapping lock occurs
             # TODO: another pose may arrive while this request is still being processed (not a big deal, just a ROS error message)
             self.send_request('request_origin', self.register_origin)
@@ -301,8 +346,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 except:
                     pass
 
-            self.auto_light_adjustment = True
-            #self.set_light_intensity("0.4")
+#            self.auto_light_adjustment = True
+            self.set_light_intensity("0.4")
 
             self.send_request('vslam_reset', vslam_reset_time)
 
@@ -394,6 +439,45 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 ARRIVAL_TOLERANCE = 1 # if we are within 1m of target, stop
                 while True:
                     try:
+
+                        if not self.vslam_valid: # vslam_valid will only be turned to False if hauler origin hasn't been requested yet
+                            self.publish("desired_movement", [0,0,0])
+
+                            # hauler approach, VSLAM should be running
+                            self.send_request('external_command hauler_1 approach %f' % self.yaw)
+
+                            # reset VSLAM (this should reset self.vslam_valid)
+                            self.tf['vslam']['trans_matrix'] = None
+                            self.vslam_reset_at = None
+                            self.send_request('vslam_reset', vslam_reset_time)
+                            while self.vslam_reset_at is None or self.sim_time - self.vslam_reset_at < timedelta(seconds=3):
+                                try:
+                                    self.wait(timedelta(seconds=1))
+                                except BusShutdownException:
+                                    raise
+                                except:
+                                    pass
+
+                            while not self.hauler_ready:
+                                try:
+                                    self.wait(timedelta(seconds=3))
+                                except BusShutdownException:
+                                    raise
+                                except:
+                                    pass
+                            self.hauler_ready = False
+
+                            self.send_request('external_command hauler_1 request_true_pose')
+                            try:
+                                self.wait(timedelta(seconds=5)) # wait for pose to update (TODO: wait for a flag instead)
+                            except BusShutdownException:
+                                raise
+                            except:
+                                pass
+                            self.send_request('external_command hauler_1 follow')
+
+
+
                         print(self.sim_time, self.robot_name, "excavator: Pursuing volatile [%.1f,%.1f]" % (v[0],v[1]))
                         while wait_for_mapping or (wait_for_hauler_requested is not None and self.sim_time < wait_for_hauler_requested):
                             self.wait(timedelta(seconds=1))
@@ -436,6 +520,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         except VSLAMEnabledException as e:
                             print(self.sim_time, self.robot_name, "VSLAM: mapping re-enabled")
                             wait_for_mapping = False
+                        except VSLAMLostException as e:
+                            print(self.sim_time, self.robot_name, "VSLAM lost, re-localize via hauler")
 
                         self.inException = False
                     except VirtualBumperException as e:
@@ -462,6 +548,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         except VSLAMEnabledException as e:
                             print(self.sim_time, self.robot_name, "VSLAM: mapping re-enabled")
                             wait_for_mapping = False
+                        except VSLAMLostException as e:
+                            print(self.sim_time, self.robot_name, "VSLAM lost, re-localize via hauler")
 
                         self.inException = False
                     except VSLAMDisabledException as e:
@@ -478,6 +566,9 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     except ResumeRequestedException as e:
                         wait_for_hauler_requested = self.sim_time + timedelta(seconds=5)
                         print(self.sim_time, self.robot_name, "Hauler wants to resume")
+                    except VSLAMLostException as e:
+                        print(self.sim_time, self.robot_name, "VSLAM lost, re-localize via hauler")
+
 
 
             def reposition(mount_angle, distal_angle):
@@ -506,7 +597,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 if abs(normalizeAnglePIPI(mount_angle)) < math.pi/2:
                     self.publish("desired_movement", [GO_STRAIGHT, int(100*math.degrees(normalizeAnglePIPI(mount_angle))), effort])
                 else:
-                    self.publish("desired_movement", [GO_STRAIGHT, -int(100*math.degrees(normalizeAnglePIPI(mount_angle))), effort])
+                    self.publish("desired_movement", [GO_STRAIGHT, -int(100*math.degrees(normalizeAnglePIPI(math.pi - mount_angle))), effort])
 
                 while distance(start_pose, self.xyz) < 0.7: # go 0.7m closer to volatile
                     try:
@@ -554,6 +645,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     self.send_speed_cmd(0.0, 0.0)
 
                     print ("---- VOLATILE REACHED ----")
+
                     #self.wait(timedelta(seconds=10))
                     #vol_list.pop(index)
                     self.set_brakes(True)
@@ -620,6 +712,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                             raise
                                         except:
                                             pass
+                                    self.hauler_ready = False
+
                                     # wait for hauler to arrive, get its yaw, then we know which direction to drop
                                     drop_angle = normalizeAnglePIPI((self.hauler_yaw - self.yaw) - math.pi)
                                     print(self.sim_time, self.robot_name, "Drop angle set to: %.2f" % drop_angle)
@@ -691,7 +785,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                 # TODO: assumes 100 to be total volatile at location, actual total reported initially, parse and match instead
                                 return True
 
-
+                    full_success = False
                     if found_angle is not None:
                         # have best position, dig everything up, adjust position, move to next volatile
                         if scoop_all(found_angle):
@@ -711,12 +805,11 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             m = translationToMatrix([float(true_pos[0])-self.xyz[0], float(true_pos[1])-self.xyz[1], 0.0])
                             print(self.sim_time, self.robot_name, "Adjusting XY based on volatile location: from [%.1f,%.1f] to [%.1f,%.1f]" % (self.xyz[0], self.xyz[1], float(true_pos[0]), float(true_pos[1])))
                             self.tf['vslam']['trans_matrix'] = np.dot(m, self.tf['vslam']['trans_matrix'])
+                            full_success = True
 
-                            break # do not de-attempt 2m back and 2m front
-
-                    self.publish("bucket_drop", [math.pi, 'reset'])
 
                     # wait for bucket to be dropped and/or position reset before moving on
+                    self.publish("bucket_drop", [math.pi, 'reset'])
                     while self.volatile_dug_up[1] != 100 or (self.mount_angle is None or abs(normalizeAnglePIPI(math.pi - self.mount_angle)) > 0.2):
                         try:
                             self.wait(timedelta(seconds=1))
@@ -725,7 +818,9 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         except:
                             pass
 
-                    self.send_request('external_command hauler_1 follow') # re-follow after each 0,+2,-2 attempt
+                    if full_success:
+                        break # do not de-attempt 2m back and 2m front
+
                 # end of for(0,+2,-4)
 
                 if accum == 0 and not self.hauler_pose_requested:
