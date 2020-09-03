@@ -7,7 +7,7 @@
           "in": ["odo_pose"],
           "out": ["desired_speed", "artf_cmd", "request_origin", "bucket_cmd"],
           "init": {
-              "debug": false
+              "debug": true
           }
       },
       "transmitter": {
@@ -64,14 +64,6 @@
           "init": {
           }
       },
-      "light_manager": {
-          "driver": "moon.light_manager:LightManager",
-          "in": [],
-          "out": [],
-          "init": {
-              "debug": false
-          }
-      },
       "detector": {
         "driver": "moon.artifacts:ArtifactDetector",
         "in": [],
@@ -81,7 +73,6 @@
             "estimate_distance": false
         }
       }
-
     },
     "links": [["receiver.raw", "rosmsg.raw"],
               ["rosmsg.cmd", "transmitter.raw"],
@@ -94,6 +85,7 @@
               ["rosmsg./qual_2_score", "app.score"],
               ["rosmsg.joint_name", "excavator.joint_name"],
               ["rosmsg.left_image", "detector.left_image"],
+              ["rosmsg.left_image", "app.left_image"],
               ["rosmsg.right_image", "detector.right_image"],
               ["rosmsg.joint_name", "app.joint_name"],
               ["rosmsg.joint_position", "app.joint_position"],
@@ -109,10 +101,8 @@
               ["app.bucket_drop", "excavator.bucket_drop"],
               ["app.request", "rpc.request"],
               ["excavator.request", "rpc.request"],
-              ["light_manager.request", "rpc.request"],
               ["rpc.response", "app.response"],
               ["rpc.response", "excavator.response"],
-              ["rpc.response", "light_manager.response"],
               ["detector.artf", "app.artf"],
               ["excavator.cmd", "transmitter.raw"],
               ["app.cmd", "transmitter.raw"],

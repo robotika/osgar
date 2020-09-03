@@ -21,7 +21,7 @@ TURN_ON = 12 # radius of circle when turning
 GO_STRAIGHT = float("inf")
 EXCAVATOR_DRIVING_GAP = 1.8 # can't be further or every bump will look like the excavator on lidar given the camera must be tilted down so that rover is visible up close
 EXCAVATOR_ONHOLD_GAP = 3 # can't be further or every bump will look like the excavator on lidar given the camera must be tilted down so that rover is visible up close
-EXCAVATOR_DIGGING_GAP = 0.5 # we should see the arm in the middle, not the back of the rover
+EXCAVATOR_DIGGING_GAP = 0.55 # we should see the arm in the middle, not the back of the rover
 DISTANCE_TOLERANCE = 0.3
 
 class ExcavatorLostException(Exception):

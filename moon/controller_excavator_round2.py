@@ -6,6 +6,7 @@ import math
 from datetime import timedelta
 import traceback
 from functools import cmp_to_key
+import cv2
 
 from shapely.geometry import Point, LineString
 from shapely.geometry.polygon import Polygon
@@ -49,6 +50,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         self.full_360_objects = {}
         self.first_distal_angle = None
         self.hauler_pose_requested = False
+        self.auto_light_adjustment = False
+        self.light_intensity = 0.0
 
     def on_osgar_broadcast(self, data):
         message_target = data.split(" ")[0]
@@ -83,6 +86,23 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             if command == "pose":
                 self.hauler_orig_pose = [float(data.split(" ")[2]),float(data.split(" ")[3])]
 
+    def on_left_image(self, data):
+        if not self.auto_light_adjustment:
+            return
+        limg = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_COLOR)
+        CAMERA_HEIGHT,CAMERA_WIDTH, _ = limg.shape
+        hsv = cv2.cvtColor(limg, cv2.COLOR_BGR2HSV)
+        mask = np.zeros((CAMERA_HEIGHT,CAMERA_WIDTH), np.uint8)
+        circle_mask = cv2.circle(mask,(CAMERA_HEIGHT//2,CAMERA_WIDTH//2),200,(255,255,255),thickness=-1)
+        hist = cv2.calcHist([limg],[2],circle_mask,[256],[0,256])
+        topthird = hist[170:]
+        brightness = int(sum(topthird) / len(topthird))
+        if brightness < 300:
+            self.light_intensity = min(1.0, self.light_intensity + 0.1)
+            self.send_request('set_light_intensity %s' % str(self.light_intensity))
+        elif brightness > 500:
+            self.light_intensity = max(0.0, self.light_intensity - 0.1)
+            self.send_request('set_light_intensity %s' % str(self.light_intensity))
 
     def on_vslam_enabled(self, data):
         super().on_vslam_enabled(data)
@@ -281,7 +301,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 except:
                     pass
 
-            self.set_light_intensity("0.4")
+            self.auto_light_adjustment = True
+            #self.set_light_intensity("0.4")
 
             self.send_request('vslam_reset', vslam_reset_time)
 
