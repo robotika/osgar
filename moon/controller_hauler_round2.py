@@ -19,7 +19,8 @@ from moon.moonnode import CAMERA_WIDTH, CAMERA_HEIGHT, CAMERA_FOCAL_LENGTH, CAME
 
 TURN_ON = 12 # radius of circle when turning
 GO_STRAIGHT = float("inf")
-EXCAVATOR_DRIVING_GAP = 3 # can't be further or every bump will look like the excavator on lidar given the camera must be tilted down so that rover is visible up close
+EXCAVATOR_DRIVING_GAP = 1.8 # can't be further or every bump will look like the excavator on lidar given the camera must be tilted down so that rover is visible up close
+EXCAVATOR_ONHOLD_GAP = 3 # can't be further or every bump will look like the excavator on lidar given the camera must be tilted down so that rover is visible up close
 EXCAVATOR_DIGGING_GAP = 0.5 # we should see the arm in the middle, not the back of the rover
 DISTANCE_TOLERANCE = 0.3
 
@@ -78,6 +79,9 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                 self.excavator_yaw = float(data.split(" ")[2])
             elif command == "follow":
                 self.target_excavator_distance = EXCAVATOR_DRIVING_GAP
+                self.arrived_message_sent = False
+            elif command == "onhold":
+                self.target_excavator_distance = EXCAVATOR_ONHOLD_GAP
                 self.arrived_message_sent = False
             elif command == "request_true_pose":
                 def forward_true_pose(result):
@@ -345,12 +349,13 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
 
                 # TODO: if hauler approaches on a diagonal, it may not get close enough to switch to lidar driving
                 speed = self.default_effort_level
-                if self.rover_distance < 3:
-                    speed = 0.5 * self.default_effort_level
-                elif self.rover_distance < self.target_excavator_distance + 1:
-                    speed = 0.5 * self.default_effort_level
-                elif self.rover_distance > self.target_excavator_distance + 3:
-                    speed = 1.2 * self.default_effort_level
+                if self.set_yaw is None: # skip adjustments before the yaw is set, need to hit excavator with a little force to align yaws accurately
+                    if self.rover_distance < 3:
+                        speed = 0.5 * self.default_effort_level
+                    elif self.rover_distance < self.target_excavator_distance + 1:
+                        speed = 0.5 * self.default_effort_level
+                    elif self.rover_distance > self.target_excavator_distance + 3:
+                        speed = 1.2 * self.default_effort_level
 
                 # if too close, just go straight back first
                 if self.driving_mode != "approach" and abs(self.target_excavator_distance - self.rover_distance) < DISTANCE_TOLERANCE:

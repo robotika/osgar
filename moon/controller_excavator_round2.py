@@ -369,12 +369,12 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 if not SAFE_POLYGON.contains(LineString([v, self.xyz[:2]])):
                     goto_path = [-10,-10] + goto_path
                 wait_for_mapping = False
-                wait_for_hauler_requested = False
+                wait_for_hauler_requested = None
                 ARRIVAL_TOLERANCE = 1 # if we are within 1m of target, stop
                 while True:
                     try:
                         print(self.sim_time, self.robot_name, "excavator: Pursuing volatile [%.1f,%.1f]" % (v[0],v[1]))
-                        while wait_for_mapping or wait_for_hauler_requested:
+                        while wait_for_mapping or (wait_for_hauler_requested is not None and self.sim_time < wait_for_hauler_requested):
                             self.wait(timedelta(seconds=1))
 
                         with LidarCollisionMonitor(self, 1500): # some distance needed not to lose tracking when seeing only obstacle up front
@@ -402,11 +402,11 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         try:
                             self.lidar_drive_around()
                         except ResumeRequestedException as e:
-                            wait_for_hauler_requested = False
+                            wait_for_hauler_requested = self.sim_time + timedelta(seconds=5) # resume only after 5 seconds to give hauler chance to get closer
                             print(self.sim_time, self.robot_name, "Hauler wants to resume")
                         except WaitRequestedException as e:
                             self.send_speed_cmd(0.0, 0.0)
-                            wait_for_hauler_requested = True
+                            wait_for_hauler_requested = self.sim_time + timedelta(minutes=2) # will wait at most 2 minutes
                             print(self.sim_time, self.robot_name, "Hauler requested to wait")
                         except VSLAMDisabledException as e:
                             print(self.sim_time, self.robot_name, "VSLAM: mapping disabled, waiting")
@@ -428,11 +428,11 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             angle_diff = self.get_angle_diff(v)
                             self.drive_around_rock(-math.copysign(5, angle_diff)) # assume 6m the most needed
                         except ResumeRequestedException as e:
-                            wait_for_hauler_requested = False
+                            wait_for_hauler_requested = self.sim_time + timedelta(seconds=5)
                             print(self.sim_time, self.robot_name, "Hauler wants to resume")
                         except WaitRequestedException as e:
                             self.send_speed_cmd(0.0, 0.0)
-                            wait_for_hauler_requested = True
+                            wait_for_hauler_requested = self.sim_time + timedelta(minutes=2)
                             print(self.sim_time, self.robot_name, "Hauler requested to wait")
                         except VSLAMDisabledException as e:
                             print(self.sim_time, self.robot_name, "VSLAM: mapping disabled, waiting")
@@ -452,10 +452,10 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         wait_for_mapping = False
                     except WaitRequestedException as e:
                         self.send_speed_cmd(0.0, 0.0)
-                        wait_for_hauler_requested = True
+                        wait_for_hauler_requested = self.sim_time + timedelta(minutes=2)
                         print(self.sim_time, self.robot_name, "Hauler requested to wait")
                     except ResumeRequestedException as e:
-                        wait_for_hauler_requested = False
+                        wait_for_hauler_requested = self.sim_time + timedelta(seconds=5)
                         print(self.sim_time, self.robot_name, "Hauler wants to resume")
 
 
@@ -521,7 +521,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 pursue_volatile(v)
 
                 accum = 0 # to check if we picked up 100.0 total and can finish
-                for attempt_offset in [0.0, +2.0, -4.0]:
+                for attempt_offset in [0.0, +4.0, -8.0]:
                     try:
                         self.go_straight(attempt_offset)
                     except BusShutdownException:
@@ -554,6 +554,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     #self.volatile_reached = False # TEST
                     #self.send_request('external_command hauler_1 backout') # Testing
                     #continue # testing
+
+                    self.send_request('external_command hauler_1 onhold') # re-follow after each 0,+2,-2 attempt
 
                     drop_angle = math.pi # if yaw is just approximated, drop straigt back instead of at hauler yaw direction
                     #drop_angle = normalizeAnglePIPI(math.pi - normalizeAnglePIPI(self.yaw - self.hauler_yaw))
