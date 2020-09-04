@@ -24,10 +24,10 @@ DIG_GOOD_LOCATION_MASS = 10
 ARRIVAL_OFFSET = -1.5
 TYPICAL_VOLATILE_DISTANCE = 2
 DISTAL_THRESHOLD = 0.1 # TODO: movement may be too fast to detect when the scooping first happened
-PREFERRED_POLYGON = Polygon([(33,18),(38, -5),(29, -25), (6,-42), (-25,-33), (-25,-9),(-32,15),(-9,29)])
+PREFERRED_POLYGON = Polygon([(33,18),(38, -5),(29, -25), (6,-44), (-25,-44), (-25,-9),(-32,15),(-9,29)])
 SAFE_POLYGON = Polygon([
-    (65,20),(65,-35),(45,-35),(45,-55),(-65,-55),(-65,-42),(-25,-42),(-25,-5),(-65,-5),(-65,25),(-40,30),(-36,55),(-10,55),(-10,31),(16,31),(16,55),(40,55),(40,20)
-])
+    (65, 20), (65, -35), (45, -35), (45, -55), (-65, -55), (-65, -42), (-25, -44), (-25, -5), (-65, -5), (-65, 25), (-40, 30), (-36, 55), (-10, 55), (-10, 41.70731707317074), (16, 37.90243902439025), (16, 55), (40, 55), (40, 25), (45.5, 20.5), (65, 20)
+],[[(35,13),(45,13),(45,20),(29,36),(-12, 42),(-35,34),(-34, 15),(-14,28),(4, 25), (21, 20)]])
 APPROACH_DISTANCE = 2.5
 
 class WaitRequestedException(Exception):
@@ -338,9 +338,14 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     self.turn(math.radians(30), ang_speed=0.8*self.max_angular_speed, with_stop=False) # get the turning stared
                     self.full_360_objects = {}
                     self.turn(math.radians(360), ang_speed=0.8*self.max_angular_speed, with_stop=False)
-                    turn_needed = normalizeAnglePIPI(math.pi + median(self.full_360_objects["rover"]) - self.yaw)
+
+                    sum_sin = sum([math.sin(a) for a in self.full_360_objects["rover"]])
+                    sum_cos = sum([math.cos(a) for a in self.full_360_objects["rover"]])
+                    mid_angle = math.atan2(sum_sin, sum_cos)
+                    print(self.sim_time, self.robot_name, "excavator: hauler angle (internal coordinates) [%.2f]" % (normalizeAnglePIPI(math.pi + mid_angle)))
+                    turn_needed = normalizeAnglePIPI(math.pi + mid_angle - self.yaw)
                     # turn a little less to allow for extra turn after the effort was stopped
-                    self.turn(turn_needed if turn_needed >= 0 else (turn_needed + 2*math.pi))
+                    self.turn(turn_needed if turn_needed >= 0 else (turn_needed + 2*math.pi), ang_speed=0.8*self.max_angular_speed)
                     break
                 except BusShutdownException:
                     raise
@@ -348,8 +353,9 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     pass
 
             self.auto_light_adjustment = True
-#            self.set_light_intensity("0.4")
+            # self.set_light_intensity("0.4")
 
+            # this will also trigger true pose once slam starts sending data
             self.send_request('vslam_reset', vslam_reset_time)
 
             while vol_list is None or not self.true_pose:

@@ -21,7 +21,7 @@ TURN_ON = 12 # radius of circle when turning
 GO_STRAIGHT = float("inf")
 EXCAVATOR_DRIVING_GAP = 1.8 # can't be further or every bump will look like the excavator on lidar given the camera must be tilted down so that rover is visible up close
 EXCAVATOR_ONHOLD_GAP = 3 # can't be further or every bump will look like the excavator on lidar given the camera must be tilted down so that rover is visible up close
-EXCAVATOR_DIGGING_GAP = 0.4 # we should see the arm in the middle, not the back of the rover
+EXCAVATOR_DIGGING_GAP = 0.55 # we should see the arm in the middle, not the back of the rover
 DISTANCE_TOLERANCE = 0.3
 
 class ExcavatorLostException(Exception):
@@ -164,9 +164,13 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                     if "rover" not in self.full_360_objects.keys() or len(self.full_360_objects["rover"]) == 0:
                         print(self.sim_time, self.robot_name, "Excavator not found during 360 turn")
                     else:
-                        turn_needed = normalizeAnglePIPI(median(self.full_360_objects["rover"]) - self.yaw)
+                        sum_sin = sum([math.sin(a) for a in self.full_360_objects["rover"]])
+                        sum_cos = sum([math.cos(a) for a in self.full_360_objects["rover"]])
+                        mid_angle = math.atan2(sum_sin, sum_cos)
+                        print(self.sim_time, self.robot_name, "hauler: excavator angle (internal coordinates) [%.2f]" % (normalizeAnglePIPI(math.pi + mid_angle)))
+                        turn_needed = normalizeAnglePIPI(math.pi + mid_angle - self.yaw)
                         # turn a little less to allow for extra turn after the effort was stopped
-                        self.turn(turn_needed if turn_needed >= 0 else (turn_needed + 2*math.pi))
+                        self.turn(turn_needed if turn_needed >= 0 else (turn_needed + 2*math.pi), ang_speed=0.8*self.max_angular_speed)
                     break
                 except BusShutdownException:
                     raise
