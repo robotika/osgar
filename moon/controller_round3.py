@@ -283,7 +283,6 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                         # stop and report angle and distance from robot
                         # robot moves a little after detection so the angles do not correspond with the true pose we will receive
                         # TODO: if found during side sweep, robot will turn some between last frame and true pose messing up the angle
-                        self.set_brakes(True)
                         self.publish("desired_movement", [0, 0, 0])
                         print(self.sim_time, "app: cubesat final frame x=%d y=%d w=%d h=%d" % (data[1], data[2], data[3], data[4]))
 
@@ -368,7 +367,6 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
 
                             # TODO: object was reached but not necessarily successfully reported;
                             # for now, just return driving to main which will either drive randomly with no additional purpose if homebase was previously found or will look for homebase
-                            self.set_brakes(False)
                             self.current_driver = None
                             self.on_driving_control(None) # do this last as it raises exception
 
