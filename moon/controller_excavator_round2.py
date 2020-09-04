@@ -22,7 +22,8 @@ from osgar.lib.mathex import normalizeAnglePIPI
 
 DIG_GOOD_LOCATION_MASS = 10
 ARRIVAL_OFFSET = -1.5
-DISTAL_THRESHOLD = -0.2
+TYPICAL_VOLATILE_DISTANCE = 2
+DISTAL_THRESHOLD = 0.1 # TODO: movement may be too fast to detect when the scooping first happened
 PREFERRED_POLYGON = Polygon([(33,18),(38, -5),(29, -25), (6,-42), (-25,-33), (-25,-9),(-32,15),(-9,29)])
 SAFE_POLYGON = Polygon([
     (65,20),(65,-35),(45,-35),(45,-55),(-65,-55),(-65,-42),(-25,-42),(-25,-5),(-65,-5),(-65,25),(-40,30),(-36,55),(-10,55),(-10,31),(16,31),(16,55),(40,55),(40,20)
@@ -346,8 +347,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 except:
                     pass
 
-#            self.auto_light_adjustment = True
-            self.set_light_intensity("0.4")
+            self.auto_light_adjustment = True
+#            self.set_light_intensity("0.4")
 
             self.send_request('vslam_reset', vslam_reset_time)
 
@@ -404,6 +405,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             self.hauler_ready = False
             self.send_request('external_command hauler_1 approach %f' % self.yaw)
 
+            self.set_brakes(True)
             while not self.hauler_ready:
                 try:
                     self.wait(timedelta(seconds=3))
@@ -412,20 +414,21 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 except:
                     pass
             self.hauler_ready = False
+            self.set_brakes(False)
 
             self.send_request('external_command hauler_1 follow')
             #self.send_request('external_command hauler_1 set_yaw %f' % self.yaw) # tell hauler looking at rover is in 'yaw' direction
 
             # reset again in case hauler was driving in front of excavator CANT RESET IF WE MOVED (TURNED)
-            self.vslam_reset_at = None
-            self.send_request('vslam_reset', vslam_reset_time)
-            while self.vslam_reset_at is None or self.sim_time - self.vslam_reset_at < timedelta(seconds=3):
-                try:
-                    self.wait(timedelta(seconds=1))
-                except BusShutdownException:
-                    raise
-                except:
-                    pass
+            #self.vslam_reset_at = None
+            #self.send_request('vslam_reset', vslam_reset_time)
+            #while self.vslam_reset_at is None or self.sim_time - self.vslam_reset_at < timedelta(seconds=3):
+            #    try:
+            #        self.wait(timedelta(seconds=1))
+            #    except BusShutdownException:
+            #        raise
+            #    except:
+            #        pass
 
             self.virtual_bumper = VirtualBumper(timedelta(seconds=3), 0.2) # radius of "stuck" area; a little more as the robot flexes
 
@@ -445,6 +448,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
                             # hauler approach, VSLAM should be running
                             self.send_request('external_command hauler_1 approach %f' % self.yaw)
+                            self.set_brakes(True)
 
                             # reset VSLAM (this should reset self.vslam_valid)
                             self.tf['vslam']['trans_matrix'] = None
@@ -474,6 +478,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                 raise
                             except:
                                 pass
+
+                            self.set_brakes(False)
                             self.send_request('external_command hauler_1 follow')
 
 
@@ -646,12 +652,14 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
                     print ("---- VOLATILE REACHED ----")
 
-                    #self.wait(timedelta(seconds=10))
-                    #vol_list.pop(index)
+                    try:
+                        self.wait(timedelta(seconds=2))
+                    except BusShutdownException:
+                        raise
+                    except Exception as e:
+                        pass
+
                     self.set_brakes(True)
-                    #self.wait(timedelta(seconds=3))
-                    #self.set_brakes(False)
-                    #continue
 
                     # TODO: could look for volatile while waiting
                     # wait for hauler to start following, will receive osgar broadcast when done
@@ -704,6 +712,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                     nma = normalizeAnglePIPI(self.mount_angle)
                                     nma = max(-math.pi/2, min(math.pi/2, nma)) # only move around the back of the robot
                                     self.send_request('external_command hauler_1 approach %f' % normalizeAnglePIPI(self.yaw + nma))
+
                                     # NOTE: this approach may bump excavator, scoop volume may worsen
                                     while not self.hauler_ready:
                                         try:
@@ -713,6 +722,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                         except:
                                             pass
                                     self.hauler_ready = False
+
 
                                     # wait for hauler to arrive, get its yaw, then we know which direction to drop
                                     drop_angle = normalizeAnglePIPI((self.hauler_yaw - self.yaw) - math.pi)
@@ -796,7 +806,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             Rr = np.asmatrix(np.array(((c, -s, 0), (s, c, 0), (0, 0, 1))))
 
                             # now in coord system WRT robot
-                            T = np.asmatrix(np.array(((1, 0, -abs(ARRIVAL_OFFSET)),(0, 1, 0),(0, 0, 1)))) # ARRIVAL OFFSET best scoooping distance from the center of robot
+                            T = np.asmatrix(np.array(((1, 0, -TYPICAL_VOLATILE_DISTANCE),(0, 1, 0),(0, 0, 1))))
                             c, s = np.cos(best_mount_angle), np.sin(best_mount_angle)
                             Rv = np.asmatrix(np.array(((c, -s, 0), (s, c, 0), (0, 0, 1))))
 
@@ -818,12 +828,15 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         except:
                             pass
 
+                    self.set_brakes(False)
                     if full_success:
                         break # do not de-attempt 2m back and 2m front
 
                 # end of for(0,+2,-4)
 
                 if accum == 0 and not self.hauler_pose_requested:
+                    self.set_brakes(True)
+
                     self.send_request('external_command hauler_1 approach %f' % self.yaw)
                     while not self.hauler_ready:
                         try:
@@ -841,10 +854,10 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         raise
                     except:
                         pass
+                    self.set_brakes(False)
 
                 self.send_request('external_command hauler_1 follow') # re-follow after each volatile
 
-                self.set_brakes(False)
 
             print("***************** VOLATILES EXHAUSTED ****************************")
 

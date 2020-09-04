@@ -21,7 +21,7 @@ TURN_ON = 12 # radius of circle when turning
 GO_STRAIGHT = float("inf")
 EXCAVATOR_DRIVING_GAP = 1.8 # can't be further or every bump will look like the excavator on lidar given the camera must be tilted down so that rover is visible up close
 EXCAVATOR_ONHOLD_GAP = 3 # can't be further or every bump will look like the excavator on lidar given the camera must be tilted down so that rover is visible up close
-EXCAVATOR_DIGGING_GAP = 0.55 # we should see the arm in the middle, not the back of the rover
+EXCAVATOR_DIGGING_GAP = 0.4 # we should see the arm in the middle, not the back of the rover
 DISTANCE_TOLERANCE = 0.3
 
 class ExcavatorLostException(Exception):
@@ -66,6 +66,8 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
             print(self.sim_time, self.robot_name, "Received external_command: %s" % str(data))
             command = data.split(" ")[1]
             self.driving_mode = command
+            self.set_brakes(False)
+
             if command == "goto":
                 # x, y, heading
                 self.goto = [float(n) for n in data.split(" ")[2:5]]
@@ -109,7 +111,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
             self.set_cam_angle(-0.1)
             self.use_gimbal = False
 
-            self.set_brakes(False)
+            self.set_brakes(True)
 
             #self.send_request('vslam_reset', self.vslam_reset_time)
 
@@ -150,6 +152,8 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                     raise
                 except:
                     pass
+
+            self.set_brakes(False)
 
             start_turn = self.sim_time
             while self.sim_time - start_turn < timedelta(seconds=60):
@@ -429,6 +433,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
             if self.excavator_yaw is None: # within requested distance and no outstanding yaw, report
                 if min(self.rover_distance, self.min_scan_distance) < self.target_excavator_distance:
                     self.publish("desired_movement", [0, 0, 0])
+                    self.set_brakes(True)
                     self.arrival_send_requested_at = self.sim_time
                     self.arrived_message_sent = True
                     self.excavator_yaw = None
