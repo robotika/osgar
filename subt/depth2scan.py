@@ -158,7 +158,7 @@ class DepthToScan(Node):
         self.verbose = False
         self.scale = np.array([1/math.cos(math.radians(30*(i-80)/80)) for i in range(160)])
         self.yaw, self.pitch, self.roll = None, None, None  # unknown values
-        self.depth_params = DepthParams()
+        self.depth_params = DepthParams(**config.get('depth_params', {}))
 
     def update(self):
         channel = super().update()
