@@ -167,15 +167,13 @@ class RospyRoverReqRep(RospyBaseReqRep):
             elif message_type == "set_brakes":
                 val = message.split(" ")[1]
                 if val.startswith("on"):
-                    brake_torque = 500.0
+                    brake_torque = 400.0
                 elif val.startswith("off"):
-                    brake_torque = 0.0
+                    brake_torque = 10.0
                 else:
                     brake_torque = float(val)
                 if "INFO" in self.logging_level:
                     print ("rospy_rover: Setting brakes to: %f" % brake_torque)
-                # TEST: always brake 10
-                brake_torque = 10.0
                 self.brakes(brake_torque)
                 return 'OK'
 
