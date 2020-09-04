@@ -706,13 +706,6 @@ class SpaceRoboticsChallenge(MoonNode):
                 break
         if with_stop:
             self.send_speed_cmd(0.0, 0.0)
-            # disable exceptions during wait or rover may brake forever
-            wasException = self.inException
-            self.inException = True
-            self.set_brakes(True)
-            self.wait(timedelta(milliseconds=200))
-            self.set_brakes(False)
-            self.inException = wasException
 
     def wait(self, dt):  # TODO refactor to some common class
         while self.sim_time is None:
