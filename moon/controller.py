@@ -412,8 +412,8 @@ class SpaceRoboticsChallenge(MoonNode):
         self.last_position = pose
 
         x, y, z = self.tf['odo']['latest_xyz']
-        x += math.cos(self.pitch) * math.cos(pose[2]) * dist
-        y += math.cos(self.pitch) * math.sin(pose[2]) * dist
+        x += math.cos(self.pitch) * math.cos(self.yaw) * dist
+        y += math.cos(self.pitch) * math.sin(self.yaw) * dist
         z += math.sin(self.pitch) * dist
         self.tf['odo']['latest_xyz'] = x, y, z
         self.tf['odo']['latest_quat'] = euler_to_quaternion(self.yaw, self.pitch, self.roll)
