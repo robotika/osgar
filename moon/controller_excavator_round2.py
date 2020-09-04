@@ -307,7 +307,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         try:
             self.wait_for_init()
 
-            self.set_brakes(False)
+            self.set_brakes(True) # prevent sliding down while waiting for arm to align
 
             self.set_cam_angle(-0.05)
             self.set_light_intensity("0.2")
@@ -329,6 +329,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     print(self.sim_time, self.robot_name, "Exception while waiting for arm to align: ", str(e))
 
 
+            self.set_brakes(False)
 
             # first, turn away from hauler
             # turn 360deg until seen, mark angle where the bbox was the biggest, then turn 180deg from there (want to face away as much as possible)
