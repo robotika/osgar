@@ -109,7 +109,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         while True:
             try:
                 with LidarCollisionMonitor(self):
-                    self.turn(math.copysign(math.radians(randrange(90,270)), direction), timeout=timedelta(seconds=20))
+                    self.turn(math.copysign(math.radians(self.rand.randrange(90,270)), direction), timeout=timedelta(seconds=20))
                     self.turn(math.radians(360), timeout=timedelta(seconds=40))
                     self.go_straight(30.0, timeout=timedelta(minutes=2))
             except ChangeDriverException as e:
@@ -285,7 +285,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                         print(self.sim_time, self.robot_name, "Bumper")
                         self.inException = True
                         self.go_straight(-1) # go 1m in opposite direction
-                        self.drive_around_rock(math.copysign(4, 1 if getrandbits(1) == 0 else -1)) # assume 6m the most needed
+                        self.drive_around_rock(math.copysign(4, 1 if self.rand.getrandbits(1) == 0 else -1)) # assume 6m the most needed
                         self.inException = False
                         continue
 
@@ -323,7 +323,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
 
                     try:
                         self.go_straight(-1) # go 1m in opposite direction
-                        self.drive_around_rock(math.copysign(4, 1 if getrandbits(1) == 0 else -1)) # assume 6m the most needed
+                        self.drive_around_rock(math.copysign(4, 1 if self.rand.getrandbits(1) == 0 else -1)) # assume 6m the most needed
                     except ExcavatorLostException as e:
                         self.excavator_waiting = True
                         self.send_request('external_command excavator_1 wait')

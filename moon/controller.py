@@ -585,7 +585,7 @@ class SpaceRoboticsChallenge(MoonNode):
                 self.avoidance_turn = AVOID_RADIUS
             else:
                 if self.avoidance_turn is None:
-                    self.avoidance_turn = AVOID_RADIUS if getrandbits(1) == 0 else -AVOID_RADIUS
+                    self.avoidance_turn = AVOID_RADIUS if self.rand.getrandbits(1) == 0 else -AVOID_RADIUS
             turn = self.avoidance_turn
             if (self.debug):
                 print(self.sim_time, self.robot_name, "Seeing object, turning: %d, distance %d" % (turn, self.scan_distance_to_obstacle))
@@ -726,7 +726,7 @@ class SpaceRoboticsChallenge(MoonNode):
             elif  self.scan_avg_distance_left * 0.8 > self.scan_avg_distance_right:
                 direction = 1
             else:
-                direction = 1 if getrandbits(1) == 0 else -1
+                direction = 1 if self.rand.getrandbits(1) == 0 else -1
 
         start_pose = self.xyz
         start_time = self.sim_time
