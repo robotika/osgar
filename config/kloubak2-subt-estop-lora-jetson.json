@@ -47,7 +47,7 @@
             "ad_center": 531,
             "ad_calibration_deg": 45,
             "ad_range": -178,
-            "max_join_angle_deg": 68
+            "max_joint_angle_deg": 68
           }
       },          
       "can": {
