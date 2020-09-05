@@ -66,6 +66,8 @@
               "camera_xyz": [0.1, 0.0, -0.08],
               "image_size": [640, 480],
               "principal_point": [320.5, 240.5],
+              "min_z": -0.6,
+              "max_z": 0.6,
               "disabled_vertical_diff_limit": 0.698, "vd_comment": "radians(40)",
               "max_slope": -0.436, "ms_comment": "radians(-25)"
             }
