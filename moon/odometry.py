@@ -34,11 +34,14 @@ class Odometry:
         fl, fr, bl, br = steering
         return abs(fl + bl) < self.circle_limit and abs(fr + br) < self.circle_limit
 
-    def update_joint_position(self, names, data, verbose=False):
+    def update_joint_position(self, names, data, imu=None, verbose=False):
         self.joint_name = names
         assert self.joint_name is not None
         if self.prev_position is None:
             self.prev_position = data
+
+        if imu is not None:
+            yaw, pitch, roll = imu
 
         diff = [b - a for a, b in zip(self.prev_position, data)]
         steering = [data[names.index(n + b'_steering_arm_joint')]
