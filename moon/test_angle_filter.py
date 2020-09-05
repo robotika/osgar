@@ -31,6 +31,7 @@ class AngleFilterTest(unittest.TestCase):
 
         self.assertAlmostEqual(af.yaw.get(), 0)
         self.assertAlmostEqual(af.roll.get(), 1)
+        self.assertEqual(af.get(), (0, 0, 1))
 
 # vim: expandtab sw=4 ts=4
 

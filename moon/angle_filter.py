@@ -39,4 +39,7 @@ class AngleFilterIMU:
         self.pitch.add(pitch)
         self.roll.add(roll)
 
+    def get(self):
+        return self.yaw.get(), self.pitch.get(), self.roll.get()
+
 # vim: expandtab sw=4 ts=4
