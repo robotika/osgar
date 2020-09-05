@@ -131,10 +131,6 @@ class Rover(MoonNode):
         yaw, pitch, roll = [normalizeAnglePIPI(math.radians(x/100)) for x in data]
         self.af.add(yaw, pitch, roll)
 
-        if self.verbose:
-            self.debug_arr.append([self.time.total_seconds(),] + [math.degrees(x) for x in [yaw, pitch, roll,
-                self.af.yaw.get(), self.af.pitch.get(), self.af.roll.get()]])
-
     def on_joint_position(self, data):
         # TODO: this only works for going straight, possibly with turning
         # this does not work at all for other types of moves such as going sideways
@@ -144,7 +140,7 @@ class Rover(MoonNode):
         right_wheel_angle = b'fr_steering_arm_joint'
         self.steering_angle = (data[self.joint_name.index(left_wheel_angle)] + data[self.joint_name.index(right_wheel_angle)]) / 2.0
 
-        self.odom.update_joint_position(self.joint_name, data, imu=self.af.get(), verbose=self.verbose)
+        self.odom.update_joint_position(self.joint_name, data, imu=self.af.get(), time=self.time, verbose=self.verbose)
         x, y, heading = self.odom.pose2d
         self.bus.publish('odo_pose', [round(x * 1000),
                                     round(y * 1000),
@@ -159,8 +155,8 @@ class Rover(MoonNode):
             speed.append(s)
             self.motor_pid[i].update(s)
 
-#        if self.verbose:
-#            self.debug_arr.append([self.time.total_seconds(),] + speed)
+        if self.verbose:
+            self.debug_arr.append([self.time.total_seconds(),] + speed)
 
     def on_joint_effort(self, data):
         assert self.joint_name is not None
@@ -307,11 +303,11 @@ class Rover(MoonNode):
     def draw(self):
         # for debugging
         import matplotlib.pyplot as plt
-#        assert len(self.debug_arr) == len(self.odom.debug_arr), (len(self.debug_arr), len(self.odom.debug_arr))
+        assert len(self.debug_arr) == len(self.odom.debug_arr), (len(self.debug_arr), len(self.odom.debug_arr))
         arr = self.debug_arr
         t = [a[0] for a in arr]
         values = [a[1:] for a in arr]
-#        values = self.odom.debug_arr
+        values = self.odom.debug_arr
 
         line = plt.plot(t, values, '-', linewidth=2)
 
