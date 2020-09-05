@@ -421,10 +421,11 @@ class SubTChallenge:
         start_time = self.sim_time_sec
         print('MD', self.xyz, distance3D(self.xyz, trace.trace[0]), trace.trace)
         while distance3D(self.xyz, trace.trace[0]) > END_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
-            if self.update() == 'scan':
+            if self.update() in ['scan', 'scan360']:
                 target_x, target_y = trace.where_to(self.xyz, max_target_distance)[:2]
                 x, y = self.xyz[:2]
 #                print((x, y), (target_x, target_y))
+                print((x, y, math.degrees(self.yaw)), (target_x, target_y))
                 desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
                 safety = self.go_safely(desired_direction)
                 if safety_limit is not None and safety < safety_limit:
@@ -467,6 +468,33 @@ class SubTChallenge:
             else:
                 self.virtual_bumper.update_pose(self.time, pose)
         self.xyz = x, y, z
+        self.trace.update_trace(self.xyz)
+
+    def on_pose3d(self, timestamp, data):
+        xyz, rot = data
+        ypr = quaternion.euler_zyx(rot)
+        pose = (xyz[0], xyz[1], ypr[0])
+        if self.last_position is not None:
+            self.is_moving = (self.last_position != pose)
+            dist = math.hypot(pose[0] - self.last_position[0], pose[1] - self.last_position[1])
+            direction = ((pose[0] - self.last_position[0]) * math.cos(self.last_position[2]) +
+                         (pose[1] - self.last_position[1]) * math.sin(self.last_position[2]))
+            if direction < 0:
+                dist = -dist
+        else:
+            dist = 0.0
+        self.last_position = pose
+        self.traveled_dist += dist
+        x, y, z = xyz
+        x0, y0, z0 = self.offset
+        self.last_send_time = self.bus.publish('pose2d', [round((x + x0) * 1000), round((y + y0) * 1000),
+                                    round(math.degrees(self.yaw) * 100)])
+        if self.virtual_bumper is not None:
+            if self.is_virtual:
+                self.virtual_bumper.update_pose(timedelta(seconds=self.sim_time_sec), pose)
+            else:
+                self.virtual_bumper.update_pose(self.time, pose)
+        self.xyz = tuple(xyz)
         self.trace.update_trace(self.xyz)
 
     def on_acc(self, timestamp, data):

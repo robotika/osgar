@@ -1043,7 +1043,7 @@ class Demo:
             return True
 
         if (self.grey_img is None or self.depth is None
-                or abs(self.depth_time - self.img_time) > 1e-2):
+                or abs(self.depth_time - self.img_time) > 0.15):
             return True  # Nothing to do now, but that's OK.
 
         imu_orientation = (None if self.imu_rpy is None else
