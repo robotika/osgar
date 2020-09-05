@@ -107,11 +107,11 @@ class ArtifactDetector(Node):
                 'detector_type': 'colormatch',
                 'min_size': 10,
                 'max_size': 700,
-                'mask': [200, CAMERA_HEIGHT, 0, CAMERA_WIDTH], # [Y,X] order - only look in lower half of screen
+                'mask': [180, CAMERA_HEIGHT, 0, CAMERA_WIDTH], # [Y,X] order - only look in lower half of screen
                 'pixel_count_threshold': 150,
                 'bbox_union_count': 10,
-                'hue_max_difference': 1,
-                'hue_match': 26, # from RGB FFA616
+                'hue_max_difference': 3,
+                'hue_match': 27, # from RGB FFA616
                 'subsequent_detects_required': 1
             },
             {
@@ -123,7 +123,7 @@ class ArtifactDetector(Node):
                 'pixel_count_threshold': 150,
                 'bbox_union_count': 3,
                 'hue_max_difference': 3,
-                'hue_match': 28, # from RGB FFA616
+                'hue_match': 27, # from RGB FFA616
                 'subsequent_detects_required': 1
             }
         ]
