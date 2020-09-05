@@ -46,7 +46,6 @@ class Excavator(Rover):
 
         self.target_arm_position = None
         self.current_arm_position = None
-        self.last_known_safe_position = None
 
         self.scoop_time = None
         self.execute_bucket_queue = []
@@ -65,7 +64,6 @@ class Excavator(Rover):
             [10, [-0.3, -0.8, 3]], # drop
             [10, [-0.6, -0.8, 3.2]] # back to neutral/travel position
         )
-        self.bucket_last_status_timestamp = None
 
     def send_bucket_position(self, bucket_params):
         mount, basearm, distalarm, bucket = bucket_params
@@ -121,21 +119,17 @@ class Excavator(Rover):
 
         # TODO: on a slope one should take into consideration current pitch and roll of the robot
         if self.sim_time is not None:
-            if self.current_arm_position is not None and self.target_arm_position is not None and rad_array_close(self.target_arm_position, self.current_arm_position):
-                self.scoop_time = None
-                self.target_arm_position = None
-
-            if len(self.execute_bucket_queue) > 0 and (self.scoop_time is None or self.target_arm_position is None):
-                if self.scoop_time is not None and self.sim_time > self.scoop_time and self.last_known_safe_position is not None:
-                    # timeout, return arm to where we came from first
-                    # eg: got stuck under hauler (eg scooped under its wheel)
-                    # can't reach drop position, banging edge of the bin
-                    duration, bucket_params = self.last_known_safe_position
-                else:
-                    if self.target_arm_position is not None:
-                        self.last_known_safe_position = [10, self.target_arm_position]
-                    duration, bucket_params = self.execute_bucket_queue.pop(0)
-#                print ("bucket_position %f %f %f " % (bucket_params[0], bucket_params[1],bucket_params[2]))
+            if (
+                    len(self.execute_bucket_queue) > 0 and
+                    (
+                        self.scoop_time is None or
+                        self.sim_time > self.scoop_time or
+                        self.target_arm_position is None or
+                        rad_array_close(self.target_arm_position, self.current_arm_position)
+                    )
+            ):
+                duration, bucket_params = self.execute_bucket_queue.pop(0)
+                # print ("bucket_position %f %f %f " % (bucket_params[0], bucket_params[1],bucket_params[2]))
                 self.send_bucket_position(bucket_params)
                 self.scoop_time = self.sim_time + timedelta(seconds=duration)
 
