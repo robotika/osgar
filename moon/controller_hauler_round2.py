@@ -119,9 +119,12 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
             except (VirtualBumperException, LidarCollisionException)  as e:
                 self.inException = True
                 print(self.sim_time, "Lidar or Virtual Bumper!")
-                self.go_straight(-3, timeout=timedelta(seconds=20))
-                deg_angle = self.rand.randrange(-180, -90)
-                self.turn(math.radians(deg_angle), timeout=timedelta(seconds=10))
+                try:
+                    self.go_straight(-3, timeout=timedelta(seconds=20))
+                    deg_angle = self.rand.randrange(-180, -90)
+                    self.turn(math.radians(deg_angle), timeout=timedelta(seconds=10))
+                except:
+                    self.publish("desired_movement", [0, 0, 0])
                 self.inException = False
 
 
