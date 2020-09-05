@@ -22,8 +22,8 @@ TURNING_ANGULAR_SPEED = math.pi/8
 AD_CENTER = 531 # K2, can be modified by config
 AD_CALIBRATION_DEG = 45  # K2, can be modified by config
 AD_RANGE = -178  # K2, can be modified by config
-MAX_JOIN_ANGLE_DEG = 68
-MAX_JOIN_ANGLE = math.radians(MAX_JOIN_ANGLE_DEG) # K2, can be modified by config
+MAX_JOINT_ANGLE_DEG = 68
+MAX_JOINT_ANGLE = math.radians(MAX_JOINT_ANGLE_DEG) # K2, can be modified by config
 AD_CENTER2 = None
 AD_RANGE2 = None
 
@@ -42,7 +42,7 @@ CAN_ID_SYNC = CAN_ID_VESC_FRONT_L
 CAN_ID_CURRENT = 0x70
 CAN_ID_DOWNDROPS_FRONT = 0x71
 CAN_ID_DOWNDROPS_REAR = 0x72
-CAN_ID_JOIN_ANGLE = 0x80
+CAN_ID_JOINT_ANGLE = 0x80
 CAN_ID_REGULATED_VOLTAGE = 0x81
 CAN_ID_VOLTAGE = 0x82
 CAN_ID_ENCODERS = 0x83
@@ -69,7 +69,7 @@ def CAN_triplet(msg_id, data):
     return [msg_id, bytes(data), 0]  # flags=0, i.e basic addressing
 
 
-def draw(arr, join_arr):
+def draw(arr, joint_arr):
     import matplotlib.pyplot as plt
     t = [a[0] for a in arr]
     values = [a[1:] for a in arr]
@@ -81,7 +81,7 @@ def draw(arr, join_arr):
                       'enc front left', 'enc front right',
                       'enc rear left', 'enc rear right'])
 
-    line = ax[1].plot(t, join_arr, '-', linewidth=2)
+    line = ax[1].plot(t, joint_arr, '-', linewidth=2)
 
     plt.xlabel('time (s)')
     plt.show()
@@ -98,7 +98,7 @@ def draw_enc_stat(arr):
     plt.show()
 
 
-def draw_4wd(speed_arr, join_arr):
+def draw_4wd(speed_arr, joint_arr):
     import numpy as np
     from matplotlib import pyplot as plt
 
@@ -117,17 +117,17 @@ def draw_4wd(speed_arr, join_arr):
     else:
         print("No speed data")
 
-    if len(join_arr) > 0:
-        join_arr = np.array(join_arr)
-        print(join_arr.shape)
+    if len(joint_arr) > 0:
+        joint_arr = np.array(joint_arr)
+        print(joint_arr.shape)
         ax2 = fig.add_subplot(212)
-        ax2.plot(join_arr[:, 0], join_arr[:, 1], "+r", label="actual angle")
-        ax2.plot(join_arr[:, 0], join_arr[:, 2], "+g", label="desired angle")
+        ax2.plot(joint_arr[:, 0], joint_arr[:, 1], "+r", label="actual angle")
+        ax2.plot(joint_arr[:, 0], joint_arr[:, 2], "+g", label="desired angle")
         ax2.set_xlabel("Time (s)")
         ax2.set_ylabel("Angle (deg)")
         ax2.legend()
     else:
-        print("No join data")
+        print("No joint data")
 
     plt.show()
 
@@ -149,11 +149,11 @@ def compute_desired_angle(desired_speed, desired_angular_speed):
     radius = desired_speed/desired_angular_speed
     if abs(radius) < 0.000001:
         # this case is undefined, we can only for large angle
-        return math.copysign(MAX_JOIN_ANGLE, desired_angular_speed)
+        return math.copysign(MAX_JOINT_ANGLE, desired_angular_speed)
 
     desired_angle = 2 * math.atan(CENTER_AXLE_DISTANCE / radius)
-    if abs(desired_angle) > MAX_JOIN_ANGLE:
-        return math.copysign(MAX_JOIN_ANGLE, desired_angle)
+    if abs(desired_angle) > MAX_JOINT_ANGLE:
+        return math.copysign(MAX_JOINT_ANGLE, desired_angle)
     return desired_angle
 
 
@@ -219,7 +219,7 @@ def setup_global_const(config):
     global AD_CALIBRATION_DEG
     global AD_RANGE
     global AD_RANGE2
-    global MAX_JOIN_ANGLE
+    global MAX_JOINT_ANGLE
 #    global TURNING_WHEEL_SPEED
     WHEEL_DISTANCE = config.get("wheel_distance", WHEEL_DISTANCE )
     CENTER_AXLE_DISTANCE = config.get("center_axle_distance", CENTER_AXLE_DISTANCE )
@@ -228,7 +228,7 @@ def setup_global_const(config):
     AD_CALIBRATION_DEG = config.get("ad_calibration_deg", AD_CALIBRATION_DEG )
     AD_RANGE = config.get("ad_range", AD_RANGE )
     AD_RANGE2 = config.get("ad_range2")
-    MAX_JOIN_ANGLE = math.radians( config.get("max_join_angle_deg", MAX_JOIN_ANGLE_DEG) )
+    MAX_JOINT_ANGLE = math.radians( config.get("max_joint_angle_deg", MAX_JOINT_ANGLE_DEG) )
 #    TURNING_WHEEL_SPEED = TURNING_ANGULAR_SPEED * WHEEL_DISTANCE / 2
 
 
@@ -266,9 +266,9 @@ class RobotKloubak(Node):
         self.last_pose_encoders = [0, 0,] * self.num_axis  # accumulated tacho readings
         self.encoders = [0, 0,] * self.num_axis  # handling 16bit integer overflow
         self.last_encoders_16bit = None  # raw readings
-        self.last_join_angle = None  # join angle in radians
-        self.last_join_angle2 = None  # # join2 angle in radians
-        self.prev_joins_angle = None  # angle between front and rear axle, used for heading
+        self.last_joint_angle = None  # joint angle in radians
+        self.last_joint_angle2 = None  # # joint2 angle in radians
+        self.prev_joints_angle = None  # angle between front and rear axle, used for heading
         self.voltage = None
         self.downdrops_front = None  # array of downdrop sensors
         self.downdrops_rear = None
@@ -280,7 +280,7 @@ class RobotKloubak(Node):
 
         self.verbose = False  # should be in Node
         self.enc_debug_arr = []
-        self.join_debug_arr = []
+        self.joint_debug_arr = []
         self.speed_debug_arr = []
         self.count = [0, 0,] * self.num_axis
         self.count_arr = []
@@ -381,7 +381,7 @@ class RobotKloubak(Node):
         if self.verbose:
             self.count_arr.append([self.time.total_seconds()] + self.count)
 
-    def compute_pose(self, left, right, join_angle_diff = 0):
+    def compute_pose(self, left, right, joint_angle_diff = 0):
         """Update internal pose with 'dt' step"""
         if left is None or right is None:
             return False, None, None
@@ -391,7 +391,7 @@ class RobotKloubak(Node):
         metricR = ENC_SCALE * right
 
         dist = (metricL + metricR)/2.0
-        angle = (metricR - metricL)/WHEEL_DISTANCE + join_angle_diff
+        angle = (metricR - metricL)/WHEEL_DISTANCE + joint_angle_diff
 
         # advance robot by given distance and angle
         if abs(angle) < 0.0000001:  # EPS
@@ -411,27 +411,27 @@ class RobotKloubak(Node):
         diff = [e - prev for e, prev in zip(self.encoders, self.last_pose_encoders)]
         self.last_pose_encoders = self.encoders
         if self.num_axis == 2:
-            if self.last_join_angle is None:
+            if self.last_joint_angle is None:
                 return False
-            if self.prev_joins_angle is None:
-                self.prev_joins_angle = self.last_join_angle
+            if self.prev_joints_angle is None:
+                self.prev_joints_angle = self.last_joint_angle
                 return False
-            join_angle_diff = self.last_join_angle - self.prev_joins_angle
-            self.prev_joins_angle = self.last_join_angle
+            joint_angle_diff = self.last_joint_angle - self.prev_joints_angle
+            self.prev_joints_angle = self.last_joint_angle
             if self.desired_speed >= 0:
-                ret, pose, motion = self.compute_pose(diff[INDEX_REAR_LEFT], diff[INDEX_REAR_RIGHT], join_angle_diff)
+                ret, pose, motion = self.compute_pose(diff[INDEX_REAR_LEFT], diff[INDEX_REAR_RIGHT], joint_angle_diff)
             else:
                 ret, pose, motion = self.compute_pose(diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT])
         elif self.num_axis == 3:
-            if self.last_join_angle is None or self.last_join_angle2 is None:
+            if self.last_joint_angle is None or self.last_joint_angle2 is None:
                 return False
-            if self.prev_joins_angle is None:
-                self.prev_joins_angle = self.last_join_angle + self.last_join_angle2
+            if self.prev_joints_angle is None:
+                self.prev_joints_angle = self.last_joint_angle + self.last_joint_angle2
                 return False
-            join_angle_diff = self.last_join_angle + self.last_join_angle2 - self.prev_joins_angle
-            self.prev_joins_angle = self.last_join_angle + self.last_join_angle2
+            joint_angle_diff = self.last_joint_angle + self.last_joint_angle2 - self.prev_joints_angle
+            self.prev_joints_angle = self.last_joint_angle + self.last_joint_angle2
             if self.desired_speed >= 0:
-                ret, pose, motion = self.compute_pose(diff[INDEX_REAR_K3_LEFT], diff[INDEX_REAR_K3_RIGHT], join_angle_diff)
+                ret, pose, motion = self.compute_pose(diff[INDEX_REAR_K3_LEFT], diff[INDEX_REAR_K3_RIGHT], joint_angle_diff)
             else:
                 ret, pose, motion = self.compute_pose(diff[INDEX_FRONT_LEFT], diff[INDEX_FRONT_RIGHT])
         else:
@@ -440,13 +440,13 @@ class RobotKloubak(Node):
         if ret:
             self.pose = pose
 
-        if self.verbose and ret and self.last_join_angle is not None:
+        if self.verbose and ret and self.last_joint_angle is not None:
 #            self.debug_odo.append((self.time.total_seconds(), motion[0], motion_rear[0]))
 #            self.debug_odo.append((self.time.total_seconds(), motion[1], motion_rear[1]))
 #            self.debug_odo.append((self.time.total_seconds(), motion[0], motion[1],
 #                                   motion_rear[0], motion_rear[1],
-#                                   math.degrees(self.last_join_angle)))
-            estimate = compute_rear(motion[0], motion[1], self.last_join_angle)
+#                                   math.degrees(self.last_joint_angle)))
+            estimate = compute_rear(motion[0], motion[1], self.last_joint_angle)
 #            self.debug_odo.append((self.time.total_seconds(), motion[0], motion_rear[0], estimate[0]))
 #            self.debug_odo.append((self.time.total_seconds(), motion[1], motion_rear[1], estimate[1]))
 #            self.debug_odo.append((self.time.total_seconds(), motion_rear[1], estimate[1]))
@@ -463,20 +463,20 @@ class RobotKloubak(Node):
 #                print(current)
             else:
                 self.can_errors += 1
-        elif msg_id == CAN_ID_JOIN_ANGLE:
+        elif msg_id == CAN_ID_JOINT_ANGLE:
             if len(payload) == 4:
                 if self.num_axis == 3:
-                    analog_join_angle, analog_join_angle2 = struct.unpack('>hh', payload)
-    #                print(self.last_join_angle,payload)
-#                    print(self.last_join_angle, self.last_join_angle2)
-                    self.last_join_angle, self.last_join_angle2 = joint_rad(analog_join_angle), joint_rad(analog_join_angle2, second_ang=True)
-                    self.publish('joint_angle', [round(math.degrees(self.last_join_angle)*100), round(math.degrees(self.last_join_angle2)*100)])
+                    analog_joint_angle, analog_joint_angle2 = struct.unpack('>hh', payload)
+    #                print(self.last_joint_angle,payload)
+#                    print(self.last_joint_angle, self.last_joint_angle2)
+                    self.last_joint_angle, self.last_joint_angle2 = joint_rad(analog_joint_angle), joint_rad(analog_joint_angle2, second_ang=True)
+                    self.publish('joint_angle', [round(math.degrees(self.last_joint_angle)*100), round(math.degrees(self.last_joint_angle2)*100)])
                 else:
-                    analog_join_angle = struct.unpack('>i', payload)[0]
-#                    print(self.last_join_angle,payload)
-#                    print(self.last_join_angle)
-                    self.last_join_angle = joint_rad(analog_join_angle)
-                    self.publish('joint_angle', [round(math.degrees(self.last_join_angle)*100)])
+                    analog_joint_angle = struct.unpack('>i', payload)[0]
+#                    print(self.last_joint_angle,payload)
+#                    print(self.last_joint_angle)
+                    self.last_joint_angle = joint_rad(analog_joint_angle)
+                    self.publish('joint_angle', [round(math.degrees(self.last_joint_angle)*100)])
             else:
                 self.can_errors += 1
         elif msg_id == CAN_ID_VOLTAGE:
@@ -543,21 +543,21 @@ class RobotKloubak(Node):
 
 
     def update_drive_three_axles(self, timestamp, data):
-        if self.last_join_angle and self.desired_speed > 0:
-            angle = self.last_join_angle
+        if self.last_joint_angle and self.desired_speed > 0:
+            angle = self.last_joint_angle
             assert abs(angle) < math.pi/2, angle * 180 / math.pi
             self.v_fl, self.v_fr, self.v_rl, self.v_rr = calculate_wheels_speeds(self.desired_speed,
                                                                                  self.desired_angular_speed, angle)
             if self.verbose:
-                self.join_debug_arr.append([timestamp.total_seconds(), angle*180/math.pi, compute_desired_angle( self.desired_speed, self. desired_angular_speed )*180/math.pi] )
+                self.joint_debug_arr.append([timestamp.total_seconds(), angle*180/math.pi, compute_desired_angle( self.desired_speed, self. desired_angular_speed )*180/math.pi] )
 
-        elif self.last_join_angle2 and self.desired_speed < 0:
-            angle = self.last_join_angle2
+        elif self.last_joint_angle2 and self.desired_speed < 0:
+            angle = self.last_joint_angle2
             assert abs(angle) < math.pi / 2, angle * 180 / math.pi
             self.v_fl, self.v_fr, self.v_rl, self.v_rr = calculate_wheels_speeds(self.desired_speed,
                                                                                  self.desired_angular_speed, angle)
             if self.verbose:
-                self.join_debug_arr.append([timestamp.total_seconds(), angle*180/math.pi, compute_desired_angle( self.desired_speed, self. desired_angular_speed )*180/math.pi] )
+                self.joint_debug_arr.append([timestamp.total_seconds(), angle*180/math.pi, compute_desired_angle( self.desired_speed, self. desired_angular_speed )*180/math.pi] )
 
         if self.process_packet(data):
             stop = [0, 0, 0, 0]
@@ -612,13 +612,13 @@ class RobotKloubak(Node):
         # update commands for all 4 motors only with new angle reading
         # (Kloubak does not have any SYNC signal for all motor drivers)
         # TODO integration front driver?
-        if self.last_join_angle:
-            angle = self.last_join_angle
+        if self.last_joint_angle:
+            angle = self.last_joint_angle
             assert abs(angle) < math.pi / 2, angle * 180 / math.pi
             self.v_fl, self.v_fr, self.v_rl, self.v_rr = calculate_wheels_speeds(self.desired_speed,
                                                                                  self.desired_angular_speed, angle)
             if self.verbose:
-                self.join_debug_arr.append([timestamp.total_seconds(), angle*180/math.pi, compute_desired_angle( self.desired_speed, self. desired_angular_speed )*180/math.pi] )
+                self.joint_debug_arr.append([timestamp.total_seconds(), angle*180/math.pi, compute_desired_angle( self.desired_speed, self. desired_angular_speed )*180/math.pi] )
 
         if self.process_packet(data):
             stop = [0, 0, 0, 0]
@@ -651,9 +651,9 @@ class RobotKloubak(Node):
 
     def update_drive_front_wheels(self, timestamp, data):
         send_speed = self.desired_speed
-        if self.last_join_angle is not None and abs(self.desired_speed) > MIN_SPEED:
+        if self.last_joint_angle is not None and abs(self.desired_speed) > MIN_SPEED:
             desired_angle = compute_desired_angle(self.desired_speed, self.desired_angular_speed)
-            angle = self.last_join_angle
+            angle = self.last_joint_angle
             angle_diff = abs( desired_angle - angle )
             if angle_diff > 0.2 and self.desired_speed > 0:
                 send_speed = max(MIN_SPEED, self.desired_speed * (1.2 - angle_diff))  # 1 rad is 57 deg
@@ -673,7 +673,7 @@ class RobotKloubak(Node):
                 self.enc_debug_arr.append((timestamp.total_seconds(), cmd_l, cmd_r,
                     self.last_encoders_front_left, self.last_encoders_front_right,
                     self.last_encoders_rear_left, self.last_encoders_rear_right))
-                self.join_debug_arr.append(math.degrees(self.last_join_angle))
+                self.joint_debug_arr.append(math.degrees(self.last_joint_angle))
 
             rear_drive = False  # True  # experimental
             if rear_drive and self.desired_speed > 0:
@@ -681,9 +681,9 @@ class RobotKloubak(Node):
                 self.publish('can', CAN_triplet(0x11, stop))  # right front
                 self.publish('can', CAN_triplet(0x12, stop))  # left front
 
-                if self.last_join_angle is not None:
+                if self.last_joint_angle is not None:
                     desired_angle = compute_desired_angle(self.desired_speed, self.desired_angular_speed)
-                    angle = self.last_join_angle
+                    angle = self.last_joint_angle
                     diff = abs(desired_angle - angle)
                     speed = self.desired_speed * (1 - diff/math.radians(80))
 
@@ -762,12 +762,12 @@ class RobotKloubak(Node):
         """
         Debug - draw encoders
         """
-#        draw(self.enc_debug_arr, self.join_debug_arr)
+#        draw(self.enc_debug_arr, self.joint_debug_arr)
 #        print(self.count_arr)
 #        print(self.count_arr[-1])
 #        draw_enc_stat(self.count_arr)
 #        draw_enc_stat(self.debug_odo)
-        draw_4wd( self.speed_debug_arr, self.join_debug_arr )
+        draw_4wd( self.speed_debug_arr, self.joint_debug_arr )
 #        draw_enc_stat(self.debug_downdrops_front)
 #        draw_enc_stat(self.debug_downdrops_rear)
 
