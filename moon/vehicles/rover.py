@@ -64,6 +64,7 @@ from osgar.lib.mathex import normalizeAnglePIPI
 from moon.moonnode import MoonNode, WHEEL_RADIUS, WHEEL_SEPARATION_WIDTH, WHEEL_SEPARATION_LENGTH
 from moon.motorpid import MotorPID
 from moon.odometry import Odometry
+from moon.angle_filter import AngleFilterIMU
 
 WHEEL_NAMES = ['fl', 'fr', 'bl', 'br']
 
@@ -95,10 +96,7 @@ class Rover(MoonNode):
         self.verbose = False
         self.prev_position = None
         self.odom = Odometry()
-        self.roll = 0.0
-        self.pitch = 0.0
-        self.yaw = 0.0
-        self.yaw_offset = None
+        self.af = AngleFilterIMU()
         self.in_driving_recovery = False
         self.steering_wait_start = None
         self.steering_wait_repeat = None
@@ -130,13 +128,12 @@ class Rover(MoonNode):
         self.drive_radius, self.drive_camera_angle, self.drive_speed = data
 
     def on_rot(self, data):
-        rot = data
-        (temp_yaw, self.pitch, self.roll) = [normalizeAnglePIPI(math.radians(x/100)) for x in rot]
+        yaw, pitch, roll = [normalizeAnglePIPI(math.radians(x/100)) for x in data]
+        self.af.add(yaw, pitch, roll)
 
-        if self.yaw_offset is None:
-            self.yaw_offset = -temp_yaw
-        self.yaw = temp_yaw + self.yaw_offset
-        #print ("yaw: %f, pitch: %f, roll: %f" % (self.yaw, self.pitch, self.roll))
+        if self.verbose:
+            self.debug_arr.append([self.time.total_seconds(),] + [math.degrees(x) for x in [yaw, pitch, roll,
+                self.af.yaw.get(), self.af.pitch.get(), self.af.roll.get()]])
 
     def on_joint_position(self, data):
         # TODO: this only works for going straight, possibly with turning
@@ -162,8 +159,8 @@ class Rover(MoonNode):
             speed.append(s)
             self.motor_pid[i].update(s)
 
-        if self.verbose:
-            self.debug_arr.append([self.time.total_seconds(),] + speed)
+#        if self.verbose:
+#            self.debug_arr.append([self.time.total_seconds(),] + speed)
 
     def on_joint_effort(self, data):
         assert self.joint_name is not None
@@ -310,11 +307,11 @@ class Rover(MoonNode):
     def draw(self):
         # for debugging
         import matplotlib.pyplot as plt
-        assert len(self.debug_arr) == len(self.odom.debug_arr), (len(self.debug_arr), len(self.odom.debug_arr))
+#        assert len(self.debug_arr) == len(self.odom.debug_arr), (len(self.debug_arr), len(self.odom.debug_arr))
         arr = self.debug_arr
         t = [a[0] for a in arr]
-#        values = [a[1:] for a in arr]
-        values = self.odom.debug_arr
+        values = [a[1:] for a in arr]
+#        values = self.odom.debug_arr
 
         line = plt.plot(t, values, '-', linewidth=2)
 
