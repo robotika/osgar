@@ -486,8 +486,7 @@ class SubTChallenge:
         self.last_position = pose
         self.traveled_dist += dist
         x, y, z = xyz
-        x0, y0, z0 = self.offset
-        self.last_send_time = self.bus.publish('pose2d', [round((x + x0) * 1000), round((y + y0) * 1000),
+        self.last_send_time = self.bus.publish('pose2d', [round(x * 1000), round(y * 1000),
                                     round(math.degrees(self.yaw) * 100)])
         if self.virtual_bumper is not None:
             if self.is_virtual:
