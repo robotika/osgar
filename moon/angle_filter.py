@@ -24,4 +24,19 @@ class AngleFilter:
             return None
         return math.atan2(sum(self.values_y), sum(self.values_x))
 
+
+class AngleFilterIMU:
+    """
+      Convenience IMU filter for all 3 angles
+    """
+    def __init__(self, history_size=10):
+        self.yaw = AngleFilter(history_size=history_size)
+        self.pitch = AngleFilter(history_size=history_size)
+        self.roll = AngleFilter(history_size=history_size)
+
+    def add(self, yaw, pitch, roll):
+        self.yaw.add(yaw)
+        self.pitch.add(pitch)
+        self.roll.add(roll)
+
 # vim: expandtab sw=4 ts=4

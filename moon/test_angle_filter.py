@@ -1,7 +1,7 @@
 import unittest
 import math
 
-from moon.angle_filter import AngleFilter
+from moon.angle_filter import AngleFilter, AngleFilterIMU
 
 
 class AngleFilterTest(unittest.TestCase):
@@ -24,6 +24,13 @@ class AngleFilterTest(unittest.TestCase):
         af.add(3)  # i.e. almost PI
         af.add(-3)
         self.assertAlmostEqual(af.get(), math.pi)
+
+    def test_imu_filter(self):
+        af = AngleFilterIMU()
+        af.add(0, 0, 1)
+
+        self.assertAlmostEqual(af.yaw.get(), 0)
+        self.assertAlmostEqual(af.roll.get(), 1)
 
 # vim: expandtab sw=4 ts=4
 
