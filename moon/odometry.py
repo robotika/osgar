@@ -3,6 +3,9 @@
 """
 import math
 
+from osgar.lib.mathex import normalizeAnglePIPI
+
+
 # TODO remove duplicity from moon\vehicles\rover.py !!!
 WHEEL_RADIUS = 0.275  # meters
 WHEEL_SEPARATION_WIDTH = 1.87325  # meters
@@ -34,7 +37,17 @@ class Odometry:
         fl, fr, bl, br = steering
         return abs(fl + bl) < self.circle_limit and abs(fr + br) < self.circle_limit
 
-    def update_joint_position(self, names, data, imu=None, verbose=False):
+    def circle_update(self, steering, drive):
+        # the angular speed is identical on the whole robot body
+        # angular_speed = wheel_speed/driving_wheel_radius
+        # sin(steering_angle) = (L/2)/driving_wheel_radius
+        left_angular = ((drive[0] * math.sin(steering[0]) - drive[2] * math.sin(steering[2]))/(WHEEL_SEPARATION_LENGTH/2))/2
+        right_angular = ((drive[1] * math.sin(steering[1]) - drive[3] * math.sin(steering[3]))/(WHEEL_SEPARATION_LENGTH/2))/2
+        angle = (left_angular + right_angular)/2
+        dist = sum(drive)/4  # TODO correct it
+        return angle, dist
+
+    def update_joint_position(self, names, data, imu=None, time=None, verbose=False):
         self.joint_name = names
         assert self.joint_name is not None
         if self.prev_position is None:
@@ -46,12 +59,14 @@ class Odometry:
         diff = [b - a for a, b in zip(self.prev_position, data)]
         steering = [data[names.index(n + b'_steering_arm_joint')]
                     for n in WHEEL_NAMES]
-        if verbose:
-            self.debug_arr.append(steering)
         x, y, heading = self.pose2d
         drive = [WHEEL_RADIUS * diff[names.index(n + b'_wheel_joint')]
                  for n in WHEEL_NAMES]
+        if verbose:
+#            self.debug_arr.append(steering)
+            self.debug_arr.append([normalizeAnglePIPI(heading), yaw])
         if self.is_crab_step(steering):
+            mode = 'CRAB'
             dist = sum(drive)/4
             # TODO use rather abs min distance with sign
             angle = sum(steering)/4  # all wheels point the same direction
@@ -59,23 +74,20 @@ class Odometry:
             y += math.sin(heading + angle) * dist
             # expected no change of heading
         elif self.is_turn_in_place(steering):
+            mode = 'TURN-IN-PLACE'
             # not expected change in x and y coordinates
             # average distance driven on wheel on the circle
             dist = (-drive[0] + drive[1] - drive[2] + drive[3])/4
             radius = math.hypot(WHEEL_SEPARATION_WIDTH/2, WHEEL_SEPARATION_LENGTH/2)
             heading += dist/radius
         elif self.is_on_circle(steering):
-            # the angular speed is identical on the whole robot body
-            # angular_speed = wheel_speed/driving_wheel_radius
-            # sin(steering_angle) = (L/2)/driving_wheel_radius
-            left_angular = ((drive[0] * math.sin(steering[0]) - drive[1] * math.sin(steering[1]))/(WHEEL_SEPARATION_LENGTH/2))/2
-            right_angular = ((drive[2] * math.sin(steering[2]) - drive[3] * math.sin(steering[3]))/(WHEEL_SEPARATION_LENGTH/2))/2
-            angle = (left_angular + right_angular)/2
-            dist = sum(drive)/4  # TODO correct it
+            mode = 'CIRCLE'
+            angle, dist = self.circle_update(steering, drive)
             x += math.cos(heading) * dist
             y += math.sin(heading) * dist
             heading += angle
         else:
+            mode = 'SKID'
             #assert False, (steering, drive)
             # measure odometry from rear wheels
             name = b'bl_wheel_joint'
@@ -87,6 +99,9 @@ class Odometry:
             x += math.cos(heading) * dist
             y += math.sin(heading) * dist
             heading += angle
+
+        if verbose:
+            print(time, mode, [int(math.degrees(s)) for s in steering], [int(1000*d) for d in drive])
         self.prev_position = data[:]
         self.pose2d = x, y, heading
         return self.pose2d

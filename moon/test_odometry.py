@@ -90,5 +90,13 @@ class MoonOdometryTest(unittest.TestCase):
         b = math.atan2(1, 3)  # for rover approx 2x2m
         self.assertTrue(odom.is_on_circle([a, b, -a, -b]))
 
+    def test_circle_update(self):
+        odom = Odometry()
+        steering = [math.radians(a) for a in [5, 4, -5, -4]]
+        drive = [x/1000.0 for x in [40, 44, 36, 44]]
+        angle, dist = odom.circle_update(steering, drive)
+        self.assertAlmostEqual(angle, 0.004052072)  # i.e. it is turning
+        self.assertAlmostEqual(dist, 0.041)
+
 # vim: expandtab sw=4 ts=4
 
