@@ -19,5 +19,11 @@ class AngleFilterTest(unittest.TestCase):
         af.add(1)
         self.assertAlmostEqual(af.get(), 1)
 
+    def test_singularity(self):
+        af = AngleFilter(history_size=2)
+        af.add(3)  # i.e. almost PI
+        af.add(-3)
+        self.assertAlmostEqual(af.get(), math.pi)
+
 # vim: expandtab sw=4 ts=4
 

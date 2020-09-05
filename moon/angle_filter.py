@@ -10,16 +10,18 @@ from osgar.lib.mathex import normalizeAnglePIPI
 class AngleFilter:
     def __init__(self, history_size=10):
         self.history_size = history_size
-        self.values = []
+        self.values_x, self.values_y = [], []
 
     def add(self, value):
-        self.values.append(value)
-        if len(self.values) > self.history_size:
-            self.values.pop(0)
+        self.values_x.append(math.cos(value))
+        self.values_y.append(math.sin(value))
+        if len(self.values_x) > self.history_size:
+            self.values_x.pop(0)
+            self.values_y.pop(0)
 
     def get(self):
-        if len(self.values) == 0:
+        if len(self.values_x) == 0:
             return None
-        return sum(self.values)/len(self.values)
+        return math.atan2(sum(self.values_y), sum(self.values_x))
 
 # vim: expandtab sw=4 ts=4
