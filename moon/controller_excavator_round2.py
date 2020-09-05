@@ -5,6 +5,7 @@ import numpy as np
 import math
 from datetime import timedelta
 import traceback
+import sys
 from functools import cmp_to_key
 import cv2
 
@@ -50,12 +51,15 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         self.vslam_is_enabled = False
         self.hauler_orig_pose = None
         self.full_360_objects = {}
+        self.full_360_distances = []
         self.first_distal_angle = None
         self.hauler_pose_requested = False
         self.auto_light_adjustment = False
         self.light_intensity = 0.0
         self.vslam_fail_start = None
         self.vslam_valid = False
+        self.visual_navigation_enabled = False
+        self.lidar_distance_enabled = False
 
     def on_osgar_broadcast(self, data):
         message_target = data.split(" ")[0]
@@ -216,7 +220,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             ): # within either circle we cannot turn into
                 print (self.sim_time, self.robot_name, "[%.1f,%.1f] within turn circles, distance: %f" % (v[0], v[1], d))
                 continue
-            if -3*math.pi/4 < math.atan2(v[1] - self.xyz[1], v[0] - self.xyz[0]) < -math.pi/4:
+            if -3*math.pi/4 < math.atan2(v[1] - self.xyz[1], v[0] - self.xyz[0]) < -math.pi/4 and d > 15:
                 print (self.sim_time, self.robot_name, "[%.1f,%.1f] too much away from the sun, shadow interference" % (v[0], v[1]))
                 continue
             accessible_volatiles.append(v)
@@ -276,6 +280,13 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         print (self.sim_time, self.robot_name, "List of volatiles in the order of suitability for traveling to: ", ranked_list)
         return ranked_list[0][0]
 
+    def on_scan(self, data):
+        super().on_scan(data)
+        if self.sim_time is None or self.true_pose:
+            return
+
+        if self.lidar_distance_enabled:
+            self.full_360_distances.append({'yaw': self.yaw, 'distance': self.scan_distance_to_obstacle})
 
 
     def on_artf(self, data):
@@ -286,9 +297,20 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             return
 
         # NOTE: counting starts before turning, ie if hauler is visible in the beginning, it keeps getting hits
-        if artifact_type not in self.full_360_objects.keys():
-            self.full_360_objects[artifact_type] = []
-        self.full_360_objects[artifact_type].append(self.yaw)
+        if self.visual_navigation_enabled:
+            if artifact_type not in self.full_360_objects.keys():
+                self.full_360_objects[artifact_type] = []
+            self.full_360_objects[artifact_type].append({'yaw': self.yaw, 'distance': self.scan_distance_to_obstacle})
+
+    def wait_for_hauler(self):
+        while not self.hauler_ready:
+            try:
+                self.wait(timedelta(seconds=1))
+            except BusShutdownException:
+                raise
+            except Exception as e:
+                print(self.sim_time, self.robot_name, "Exception while waiting for hauler to arrive: ", str(e))
+        self.hauler_ready = False
 
     def run(self):
 
@@ -307,9 +329,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         try:
             self.wait_for_init()
 
-            self.set_brakes(True) # prevent sliding down while waiting for arm to align
-
-            self.set_cam_angle(-0.05)
+            self.set_cam_angle(0.0)
             self.set_light_intensity("0.2")
 
             self.send_request('get_volatile_locations', process_volatiles)
@@ -317,7 +337,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             # move bucket to the back so that it does not interfere with lidar
             # TODO: is there a better position to stash the bucket for driving?
 
-            # wait for interface to wake up before trying to move arm
+            # move arm to the back, let robot slide off of a hill if that's where it starts
             self.publish("bucket_drop", [math.pi, 'reset'])
 
             while self.mount_angle is None or abs(normalizeAnglePIPI(math.pi - self.mount_angle)) > 0.2:
@@ -328,31 +348,129 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 except Exception as e:
                     print(self.sim_time, self.robot_name, "Exception while waiting for arm to align: ", str(e))
 
+            self.set_brakes(False) # start applying mild braking
 
-            self.set_brakes(False)
-
-            # first, turn away from hauler
-            # turn 360deg until seen, mark angle where the bbox was the biggest, then turn 180deg from there (want to face away as much as possible)
-            # then, when hauler turns towards us (and follows?), it should have the same yaw which we can then share with it
-
+            # initial 360 turn to find emptiest area
+            self.lidar_distance_enabled = True
             while True:
                 try:
                     self.turn(math.radians(30), ang_speed=0.8*self.max_angular_speed, with_stop=False) # get the turning stared
-                    self.full_360_objects = {}
-                    self.turn(math.radians(360), ang_speed=0.8*self.max_angular_speed, with_stop=False)
-
-                    sum_sin = sum([math.sin(a) for a in self.full_360_objects["rover"]])
-                    sum_cos = sum([math.cos(a) for a in self.full_360_objects["rover"]])
-                    mid_angle = math.atan2(sum_sin, sum_cos)
-                    print(self.sim_time, self.robot_name, "excavator: hauler angle (internal coordinates) [%.2f]" % (normalizeAnglePIPI(math.pi + mid_angle)))
-                    turn_needed = normalizeAnglePIPI(math.pi + mid_angle - self.yaw)
-                    # turn a little less to allow for extra turn after the effort was stopped
-                    self.turn(turn_needed if turn_needed >= 0 else (turn_needed + 2*math.pi), ang_speed=0.8*self.max_angular_speed)
+                    self.full_360_distances = []
+                    self.turn(math.radians(360), ang_speed=0.8*self.max_angular_speed)
                     break
                 except BusShutdownException:
                     raise
                 except Exception as e:
                     print(self.sim_time, self.robot_name, "Exception while performing initial turn: ", str(e))
+
+            self.lidar_distance_enabled = False
+            self.set_cam_angle(-0.05)
+
+            # divide circle to 20deg segments
+            #directions = []
+            #for angle in np.arange(-math.pi, math.pi, math.radians(20)):
+            #    directions.append({
+            #        'yaw': angle + math.radians(10),
+            #        'median_distance': median([a['distance'] for a in self.full_360_distances if angle <= a['yaw'] <= (angle+math.radians(20))])
+            #        })
+
+            min_distance_obj = min(self.full_360_distances, key=lambda x: x['distance'])
+            # if min distance in all directions is more than 5m, no need to drive anywhere
+            if min_distance_obj['distance'] < 5000:
+
+                def distance_grouper(iterable):
+                    prev = None
+                    group = []
+                    for item in iterable:
+                        if not prev or abs(item['distance'] - prev['distance']) <= 300:
+                            group.append(item)
+                        else:
+                            yield group
+                            group = [item]
+                        prev = item
+                    if group:
+                        yield group
+
+
+                clusters = list(enumerate(distance_grouper(self.full_360_distances)))
+                m = []
+                for c in clusters:
+                    sum_sin = sum([math.sin(a['yaw']) for a in c[1]])
+                    sum_cos = sum([math.cos(a['yaw']) for a in c[1]])
+                    mid_angle = math.atan2(sum_sin, sum_cos)
+                    m.append({'yaw': mid_angle, 'distance': median([o['distance'] for o in c[1]])})
+                bestyawobj = max(m, key=lambda x: x['distance'])
+
+                try:
+                    self.turn(bestyawobj['yaw'] - self.yaw)
+                    self.go_straight(4)
+                except BusShutdownException:
+                    raise
+                except Exception as e:
+                    print(self.sim_time, self.robot_name, "Exception while performing initial going away from obstacles: ", str(e))
+
+            self.send_request('external_command hauler_1 follow') # force hauler to come real close, this will make it lose visual match with processing plant
+            self.wait_for_hauler()
+
+
+            # first, turn away from hauler
+            # turn 360deg until seen, mark angle where the bbox was the biggest, then turn 180deg from there (want to face away as much as possible)
+            # then, when hauler turns towards us (and follows?), it should have the same yaw which we can then share with it
+
+
+            def angle_grouper(iterable):
+                prev = None
+                group = []
+                for item in iterable:
+                    if not prev or abs(normalizeAnglePIPI(item['yaw'] - prev['yaw'])) <= 0.2:
+                        group.append(item)
+                    else:
+                        yield group
+                        group = [item]
+                    prev = item
+                if group:
+                    yield group
+
+            self.visual_navigation_enabled = True
+            while True:
+                while True:
+                    try:
+                        self.turn(math.radians(30), ang_speed=0.8*self.max_angular_speed, with_stop=False) # get the turning stared
+                        self.full_360_objects = {}
+                        self.turn(math.radians(360), ang_speed=0.8*self.max_angular_speed, with_stop=False)
+                        if "rover" not in self.full_360_objects.keys() or len(self.full_360_objects["rover"]) == 0:
+                            print(self.sim_time, self.robot_name, "Hauler not found during 360 turn")
+                        else:
+                            clusters = list(enumerate(angle_grouper(self.full_360_objects["rover"])))
+                            biggest_wedge_obj = max(clusters, key=lambda x: len(x[1]))
+                            sum_sin = sum([math.sin(a['yaw']) for a in biggest_wedge_obj[1]])
+                            sum_cos = sum([math.cos(a['yaw']) for a in biggest_wedge_obj[1]])
+                            mid_angle = math.atan2(sum_sin, sum_cos)
+                            print(self.sim_time, self.robot_name, "excavator: away-from-hauler angle (internal coordinates) [%.2f]" % (normalizeAnglePIPI(math.pi + mid_angle)))
+                            turn_needed = normalizeAnglePIPI(math.pi + mid_angle - self.yaw)
+                            # turn a little less to allow for extra turn after the effort was stopped
+                            self.turn(turn_needed if turn_needed >= 0 else (turn_needed + 2*math.pi), ang_speed=0.8*self.max_angular_speed)
+                        break
+                    except BusShutdownException:
+                        raise
+                    except Exception as e:
+                        print(self.sim_time, self.robot_name, "Exception while performing initial turn: ", str(e))
+                        traceback.print_exc(file=sys.stdout)
+
+
+                if "rover" not in self.full_360_objects.keys() or len(self.full_360_objects["rover"]) == 0:
+                    # hauler was not found visually but must be close, perform random walk
+                    min_dist_obj = min(self.full_360_distances, key=lambda x: x['distance'])
+                    self.turn(min_dist_obj['yaw'] - self.yaw)
+                    self.go_straight(3)
+                    while abs(self.pitch) > 0.2:
+                        self.publish("desired_movement", [GO_STRAIGHT, 0, self.default_effort_level])
+                        self.wait(timedelta(milliseconds=100))
+                    self.publish("desired_movement", [0, 0, 0])
+                else:
+                    break
+
+            self.visual_navigation_enabled = False
 
             self.auto_light_adjustment = True
             # self.set_light_intensity("0.4")
