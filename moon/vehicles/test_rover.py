@@ -35,6 +35,9 @@ class RoverTest(unittest.TestCase):
         # triangle 3, 4, 5
         self.assertAlmostEqual(compute_steering_angle((3, 0), 4), math.acos(4/5))
 
+    def test_negative_radius(self):
+        self.assertLess(compute_steering_angle((1, 1), -8), math.radians(90))
+
 
 # vim: expandtab sw=4 ts=4
 

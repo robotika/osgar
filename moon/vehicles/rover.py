@@ -75,7 +75,11 @@ def compute_steering_angle(pos, radius):
     """compute steering angle for wheel at position "pos" for given (signed) radius"""
     x, y = pos
     r = radius + y
-    return math.atan2(x, r)
+    if radius >= 0:
+        return math.atan2(x, r)
+    else:
+        # clockwise motion - flip wheels
+        return normalizeAnglePIPI(math.atan2(x, r) + math.pi)
 
 class Rover(MoonNode):
     def __init__(self, config, bus):
