@@ -424,7 +424,6 @@ class SubTChallenge:
             if self.update() in ['scan', 'scan360']:
                 target_x, target_y = trace.where_to(self.xyz, max_target_distance)[:2]
                 x, y = self.xyz[:2]
-#                print((x, y, math.degrees(self.yaw)), (target_x, target_y))
                 desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
                 safety = self.go_safely(desired_direction)
                 if safety_limit is not None and safety < safety_limit:
