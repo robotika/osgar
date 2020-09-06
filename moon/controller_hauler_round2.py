@@ -7,11 +7,12 @@ import numpy as np
 import math
 from datetime import timedelta
 from statistics import median
-from random import getrandbits,randrange
+import traceback
+import sys
 
 from osgar.bus import BusShutdownException
 
-from moon.controller import ps, SpaceRoboticsChallenge, ChangeDriverException, VirtualBumperException, min_dist, LidarCollisionException, LidarCollisionMonitor
+from moon.controller import ps, SpaceRoboticsChallenge, MoonException, ChangeDriverException, VirtualBumperException, min_dist, LidarCollisionException, LidarCollisionMonitor
 from osgar.lib.quaternion import euler_zyx
 from osgar.lib.virtual_bumper import VirtualBumper
 from osgar.lib.mathex import normalizeAnglePIPI
@@ -24,7 +25,7 @@ EXCAVATOR_ONHOLD_GAP = 3 # can't be further or every bump will look like the exc
 EXCAVATOR_DIGGING_GAP = 0.55 # we should see the arm in the middle, not the back of the rover
 DISTANCE_TOLERANCE = 0.3
 
-class ExcavatorLostException(Exception):
+class ExcavatorLostException(MoonException):
     pass
 
 class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
@@ -106,6 +107,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
 
     def look_for_rover(self, direction=1):
         self.looking_for_excavator = True
+        print(self.sim_time, self.robot_name, "Starting to look for excavator")
         while True:
             try:
                 with LidarCollisionMonitor(self):
@@ -113,12 +115,12 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                     self.turn(math.radians(360), timeout=timedelta(seconds=40))
                     self.go_straight(30.0, timeout=timedelta(minutes=2))
             except ChangeDriverException as e:
-                print(self.sim_time, "Rover found, following")
+                print(self.sim_time, self.robot_name, "Excavator found, following")
                 self.publish("desired_movement", [0, 0, 0])
                 raise
             except (VirtualBumperException, LidarCollisionException)  as e:
                 self.inException = True
-                print(self.sim_time, "Lidar or Virtual Bumper!")
+                print(self.sim_time, self.robot_name, "Lidar or Virtual Bumper!")
                 try:
                     self.go_straight(-3, timeout=timedelta(seconds=20))
                     deg_angle = self.rand.randrange(-180, -90)
@@ -126,6 +128,10 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                 except:
                     self.publish("desired_movement", [0, 0, 0])
                 self.inException = False
+            except MoonException as e:
+                print(self.sim_time, self.robot_name, "MoonException while looking for rover, restarting turns")
+                traceback.print_exc(file=sys.stdout)
+
 
 
     def run(self):
@@ -137,16 +143,34 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
             self.set_cam_angle(-0.1)
             self.use_gimbal = False
 
+            self.set_brakes(True)
+            if False:
+                # point wheels downwards and wait until on flat terrain or timeout
+                start_drifting = self.sim_time
+                while self.sim_time - start_drifting < timedelta(seconds=20) and (abs(self.pitch) > 0.05 or abs(self.roll) > 0.05):
+                    try:
+                        attitude = math.asin(math.sin(self.roll) / math.sqrt(math.sin(self.pitch)**2+math.sin(self.roll)**2))
+                        if self.debug:
+                            print(self.sim_time, self.robot_name, "Vehicle attitude: %.2f" % attitude)
+                        self.publish("desired_movement", [GO_STRAIGHT, math.degrees(attitude * 100), 0.1])
+                        self.wait(timedelta(milliseconds=100))
+                    except BusShutdownException:
+                        raise
+                    except MoonException as e:
+                        print(self.sim_time, self.robot_name, "Exception while waiting for excavator to settle: ", str(e))
+                self.publish("desired_movement", [0, 0, 0])
+
             while True:
                 while self.driving_mode is None: # waiting for align command
                     try:
                         self.wait(timedelta(seconds=1))
                     except BusShutdownException:
                         raise
-                    except Exception as e:
+                    except MoonException as e:
                         print(self.sim_time, self.robot_name, "Exception while waiting to be invited to look for excavator", str(e))
                 break
 
+            self.set_brakes(False)
             self.finish_visually = True
 
             # FIND EXCAVATOR
@@ -222,9 +246,9 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                 start_turn = self.sim_time
                 while self.sim_time - start_turn < timedelta(seconds=60):
                     try:
-                        self.turn(math.radians(30), ang_speed=0.8*self.max_angular_speed, with_stop=False)
+                        self.turn(math.radians(30), ang_speed=0.8*self.max_angular_speed, with_stop=False, timeout=timedelta(seconds=40))
                         self.full_360_objects = {}
-                        self.turn(math.radians(360), ang_speed=0.8*self.max_angular_speed, with_stop=False)
+                        self.turn(math.radians(360), ang_speed=0.8*self.max_angular_speed, with_stop=False, timeout=timedelta(seconds=40))
                         if "rover" not in self.full_360_objects.keys() or len(self.full_360_objects["rover"]) == 0:
                             print(self.sim_time, self.robot_name, "Excavator not found during 360 turn")
                         else:
@@ -234,11 +258,11 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                             print(self.sim_time, self.robot_name, "hauler: excavator angle (internal coordinates) [%.2f]" % (normalizeAnglePIPI(math.pi + mid_angle)))
                             turn_needed = normalizeAnglePIPI(math.pi + mid_angle - self.yaw)
                             # turn a little less to allow for extra turn after the effort was stopped
-                            self.turn(turn_needed if turn_needed >= 0 else (turn_needed + 2*math.pi), ang_speed=0.8*self.max_angular_speed)
+                            self.turn(turn_needed if turn_needed >= 0 else (turn_needed + 2*math.pi), ang_speed=0.8*self.max_angular_speed, timeout=timedelta(seconds=40))
                         break
                     except BusShutdownException:
                         raise
-                    except Exception as e:
+                    except MoonException as e:
                         print ("Exception while turning: ", e)
 
                 self.set_light_intensity("0.2")
@@ -263,9 +287,9 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                     try:
                         with LidarCollisionMonitor(self, 1000):
                             angle_diff = self.get_angle_diff(self.goto, 1)
-                            self.turn(angle_diff)
+                            self.turn(angle_diff, timeout=timedelta(seconds=40))
                             self.go_to_location(self.goto, self.default_effort_level, full_turn=False, avoid_obstacles_close_to_destination=True, timeout=timedelta(minutes=2))
-                            self.turn(normalizeAnglePIPI(self.goto[2] - self.yaw))
+                            self.turn(normalizeAnglePIPI(self.goto[2] - self.yaw), timeout=timedelta(seconds=40))
                         self.send_request('external_command excavator_1 arrived %.2f' % self.yaw)
                         self.goto = None
                         self.finish_visually = True
@@ -291,13 +315,15 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
 
                 try:
                     if self.excavator_waiting:
-                        self.look_for_rover(self.rover_angle)
-
-                    if self.rover_distance > 5 and self.driving_mode != "approach":
-                        with LidarCollisionMonitor(self, 1000):
-                            self.wait(timedelta(seconds=1))
+                        self.turn(math.copysign(math.radians(self.rand.randrange(90,270)), self.rover_angle), timeout=timedelta(seconds=20))
+                        self.turn(math.radians(360), timeout=timedelta(seconds=40))
+                        self.go_straight(20.0, timeout=timedelta(seconds=40))
                     else:
-                            self.wait(timedelta(seconds=1))
+                        if self.rover_distance > 5 and self.driving_mode != "approach":
+                            with LidarCollisionMonitor(self, 1000):
+                                self.wait(timedelta(seconds=1))
+                        else:
+                                self.wait(timedelta(seconds=1))
                 except LidarCollisionException as e: #TODO: long follow of obstacle causes loss, go along under steeper angle
                     print(self.sim_time, self.robot_name, "Lidar while following/waiting, distance: %.1f" % self.rover_distance)
                     self.excavator_waiting = True
@@ -402,7 +428,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
 
         if self.looking_for_excavator:
             # do not drive from here, either throw exception if found or return if not
-            if artifact_type == 'rover':
+            if artifact_type == 'rover' or artifact_type == "excavator_arm":
                 self.looking_for_excavator = False
                 raise ChangeDriverException(data)
             else:
