@@ -181,17 +181,10 @@ class Rover(MoonNode):
 
         elif self.drive_radius == 0:
             # turning in place if radius is 0 but speed is non-zero
-            e = 40
+            e = 40 * self.drive_speed / 1000.0
             movement_type = 'angular'
-
-            if self.drive_speed > 0:
-                # turn left
-                effort = [-e, e, -e, e]
-                steering = [-CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE,-CRAB_ROLL_ANGLE]
-            else: # drive speed < 0
-                # turn right
-                effort = [e, -e, e, -e]
-                steering = [-CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE,-CRAB_ROLL_ANGLE]
+            effort = [-e, e, -e, e]
+            steering = [-CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE,CRAB_ROLL_ANGLE,-CRAB_ROLL_ANGLE]
 
         else:
             movement_type = 'linear'
@@ -271,7 +264,6 @@ class Rover(MoonNode):
                 ):
                     if self.steering_wait_start is None:
                         self.steering_wait_start = self.sim_time
-                        self.send_request('set_brakes 10')
                     # brake while steering angles are changing so that the robot doesn't roll away while wheels turning meanwhile
                     # use braking force 20 Nm/rad which should prevent sliding but can be overcome by motor effort
                     effort = [0.0,]*4
@@ -280,13 +272,11 @@ class Rover(MoonNode):
 
             else: # angles are reached
                 if self.steering_wait_start is not None:
-                    self.send_request('set_brakes off')
                     self.steering_wait_start = None # angles were reached successfully, can wait any time again
                 self.steering_wait_repeat = None # angles were reached successfully, can wait any time again
 
         # if attempt to steer without effort timed out, brakes off, start instant repeat prevention timer
         if self.steering_wait_start is not None and self.sim_time - self.steering_wait_start > timedelta(milliseconds=WAIT_TO_STEER_MS):
-            self.send_request('set_brakes off')
             self.steering_wait_start = None
             self.steering_wait_repeat = self.sim_time
 

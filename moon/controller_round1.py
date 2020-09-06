@@ -312,12 +312,10 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                     current_sweep_step += 1
             except VSLAMEnabledException as e:
                 print(self.sim_time, "VSLAM: mapping re-enabled")
-                self.set_brakes(False)
                 wait_for_mapping = False
             except VSLAMDisabledException as e:
                 print(self.sim_time, "VSLAM: mapping disabled, waiting")
                 self.send_speed_cmd(0.0, 0.0)
-                self.set_brakes(True)
                 wait_for_mapping = True
             except VSLAMLostException as e:
                 print(self.sim_time, "VSLAM lost")
@@ -370,6 +368,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
 
         self.set_cam_angle(0.1)
         self.set_light_intensity("0.4")
+        self.set_brakes(False)
 
         def set_homebase_found(response):
             self.vslam_reset_at = self.sim_time

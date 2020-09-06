@@ -158,7 +158,8 @@ class RospyRoverReqRep(RospyBaseReqRep):
             message_type = message.split(" ")[0]
             if message_type == "set_cam_angle":
                 angle = float(message.split(" ")[1])
-                print ("rospy_rover: Setting cam angle to: %f" % angle)
+                if "INFO" in self.logging_level:
+                    print ("rospy_rover: Setting cam angle to: %f" % angle)
                 self.light_up_msg.data = angle
                 self.light_up_pub.publish(self.light_up_msg)
                 return 'OK'
@@ -166,41 +167,45 @@ class RospyRoverReqRep(RospyBaseReqRep):
             elif message_type == "set_brakes":
                 val = message.split(" ")[1]
                 if val.startswith("on"):
-                    brake_torque = 500.0
+                    brake_torque = 400.0
                 elif val.startswith("off"):
-                    brake_torque = 0.0
+                    brake_torque = 10.0
                 else:
                     brake_torque = float(val)
-                print ("rospy_rover: Setting brakes to: %f" % brake_torque)
-                # TEST: always brake 10
-                brake_torque = 10.0
+                if "INFO" in self.logging_level:
+                    print ("rospy_rover: Setting brakes to: %f" % brake_torque)
                 self.brakes(brake_torque)
                 return 'OK'
 
             elif message_type == "set_light_intensity":
                 light_level = message.split(" ")[1]
-                print ("rospy_rover: Setting light intensity to: %s" % light_level)
+                if "VERBOSE" in self.logging_level:
+                    print ("rospy_rover: Setting light intensity to: %s" % light_level)
                 self.lights(light_level)
                 return 'OK'
 
             elif message_type == "reset_model":
-                print ("rospy_rover: Resetting model")
+                if "INFO" in self.logging_level:
+                    print ("rospy_rover: Resetting model")
                 self.reset_model(True)
                 return 'OK'
 
             elif message_type == "vslam_reset":
-                print ("rospy_rover: Resetting VSLAM map")
+                if "INFO" in self.logging_level:
+                    print ("rospy_rover: Resetting VSLAM map")
                 self.vslam_command_msg.data = "reset"
                 self.vslam_command_pub.publish(self.vslam_command_msg)
                 return 'OK'
 
             elif message_type == "request_origin":
-                print "rospy_rover: Requesting true pose"
+                if "INFO" in self.logging_level:
+                    print "rospy_rover: Requesting true pose"
                 try:
                     rospy.wait_for_service('/' + self.robot_name + '/get_true_pose', timeout=2.0)
                     request_origin = rospy.ServiceProxy('/' + self.robot_name + '/get_true_pose', LocalizationSrv)
                     p = request_origin(True)
-                    print("rospy_rover: true pose [%f, %f, %f]  [%f, %f, %f, %f]" % (p.pose.position.x, p.pose.position.y, p.pose.position.z, p.pose.orientation.x, p.pose.orientation.y, p.pose.orientation.z, p.pose.orientation.w))
+                    if "INFO" in self.logging_level:
+                        print("rospy_rover: true pose [%f, %f, %f]  [%f, %f, %f, %f]" % (p.pose.position.x, p.pose.position.y, p.pose.position.z, p.pose.orientation.x, p.pose.orientation.y, p.pose.orientation.z, p.pose.orientation.w))
                     s = "origin %f %f %f  %f %f %f %f" % (p.pose.position.x, p.pose.position.y, p.pose.position.z,
                                                                   p.pose.orientation.x, p.pose.orientation.y, p.pose.orientation.z, p.pose.orientation.w)
                     return s
