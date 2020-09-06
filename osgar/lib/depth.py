@@ -32,7 +32,8 @@ class DepthParams:
             max_slope=np.radians(-16),
             # Despeckling parameters.
             noise_filter_window=(5, 5),
-            noise_filter_threshold=20):
+            noise_filter_threshold=20,
+            **kwargs):
 
         self.fx = fx
         self.camera_xyz = np.asarray(camera_xyz)

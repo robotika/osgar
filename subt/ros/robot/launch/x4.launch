@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<launch>
+  <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)" output="screen">
+    <remap from="$(arg robot_name)/front_rgbd/image_raw/compressed" to="$(arg robot_name)/front/image_raw/compressed"/>
+    <remap from="$(arg robot_name)/cmd_vel" to="$(arg robot_name)/cmd_vel_osgar" />
+    <remap from="$(arg robot_name)/odom" to="/odom_drone"/>
+  </node>
+
+
+  <node name="drone_height" pkg="robot" type="drone_height.py">
+    <remap from="scan_down" to="$(arg robot_name)/bottom_scan" />
+    <remap from="scan_up" to="$(arg robot_name)/top_scan" />
+    <remap from="cmd_vel_drone" to="$(arg robot_name)/cmd_vel" />
+    <remap from="cmd_vel" to="$(arg robot_name)/cmd_vel_osgar"/>
+    <remap from="odom" to="$(arg robot_name)/odom" />
+  </node>
+</launch>
