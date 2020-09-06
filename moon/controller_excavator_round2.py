@@ -581,7 +581,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             def pursue_volatile(v):
                 goto_path = [v]
                 if not SAFE_POLYGON.contains(LineString([v, self.xyz[:2]])):
-                    goto_path = [-10,-10] + goto_path
+                    goto_path = [[-10,-10]] + goto_path
                 wait_for_mapping = False
                 wait_for_hauler_requested = None
                 ARRIVAL_TOLERANCE = 1 # if we are within 1m of target, stop
