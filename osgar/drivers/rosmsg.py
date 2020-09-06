@@ -645,6 +645,7 @@ class ROSMsgParser(Thread):
 
     def slot_desired_speed(self, timestamp, data):
         self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
+        self.desired_speed_3d, self.desired_angular_speed_3d = None, None
 
     def slot_desired_speed_3d(self, timestamp, data):
         self.desired_speed, self.desired_angular_speed = None, None
