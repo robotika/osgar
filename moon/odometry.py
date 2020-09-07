@@ -17,6 +17,7 @@ WHEEL_NAMES = [b'fl', b'fr', b'bl', b'br']
 class Odometry:
     def __init__(self):
         self.pose2d = 0, 0, 0
+        self.xyz = 0, 0, 0  # 3D coordinates without knowledge of origin
         self.prev_position = None
         self.crab_limit = math.radians(5)
         self.turn_in_place_limit = math.radians(30)
@@ -55,6 +56,7 @@ class Odometry:
 
         if imu is not None:
             yaw, pitch, roll = imu
+            heading = yaw  # simply ignore the odometry heading
 
         diff = [b - a for a, b in zip(self.prev_position, data)]
         steering = [data[names.index(n + b'_steering_arm_joint')]
@@ -104,6 +106,15 @@ class Odometry:
             print(time, mode, [int(math.degrees(s)) for s in steering], [int(1000*d) for d in drive])
         self.prev_position = data[:]
         self.pose2d = x, y, heading
+
+        if imu is not None:
+#            x, y, z = self.xyz
+#            x += math.cos(pitch) * math.cos(yaw) * dist
+#            y += math.cos(pitch) * math.sin(yaw) * dist
+#            z += math.sin(pitch) * dist
+            z = 0.0  # let's start in 2D plane
+            self.xyz = x, y, z
+
         return self.pose2d
 
 
