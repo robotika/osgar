@@ -5,7 +5,6 @@ import math
 from math import sqrt
 import numpy as np
 import io
-from random import getrandbits
 
 from datetime import timedelta
 from statistics import median
@@ -25,22 +24,27 @@ GO_STRAIGHT = float("inf")
 AVOIDANCE_DURATION = 3000 # milliseconds
 AVOIDANCE_TURN_DURATION = 800
 
-class ChangeDriverException(Exception):
+class MoonException(Exception):
+    pass
+class ChangeDriverException(MoonException):
     pass
 
-class VSLAMLostException(Exception):
+class VSLAMLostException(MoonException):
     pass
 
-class VSLAMDisabledException(Exception):
+class VSLAMDisabledException(MoonException):
     pass
 
-class VSLAMEnabledException(Exception):
+class VSLAMEnabledException(MoonException):
     pass
 
-class VSLAMFoundException(Exception):
+class VSLAMFoundException(MoonException):
     pass
 
-class VirtualBumperException(Exception):
+class VirtualBumperException(MoonException):
+    pass
+
+class LidarCollisionException(MoonException):
     pass
 
 def pol2cart(rho, phi):
@@ -155,9 +159,6 @@ def min_dist(laser_data):
         laser_data = [x if x > 10 else 10000 for x in laser_data]
         return min(laser_data)/1000.0
     return 0
-
-class LidarCollisionException(Exception):
-    pass
 
 
 class LidarCollisionMonitor:
@@ -585,7 +586,7 @@ class SpaceRoboticsChallenge(MoonNode):
                 self.avoidance_turn = AVOID_RADIUS
             else:
                 if self.avoidance_turn is None:
-                    self.avoidance_turn = AVOID_RADIUS if getrandbits(1) == 0 else -AVOID_RADIUS
+                    self.avoidance_turn = AVOID_RADIUS if self.rand.getrandbits(1) == 0 else -AVOID_RADIUS
             turn = self.avoidance_turn
             if (self.debug):
                 print(self.sim_time, self.robot_name, "Seeing object, turning: %d, distance %d" % (turn, self.scan_distance_to_obstacle))
@@ -664,7 +665,7 @@ class SpaceRoboticsChallenge(MoonNode):
         print(self.sim_time, self.robot_name, "move sideways ended at [%.1f,%.1f]" % (self.xyz[0], self.xyz[1]))
 
 
-    def go_straight(self, how_far, timeout=None):
+    def go_straight(self, how_far, with_stop=True, timeout=None):
         print(self.sim_time, self.robot_name, "go_straight %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position)
         if timeout is None:
             timeout = timedelta(seconds=2*abs(how_far) / self.max_speed)
@@ -675,26 +676,34 @@ class SpaceRoboticsChallenge(MoonNode):
         else:
             self.send_speed_cmd(-self.max_speed, 0.0)
         start_time = self.sim_time
+        slowdown_happened = False
         while distance(start_pose, self.last_position) < abs(how_far):
+            if with_stop and not slowdown_happened and distance(start_pose, self.last_position) - abs(how_far) < 2:
+                self.send_speed_cmd(math.copysign(self.max_speed / 2.0, how_far), 0.0)
+                slowdown_happened = True
+
             self.update()
             if timeout is not None and self.sim_time - start_time > timeout:
                 print(self.sim_time, self.robot_name, "go_straight - timeout at %.1fm" % distance(start_pose, self.last_position))
                 break
         self.send_speed_cmd(0.0, 0.0)
 
-    def turn(self, angle, with_stop=True, speed=0.0, timeout=None):
+    def turn(self, angle, with_stop=True, speed=0.0, ang_speed=None, timeout=None):
         # positive turn - counterclockwise
         print(self.sim_time, self.robot_name, "turn %.1f deg from %.1f deg" % (math.degrees(angle), math.degrees(self.yaw)))
-        if angle >= 0:
-            self.send_speed_cmd(speed, self.max_angular_speed)
-        else:
-            self.send_speed_cmd(speed, -self.max_angular_speed)
+        self.send_speed_cmd(speed, math.copysign(ang_speed if ang_speed is not None else self.max_angular_speed, angle))
+
         start_time = self.sim_time
         # problem with accumulated angle
 
         sum_angle = 0.0
         prev_angle = self.yaw
+        slowdown_happened = False
         while abs(sum_angle) < abs(angle):
+            if with_stop and not slowdown_happened and abs(sum_angle) > abs(angle) - 0.35: # slow rotation down for the last 20deg to improve accuracy
+                self.send_speed_cmd(speed, math.copysign(self.max_angular_speed / 2.0, angle))
+                slowdown_happened = True
+
             self.update()
             sum_angle += normalizeAnglePIPI(self.yaw - prev_angle)
             prev_angle = self.yaw
@@ -703,13 +712,6 @@ class SpaceRoboticsChallenge(MoonNode):
                 break
         if with_stop:
             self.send_speed_cmd(0.0, 0.0)
-            # disable exceptions during wait or rover may brake forever
-            wasException = self.inException
-            self.inException = True
-            self.set_brakes(True)
-            self.wait(timedelta(milliseconds=200))
-            self.set_brakes(False)
-            self.inException = wasException
 
     def wait(self, dt):  # TODO refactor to some common class
         while self.sim_time is None:
@@ -730,7 +732,7 @@ class SpaceRoboticsChallenge(MoonNode):
             elif  self.scan_avg_distance_left * 0.8 > self.scan_avg_distance_right:
                 direction = 1
             else:
-                direction = 1 if getrandbits(1) == 0 else -1
+                direction = 1 if self.rand.getrandbits(1) == 0 else -1
 
         start_pose = self.xyz
         start_time = self.sim_time

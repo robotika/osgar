@@ -211,9 +211,8 @@ RUN set -x && \
   rm -rf CMakeCache.txt CMakeFiles Makefile cmake_install.cmake example src && \
   chmod -R 777 ./*
 
-# Copy sources to workspace
+# Copy SRCP2 env to workspace
 COPY ./srcp2-competitors /srcp2-competitors/
-COPY ./osgar /osgar/
 
 # OpenVSLAMROS
 WORKDIR /openvslam/ros/1/
@@ -245,13 +244,17 @@ RUN chmod 777 /rover_workspace
 
 RUN rm -rf /rover_workspace/devel
 RUN rm -rf /rover_workspace/build
+
+RUN  /bin/bash -c "source /openvslam/ros/1/devel/setup.bash; cd /rover_workspace; catkin_make"
+
+RUN echo "source /rover_workspace/devel/setup.bash" >> /root/.bashrc
+
+COPY ./osgar /osgar/
+
 RUN rm -rf /osgar/.git
 RUN rm -rf /osgar/.github
 RUN rm -rf /osgar/research_scripts
 RUN rm -rf /osgar/disparity_images
-RUN  /bin/bash -c "source /openvslam/ros/1/devel/setup.bash; cd /rover_workspace; catkin_make"
-
-RUN echo "source /rover_workspace/devel/setup.bash" >> /root/.bashrc
 
 WORKDIR /
 ENTRYPOINT ["/osgar/moon/docker/rover/entrypoint.bash"]
