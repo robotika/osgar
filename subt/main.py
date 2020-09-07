@@ -150,7 +150,7 @@ class SubTChallenge:
         self.origin = None  # unknown initial position
         self.origin_quat = quaternion.identity()
 
-        self.offset = (0, 0, 0)
+        self.offset = None  # the offset between robot frame and world frame is not known on start
         if 'init_offset' in config:
             x, y, z = [d/1000.0 for d in config['init_offset']]
             self.offset = (x, y, z)
@@ -471,6 +471,13 @@ class SubTChallenge:
     def on_pose3d(self, timestamp, data):
         xyz, rot = data
         ypr = quaternion.euler_zyx(rot)
+        if self.offset is None:
+            # we cannot align global coordinates if offset is not known
+            return
+        x0, y0, z0 = self.offset
+        # pretend that received coordinates are in robot frame (compatible with on_pose2d)
+        xyz = xyz[0] - x0, xyz[1] - y0, xyz[2] - z0
+
         pose = (xyz[0], xyz[1], ypr[0])
         if self.last_position is not None:
             self.is_moving = (self.last_position != pose)
@@ -484,7 +491,7 @@ class SubTChallenge:
         self.last_position = pose
         self.traveled_dist += dist
         x, y, z = xyz
-        self.last_send_time = self.bus.publish('pose2d', [round(x * 1000), round(y * 1000),
+        self.last_send_time = self.bus.publish('pose2d', [round((x + x0) * 1000), round((y + y0) * 1000),
                                     round(math.degrees(self.yaw) * 100)])
         if self.virtual_bumper is not None:
             if self.is_virtual:
