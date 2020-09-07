@@ -469,11 +469,11 @@ class SubTChallenge:
         self.trace.update_trace(self.xyz)
 
     def on_pose3d(self, timestamp, data):
-        xyz, rot = data
-        ypr = quaternion.euler_zyx(rot)
         if self.offset is None:
             # we cannot align global coordinates if offset is not known
             return
+        xyz, rot = data
+        ypr = quaternion.euler_zyx(rot)
         x0, y0, z0 = self.offset
         # pretend that received coordinates are in robot frame (compatible with on_pose2d)
         xyz = xyz[0] - x0, xyz[1] - y0, xyz[2] - z0
