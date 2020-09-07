@@ -2,6 +2,7 @@
   Osgar Config Class
 """
 import json
+import numbers
 import sys
 from importlib import import_module
 
@@ -53,8 +54,14 @@ def config_load(*filenames, application=None):
 
 
 def merge_dict(dict1, dict2):
+    simple_types = numbers.Number, str
+    for t in simple_types:
+        if isinstance(dict1, t) and isinstance(dict2, t):
+            return dict2
+
     if not isinstance(dict1, dict) or not isinstance(dict2, dict):
         raise MergeConflictError(str((dict1, dict2)))
+
     ret = dict1.copy()
     for key in dict2.keys():
         if key in dict1:
