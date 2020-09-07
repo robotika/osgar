@@ -80,7 +80,7 @@
         "init": {
           "xyz": [0.1, 0, -0.08],
           "rpy": [0.0, 0.0, 0.0],
-          "principal-point": [320.5, 180.5],
+          "principal-point": [320.5, 240.5],
           "focal-length": 554.25469
         }
       },
