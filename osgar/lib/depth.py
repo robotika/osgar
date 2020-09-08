@@ -44,7 +44,7 @@ class DepthParams:
 
         self.fx = fx
         self.camera_xyz = np.asarray(camera_xyz)
-        self.camera_rot = rotation_matrix(*camera_ypr)
+        self.camera_rot = _rotation_matrix(*camera_ypr)
         self.camw, self.camh = image_size
         self.cam_low = self.camh // 2 + 1
         self.rx, self.ry = principal_point
@@ -77,7 +77,8 @@ class DepthParams:
 X, Y, Z = 0, 1, 2
 
 
-def rotation_matrix(yaw, pitch, roll):
+def _rotation_matrix(yaw, pitch, roll):
+    # private so it will not be used by other modules -> TODO move to math or quaternion?
     cos_roll = np.cos(roll)
     sin_roll = np.sin(roll)
     roll_m = np.array([[1., 0., 0.], [0., cos_roll, -sin_roll],
