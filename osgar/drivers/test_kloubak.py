@@ -133,7 +133,7 @@ class KloubakTest(unittest.TestCase):
         k3.process_packet([CAN_ID_ENCODERS, bytes([14, 1, 0, 1, 0, 2]), flags])
         bus.publish.assert_called()
 
-    def test_kloubak_pose(self):
+    def test_kloubak_heading(self):
         config = {
             'num_axis': 2,
             "wheel_distance": 0.496
