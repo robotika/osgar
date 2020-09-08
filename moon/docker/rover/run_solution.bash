@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-while getopts hr: arg; do
+RUN_UNPAUSED=0
+
+while getopts uhr: arg; do
     case $arg in
 	r)
 	    case $OPTARG in
@@ -23,19 +25,25 @@ while getopts hr: arg; do
 	    esac
 	    ;;
 	h)
-	    echo "Use -r [1|2|3] to choose the run to execute"
+	    echo "-r [1|2|3] to choose the run to execute"
+	    echo "-u run unpaused"
 	    exit
 	    ;;
+        u)
+            RUN_UNPAUSED=1
+            ;;
 	*)
 	    exit
 	    ;;
     esac
 done
 
-echo "Unpause simulation"
-rosservice call /gazebo/unpause_physics "{}"
-echo "wait a moment"
-sleep 5
+if [[ $RUN_UNPAUSED -eq 1 ]]; then
+    echo "Unpause simulation"
+    rosservice call /gazebo/unpause_physics "{}"
+    echo "wait a moment"
+    sleep 5
+fi
 
 ROBOT_PIDS=()
 ROS_PIDS=()
