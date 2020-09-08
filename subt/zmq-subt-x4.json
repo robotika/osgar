@@ -13,7 +13,8 @@
             "virtual_bumper_sec": 60,
             "virtual_bumper_radius": 10.0,
             "virtual_world": true,
-            "speed_policy": "conservative"
+            "speed_policy": "conservative",
+            "obstacle_influence": 1.2
           }
       },
       "detector": {
@@ -66,12 +67,13 @@
               "camera_xyz": [0.1, 0.0, -0.08],
               "image_size": [640, 480],
               "principal_point": [320.5, 240.5],
+              "vertical_pixel_offset": 16,
               "lidar_fov": 6.283185307179586,
+              "lidar_trusted_zone": 2.0,
               "min_z": -0.2,
               "max_z": 0.4,
               "max_slope": -3.14,
-              "disabled_vertical_diff_limit": 0.698, "vd_comment": "radians(40)",
-              "max_slope": -0.436, "ms_comment": "radians(-25)"
+              "disabled_vertical_diff_limit": 0.698, "vd_comment": "radians(40)"
             }
           }
       },
@@ -111,7 +113,7 @@
               ["rosmsg.image", "app.image"],
 
               ["rosmsg.depth", "depth2scan.depth"],
-              ["rosmsg.scan", "app.scan360"],
+              ["depth2scan.scan", "app.scan360"],
               ["rosmsg.depth", "detector.depth"],
 
               ["rospy.rot", "app.rot"],

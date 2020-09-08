@@ -212,8 +212,12 @@ class SubTChallenge:
         else:
             safety, safe_direction = self.local_planner.recommend(desired_direction)
         #print(self.time,"safety:%f    desired:%f  safe_direction:%f"%(safety, desired_direction, safe_direction))
-        #desired_angular_speed = 1.2 * safe_direction
-        desired_angular_speed = 0.9 * safe_direction
+        if self.speed_policy == 'conservative':
+            desired_angular_speed = 1.2 * safe_direction
+        elif self.speed_policy == 'always_forward':
+            desired_angular_speed = 0.9 * safe_direction
+        else:
+            assert(False)  # Unsupported speed_policy.
         size = len(self.scan)
         dist = min_dist(self.scan[size//3:2*size//3])
         if dist < self.min_safe_dist:  # 2.0:

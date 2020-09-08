@@ -29,14 +29,15 @@ class DroneHeightListener:
 
 
     def scanDownCallback(self, scan):
-        self.lastScanDown = scan
+        self.lastScanDown = scan.ranges[0]
 
     def scanUpCallback(self, scan):
-        self.lastScanUp = scan
+        self.lastScanUp = scan.ranges[0]
 
     def twistCallback(self, cmd_vel):
-        desiredVel = min(PID_P * abs(HEIGHT - self.lastScanDown.ranges[0]), MAX_VERTICAL)
-        if self.lastScanDown.ranges[0] > HEIGHT:
+        height = min(HEIGHT, (self.lastScanDown + self.lastScanUp) / 2)
+        desiredVel = min(PID_P * abs(height - self.lastScanDown), MAX_VERTICAL)
+        if self.lastScanDown > height:
             cmd_vel.linear.z = -desiredVel
         else:
             cmd_vel.linear.z = desiredVel
