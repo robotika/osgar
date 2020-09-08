@@ -178,7 +178,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         if self.going_to_volatile and data[0] % 5 == 0 and data[1] == 0:
             # if pursuing volatile then every two seconds rerun trajectory optimization and if better volatile than planned ahead, re-plan route
             v = self.get_next_volatile()
-            if v != self.current_volatile:
+            if v != self.current_volatile and distance(self.xyz, self.current_volatile) > 6: # do not change volatile if almost arrived to the current one
                 print (self.sim_time, self.robot_name, "New volatile target: [%.1f,%.1f]" % (v[0], v[1]))
                 self.current_volatile = v
                 raise NewVolatileTargetException()
@@ -836,11 +836,19 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                     # first time volatile: raise arm, bring hauler to the other side, drop load into bin
                                     #drop_angle = (self.mount_angle + math.pi) % (2*math.pi)
 
-                                    self.publish("bucket_dig", [self.mount_angle, 'standby']) # lift arm and clear rest of queue
-                                    self.hauler_ready = False
                                     nma = normalizeAnglePIPI(self.mount_angle)
-                                    nma = max(-math.pi/2, min(math.pi/2, nma)) # only move around the back of the robot
-                                    self.send_request('external_command hauler_1 approach %f' % normalizeAnglePIPI(self.yaw + nma))
+                                    if -math.pi/2 <= nma <= math.pi/2:
+                                        # if mount angle is in the front half of the vehicle, approach directly from the back
+                                        approach_angle = 0.0
+                                    elif nma < -math.pi/2:
+                                        approach_angle = normalizeAnglePIPI(nma + math.pi/2) # rover clockwise 90 degrees
+                                    elif nma > math.pi/2:
+                                        approach_angle = normalizeAnglePIPI(nma - math.pi/2) # rover counterclockwise 90 degrees
+
+                                    # point arm in the hauler approach direction so that hauler aligns with the center of the excavator
+                                    self.publish("bucket_dig", [normalizeAnglePIPI(approach_angle + math.pi), 'standby']) # lift arm and clear rest of queue
+                                    self.hauler_ready = False
+                                    self.send_request('external_command hauler_1 approach %f' % normalizeAnglePIPI(self.yaw + approach_angle))
 
                                     # NOTE: this approach may bump excavator, scoop volume may worsen
                                     while not self.hauler_ready:
