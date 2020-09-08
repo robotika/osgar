@@ -4,9 +4,13 @@ https://robotika.cz/competitions/robotour/2020/cs
 """
 import math
 import numpy as np
+import cv2
+from pyzbar.pyzbar import decode
 from datetime import timedelta
 
 from osgar.node import Node
+
+R = 12720000/2 #  Earth radius [m]
 
 
 def get_direction(x_diff, y_diff):
@@ -25,6 +29,13 @@ def downsample_scan(scan):
     return scan
 
 
+def parse_gps(data):
+    #gps = eval(data[4:]) #  in the beginning is "geo:"
+    gps = eval(data)
+    if len(gps) == 2:
+        return gps
+
+
 class Robotour(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
@@ -32,10 +43,13 @@ class Robotour(Node):
         self.speed = config['max_speed']
         self.pose = [0, 0, 0]
         self.verbose = False
-        self.destination = [3, 0]
+        self.destination = None
         self.new_scan = None
+        self.last_image = None #  numpy image
         self.dangerous_dist = 0.35
-        self.min_safe_dist = 2
+        self.min_safe_dist = 1.5
+        self.gps_start = (50.1286131, 14.3748433)
+        self.x_scale = math.cos(math.radians(self.gps_start[0]))
 
 
     def update(self):
@@ -48,6 +62,9 @@ class Robotour(Node):
         if channel == "scan":
             assert len(self.scan) == 811, len(self.scan)
             self.new_scan = downsample_scan(self.scan)
+        if channel =="image":
+            self.last_image = cv2.imdecode(np.frombuffer(self.image, np.uint8), 1)
+            #print(type(self.last_image), self.last_image.shape)
 
 
     def send_speed_cmd(self, speed, angular_speed):
@@ -60,6 +77,24 @@ class Robotour(Node):
         start_time = self.time
         while self.time - start_time < dt:
             self.update()
+
+
+    def latlon_diff2xy(self, dest_gps):
+        x = R * math.radians(dest_gps[1] - self.gps_start[1]) * self.x_scale
+        y = R * math.radians(dest_gps[0] - self.gps_start[0])
+        return x, y
+
+
+    def get_qrcode(self):
+        qr_codes = decode(self.last_image)
+        if len(qr_codes) > 0:
+            for qr in qr_codes:
+                print(qr.data)
+                dest_gps = parse_gps(qr.data)
+                dest = self.latlon_diff2xy(dest_gps)
+
+                return dest
+
 
     def go_safely(self, desired_direction):
         angular_speed = desired_direction
@@ -102,10 +137,20 @@ class Robotour(Node):
 
     def run(self):
         self.update()  # define self.time
-        self.wait(timedelta(seconds=10))  # waiting for QR code
+        # waiting for QR code
+        print("waiting for QR code..")
+        while True:
+            if self.last_image is not None:
+                self.destination = self.get_qrcode()
+                if self.destination is not None:
+                    print(self.destination)
+                    break
+                self.last_image = None
+            self.update()
+
         print(self.time, "Go!")
         start_time = self.time
-        while self.time - start_time < timedelta(seconds=60):
+        while self.time - start_time < timedelta(seconds=120):
             if self.new_scan is not None:
                 x, y, heading = self.pose
                 y_diff = self.destination[1] - y
