@@ -4,8 +4,8 @@
 
 
 import struct
-from threading import Thread
 
+from osgar.node import Node
 from osgar.bus import BusShutdownException
 
 
@@ -13,11 +13,10 @@ def CAN_triplet(msg_id, data):
     return [msg_id, bytes(data), 0]  # flags=0, i.e basic addressing
 
 
-class Spider(Thread):
+class Spider(Node):
     def __init__(self, config, bus):
+        super().__init__(config, bus)
         bus.register('can', 'status')
-        Thread.__init__(self)
-        self.setDaemon(True)
 
         self.bus = bus
         self.status_word = None  # not defined yet
@@ -29,6 +28,7 @@ class Spider(Thread):
         self.desired_angle = None  # in Spider mode desired weels direction
         self.desired_speed = None
         self.verbose = False  # TODO node
+        self.debug_arr = []
 
     @staticmethod
     def fix_range(value):
@@ -85,6 +85,7 @@ class Spider(Thread):
                 val = struct.unpack_from('hh', packet, 2)
                 if verbose:
                     print("Enc:", val)
+                    self.debug_arr.append((self.time.total_seconds(), *val))
 
     def process_gen(self, data, verbose=False):
         self.buf, packet = self.split_buffer(self.buf + data)
@@ -94,23 +95,16 @@ class Spider(Thread):
                 yield ret
             self.buf, packet = self.split_buffer(self.buf)  # i.e. process only existing buffer now
 
-    def run(self):
-        try:
-            while True:
-                dt, channel, data = self.bus.listen()
-                if channel == 'can':
-                    status = self.process_packet(data, verbose=self.verbose)
-                    if status is not None:
-                        self.bus.publish('status', status)
-                elif channel == 'move':
-                    self.desired_speed, self.desired_angle = data
-                else:
-                    assert False, channel  # unsupported channel
-        except BusShutdownException:
-            pass
-
-    def request_stop(self):
-        self.bus.shutdown()
+    def update(self):
+        channel = super().update()
+        if channel == 'can':
+            status = self.process_packet(self.can, verbose=self.verbose)
+            if status is not None:
+                self.bus.publish('status', status)
+        elif channel == 'move':
+            self.desired_speed, self.desired_angle = self.move
+        else:
+            assert False, channel  # unsupported channel
 
     def send(self, data):
         if True:  #self.can_bridge_initialized:
@@ -148,5 +142,19 @@ class Spider(Thread):
         else:
             print('CAN bridge not initialized yet!')
 #            self.logger.write(0, 'ERROR: CAN bridge not initialized yet! [%s]' % str(data))
+
+    def draw(self):
+        # for debugging
+        import matplotlib.pyplot as plt
+        arr = self.debug_arr
+        t = [a[0] for a in arr]
+        values = [a[1:] for a in arr]
+
+        line = plt.plot(t, values, '-', linewidth=2)
+
+        plt.xlabel('time (s)')
+        plt.legend(['left', 'right'])
+        plt.show()
+
 
 # vim: expandtab sw=4 ts=4
