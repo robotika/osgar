@@ -24,7 +24,7 @@ from osgar.lib.mathex import normalizeAnglePIPI
 DIG_GOOD_LOCATION_MASS = 10
 ARRIVAL_OFFSET = -1.5
 TYPICAL_VOLATILE_DISTANCE = 2
-DISTAL_THRESHOLD = 0.1 # TODO: movement may be too fast to detect when the scooping first happened
+DISTAL_THRESHOLD = 0.145 # TODO: movement may be too fast to detect when the scooping first happened
 PREFERRED_POLYGON = Polygon([(33,18),(38, -5),(29, -25), (6,-44), (-25,-44), (-25,-9),(-32,15),(-9,29)])
 SAFE_POLYGON = Polygon([
     (65, 20), (65, -35), (45, -35), (45, -55), (-65, -55), (-65, -42), (-25, -44), (-25, -5), (-65, -5), (-65, 25), (-40, 30), (-36, 55), (-10, 55), (-10, 41.70731707317074), (16, 37.90243902439025), (16, 55), (40, 55), (40, 25), (45.5, 20.5), (65, 20)
@@ -62,8 +62,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         self.vslam_valid = False
         self.visual_navigation_enabled = False
         self.lidar_distance_enabled = False
-        self.pursuing_volatile = False
-
+        self.current_volatile = None
+        self.going_to_volatile = False
 
     def on_osgar_broadcast(self, data):
         message_target = data.split(" ")[0]
@@ -173,6 +173,17 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         self.mount_angle = data[self.joint_name.index(b'mount_joint')]
         self.distal_angle = data[self.joint_name.index(b'distalarm_joint')]
 
+    def on_sim_clock(self, data):
+        super().on_sim_clock(data)
+        if self.going_to_volatile and data[0] % 5 == 0 and data[1] == 0:
+            # if pursuing volatile then every two seconds rerun trajectory optimization and if better volatile than planned ahead, re-plan route
+            v = self.get_next_volatile()
+            if v != self.current_volatile:
+                print (self.sim_time, self.robot_name, "New volatile target: [%.1f,%.1f]" % (v[0], v[1]))
+                self.current_volatile = v
+                raise NewVolatileTargetException()
+
+
     def on_vslam_pose(self, data):
         super().on_vslam_pose(data)
 
@@ -197,7 +208,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             # TODO: another pose may arrive while this request is still being processed (not a big deal, just a ROS error message)
             self.send_request('request_origin', self.register_origin)
 
-    def get_next_volatile(self, vol_list):
+    def get_next_volatile(self):
         # first, remove volatiles that we won't attempt - in unsafe areas, too close or in the direction of sun
         accessible_volatiles = []
         rover = np.asmatrix(np.asarray([self.xyz[0], self.xyz[1], 1]))
@@ -210,7 +221,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         turn_center_L = (float(pL[0]), float(pL[1]))
         turn_center_R = (float(pR[0]), float(pR[1]))
 
-        for v in vol_list:
+        for v in self.vol_list:
 
             d = distance(self.xyz, v)
             if not SAFE_POLYGON.contains(Point(v[0],v[1])):
@@ -240,7 +251,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         for v in accessible_volatiles:
             path_to_vol = []
             c_angular_difference = self.get_angle_diff(v)
-            c_distance = distance(v, self.xyz)
             turn_center = turn_center_L if c_angular_difference < 0 else turn_center_R
             tangs = calc_tangents(turn_center, TURN_RADIUS, v)
             tang1_v = np.asmatrix(np.asarray([tangs[0][0], tangs[0][1], 1]))
@@ -272,7 +282,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             ls = LineString(path_to_vol).buffer(1)
             c_nonpreferred_overlap =  ls.difference(PREFERRED_POLYGON).area
 
-            ranked_list.append([v, c_angular_difference, c_nonpreferred_overlap, c_distance])
+            ranked_list.append([v, c_angular_difference, c_nonpreferred_overlap, ls.area])
 
         # ranked_list: [volatile, angle, area, distance]
         def cmp(a,b):
@@ -315,16 +325,13 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
     def run(self):
 
         def process_volatiles(vol_string):
-            nonlocal vol_list
 
             vol_list_one = vol_string.split(',')
-            vol_list = [list(map(float, s.split())) for s in vol_list_one]
-            print (self.sim_time, self.robot_name, "Volatiles (%d): " % len(vol_list), vol_list)
+            self.vol_list = [list(map(float, s.split())) for s in vol_list_one]
+            print (self.sim_time, self.robot_name, "Volatiles (%d): " % len(self.vol_list), self.vol_list)
 
         def vslam_reset_time(response):
             self.vslam_reset_at = self.sim_time
-
-        vol_list = None
 
         try:
             self.wait_for_init()
@@ -486,7 +493,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             # this will also trigger true pose once slam starts sending data
             self.send_request('vslam_reset', vslam_reset_time)
 
-            while vol_list is None or not self.true_pose:
+            while self.vol_list is None or not self.true_pose:
                 try:
                     self.wait(timedelta(seconds=1))
                 except MoonException as e:
@@ -562,7 +569,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             self.virtual_bumper = VirtualBumper(timedelta(seconds=3), 0.2) # radius of "stuck" area; a little more as the robot flexes
 
 
-            def pursue_volatile(v):
+            def pursue_volatile():
+                v = self.current_volatile
                 wait_for_mapping = False
                 wait_for_hauler_requested = None
                 ARRIVAL_TOLERANCE = 1 # if we are within 1m of target, stop
@@ -615,7 +623,13 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                 #self.turn(math.copysign(min(abs(angle_diff),math.pi/4),angle_diff), timeout=timedelta(seconds=15))
                             # ideal position is 0.5m in front of the excavator
                             # TODO: fine-tune offset and tolerance given slipping
-                            self.go_to_location(v, self.default_effort_level, offset=ARRIVAL_OFFSET, full_turn=True, timeout=timedelta(minutes=5), tolerance=ARRIVAL_TOLERANCE)
+                            self.going_to_volatile = True
+                            try:
+                                self.go_to_location(v, self.default_effort_level, offset=ARRIVAL_OFFSET, full_turn=True, timeout=timedelta(minutes=5), tolerance=ARRIVAL_TOLERANCE)
+                            except NewVolatileTargetException:
+                                raise
+                            finally:
+                                self.going_to_volatile = False
                             return v #arrived
 
                     except LidarCollisionException as e: #TODO: long follow of obstacle causes loss, go along under steeper angle
@@ -746,13 +760,18 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 #        pass
             # end of reposition function
 
-            while len(vol_list) > 0:
-                v = self.get_next_volatile(vol_list)
-                if v is None:
+            while len(self.vol_list) > 0:
+                self.current_volatile = self.get_next_volatile()
+                if self.current_volatile is None:
                     break
-                self.pursuing_volatile = True
-                pursue_volatile(v)
-                self.pursuing_volatile = False
+                while True:
+                    try:
+                        pursue_volatile()
+                    except NewVolatileTargetException:
+                        continue
+                    break
+                v = self.current_volatile
+                self.current_volatile = None
 
                 accum = 0 # to check if we picked up 100.0 total and can finish
                 for attempt_offset in [{'dist': 0.0, 'start_dig_angle': 0.0}, {'dist': 4, 'start_dig_angle': math.pi}, {'dist': -8, 'start_dig_angle': 0.0}]:
@@ -904,7 +923,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         # have best position, dig everything up, adjust position, move to next volatile
                         self.set_brakes(True)
                         if scoop_all(found_angle):
-                            vol_list.remove(v)# once scooping finished or given up on, remove volatile from list
+                            self.vol_list.remove(v)# once scooping finished or given up on, remove volatile from list
 
                             v = np.asmatrix(np.asarray([v[0], v[1], 1]))
                             c, s = np.cos(self.yaw), np.sin(self.yaw)
