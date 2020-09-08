@@ -48,6 +48,7 @@ then
     echo "Robot is X4 drone"    
     LAUNCH_FILE="robot x4.launch"
     CONFIG_FILES=("zmq-subt-x4.json")
+    SPEED=2.0
 elif $IS_TEAMBASE
 then
     echo "Robot is TEAMBASE"
