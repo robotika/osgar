@@ -70,7 +70,12 @@
           "driver": "subt.depth2scan:DepthToScan",
           "in": ["depth", "scan"],
           "out": ["scan"],
-          "init": {}
+          "init": {
+            "depth_params": {
+              "vertical_pixel_offset": 16,
+              "lidar_trusted_zone": 0.25
+            }
+          }
       },
       "rospy": {
           "driver": "subt.pull:Pull",
