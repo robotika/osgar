@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 import math
 import numpy as np
-from examples.robotour.robotour_2020 import get_direction, Robotour, downsample_scan
+from examples.robotour.robotour_2020 import get_direction, Robotour, downsample_scan, parse_gps
 
 
 class RobotourTest(unittest.TestCase):
@@ -24,6 +24,10 @@ class RobotourTest(unittest.TestCase):
 
         r.new_scan = scan[::-1] * 1000
         self.assertEqual(r.navigate(0), -0.6981317007977318)
+
+    def test_parse_gps(self):
+        self.assertEqual(parse_gps(b'geo:48.8016394,16.8011145'), (48.8016394, 16.8011145))
+
 
 
 if __name__ == '__main__':
