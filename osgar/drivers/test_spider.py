@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 from datetime import timedelta
 
-from osgar.drivers.spider import Spider, CAN_triplet
+from osgar.drivers.spider import Spider, CAN_triplet, sint8_diff
 from osgar.bus import Bus
 
 
@@ -26,5 +26,11 @@ class SpiderTest(unittest.TestCase):
         self.assertEqual(dt, timedelta(seconds=135))
         self.assertEqual(stream, 'status')
         self.assertEqual(data, ([0x8000, None]))
+
+    def test_8bit_diff(self):
+        self.assertEqual(sint8_diff(0, 256), 0)
+        self.assertEqual(sint8_diff(0, 1), -1)
+        self.assertEqual(sint8_diff(255, 0), -1)
+
 
 # vim: expandtab sw=4 ts=4

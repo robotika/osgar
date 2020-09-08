@@ -2,21 +2,30 @@
   Spider3 Rider Driver
 """
 
-
 import struct
+import ctypes
+import math
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
+
+
+SPIDER_ENC_SCALE = 0.01  # TODO calibrate
+WHEEL_DISTANCE = 1.5  # TODO calibrate
 
 
 def CAN_triplet(msg_id, data):
     return [msg_id, bytes(data), 0]  # flags=0, i.e basic addressing
 
 
+def sint8_diff(a, b):
+    return ctypes.c_int8(a - b).value
+
+
 class Spider(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('can', 'status')
+        bus.register('can', 'status', 'encoders', 'pose2d')
 
         self.bus = bus
         self.status_word = None  # not defined yet
@@ -29,6 +38,35 @@ class Spider(Node):
         self.desired_speed = None
         self.verbose = False  # TODO node
         self.debug_arr = []
+        self.pose2d = (0.0, 0.0, 0.0)  # x, y in meters, heading in radians (not corrected to 2PI)
+        self.prev_enc = None  # not defined
+
+    def update_pose2d(self, diff):
+        x, y, heading = self.pose2d
+
+        metricL = SPIDER_ENC_SCALE * diff[0]
+        metricR = SPIDER_ENC_SCALE * diff[1]
+
+        dist = (metricL + metricR)/2.0
+        angle = (metricR - metricL)/WHEEL_DISTANCE
+
+        # advance robot by given distance and angle
+        if abs(angle) < 0.0000001:  # EPS
+            # Straight movement - a special case
+            x += dist * math.cos(heading)
+            y += dist * math.sin(heading)
+            #Not needed: heading += angle
+        else:
+            # Arc
+            r = dist / angle
+            x += -r * math.sin(heading) + r * math.sin(heading + angle)
+            y += +r * math.cos(heading) - r * math.cos(heading + angle)
+            heading += angle # not normalized
+        self.pose2d = (x, y, heading)
+
+    def send_pose2d(self):
+        x, y, heading = self.pose2d
+        self.bus.publish('pose2d', [round(x*1000), round(y*1000), round(math.degrees(heading)*100)])
 
     @staticmethod
     def fix_range(value):
@@ -83,9 +121,16 @@ class Spider(Node):
                 # encoders
                 assert len(packet) == 2 + 4, packet
                 val = struct.unpack_from('hh', packet, 2)
+                if self.prev_enc is None:
+                    self.prev_enc = val
+                diff = [sint8_diff(a, b) for a, b in zip(val, self.prev_enc)]
+                self.publish('encoders', list(diff))
+                self.update_pose2d(diff)
+                self.send_pose2d()
+                self.prev_enc = val
                 if verbose:
                     print("Enc:", val)
-                    self.debug_arr.append((self.time.total_seconds(), *val))
+                    self.debug_arr.append((self.time.total_seconds(), *diff))
 
     def process_gen(self, data, verbose=False):
         self.buf, packet = self.split_buffer(self.buf + data)
@@ -94,6 +139,7 @@ class Spider(Node):
             if ret is not None:
                 yield ret
             self.buf, packet = self.split_buffer(self.buf)  # i.e. process only existing buffer now
+
 
     def update(self):
         channel = super().update()
@@ -150,7 +196,7 @@ class Spider(Node):
         t = [a[0] for a in arr]
         values = [a[1:] for a in arr]
 
-        line = plt.plot(t, values, '-', linewidth=2)
+        line = plt.plot(t, values, '-o', linewidth=2)
 
         plt.xlabel('time (s)')
         plt.legend(['left', 'right'])
