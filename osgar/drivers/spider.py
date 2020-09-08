@@ -10,7 +10,7 @@ from osgar.node import Node
 from osgar.bus import BusShutdownException
 
 
-SPIDER_ENC_SCALE = 0.01  # TODO calibrate
+SPIDER_ENC_SCALE = 0.002  # TODO calibrate
 WHEEL_DISTANCE = 1.5  # TODO calibrate
 
 
@@ -156,15 +156,16 @@ class Spider(Node):
         if True:  #self.can_bridge_initialized:
             speed, angular_speed = data
             if speed > 0:
+#                print(self.status_word & 0x7fff)
                 if self.status_word is None or self.status_word & 0x10 != 0:
                     angle_cmd = int(angular_speed)  # TODO verify angle, byte resolution
                 else:
-                    print('SPIDER MODE')
+#                    print('SPIDER MODE')
                     desired_angle = int(angular_speed)  # TODO proper naming etc.
                     if self.wheel_angles is not None and self.zero_steering is not None:
                         curr = Spider.fix_range(self.wheel_angles[0] - self.zero_steering[0])
                         diff = Spider.fix_range(desired_angle - curr)
-                        print('DIFF', diff)
+#                        print('DIFF', diff)
                         if abs(diff) < 5:
                             angle_cmd = 0
                         elif diff < 0:
