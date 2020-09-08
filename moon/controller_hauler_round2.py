@@ -57,7 +57,6 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         self.arrival_send_requested_at = None
         self.set_yaw = None
         self.full_360_objects = {}
-        self.looking_for_excavator = True
 
     def vslam_reset_time(self, response):
         self.vslam_reset_at = self.sim_time
@@ -111,7 +110,6 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         self.bin_content = data
 
     def look_for_rover(self, direction=1):
-        self.looking_for_excavator = True
         print(self.sim_time, self.robot_name, "Starting to look for excavator")
         while True:
             try:
@@ -181,32 +179,47 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
             # FIND EXCAVATOR
             while True:
                 try:
+                    self.excavator_waiting = True
                     self.look_for_rover()
                 except ChangeDriverException as e:
-                    pass
+                    traceback.print_exc(file=sys.stdout)
+                    print(self.sim_time, self.robot_name, "Excavator found, driving towards it")
+                except MoonException as e:
+                    print(self.sim_time, self.robot_name, "Exception while looking for rover, trying on")
+                    continue
 
                 # follow to ONHOLD distance
                 self.driving_mode = "onhold"
                 self.target_excavator_distance = EXCAVATOR_ONHOLD_GAP
 
-                # wait until rover is in position
-                while abs(self.target_excavator_distance - self.rover_distance) > DISTANCE_TOLERANCE:
-                    try:
-                        self.wait(timedelta(milliseconds=200))
-                    except ExcavatorLostException:
-                        continue
+                def wait_for_yaw():
+                    # wait until hauler is in position
+                    while abs(self.target_excavator_distance - self.rover_distance) > DISTANCE_TOLERANCE:
+                        try:
+                            self.wait(timedelta(milliseconds=200))
+                        except ExcavatorLostException:
+                            print(self.sim_time, self.robot_name, "Excavator lost while waiting to reach desired location, starting to look again")
+                            return False
+                        except MoonException:
+                            print(self.sim_time, self.robot_name, "Exception while waiting to reach desired location, waiting on")
 
-                print(self.sim_time, self.robot_name, "Sending arrived message to excavator")
-                self.send_request('external_command excavator_1 arrived %.2f' % 0.0)
+                    print(self.sim_time, self.robot_name, "Sending arrived message to excavator")
+                    self.send_request('external_command excavator_1 arrived %.2f' % 0.0)
 
-                while self.set_yaw is None:
-                    try:
-                        self.wait(timedelta(seconds=1))
-                    except BusShutdownException:
-                        raise
-                    except ExcavatorLostException:
-                        continue
-                break
+                    while self.set_yaw is None:
+                        try:
+                            self.wait(timedelta(seconds=1))
+                        except BusShutdownException:
+                            raise
+                        except ExcavatorLostException:
+                            print(self.sim_time, self.robot_name, "Excavator lost while waiting for yaw alignment readiness, starting to look again")
+                            return False # need to start looking for rover again
+                        except MoonException:
+                            print(self.sim_time, self.robot_name, "Exception while waiting for yaw alignment readiness, waiting on")
+                    return True # yaw received
+
+                if wait_for_yaw():
+                    break
 
 
             #self.set_brakes(True)
@@ -344,7 +357,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                     self.inException = False
                     self.send_speed_cmd(0.0, 0.0)
                 except ChangeDriverException as e:
-                    print(self.sim_time, self.robot_name, "Driver changed to go to location")
+                    print(self.sim_time, self.robot_name, "Excavator found, continuing visual driving")
                 except VirtualBumperException as e: # if bumper while following (e.g, blocked by a rock)
                     if self.arrived_message_sent: # if while waiting for loading, ignore
                         continue
@@ -412,6 +425,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
             if self.excavator_waiting:
                 self.send_request('external_command excavator_1 resume')
                 self.excavator_waiting = False
+                raise ChangeDriverException(data)
 
             # TODO: maybe just use min of stereo cam distances?
             if artf_distance < 1.3:
@@ -431,13 +445,6 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
 #            if (self.debug):
 #                print (self.sim_time, self.robot_name, "Rover angle: %.2f dist: %d" % (angle_x, self.rover_distance))
 
-        if self.looking_for_excavator:
-            # do not drive from here, either throw exception if found or return if not
-            if artifact_type == 'rover' or artifact_type == "excavator_arm":
-                self.looking_for_excavator = False
-                raise ChangeDriverException(data)
-            else:
-                return
 
         if not self.inException and not self.arrived_message_sent and not self.scan_driving:
             if self.rover_distance > 6 and self.scan_distance_to_obstacle < 4000:

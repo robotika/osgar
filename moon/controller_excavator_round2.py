@@ -35,6 +35,8 @@ class WaitRequestedException(MoonException):
     pass
 class ResumeRequestedException(MoonException):
     pass
+class NewVolatileTargetException(MoonException):
+    pass
 
 class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
     def __init__(self, config, bus):
@@ -60,6 +62,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         self.vslam_valid = False
         self.visual_navigation_enabled = False
         self.lidar_distance_enabled = False
+        self.pursuing_volatile = False
+
 
     def on_osgar_broadcast(self, data):
         message_target = data.split(" ")[0]
@@ -304,8 +308,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         while not self.hauler_ready:
             try:
                 self.wait(timedelta(seconds=1))
-            except BusShutdownException:
-                raise
             except MoonException as e:
                 print(self.sim_time, self.robot_name, "Exception while waiting for hauler to arrive: ", str(e))
         self.hauler_ready = False
@@ -339,6 +341,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             self.publish("bucket_drop", [math.pi, 'reset'])
 
             # point wheels downwards and wait until on flat terrain or timeout
+            print(self.sim_time, self.robot_name, "Letting excavator slide down the hill")
             start_drifting = self.sim_time
             while self.sim_time - start_drifting < timedelta(seconds=20) and (abs(self.pitch) > 0.05 or abs(self.roll) > 0.05):
                 try:
@@ -347,8 +350,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         print(self.sim_time, self.robot_name, "Vehicle attitude: %.2f" % attitude)
                     self.publish("desired_movement", [GO_STRAIGHT, math.degrees(attitude * 100), 0.1])
                     self.wait(timedelta(milliseconds=100))
-                except BusShutdownException:
-                    raise
                 except MoonException as e:
                     print(self.sim_time, self.robot_name, "Exception while waiting for excavator to settle: ", str(e))
             self.publish("desired_movement", [0, 0, 0])
@@ -356,8 +357,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             while self.mount_angle is None or abs(normalizeAnglePIPI(math.pi - self.mount_angle)) > 0.2:
                 try:
                     self.wait(timedelta(seconds=1))
-                except BusShutdownException:
-                    raise
                 except MoonException as e:
                     print(self.sim_time, self.robot_name, "Exception while waiting for arm to align: ", str(e))
 
@@ -365,6 +364,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             self.set_brakes(False) # start applying mild braking
 
             # initial 360 turn to find emptiest area
+            print(self.sim_time, self.robot_name, "Scanning 360 degrees of horizon to find widest segment with far enough free space")
             self.lidar_distance_enabled = True
             while True:
                 try:
@@ -372,21 +372,11 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     self.full_360_distances = []
                     self.turn(math.radians(360), ang_speed=0.8*self.max_angular_speed, timeout=timedelta(seconds=40))
                     break
-                except BusShutdownException:
-                    raise
                 except MoonException as e:
                     print(self.sim_time, self.robot_name, "Exception while performing initial turn: ", str(e))
 
             self.lidar_distance_enabled = False
             self.set_cam_angle(-0.05)
-
-            # divide circle to 20deg segments
-            #directions = []
-            #for angle in np.arange(-math.pi, math.pi, math.radians(20)):
-            #    directions.append({
-            #        'yaw': angle + math.radians(10),
-            #        'median_distance': median([a['distance'] for a in self.full_360_distances if angle <= a['yaw'] <= (angle+math.radians(20))])
-            #        })
 
             min_distance_obj = min(self.full_360_distances, key=lambda x: x['distance'])
             # if min distance in all directions is more than 5m, no need to drive anywhere
@@ -405,7 +395,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     if group:
                         yield group
 
-
                 clusters = list(enumerate(distance_grouper(self.full_360_distances)))
                 m = []
                 for c in clusters:
@@ -418,13 +407,14 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     bestyawobj = max(m, key=lambda x: x['wedge_width'])
 
                     try:
-                        print(self.sim_time, self.robot_name, "excavator: into-clear-space angle (internal coordinates) [%.2f]" % (normalizeAnglePIPI(bestyawobj['yaw'])))
+                        print(self.sim_time, self.robot_name, "excavator: Driving into-clear-space, yaw (internal coordinates) [%.2f]" % (normalizeAnglePIPI(bestyawobj['yaw'])))
                         self.turn(bestyawobj['yaw'] - self.yaw, timeout=timedelta(seconds=40))
                         self.go_straight(4)
-                    except BusShutdownException:
-                        raise
                     except MoonException as e:
                         print(self.sim_time, self.robot_name, "Exception while performing initial going away from obstacles: ", str(e))
+
+
+            print(self.sim_time, self.robot_name, "Asking hauler to arrive to <follow> distance")
 
             self.send_request('external_command hauler_1 follow') # force hauler to come real close, this will make it lose visual match with processing plant
             self.wait_for_hauler()
@@ -448,6 +438,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 if group:
                     yield group
 
+            print(self.sim_time, self.robot_name, "Scanning 360 degrees of horizon to find hauler (widest wedge with continuous hauler detection)")
+
             self.visual_navigation_enabled = True
             while True:
                 while True:
@@ -468,8 +460,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             # turn a little less to allow for extra turn after the effort was stopped
                             self.turn(turn_needed if turn_needed >= 0 else (turn_needed + 2*math.pi), ang_speed=0.8*self.max_angular_speed, timeout=timedelta(seconds=40))
                         break
-                    except BusShutdownException:
-                        raise
                     except MoonException as e:
                         print(self.sim_time, self.robot_name, "Exception while performing initial turn: ", str(e))
 
@@ -491,14 +481,14 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             self.auto_light_adjustment = True
             # self.set_light_intensity("0.4")
 
+            print(self.sim_time, self.robot_name, "Resetting VSLAM, requesting true_pose")
+
             # this will also trigger true pose once slam starts sending data
             self.send_request('vslam_reset', vslam_reset_time)
 
             while vol_list is None or not self.true_pose:
                 try:
                     self.wait(timedelta(seconds=1))
-                except BusShutdownException:
-                    raise
                 except MoonException as e:
                     print(self.sim_time, self.robot_name, "Exception while waiting for true pose: ", str(e))
 
@@ -540,8 +530,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             while not self.hauler_ready:
                 try:
                     self.wait(timedelta(seconds=1))
-                except BusShutdownException:
-                    raise
                 except MoonException as e:
                     print(self.sim_time, self.robot_name, "Exception while waiting for hauler to arrive: ", str(e))
 
@@ -552,8 +540,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             while not self.hauler_ready:
                 try:
                     self.wait(timedelta(seconds=3))
-                except BusShutdownException:
-                    raise
                 except MoonException as e:
                     print(self.sim_time, self.robot_name, "Exception while waiting for hauler to arrive: ", str(e))
 
@@ -577,9 +563,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
 
             def pursue_volatile(v):
-                goto_path = [v]
-                if not SAFE_POLYGON.contains(LineString([v, self.xyz[:2]])):
-                    goto_path = [[-10,-10]] + goto_path
                 wait_for_mapping = False
                 wait_for_hauler_requested = None
                 ARRIVAL_TOLERANCE = 1 # if we are within 1m of target, stop
@@ -600,17 +583,12 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             while self.vslam_reset_at is None or self.sim_time - self.vslam_reset_at < timedelta(seconds=3):
                                 try:
                                     self.wait(timedelta(seconds=1))
-                                except BusShutdownException:
-                                    raise
                                 except MoonException as e:
                                     print(self.sim_time, self.robot_name, "Exception while waiting for VSLAM reset: ", str(e))
-
 
                             while not self.hauler_ready:
                                 try:
                                     self.wait(timedelta(seconds=3))
-                                except BusShutdownException:
-                                    raise
                                 except MoonException as e:
                                     print(self.sim_time, self.robot_name, "Exception while waiting for hauler to be ready: ", str(e))
 
@@ -619,16 +597,12 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             self.send_request('external_command hauler_1 request_true_pose')
                             try:
                                 self.wait(timedelta(seconds=5)) # wait for pose to update (TODO: wait for a flag instead)
-                            except BusShutdownException:
-                                raise
                             except MoonException as e:
                                 print(self.sim_time, self.robot_name, "Exception while waiting for true pose: ", str(e))
 
 
                             self.set_brakes(False)
                             self.send_request('external_command hauler_1 follow')
-
-
 
                         print(self.sim_time, self.robot_name, "excavator: Pursuing volatile [%.1f,%.1f]" % (v[0],v[1]))
                         while wait_for_mapping or (wait_for_hauler_requested is not None and self.sim_time < wait_for_hauler_requested):
@@ -641,14 +615,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                 #self.turn(math.copysign(min(abs(angle_diff),math.pi/4),angle_diff), timeout=timedelta(seconds=15))
                             # ideal position is 0.5m in front of the excavator
                             # TODO: fine-tune offset and tolerance given slipping
-                            while len(goto_path) > 1:
-                                self.go_to_location(goto_path[0], self.default_effort_level, tolerance=8.0, full_turn=True) # extra offset for sliding
-                                goto_path.pop(0)
-                            # extra offset for sliding?
-                            if len(goto_path) == 1:
-                                self.go_to_location(goto_path[0], self.default_effort_level, offset=ARRIVAL_OFFSET, full_turn=True, timeout=timedelta(minutes=5), tolerance=ARRIVAL_TOLERANCE)
-                                goto_path.pop(0)
-
+                            self.go_to_location(v, self.default_effort_level, offset=ARRIVAL_OFFSET, full_turn=True, timeout=timedelta(minutes=5), tolerance=ARRIVAL_TOLERANCE)
                             return v #arrived
 
                     except LidarCollisionException as e: #TODO: long follow of obstacle causes loss, go along under steeper angle
@@ -732,16 +699,12 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 while self.sim_time - start_alignment < timedelta(seconds=20) and self.mount_angle is None or abs(normalizeAnglePIPI(math.pi - self.mount_angle)) > 0.2:
                     try:
                         self.wait(timedelta(seconds=1))
-                    except BusShutdownException:
-                        raise
                     except MoonException as e:
                         print(self.sim_time, self.robot_name, "Exception while waiting for arm to align: ", str(e))
 
                 self.send_request('external_command hauler_1 onhold')
                 try:
                     self.wait(timedelta(seconds=8))
-                except BusShutdownException:
-                    raise
                 except MoonException as e:
                     print(self.sim_time, self.robot_name, "Exception while waiting for hauler to assume position: ", str(e))
 
@@ -752,13 +715,14 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 if abs(normalizeAnglePIPI(mount_angle)) < math.pi/2:
                     self.publish("desired_movement", [GO_STRAIGHT, int(100*math.degrees(normalizeAnglePIPI(mount_angle))), effort])
                 else:
-                    self.publish("desired_movement", [GO_STRAIGHT, -int(100*math.degrees(normalizeAnglePIPI(math.pi - mount_angle))), effort])
+                    self.publish("desired_movement", [
+                        GO_STRAIGHT,
+                        int(100*math.degrees(normalizeAnglePIPI(math.copysign(math.pi - abs(normalizeAnglePIPI(mount_angle)), -normalizeAnglePIPI(mount_angle))))),
+                        -effort])
 
                 while distance(start_pose, self.xyz) < 0.7: # go 0.7m closer to volatile
                     try:
                         self.wait(timedelta(milliseconds=100))
-                    except BusShutdownException:
-                        raise
                     except MoonException as e:
                         print(self.sim_time, self.robot_name, "Exception while adjusting position: ", str(e))
                         traceback.print_exc(file=sys.stdout)
@@ -767,8 +731,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 self.publish("desired_movement", [0,0,0])
                 try:
                     self.wait(timedelta(seconds=3))
-                except BusShutdownException:
-                    raise
                 except MoonException as e:
                     print(self.sim_time, self.robot_name, "Exception while waiting to come to stop: ", str(e))
 
@@ -788,14 +750,14 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 v = self.get_next_volatile(vol_list)
                 if v is None:
                     break
+                self.pursuing_volatile = True
                 pursue_volatile(v)
+                self.pursuing_volatile = False
 
                 accum = 0 # to check if we picked up 100.0 total and can finish
                 for attempt_offset in [{'dist': 0.0, 'start_dig_angle': 0.0}, {'dist': 4, 'start_dig_angle': math.pi}, {'dist': -8, 'start_dig_angle': 0.0}]:
                     try:
                         self.go_straight(attempt_offset['dist'])
-                    except BusShutdownException:
-                        raise
                     except MoonException as e:
                         # excess pitch or other exception could happen but we are stopped so should stabilize
                         print(self.sim_time, self.robot_name, "Exception when adjusting linearly", str(e))
@@ -806,8 +768,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
                     try:
                         self.wait(timedelta(seconds=2))
-                    except BusShutdownException:
-                        raise
                     except MoonException as e:
                         print(self.sim_time, self.robot_name, "Exception while waiting to come to stop: ", str(e))
 
@@ -848,8 +808,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             # TODO instead of/in addition to timeout, trigger exit by bucket reaching reset position
                             try:
                                 self.wait(timedelta(milliseconds=100))
-                            except BusShutdownException:
-                                raise
                             except MoonException as e:
                                 print(self.sim_time, self.robot_name, "Exception while waiting in loop: ", str(e))
 
@@ -869,8 +827,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                     while not self.hauler_ready:
                                         try:
                                             self.wait(timedelta(seconds=1))
-                                        except BusShutdownException:
-                                            raise
                                         except MoonException as e:
                                             print(self.sim_time, self.robot_name, "Exception while waiting for hauler to arrive: ", str(e))
                                     self.hauler_ready = False
@@ -898,8 +854,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                                 while self.volatile_dug_up[1] != 100:
                                     try:
                                         self.wait(timedelta(milliseconds=300))
-                                    except BusShutdownException:
-                                        raise
                                     except MoonException as e:
                                         print(self.sim_time, self.robot_name, "Exception while waiting to empty bin: ", str(e))
                                 self.first_distal_angle = None
@@ -923,8 +877,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             while self.volatile_dug_up[1] == 100:
                                 try:
                                     self.wait(timedelta(milliseconds=300))
-                                except BusShutdownException:
-                                    raise
                                 except MoonException as e:
                                     print(self.sim_time, self.robot_name, "Exception while waiting to detect volatile: ", str(e))
                                 if self.sim_time - dig_start > timedelta(seconds=120): # TODO: timeout needs to be adjusted to the ultimate digging plan
@@ -938,8 +890,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             while self.volatile_dug_up[1] != 100:
                                 try:
                                     self.wait(timedelta(milliseconds=300))
-                                except BusShutdownException:
-                                    raise
                                 except MoonException as e:
                                     print(self.sim_time, self.robot_name, "Exception while waiting to empty bin: ", str(e))
 
@@ -979,8 +929,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     while self.volatile_dug_up[1] != 100 or (self.mount_angle is None or abs(normalizeAnglePIPI(math.pi - self.mount_angle)) > 0.2):
                         try:
                             self.wait(timedelta(seconds=1))
-                        except BusShutdownException:
-                            raise
                         except MoonException as e:
                             print(self.sim_time, self.robot_name, "Exception while waiting to empty bin: ", str(e))
 
@@ -998,8 +946,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     while not self.hauler_ready:
                         try:
                             self.wait(timedelta(seconds=1))
-                        except BusShutdownException:
-                            raise
                         except MoonException as e:
                             print(self.sim_time, self.robot_name, "Exception while waiting for hauler to arrive: ", str(e))
 
@@ -1008,8 +954,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     self.send_request('external_command hauler_1 request_true_pose')
                     try:
                         self.wait(timedelta(seconds=5)) # wait for pose to update (TODO: wait for a flag instead)
-                    except BusShutdownException:
-                        raise
                     except MoonException as e:
                         print(self.sim_time, self.robot_name, "Exception while waiting to true pose: ", str(e))
 

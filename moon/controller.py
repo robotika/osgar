@@ -668,7 +668,7 @@ class SpaceRoboticsChallenge(MoonNode):
     def go_straight(self, how_far, with_stop=True, timeout=None):
         print(self.sim_time, self.robot_name, "go_straight %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position)
         if timeout is None:
-            timeout = timedelta(seconds=2*abs(how_far) / self.max_speed)
+            timeout = timedelta(seconds=10 + 2*abs(how_far) / self.max_speed)
 
         start_pose = self.last_position
         if how_far >= 0:
