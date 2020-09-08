@@ -4,10 +4,11 @@
     "modules": {
       "app": {
         "init": {
-          "limit_pitch": 40,
-          "limit_roll": 35,
-          "return_limit_pitch": 45,
-          "return_limit_roll": 45,
+          "limit_pitch": 45,
+          "limit_roll": 40,
+          "return_limit_pitch": 50,
+          "return_limit_roll": 50,
+          "obstacle_influence": 1.2,
           "speed_policy": "conservative"
         }
       },
@@ -18,8 +19,8 @@
             "camera_xyz": [0.25, 0.0, 0.23],
             "image_size": [640, 360],
             "principal_point": [319.5, 179.5],
-            "disabled_vertical_diff_limit": 0.698, "vd_comment": "radians(40)",
-            "max_slope": -0.436, "ms_comment": "radians(-25)"
+            "vertical_diff_limit": 0.698, "vd_comment": "radians(40)",
+            "max_slope": -0.4538, "ms_comment": "radians(-26)"
           }
         }
       }
