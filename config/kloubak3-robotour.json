@@ -4,9 +4,9 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["scan", "scan_back", "emergency_stop", "pose2d"],
+          "in": ["scan", "scan_back", "emergency_stop", "pose2d", "image"],
           "out": ["desired_speed", "pose2d"],
-          "init": {"max_speed" : 0.5
+          "init": {"max_speed" : 0.7
           }
       },
       "kloubak": {
@@ -111,7 +111,8 @@
               ["kloubak.emergency_stop", "app.emergency_stop"],
               ["imu_serial.raw", "imu.raw"],
               ["imu.rotation", "app.rot"],
-              ["kloubak.joint_angle", "app.joint_angle"]
+              ["kloubak.joint_angle", "app.joint_angle"],
+              ["camera.raw", "app.image"]
       ]
   }
 }
