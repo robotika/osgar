@@ -9,9 +9,16 @@ class Teambase(Node):
         super().__init__(config, bus)
         bus.register("broadcast")
 
+        self.robot_name = config.get('robot_name')
+        self.finish_time = None  # infinite
+        if self.robot_name is not None:
+            self.finish_time = int(self.robot_name[1:].split('F')[0])  # T100 is accepted for example
+
     def on_sim_time_sec(self, data):
         # broadcast simulation time every second
         self.publish('broadcast', b'%d' % data)
+        if self.finish_time is not None and data > self.finish_time:
+            self.request_stop()
 
     def update(self):
         channel = super().update()
