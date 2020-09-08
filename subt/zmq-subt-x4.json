@@ -4,7 +4,7 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["emergency_stop", "pose2d", "scan", "rot", "artf",
+          "in": ["emergency_stop", "pose2d", "pose3d", "scan", "rot", "artf",
                  "sim_time_sec", "acc", "origin"],
           "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout", "request_origin"],
           "init": {
@@ -13,7 +13,8 @@
             "virtual_bumper_sec": 60,
             "virtual_bumper_radius": 10.0,
             "virtual_world": true,
-            "speed_policy": "conservative"
+            "speed_policy": "conservative",
+            "obstacle_influence": 1.2
           }
       },
       "detector": {
@@ -66,10 +67,24 @@
               "camera_xyz": [0.1, 0.0, -0.08],
               "image_size": [640, 480],
               "principal_point": [320.5, 240.5],
-              "disabled_vertical_diff_limit": 0.698, "vd_comment": "radians(40)",
-              "max_slope": -0.436, "ms_comment": "radians(-25)"
+              "vertical_pixel_offset": 16,
+              "lidar_fov": 6.283185307179586,
+              "lidar_trusted_zone": 2.0,
+              "min_z": -0.2,
+              "max_z": 0.4,
+              "max_slope": -3.14,
+              "disabled_vertical_diff_limit": 0.698, "vd_comment": "radians(40)"
             }
           }
+      },
+      "vo": {
+        "driver": "subt.visual_odometry:Localization",
+        "init": {
+          "xyz": [0.1, 0, -0.08],
+          "rpy": [0.0, 0.0, 0.0],
+          "principal-point": [320.5, 240.5],
+          "focal-length": 554.25469
+        }
       },
       "rospy": {
           "driver": "subt.pull:Pull",
@@ -98,10 +113,11 @@
               ["rosmsg.image", "app.image"],
 
               ["rosmsg.depth", "depth2scan.depth"],
-              ["depth2scan.scan", "app.scan"],
+              ["depth2scan.scan", "app.scan360"],
               ["rosmsg.depth", "detector.depth"],
 
-              ["rosmsg.pose2d", "app.pose2d"],
+              ["rospy.rot", "app.rot"],
+              ["vo.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
 
               ["rosmsg.gas_detected", "detector.gas_detected"],
@@ -109,6 +125,11 @@
               ["detector.artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],
               ["app.artf_xyz", "reporter.artf_xyz"],
-              ["reporter.artf_cmd", "transmitter.raw"]]
+              ["reporter.artf_cmd", "transmitter.raw"],
+
+              ["rosmsg.origin",     "vo.origin"],
+              ["rospy.orientation", "vo.orientation"],
+              ["rosmsg.depth",      "vo.depth"],
+              ["rosmsg.image",      "vo.image"]]
   }
 }
