@@ -99,16 +99,13 @@ def adjust_scan(scan, depth_scan, depth_params):
     DISAGREEMENT_MM_LIMIT = 600
     LIDAR_NO_MEASUREMENT = 0
     DEPTH_NO_MEASUREMENT = 0
-    # TODO: Get rid of unnecessary computation. We only want to check
-    #       disagreements at the beginning and end of the overlap.
-    disagreement = np.logical_and(
-        lidar_overlap != LIDAR_NO_MEASUREMENT,
-        np.logical_or(
-            depth_scan == DEPTH_NO_MEASUREMENT,
-            depth_scan - lidar_overlap > DISAGREEMENT_MM_LIMIT))
+    def disagreement(idx):
+        return lidar_overlap[idx] != LIDAR_NO_MEASUREMENT and (
+                depth_scan[idx] == DEPTH_NO_MEASUREMENT or
+                depth_scan[idx] - lidar_overlap[idx] > DISAGREEMENT_MM_LIMIT)
     # We check multiple consecutive directions to reduce noise.
-    disagreement_right = disagreement[0] and disagreement[1] and disagreement[2]
-    disagreement_left = disagreement[-1] and disagreement[-2] and disagreement[-3]
+    disagreement_right = disagreement(0) and disagreement(1) and disagreement(2)
+    disagreement_left = disagreement(-1) and disagreement(-2) and disagreement(-3)
 
     if disagreement_right:
         # Taking measurements 2 indices away to lower impact of noise.
@@ -119,7 +116,7 @@ def adjust_scan(scan, depth_scan, depth_params):
         b = d1 * np.cos(phi1), d1 * np.sin(phi1)
         for i in range(alignment_start):
             d2 = lidar_scan[i]
-            if d2 == LIDAR_NO_MEASUREMENT:
+            if d2 == LIDAR_NO_MEASUREMENT or d2 < depth_params.lidar_trusted_zone:
                 continue
             phi2 = -lidar_fov / 2 + i / lidar_density
             c = d2 * np.cos(phi2), d2 * np.sin(phi2)
@@ -137,7 +134,7 @@ def adjust_scan(scan, depth_scan, depth_params):
         lidar_len = lidar_scan.shape[0]
         for i in range(lidar_len - alignment_tail, lidar_len):
             d2 = lidar_scan[i]
-            if d2 == LIDAR_NO_MEASUREMENT:
+            if d2 == LIDAR_NO_MEASUREMENT or d2 < depth_params.lidar_trusted_zone:
                 continue
             phi2 = -lidar_fov / 2 + i / lidar_density
             c = d2 * np.cos(phi2), d2 * np.sin(phi2)
@@ -146,7 +143,23 @@ def adjust_scan(scan, depth_scan, depth_params):
 
     depth_scan[depth_scan == DEPTH_NO_MEASUREMENT] = LIDAR_NO_MEASUREMENT
     new_scan = lidar_scan
-    new_scan[alignment_start:-alignment_tail] = depth_scan
+    # Up to depth_params.lidar_trusted_zone, we trust the lidar measurements,
+    # so we take a minimum between lidar- and depth-based distance to obstacle.
+    # Beyond that distance, we no longer trust lidar, because it could, for
+    # example, be pointing to ground, and we only take the depth-based estimate.
+    new_scan[alignment_start:-alignment_tail] = np.where(
+            np.logical_and(
+                lidar_overlap != LIDAR_NO_MEASUREMENT,
+                lidar_overlap < depth_params.lidar_trusted_zone),
+            np.minimum(lidar_overlap,
+                   # If we have a trusted lidar measurement, we shouldn't
+                   # override it with "no depth measurement", even if that is
+                   # technically a lower value.
+                   np.where(
+                       depth_scan == DEPTH_NO_MEASUREMENT,
+                       np.inf,
+                       depth_scan)),
+            depth_scan)
     return new_scan
 
 class DepthToScan(Node):
