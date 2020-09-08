@@ -119,7 +119,7 @@
               ["depth2scan.scan", "app.scan"],
               ["rosmsg.depth", "detector.depth"],
 
-              ["rosmsg.pose2d", "app.pose2d"],
+              ["localization.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
 
               ["rosmsg.gas_detected", "detector.gas_detected"],
