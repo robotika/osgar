@@ -33,6 +33,8 @@ class DepthParams:
             # Despeckling parameters.
             noise_filter_window=(5, 5),
             noise_filter_threshold=20,
+            # Lidar field of view in radians.
+            lidar_fov=np.radians(270),
             **kwargs):
 
         self.fx = fx
@@ -48,6 +50,7 @@ class DepthParams:
         self.max_slope = max_slope
         self.noise_filter_window = noise_filter_window
         self.noise_filter_threshold = noise_filter_threshold
+        self.lidar_fov = lidar_fov
 
         # Pixel coordinates relative to the center of the image, with positive
         # directions to the left and up.

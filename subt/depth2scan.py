@@ -80,15 +80,15 @@ def adjust_scan(scan, depth_scan, depth_params):
 
     lidar_scan = np.asarray(scan)
 
-    CAMERA_FOV = 2 * np.arctan2(depth_params.camw / 2.0, depth_params.fx)
-    LIDAR_FOV = np.radians(270)
+    camera_fov = 2 * np.arctan2(depth_params.camw / 2.0, depth_params.fx)
+    lidar_fov = depth_params.lidar_fov
 
-    depth_density = depth_scan.shape[0] / CAMERA_FOV
-    lidar_density = lidar_scan.shape[0] / LIDAR_FOV
+    depth_density = depth_scan.shape[0] / camera_fov
+    lidar_density = lidar_scan.shape[0] / lidar_fov
     assert depth_density > lidar_density
     depth_scan = cv2.resize(
         depth_scan.reshape((1, -1)),
-        (int(CAMERA_FOV * lidar_density), 1),
+        (int(camera_fov * lidar_density), 1),
         interpolation=cv2.INTER_NEAREST).reshape((-1,))
     alignment_start = (lidar_scan.shape[0] - depth_scan.shape[0]) // 2
     alignment_tail = lidar_scan.shape[0] - depth_scan.shape[0] - alignment_start
@@ -113,7 +113,7 @@ def adjust_scan(scan, depth_scan, depth_params):
     if disagreement_right:
         # Taking measurements 2 indices away to lower impact of noise.
         d0, d1 = lidar_scan[alignment_start], lidar_scan[alignment_start + 2]
-        phi0 = -LIDAR_FOV / 2 + alignment_start / lidar_density
+        phi0 = -lidar_fov / 2 + alignment_start / lidar_density
         phi1 = phi0 + 2 / lidar_density
         a = d0 * np.cos(phi0), d0 * np.sin(phi0)
         b = d1 * np.cos(phi1), d1 * np.sin(phi1)
@@ -121,7 +121,7 @@ def adjust_scan(scan, depth_scan, depth_params):
             d2 = lidar_scan[i]
             if d2 == LIDAR_NO_MEASUREMENT:
                 continue
-            phi2 = -LIDAR_FOV / 2 + i / lidar_density
+            phi2 = -lidar_fov / 2 + i / lidar_density
             c = d2 * np.cos(phi2), d2 * np.sin(phi2)
             if is_on_line(a, b, c):
                 lidar_scan[i] = LIDAR_NO_MEASUREMENT
@@ -130,7 +130,7 @@ def adjust_scan(scan, depth_scan, depth_params):
         aidx = -alignment_tail - 1
         bidx = -alignment_tail - 1 - 2
         d0, d1 = lidar_scan[aidx], lidar_scan[bidx]
-        phi0 = LIDAR_FOV / 2 + aidx / lidar_density
+        phi0 = lidar_fov / 2 + aidx / lidar_density
         phi1 = phi0 - 2 / lidar_density
         a = d0 * np.cos(phi0), d0 * np.sin(phi0)
         b = d1 * np.cos(phi1), d1 * np.sin(phi1)
@@ -139,7 +139,7 @@ def adjust_scan(scan, depth_scan, depth_params):
             d2 = lidar_scan[i]
             if d2 == LIDAR_NO_MEASUREMENT:
                 continue
-            phi2 = -LIDAR_FOV / 2 + i / lidar_density
+            phi2 = -lidar_fov / 2 + i / lidar_density
             c = d2 * np.cos(phi2), d2 * np.sin(phi2)
             if is_on_line(a, b, c):
                 lidar_scan[i] = LIDAR_NO_MEASUREMENT
