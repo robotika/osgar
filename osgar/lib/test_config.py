@@ -39,6 +39,8 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(merge_dict({'A':1}, {'A':1}), {'A':1})
         self.assertEqual(merge_dict({'A':1}, {'A':2}), {'A':2})
         self.assertEqual(merge_dict({'A':'a'}, {'A':'b'}), {'A':'b'})
+        self.assertEqual(merge_dict({'A':[]}, {'A':[1]}), {'A':[1]})
+        self.assertEqual(merge_dict({'A':()}, {'A':(1,)}), {'A':(1,)})
 
         with self.assertRaises(MergeConflictError) as e:
             merge_dict({'A':{'B':1}}, {'A':2})
