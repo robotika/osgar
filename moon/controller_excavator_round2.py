@@ -232,15 +232,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             if not SAFE_POLYGON.contains(Point(v[0],v[1])):
                 print (self.sim_time, self.robot_name, "[%.1f,%.1f] not in safe area" % (v[0], v[1]))
                 continue
-            if (
-                    Point(turn_center_L[0],turn_center_L[1]).buffer(TURN_RADIUS+0.1).contains(Point(v[0],v[1])) or
-                    Point(turn_center_R[0],turn_center_R[1]).buffer(TURN_RADIUS+0.1).contains(Point(v[0],v[1]))
-            ): # within either circle we cannot turn into
-                print (self.sim_time, self.robot_name, "[%.1f,%.1f] within turn circles, distance: %f" % (v[0], v[1], d))
-                continue
-            if -3*math.pi/4 < math.atan2(v[1] - self.xyz[1], v[0] - self.xyz[0]) < -math.pi/4 and d > 15:
-                print (self.sim_time, self.robot_name, "[%.1f,%.1f] too much away from the sun, shadow interference" % (v[0], v[1]))
-                continue
             accessible_volatiles.append(v)
 
         # balance distance, angle and length of traversing non-preferred areas
@@ -258,31 +249,36 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
             c_angular_difference = self.get_angle_diff(v)
             turn_center = turn_center_L if c_angular_difference < 0 else turn_center_R
             tangs = calc_tangents(turn_center, TURN_RADIUS, v)
-            tang1_v = np.asmatrix(np.asarray([tangs[0][0], tangs[0][1], 1]))
-            tang2_v = np.asmatrix(np.asarray([tangs[1][0], tangs[1][1], 1]))
+            if tangs is not None:
+                tang1_v = np.asmatrix(np.asarray([tangs[0][0], tangs[0][1], 1]))
+                tang2_v = np.asmatrix(np.asarray([tangs[1][0], tangs[1][1], 1]))
 
-            i = 1;
-            while True:
-                phi = -math.copysign(math.pi/2, c_angular_difference) + self.yaw + math.copysign(i*arc_len, c_angular_difference)
-                i += 1
-                x,y = pol2cart(TURN_RADIUS, phi)
-                px = turn_center[0] + x
-                py = turn_center[1] + y
-                yw = phi - math.pi/2
-                path_to_vol.append((px, py))
+                i = 1;
+                while True:
+                    phi = -math.copysign(math.pi/2, c_angular_difference) + self.yaw + math.copysign(i*arc_len, c_angular_difference)
+                    i += 1
+                    x,y = pol2cart(TURN_RADIUS, phi)
+                    px = turn_center[0] + x
+                    py = turn_center[1] + y
+                    yw = phi - math.pi/2
+                    path_to_vol.append((px, py))
 
-                rover_t =  np.asmatrix(np.array(((1, 0, px),(0, 1, py),(0, 0, 1))))
-                c, s = np.cos(yw), np.sin(yw)
-                rover_r = np.asmatrix(np.array(((c, -s, 0), (s, c, 0), (0, 0, 1))))
-                mat = np.dot(rover_r, rover_t.I)
-                m1 = np.dot(mat, tang1_v.T)
-                m2 = np.dot(mat, tang2_v.T)
+                    rover_t =  np.asmatrix(np.array(((1, 0, px),(0, 1, py),(0, 0, 1))))
+                    c, s = np.cos(yw), np.sin(yw)
+                    rover_r = np.asmatrix(np.array(((c, -s, 0), (s, c, 0), (0, 0, 1))))
+                    mat = np.dot(rover_r, rover_t.I)
+                    m1 = np.dot(mat, tang1_v.T)
+                    m2 = np.dot(mat, tang2_v.T)
 
-                if (
-                        (distance([m1[0,0], m1[1,0]], [0,0]) < arc_dist+0.1 and m1[0,0]>=-0.1) or
-                        (distance([m2[0,0], m2[1,0]], [0,0]) < arc_dist+0.1 and m2[0,0]>=-0.10)
-                ):
-                    break
+                    if (
+                            (distance([m1[0,0], m1[1,0]], [0,0]) < arc_dist+0.1 and m1[0,0]>=-0.1) or
+                            (distance([m2[0,0], m2[1,0]], [0,0]) < arc_dist+0.1 and m2[0,0]>=-0.10)
+                    ):
+                        break
+
+            else:
+                # if we had to go with a volatile within the turning radius, do not build a driving arc, just use straight line
+                path_to_vol.append((self.xyz[0],self.xyz[1]))
             path_to_vol.append((v[0],v[1]))
             ls = LineString(path_to_vol).buffer(1)
             c_nonpreferred_overlap =  ls.difference(PREFERRED_POLYGON).area
@@ -291,7 +287,28 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
         # ranked_list: [volatile, angle, area, distance]
         def cmp(a,b):
-            return a[3]-b[3] if abs(a[2]-b[2]) < 10 else a[2]-b[2]
+            nonlocal turn_center_L, turn_center_R
+            #a: [[x,y], angular_diff, non_preferred_overlap, distance_along_driving_path]
+            a_v, _, a_overlap, a_distance = a
+            b_v, _, b_overlap, b_distance = b
+
+
+            a_cost = 100 if (
+                    Point(turn_center_L[0],turn_center_L[1]).buffer(TURN_RADIUS+0.1).contains(Point(a_v[0],a_v[1])) or
+                    Point(turn_center_R[0],turn_center_R[1]).buffer(TURN_RADIUS+0.1).contains(Point(a_v[0],a_v[1]))
+            ) else 0
+            b_cost = 100 if (
+                    Point(turn_center_L[0],turn_center_L[1]).buffer(TURN_RADIUS+0.1).contains(Point(b_v[0],b_v[1])) or
+                    Point(turn_center_R[0],turn_center_R[1]).buffer(TURN_RADIUS+0.1).contains(Point(b_v[0],b_v[1]))
+            ) else 0
+
+            a_cost += 200 if -3*math.pi/4 < math.atan2(a_v[1] - self.xyz[1], a_v[0] - self.xyz[0]) < -math.pi/4 and a_distance > 15 else 0
+            a_cost += 200 if -3*math.pi/4 < math.atan2(a_v[1] - self.xyz[1], a_v[0] - self.xyz[0]) < -math.pi/4 and a_distance > 15 else 0
+
+            a_cost += a_distance
+            b_cost += b_distance
+
+            return a_cost - b_cost if abs(a_overlap - b_overlap) < 10 else a_overlap - b_overlap
 
         ranked_list = sorted(ranked_list, key=cmp_to_key(cmp)) # if non safe overlap similar, focus on distance
         print (self.sim_time, self.robot_name, "List of volatiles in the order of suitability for traveling to: ", ranked_list)
