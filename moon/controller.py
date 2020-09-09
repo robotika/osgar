@@ -8,6 +8,8 @@ import io
 
 from datetime import timedelta
 from statistics import median
+from shapely.geometry import Point, LineString
+from shapely.geometry.polygon import Polygon
 
 from osgar.bus import BusShutdownException
 from osgar.lib import quaternion
@@ -235,6 +237,8 @@ class SpaceRoboticsChallenge(MoonNode):
         self.avoidance_start = None
         self.avoidance_turn = None
         self.steering_angle = 0.0
+
+        self.unsafe_location = None
 
         self.default_effort_level = 1000 # default is max speed
 
@@ -478,6 +482,48 @@ class SpaceRoboticsChallenge(MoonNode):
         before_robot = median_scan[midpoint - sample_size:midpoint + sample_size]
         before_robot.sort();
         self.scan_distance_to_obstacle = median(before_robot[:self.scan_min_window])
+
+        # unless we are already inside unsafe area, augment nearest obstacles with virtual fence values
+        if self.unsafe_location is not None and not self.unsafe_location.contains(Point(self.xyz[0], self.xyz[1])):
+            # calculate position in front of and to the left and right of the robot in the direction of its heading
+            v = np.asmatrix(np.asarray([self.xyz[0], self.xyz[1], 1]))
+            c, s = np.cos(self.steering_angle + self.yaw), np.sin(self.steering_angle + self.yaw)
+            R = np.asmatrix(np.array(((c, -s, 0), (s, c, 0), (0, 0, 1))))
+
+            T = np.asmatrix(np.array(((1, 0, +6),(0, 1, 0),(0, 0, 1))))
+            pos =  np.dot(R, np.dot(T, np.dot(R.I, v.T)))
+            ls = LineString([(self.xyz[0], self.xyz[1]), (float(pos[0]), float(pos[1]))])
+            intr = self.unsafe_location.intersection(ls)
+            if not intr.is_empty:
+                d = int(1000*(ls.length - intr.length))
+                if self.debug:
+                    print(self.sim_time, self.robot_name, "Virtual fence: decreasing front distance to %d" % d)
+                self.scan_distance_to_obstacle = min(self.scan_distance_to_obstacle, d)
+
+            left_angle = 0.787878
+            x,y = pol2cart(+6, left_angle)
+            Tl = np.asmatrix(np.array(((1, 0, x),(0, 1, y),(0, 0, 1))))
+            posL = np.dot(R, np.dot(Tl, np.dot(R.I, v.T)))
+            ls = LineString([(self.xyz[0], self.xyz[1]), (float(posL[0]), float(posL[1]))])
+            intr = self.unsafe_location.intersection(ls)
+            if not intr.is_empty:
+                d = int(1000*(ls.length - intr.length))
+                if self.debug:
+                    print(self.sim_time, self.robot_name, "Virtual fence: decreasing left distance to %d" % d)
+                self.scan_avg_distance_left = min(self.scan_avg_distance_left, d)
+
+            right_angle = -0.787878
+            x,y = pol2cart(+6, right_angle)
+            Tr = np.asmatrix(np.array(((1, 0, x),(0, 1, y),(0, 0, 1))))
+            posR = np.dot(R, np.dot(Tr, np.dot(R.I, v.T)))
+            ls = LineString([(self.xyz[0], self.xyz[1]), (float(posR[0]), float(posR[1]))])
+            intr = self.unsafe_location.intersection(ls)
+            if not intr.is_empty:
+                d = int(1000*(ls.length - intr.length))
+                if self.debug:
+                    print(self.sim_time, self.robot_name, "Virtual fence: decreasing right distance to %d" % d)
+                self.scan_avg_distance_right = min(self.scan_avg_distance_right, d)
+
 
     def on_joint_position(self, data):
         assert self.joint_name is not None
