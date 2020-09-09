@@ -9,8 +9,7 @@ import sys
 from functools import cmp_to_key
 import cv2
 
-from shapely.geometry import Point, LineString
-from shapely.geometry.polygon import Polygon
+from shapely.geometry import Point, LineString, MultiPolygon, Polygon
 from statistics import median
 
 from osgar.bus import BusShutdownException
@@ -22,13 +21,17 @@ from osgar.lib.quaternion import euler_zyx
 from osgar.lib.mathex import normalizeAnglePIPI
 
 DIG_GOOD_LOCATION_MASS = 10
+GROUP_ANGLES_MAX_DIFF = 0.3
 ARRIVAL_OFFSET = -1.5
 TYPICAL_VOLATILE_DISTANCE = 2
 DISTAL_THRESHOLD = 0.145 # TODO: movement may be too fast to detect when the scooping first happened
-PREFERRED_POLYGON = Polygon([(33,18),(38, -5),(29, -25), (6,-44), (-25,-44), (-25,-9),(-32,15),(-9,29)])
-SAFE_POLYGON = Polygon([
-    (65, 20), (65, -35), (45, -35), (45, -55), (-65, -55), (-65, -42), (-25, -44), (-25, -5), (-65, -5), (-65, 25), (-40, 30), (-36, 55), (-10, 55), (-10, 41.70731707317074), (16, 37.90243902439025), (16, 55), (40, 55), (40, 25), (45.5, 20.5), (65, 20)
-],[[(35,13),(45,13),(45,20),(29,36),(-12, 42),(-35,34),(-34, 15),(-14,28),(4, 25), (21, 20)]])
+PREFERRED_POLYGON = Polygon([(-32,9),(-25,20),(-16,26),(-6,26),(3.5,22),(14.5,25.5),(23.5,20),(30,9),(35,1),(30,-13.5),(21,-24),(11,-30),(5,-36),(-18,-32),(-19,-17),(-26,-4)])
+
+SAFE_POLYGON = PREFERRED_POLYGON.union(MultiPolygon([
+    Polygon([(-30,9),(-43,15),(-41,25),(-28,38),(-15,44.5),(-13,50.5),(-33,51),(-38,36),(-53,26),(-61,3),(-26,-1)]),
+    Polygon([(-45,-39),(-58,-40),(-59,-50),(43,-50),(43,-31),(60,-27),(65,30),(51,15),(46,-18), (29,-12.5), (27, -15), (43,-22), (27,-37),(4,-31),(-15,-30)])
+    ]))
+
 APPROACH_DISTANCE = 2.5
 
 class WaitRequestedException(MoonException):
@@ -64,6 +67,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         self.lidar_distance_enabled = False
         self.current_volatile = None
         self.going_to_volatile = False
+        self.unsafe_location = Polygon([(-100, -100), (-100, 100), (100, 100), (100, -100)]).difference(SAFE_POLYGON)
 
     def on_osgar_broadcast(self, data):
         message_target = data.split(" ")[0]
@@ -166,6 +170,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
         #[0] .. type ('ice'); [1] .. index (100=nothing); [2] .. mass
         self.volatile_dug_up = bucket_status
         if self.first_distal_angle is None and bucket_status[1] != 100:
+            print (self.sim_time, self.robot_name, "Volatile in bucket at distal: %.2f" % self.distal_angle)
             self.first_distal_angle = self.distal_angle
 
     def on_joint_position(self, data):
@@ -322,6 +327,14 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 print(self.sim_time, self.robot_name, "Exception while waiting for hauler to arrive: ", str(e))
         self.hauler_ready = False
 
+    def wait_for_arm(self, angle):
+        wait_start = self.sim_time
+        while self.sim_time - wait_start < timedelta(seconds=20) and (self.mount_angle is None or abs(normalizeAnglePIPI(angle - self.mount_angle)) > 0.2):
+            try:
+                self.wait(timedelta(seconds=1))
+            except MoonException as e:
+                print(self.sim_time, self.robot_name, "Exception while waiting for arm to align: ", str(e))
+
     def run(self):
 
         def process_volatiles(vol_string):
@@ -361,12 +374,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     print(self.sim_time, self.robot_name, "Exception while waiting for excavator to settle: ", str(e))
             self.publish("desired_movement", [0, 0, 0])
 
-            while self.mount_angle is None or abs(normalizeAnglePIPI(math.pi - self.mount_angle)) > 0.2:
-                try:
-                    self.wait(timedelta(seconds=1))
-                except MoonException as e:
-                    print(self.sim_time, self.robot_name, "Exception while waiting for arm to align: ", str(e))
-
+            self.wait_for_arm(math.pi)
 
             self.set_brakes(False) # start applying mild braking
 
@@ -436,7 +444,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 prev = None
                 group = []
                 for item in iterable:
-                    if not prev or abs(normalizeAnglePIPI(item['yaw'] - prev['yaw'])) <= 0.2:
+                    if not prev or abs(normalizeAnglePIPI(item['yaw'] - prev['yaw'])) <= GROUP_ANGLES_MAX_DIFF:
                         group.append(item)
                     else:
                         yield group
@@ -458,6 +466,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             print(self.sim_time, self.robot_name, "Hauler not found during 360 turn")
                         else:
                             clusters = list(enumerate(angle_grouper(self.full_360_objects["rover"])))
+                            if self.debug:
+                                print(self.sim_time, self.robot_name, "Cluster list: ", str(clusters))
                             biggest_wedge_obj = max(clusters, key=lambda x: len(x[1]))
                             sum_sin = sum([math.sin(a['yaw']) for a in biggest_wedge_obj[1]])
                             sum_cos = sum([math.cos(a['yaw']) for a in biggest_wedge_obj[1]])
@@ -807,8 +817,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
                     self.send_request('external_command hauler_1 onhold') # re-follow after each 0,+2,-2 attempt
 
-                    drop_angle = math.pi # if yaw is just approximated, drop straigt back instead of at hauler yaw direction
-                    #drop_angle = normalizeAnglePIPI(math.pi - normalizeAnglePIPI(self.yaw - self.hauler_yaw))
                     found_angle = None
 
                     # mount 0.4-1.25 or 1.85-2.75 means we can't reach under the vehicle because of the wheels
@@ -833,9 +841,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                             if self.volatile_dug_up[1] != 100:
                                 # we found volatile
                                 if best_mount_angle is None:
-                                    # first time volatile: raise arm, bring hauler to the other side, drop load into bin
-                                    #drop_angle = (self.mount_angle + math.pi) % (2*math.pi)
-
                                     nma = normalizeAnglePIPI(self.mount_angle)
                                     if -math.pi/2 <= nma <= math.pi/2:
                                         # if mount angle is in the front half of the vehicle, approach directly from the back
@@ -847,6 +852,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
                                     # point arm in the hauler approach direction so that hauler aligns with the center of the excavator
                                     self.publish("bucket_dig", [normalizeAnglePIPI(approach_angle + math.pi), 'standby']) # lift arm and clear rest of queue
+                                    self.wait_for_arm(normalizeAnglePIPI(approach_angle + math.pi))
+
                                     self.hauler_ready = False
                                     self.send_request('external_command hauler_1 approach %f' % normalizeAnglePIPI(self.yaw + approach_angle))
 
@@ -865,17 +872,21 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
                                     exit_time = self.sim_time + timedelta(seconds=80)
                                     self.publish("bucket_drop", [drop_angle, 'append']) # this will be duplicated below but need to queue now or load would be lost by another dig happening first
-                                    self.publish("bucket_dig", [self.mount_angle - 0.3, 'append'])
-                                    self.publish("bucket_dig", [self.mount_angle + 0.3, 'append'])
+                                    self.publish("bucket_dig", [nma - 0.3, 'append'])
+                                    self.publish("bucket_dig", [nma + 0.3, 'append'])
                                     # TODO: this plan doesn't end once these moves are executed, only with timeout
+                                    best_distal_angle = self.first_distal_angle
+                                    best_angle_volume = self.volatile_dug_up[2]
+                                    best_mount_angle = nma
 
-                                if best_mount_angle is None or self.volatile_dug_up[2] > best_angle_volume:
+                                elif self.volatile_dug_up[2] > best_angle_volume:
                                     best_distal_angle = self.first_distal_angle
                                     best_angle_volume = self.volatile_dug_up[2]
                                     best_mount_angle = self.mount_angle
+
                                 accum += self.volatile_dug_up[2]
                                 if self.volatile_dug_up[2] > DIG_GOOD_LOCATION_MASS:
-                                    found_angle = self.mount_angle
+                                    found_angle = best_mount_angle
                                 # go for volatile drop (to hauler), wait until finished
                                 self.publish("bucket_drop", [drop_angle, 'prepend'])
                                 while self.volatile_dug_up[1] != 100:
@@ -969,7 +980,7 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                 if accum == 0 and not self.hauler_pose_requested:
                     self.set_brakes(True)
 
-                    self.send_request('external_command hauler_1 approach %f' % self.yaw)
+                    self.send_request('external_command hauler_1 approach %f' % self.hauler_yaw)
                     while not self.hauler_ready:
                         try:
                             self.wait(timedelta(seconds=1))
