@@ -83,8 +83,6 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                     initial_quat = origin[3:]
                     initial_rpy = euler_zyx(initial_quat) # note: this is not in roll, pitch, yaw order
 
-                    self.yaw_offset = self.yaw + self.yaw_offset - initial_rpy[0]
-
                     v = np.asmatrix(np.asarray([initial_xyz[0], initial_xyz[1], 1]))
                     c, s = np.cos(initial_rpy[0]), np.sin(initial_rpy[0])
                     Rr = np.asmatrix(np.array(((c, -s, 0), (s, c, 0), (0, 0, 1))))

@@ -23,4 +23,8 @@ class TeambaseTest(unittest.TestCase):
         c.join()
         self.assertEqual(tester.listen()[2], b'13')
 
+    def test_finish_time(self):
+        tb = Teambase(bus=MagicMock(), config={'robot_name':'T42'})
+        self.assertEqual(tb.finish_time, 42)
+
 # vim: expandtab sw=4 ts=4

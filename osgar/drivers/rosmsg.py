@@ -561,7 +561,7 @@ class ROSMsgParser(Thread):
         #if frame_id.endswith(b'camera_depth_frame'):
         #    import pdb
         #    pdb.set_trace()
-        if frame_id.endswith(b'/base_link/camera_front') or frame_id.endswith(b'camera_color_optical_frame'):
+        if frame_id.endswith(b'/base_link/camera_front') or frame_id.endswith(b'/base_link/camera_down') or frame_id.endswith(b'camera_color_optical_frame'):
             # used to be self.topic_type == 'sensor_msgs/CompressedImage'
             self.bus.publish('image', parse_jpeg_image(packet))
         elif frame_id.endswith(b'base_link/front_laser') or frame_id.endswith(b'base_link/laser_front'):  # self.topic_type == 'sensor_msgs/LaserScan':

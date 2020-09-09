@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+  <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)" output="screen">
+    <remap from="$(arg robot_name)/image_raw/compressed" to="$(arg robot_name)/down/image_raw/compressed"/>
+    <remap from="$(arg robot_name)/front/depth" to="$(arg robot_name)/down/depth"/>
+    <remap from="$(arg robot_name)/points" to="$(arg robot_name)/rgbd_camera_down/depth/points"/>
+  </node>
+</launch>

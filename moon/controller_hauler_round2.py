@@ -90,6 +90,11 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                 self.arrived_message_sent = False
             elif command == "request_true_pose":
                 def forward_true_pose(result):
+                    if result.split()[0] == 'origin':
+                        origin = [float(x) for x in result.split()[1:]]
+                        initial_quat = origin[3:]
+                        initial_rpy = euler_zyx(initial_quat) # note: this is not in roll, pitch, yaw order
+                        self.yaw_offset = self.yaw + self.yaw_offset - initial_rpy[0]
                     self.send_request('external_command excavator_1 hauler_true_pose %s' % result)
                 self.send_request('request_origin', forward_true_pose)
             elif command == "turnto":
