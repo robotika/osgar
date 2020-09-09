@@ -526,6 +526,9 @@ class SubTChallenge:
                 raise Collision()
 
     def on_artf(self, timestamp, data):
+        if self.offset is None:
+            # there can be observed artifact (false) on the start before the coordinate system is defined
+            return
         artifact_data, deg_100th, dist_mm = data
         x, y, z = self.xyz
         x0, y0, z0 = self.offset
