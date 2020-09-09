@@ -802,11 +802,14 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
                 accum = 0 # to check if we picked up 100.0 total and can finish
                 for attempt_offset in [{'dist': 0.0, 'start_dig_angle': 0.0}, {'dist': 4, 'start_dig_angle': math.pi}, {'dist': -8, 'start_dig_angle': 0.0}]:
-                    try:
-                        self.go_straight(attempt_offset['dist'])
-                    except MoonException as e:
-                        # excess pitch or other exception could happen but we are stopped so should stabilize
-                        print(self.sim_time, self.robot_name, "Exception when adjusting linearly", str(e))
+                    starting_point = self.xyz
+                    starting_time = self.sim_time
+                    while abs(abs(attempt_offset['dist']) - distance(self.xyz, starting_point)) > 1 and self.sim_time - starting_time < timedelta(seconds=15):
+                        try:
+                            self.go_straight(attempt_offset['dist'] - math.copysign(distance(self.xyz, starting_point), attempt_offset['dist']))
+                        except MoonException as e:
+                            # excess pitch or other exception could happen but we are stopped so should stabilize
+                            print(self.sim_time, self.robot_name, "Exception when adjusting linearly", str(e))
 
                     self.send_speed_cmd(0.0, 0.0)
 
