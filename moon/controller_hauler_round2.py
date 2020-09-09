@@ -52,6 +52,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         self.aligned_at = None
         self.target_excavator_distance = EXCAVATOR_DRIVING_GAP
         self.scan_driving_phase = "yaw"
+        self.scan_driving_phase_start = None
         self.excavator_waiting = False
         self.turnto_angle = None
         self.arrival_send_requested_at = None
@@ -353,6 +354,9 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                     except ExcavatorLostException as e:
                         self.excavator_waiting = True
                         self.send_request('external_command excavator_1 wait')
+                    except MoonException as e:
+                        print(self.sim_time, self.robot_name, "Exception while handling Lidar", str(e))
+                        traceback.print_exc(file=sys.stdout)
 
                     self.inException = False
                     self.send_speed_cmd(0.0, 0.0)
@@ -568,7 +572,9 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
 
 
                 if self.scan_driving_phase == "yaw":
-                    if abs(diff) > 0.12 and self.set_yaw is None: # 10deg, don't bother otherwise; also, don't attempt to align before true pose is known
+                    if self.scan_driving_phase_start is None:
+                        self.scan_driving_phase_start = self.sim_time
+                    if abs(diff) > 0.12 and self.set_yaw is None and self.sim_time - self.scan_driving_phase_start < timedelta(seconds=30): # 10deg, don't bother otherwise; also, don't attempt to align before true pose is known
                             if (self.debug):
                                 print(self.sim_time, self.robot_name, "Arrival handling: moving on a curve")
                             self.publish("desired_movement", [-8, -9000, math.copysign(0.5 * self.default_effort_level, diff)])
@@ -577,7 +583,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                          self.scan_driving_phase = "behind"
 
                 if self.scan_driving_phase == "behind":
-                    if abs(self.rover_angle) > 0.12 and self.set_yaw is None:
+                    if abs(self.rover_angle) > 0.12 and self.set_yaw is None and self.sim_time - self.scan_driving_phase_start < timedelta(seconds=50):
                         if (self.debug):
                             print(self.sim_time, self.robot_name, "Arrival handling: moving sideways")
                         self.publish("desired_movement", [GO_STRAIGHT, -9000, -math.copysign(0.5 * self.default_effort_level, self.rover_angle)])
@@ -598,6 +604,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                         self.scan_driving = False
                         self.aligned_at = None
                         self.scan_driving_phase = "yaw"
+                        self.scan_driving_phase_start = None
                     else:
                         self.publish("desired_movement", [0, 0, 0]) # going straight doesn't wait for steering so we have to wait here
 
