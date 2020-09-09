@@ -13,7 +13,7 @@ class Teambase(Node):
         self.start_time = None  # unknown
         self.finish_time = None  # infinite
         if self.robot_name is not None:
-            self.finish_time = int(self.robot_name[1:].split('F')[0])  # T100 is accepted for example
+            self.finish_time = int(self.robot_name[1:])  # T100 is accepted for example
 
     def on_sim_time_sec(self, data):
         # broadcast simulation time every second
