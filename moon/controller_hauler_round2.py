@@ -35,7 +35,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
         self.robot_name = "hauler_1"
 
         self.rover_angle = 0.0
-        self.use_gimbal = False
+        self.use_gimbal = True
         self.vslam_reset_at = None
         self.goto = None
         self.finish_visually = False
@@ -117,7 +117,7 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                 with LidarCollisionMonitor(self):
                     self.turn(math.copysign(math.radians(self.rand.randrange(90,270)), direction), timeout=timedelta(seconds=20))
                     self.turn(math.radians(360), timeout=timedelta(seconds=40))
-                    self.go_straight(30.0, timeout=timedelta(minutes=2))
+                    self.go_straight(20.0, timeout=timedelta(minutes=2))
             except ChangeDriverException as e:
                 print(self.sim_time, self.robot_name, "Excavator found, following")
                 self.publish("desired_movement", [0, 0, 0])
@@ -158,8 +158,6 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                             print(self.sim_time, self.robot_name, "Vehicle attitude: %.2f" % attitude)
                         self.publish("desired_movement", [GO_STRAIGHT, math.degrees(attitude * 100), 0.1])
                         self.wait(timedelta(milliseconds=100))
-                    except BusShutdownException:
-                        raise
                     except MoonException as e:
                         print(self.sim_time, self.robot_name, "Exception while waiting for excavator to settle: ", str(e))
                 self.publish("desired_movement", [0, 0, 0])
@@ -168,8 +166,6 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                 while self.driving_mode is None: # waiting for align command
                     try:
                         self.wait(timedelta(seconds=1))
-                    except BusShutdownException:
-                        raise
                     except MoonException as e:
                         print(self.sim_time, self.robot_name, "Exception while waiting to be invited to look for excavator", str(e))
                 break
@@ -207,19 +203,24 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                     print(self.sim_time, self.robot_name, "Sending arrived message to excavator")
                     self.send_request('external_command excavator_1 arrived %.2f' % 0.0)
 
+                    self.set_light_intensity("0.0")
                     while self.set_yaw is None:
                         try:
                             self.wait(timedelta(seconds=1))
-                        except BusShutdownException:
-                            raise
                         except ExcavatorLostException:
                             print(self.sim_time, self.robot_name, "Excavator lost while waiting for yaw alignment readiness, starting to look again")
+                            self.set_light_intensity("0.2")
                             return False # need to start looking for rover again
                         except MoonException:
                             print(self.sim_time, self.robot_name, "Exception while waiting for yaw alignment readiness, waiting on")
+
+                    self.set_light_intensity("0.2")
                     return True # yaw received
 
-                if wait_for_yaw():
+                # turn lights off while waiting for excavator to rotate away from hauler
+                # prevents potentially illuminating nearby processing plant too much and causing mis-detections
+                yaw_success =  wait_for_yaw()
+                if yaw_success:
                     break
 
 
@@ -279,8 +280,6 @@ class SpaceRoboticsChallengeHaulerRound2(SpaceRoboticsChallenge):
                             # turn a little less to allow for extra turn after the effort was stopped
                             self.turn(turn_needed if turn_needed >= 0 else (turn_needed + 2*math.pi), ang_speed=0.8*self.max_angular_speed, timeout=timedelta(seconds=40))
                         break
-                    except BusShutdownException:
-                        raise
                     except MoonException as e:
                         print ("Exception while turning: ", e)
 
