@@ -6,12 +6,15 @@ import socket
 import sys
 import threading
 import time
+import operator
+import functools
 
 import rospy
+import rostopic
 import zmq
 import msgpack
 
-from sensor_msgs.msg import Imu
+from sensor_msgs.msg import Imu, LaserScan
 
 
 def py3round(f):
@@ -58,21 +61,53 @@ class Bus:
 
 
 class main:
-    def __init__(self):
+    def __init__(self, robot_name):
         # get cloudsim ready
-        robot_name = sys.argv[1]
-        imu_name = '/'+robot_name+'/imu/data'
         wait_for_master()
-        rospy.init_node('imu2osgar', log_level=rospy.DEBUG)
-        rospy.loginfo("waiting for {}".format(imu_name))
-        rospy.wait_for_message(imu_name, Imu)
-        rospy.sleep(2)
-        self.imu_count = 0
-
-        # start
+        rospy.init_node('cloudsim2osgar', log_level=rospy.DEBUG)
         self.bus = Bus()
-        self.bus.register('rot', 'acc', 'orientation')
-        rospy.Subscriber(imu_name, Imu, self.imu)
+
+        # common topics
+        topics = [
+            ('/' + robot_name + '/imu/data', Imu, self.imu, ('rot', 'acc', 'orientation')),
+        ]
+
+        # configuration specific topics
+        robot_description = rospy.get_param("/{}/robot_description".format(robot_name))
+        if "robotika_x2_sensor_config_1" in robot_description:
+            rospy.loginfo("robotika x2")
+        elif "ssci_x2_sensor_config_1" in robot_description:
+            rospy.loginfo("ssci x2")
+        elif "ssci_x4_sensor_config_2" in robot_description:
+            rospy.loginfo("ssci drone")
+            topics.append(('/' + robot_name + '/top_scan', LaserScan, self.top_scan, ('top_scan',)))
+            topics.append(('/' + robot_name + '/bottom_scan', LaserScan, self.bottom_scan, ('bottom_scan',)))
+        elif "TeamBase" in robot_description:
+            rospy.loginfo("teambase")
+        elif "robotika_freyja_sensor_config" in robot_description:
+            # possibly fragile detection if freya has bredcrumbs
+            rospy.sleep(1)
+            publishers, subscribers = rostopic.get_topic_list()
+            for name, type, _ in subscribers:
+                if name == "/{}/breadcrumb/deploy".format(robot_name):
+                    rospy.loginfo("freya 2 (with comms beacons)")
+                    break
+            else:
+                rospy.loginfo("freya 1")
+        else:
+            rospy.logerror("unknown configuration")
+            return
+
+        outputs = functools.reduce(operator.add, (t[-1] for t in topics))
+        self.bus.register(outputs)
+
+        for name, type, handler, _ in topics:
+            rospy.loginfo("waiting for {}".format(name))
+            rospy.wait_for_message(name, type)
+            setattr(self, handler.__name__+"_count", 0)
+            rospy.Subscriber(name, type, handler)
+
+        rospy.sleep(2)
         rospy.spin()
 
     def imu(self, msg):
@@ -102,10 +137,20 @@ class main:
         #]
         #self.bus.publish('imu', data)
 
+    def top_scan(self, msg):
+        self.top_scan_count += 1
+        rospy.loginfo_throttle(10, "top_scan callback: {}".format(self.top_scan_count))
+        self.bus.publish('top_scan', msg.ranges)
+
+    def bottom_scan(self, msg):
+        self.bottom_scan_count += 1
+        rospy.loginfo_throttle(10, "bottom_scan callback: {}".format(self.bottom_scan_count))
+        self.bus.publish('bottom_scan', msg.ranges)
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("need robot name as argument")
         raise SystemExit(1)
-    main()
+    main(sys.argv[1])
 
