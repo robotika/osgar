@@ -18,13 +18,14 @@ from osgar.lib.quaternion import euler_zyx, euler_to_quaternion
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.lib.virtual_bumper import VirtualBumper
 
-from moon.moonnode import MoonNode
+from moon.moonnode import MoonNode, LIDAR_BEAM_SPACING
 
 TURN_RADIUS = 8 # radius of circle when turning
 AVOID_RADIUS = 4 # radius to use when going around an obstacle (this means it will not rush to go back to the same direction once it disappears off lidar)
 GO_STRAIGHT = float("inf")
 AVOIDANCE_DURATION = 3000 # milliseconds
 AVOIDANCE_TURN_DURATION = 800
+VIRTUAL_FENCE_LOOK_AHEAD_DISTANCE = 6 # max distance in front of the rover to investigate overlap with unsafe regions for
 
 class MoonException(Exception):
     pass
@@ -455,7 +456,7 @@ class SpaceRoboticsChallenge(MoonNode):
         # measure distance only in 66 degree angle (about the width of the robot 1.5m)
         # however, don't look just ahead (camera angle) or direction of wheels (steering angle)
         # look further in the direction wheels are turned
-        midpoint = int(max(50, min(130, 40 + 50 + 2 * self.steering_angle / 0.0262626260519)))
+        midpoint = int(max(50, min(130, 40 + 50 + 2 * self.steering_angle / LIDAR_BEAM_SPACING)))
         if midpoint < 40 + IDEAL_SAMPLE_SIZE:
             sample_size = midpoint - 40
         elif midpoint > 140 - IDEAL_SAMPLE_SIZE:
@@ -490,7 +491,7 @@ class SpaceRoboticsChallenge(MoonNode):
             c, s = np.cos(self.steering_angle + self.yaw), np.sin(self.steering_angle + self.yaw)
             R = np.asmatrix(np.array(((c, -s, 0), (s, c, 0), (0, 0, 1))))
 
-            T = np.asmatrix(np.array(((1, 0, +6),(0, 1, 0),(0, 0, 1))))
+            T = np.asmatrix(np.array(((1, 0, VIRTUAL_FENCE_LOOK_AHEAD_DISTANCE),(0, 1, 0),(0, 0, 1))))
             pos =  np.dot(R, np.dot(T, np.dot(R.I, v.T)))
             ls = LineString([(self.xyz[0], self.xyz[1]), (float(pos[0]), float(pos[1]))])
             intr = self.unsafe_location.intersection(ls)
@@ -500,8 +501,8 @@ class SpaceRoboticsChallenge(MoonNode):
                     print(self.sim_time, self.robot_name, "Virtual fence: decreasing front distance to %d" % d)
                 self.scan_distance_to_obstacle = min(self.scan_distance_to_obstacle, d)
 
-            left_angle = 0.787878
-            x,y = pol2cart(+6, left_angle)
+            left_angle = IDEAL_SAMPLE_SIZE * LIDAR_BEAM_SPACING
+            x,y = pol2cart(VIRTUAL_FENCE_LOOK_AHEAD_DISTANCE, left_angle)
             Tl = np.asmatrix(np.array(((1, 0, x),(0, 1, y),(0, 0, 1))))
             posL = np.dot(R, np.dot(Tl, np.dot(R.I, v.T)))
             ls = LineString([(self.xyz[0], self.xyz[1]), (float(posL[0]), float(posL[1]))])
@@ -512,8 +513,8 @@ class SpaceRoboticsChallenge(MoonNode):
                     print(self.sim_time, self.robot_name, "Virtual fence: decreasing left distance to %d" % d)
                 self.scan_avg_distance_left = min(self.scan_avg_distance_left, d)
 
-            right_angle = -0.787878
-            x,y = pol2cart(+6, right_angle)
+            right_angle = -IDEAL_SAMPLE_SIZE * LIDAR_BEAM_SPACING
+            x,y = pol2cart(VIRTUAL_FENCE_LOOK_AHEAD_DISTANCE, right_angle)
             Tr = np.asmatrix(np.array(((1, 0, x),(0, 1, y),(0, 0, 1))))
             posR = np.dot(R, np.dot(Tr, np.dot(R.I, v.T)))
             ls = LineString([(self.xyz[0], self.xyz[1]), (float(posR[0]), float(posR[1]))])
@@ -724,7 +725,7 @@ class SpaceRoboticsChallenge(MoonNode):
         start_time = self.sim_time
         slowdown_happened = False
         while distance(start_pose, self.last_position) < abs(how_far):
-            if with_stop and not slowdown_happened and distance(start_pose, self.last_position) - abs(how_far) < 2:
+            if with_stop and not slowdown_happened and abs(distance(start_pose, self.last_position) - abs(how_far)) < 2:
                 self.send_speed_cmd(math.copysign(self.max_speed / 2.0, how_far), 0.0)
                 slowdown_happened = True
 
