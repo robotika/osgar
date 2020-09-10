@@ -2,6 +2,7 @@
   Osgar Config Class
 """
 import json
+import numbers
 import sys
 from importlib import import_module
 
@@ -53,15 +54,21 @@ def config_load(*filenames, application=None):
 
 
 def merge_dict(dict1, dict2):
-    if not isinstance(dict1, dict) or not isinstance(dict2, dict):
-        raise MergeConflictError(str((dict1, dict2)))
     ret = dict1.copy()
-    for key in dict2.keys():
-        if key in dict1:
-            if dict1[key] != dict2[key]:
-                ret[key] = merge_dict(dict1[key], dict2[key])
-        else:
-            ret[key] = dict2[key]
+    for key, val2 in dict2.items():
+        try:
+            val1 = dict1[key]
+            if isinstance(val1, dict) and isinstance(val2, dict):
+                ret[key] = merge_dict(val1, val2)
+            else:
+                for t in numbers.Number, str, list, tuple:
+                    if isinstance(val1, t) and isinstance(val2, t):
+                        ret[key] = val2
+                        break
+                else:
+                    raise MergeConflictError(str((val1, val2)))
+        except KeyError:
+            ret[key] = val2
     return ret
 
 # vim: expandtab sw=4 ts=4
