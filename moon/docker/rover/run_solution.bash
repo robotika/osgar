@@ -40,7 +40,7 @@ done
 
 if [[ $RUN_UNPAUSED -eq 1 ]]; then
     echo "Unpause simulation in 5 sec"
-    sleep 5; rosservice call /gazebo/unpause_physics "{}" &
+    ( sleep 5; rosservice call /gazebo/unpause_physics "{}" ) &
 fi
 
 ROBOT_PIDS=()
