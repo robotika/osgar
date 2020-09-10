@@ -39,10 +39,8 @@ while getopts uhr: arg; do
 done
 
 if [[ $RUN_UNPAUSED -eq 1 ]]; then
-    echo "Unpause simulation"
-    rosservice call /gazebo/unpause_physics "{}"
-    echo "wait a moment"
-    sleep 5
+    echo "Unpause simulation in 5 sec"
+    sleep 5; rosservice call /gazebo/unpause_physics "{}" &
 fi
 
 ROBOT_PIDS=()
