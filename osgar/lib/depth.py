@@ -11,13 +11,18 @@ class DepthParams:
             self,
             # Focal length.
             fx=462.1,
-            # Placement of the camera reliative to the center of the robot.
+            # Placement of the camera relative to the center of the robot.
             camera_xyz=(0.23, 0, (0.19 + 0.06256005)),
+            # Orientation of the camera relative to the robot. In radians.
+            camera_ypr=(0, 0, 0),
             # Image dimensions.
             image_size=(640, 360),
             # Principal point, position of optical axis
             principal_point=(640 / 2. +  0.5, 360 / 2 + 0.5),
-            max_xy=(16., 16.),
+            min_x = 0.,
+            min_y = 0.,
+            max_x = 16.,
+            max_y = 16.,
             # Low-height stuff on the ground does not matter. (In meters.)
             min_z=0.08,
             # Stuff above the robot does not matter.
@@ -32,14 +37,23 @@ class DepthParams:
             max_slope=np.radians(-16),
             # Despeckling parameters.
             noise_filter_window=(5, 5),
-            noise_filter_threshold=20):
+            noise_filter_threshold=20,
+            # Lidar field of view in radians.
+            lidar_fov=np.radians(270),
+            # Distance to which we fully trust the lidar.
+            lidar_trusted_zone=0,
+            **kwargs):
 
         self.fx = fx
         self.camera_xyz = np.asarray(camera_xyz)
+        self.camera_rot = _rotation_matrix(*camera_ypr)
         self.camw, self.camh = image_size
         self.cam_low = self.camh // 2 + 1
         self.rx, self.ry = principal_point
-        self.max_x, self.max_y = max_xy
+        self.min_x = min_x
+        self.min_y = min_y
+        self.max_x = max_x
+        self.max_y = max_y
         self.min_z = min_z
         self.max_z = max_z
         self.vertical_pixel_offset = vertical_pixel_offset
@@ -47,6 +61,8 @@ class DepthParams:
         self.max_slope = max_slope
         self.noise_filter_window = noise_filter_window
         self.noise_filter_threshold = noise_filter_threshold
+        self.lidar_fov = lidar_fov
+        self.lidar_trusted_zone = lidar_trusted_zone
 
         # Pixel coordinates relative to the center of the image, with positive
         # directions to the left and up.
@@ -57,11 +73,29 @@ class DepthParams:
         pzs = np.ones((self.camh, self.camw), dtype=np.float)
         # For each pixel in the image, a vector representing its corresponding
         # direction in the scene with a unit forward axis.
-        self.ps = np.dstack([pzs, pxs / fx, pys / fx])
+        self.ps = (self.camera_rot @ np.dstack([pzs, pxs / fx, pys / fx]).T.reshape((3, -1))).reshape((3, self.camw, self.camh)).T
 
 
 # Indices of directions in a matrix with 3D points.
 X, Y, Z = 0, 1, 2
+
+
+def _rotation_matrix(yaw, pitch, roll):
+    # private so it will not be used by other modules -> TODO move to math or quaternion?
+    cos_roll = np.cos(roll)
+    sin_roll = np.sin(roll)
+    roll_m = np.array([[1., 0., 0.], [0., cos_roll, -sin_roll],
+                       [0., sin_roll, cos_roll]])
+    cos_pitch = np.cos(pitch)
+    sin_pitch = np.sin(pitch)
+    pitch_m = np.array([[cos_pitch, 0, sin_pitch], [0, 1, 0],
+                        [-sin_pitch, 0, cos_pitch]])
+    cos_yaw = np.cos(yaw)
+    sin_yaw = np.sin(yaw)
+    yaw_m = np.array([[cos_yaw, -sin_yaw, 0], [sin_yaw, cos_yaw, 0],
+                      [0, 0, 1]])
+
+    return roll_m @ pitch_m @ yaw_m
 
 
 def depth2danger(depth_mm, params):
@@ -81,13 +115,18 @@ def depth2danger(depth_mm, params):
     slope = np.arctan2(
             rel_xyz[:,:,Z], np.hypot(rel_xyz[:,:,X], rel_xyz[:,:,Y]))
 
+    nearer_x = np.minimum(xyz[:-params.vertical_pixel_offset,:,X],
+                          xyz[params.vertical_pixel_offset:,:,X])
+    abs_y = np.abs(xyz[:,:,Y])
+    nearer_abs_y = np.minimum(abs_y[:-params.vertical_pixel_offset,:],
+                              abs_y[params.vertical_pixel_offset:,:])
     danger = np.logical_and.reduce(np.stack([
         # It has to be near.
-        np.minimum(xyz[:-params.vertical_pixel_offset,:,X],
-                   xyz[params.vertical_pixel_offset:,:,X]) <= params.max_x,
-        np.abs(
-            np.minimum(xyz[:-params.vertical_pixel_offset,:,Y],
-                       xyz[params.vertical_pixel_offset:,:,Y])) <= params.max_y,
+        nearer_x <= params.max_x,
+        nearer_abs_y <= params.max_y,
+        # But not too near.
+        nearer_x >= params.min_x,
+        nearer_abs_y >= params.min_y,
         # It should not be something small on the ground.
         np.maximum(xyz[:-params.vertical_pixel_offset,:,Z],
                    xyz[params.vertical_pixel_offset:,:,Z]) >= params.min_z,
@@ -146,14 +185,18 @@ def depth2dist(depth_mm, params, pitch=None, roll=None):
     slope = np.arctan2(
             rel_xyz[:,:,Z], np.hypot(rel_xyz[:,:,X], rel_xyz[:,:,Y]))
 
+    nearer_x = np.minimum(rxyz[:-params.vertical_pixel_offset,:,X],
+                          rxyz[params.vertical_pixel_offset:,:,X])
+    abs_y = np.abs(rxyz[:,:,Y])
+    nearer_abs_y = np.minimum(abs_y[:-params.vertical_pixel_offset,:],
+                              abs_y[params.vertical_pixel_offset:,:])
     danger = np.logical_and.reduce(np.stack([
         # It has to be near.
-        np.minimum(rxyz[:-params.vertical_pixel_offset,:,X],
-                   rxyz[params.vertical_pixel_offset:,:,X]) <= params.max_x,
-        np.abs(
-            np.minimum(
-                rxyz[:-params.vertical_pixel_offset,:,Y],
-                rxyz[params.vertical_pixel_offset:,:,Y])) <= params.max_y,
+        nearer_x <= params.max_x,
+        nearer_abs_y <= params.max_y,
+        # But not too near.
+        nearer_x >= params.min_x,
+        nearer_abs_y >= params.min_y,
         # It should not be something small on the ground.
         np.maximum(rxyz[:-params.vertical_pixel_offset,:,Z],
                    rxyz[params.vertical_pixel_offset:,:,Z]) >= params.min_z,

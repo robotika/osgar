@@ -50,6 +50,7 @@ class RospyBasePushPull(Thread):
         self.g_lock = RLock()
         self.prev_time = None
         self.downsample_topic_count = {}
+        self.logging_level = ["INFO"] # VERBOSE, INFO, WARNING, ERROR
 
     def setup_sockets(self, context=None):
 
@@ -128,6 +129,7 @@ class RospyBaseReqRep(Thread):
             if opt in ['--reqrep_port']:
                 self.REQREP_PORT = arg
         self.reqrep_socket = None
+        self.logging_level = ["INFO"] # VERBOSE, INFO, WARNING, ERROR
 
     def setup_sockets(self, context=None):
         context2 = context or zmq.Context().instance()

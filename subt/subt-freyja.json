@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+        "init": {
+          "limit_pitch": 45,
+          "limit_roll": 40,
+          "return_limit_pitch": 50,
+          "return_limit_roll": 50,
+          "obstacle_influence": 1.2,
+          "speed_policy": "conservative"
+        }
+      },
+      "depth2scan": {
+        "init": {
+          "depth_params": {
+            "fx": 349.2,
+            "camera_xyz": [0.25, 0.0, 0.23],
+            "image_size": [640, 360],
+            "principal_point": [319.5, 179.5],
+            "vertical_diff_limit": 0.698, "vd_comment": "radians(40)",
+            "max_slope": -0.4538, "ms_comment": "radians(-26)"
+          }
+        }
+      }
+    }
+  }
+}

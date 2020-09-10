@@ -59,7 +59,7 @@ def replay(args, application=None):
 
     driver_name = module_config['driver']
     module_class = get_class_by_name(driver_name)
-    module_instance = module_class(module_config['init'], bus=bus)
+    module_instance = module_class(module_config.get('init', {}), bus=bus)
 
     bus.node = module_instance # needed for slots
     return module_instance
