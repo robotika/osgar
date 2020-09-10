@@ -10,6 +10,7 @@ import operator
 import functools
 
 import rospy
+import rostopic
 import zmq
 import msgpack
 
@@ -83,8 +84,16 @@ class main:
             topics.append(('/' + robot_name + '/bottom_scan', LaserScan, self.bottom_scan, ('bottom_scan',)))
         elif "TeamBase" in robot_description:
             rospy.loginfo("teambase")
-        elif "robotika_freyja_sensor_config_1" in robot_description:
-            rospy.loginfo("freya 1")
+        elif "robotika_freyja_sensor_config" in robot_description:
+            # possibly fragile detection if freya has bredcrumbs
+            rospy.sleep(1)
+            publishers, subscribers = rostopic.get_topic_list()
+            for name, type, _ in subscribers:
+                if name == "/{}/breadcrumb/deploy".format(robot_name):
+                    rospy.loginfo("freya 2 (with comms beacons)")
+                    break
+            else:
+                rospy.loginfo("freya 1")
         else:
             rospy.logerror("unknown configuration")
             return
