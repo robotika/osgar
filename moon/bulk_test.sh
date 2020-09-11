@@ -12,7 +12,7 @@ SCORE="13"
 RANGE_START=0
 RANGE_END=49
 
-SRCP2_WAIT=10
+SRCP2_WAIT=15
 
 UNSUCCESS_LOGS_ONLY=0
 
@@ -111,7 +111,7 @@ do
 
         log_file="${log_dir}"/osgar-tty-${now}-seed_${i}_run_${j}.txt
 
-        echo "==========" `date` "====== seed:" $i
+        echo "==========" `date` "====== seed:" $i " run: " $j
         $HOME/space-challenge/srcp2-competitors/docker/scripts/launch/roslaunch_docker -q -n --run-round $ROUND -s ${i} >& /dev/null
 
         # wait for SRCP2 simulator to start
