@@ -94,7 +94,7 @@ rosrun proxy sendlog.py $LOG_FILE &
 echo "Starting osgar"
 if $IS_TEAMBASE
 then
-    $PYTHON -m osgar.record ${CONFIG_FILE_PATHS[@]} --log $LOG_FILE --note "run teambase"
+    $PYTHON -m subt.teambase ${CONFIG_FILE_PATHS[@]} --robot-name $ROBOT_NAME --log $LOG_FILE --note "run teambase"
 else
     $PYTHON -m subt run ${CONFIG_FILE_PATHS[@]} --log $LOG_FILE --side auto --walldist $WALLDIST --speed $SPEED --note "run_solution.bash"
 fi
@@ -105,6 +105,12 @@ echo "Sleep and finish"
 sleep 30
 
 # DO NOT CALL /subt/finish for group of robots!
-# it terminates the run for everybody
-# https://bitbucket.org/osrf/subt/issues/336/handling-subt-finish-for-multiple-robots
-# rosservice call '/subt/finish' true
+#
+if $IS_TEAMBASE
+then
+    echo "TEAMBASE is terminating all robots"
+    rosservice call '/subt/finish' true
+    # it terminates the run for everybody
+    # https://bitbucket.org/osrf/subt/issues/336/handling-subt-finish-for-multiple-robots
+fi
+

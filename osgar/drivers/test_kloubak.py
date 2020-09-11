@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 from osgar.drivers.kloubak import (compute_desired_erpm, compute_desired_angle,
         WHEEL_DISTANCE, compute_rear, CENTER_AXLE_DISTANCE, RobotKloubak,
-        get_downdrop_bumpers, MAX_JOIN_ANGLE, CAN_ID_ENCODERS)
+        get_downdrop_bumpers, MAX_JOINT_ANGLE, CAN_ID_ENCODERS, ENC_SCALE)
 
 
 class KloubakTest(unittest.TestCase):
@@ -110,10 +110,10 @@ class KloubakTest(unittest.TestCase):
 
     def test_compute_desired_angle_division_by_zero(self):
         self.assertAlmostEqual(compute_desired_angle(desired_speed=0.0, desired_angular_speed=0.1),
-                               MAX_JOIN_ANGLE)
+                               MAX_JOINT_ANGLE)
 
         self.assertAlmostEqual(compute_desired_angle(desired_speed=0.0, desired_angular_speed=-20.1),
-                               -MAX_JOIN_ANGLE)
+                               -MAX_JOINT_ANGLE)
 
     def test_publish_encoders(self):
         config = {
@@ -132,5 +132,33 @@ class KloubakTest(unittest.TestCase):
 
         k3.process_packet([CAN_ID_ENCODERS, bytes([14, 1, 0, 1, 0, 2]), flags])
         bus.publish.assert_called()
+
+    def test_kloubak_heading(self):
+        config = {
+            'num_axis': 2,
+            "wheel_distance": 0.496
+        }
+        bus = MagicMock()
+        k2 = RobotKloubak(config, bus)
+
+        # forward moving, use joint angle for correction
+        k2.encoders = [100, 100, 100, 100 + WHEEL_DISTANCE/ENC_SCALE]
+        k2.last_pose_encoders = [100, 100, 100, 100]
+        k2.last_joint_angle = 1
+        k2.prev_joints_angle = 0
+        k2.desired_speed = 1
+        k2.update_pose()
+        x, y, heading = k2.pose
+        self.assertAlmostEqual(heading, 0)
+
+        # backward moving, do not use joint angle for correction
+        k2.encoders = [100, 100 + WHEEL_DISTANCE / ENC_SCALE, 100, 100]
+        k2.last_pose_encoders = [100, 100, 100, 100]
+        k2.last_joint_angle = 1
+        k2.prev_joints_angle = 0
+        k2.desired_speed = -1
+        k2.update_pose()
+        x, y, heading = k2.pose
+        self.assertAlmostEqual(heading, -1)
 
 # vim: expandtab sw=4 ts=4
