@@ -366,15 +366,15 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
         # chord length=2*sqrt(h * (2* radius - h)) where h is the distance from the circle boundary
         # https://mathworld.wolfram.com/CircularSegment.html
 
-        self.set_cam_angle(0.1)
-        self.set_light_intensity("0.4")
-        self.set_brakes(False)
-
         def set_homebase_found(response):
             self.vslam_reset_at = self.sim_time
 
         try:
             self.wait_for_init()
+
+            self.set_cam_angle(0.1)
+            self.set_light_intensity("0.4")
+            self.set_brakes(False)
 
             try:
                 self.turn(math.radians(360), timeout=timedelta(seconds=20))
