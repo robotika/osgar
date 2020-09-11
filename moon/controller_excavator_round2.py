@@ -444,7 +444,10 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
                         self.go_straight(4)
                     except MoonException as e:
                         print(self.sim_time, self.robot_name, "Exception while performing initial going away from obstacles: ", str(e))
-
+                else:
+                    print(self.sim_time, self.robot_name, "No direction with 6+m unobstructed area found")
+            else:
+                print(self.sim_time, self.robot_name, "More than 5m of space in all directions, no need to move")
 
             print(self.sim_time, self.robot_name, "Asking hauler to arrive to <follow> distance")
 
@@ -536,29 +539,8 @@ class SpaceRoboticsChallengeExcavatorRound2(SpaceRoboticsChallenge):
 
             #self.send_request('external_command hauler_1 align %f' % self.yaw) # TODO: due to skidding, this yaw may still change
 
+            self.hauler_ready = False
             self.send_request('external_command hauler_1 set_yaw %f' % self.yaw) # tell hauler looking at rover
-
-            # wait for hauler to send pose
-            #while self.hauler_orig_pose is None:
-            #    try:
-            #        self.wait(timedelta(seconds=1))
-            #    except BusShutdownException:
-            #        raise
-            #    except:
-            #        pass
-
-            #dir_angle = math.atan2(self.xyz[1] - self.hauler_orig_pose[1], self.xyz[0] - self.hauler_orig_pose[0])
-            #self.send_request('external_command hauler_1 turnto %f' % dir_angle)
-
-            # finish the turn no matter what
-            #while True:
-            #    try:
-            #        self.turn(normalizeAnglePIPI(dir_angle - self.yaw), timeout=timedelta(seconds=15))
-            #        break
-            #    except BusShutdownException:
-            #        raise
-            #    except:
-            #        pass
 
             # wait for hauler to start following, will receive osgar broadcast when done
             while not self.hauler_ready:
