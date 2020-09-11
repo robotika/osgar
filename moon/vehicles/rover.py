@@ -85,7 +85,7 @@ def compute_steering_angle(pos, radius):
 class Rover(MoonNode):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('cmd', 'odo_pose', 'odo_pose3d', 'desired_speeds')
+        bus.register('cmd', 'odo_pose', 'desired_speeds')
 
         # general driving parameters
         # radius: radius of circle to drive around, "inf" if going straight; 0 if turning round in place
@@ -150,7 +150,6 @@ class Rover(MoonNode):
         self.bus.publish('odo_pose', [round(x * 1000),
                                     round(y * 1000),
                                     round(math.degrees(heading) * 100)])
-        self.bus.publish('odo_pose3d', [list(self.odom.xyz), quaternion.identity()])  # TODO fix quaternion
         self.prev_position = data  # TODO remove dependency
 
     def on_joint_velocity(self, data):
