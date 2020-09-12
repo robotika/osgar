@@ -161,5 +161,6 @@ do
         fi
 
         docker kill srcp2-simulation >& /dev/null
+        sleep ${SRCP2_WAIT}
     done
 done
