@@ -12,7 +12,7 @@ from osgar.bus import BusShutdownException
 
 from moon.controller import pol2cart, cart2pol, best_fit_circle, SpaceRoboticsChallenge, ChangeDriverException, VirtualBumperException, LidarCollisionException, LidarCollisionMonitor
 from osgar.lib.virtual_bumper import VirtualBumper
-from moon.moonnode import CAMERA_WIDTH, CAMERA_HEIGHT, CAMERA_FOCAL_LENGTH, CAMERA_BASELINE
+from moon.moonnode import CAMERA_WIDTH, CAMERA_HEIGHT, CAMERA_FOCAL_LENGTH, CAMERA_BASELINE, LIDAR_BEAM_SPACING
 
 CAMERA_ANGLE_DRIVING = 0.1
 CAMERA_ANGLE_LOOKING = 0.5
@@ -481,7 +481,7 @@ class SpaceRoboticsChallengeRound3(SpaceRoboticsChallenge):
                 x_l = []
                 y_l = []
                 for i in range(min_index, max_index):
-                    x,y = pol2cart(data[i] / 1000.0, -1.29999995232 + (i - 40) * 0.0262626260519)
+                    x,y = pol2cart(data[i] / 1000.0, -1.29999995232 + (i - 40) * LIDAR_BEAM_SPACING)
                     x_l.append(x)
                     y_l.append(y)
 

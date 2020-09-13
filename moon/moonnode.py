@@ -14,7 +14,7 @@ CAMERA_BASELINE = 0.42 # meters
 WHEEL_RADIUS = 0.275  # meters
 WHEEL_SEPARATION_WIDTH = 1.87325  # meters
 WHEEL_SEPARATION_LENGTH = 1.5748  # meters
-
+LIDAR_BEAM_SPACING = 0.0262626260519 # angle difference in radians between two consecutive LIDAR beams
 
 class MoonNode(Node):
     def __init__(self, config, bus):

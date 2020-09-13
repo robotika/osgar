@@ -64,6 +64,13 @@ class Excavator(Rover):
             [10, [-0.3, -0.8, 3]], # drop
             [10, [-0.6, -0.8, 3.2]] # back to neutral/travel position
         )
+        self.bucket_rotate_sequence = (
+            # [<seconds to execute>, [mount, base, distal, bucket]]
+            [10, [-0.6,  -0.2, 3.92]],
+            [10, [-0.6,  -0.2, 3.92]],
+            [10, [-0.6,  -0.2, 3.92]],
+            [10, [-0.6,  -0.2, 3.92]]
+            )
 
     def send_bucket_position(self, bucket_params):
         mount, basearm, distalarm, bucket = bucket_params
@@ -85,10 +92,10 @@ class Excavator(Rover):
         elif queue_action == 'prepend':
             i = len(self.execute_bucket_queue) % 4
             self.execute_bucket_queue[i:i] = dig
-        elif queue_action == 'standby': # finish existing action and clear rest of queue
+        elif queue_action == 'standby': # finish existing action, turn in the prescribed direction and clear rest of queue (hold volatiles)
             self.scoop_time = None
             i = len(self.execute_bucket_queue) % 4
-            self.execute_bucket_queue = self.execute_bucket_queue[:i]
+            self.execute_bucket_queue = self.execute_bucket_queue[:i] +  [[duration, [dig_angle, *step]] for duration, step in self.bucket_rotate_sequence]
         else:
             assert False, "Dig command"
 

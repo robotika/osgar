@@ -150,7 +150,7 @@ class SubTChallenge:
         self.origin = None  # unknown initial position
         self.origin_quat = quaternion.identity()
 
-        self.offset = (0, 0, 0)
+        self.offset = None  # the offset between robot frame and world frame is not known on start
         if 'init_offset' in config:
             x, y, z = [d/1000.0 for d in config['init_offset']]
             self.offset = (x, y, z)
@@ -212,8 +212,12 @@ class SubTChallenge:
         else:
             safety, safe_direction = self.local_planner.recommend(desired_direction)
         #print(self.time,"safety:%f    desired:%f  safe_direction:%f"%(safety, desired_direction, safe_direction))
-        #desired_angular_speed = 1.2 * safe_direction
-        desired_angular_speed = 0.9 * safe_direction
+        if self.speed_policy == 'conservative':
+            desired_angular_speed = 1.2 * safe_direction
+        elif self.speed_policy == 'always_forward':
+            desired_angular_speed = 0.9 * safe_direction
+        else:
+            assert(False)  # Unsupported speed_policy.
         size = len(self.scan)
         dist = min_dist(self.scan[size//3:2*size//3])
         if dist < self.min_safe_dist:  # 2.0:
@@ -421,10 +425,9 @@ class SubTChallenge:
         start_time = self.sim_time_sec
         print('MD', self.xyz, distance3D(self.xyz, trace.trace[0]), trace.trace)
         while distance3D(self.xyz, trace.trace[0]) > END_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
-            if self.update() == 'scan':
+            if self.update() in ['scan', 'scan360']:
                 target_x, target_y = trace.where_to(self.xyz, max_target_distance)[:2]
                 x, y = self.xyz[:2]
-#                print((x, y), (target_x, target_y))
                 desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
                 safety = self.go_safely(desired_direction)
                 if safety_limit is not None and safety < safety_limit:
@@ -469,6 +472,39 @@ class SubTChallenge:
         self.xyz = x, y, z
         self.trace.update_trace(self.xyz)
 
+    def on_pose3d(self, timestamp, data):
+        if self.offset is None:
+            # we cannot align global coordinates if offset is not known
+            return
+        xyz, rot = data
+        ypr = quaternion.euler_zyx(rot)
+        x0, y0, z0 = self.offset
+        # pretend that received coordinates are in robot frame (compatible with on_pose2d)
+        xyz = xyz[0] - x0, xyz[1] - y0, xyz[2] - z0
+
+        pose = (xyz[0], xyz[1], ypr[0])
+        if self.last_position is not None:
+            self.is_moving = (self.last_position != pose)
+            dist = math.hypot(pose[0] - self.last_position[0], pose[1] - self.last_position[1])
+            direction = ((pose[0] - self.last_position[0]) * math.cos(self.last_position[2]) +
+                         (pose[1] - self.last_position[1]) * math.sin(self.last_position[2]))
+            if direction < 0:
+                dist = -dist
+        else:
+            dist = 0.0
+        self.last_position = pose
+        self.traveled_dist += dist
+        x, y, z = xyz
+        self.last_send_time = self.bus.publish('pose2d', [round((x + x0) * 1000), round((y + y0) * 1000),
+                                    round(math.degrees(self.yaw) * 100)])
+        if self.virtual_bumper is not None:
+            if self.is_virtual:
+                self.virtual_bumper.update_pose(timedelta(seconds=self.sim_time_sec), pose)
+            else:
+                self.virtual_bumper.update_pose(self.time, pose)
+        self.xyz = tuple(xyz)
+        self.trace.update_trace(self.xyz)
+
     def on_acc(self, timestamp, data):
         acc = [x / 1000.0 for x in data]
         gacc = np.matrix([[0., 0., 9.80]])  # Gravitational acceleration.
@@ -490,6 +526,9 @@ class SubTChallenge:
                 raise Collision()
 
     def on_artf(self, timestamp, data):
+        if self.offset is None:
+            # there can be observed artifact (false) on the start before the coordinate system is defined
+            return
         artifact_data, deg_100th, dist_mm = data
         x, y, z = self.xyz
         x0, y0, z0 = self.offset
@@ -838,7 +877,7 @@ class SubTChallenge:
         self.wait(timedelta(seconds=10), use_sim_time=True)
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver68!")
+        self.stdout("SubT Challenge Ver69!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
