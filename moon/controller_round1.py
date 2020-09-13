@@ -208,7 +208,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                     current_sweep_step += 1
             except VSLAMLostException as e:
                 print("VSLAM lost")
-                sweep_steps.insert(current_sweep_step, ["turn", False, [math.radians(360), True]])
+                sweep_steps.insert(current_sweep_step, ["goto", False, [HOMEPOINT, self.default_effort_level, True]])
                 continue
 
                 self.inException = True
