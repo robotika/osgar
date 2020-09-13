@@ -134,27 +134,30 @@ class Robotour(Node):
 
         return safe_direction
 
+    def ask4beer(self):
+        pass
 
-    def run(self):
-        self.update()  # define self.time
-        # waiting for QR code
+    def wait4qr_code(self):
         print("waiting for QR code..")
         while True:
             if self.last_image is not None:
-                self.destination = self.get_qrcode()
-                if self.destination is not None:
-                    print(self.destination)
+                destination = self.get_qrcode()
+                if destination is not None:
+                    print(destination)
                     break
                 self.last_image = None
             self.update()
+        return destination
 
-        print(self.time, "Go!")
-        start_time = self.time
-        while self.time - start_time < timedelta(seconds=120):
+    def compute_path(self, destination):
+        return [[3,0], [3,-3], [0,-3]]
+
+    def go2way_point(self, way_point):
+        while True:
             if self.new_scan is not None:
                 x, y, heading = self.pose
-                y_diff = self.destination[1] - y
-                x_diff = self.destination[0] - x
+                y_diff = way_point[1] - y
+                x_diff = way_point[0] - x
                 destination_dist = math.hypot(x_diff, y_diff )
                 if destination_dist < 1:
                     print("Destination reached")
@@ -172,10 +175,33 @@ class Robotour(Node):
                 else:
                     print(self.time, "NO SAVE DIRECTION!!!")
                     self.send_speed_cmd(0, 0)
-            self.new_scan = None
+                self.new_scan = None
             self.update()
 
+    def run(self):
+        self.update()  # define self.time
+        destination = self.wait4qr_code()
+        path = self.compute_path(destination)
+        print(self.time, "Go!")
+        for way_point in path:
+            self.go2way_point(way_point)
         self.send_speed_cmd(0.0, 0.0)
+        self.ask4beer()
+
+        destination = self.wait4qr_code()
+        path = self.compute_path(destination)
+        print(self.time, "Go!")
+        for way_point in path:
+            self.go2way_point(way_point)
+        self.send_speed_cmd(0.0, 0.0)
+        self.ask4beer()  # unload beer
+
+        path = self.compute_path((0,0))
+        print(self.time, "Go!")
+        for way_point in path:
+            self.go2way_point(way_point)
+        self.send_speed_cmd(0.0, 0.0)
+
         self.wait(timedelta(seconds=2))
 
 
