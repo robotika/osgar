@@ -251,13 +251,15 @@ class SpaceRoboticsChallenge(MoonNode):
                 'trans_matrix': None,
                 'latest_xyz': None,
                 'latest_quat': None,
-                'timestamp': None
+                'timestamp': None,
+                'debug_arr': []
             },
             'odo': {
                 'trans_matrix': None,
                 'latest_xyz': (0,0,0),
                 'latest_quat': None,
-                'timestamp': None
+                'timestamp': None,
+                'debug_arr': []
             }
         } # transformations from position sources (odometry, vslam) to robot coordinates
 
@@ -588,6 +590,8 @@ class SpaceRoboticsChallenge(MoonNode):
                         m = np.dot(obj['trans_matrix'], v.T)
                         x,y,z = [m[0,0], m[1,0], m[2,0]]
                         s += ps("Loc[%s]: [%f %f %f]" % (k, x, y, z))
+                        if self.verbose:
+                            obj['debug_arr'].append((self.sim_time.total_seconds(), x, y, z))
                 s += self.get_extra_status()
                 s += ("\n---------------------------------------------------------")
                 print(s)
@@ -846,5 +850,22 @@ class SpaceRoboticsChallenge(MoonNode):
             except:
                 pass
         print(self.robot_name, 'done at', self.sim_time)
+
+    def draw(self):
+        # for debugging
+        import matplotlib.pyplot as plt
+
+        arr = []
+        for a, b in zip(self.tf['odo']['debug_arr'], self.tf['vslam']['debug_arr']):
+            arr.append((a[0], *[x - y for x, y in zip(a[1:], b[1:])]))
+        t = [a[0] for a in arr]
+        values = [a[1:] for a in arr]
+
+        line = plt.plot(t, values, '-o', linewidth=2)
+
+        plt.xlabel('time (s)')
+        plt.legend(['x', 'y', 'z'])
+        plt.show()
+
 
 # vim: expandtab sw=4 ts=4
