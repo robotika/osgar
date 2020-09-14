@@ -283,6 +283,7 @@ class SpaceRoboticsChallenge(MoonNode):
         self.last_status_timestamp = None
 
         self.virtual_bumper = None
+        self.debug_arr = []
 
     def register(self, callback):
         self.monitors.append(callback)
@@ -349,8 +350,10 @@ class SpaceRoboticsChallenge(MoonNode):
         # if VSLAM active, report its position either in internal or global coordinates depending on whether origin was established yet
         # otherwise use ODO position (internal or global)
 
+        vslam_available = False
         if self.tf['vslam']['timestamp'] is not None and self.sim_time - self.tf['vslam']['timestamp'] < timedelta(milliseconds=300):
             if self.tf['vslam']['trans_matrix'] is not None:
+                vslam_available = True
                 v = np.asmatrix(np.array([self.tf['vslam']['latest_xyz'][0], self.tf['vslam']['latest_xyz'][1], self.tf['vslam']['latest_xyz'][2], 1]))
                 m = np.dot(self.tf['vslam']['trans_matrix'], v.T)
                 self.xyz = [m[0,0], m[1,0], m[2,0]]
@@ -371,6 +374,10 @@ class SpaceRoboticsChallenge(MoonNode):
             else:
                 self.xyz = self.tf['odo']['latest_xyz']
 
+        if self.verbose:
+            x, y, z = self.xyz
+            if vslam_available:
+                self.debug_arr.append([self.sim_time.total_seconds(), x, y, z])
 
         self.publish("pose2d", [round(1000*self.xyz[0]), round(1000*self.xyz[1]), round(100*math.degrees(self.yaw))])
 
@@ -855,9 +862,10 @@ class SpaceRoboticsChallenge(MoonNode):
         # for debugging
         import matplotlib.pyplot as plt
 
-        arr = []
-        for a, b in zip(self.tf['odo']['debug_arr'], self.tf['vslam']['debug_arr']):
-            arr.append((a[0], *[x - y for x, y in zip(a[1:], b[1:])]))
+#        arr = []
+#        for a, b in zip(self.tf['odo']['debug_arr'], self.tf['vslam']['debug_arr']):
+#            arr.append((a[0], *[x - y for x, y in zip(a[1:], b[1:])]))
+        arr = self.debug_arr
         t = [a[0] for a in arr]
         values = [a[1:] for a in arr]
 
