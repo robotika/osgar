@@ -5,17 +5,21 @@
 """
 import math
 
+from osgar.lib.mathex import normalizeAnglePIPI
 
-def equal_poses(pose1, pose2, dist_limit):
+
+def equal_poses(pose1, pose2, dist_limit, angle_limit=None):
     x1, y1, heading1 = pose1
     x2, y2, heading2 = pose2
-    return math.hypot(x2 - x1, y2 - y1) < dist_limit
+    return (math.hypot(x2 - x1, y2 - y1) < dist_limit and 
+            (angle_limit is None or abs(normalizeAnglePIPI(heading1 - heading2)) < angle_limit))
 
 
 class VirtualBumper:
-    def __init__(self, stuck_time_limit, dist_radius_limit):
+    def __init__(self, stuck_time_limit, dist_radius_limit, angle_limit=None):
         self.stuck_time_limit = stuck_time_limit
         self.dist_radius_limit = dist_radius_limit
+        self.angle_limit = angle_limit
         self.should_be_moving = False  # status based on desired speed commands
         self.verbose = False
         self.reset_counters()
@@ -36,7 +40,7 @@ class VirtualBumper:
         if self.verbose:
             print('VirtualBumper', timestamp, pose)
         if self.last_pose is not None:
-            if equal_poses(pose, self.last_pose, self.dist_radius_limit):
+            if equal_poses(pose, self.last_pose, self.dist_radius_limit, self.angle_limit):
                 self.not_moving = timestamp - self.last_pose_time
             else:
                 self.last_pose = pose
