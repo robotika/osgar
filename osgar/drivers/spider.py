@@ -10,7 +10,7 @@ from osgar.node import Node
 from osgar.bus import BusShutdownException
 
 
-SPIDER_ENC_SCALE = 0.002  # TODO calibrate
+SPIDER_ENC_SCALE = 0.0023
 WHEEL_DISTANCE = 1.5  # TODO calibrate
 
 
