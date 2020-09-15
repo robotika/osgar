@@ -1,0 +1,51 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": [],
+          "out": ["desired_speed"],
+          "init": {
+            "max_speed": 0.5
+          }
+      },
+      "spider": {
+          "driver": "spider",
+          "in": ["can", "move"],
+          "out": ["can"],
+          "init": {}
+      },
+      "can": {
+          "driver": "can",
+          "in": ["raw", "can"],
+          "out": ["can", "raw"],
+          "init": {}
+      },
+      "serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyS0", "speed": 115200,
+                   "rtscts":true, "reset":true}
+      },
+      "velodyne": {
+          "driver": "udp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {
+              "host": "192.168.1.201",
+              "port": 2368,
+              "bufsize": 2000
+          }
+      }
+    },
+    "links": [["app.desired_speed", "spider.move"],
+              ["spider.status", "app.status"],
+              ["spider.pose2d", "app.pose2d"],
+              ["spider.can", "can.can"],
+              ["can.can", "spider.can"],
+              ["serial.raw", "can.raw"], 
+              ["can.raw", "serial.raw"]]
+  }
+}
