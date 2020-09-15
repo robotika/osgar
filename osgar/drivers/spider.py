@@ -85,7 +85,11 @@ class Spider(Node):
             if verbose:
                 print(hex(msg_id), packet[2:])
             if msg_id == 0x200:
+                prev = self.status_word
                 self.status_word = struct.unpack('H', packet[2:])[0]
+                if prev is None or (prev & 0x7FFF != self.status_word & 0x7FFF):
+                    mode = 'CAR' if self.status_word & 0x10 else 'SPIDER'
+                    print(self.time, hex(self.status_word & 0x7FFF), 'Mode:', mode)
                 if self.wheel_angles is not None and self.zero_steering is not None:
                     ret = [self.status_word, [Spider.fix_range(a - b) for a, b in zip(self.wheel_angles, self.zero_steering)]]
                 else:
@@ -158,9 +162,10 @@ class Spider(Node):
             if speed > 0:
 #                print(self.status_word & 0x7fff)
                 if self.status_word is None or self.status_word & 0x10 != 0:
+                    # car mode
                     angle_cmd = int(angular_speed)  # TODO verify angle, byte resolution
                 else:
-#                    print('SPIDER MODE')
+                    # spider mode
                     desired_angle = int(angular_speed)  # TODO proper naming etc.
                     if self.wheel_angles is not None and self.zero_steering is not None:
                         curr = Spider.fix_range(self.wheel_angles[0] - self.zero_steering[0])
