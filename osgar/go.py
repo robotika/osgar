@@ -41,8 +41,6 @@ class Go(Node):
 
     def run(self):
         self.update()  # define self.time
-        print(self.time, "***Waiting***")
-        self.wait(timedelta(seconds=30))
         print(self.time, "Go!")
         start_time = self.time
         if self.dist >= 0:
