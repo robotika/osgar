@@ -35,6 +35,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
         self.vslam_fail_start = None
         self.vslam_success_start = None
         self.vslam_is_enabled = False
+        self.last_processing_plant_follow = None
 
     def get_extra_status(self):
         return ps("Volatile queue length: %d" % len(self.volatile_queue))
@@ -86,6 +87,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
         if self.vslam_reset_at is not None and self.processing_plant_found and self.sim_time - self.vslam_reset_at > timedelta(seconds=3) and not math.isnan(data[0][0]) and self.tf['vslam']['trans_matrix'] is None:
             # request origin and start tracking in correct coordinates as soon as first mapping lock occurs
             # TODO: another pose may arrive while this request is still being processed (not a big deal, just a ROS error message)
+            self.vslam_reset_at = None
             self.send_request('request_origin', self.register_origin)
 
     def process_volatile_response(self, response, vol_index):
@@ -94,7 +96,9 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
             # if ok, no need to attempt the remaining guesses
             i = 0
             while i < len(self.volatile_queue):
-                if self.volatile_queue[i][1][0] == vol_index:
+                p, vol = self.volatile_queue[i]
+                _, obj_idx, _, _, _ = vol
+                if obj_idx == vol_index:
                     self.volatile_queue[i], self.volatile_queue[-1] = self.volatile_queue[-1], self.volatile_queue[i]
                     self.volatile_queue.pop()
                 else:
@@ -114,7 +118,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
             priority, vol = heapq.heappop(self.volatile_queue)
             guess_layer, obj_idx, obj_type, qx, qy = vol
             self.volatile_last_submit_time = self.sim_time
-            print(self.sim_time, "app: Reporting obj %d, priority %d, guesses in queue: %d" % (obj_idx, priority, len(self.volatile_queue)))
+            print(self.sim_time, "app: Reporting obj %d, priority %.2f, guesses in queue: %d" % (obj_idx, priority, len(self.volatile_queue)))
             self.send_request('artf %s %f %f 0.0' % (obj_type, qx, qy), partial(self.process_volatile_response, vol_index=obj_idx))
 
     def on_artf(self, data):
@@ -164,15 +168,28 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                     heapq.heappush(self.volatile_queue, (1000 + olap, [1, object_index, object_type, x+x_d, y+y_d]))
                     queued_count += 1
 
+            # further out non-overlapping guesses have higher priority than closer guesses with half circle or more of overlap with existing guesses
             for i in range(12):
                 x_d,y_d = pol2cart(2*3.46 if i % 2 == 0 else 2*3, math.radians(i * 30))
                 olap = covered_area[object_index][2].intersection(Point(x+x_d,y+y_d).buffer(2)).area
                 if olap < 0.99 * 4 * math.pi:
-                    heapq.heappush(self.volatile_queue, (10000 + olap, [2, object_index, object_type, x+x_d, y+y_d]))
+                    heapq.heappush(self.volatile_queue, (1006 + olap, [2, object_index, object_type, x+x_d, y+y_d]))
                     queued_count += 1
 
             print(self.sim_time, "app: Queueing %d guesses" % (queued_count))
-
+            if self.debug:
+                print("=== matplotlib start ===")
+                print("from matplotlib import pyplot as plt")
+                print("fig, ax = plt.subplots()")
+                print("ax.set_aspect(1)")
+                clrs = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+                for i in range(len(self.volatile_queue)):
+                    p, vol = self.volatile_queue[i]
+                    _, idx, _, x, y = vol
+                    print("ax.add_artist(plt.Circle((%.1f,%.1f),2,color='%s'))" % (x,y,clrs[idx % len(clrs)]))
+                print("plt.axis([-50, 50, -50, 50])")
+                print("plt.show()")
+                print("=== matplotlib end ===")
 
     def circular_pattern(self):
         current_sweep_step = 0
@@ -211,7 +228,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
         start_time = self.sim_time
         wait_for_mapping = False
 
-        self.virtual_bumper = VirtualBumper(timedelta(seconds=5), 0.2) # radius of "stuck" area; a little more as the robot flexes
+        self.virtual_bumper = VirtualBumper(timedelta(seconds=5), 0.2, angle_limit=math.pi/16) # radius of "stuck" area; a little more as the robot flexes
         while current_sweep_step < len(sweep_steps) and self.sim_time - start_time < timedelta(minutes=60):
             ex = None
             try:
@@ -220,11 +237,19 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
 
                 if not self.vslam_valid:
                     try:
-                        self.virtual_bumper = VirtualBumper(timedelta(seconds=50), 0.2)
                         with LidarCollisionMonitor(self, 1200):
-                            self.turn(math.radians(self.rand.randrange(90,270)), timeout=timedelta(seconds=20))
-                            self.turn(math.radians(360), timeout=timedelta(seconds=40))
-                            self.go_straight(20.0, timeout=timedelta(minutes=2))
+                            try:
+                                if self.last_processing_plant_follow is None or self.sim_time - self.last_processing_plant_follow > timedelta(seconds=60):
+                                    self.processing_plant_found = False
+                                    self.last_processing_plant_follow = self.sim_time
+
+                                self.turn(math.radians(self.rand.randrange(90,270)), timeout=timedelta(seconds=20))
+                                self.turn(math.radians(360), timeout=timedelta(seconds=40))
+                            except ChangeDriverException as e:
+                                pass
+                            finally:
+                                self.processing_plant_found = True
+                            self.go_straight(20.0, timeout=timedelta(seconds=40))
                     except (VirtualBumperException, LidarCollisionException)  as e:
                         self.inException = True
                         print(self.sim_time, self.robot_name, "Lidar or Virtual Bumper in random walk")
@@ -235,7 +260,6 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                         self.inException = False
                     continue
 
-                self.virtual_bumper = VirtualBumper(timedelta(seconds=5), 0.2) # radius of "stuck" area; a little more as the robot flexes
                 with LidarCollisionMonitor(self, 1200): # some distance needed not to lose tracking when seeing only obstacle up front
 
                     op, self.inException, params = sweep_steps[current_sweep_step]
