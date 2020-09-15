@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "velodyne": {
+          "driver": "udp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {
+              "host": "192.168.1.201",
+              "port": 2368,
+              "bufsize": 2000
+          }
+      }
+    },
+    "links": []
+  }
+}
