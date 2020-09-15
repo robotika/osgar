@@ -40,6 +40,7 @@ class Spider(Node):
         self.debug_arr = []
         self.pose2d = (0.0, 0.0, 0.0)  # x, y in meters, heading in radians (not corrected to 2PI)
         self.prev_enc = None  # not defined
+        self.paused = True  # safe default
 
     def update_pose2d(self, diff):
         x, y, heading = self.pose2d
@@ -88,6 +89,7 @@ class Spider(Node):
                 prev = self.status_word
                 self.status_word = struct.unpack('H', packet[2:])[0]
                 if prev is None or (prev & 0x7FFF != self.status_word & 0x7FFF):
+                    self.paused = (self.status_word & 0x10) == 0
                     mode = 'CAR' if self.status_word & 0x10 else 'SPIDER'
                     print(self.time, hex(self.status_word & 0x7FFF), 'Mode:', mode)
                 if self.wheel_angles is not None and self.zero_steering is not None:
@@ -96,7 +98,7 @@ class Spider(Node):
                     ret = [self.status_word, None]
 
                 # handle steering
-                if self.desired_angle is not None and self.desired_speed is not None:
+                if self.desired_angle is not None and self.desired_speed is not None and not self.paused:
                     self.send((self.desired_speed, self.desired_angle))
                 else:
                     self.send((0, 0))
