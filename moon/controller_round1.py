@@ -7,6 +7,8 @@ import numpy as np
 
 from datetime import timedelta
 from functools import partial
+from shapely.geometry import Point, Polygon
+from collections import defaultdict
 
 from osgar.bus import BusShutdownException
 from osgar.lib import quaternion
@@ -31,6 +33,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
         self.vslam_valid = False
         self.returning_to_base = False
         self.vslam_fail_start = None
+        self.vslam_success_start = None
         self.vslam_is_enabled = False
 
     def get_extra_status(self):
@@ -73,8 +76,12 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
 
         if not math.isnan(data[0][0]):
             self.vslam_valid = True
-            if not self.inException and self.returning_to_base:
-                raise VSLAMFoundException()
+            if self.vslam_success_start is None:
+                self.vslam_success_start = self.sim_time
+            if self.sim_time - self.vslam_success_start > timedelta(milliseconds=300):
+                self.vslam_success_start = None
+                if not self.inException and self.returning_to_base:
+                    raise VSLAMFoundException()
 
         if self.vslam_reset_at is not None and self.processing_plant_found and self.sim_time - self.vslam_reset_at > timedelta(seconds=3) and not math.isnan(data[0][0]) and self.tf['vslam']['trans_matrix'] is None:
             # request origin and start tracking in correct coordinates as soon as first mapping lock occurs
@@ -105,9 +112,10 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                 (self.volatile_last_submit_time is None or self.sim_time - self.volatile_last_submit_time > timedelta(seconds=30))
         ):
             priority, vol = heapq.heappop(self.volatile_queue)
+            guess_layer, obj_idx, obj_type, qx, qy = vol
             self.volatile_last_submit_time = self.sim_time
-            print(self.sim_time, "app: Reporting obj %d, priority %d, guesses in queue: %d" % (vol[0], priority, len(self.volatile_queue)))
-            self.send_request('artf %s %f %f 0.0' % (vol[1], vol[2], vol[3]), partial(self.process_volatile_response, vol_index=vol[0]))
+            print(self.sim_time, "app: Reporting obj %d, priority %d, guesses in queue: %d" % (obj_idx, priority, len(self.volatile_queue)))
+            self.send_request('artf %s %f %f 0.0' % (obj_type, qx, qy), partial(self.process_volatile_response, vol_index=obj_idx))
 
     def on_artf(self, data):
         artifact_type = data[0]
@@ -132,16 +140,38 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                 self.sim_time - self.tf['vslam']['timestamp'] < timedelta(milliseconds=300)
         ):
             x,y,z = self.xyz
-            print(self.sim_time, "app: Object %s[%d] reached at [%.1f,%.1f], queueing up 19 around" % (object_type, object_index, x, y))
-            heapq.heappush(self.volatile_queue, (self.sim_time.total_seconds(), [object_index, object_type, x, y]))
+            print(self.sim_time, "app: Object %s[%d] reached at [%.1f,%.1f]" % (object_type, object_index, x, y))
+
+            # covered_area = { idx: { layer: Polygon() } }
+            # https://www.researchgate.net/figure/Minimum-overlap-of-circles-covering-an-area_fig2_256607366
+            # Minimum overlap of circles covering an area; r= 3.46 (=2* r * cos(30)); step 60 degrees, 6x
+            queued_count = 0
+            covered_area = defaultdict(lambda: defaultdict(lambda: Polygon()))
+            for key, p in self.volatile_queue:
+                layer, idx, _, qx, qy = p
+                for l in range(layer, 3):
+                    covered_area[idx][l] = covered_area[idx][l].union(Point(qx, qy).buffer(2))
+
+            olap = covered_area[object_index][0].intersection(Point(x,y).buffer(2)).area
+            if olap < 0.99 * 4 * math.pi: # if overlap is less than 100%
+                heapq.heappush(self.volatile_queue, (olap, [0, object_index, object_type, x, y]))
+                queued_count += 1
+
             for i in range(6):
                 x_d,y_d = pol2cart(3.46, math.radians(i * 60))
-                heapq.heappush(self.volatile_queue, (3600 + self.sim_time.total_seconds(), [object_index, object_type, x+x_d, y+y_d]))
-                 # https://www.researchgate.net/figure/Minimum-overlap-of-circles-covering-an-area_fig2_256607366
-                 # Minimum overlap of circles covering an area; r= 3.46 (=2* r * cos(30)); step 60 degrees, 6x
+                olap = covered_area[object_index][1].intersection(Point(x+x_d,y+y_d).buffer(2)).area
+                if olap < 0.99 * 4 * math.pi:
+                    heapq.heappush(self.volatile_queue, (1000 + olap, [1, object_index, object_type, x+x_d, y+y_d]))
+                    queued_count += 1
+
             for i in range(12):
                 x_d,y_d = pol2cart(2*3.46 if i % 2 == 0 else 2*3, math.radians(i * 30))
-                heapq.heappush(self.volatile_queue, (7200 + self.sim_time.total_seconds(), [object_index, object_type, x+x_d, y+y_d]))
+                olap = covered_area[object_index][2].intersection(Point(x+x_d,y+y_d).buffer(2)).area
+                if olap < 0.99 * 4 * math.pi:
+                    heapq.heappush(self.volatile_queue, (10000 + olap, [2, object_index, object_type, x+x_d, y+y_d]))
+                    queued_count += 1
+
+            print(self.sim_time, "app: Queueing %d guesses" % (queued_count))
 
 
     def circular_pattern(self):
@@ -151,7 +181,7 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
         sweep_steps = []
         #HOMEPOINT = self.xyz # where the drive started and we know the location well
         CENTERPOINT = [3,-3] # where to start the circle from
-        HOMEPOINT = [-10,-10] # central area, good for regrouping
+        HOMEPOINT = [19,5] # central area, good for regrouping
         print(self.sim_time, "Home coordinates: %.1f, %.1f" % (HOMEPOINT[0], HOMEPOINT[1]))
 
 
@@ -187,7 +217,27 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
             try:
                 while wait_for_mapping:
                     self.wait(timedelta(seconds=1))
+
+                if not self.vslam_valid:
+                    try:
+                        self.virtual_bumper = VirtualBumper(timedelta(seconds=50), 0.2)
+                        with LidarCollisionMonitor(self, 1200):
+                            self.turn(math.radians(self.rand.randrange(90,270)), timeout=timedelta(seconds=20))
+                            self.turn(math.radians(360), timeout=timedelta(seconds=40))
+                            self.go_straight(20.0, timeout=timedelta(minutes=2))
+                    except (VirtualBumperException, LidarCollisionException)  as e:
+                        self.inException = True
+                        print(self.sim_time, self.robot_name, "Lidar or Virtual Bumper in random walk")
+                        try:
+                            self.go_straight(-3, timeout=timedelta(seconds=20))
+                        except:
+                            pass
+                        self.inException = False
+                    continue
+
+                self.virtual_bumper = VirtualBumper(timedelta(seconds=5), 0.2) # radius of "stuck" area; a little more as the robot flexes
                 with LidarCollisionMonitor(self, 1200): # some distance needed not to lose tracking when seeing only obstacle up front
+
                     op, self.inException, params = sweep_steps[current_sweep_step]
                     if op == "goto":
                         pos, speed, self.returning_to_base = params
@@ -208,7 +258,8 @@ class SpaceRoboticsChallengeRound1(SpaceRoboticsChallenge):
                     current_sweep_step += 1
             except VSLAMLostException as e:
                 print("VSLAM lost")
-                sweep_steps.insert(current_sweep_step, ["goto", False, [HOMEPOINT, self.default_effort_level, True]])
+                self.returning_to_base = True
+                #sweep_steps.insert(current_sweep_step, ["goto", False, [HOMEPOINT, self.default_effort_level, True]])
                 continue
 
                 self.inException = True
