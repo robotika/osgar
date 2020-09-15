@@ -161,7 +161,7 @@ class Spider(Node):
     def send(self, data):
         if True:  #self.can_bridge_initialized:
             speed, angular_speed = data
-            if speed > 0:
+            if abs(speed) > 0:
 #                print(self.status_word & 0x7fff)
                 if self.status_word is None or self.status_word & 0x10 != 0:
                     # car mode
@@ -181,10 +181,11 @@ class Spider(Node):
                             angle_cmd = 0x80 + 50
                     else:
                         angle_cmd = 0
-                if speed >= 10:
-                    packet = CAN_triplet(0x401, [0x80 + 127, angle_cmd])
+                sign_offset = 0x80 if speed > 0 else 0x0
+                if abs(speed) >= 10:
+                    packet = CAN_triplet(0x401, [sign_offset + 127, angle_cmd])
                 else:
-                    packet = CAN_triplet(0x401, [0x80 + 80, angle_cmd])
+                    packet = CAN_triplet(0x401, [sign_offset + 80, angle_cmd])
             else:
                 packet = CAN_triplet(0x401, [0, 0])  # STOP packet
             self.bus.publish('can', packet)
