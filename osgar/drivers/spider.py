@@ -41,6 +41,7 @@ class Spider(Node):
         self.pose2d = (0.0, 0.0, 0.0)  # x, y in meters, heading in radians (not corrected to 2PI)
         self.prev_enc = None  # not defined
         self.paused = True  # safe default
+        self.valve = None
 
     def update_pose2d(self, diff):
         x, y, heading = self.pose2d
@@ -110,6 +111,10 @@ class Spider(Node):
                 if verbose and self.wheel_angles is not None and self.zero_steering is not None:
                     print('Wheels:',
                           [Spider.fix_range(a - b) for a, b in zip(self.wheel_angles, self.zero_steering)])
+            elif msg_id == 0x202:
+                assert len(packet) == 2 + 8, packet
+                valves = struct.unpack_from('HHHH', packet, 2)
+                self.valve = (valves[0] - valves[2], valves[1] - valves[3])
             elif msg_id == 0x203:
                 assert len(packet) == 2 + 8, packet
                 prev = self.zero_steering
@@ -136,7 +141,8 @@ class Spider(Node):
                 self.prev_enc = val
                 if verbose:
                     print("Enc:", val)
-                    self.debug_arr.append((self.time.total_seconds(), *diff))
+                    if self.valve is not None:
+                        self.debug_arr.append([self.time.total_seconds(), *diff] + list(self.valve))
 
     def process_gen(self, data, verbose=False):
         self.buf, packet = self.split_buffer(self.buf + data)
