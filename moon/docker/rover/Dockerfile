@@ -101,7 +101,7 @@ RUN set -x && \
     -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX} \
     -DBUILD_SHARED_LIBS=ON \
     -DBUILD_UNITTESTS=OFF \
-    -DBUILD_WITH_MARCH_NATIVE=ON \
+    -DBUILD_WITH_MARCH_NATIVE=OFF \
     -DG2O_USE_CHOLMOD=OFF \
     -DG2O_USE_CSPARSE=ON \
     -DG2O_USE_OPENGL=OFF \
@@ -199,7 +199,7 @@ RUN set -x && \
   mkdir -p build && \
   cd build && \
   cmake \
-    -DBUILD_WITH_MARCH_NATIVE=ON \
+    -DBUILD_WITH_MARCH_NATIVE=OFF \
     -DUSE_PANGOLIN_VIEWER=OFF \
     -DUSE_SOCKET_PUBLISHER=OFF \
     -DUSE_STACK_TRACE_LOGGER=ON \
@@ -216,7 +216,7 @@ COPY ./srcp2-competitors /srcp2-competitors/
 # OpenVSLAMROS
 WORKDIR /openvslam/ros/1/
 RUN /bin/bash -c 'source /srcp2-competitors/ros_workspace/install/setup.bash; cd /openvslam/ros/1/; catkin_make \
-    -DBUILD_WITH_MARCH_NATIVE=ON \
+    -DBUILD_WITH_MARCH_NATIVE=OFF \
     -DUSE_PANGOLIN_VIEWER=OFF \
     -DUSE_SOCKET_PUBLISHER=OFF \
     -DUSE_STACK_TRACE_LOGGER=ON \
