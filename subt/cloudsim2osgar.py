@@ -120,6 +120,8 @@ class main:
             topics.append(('/' + robot_name + '/air_pressure', FluidPressure, self.air_pressure, ('air_pressure',)))
         elif "TeamBase" in robot_description:
             rospy.loginfo("teambase")
+        elif "GAGARIN" in robot_description:
+            rospy.loginfo("GAGARIN")
         elif "robotika_freyja_sensor_config" in robot_description:
             if has_breadcrumbs(robot_name):
                 rospy.loginfo("freya 2 (with comms beacons)")
