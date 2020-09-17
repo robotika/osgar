@@ -29,6 +29,7 @@ grep -q TeamBase <<< $ROBOT_DESCRIPTION && IS_TEAMBASE=true || IS_TEAMBASE=false
 grep -q robotika_freyja_sensor_config <<< $ROBOT_DESCRIPTION && IS_FREYJA=true || IS_FREYJA=false
 grep -q explorer_r2_sensor_config <<< $ROBOT_DESCRIPTION && IS_EXPLORER_R2=true || IS_EXPLORER_R2=false
 grep -q robotika_kloubak_sensor_config <<< $ROBOT_DESCRIPTION && IS_K2=true || IS_K2=false
+grep -q GAGARIN <<< $ROBOT_DESCRIPTION && IS_GAGARIN=true || IS_GAGARIN=false
 
 # Defaults
 WALLDIST=0.8
@@ -66,6 +67,13 @@ then
     LAUNCH_FILE="robot k2-virt.launch"
     CONFIG_FILES=("zmq-subt-x2.json" "subt-k2-virt.json")
     WALLDIST=1.0
+    SPEED=1.5
+elif $IS_GAGARIN
+then
+    echo "Robot is GAGARIN"
+    LAUNCH_FILE="robot gagarin.launch"
+    CONFIG_FILES=("zmq-subt-x4.json")
+    WALLDIST=1.6
     SPEED=1.5
 else
     echo "Robot is default X2 wheeled robot"
