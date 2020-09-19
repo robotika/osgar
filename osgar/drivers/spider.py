@@ -206,10 +206,12 @@ class Spider(Node):
                     else:
                         angle_cmd = 0
                 sign_offset = 0x80 if speed > 0 else 0x0
-                if abs(speed) >= 10:
-                    packet = CAN_triplet(0x401, [sign_offset + 127, angle_cmd])
-                else:
-                    packet = CAN_triplet(0x401, [sign_offset + 80, angle_cmd])
+                err = min(127, 80 + max(0, int(100*(speed - self.speed))))
+                packet = CAN_triplet(0x401, [sign_offset + err, angle_cmd])
+#                if abs(speed) >= 10:
+#                    packet = CAN_triplet(0x401, [sign_offset + 127, angle_cmd])
+#                else:
+#                    packet = CAN_triplet(0x401, [sign_offset + 80, angle_cmd])
             else:
                 packet = CAN_triplet(0x401, [0, 0])  # STOP packet
             self.bus.publish('can', packet)
