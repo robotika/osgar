@@ -36,6 +36,7 @@ class Spider(Node):
         self.alive = 0  # toggle with 128
         self.desired_angle = None  # in Spider mode desired weels direction
         self.desired_speed = None
+        self.desired_angular_speed = None  # for CAR mode
         self.speed_history_left = []
         self.speed_history_right = []
         self.speed = None  # unknown
@@ -171,8 +172,13 @@ class Spider(Node):
             status = self.process_packet(self.can, verbose=self.verbose)
             if status is not None:
                 self.bus.publish('status', status)
-        elif channel == 'move':
-            self.desired_speed, self.desired_angle = self.move
+# move is for SPIDER mode, which is currently not supported
+#        elif channel == 'move':
+#            self.desired_speed, self.desired_angle = self.move
+        elif channel == 'desired_speed':
+            speed_mm, angular_speed_mrad = self.desired_speed  # really ugly!!!
+            self.desired_speed = speed_mm/1000.0
+            self.desired_angular_speed = math.radians(angular_speed_mrad/100.0)
         else:
             assert False, channel  # unsupported channel
 
