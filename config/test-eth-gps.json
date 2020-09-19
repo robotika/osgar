@@ -20,7 +20,7 @@
       }
     },
     "links": [
-      ['timer.tick', 'gps.raw']
+      ["timer.tick", "gps.raw"]
       ]
   }
 }
