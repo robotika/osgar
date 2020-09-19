@@ -50,7 +50,7 @@
           }
       }
     },
-    "links": [["app.desired_speed", "spider.move"],
+    "links": [["app.desired_speed", "spider.desired_speed"],
               ["spider.status", "app.status"],
               ["spider.pose2d", "app.pose2d"],
               ["spider.can", "can.can"],
