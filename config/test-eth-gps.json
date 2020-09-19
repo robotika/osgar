@@ -11,17 +11,9 @@
               "port": 10001,
               "bufsize": 2000
           }
-      },
-      "timer": {
-          "driver": "timer",
-          "in": [],
-          "out": ["tick"],
-          "init": {"sleep": 1.0}
       }
     },
-    "links": [
-      ["timer.tick", "gps.raw"]
-      ]
+    "links": []
   }
 }
 
