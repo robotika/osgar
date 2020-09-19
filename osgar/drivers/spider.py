@@ -36,12 +36,23 @@ class Spider(Node):
         self.alive = 0  # toggle with 128
         self.desired_angle = None  # in Spider mode desired weels direction
         self.desired_speed = None
+        self.speed_history_left = []
+        self.speed_history_right = []
+        self.speed = None  # unknown
         self.verbose = False  # TODO node
         self.debug_arr = []
         self.pose2d = (0.0, 0.0, 0.0)  # x, y in meters, heading in radians (not corrected to 2PI)
         self.prev_enc = None  # not defined
         self.paused = True  # safe default
         self.valve = None
+
+    def update_speed(self, diff):
+        self.speed_history_left.append(diff[0])
+        self.speed_history_right.append(diff[1])
+        self.speed_history_left = self.speed_history_left[-10:]
+        self.speed_history_right = self.speed_history_right[-10:]
+
+        self.speed = SPIDER_ENC_SCALE * (sum(self.speed_history_left) + sum(self.speed_history_right))  # 20Hz -> left + right = 1s
 
     def update_pose2d(self, diff):
         x, y, heading = self.pose2d
@@ -100,9 +111,9 @@ class Spider(Node):
 
                 # handle steering
                 if self.desired_angle is not None and self.desired_speed is not None and not self.paused:
-                    self.send((self.desired_speed, self.desired_angle))
+                    self.send_speed((self.desired_speed, self.desired_angle))
                 else:
-                    self.send((0, 0))
+                    self.send_speed((0, 0))
                 return ret
 
             elif msg_id == 0x201:
@@ -136,13 +147,14 @@ class Spider(Node):
                     self.prev_enc = val
                 diff = [sint8_diff(a, b) for a, b in zip(val, self.prev_enc)]
                 self.publish('encoders', list(diff))
+                self.update_speed(diff)
                 self.update_pose2d(diff)
                 self.send_pose2d()
                 self.prev_enc = val
                 if verbose:
                     print("Enc:", val)
                     if self.valve is not None:
-                        self.debug_arr.append([self.time.total_seconds(), *diff] + list(self.valve))
+                        self.debug_arr.append([self.time.total_seconds(), *diff] + list(self.valve) + [self.speed])
 
     def process_gen(self, data, verbose=False):
         self.buf, packet = self.split_buffer(self.buf + data)
@@ -164,7 +176,7 @@ class Spider(Node):
         else:
             assert False, channel  # unsupported channel
 
-    def send(self, data):
+    def send_speed(self, data):
         if True:  #self.can_bridge_initialized:
             speed, angular_speed = data
             if abs(speed) > 0:
