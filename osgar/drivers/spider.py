@@ -111,8 +111,8 @@ class Spider(Node):
                     ret = [self.status_word, None]
 
                 # handle steering
-                if self.desired_angle is not None and self.desired_speed is not None and not self.paused:
-                    self.send_speed((self.desired_speed, self.desired_angle))
+                if self.desired_speed is not None and not self.paused:
+                    self.send_speed((self.desired_speed, self.desired_angular_speed))
                 else:
                     self.send_speed((0, 0))
                 return ret
