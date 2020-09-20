@@ -51,6 +51,7 @@ def parse_packet(data, offset_step=100):
 
 class Velodyne(Node):
     def __init__(self, config, bus):
+        bus.register('raw', 'xyz')        
         super().__init__(config, bus)
         self.offset_step = config.get('offset_step', 200)  # skip every second packet (we need 1deg resolution input 0.4)
         assert self.offset_step % 100 == 0, self.offset_step  # must be divisible by 100
