@@ -25,6 +25,7 @@ class MyApp(Node):
         self.last_position = (0, 0, 0)
         self.is_moving = False
         self.pose2d = None  # TODO should be defined by super().__init__()
+        self.safety_limit = 3.0  # terminate run when reached, None for no limit
 
     # TODO refactor to common "serializer"
     def send_speed_cmd(self, speed, angular_speed):
@@ -77,7 +78,7 @@ class MyApp(Node):
             self.is_moving = (prev != self.pose2d)
         elif channel == 'min_dist':
             dist, azi = self.min_dist
-            if dist < 3.0:
+            if self.safety_limit is not None and dist < self.safety_limit:
                 print(dist, 'at direction', azi/100)
                 self.send_speed_cmd(0.0, 0.0)
                 raise ObstacleException()
@@ -96,6 +97,7 @@ class MyApp(Node):
             print("ObstacleException")
 
         self.send_speed_cmd(0.0, 0.0)
+        self.safety_limit = None  # i.e. disable exceptions
         self.wait(dt=timedelta(seconds=1.0))
 
         print("END")
