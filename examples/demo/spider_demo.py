@@ -60,6 +60,13 @@ class MyApp(Node):
                     break
             print(self.time, 'stop at', self.time - start_time)
 
+    def wait(self, dt):
+        if self.time is None:
+            self.update()
+        start_time = self.time
+        while self.time - start_time < dt:
+            self.update()
+
     def update(self):
         prev = self.pose2d
         channel = super().update()
@@ -70,8 +77,8 @@ class MyApp(Node):
             self.is_moving = (prev != self.pose2d)
         elif channel == 'min_dist':
             dist, azi = self.min_dist
-            #print(dist, azi)
             if dist < 3.0:
+                print(dist, 'at direction', azi/100)
                 self.send_speed_cmd(0.0, 0.0)
                 raise ObstacleException()
 
@@ -79,9 +86,17 @@ class MyApp(Node):
         print("Spider demo back & forth!")
         step_size = 3  # meters
 
-        for i in range(4):
-            self.go_straight(step_size)
-            self.go_straight(-step_size)
+        try:
+            for i in range(4):
+                self.go_straight(step_size)
+                self.wait(dt=timedelta(seconds=2.0))
+                self.go_straight(-step_size)
+                self.wait(dt=timedelta(seconds=2.0))
+        except ObstacleException:
+            print("ObstacleException")
+
+        self.send_speed_cmd(0.0, 0.0)
+        self.wait(dt=timedelta(seconds=1.0))
 
         print("END")
 
