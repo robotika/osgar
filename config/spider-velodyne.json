@@ -40,6 +40,12 @@
           }
       },
       "gps": {
+          "driver": "gps",
+          "in": ["raw"],
+          "out": ["position"],
+          "init": {}
+      },
+      "gps_eth": {
           "driver": "tcp",
           "in": ["raw"],
           "out": ["raw"],
@@ -56,6 +62,7 @@
               ["spider.can", "can.can"],
               ["can.can", "spider.can"],
               ["serial.raw", "can.raw"], 
-              ["can.raw", "serial.raw"]]
+              ["can.raw", "serial.raw"],
+              ["gps_eth.raw", "gps.raw"]]
   }
 }
