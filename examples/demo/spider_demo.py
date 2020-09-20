@@ -11,6 +11,10 @@ def distance(pose1, pose2):
     return math.hypot(pose1[0] - pose2[0], pose1[1] - pose2[1])
 
 
+class ObstacleException(Exception):
+    pass
+
+
 class MyApp(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
@@ -64,6 +68,12 @@ class MyApp(Node):
             self.last_position = (x_mm/1000.0, y_mm/1000.0,
                                   math.radians(heading_mdeg/100.0))
             self.is_moving = (prev != self.pose2d)
+        elif channel == 'min_dist':
+            dist, azi = self.min_dist
+            #print(dist, azi)
+            if dist < 3.0:
+                self.send_speed_cmd(0.0, 0.0)
+                raise ObstacleException()
 
     def run(self):
         print("Spider demo back & forth!")
