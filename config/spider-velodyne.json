@@ -33,7 +33,9 @@
           "driver": "velodyne",
           "in": ["raw"],
           "out": ["xyz"],
-          "init": {}
+          "init": {
+            "publish_xyz":false
+          }
       },
       "velodyne_udp": {
           "driver": "udp",
