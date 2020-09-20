@@ -206,7 +206,10 @@ class Spider(Node):
                     else:
                         angle_cmd = 0
                 sign_offset = 0x80 if speed > 0 else 0x0
-                err = min(127, 80 + max(0, int(100*(speed - self.speed))))
+                if self.speed is not None:
+                    err = min(127, 80 + max(0, int(100*(speed - self.speed))))
+                else:
+                    err = 80  # currently min value
                 packet = CAN_triplet(0x401, [sign_offset + err, angle_cmd])
 #                if abs(speed) >= 10:
 #                    packet = CAN_triplet(0x401, [sign_offset + 127, angle_cmd])
