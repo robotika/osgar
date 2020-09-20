@@ -72,6 +72,7 @@
               ["serial.raw", "can.raw"], 
               ["can.raw", "serial.raw"],
               ["velodyne_udp.raw", "velodyne.raw"],
+              ["velodyne.min_dist", "app.min_dist"],
               ["gps_eth.raw", "gps.raw"]]
   }
 }
