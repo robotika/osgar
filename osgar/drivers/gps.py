@@ -33,7 +33,9 @@ def str2ms(s):
 
 def parse_line(line):
     assert line.startswith(b'$GNGGA') or line.startswith(b'$GPGGA'), line
-    assert checksum(line[1:-3]) == line[-2:], (line, checksum(line[1:-3]))
+    if checksum(line[1:-3]) != line[-2:]:
+        print('Checksum error!', line, checksum(line[1:-3]))
+        return [None, None]
     s = line.split(b',')
     coord = [str2ms(s[4]), str2ms(s[2])]
     return coord
