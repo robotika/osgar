@@ -114,7 +114,7 @@ class main:
             setattr(self, handler.__name__+"_count", 0)
             rospy.Subscriber(name, type, handler)
 
-        while rospy.ok():
+        while not rospy.is_shutdown():
             channel, bytes_data = self.bus.listen()
             # TODO: switch on channel to feed different ROS publishers
 
