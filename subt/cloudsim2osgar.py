@@ -52,6 +52,7 @@ class Bus:
         self.push.bind('tcp://*:5565')
         self.pull = context.socket(zmq.PULL)
         self.pull.LINGER = 100
+        self.pull.bind('tcp://*:5566')
 
     def register(self, *outputs):
         pass
@@ -115,7 +116,9 @@ class main:
             rospy.Subscriber(name, type, handler)
 
         while not rospy.is_shutdown():
-            channel, bytes_data = self.bus.listen()
+            channel, data = self.bus.listen()
+            print("_"*50)
+            print("receiving:", data)
             # TODO: switch on channel to feed different ROS publishers
 
     def imu(self, msg):
