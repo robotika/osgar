@@ -1,5 +1,7 @@
 #!/usr/bin/env python2
 
+from __future__ import print_function
+
 import errno
 import math
 import socket
@@ -50,6 +52,10 @@ class Bus:
         self.push = context.socket(zmq.PUSH)
         self.push.setsockopt(zmq.LINGER, 100)  # milliseconds
         self.push.bind('tcp://*:5565')
+        self.pull = context.socket(zmq.PULL)
+        self.pull.LINGER = 100
+        self.pull.RCVTIMEO = 100
+        self.pull.bind('tcp://*:5566')
 
     def register(self, *outputs):
         pass
@@ -58,6 +64,17 @@ class Bus:
         raw = msgpack.packb(data, use_bin_type=True)
         with self.lock:
             self.push.send_multipart([channel, raw])
+
+    def listen(self):
+        while not rospy.is_shutdown():
+            try:
+                channel, bytes_data = self.pull.recv_multipart()
+                data = msgpack.unpackb(bytes_data, raw=False)
+                return channel.decode('ascii'), data
+            except zmq.ZMQError as e:
+                if e.errno != zmq.EAGAIN:
+                    sys.exit("zmq error")
+        sys.exit()
 
 
 class main:
@@ -107,8 +124,12 @@ class main:
             setattr(self, handler.__name__+"_count", 0)
             rospy.Subscriber(name, type, handler)
 
-        rospy.sleep(2)
-        rospy.spin()
+        # main thread receives data from osgar and sends it to ROS
+        while True:
+            channel, data = self.bus.listen()
+            print("_"*50)
+            print("receiving:", data)
+            # TODO: switch on channel to feed different ROS publishers
 
     def imu(self, msg):
         self.imu_count += 1
@@ -150,7 +171,7 @@ class main:
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("need robot name as argument")
-        raise SystemExit(1)
+        print("need robot name as argument", file=sys.stderr)
+        sys.exit(2)
     main(sys.argv[1])
 
