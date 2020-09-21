@@ -50,6 +50,8 @@ class Bus:
         self.push = context.socket(zmq.PUSH)
         self.push.setsockopt(zmq.LINGER, 100)  # milliseconds
         self.push.bind('tcp://*:5565')
+        self.pull = context.socket(zmq.PULL)
+        self.pull.LINGER = 100
 
     def register(self, *outputs):
         pass
@@ -58,6 +60,11 @@ class Bus:
         raw = msgpack.packb(data, use_bin_type=True)
         with self.lock:
             self.push.send_multipart([channel, raw])
+
+    def listen(self):
+        channel, bytes_data = self.pull.recv_multipart()
+        data = msgpack.unpackb(bytes_data, raw=False)
+        return channel.decode('ascii'), data
 
 
 class main:
@@ -107,8 +114,9 @@ class main:
             setattr(self, handler.__name__+"_count", 0)
             rospy.Subscriber(name, type, handler)
 
-        rospy.sleep(2)
-        rospy.spin()
+        while rospy.ok():
+            channel, bytes_data = self.bus.listen()
+            # TODO: switch on channel to feed different ROS publishers
 
     def imu(self, msg):
         self.imu_count += 1
