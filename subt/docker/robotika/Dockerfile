@@ -2,7 +2,7 @@ FROM robotika/subt-base:2020-05-26
 
 ADD http://osgar.robotika.cz/subt/virtual/model/mdnet0.64.64.13.4.relu.pth .
 
-RUN sudo apt-get update && sudo apt install -y ros-melodic-teleop-twist-keyboard
+RUN sudo apt-get update && sudo apt install -y ros-melodic-teleop-twist-keyboard ros-melodic-rtabmap-ros
 
 ENTRYPOINT ["./src/osgar/subt/docker/robotika/entrypoint.bash"]
 

@@ -17,6 +17,7 @@ import zmq
 import msgpack
 
 from sensor_msgs.msg import Imu, LaserScan
+from nav_msgs.msg import Odometry
 
 
 def py3round(f):
@@ -87,6 +88,7 @@ class main:
         # common topics
         topics = [
             ('/' + robot_name + '/imu/data', Imu, self.imu, ('rot', 'acc', 'orientation')),
+            ('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)),
         ]
 
         # configuration specific topics
@@ -168,6 +170,17 @@ class main:
         rospy.loginfo_throttle(10, "bottom_scan callback: {}".format(self.bottom_scan_count))
         self.bus.publish('bottom_scan', msg.ranges)
 
+    def odom_fused(self, msg):
+        self.odom_fused_count += 1
+        rospy.loginfo_throttle(10, "odom_fused callback: {}".format(self.odom_fused_count))
+
+        position = msg.pose.pose.position
+        orientation = msg.pose.pose.orientation
+
+        xyz = [position.x, position.y, position.z]
+        orientation = [orientation.x, orientation.y, orientation.z, orientation.w]
+
+        self.bus.publish('pose3d', [xyz, orientation])
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:

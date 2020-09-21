@@ -14,7 +14,9 @@
             "virtual_bumper_radius": 10.0,
             "virtual_world": true,
             "speed_policy": "conservative",
-            "obstacle_influence": 1.2
+            "obstacle_influence": 1.2,
+            "max_obstacle_distance": 4.0,
+            "height_above_ground": 2.0
           }
       },
       "detector": {
@@ -77,19 +79,10 @@
             }
           }
       },
-      "vo": {
-        "driver": "subt.visual_odometry:Localization",
-        "init": {
-          "xyz": [0.1, 0, -0.08],
-          "rpy": [0.0, 0.0, 0.0],
-          "principal-point": [320.5, 240.5],
-          "focal-length": 554.25469
-        }
-      },
       "rospy": {
           "driver": "subt.pull:Pull",
 	      "init": {
-	        "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan"]
+	        "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan", "pose3d"]
 	      }
       }
     },
@@ -117,7 +110,7 @@
               ["rosmsg.depth", "detector.depth"],
 
               ["rospy.rot", "app.rot"],
-              ["vo.pose3d", "app.pose3d"],
+              ["rospy.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
 
               ["rosmsg.gas_detected", "detector.gas_detected"],
@@ -125,11 +118,6 @@
               ["detector.artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],
               ["app.artf_xyz", "reporter.artf_xyz"],
-              ["reporter.artf_cmd", "transmitter.raw"],
-
-              ["rosmsg.origin",     "vo.origin"],
-              ["rospy.orientation", "vo.orientation"],
-              ["rosmsg.depth",      "vo.depth"],
-              ["rosmsg.image",      "vo.image"]]
+              ["reporter.artf_cmd", "transmitter.raw"]]
   }
 }
