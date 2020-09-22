@@ -479,6 +479,9 @@ class SubTChallenge:
         self.trace.update_trace(self.xyz)
 
     def on_pose3d(self, timestamp, data):
+        if self.xyz is None:
+            # to avoid deadlock when we are waiting for offset but it is defined after self.xyz is not None
+            self.xyz = data[0]
         if self.offset is None:
             # we cannot align global coordinates if offset is not known
             return
