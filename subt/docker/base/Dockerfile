@@ -107,3 +107,7 @@ RUN apt-get update \
   && pip2 install --no-cache-dir --user \
     "msgpack==1.0.0" \
     "pyzmq==19.0.2"
+
+# disable crazy threading behavior inside openblas (and maybe also in opencv)
+# https://github.com/xianyi/OpenBLAS#setting-the-number-of-threads-using-environment-variables
+ENV OMP_NUM_THREADS=1
