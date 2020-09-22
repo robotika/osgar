@@ -18,6 +18,15 @@
       "localization": {
         "driver": "subt.odoimuloc:Localization"
       },
+      "vo": {
+        "driver": "subt.visual_odometry:Localization",
+        "init": {
+          "xyz": [0.23, 0, 0.25256005000000004],
+          "rpy": [0.0, 0.0, 0.0],
+          "principal-point": [320.5, 180.5],
+          "focal-length": 462.1
+        }
+      },
       "detector": {
           "driver": "subt.artf_node:ArtifactDetectorDNN",
           "in": ["image", "scan"],
@@ -61,13 +70,21 @@
           "driver": "subt.depth2scan:DepthToScan",
           "in": ["depth", "scan"],
           "out": ["scan"],
-          "init": {}
+          "init": {
+            "depth_params": {
+              "vertical_pixel_offset": 16,
+              "lidar_trusted_zone": 0.25
+            }
+          }
       },
-      "rospy": {
+      "fromrospy": {
           "driver": "subt.pull:Pull",
 	      "init": {
 	        "outputs": ["rot", "acc", "orientation"]
 	      }
+      },
+      "torospy": {
+          "driver": "subt.push:Push"
       },
       "lora": {
           "driver": "lora",
@@ -85,14 +102,20 @@
 
               ["rosmsg.origin",     "localization.origin"],
               ["rosmsg.pose2d",     "localization.odom"],
-              ["rospy.orientation", "localization.orientation"],
+              ["fromrospy.orientation", "localization.orientation"],
+
+              ["rosmsg.origin",     "vo.origin"],
+              ["fromrospy.orientation", "vo.orientation"],
+              ["rosmsg.depth",      "vo.depth"],
+              ["rosmsg.image",      "vo.image"],
+              ["localization.pose3d", "vo.baseline"],
 
               ["receiver.raw", "rosmsg.raw"],
               ["rosmsg.cmd", "transmitter.raw"],
 
-              ["rospy.rot", "app.rot"],
-              ["rospy.rot", "depth2scan.rot"],
-              ["rospy.acc", "app.acc"],
+              ["fromrospy.rot", "app.rot"],
+              ["fromrospy.rot", "depth2scan.rot"],
+              ["fromrospy.acc", "app.acc"],
 
               ["rosmsg.scan", "detector.scan"],
               ["rosmsg.scan", "depth2scan.scan"],
@@ -104,8 +127,9 @@
               ["depth2scan.scan", "app.scan"],
               ["rosmsg.depth", "detector.depth"],
 
-              ["rosmsg.pose2d", "app.pose2d"],
+              ["localization.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
+              ["rosmsg.sim_time_sec", "torospy.sim_time_sec"],
 
               ["rosmsg.gas_detected", "detector.gas_detected"],
 

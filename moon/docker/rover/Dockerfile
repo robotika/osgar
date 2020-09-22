@@ -71,10 +71,9 @@ ENV LD_LIBRARY_PATH=${CMAKE_INSTALL_PREFIX}/lib:${LD_LIBRARY_PATH}
 ARG EIGEN3_VERSION=3.3.7
 WORKDIR /tmp
 RUN set -x && \
-  wget -q http://bitbucket.org/eigen/eigen/get/${EIGEN3_VERSION}.tar.bz2 && \
-  tar xf ${EIGEN3_VERSION}.tar.bz2 && \
-  rm -rf ${EIGEN3_VERSION}.tar.bz2 && \
-  mv eigen-eigen-* eigen-${EIGEN3_VERSION} && \
+  wget -q https://gitlab.com/libeigen/eigen/-/archive/${EIGEN3_VERSION}/eigen-${EIGEN3_VERSION}.tar.bz2 && \
+  tar xf eigen-${EIGEN3_VERSION}.tar.bz2 && \
+  rm -rf eigen-${EIGEN3_VERSION}.tar.bz2 && \
   cd eigen-${EIGEN3_VERSION} && \
   mkdir -p build && \
   cd build && \
@@ -102,7 +101,7 @@ RUN set -x && \
     -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX} \
     -DBUILD_SHARED_LIBS=ON \
     -DBUILD_UNITTESTS=OFF \
-    -DBUILD_WITH_MARCH_NATIVE=ON \
+    -DBUILD_WITH_MARCH_NATIVE=OFF \
     -DG2O_USE_CHOLMOD=OFF \
     -DG2O_USE_CSPARSE=ON \
     -DG2O_USE_OPENGL=OFF \
@@ -190,21 +189,17 @@ RUN set -x && \
   apt-get autoremove -y -qq && \
   rm -rf /var/lib/apt/lists/*
 
-# Copy sources to workspace
-COPY ./openvslam/openvslam /openvslam/
-COPY ./openvslam/orb_vocab /openvslam/
-COPY ./srcp2-competitors /srcp2-competitors/
-COPY ./osgar /osgar/
-
-RUN echo "source /openvslam/ros/1/devel/setup.bash" >> /root/.bashrc
-
 # OpenVSLAM
-WORKDIR /openvslam/
+WORKDIR /
+ARG OPENVSLAM_COMMIT=026827ebd59825de42463f853e910e9ccb44f0ef
 RUN set -x && \
+  git clone https://github.com/frantisekbrabec/openvslam.git && \
+  cd openvslam && \
+  git checkout ${OPENVSLAM_COMMIT} && \
   mkdir -p build && \
   cd build && \
   cmake \
-    -DBUILD_WITH_MARCH_NATIVE=ON \
+    -DBUILD_WITH_MARCH_NATIVE=OFF \
     -DUSE_PANGOLIN_VIEWER=OFF \
     -DUSE_SOCKET_PUBLISHER=OFF \
     -DUSE_STACK_TRACE_LOGGER=ON \
@@ -215,10 +210,13 @@ RUN set -x && \
   rm -rf CMakeCache.txt CMakeFiles Makefile cmake_install.cmake example src && \
   chmod -R 777 ./*
 
+# Copy SRCP2 env to workspace
+COPY ./srcp2-competitors /srcp2-competitors/
+
 # OpenVSLAMROS
 WORKDIR /openvslam/ros/1/
 RUN /bin/bash -c 'source /srcp2-competitors/ros_workspace/install/setup.bash; cd /openvslam/ros/1/; catkin_make \
-    -DBUILD_WITH_MARCH_NATIVE=ON \
+    -DBUILD_WITH_MARCH_NATIVE=OFF \
     -DUSE_PANGOLIN_VIEWER=OFF \
     -DUSE_SOCKET_PUBLISHER=OFF \
     -DUSE_STACK_TRACE_LOGGER=ON \
@@ -226,13 +224,36 @@ RUN /bin/bash -c 'source /srcp2-competitors/ros_workspace/install/setup.bash; cd
 
 SHELL ["/bin/bash", "-c"]
 
-
 RUN apt-get update && apt-get install -y python-pip python3-pip openssh-client vim less
 RUN python -m pip install pyzmq
 
 RUN /usr/bin/python3 -m pip install scikit-build
 RUN /usr/bin/python3 -m pip install msgpack pyzmq shapely scipy
 RUN /usr/bin/python3 -m pip install --install-option="-j$(nproc)" "opencv-python>=3.4.10,<3.4.11"
+
+RUN mkdir -p /rover_workspace/src
+
+# Alien Control
+WORKDIR /rover_workspace/src
+RUN set -x && \
+  git clone https://github.com/frantisekbrabec/aliencontrol.git
+
+COPY ./osgar/moon/ros_launchfiles /rover_workspace/src/aliencontrol/launch
+RUN chmod 777 /rover_workspace
+
+RUN rm -rf /rover_workspace/devel
+RUN rm -rf /rover_workspace/build
+
+RUN  /bin/bash -c "source /openvslam/ros/1/devel/setup.bash; cd /rover_workspace; catkin_make"
+
+RUN echo "source /rover_workspace/devel/setup.bash" >> /root/.bashrc
+
+COPY ./osgar /osgar/
+
+RUN rm -rf /osgar/.git
+RUN rm -rf /osgar/.github
+RUN rm -rf /osgar/research_scripts
+RUN rm -rf /osgar/disparity_images
 
 WORKDIR /
 ENTRYPOINT ["/osgar/moon/docker/rover/entrypoint.bash"]

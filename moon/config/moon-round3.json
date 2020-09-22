@@ -6,7 +6,9 @@
         "driver": "moon.controller_round3:SpaceRoboticsChallengeRound3",
         "in": ["pose2d", "driving_control", "driving_recovery"],
         "out": ["desired_speed", "driving_recovery"],
-        "init": {}
+          "init": {
+              "debug": false
+          }
       },
       "transmitter": {
         "driver": "zeromq",
