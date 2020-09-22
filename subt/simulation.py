@@ -68,6 +68,8 @@ class Simulation:
     def main(self):
         log("started")
         self.on_request_origin(datetime.timedelta(), "request_origin", True)
+        # there is no SubT control until pose is received -> trigger it
+        self.on_desired_speed(datetime.timedelta(), "desired_speed", [0, 0])
 
         for _ in range(500):
             packet = self.bus.listen()

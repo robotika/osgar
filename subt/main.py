@@ -121,7 +121,7 @@ class SubTChallenge:
         self.height_above_ground = config.get('height_above_ground', 0.0)
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
-        self.xyz = (0, 0, 0)  # 3D position for mapping artifacts
+        self.xyz = None  # 3D position for mapping artifacts - unknown depends on source (pose2d or pose3d)
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.yaw_offset = None  # not defined, use first IMU reading
         self.is_moving = None  # unknown
@@ -446,6 +446,8 @@ class SubTChallenge:
         self.monitors.remove(callback)
 
     def on_pose2d(self, timestamp, data):
+        if self.xyz is None:
+            self.xyz = 0, 0, 0
         if self.offset is None:
             return
         x, y, heading = data
@@ -573,7 +575,7 @@ class SubTChallenge:
 #            print('SubT', packet)
             timestamp, channel, data = packet
             if self.time is None or int(self.time.seconds)//60 != int(timestamp.seconds)//60:
-                self.stdout(timestamp, '(%.1f %.1f %.1f)' % self.xyz, sorted(self.stat.items()))
+                self.stdout(timestamp, '(%.1f %.1f %.1f)' % self.xyz if self.xyz is not None else '(xyz=None)', sorted(self.stat.items()))
                 print(timestamp, list(('%.1f' % (v/100)) for v in self.voltage))
                 self.stat.clear()
 
@@ -892,7 +894,8 @@ class SubTChallenge:
         self.stdout('robot_name:', self.robot_name)
 
         # wait for critical data
-        while any_is_none(self.scan, self.yaw_offset):
+        while any_is_none(self.scan, self.yaw_offset, self.xyz):
+            # self.xyz is initialized by pose2d or pose3d depending on robot type
             self.update()
 
         if self.use_right_wall == 'auto':
@@ -906,7 +909,7 @@ class SubTChallenge:
         # add extra sleep to give a chance to the other robot (based on name)
         # and making sure that the sleep time is non-trivial so that ROS modules
         # can start in the meantime.
-        self.wait(timedelta(seconds=max(5, times_sec[0])), use_sim_time=True)
+        self.wait(timedelta(seconds=times_sec[0]), use_sim_time=True)
 
         # potential wrong artifacts:
         self.stdout('Artifacts before start:', self.artifacts)
