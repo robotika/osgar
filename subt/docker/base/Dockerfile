@@ -43,6 +43,7 @@ RUN /bin/sh -c 'echo "deb [trusted=yes] http://packages.ros.org/ros/ubuntu $(lsb
     ros-melodic-pointcloud-to-laserscan \
     ros-melodic-robot-localization \
     ros-melodic-rotors-control \
+    ros-melodic-rtabmap-ros \
     ros-melodic-rviz-imu-plugin \
     ros-melodic-spacenav-node \
     ros-melodic-tf2-sensor-msgs \
