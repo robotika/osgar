@@ -84,11 +84,13 @@ WORKDIR /osgar-ws
 
 RUN /usr/bin/python3 -m venv env
 
+RUN ./env/bin/pip install --no-cache-dir --upgrade pip
+
 RUN ./env/bin/pip install --no-cache-dir \
   "msgpack==1.0.0" \
-  "numpy==1.18.2" \
-  "opencv-python==4.2.0.32" \
-  "pyzmq==19.0.0"
+  "numpy==1.19.2" \
+  "opencv-python==4.4.0.42" \
+  "pyzmq==19.0.2"
 
 RUN ./env/bin/pip install --no-cache-dir \
   "http://osgar.robotika.cz/subt/pip/tensorflow/tensorflow-2.2.0rc3-cp36-cp36m-linux_x86_64.whl"
@@ -104,4 +106,4 @@ RUN apt-get update \
   && apt-get clean \
   && pip2 install --no-cache-dir --user \
     "msgpack==1.0.0" \
-    "pyzmq==19.0.0"
+    "pyzmq==19.0.2"
