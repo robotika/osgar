@@ -14,7 +14,7 @@ g_logger = logging.getLogger(__name__)
 
 def entrance_reached(sim):
     corrected = [(rr - oo) for rr, oo in zip(sim.xyz, sim.origin)]
-    goal = [2.5, 0, 0]
+    goal = [0.5, 0, 0]  # note, that in real run the Y coordinate depends on choise left/righ
     if distance3D(corrected, goal) < 2:
         return True
     return False

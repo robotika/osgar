@@ -118,9 +118,10 @@ class SubTChallenge:
             self.virtual_bumper = VirtualBumper(timedelta(seconds=virtual_bumper_sec), virtual_bumper_radius)
         self.speed_policy = config.get('speed_policy', 'always_forward')
         assert(self.speed_policy in ['always_forward', 'conservative'])
+        self.height_above_ground = config.get('height_above_ground', 0.0)
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
-        self.xyz = (0, 0, 0)  # 3D position for mapping artifacts
+        self.xyz = None  # 3D position for mapping artifacts - unknown depends on source (pose2d or pose3d)
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.yaw_offset = None  # not defined, use first IMU reading
         self.is_moving = None  # unknown
@@ -163,10 +164,11 @@ class SubTChallenge:
         scan_subsample = config.get('scan_subsample', 1)
         obstacle_influence = config.get('obstacle_influence', 0.8)
         direction_adherence = math.radians(config.get('direction_adherence', 90))
+        max_obstacle_distance = config.get('max_obstacle_distance', 2.5)
         self.local_planner = LocalPlanner(
                 obstacle_influence=obstacle_influence,
                 direction_adherence=direction_adherence,
-                max_obstacle_distance=2.5,
+                max_obstacle_distance=max_obstacle_distance,
                 scan_subsample=scan_subsample,
                 max_considered_obstacles=100)
         self.use_return_trace = config.get('use_return_trace', True)
@@ -444,6 +446,10 @@ class SubTChallenge:
         self.monitors.remove(callback)
 
     def on_pose2d(self, timestamp, data):
+        if self.xyz is None:
+            self.xyz = 0, 0, 0
+        if self.offset is None:
+            return
         x, y, heading = data
         pose = (x / 1000.0, y / 1000.0, math.radians(heading / 100.0))
         if self.last_position is not None:
@@ -473,14 +479,15 @@ class SubTChallenge:
         self.trace.update_trace(self.xyz)
 
     def on_pose3d(self, timestamp, data):
+        if self.xyz is None:
+            # to avoid deadlock when we are waiting for offset but it is defined after self.xyz is not None
+            self.xyz = data[0]
         if self.offset is None:
             # we cannot align global coordinates if offset is not known
             return
         xyz, rot = data
         ypr = quaternion.euler_zyx(rot)
         x0, y0, z0 = self.offset
-        # pretend that received coordinates are in robot frame (compatible with on_pose2d)
-        xyz = xyz[0] - x0, xyz[1] - y0, xyz[2] - z0
 
         pose = (xyz[0], xyz[1], ypr[0])
         if self.last_position is not None:
@@ -571,7 +578,7 @@ class SubTChallenge:
 #            print('SubT', packet)
             timestamp, channel, data = packet
             if self.time is None or int(self.time.seconds)//60 != int(timestamp.seconds)//60:
-                self.stdout(timestamp, '(%.1f %.1f %.1f)' % self.xyz, sorted(self.stat.items()))
+                self.stdout(timestamp, '(%.1f %.1f %.1f)' % self.xyz if self.xyz is not None else '(xyz=None)', sorted(self.stat.items()))
                 print(timestamp, list(('%.1f' % (v/100)) for v in self.voltage))
                 self.stat.clear()
 
@@ -800,10 +807,16 @@ class SubTChallenge:
         """
         Navigate to the base station tile end
         """
-        dx, dy, __ = self.offset
+        dx, dy, dz = self.offset
         trace = Trace()  # starts by default at (0, 0, 0) and the robots are placed X = -7.5m (variable Y)
-        trace.add_line_to((-4.5 - dx, -dy, 0))  # in front of the tunnel/entrance
-        trace.add_line_to((2.5 - dx, -dy, 0))  # 2.5m inside
+        trace.add_line_to((-4.5 - dx, -dy, self.height_above_ground))  # in front of the tunnel/entrance
+        if self.use_right_wall:
+            entrance_offset = -0.5
+        elif self.use_center:
+            entrance_offset = 0
+        else:
+            entrance_offset = 0.5
+        trace.add_line_to((0.5 - dx, -dy + entrance_offset, dz + self.height_above_ground))  # 0.5m inside, towards the desired wall.
         trace.reverse()
         self.follow_trace(trace, timeout=timedelta(seconds=30), max_target_distance=2.5, safety_limit=0.2)
 
@@ -877,14 +890,15 @@ class SubTChallenge:
         self.wait(timedelta(seconds=10), use_sim_time=True)
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver69!")
+        self.stdout("SubT Challenge Ver72!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
         self.stdout('robot_name:', self.robot_name)
 
         # wait for critical data
-        while any_is_none(self.scan, self.yaw_offset):
+        while any_is_none(self.scan, self.yaw_offset, self.xyz):
+            # self.xyz is initialized by pose2d or pose3d depending on robot type
             self.update()
 
         if self.use_right_wall == 'auto':
@@ -974,7 +988,7 @@ def main():
         import logging
         logging.basicConfig(
             level=logging.DEBUG,
-            format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+            format='%(asctime)s %(name)-16s %(levelname)-8s %(message)s',
         )
         # To reduce latency spikes as described in https://morepypy.blogspot.com/2019/01/pypy-for-low-latency-systems.html.
         # Increased latency leads to uncontrolled behavior and robot either missing turns or hitting walls.

@@ -17,6 +17,7 @@ import zmq
 import msgpack
 
 from sensor_msgs.msg import Imu, LaserScan
+from nav_msgs.msg import Odometry
 
 
 def py3round(f):
@@ -73,7 +74,9 @@ class Bus:
                 return channel.decode('ascii'), data
             except zmq.ZMQError as e:
                 if e.errno != zmq.EAGAIN:
+                    rospy.logerr("zmq error")
                     sys.exit("zmq error")
+        rospy.loginfo("done")
         sys.exit()
 
 
@@ -99,6 +102,7 @@ class main:
             rospy.loginfo("ssci drone")
             topics.append(('/' + robot_name + '/top_scan', LaserScan, self.top_scan, ('top_scan',)))
             topics.append(('/' + robot_name + '/bottom_scan', LaserScan, self.bottom_scan, ('bottom_scan',)))
+            topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
         elif "TeamBase" in robot_description:
             rospy.loginfo("teambase")
         elif "robotika_freyja_sensor_config" in robot_description:
@@ -168,6 +172,17 @@ class main:
         rospy.loginfo_throttle(10, "bottom_scan callback: {}".format(self.bottom_scan_count))
         self.bus.publish('bottom_scan', msg.ranges)
 
+    def odom_fused(self, msg):
+        self.odom_fused_count += 1
+        rospy.loginfo_throttle(10, "odom_fused callback: {}".format(self.odom_fused_count))
+
+        position = msg.pose.pose.position
+        orientation = msg.pose.pose.orientation
+
+        xyz = [position.x, position.y, position.z]
+        orientation = [orientation.x, orientation.y, orientation.z, orientation.w]
+
+        self.bus.publish('pose3d', [xyz, orientation])
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
