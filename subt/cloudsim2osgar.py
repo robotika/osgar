@@ -74,7 +74,9 @@ class Bus:
                 return channel.decode('ascii'), data
             except zmq.ZMQError as e:
                 if e.errno != zmq.EAGAIN:
+                    rospy.logerr("zmq error")
                     sys.exit("zmq error")
+        rospy.loginfo("done")
         sys.exit()
 
 
