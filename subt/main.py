@@ -910,8 +910,6 @@ class SubTChallenge:
         self.stdout('Using times', times_sec)
 
         # add extra sleep to give a chance to the other robot (based on name)
-        # and making sure that the sleep time is non-trivial so that ROS modules
-        # can start in the meantime.
         self.wait(timedelta(seconds=times_sec[0]), use_sim_time=True)
 
         # potential wrong artifacts:
