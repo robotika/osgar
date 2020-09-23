@@ -37,7 +37,7 @@ def main(*args):
 
             msg.data = log_file.read()
             if log_file.tell() >= ROSBAG_SIZE_LIMIT:
-                rospy.warn("ROSBAG_SIZE_LIMIT reached, exiting log sending node")
+                rospy.logwarn("ROSBAG_SIZE_LIMIT reached, exiting log sending node")
                 return
             pub.publish(msg)
             rospy.loginfo_throttle(10, str(count))
