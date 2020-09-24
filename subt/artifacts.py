@@ -436,10 +436,15 @@ class ArtifactReporter(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("artf_cmd")
+        self.repeat_report_sec = config.get('repeat_report_sec')
 
     def update(self):  # hack, this method should be called run instead!
         channel = super().update()  # define self.time
-        assert channel == "artf_xyz", channel
+        assert channel in ["artf_xyz", "sim_time_sec"], channel
+
+        if channel == 'sim_time_sec':
+            if self.repeat_report_sec is None or self.sim_time_sec % self.repeat_report_sec != 0:
+                return channel
 
         print(self.time, "DETECTED:")
         for artf_type, ix, iy, iz in self.artf_xyz:
@@ -448,6 +453,7 @@ class ArtifactReporter(Node):
             self.publish('artf_cmd', bytes('artf ' + s, encoding='ascii'))
 
         print('report completed')
+        return channel
 
 
 def debug2dir(filename, out_dir):
