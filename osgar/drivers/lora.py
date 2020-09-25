@@ -98,7 +98,7 @@ def draw_lora_positions(arr):
 class LoRa(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('raw', 'cmd', 'robot_status', 'artf')
+        bus.register('raw', 'cmd', 'robot_status', 'artf', 'artf_xyz')
         self.device_id = config.get('device_id')  # None for "autodetect"
         self.init_sleep = config.get('sleep')  # needed for Windows on start
         self.min_transmit_dt = timedelta(seconds=10)  # TODO config?
@@ -132,6 +132,7 @@ class LoRa(Node):
                     else:
                         assert len(arr) == 4, arr  # artifact, x, y z
                         self.publish('artf', [addr[-1], arr])
+                        self.publish('artf_xyz', [arr])  # publish also standard "list" of detected artifacts
                     if self.verbose:
                         self.debug_robot_poses.append((self.time.total_seconds(), addr[-1], pose))
                 cmd = parse_my_cmd(self.device_id, data)
