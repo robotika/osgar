@@ -131,6 +131,7 @@
               ["reporter.artf_all", "lora.artf"],
               ["lora.artf_xyz", "reporter.artf_xyz"],
               ["lora.raw", "rosmsg.broadcast"],
+              ["rosmsg.radio", "lora.radio"],
 
               ["detector.artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],
