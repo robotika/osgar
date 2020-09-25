@@ -29,7 +29,9 @@
           "driver": "subt.artifacts:ArtifactReporter",
           "in": ["artf_xyz"],
           "out": ["artf_cmd"],
-          "init": {}
+          "init": {
+            "repeat_report_sec": 10
+          }
       },
       "transmitter": {
           "driver": "zeromq",
@@ -120,8 +122,10 @@
 
               ["app.pose2d", "lora.pose2d"],
               ["lora.cmd", "app.cmd"],
-              ["app.artf_xyz", "lora.artf"],
+              ["reporter.artf_all", "lora.artf"],
+              ["lora.artf_xyz", "reporter.artf_xyz"],
               ["lora.raw", "rosmsg.broadcast"],
+              ["rosmsg.radio", "lora.radio"],
 
               ["detector.artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],
