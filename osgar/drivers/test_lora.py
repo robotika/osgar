@@ -115,9 +115,18 @@ class LoRaTest(unittest.TestCase):
             c.raw = b"3|['TYPE_BACKPACK', 3506, -18369, -752]\n"
             c.update()
             self.assertEqual(bus.method_calls,
-                             [call.register('raw', 'cmd', 'robot_status', 'artf'),
+                             [call.register('raw', 'cmd', 'robot_status', 'artf', 'artf_xyz'),
                               call.publish('artf', [3, ['TYPE_BACKPACK', 3506, -18369, -752]]),
                               call.publish('raw', b"3|['TYPE_BACKPACK', 3506, -18369, -752]\n")]
                              )
+
+    def test_on_radio(self):
+        # virtual world
+        data = [b'A0F150L', b"['TYPE_RESCUE_RANDY', 15982, 104845, 3080]\n"]
+        bus = MagicMock()
+        dev = LoRa(bus=bus, config={'device_id':1})
+        bus.reset_mock()
+        dev.on_radio(data)
+        bus.publish.assert_called()
 
 # vim: expandtab sw=4 ts=4

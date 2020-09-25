@@ -113,6 +113,22 @@ class LoRa(Node):
         self.last_transmit = self.publish('raw', data + b'\n')
         return self.last_transmit
 
+    def on_radio(self, data):
+        src, packet = data
+        name = src.decode('ascii')
+        if packet.startswith(b'['):
+            arr = literal_eval(packet.decode('ascii'))
+            if len(arr) == 3:
+                # position
+                self.robot_positions[name] = arr
+                if self.verbose:
+                    self.debug_arr.append((name, arr))
+            elif len(arr) == 4:
+                # artifact
+                self.publish('artf_xyz', [arr])  # publish also standard "list" of detected artifacts
+            else:
+                assert False, arr  # unexpected size/type
+
     def update(self):
         self.recent_packets = []
         channel = super().update()  # define self.time
@@ -132,7 +148,6 @@ class LoRa(Node):
                     else:
                         assert len(arr) == 4, arr  # artifact, x, y z
                         self.publish('artf', [addr[-1], arr])
-                        self.publish('artf_xyz', [arr])  # publish also standard "list" of detected artifacts
                     if self.verbose:
                         self.debug_robot_poses.append((self.time.total_seconds(), addr[-1], pose))
                 cmd = parse_my_cmd(self.device_id, data)
@@ -143,7 +158,8 @@ class LoRa(Node):
                         print('re-transmit')
                     self.send_data(packet.strip())  # re-transmit data from other robots
                 self.buf, packet = split_lora_buffer(self.buf)
-
+        elif channel == 'radio':
+            self.on_radio(self.radio)
         elif channel == 'pose2d':
             if self.last_transmit is None or self.time > self.last_transmit + self.min_transmit_dt:
                 self.send_data(bytes(str(self.pose2d), encoding='ascii'))
