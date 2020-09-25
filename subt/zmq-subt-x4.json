@@ -86,6 +86,14 @@
 	      "init": {
 	        "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan", "pose3d"]
 	      }
+      },
+      "lora": {
+          "driver": "lora",
+          "in": ["raw", "pose2d"],
+          "out": ["raw", "cmd"],
+          "init": {
+            "device_id": 1
+          }
       }
     },
     "links": [["app.desired_speed", "rosmsg.desired_speed"],
@@ -117,6 +125,12 @@
               ["rosmsg.sim_time_sec", "reporter.sim_time_sec"],
 
               ["rosmsg.gas_detected", "detector.gas_detected"],
+
+              ["app.pose2d", "lora.pose2d"],
+              ["lora.cmd", "app.cmd"],
+              ["reporter.artf_all", "lora.artf"],
+              ["lora.artf_xyz", "reporter.artf_xyz"],
+              ["lora.raw", "rosmsg.broadcast"],
 
               ["detector.artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],
