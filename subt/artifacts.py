@@ -457,16 +457,15 @@ class ArtifactReporter(Node):
                 return channel
             if len(self.artf_xyz) == 0:
                 return channel
+            # publish all artifacts only on regular update (to avoid LoRA cross-talk)
+            self.publish_artf(self.artf_xyz_accumulated)
+            self.publish('artf_all', self.artf_xyz_accumulated)
+
         elif channel == 'artf_xyz':
             for item in self.artf_xyz:
                 if item not in self.artf_xyz_accumulated:
                     self.artf_xyz_accumulated.append(item)
-
-        if self.repeat_report_sec is None:
             self.publish_artf(self.artf_xyz)
-        else:
-            self.publish_artf(self.artf_xyz_accumulated)
-            self.publish('artf_all', self.artf_xyz_accumulated)
 
         return channel
 
