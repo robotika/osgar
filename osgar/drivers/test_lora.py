@@ -129,4 +129,9 @@ class LoRaTest(unittest.TestCase):
         dev.on_radio(data)
         bus.publish.assert_called()
 
+        data = [b'A0F150L', b'[11896, 7018, -11886]\n']
+        bus.reset_mock()
+        dev.on_radio(data)
+        bus.publish.assert_not_called()
+
 # vim: expandtab sw=4 ts=4

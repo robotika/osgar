@@ -120,9 +120,7 @@ class LoRa(Node):
             arr = literal_eval(packet.decode('ascii'))
             if len(arr) == 3:
                 # position
-                self.robot_positions[name] = arr
-                if self.verbose:
-                    self.debug_arr.append((name, arr))
+                pass
             elif len(arr) == 4:
                 # artifact
                 self.publish('artf_xyz', [arr])  # publish also standard "list" of detected artifacts
