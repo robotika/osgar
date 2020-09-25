@@ -435,7 +435,7 @@ class ArtifactDetector(Node):
 class ArtifactReporter(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register("artf_cmd")
+        bus.register("artf_cmd", "artf_all")
         self.repeat_report_sec = config.get('repeat_report_sec')
         self.artf_xyz = []
         self.artf_xyz_accumulated = []
@@ -466,6 +466,7 @@ class ArtifactReporter(Node):
             self.publish_artf(self.artf_xyz)
         else:
             self.publish_artf(self.artf_xyz_accumulated)
+            self.publish('artf_all', self.artf_xyz_accumulated)
 
         return channel
 
