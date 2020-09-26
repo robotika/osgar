@@ -11,12 +11,24 @@ PATH_TO_PB_GRAPH = "subt/tf_models/frozen_inference_graph.pb"
 PATH_TO_CV_GRAPH = "subt/tf_models/cv_graph.pbtxt"
 
 ARTF_NAME = np.array(["backpack", "survivor", "phone", "rope", "helmet", "robot"])
-MIN_SCORES = np.array([0.2, 0.2, 0.2, 0.5, 0.3, 0.2])
+MIN_SCORES = np.array([0.2, 0.2, 0.2, 0.5, 0.3, 1.0])
 
 
 class CvDetector:
     def __init__(self):
         self.cvNet = cv2.dnn.readNetFromTensorflow(PATH_TO_PB_GRAPH, PATH_TO_CV_GRAPH)
+
+    def subt_detector(self, img):
+        ret  = []
+        detection = self.detect(img)
+        if detection is not None:
+            num_detections = detection['num_detections']
+            for ii in range(num_detections):
+                x, y, w, h = detection['bboxes'][ii]
+                score = detection['scores'][ii]
+                name = detection['classes_names'][ii]
+                ret.append((name, [((x+w)//2, (y+h)//2, score)]))
+        return ret
 
     def detect(self, img):
         rows = img.shape[0]
