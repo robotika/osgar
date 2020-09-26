@@ -16,7 +16,14 @@ MIN_SCORES = np.array([0.2, 0.2, 0.2, 0.5, 0.3, 1.0])
 
 class CvDetector:
     def __init__(self):
-        self.cvNet = cv2.dnn.readNetFromTensorflow(PATH_TO_PB_GRAPH, PATH_TO_CV_GRAPH)
+        if os.path.exists(PATH_TO_PB_GRAPH) and os.path.exists(PATH_TO_CV_GRAPH):
+            graph_path = PATH_TO_PB_GRAPH
+            cv_graph = PATH_TO_CV_GRAPH
+        else:  # docker
+            graph_path = os.path.join(os.path.dirname(__file__), '../../../frozen_inference_graph.pb')
+            cv_graph = os.path.join(os.path.dirname(__file__), '../../../cv_graph.pbtxt')
+
+        self.cvNet = cv2.dnn.readNetFromTensorflow(graph_path, cv_graph)
 
     def subt_detector(self, img):
         ret  = []
