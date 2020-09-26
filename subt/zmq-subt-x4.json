@@ -31,7 +31,9 @@
           "driver": "subt.artifacts:ArtifactReporter",
           "in": ["artf_xyz"],
           "out": ["artf_cmd"],
-          "init": {}
+          "init": {
+            "repeat_report_sec": 10
+          }
       },
       "transmitter": {
           "driver": "zeromq",
@@ -112,6 +114,7 @@
               ["rospy.rot", "app.rot"],
               ["rospy.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
+              ["rosmsg.sim_time_sec", "reporter.sim_time_sec"],
 
               ["rosmsg.gas_detected", "detector.gas_detected"],
 
