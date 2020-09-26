@@ -18,6 +18,7 @@ import msgpack
 
 from sensor_msgs.msg import Imu, LaserScan
 from nav_msgs.msg import Odometry
+from std_msgs.msg import Empty
 
 
 def py3round(f):
@@ -92,6 +93,8 @@ class main:
             ('/' + robot_name + '/imu/data', Imu, self.imu, ('rot', 'acc', 'orientation')),
         ]
 
+        publishers = {}
+
         # configuration specific topics
         robot_description = rospy.get_param("/{}/robot_description".format(robot_name))
         if "robotika_x2_sensor_config_1" in robot_description:
@@ -108,10 +111,11 @@ class main:
         elif "robotika_freyja_sensor_config" in robot_description:
             # possibly fragile detection if freya has bredcrumbs
             rospy.sleep(1)
-            publishers, subscribers = rostopic.get_topic_list()
+            _publishers, subscribers = rostopic.get_topic_list()
             for name, type, _ in subscribers:
                 if name == "/{}/breadcrumb/deploy".format(robot_name):
                     rospy.loginfo("freya 2 (with comms beacons)")
+                    publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
                     break
             else:
                 rospy.loginfo("freya 1")
@@ -133,7 +137,11 @@ class main:
             channel, data = self.bus.listen()
             print("_"*50)
             print("receiving:", data)
-            # TODO: switch on channel to feed different ROS publishers
+            # switch on channel to feed different ROS publishers
+            if channel in publishers:
+                publishers[channel].publish(*data)  # just guessing for Empty, where ([],) is wrong
+            else:
+                print("ignoring:", channel, data)
 
     def imu(self, msg):
         self.imu_count += 1
