@@ -6,12 +6,16 @@ from io import StringIO
 
 import cv2
 import numpy as np
-try:
-    import torch
-    import subt.artf_model
-    from subt.artf_detector import Detector
-except ImportError:
-    print('\nWarning: missing torch!\n')
+TF_DETECTOR = True
+if TF_DETECTOR:
+    from subt.tf_detector import CvDetector
+else:
+    try:
+        import torch
+        import subt.artf_model
+        from subt.artf_detector import Detector
+    except ImportError:
+        print('\nWarning: missing torch!\n')
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
@@ -45,7 +49,12 @@ class ArtifactDetectorDNN(Node):
         self.time = None
         self.width = None  # not sure if we will need it
         self.depth = None  # more precise artifact position from depth image
-        self.detector = self.create_detector()
+        if TF_DETECTOR:
+            print("Use tf detector (openCV)")
+            self.detector = CvDetector().subt_detector
+        else:
+            print("Use torch detector")
+            self.detector = self.create_detector()
 
     def create_detector(self):
         model = os.path.join(os.path.dirname(__file__), '../../../mdnet0.64.64.13.4.relu.pth')
