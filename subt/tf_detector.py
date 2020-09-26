@@ -11,7 +11,7 @@ PATH_TO_PB_GRAPH = "subt/tf_models/frozen_inference_graph.pb"
 PATH_TO_CV_GRAPH = "subt/tf_models/cv_graph.pbtxt"
 
 ARTF_NAME = np.array(["backpack", "survivor", "phone", "rope", "helmet", "robot"])
-MIN_SCORES = np.array([0.2, 0.2, 0.2, 0.5, 0.3, 1.0])
+MIN_SCORES = np.array([0.45, 0.3, 0.3, 0.5, 0.3, 1.0])
 
 
 class CvDetector:
