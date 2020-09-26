@@ -3,19 +3,17 @@
 """
 import os.path
 from io import StringIO
+import time  # to be removed
 
 import cv2
 import numpy as np
-TF_DETECTOR = True
-if TF_DETECTOR:
-    from subt.tf_detector import CvDetector
-else:
-    try:
-        import torch
-        import subt.artf_model
-        from subt.artf_detector import Detector
-    except ImportError:
-        print('\nWarning: missing torch!\n')
+from subt.tf_detector import CvDetector
+try:
+    import torch
+    import subt.artf_model
+    from subt.artf_detector import Detector
+except ImportError:
+    print('\nWarning: missing torch!\n')
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
@@ -49,12 +47,8 @@ class ArtifactDetectorDNN(Node):
         self.time = None
         self.width = None  # not sure if we will need it
         self.depth = None  # more precise artifact position from depth image
-        if TF_DETECTOR:
-            print("Use tf detector (openCV)")
-            self.detector = CvDetector().subt_detector
-        else:
-            print("Use torch detector")
-            self.detector = self.create_detector()
+        self.cv_detector = CvDetector().subt_detector
+        self.detector = self.create_detector()
 
     def create_detector(self):
         model = os.path.join(os.path.dirname(__file__), '../../../mdnet0.64.64.13.4.relu.pth')
@@ -112,7 +106,11 @@ class ArtifactDetectorDNN(Node):
             self.width = img.shape[1]
         assert self.width == img.shape[1], (self.width, img.shape[1])
 
+        t0 = time.time()  # to be removed
         result = self.detector(img)
+        t1 = time.time()  # to be removed
+        result_cv = self.cv_detector(img)
+        print(t1-t0, time.time() - t1)  # to be removed
         if len(result) > 0:
             self.stdout(result)
             report = result2report(result, self.depth)
