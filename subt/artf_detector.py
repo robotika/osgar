@@ -184,18 +184,22 @@ if __name__ == '__main__':
                 print('---')
                 for name, group in artifacts:
                     print(name)
-                    is_main_pt = True
                     for x, y, confidence in group:
-                        if args.show or args.output:
-                            cv2.circle(img, (x, y), 5, (0, 0, 255),
-                                       -1 if is_main_pt else 1)
-                            is_main_pt = False
                         print(' ', confidence, x, y)
-                    if args.output:
-                        cv2.imwrite(
-                            os.path.join(args.output, '{:06d}.jpg'.format(n)),
-                            img)
-                    n += 1
+                    if args.show or args.output:
+                        min_x = min(x for (x, _, _) in group)
+                        min_y = min(y for (_, y, _) in group)
+                        max_x = max(x for (x, _, _) in group)
+                        max_y = max(y for (_, y, _) in group)
+                        # Rectangle around all detected points.
+                        cv2.rectangle(img, (min_x, min_y), (max_x, max_y), (0, 255, 0))
+                        # Main point.
+                        cv2.circle(img, group[0][:2], 5, (0, 0, 255), -1)
+                if artifacts and args.output:
+                    cv2.imwrite(
+                        os.path.join(args.output, '{:06d}.jpg'.format(n)),
+                        img)
+                n += 1
                 if args.show:
                     cv2.imshow('img', img)
                     KEY_Q = ord('q')
@@ -211,13 +215,17 @@ if __name__ == '__main__':
         artifacts = detector(img)
         for name, group in artifacts:
             print(name)
-            is_main_pt = True
             for x, y, confidence in group:
-                if args.show or args.output:
-                    cv2.circle(img, (x, y), 5, (0, 0, 255),
-                               -1 if is_main_pt else 1)
-                    is_main_pt = False
                 print('  ', confidence, x, y)
+            if args.show or args.output:
+                min_x = min(x for (x, _, _) in group)
+                min_y = min(y for (_, y, _) in group)
+                max_x = max(x for (x, _, _) in group)
+                max_y = max(y for (_, y, _) in group)
+                # Rectangle around all detected points.
+                cv2.rectangle(img, (min_x, min_y), (max_x, max_y), (0, 255, 0))
+                # Main point.
+                cv2.circle(img, group[0][:2], 5, (0, 0, 255), -1)
         if args.output:
             cv2.imwrite(
                 os.path.join(args.output, os.path.basename(args.image)), img)
