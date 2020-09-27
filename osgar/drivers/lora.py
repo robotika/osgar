@@ -98,7 +98,7 @@ def draw_lora_positions(arr):
 class LoRa(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('raw', 'cmd', 'robot_status', 'artf')
+        bus.register('raw', 'cmd', 'robot_status', 'artf', 'artf_xyz')
         self.device_id = config.get('device_id')  # None for "autodetect"
         self.init_sleep = config.get('sleep')  # needed for Windows on start
         self.min_transmit_dt = timedelta(seconds=10)  # TODO config?
@@ -112,6 +112,20 @@ class LoRa(Node):
     def send_data(self, data):
         self.last_transmit = self.publish('raw', data + b'\n')
         return self.last_transmit
+
+    def on_radio(self, data):
+        src, packet = data
+        name = src.decode('ascii')
+        if packet.startswith(b'['):
+            arr = literal_eval(packet.decode('ascii'))
+            if len(arr) == 3:
+                # position
+                pass
+            elif len(arr) == 4:
+                # artifact
+                self.publish('artf_xyz', [arr])  # publish also standard "list" of detected artifacts
+            else:
+                assert False, arr  # unexpected size/type
 
     def update(self):
         self.recent_packets = []
@@ -142,7 +156,8 @@ class LoRa(Node):
                         print('re-transmit')
                     self.send_data(packet.strip())  # re-transmit data from other robots
                 self.buf, packet = split_lora_buffer(self.buf)
-
+        elif channel == 'radio':
+            self.on_radio(self.radio)
         elif channel == 'pose2d':
             if self.last_transmit is None or self.time > self.last_transmit + self.min_transmit_dt:
                 self.send_data(bytes(str(self.pose2d), encoding='ascii'))

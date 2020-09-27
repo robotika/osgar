@@ -50,6 +50,7 @@
 
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
               ["app.broadcast", "rosmsg.broadcast"],
+              ["rosmsg.radio", "app.radio"],
 
               ["app.artf_xyz", "reporter.artf_xyz"],
               ["reporter.artf_cmd", "transmitter.raw"]]

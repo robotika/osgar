@@ -137,7 +137,8 @@ class ArtifactDetectorTest(unittest.TestCase):
             bus.listen = MagicMock(return_value=(1, 'sim_time_sec', sim_time_sec))
             reporter.update()
         # well, I am not sure how to ensure only 2 calls :(
-        bus.publish.assert_has_calls([call('artf_cmd', b'artf BACKPACK 0.10 0.20 -0.00\n'),]*2)
+        bus.publish.assert_has_calls([call('artf_cmd', b'artf BACKPACK 0.10 0.20 -0.00\n'),
+                                      call('artf_all', [['BACKPACK', 100, 200, -3]]),]*2)
 
     def test_artf_empty_repeat(self):
         config = {
