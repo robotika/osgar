@@ -28,6 +28,7 @@ def parse_robot_name(robot_name):
     ret = []
     ret.append(('wait', int(parts[0])))
     for run in parts[1:]:
+        ret.append(('enter', None))
         sum_t = 0
         for part in split_multi(run, options.keys()):
             try:
