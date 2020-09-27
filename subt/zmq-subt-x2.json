@@ -92,7 +92,7 @@
           "in": ["sim_time_sec"],
           "out": ["deploy"],
           "init": {
-            "step_sec": 10
+            "step_sec": 50
           }
       }
     },
