@@ -882,7 +882,7 @@ class SubTChallenge:
         self.stdout(self.time, "Going HOME %.3f" % dist, reason)  # this message can be now misleading - used for 1:1 compatibility
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver75!")
+        self.stdout("SubT Challenge Ver76!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
