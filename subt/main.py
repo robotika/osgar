@@ -21,6 +21,7 @@ from osgar.lib.lidar_pts import equal_scans
 
 from subt.local_planner import LocalPlanner
 from subt.trace import Trace, distance3D
+from subt.name_decoder import parse_robot_name
 
 # safety limits for exploration and return home
 DEFAULT_LIMIT_ROLL = 28  # degrees
@@ -878,16 +879,7 @@ class SubTChallenge:
 
         self.stdout("Artifacts:", self.artifacts)
 
-        self.stdout(self.time, "Going HOME %.3f" % dist, reason)
-
-        self.return_home(2 * self.timeout)
-        self.send_speed_cmd(0, 0)
-
-        if self.artifacts:
-            self.bus.publish('artf_xyz', [[artifact_data, round(x*1000), round(y*1000), round(z*1000)] 
-                                          for artifact_data, (x, y, z) in self.artifacts])
-
-        self.wait(timedelta(seconds=10), use_sim_time=True)
+        self.stdout(self.time, "Going HOME %.3f" % dist, reason)  # this message can be now misleading - used for 1:1 compatibility
 
     def play_virtual_track(self):
         self.stdout("SubT Challenge Ver75!")
@@ -904,24 +896,36 @@ class SubTChallenge:
         if self.use_right_wall == 'auto':
             self.use_right_wall = self.robot_name.endswith('R')
             self.use_center = self.robot_name.endswith('C')
-        self.stdout('Use right wall:', self.use_right_wall)
+        self.stdout('Use right wall:', self.use_right_wall)  # this can be now also misleading if we allow multiple changes
 
-        times_sec = [int(x) for x in self.robot_name[1:-1].split('F')]
+        steps = parse_robot_name(self.robot_name)
+        times_sec = [duration for action, duration in steps if action != 'home']
         self.stdout('Using times', times_sec)
 
-        # add extra sleep to give a chance to the other robot (based on name)
-        self.wait(timedelta(seconds=times_sec[0]), use_sim_time=True)
+        for action, duration, in steps:
+            if action == 'wait':
+                self.wait(timedelta(seconds=duration), use_sim_time=True)
+                self.stdout('Artifacts before start:', self.artifacts)  # seen during wait
 
-        # potential wrong artifacts:
-        self.stdout('Artifacts before start:', self.artifacts)
+            elif action in ['left', 'right', 'center']:
+                self.timeout = timedelta(seconds=duration)
+                self.use_right_wall = (action == 'right')
+                self.use_center = (action == 'center')
+                self.play_virtual_part()
 
-        for timeout_sec in times_sec[1:]:
-            self.timeout = timedelta(seconds=timeout_sec)
-            self.play_virtual_part()
-            self.stdout('Final xyz:', self.xyz)
-            x, y, z = self.xyz
-            x0, y0, z0 = self.offset
-            self.stdout('Final xyz (DARPA coord system):', (x + x0, y + y0, z + z0))
+            elif action == 'home':
+                self.return_home(timedelta(seconds=duration))
+                self.send_speed_cmd(0, 0)
+                if self.artifacts:
+                    self.bus.publish('artf_xyz', [[artifact_data, round(x * 1000), round(y * 1000), round(z * 1000)]
+                                                  for artifact_data, (x, y, z) in self.artifacts])
+                self.wait(timedelta(seconds=10), use_sim_time=True)
+                self.stdout('Final xyz:', self.xyz)
+                x, y, z = self.xyz
+                x0, y0, z0 = self.offset
+                self.stdout('Final xyz (DARPA coord system):', (x + x0, y + y0, z + z0))
+            else:
+                assert False, action  # unknown action
 
         self.wait(timedelta(seconds=30), use_sim_time=True)
 #        self.dumplog()
