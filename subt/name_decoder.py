@@ -1,5 +1,13 @@
 """
   Virtual SubT Challenge - decoder of robot name
+
+The name is based on combination of capital letters and numbers.
+New coding:
+  <name letter (any)> ([<duration>] <action type>)+
+  where supported actions are (first letter) Left, Right, Center, Wait, Home
+
+The last action is by default Home. There is no default direction.
+The time for Home is optional (default is 2 times sum of previous exploration).
 """
 
 def split_multi(s, delimiters):
