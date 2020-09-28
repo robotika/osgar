@@ -27,5 +27,9 @@ class NameDecoderTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse_robot_name('A10F100L')
 
+    def test_double_home(self):
+        steps = parse_robot_name('A100LH')
+        self.assertEqual(steps, [('enter', None), ('left', 100), ('home', 200)])
+
 # vim: expandtab sw=4 ts=4
 

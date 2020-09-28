@@ -53,7 +53,9 @@ def parse_robot_name(robot_name):
         if action == 'home':
             entered = False
             sum_t = 0
-    ret.append(('home', sum_t * 2))
+    if len(ret) > 0 and ret[-1][0] != 'home':
+        # add default home return if it was not specifically requested
+        ret.append(('home', sum_t * 2))
     return ret
 
 # vim: expandtab sw=4 ts=4
