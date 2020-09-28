@@ -23,5 +23,9 @@ class NameDecoderTest(unittest.TestCase):
     def test_split_multi(self):
         self.assertEqual(split_multi('123L456R78', ['L', 'R']), ['123L', '456R', '78'])
 
+    def test_old_code(self):
+        with self.assertRaises(ValueError):
+            parse_robot_name('A10F100L')
+
 # vim: expandtab sw=4 ts=4
 
