@@ -15,7 +15,7 @@
             "virtual_world": true,
             "speed_policy": "conservative",
             "obstacle_influence": 1.2,
-            "max_obstacle_distance": 4.0,
+            "max_obstacle_distance": 3.0,
             "height_above_ground": 2.0
           }
       },
