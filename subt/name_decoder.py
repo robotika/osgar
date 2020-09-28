@@ -29,25 +29,31 @@ def parse_robot_name(robot_name):
         'L': 'left',
         'R': 'right',
         'C': 'center',
-        'W': 'wait'
+        'W': 'wait',
+        'H': 'home'
     }
-    parts = robot_name[1:-1].split('F')
-    default_side = options[robot_name[-1]]
+    parts = split_multi(robot_name[1:], options.keys())
     ret = []
-    ret.append(('wait', int(parts[0])))
-    for run in parts[1:]:
-        ret.append(('enter', None))
-        sum_t = 0
-        for part in split_multi(run, options.keys()):
-            try:
-                t = int(part)
-                side = default_side
-            except ValueError:
-                t = int(part[:-1])
-                side = options[part[-1]]
-            ret.append((side, t))
+    sum_t = 0
+    entered = False
+    for part in parts:
+        action = options[part[-1]]
+        if len(part) > 1:
+            t = int(part[:-1])
+        else:
+            assert action == 'home', action  # missing time
+            t = 2 * sum_t
+        if action in ['left', 'right', 'center']:
+            # exploration commands
+            if not entered:
+                ret.append(('enter', None))
+                entered = True
             sum_t += t
-        ret.append(('home', sum_t * 2))
+        ret.append((action, t))
+        if action == 'home':
+            entered = False
+            sum_t = 0
+    ret.append(('home', sum_t * 2))
     return ret
 
 # vim: expandtab sw=4 ts=4
