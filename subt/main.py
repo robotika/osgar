@@ -880,7 +880,7 @@ class SubTChallenge:
 
         self.stdout("Artifacts:", self.artifacts)
 
-        self.stdout(self.time, "Going HOME %.3f" % dist, reason)  # this message can be now misleading - used for 1:1 compatibility
+        self.stdout(self.time, "Explore phase finished %.3f" % dist, reason)
 
     def play_virtual_part_return(self, timeout):
         self.return_home(timeout)
@@ -906,11 +906,6 @@ class SubTChallenge:
             # self.xyz is initialized by pose2d or pose3d depending on robot type
             self.update()
 
-        if self.use_right_wall == 'auto':
-            self.use_right_wall = self.robot_name.endswith('R')
-            self.use_center = self.robot_name.endswith('C')
-        self.stdout('Use right wall:', self.use_right_wall)  # this can be now also misleading if we allow multiple changes
-
         steps = parse_robot_name(self.robot_name)
         times_sec = [duration for action, duration in steps if action not in ['enter', 'home']]
         self.stdout('Using times', times_sec)
@@ -935,8 +930,6 @@ class SubTChallenge:
                 assert False, action  # unknown action
 
         self.wait(timedelta(seconds=30), use_sim_time=True)
-#        self.dumplog()
-#        self.wait(timedelta(seconds=10), use_sim_time=True)
 
 #############################################
 
