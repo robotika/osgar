@@ -2,7 +2,7 @@
 
 termtitle() { printf "\033]0;$*\007"; }
 
-ROBOT="${ROBOT:-X0F200L}"
+ROBOT="${ROBOT:-X200L}"
 WORLD="${WORLD:-urban_circuit_practice_01}"
 CIRCUIT="${CIRCUIT:-urban}"
 HEADLESS="${HEADLESS:-false}"

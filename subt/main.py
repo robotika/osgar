@@ -21,6 +21,7 @@ from osgar.lib.lidar_pts import equal_scans
 
 from subt.local_planner import LocalPlanner
 from subt.trace import Trace, distance3D
+from subt.name_decoder import parse_robot_name
 
 # safety limits for exploration and return home
 DEFAULT_LIMIT_ROLL = 28  # degrees
@@ -820,7 +821,7 @@ class SubTChallenge:
         trace.reverse()
         self.follow_trace(trace, timeout=timedelta(seconds=30), max_target_distance=2.5, safety_limit=0.2)
 
-    def play_virtual_part(self):
+    def play_virtual_part_enter(self):
         self.stdout("Waiting for origin ...")
         self.origin = None  # invalidate origin
         self.origin_error = False
@@ -842,6 +843,7 @@ class SubTChallenge:
             # lost in tunnel
             self.stdout('Lost in tunnel:', self.origin_error, self.offset)
 
+    def play_virtual_part_explore(self):
         start_time = self.sim_time_sec
         for loop in range(100):
             self.collision_detector_enabled = True
@@ -878,19 +880,22 @@ class SubTChallenge:
 
         self.stdout("Artifacts:", self.artifacts)
 
-        self.stdout(self.time, "Going HOME %.3f" % dist, reason)
+        self.stdout(self.time, "Explore phase finished %.3f" % dist, reason)
 
-        self.return_home(2 * self.timeout)
+    def play_virtual_part_return(self, timeout):
+        self.return_home(timeout)
         self.send_speed_cmd(0, 0)
-
         if self.artifacts:
-            self.bus.publish('artf_xyz', [[artifact_data, round(x*1000), round(y*1000), round(z*1000)] 
+            self.bus.publish('artf_xyz', [[artifact_data, round(x * 1000), round(y * 1000), round(z * 1000)]
                                           for artifact_data, (x, y, z) in self.artifacts])
-
         self.wait(timedelta(seconds=10), use_sim_time=True)
+        self.stdout('Final xyz:', self.xyz)
+        x, y, z = self.xyz
+        x0, y0, z0 = self.offset
+        self.stdout('Final xyz (DARPA coord system):', (x + x0, y + y0, z + z0))
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver75!")
+        self.stdout("SubT Challenge Ver76!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
@@ -901,31 +906,30 @@ class SubTChallenge:
             # self.xyz is initialized by pose2d or pose3d depending on robot type
             self.update()
 
-        if self.use_right_wall == 'auto':
-            self.use_right_wall = self.robot_name.endswith('R')
-            self.use_center = self.robot_name.endswith('C')
-        self.stdout('Use right wall:', self.use_right_wall)
-
-        times_sec = [int(x) for x in self.robot_name[1:-1].split('F')]
+        steps = parse_robot_name(self.robot_name)
+        times_sec = [duration for action, duration in steps if action not in ['enter', 'home']]
         self.stdout('Using times', times_sec)
 
-        # add extra sleep to give a chance to the other robot (based on name)
-        self.wait(timedelta(seconds=times_sec[0]), use_sim_time=True)
+        for action, duration, in steps:
+            if action == 'wait':
+                self.wait(timedelta(seconds=duration), use_sim_time=True)
+                self.stdout('Artifacts before start:', self.artifacts)  # seen during wait
 
-        # potential wrong artifacts:
-        self.stdout('Artifacts before start:', self.artifacts)
+            elif action == 'enter':
+                self.play_virtual_part_enter()
 
-        for timeout_sec in times_sec[1:]:
-            self.timeout = timedelta(seconds=timeout_sec)
-            self.play_virtual_part()
-            self.stdout('Final xyz:', self.xyz)
-            x, y, z = self.xyz
-            x0, y0, z0 = self.offset
-            self.stdout('Final xyz (DARPA coord system):', (x + x0, y + y0, z + z0))
+            elif action in ['left', 'right', 'center']:
+                self.timeout = timedelta(seconds=duration)
+                self.use_right_wall = (action == 'right')
+                self.use_center = (action == 'center')
+                self.play_virtual_part_explore()
+
+            elif action == 'home':
+                self.play_virtual_part_return(timedelta(seconds=duration))
+            else:
+                assert False, action  # unknown action
 
         self.wait(timedelta(seconds=30), use_sim_time=True)
-#        self.dumplog()
-#        self.wait(timedelta(seconds=10), use_sim_time=True)
 
 #############################################
 
