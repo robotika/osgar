@@ -91,7 +91,7 @@ class Simulation:
         # ros_proxy_node.cc keeps sending origin data until robot arrives within 0.3m from (0,0,0)
         # we send it only once
         corrected = [rr - oo for rr, oo in zip(self.xyz, self.origin)]
-        self.bus.publish('origin', [b'X0W100L', *corrected, *self.orientation])
+        self.bus.publish('origin', [b'X100L', *corrected, *self.orientation])
         self.bus.publish('scan', self.scan())
         heading_centidegrees = round(math.degrees(quaternion.heading(self.orientation))*100)
         self.bus.publish('rot', [heading_centidegrees, 0, 0])
