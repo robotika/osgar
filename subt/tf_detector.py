@@ -140,13 +140,13 @@ if __name__ == "__main__":
     parser.add_argument('--path', help='path to log file, image or directory wit images')
     parser.add_argument('--stream', help='image stream', default='camera.raw')
     parser.add_argument('--cam', help='test with notebook camera', action='store_true')
-    parser.add_argument('--cv', help='run opencv detector', action='store_true')
+    parser.add_argument('--tf', help='run detector with tensorflow', action='store_true')
     args = parser.parse_args()
 
-    if args.cv:
-        detector = CvDetector()
-    else:
+    if args.tf:
         detector = TfDetector()
+    else:
+        detector = CvDetector()
 
     if args.cam:
         cam = cv2.VideoCapture(0)
@@ -170,7 +170,7 @@ if __name__ == "__main__":
                 if img is not None:
                     img = detector.run_on_image(img)
                     cv2.imshow('img', img)
-                    k = cv2.waitKey(500) & 0xFF
+                    k = cv2.waitKey(0) & 0xFF
                     if k == ord("q"):
                         cv2.destroyAllWindows()
                         break
