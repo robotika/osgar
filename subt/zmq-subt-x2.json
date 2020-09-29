@@ -29,7 +29,9 @@
           "driver": "subt.artifacts:ArtifactReporter",
           "in": ["artf_xyz"],
           "out": ["artf_cmd"],
-          "init": {}
+          "init": {
+            "repeat_report_sec": 10
+          }
       },
       "transmitter": {
           "driver": "zeromq",
@@ -84,6 +86,14 @@
           "init": {
             "device_id": 1
           }
+      },
+      "breadcrumbs": {
+          "driver": "subt.breadcrumbs:Breadcrumbs",
+          "in": ["sim_time_sec"],
+          "out": ["deploy"],
+          "init": {
+            "step_sec": 50
+          }
       }
     },
     "links": [["app.desired_speed", "rosmsg.desired_speed"],
@@ -120,8 +130,13 @@
 
               ["app.pose2d", "lora.pose2d"],
               ["lora.cmd", "app.cmd"],
-              ["app.artf_xyz", "lora.artf"],
+              ["reporter.artf_all", "lora.artf"],
+              ["lora.artf_xyz", "reporter.artf_xyz"],
               ["lora.raw", "rosmsg.broadcast"],
+              ["rosmsg.radio", "lora.radio"],
+
+              ["rosmsg.sim_time_sec", "breadcrumbs.sim_time_sec"],
+              ["breadcrumbs.deploy", "torospy.deploy"],
 
               ["detector.artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],

@@ -20,7 +20,7 @@
           }
       },
       "detector": {
-          "driver": "subt.artifacts:ArtifactDetector",
+          "driver": "subt.artf_node:ArtifactDetectorDNN",
           "in": ["image", "scan"],
           "out": ["artf", "dropped", "debug_artf", "stdout"],
           "init": {
@@ -31,7 +31,9 @@
           "driver": "subt.artifacts:ArtifactReporter",
           "in": ["artf_xyz"],
           "out": ["artf_cmd"],
-          "init": {}
+          "init": {
+            "repeat_report_sec": 10
+          }
       },
       "transmitter": {
           "driver": "zeromq",
@@ -84,6 +86,14 @@
 	      "init": {
 	        "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan", "pose3d"]
 	      }
+      },
+      "lora": {
+          "driver": "lora",
+          "in": ["raw", "pose2d"],
+          "out": ["raw", "cmd"],
+          "init": {
+            "device_id": 1
+          }
       }
     },
     "links": [["app.desired_speed", "rosmsg.desired_speed"],
@@ -112,8 +122,16 @@
               ["rospy.rot", "app.rot"],
               ["rospy.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
+              ["rosmsg.sim_time_sec", "reporter.sim_time_sec"],
 
               ["rosmsg.gas_detected", "detector.gas_detected"],
+
+              ["app.pose2d", "lora.pose2d"],
+              ["lora.cmd", "app.cmd"],
+              ["reporter.artf_all", "lora.artf"],
+              ["lora.artf_xyz", "reporter.artf_xyz"],
+              ["lora.raw", "rosmsg.broadcast"],
+              ["rosmsg.radio", "lora.radio"],
 
               ["detector.artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],
