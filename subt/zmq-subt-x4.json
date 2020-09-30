@@ -81,7 +81,7 @@
             }
           }
       },
-      "rospy": {
+      "fromrospy": {
           "driver": "subt.pull:Pull",
 	      "init": {
 	        "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan", "pose3d"]
@@ -94,6 +94,9 @@
           "init": {
             "device_id": 1
           }
+      },
+      "offseter": {
+        "driver": "subt.offseter:Offseter"
       }
     },
     "links": [["app.desired_speed", "rosmsg.desired_speed"],
@@ -105,7 +108,7 @@
               ["rosmsg.cmd", "transmitter.raw"],
 
               ["rosmsg.rot", "app.rot"],
-              ["rospy.rot", "depth2scan.rot"],
+              ["fromrospy.rot", "depth2scan.rot"],
               ["rosmsg.acc", "app.acc"],
               ["rosmsg.orientation", "app.orientation"],
 
@@ -119,8 +122,8 @@
               ["depth2scan.scan", "app.scan360"],
               ["rosmsg.depth", "detector.depth"],
 
-              ["rospy.rot", "app.rot"],
-              ["rospy.pose3d", "app.pose3d"],
+              ["fromrospy.rot", "app.rot"],
+              ["fromrospy.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
               ["rosmsg.sim_time_sec", "reporter.sim_time_sec"],
 
@@ -136,6 +139,10 @@
               ["detector.artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],
               ["app.artf_xyz", "reporter.artf_xyz"],
-              ["reporter.artf_cmd", "transmitter.raw"]]
+              ["reporter.artf_cmd", "transmitter.raw"],
+
+              ["rosmsg.origin", "offseter.origin"],
+              ["fromrospy.pose3d", "offseter.pose3d"]
+    ]
   }
 }
