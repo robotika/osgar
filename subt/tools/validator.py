@@ -89,10 +89,6 @@ def autodetect_name(logfile):
     assert False, "Robot name autodetection failed!"
 
 
-def process_logfile(logfile):
-    pass
-
-
 def main():
     import argparse
     import pathlib
