@@ -83,23 +83,30 @@ if __name__ == '__main__':
     from osgar.logger import LogReader, lookup_stream_id
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--logfile', help='Path to Osgar log.')
+    parser.add_argument('--logfile', help='Path to Osgar log.', required=True)
     parser.add_argument('--pose3d-stream',
-                        help='Stream id or name with pose and orientation data.')
+                        help='Stream id or name with pose and orientation data.',
+                        required=True)
+    parser.add_argument('--debug', help='Provide debug info.', action='store_true')
     args = parser.parse_args()
-    assert (args.logfile)
-    assert (args.pose3d_stream)
 
     pose3d_stream_id = lookup_stream_id(args.logfile, args.pose3d_stream)
     loop_detector = LoopDetector()
     with LogReader(args.logfile,
                    only_stream_id=pose3d_stream_id) as logreader:
+        previously_detected = False
         for time, stream, data in logreader:
             pose, orientation = deserialize(data)
             loop_detector.add(pose, orientation)
             loop = loop_detector.loop()
             if loop:
-                print('xxxx', loop)
-            #else:
-            #    print('---- ', pose)
+                if args.debug:
+                    print('xxxx', loop)
+                else:
+                    if not previously_detected:
+                        print('Loop detected at', time)
+            else:
+                if previously_detected:
+                    print('... end at', time)
+            previously_detected = loop
 
