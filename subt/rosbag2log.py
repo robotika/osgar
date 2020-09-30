@@ -208,18 +208,29 @@ def process_tar(filepath, all, verbose):
 
 def main():
     import argparse
+    import pathlib
+    import sys
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('filename', help='ROS bag file or tar(.gz)')
+    parser.add_argument('filenames', help='ROS bag file(s) or tar(.gz)', nargs='*')
     parser.add_argument('-a', '--all', help='extract all robot_data* files', action='store_true')
     parser.add_argument('-v', '--verbose', help='verbose mode', action='store_true')
     args = parser.parse_args()
 
-    if args.filename.endswith('.tar') or args.filename.endswith('.tar.gz'):
-        process_tar(args.filename, args.all, args.verbose)
-    else:
-        out_name = os.path.join(os.path.dirname(args.filename), 'tmp.log')
-        extract_log(read_rosbag_gen(args.filename), out_name, verbose=args.verbose)
+    if args.filenames == []:
+        for p in pathlib.Path('.').iterdir():
+            if p.suffixes == ['.tar', '.gz'] or p.suffixes == ['.tar']:
+                args.filenames.append(str(p))
+        if len(args.filenames) == 0:
+            sys.exit("no logfiles found in current directory")
+
+    for filename in args.filenames:
+        print("processing:", filename)
+        if filename.endswith('.tar') or filename.endswith('.tar.gz'):
+            process_tar(filename, args.all, args.verbose)
+        else:
+            out_name = os.path.join(os.path.dirname(filename), 'tmp.log')
+            extract_log(read_rosbag_gen(filename), out_name, verbose=args.verbose)
 
 
 if __name__ == "__main__":
