@@ -94,7 +94,7 @@ if __name__ == '__main__':
     loop_detector = LoopDetector()
     with LogReader(args.logfile,
                    only_stream_id=pose3d_stream_id) as logreader:
-        previously_detected = False
+        last_detected_start = None
         for time, stream, data in logreader:
             pose, orientation = deserialize(data)
             loop_detector.add(pose, orientation)
@@ -103,10 +103,10 @@ if __name__ == '__main__':
                 if args.debug:
                     print('xxxx', loop)
                 else:
-                    if not previously_detected:
-                        print('Loop detected at', time)
+                    if last_detected_start is None:
+                        last_detected_start = time
             else:
-                if previously_detected:
-                    print('... end at', time)
-            previously_detected = loop
+                if last_detected_start is not None:
+                    print(f'Loop detected at {last_detected_start} (duration {time - last_detected_start})')
+                    last_detected_start = None
 
