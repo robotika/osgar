@@ -9,7 +9,8 @@ from geometry_msgs.msg import *
 HEIGHT = 2.0
 MAX_ANGULAR = 0.7
 MAX_VERTICAL = 0.7
-PID_P = 1.0
+PID_P = 1.0  # 0.5
+PID_I = 0.0  # 0.5
 
 
 class DroneHeightListener:
@@ -24,6 +25,8 @@ class DroneHeightListener:
         self.subscriberScanDown = rospy.Subscriber("/scan_up", LaserScan, self.scanUpCallback, queue_size=15)
         self.publisherTwist = rospy.Publisher("/cmd_vel_drone", Twist, queue_size=50)
 
+        self.accum = 0.0
+
 
     def scanDownCallback(self, scan):
         self.lastScanDown = scan.ranges[0]
@@ -37,11 +40,10 @@ class DroneHeightListener:
 
         if self.started:
             height = min(HEIGHT, (self.lastScanDown + self.lastScanUp) / 2)
-            desiredVel = min(PID_P * abs(height - self.lastScanDown), MAX_VERTICAL)
-            if self.lastScanDown > height:
-                cmd_vel.linear.z = -desiredVel
-            else:
-                cmd_vel.linear.z = desiredVel
+            diff = height - self.lastScanDown
+            self.accum += diff
+            desiredVel = max(-MAX_VERTICAL, min(MAX_VERTICAL, PID_P * diff + PID_I * self.accum))
+            cmd_vel.linear.z = desiredVel
 
             #this is because drone can't handle too aggressive rotation
             if cmd_vel.angular.z > MAX_ANGULAR:
