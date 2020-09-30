@@ -9,8 +9,8 @@ from geometry_msgs.msg import *
 HEIGHT = 2.0
 MAX_ANGULAR = 0.7
 MAX_VERTICAL = 0.7
-PID_P = 0.5
-PID_I = 0.5
+PID_P = 1.0  # 0.5
+PID_I = 0.0  # 0.5
 
 
 class DroneHeightListener:
