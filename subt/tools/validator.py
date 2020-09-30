@@ -89,12 +89,16 @@ def autodetect_name(logfile):
     assert False, "Robot name autodetection failed!"
 
 
+def process_logfile(logfile):
+    pass
+
+
 def main():
     import argparse
     import pathlib
     import sys
     parser = argparse.ArgumentParser(__doc__)
-    parser.add_argument('logfile', help='OSGAR logfile', nargs='?')
+    parser.add_argument('logfiles', help='OSGAR logfile(s)', nargs='*')
     parser.add_argument('--ign', help='Ignition "state.tlog", default in current directory', default=str(pathlib.Path("./state.tlog")))
     parser.add_argument('--pose3d', help='Stream with pose3d data', default='offseter.pose3d')
     parser.add_argument('--name', help='Robot name, default is autodetect')
@@ -103,63 +107,59 @@ def main():
     parser.add_argument('--draw', help="draw debug results", action='store_true')
     args = parser.parse_args()
 
-    if args.logfile is None:
+    if args.logfiles == []:
         paths = pathlib.Path('.').glob("*.log")
-        candidates = []
         for p in paths:
             try:
                 LogReader(p)
-                candidates.append(str(p))
+                args.logfiles.append(str(p))
             except AssertionError:
                 pass
-        if len(candidates) == 0:
+        if len(args.logfiles) == 0:
             sys.exit("no logfiles found in current directory")
-        if len(candidates) > 1:
-            print(candidates, file=sys.stderr)
-            sys.exit("multiple logfiles found in current directory")
-        args.logfile = candidates[0]
-
-    print("Processing logfile:", args.logfile)
-    robot_name = args.name
-    if robot_name is None:
-        robot_name = autodetect_name(args.logfile)
-        print('Autodetected name:', robot_name)
 
     ground_truth = ign.read_poses(args.ign, seconds=args.sec)
-    print('GT count:', len(ground_truth))
+    print('Ground truth count:', len(ground_truth))
 
-    pose3d = read_pose3d(args.logfile, args.pose3d, seconds=args.sec)
-    print('Trace reduced count:', len(pose3d))
+    for logfile in args.logfiles:
+        print("Processing logfile:", logfile)
+        robot_name = args.name
+        if robot_name is None:
+            robot_name = autodetect_name(logfile)
+            print('  Autodetected name:', robot_name)
 
-    tmp_poses = osgar2arr(pose3d)
-    tmp_gt = ign2arr(ground_truth, robot_name=robot_name)
-    print('GT seconds:', len(tmp_gt))
-    arr = evaluate_poses(tmp_poses, tmp_gt)
-    if len(arr) == 0:
-        print('EMPTY OVERLAP!')
-        if len(tmp_poses) > 0:
-            print('poses:', tmp_poses[0][0], tmp_poses[-1][0])
-        if len(tmp_gt) > 0:
-            print('gt   :', tmp_gt[0][0], tmp_gt[-1][0])
-    else:
-        dist3d = [a[1] for a in arr]
-        print(max(dist3d))
-        assert min(dist3d) < 0.1, min(dist3d)  # the minimum should be almost zero for correct evaluation
+        pose3d = read_pose3d(logfile, args.pose3d, seconds=args.sec)
+        print('  Trace reduced count:', len(pose3d))
 
-    if args.draw:
-        import matplotlib.pyplot as plt
+        tmp_poses = osgar2arr(pose3d)
+        tmp_gt = ign2arr(ground_truth, robot_name=robot_name)
+        print('  Ground truth seconds:', len(tmp_gt))
+        arr = evaluate_poses(tmp_poses, tmp_gt)
+        if len(arr) == 0:
+            print('EMPTY OVERLAP!')
+            if len(tmp_poses) > 0:
+                print('poses:', tmp_poses[0][0], tmp_poses[-1][0])
+            if len(tmp_gt) > 0:
+                print('gt   :', tmp_gt[0][0], tmp_gt[-1][0])
+        else:
+            dist3d = [a[1] for a in arr]
+            print(f"  Maximum error: {max(dist3d):.2f}m -> {'OK' if max(dist3d) < 3 else 'FAIL'}")
+            assert min(dist3d) < 0.1, min(dist3d)  # the minimum should be almost zero for correct evaluation
 
-        fig, ax1 = plt.subplots()
-        ax1.set_ylabel('distance (m)')
-        ax1.set_title(robot_name)
+        if args.draw:
+            import matplotlib.pyplot as plt
 
-        x = [a[0] for a in arr]
-        for index, label in enumerate(['dist3d', 'x', 'y', 'z']):
-            y = [a[index + 1] for a in arr]
-            ax1.plot(x, y, '-', linewidth=2, label=label)
-        ax1.set_xlabel('sim time (s)')
-        plt.legend()
-        plt.show()
+            fig, ax1 = plt.subplots()
+            ax1.set_ylabel('distance (m)')
+            ax1.set_title(robot_name)
+
+            x = [a[0] for a in arr]
+            for index, label in enumerate(['dist3d', 'x', 'y', 'z']):
+                y = [a[index + 1] for a in arr]
+                ax1.plot(x, y, '-', linewidth=2, label=label)
+            ax1.set_xlabel('sim time (s)')
+            plt.legend()
+            plt.show()
 
     return arr
 
