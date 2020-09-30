@@ -91,16 +91,35 @@ def autodetect_name(logfile):
 
 def main():
     import argparse
+    import pathlib
+    import sys
     parser = argparse.ArgumentParser(__doc__)
-    parser.add_argument('logfile', help='OSGAR logfile')
-    parser.add_argument('--ign', help='Ignition "state.tlog"', required=True)
-    parser.add_argument('--pose3d', help='Stream with pose3d data', default='app.pose3d')
+    parser.add_argument('logfile', help='OSGAR logfile', nargs='?')
+    parser.add_argument('--ign', help='Ignition "state.tlog", default in current directory', default=str(pathlib.Path("./state.tlog")))
+    parser.add_argument('--pose3d', help='Stream with pose3d data', default='offseter.pose3d')
     parser.add_argument('--name', help='Robot name, default is autodetect')
     parser.add_argument('--sec', help='duration of the analyzed part (seconds)',
                         type=float, default=MAX_SIMULATION_DURATION)
     parser.add_argument('--draw', help="draw debug results", action='store_true')
     args = parser.parse_args()
 
+    if args.logfile is None:
+        paths = pathlib.Path('.').glob("*.log")
+        candidates = []
+        for p in paths:
+            try:
+                LogReader(p)
+                candidates.append(str(p))
+            except AssertionError:
+                pass
+        if len(candidates) == 0:
+            sys.exit("no logfiles found in current directory")
+        if len(candidates) > 1:
+            print(candidates, file=sys.stderr)
+            sys.exit("multiple logfiles found in current directory")
+        args.logfile = candidates[0]
+
+    print("Processing logfile:", args.logfile)
     robot_name = args.name
     if robot_name is None:
         robot_name = autodetect_name(args.logfile)
