@@ -96,4 +96,11 @@ def from_rotation_matrix(rotation_matrix):
     qz = math.copysign(qz, m10 - m01)
     return [qx, qy, qz, qw]
 
+
+def angle_between(quaternion0, quaternion1):
+    # https://math.stackexchange.com/questions/90081/quaternion-distance
+    inner_product = sum(a * b for (a, b) in zip(quaternion0, quaternion1))
+    return math.acos(2 * inner_product**2 - 1)
+
+
 # vim: expandtab sw=4 ts=4
