@@ -41,6 +41,8 @@ import pathlib
 
 g_logger = logging.getLogger(__name__)
 
+MAGIC = b'Pyr\x00'
+
 INFO_STREAM_ID = 0
 ENV_OSGAR_LOGS = 'OSGAR_LOGS'
 
@@ -51,7 +53,7 @@ TIMESTAMP_MASK = TIMESTAMP_OVERFLOW_STEP - 1
 def format_header(start_time):
     t = start_time
     ret = []
-    ret.append(b'Pyr\x00')
+    ret.append(MAGIC)
     ret.append(struct.pack('HBBBBBI', t.year, t.month, t.day, t.hour, t.minute, t.second, t.microsecond))
     return ret
 
@@ -161,7 +163,7 @@ class LogReader:
         self.follow = follow
         self.f = open(self.filename, 'rb')
         data = self._read(4)
-        assert data == b'Pyr\x00', data
+        assert data == MAGIC, data
 
         data = self._read(12)
         self.start_time = datetime.datetime(*struct.unpack('HBBBBBI', data), datetime.timezone.utc)
