@@ -41,7 +41,7 @@ def result2report(result, depth):
 class ArtifactDetectorDNN(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register("artf", "dropped", "debug_artf", "stdout")
+        bus.register("artf", "dropped", "debug_artf", "debug_depth:gz", "stdout")
         self.time = None
         self.width = None  # not sure if we will need it
         self.depth = None  # more precise artifact position from depth image
@@ -110,5 +110,6 @@ class ArtifactDetectorDNN(Node):
             if report is not None:
                 self.publish('artf', report)
                 self.publish('debug_artf', image)  # JPEG
+                self.publish('debug_depth', self.depth)
 
 # vim: expandtab sw=4 ts=4
