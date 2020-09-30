@@ -213,8 +213,8 @@ def main():
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('filenames', help='ROS bag file(s) or tar(.gz)', nargs='*')
-    parser.add_argument('-a', '--all', help='extract all robot_data* files', action='store_true')
-    parser.add_argument('-v', '--verbose', help='verbose mode', action='store_true')
+    #parser.add_argument('-a', '--all', help='extract all robot_data* files', action='store_true')
+    parser.add_argument('--debug', help='debug output', action='store_true')
     args = parser.parse_args()
 
     if args.filenames == []:
@@ -227,10 +227,10 @@ def main():
     for filename in args.filenames:
         print("processing:", filename)
         if filename.endswith('.tar') or filename.endswith('.tar.gz'):
-            process_tar(filename, args.all, args.verbose)
+            process_tar(filename, all=True, verbose=args.debug)
         else:
             out_name = os.path.join(os.path.dirname(filename), 'tmp.log')
-            extract_log(read_rosbag_gen(filename), out_name, verbose=args.verbose)
+            extract_log(read_rosbag_gen(filename), out_name, verbose=args.debug)
 
 
 if __name__ == "__main__":
