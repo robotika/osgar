@@ -19,7 +19,6 @@ class Offseter:
         xyz = None
         while None in (origin, xyz):
             dt, channel, data = self.bus.listen()
-            #print("#", channel, data)
             if channel == "origin":
                 if len(data) == 8:
                     robot_name, x, y, z, qa, qb, qc, qd = data
@@ -33,7 +32,6 @@ class Offseter:
 
         while True:
             dt, channel, data = self.bus.listen()
-            #print("-", channel, data)
             if channel == "origin" and len(data) == 8:
                 robot_name, x, y, z, qa, qb, qc, qd = data
                 origin = [x, y, z]
@@ -90,7 +88,6 @@ def main():
         with LogReader(args.logfile, only_stream_id=[origin_stream_id, pose3d_stream_id]) as logreader:
             for time, stream, data in logreader:
                 data = deserialize(data)
-                #print(channel[stream], data)
                 tester.publish(channel[stream], data)
     except Exception as e:
         print(e)
