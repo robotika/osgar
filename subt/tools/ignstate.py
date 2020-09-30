@@ -170,12 +170,14 @@ def draw(poses, artifacts):
 
 def main():
     import argparse
+    from pathlib import Path
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('filename', help='Ignition file from simulation (state.tlog)')
+    parser.add_argument('filename', help='Ignition file from simulation (state.tlog)', nargs='?', default=str(Path('./state.tlog')))
     parser.add_argument('-s', default=3700, type=float,
                         help='Limit duration time')
     parser.add_argument('-a', '--artifacts', action='store_true', default=False,
                         help='Display list of artifacts with positions')
+    parser.add_argument('-o', '--open', action='store_true', help='open resulting file with browser')
     args = parser.parse_args()
 
     if args.artifacts:
@@ -189,6 +191,10 @@ def main():
     a = read_artifacts(args.filename)
     img = draw(p, a)
     cv2.imwrite(args.filename+'.png', img)
+    print("created:", args.filename+'.png')
+    if args.open:
+        import webbrowser
+        webbrowser.open(args.filename+'.png')
 
 
 if __name__ == "__main__":
