@@ -18,6 +18,7 @@ from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.lib import quaternion
 from osgar.lib.virtual_bumper import VirtualBumper
 from osgar.lib.lidar_pts import equal_scans
+from osgar.lib.loop import LoopDetector
 
 from subt.local_planner import LocalPlanner
 from subt.trace import Trace, distance3D
@@ -133,6 +134,7 @@ class SubTChallenge:
         self.voltage = []
         self.artifacts = []
         self.trace = Trace()
+        self.loop_detector = LoopDetector()
         self.collision_detector_enabled = False
         self.sim_time_sec = 0
 
@@ -313,6 +315,10 @@ class SubTChallenge:
                     self.go_straight(-0.3, timeout=timedelta(seconds=10))
                     reason = REASON_VIRTUAL_BUMPER
                     break
+
+                loop = self.loop_detector.loop()
+                if loop:
+                    print(self.time, self.sim_time_sec, 'Loop detected')
 
                 if self.front_bumper and not flipped:
                     print(self.time, "FRONT BUMPER - collision")
@@ -512,6 +518,7 @@ class SubTChallenge:
                 self.virtual_bumper.update_pose(self.time, pose)
         self.xyz = tuple(xyz)
         self.trace.update_trace(self.xyz)
+        self.loop_detector.add(self.xyz, rot)
 
     def on_acc(self, timestamp, data):
         acc = [x / 1000.0 for x in data]
