@@ -100,12 +100,12 @@ def autodetect_name(logfile):
 def autodetect_pose3d(logfile):
     streams = lookup_stream_names(logfile)
     nodes = set(s.split('.')[0] for s in streams if s.endswith('.pose3d'))
+    if len(nodes) == 1:
+        return nodes.pop()+'.pose3d'
     if 'offseter' in nodes:
         return 'offseter.pose3d'
     if 'localization' in nodes:
         return 'localization.pose3d'
-    if len(nodes) == 1:
-        return nodes[0]+'.pose3d'
     assert False, f"pose3d stream autodetection failed: {nodes}"
 
 
