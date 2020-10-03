@@ -79,13 +79,11 @@
       "torospy": {
           "driver": "subt.push:Push"
       },
-      "lora": {
-          "driver": "lora",
-          "in": ["raw", "pose2d"],
-          "out": ["raw", "cmd"],
-          "init": {
-            "device_id": 1
-          }
+      "radio": {
+          "driver": "radio",
+          "in": ["radio", "pose2d", "artf"],
+          "out": ["radio", "artf_xyz"],
+          "init": {}
       },
       "breadcrumbs": {
           "driver": "subt.breadcrumbs:Breadcrumbs",
@@ -128,12 +126,11 @@
 
               ["rosmsg.gas_detected", "detector.gas_detected"],
 
-              ["app.pose2d", "lora.pose2d"],
-              ["lora.cmd", "app.cmd"],
-              ["reporter.artf_all", "lora.artf"],
-              ["lora.artf_xyz", "reporter.artf_xyz"],
-              ["lora.raw", "rosmsg.broadcast"],
-              ["rosmsg.radio", "lora.radio"],
+              ["app.pose2d", "radio.pose2d"],
+              ["reporter.artf_all", "radio.artf"],
+              ["radio.artf_xyz", "reporter.artf_xyz"],
+              ["radio.radio", "rosmsg.broadcast"],
+              ["rosmsg.radio", "radio.radio"],
 
               ["rosmsg.sim_time_sec", "breadcrumbs.sim_time_sec"],
               ["breadcrumbs.deploy", "torospy.deploy"],
