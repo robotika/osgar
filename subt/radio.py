@@ -33,7 +33,7 @@ def Xdraw_lora_positions(arr):
 class Radio(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('raw', 'cmd', 'robot_status', 'artf', 'artf_xyz')
+        bus.register('radio', 'artf_xyz')
         self.min_transmit_dt = timedelta(seconds=10)  # TODO config?
         self.last_transmit = None
         self.recent_packets = []
@@ -41,7 +41,7 @@ class Radio(Node):
         self.debug_robot_poses = []
 
     def send_data(self, data):
-        self.last_transmit = self.publish('raw', data + b'\n')
+        self.last_transmit = self.publish('radio', data + b'\n')
         return self.last_transmit
 
     def on_radio(self, data):
@@ -65,9 +65,6 @@ class Radio(Node):
         elif channel == 'pose2d':
             if self.last_transmit is None or self.time > self.last_transmit + self.min_transmit_dt:
                 self.send_data(bytes(str(self.pose2d), encoding='ascii'))
-        elif channel == 'cmd':
-            assert len(self.cmd) == 2, self.cmd
-            self.send_data(b'%d:%s:%d' % (self.cmd[0], self.cmd[1], int(self.time.total_seconds())))
         elif channel == 'artf':
             # send data as they are, ignore transmit time, ignore transmit failure
             for artf_item in self.artf:
