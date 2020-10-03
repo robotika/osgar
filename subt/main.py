@@ -44,6 +44,7 @@ REASON_VIRTUAL_BUMPER = 'virtual_bumper'
 REASON_LORA = 'lora'
 REASON_FRONT_BUMPER = 'front_bumper'
 REASON_REAR_BUMPER = 'rear_bumper'
+REASON_LOOP = 'loop'
 
 
 def any_is_none(*args):
@@ -319,6 +320,9 @@ class SubTChallenge:
                 loop = self.loop_detector.loop()
                 if loop:
                     print(self.time, self.sim_time_sec, 'Loop detected')
+                    self.turn(math.radians(160 if self.use_right_wall else -160), timeout=timedelta(seconds=40), with_stop=True)
+                    reason = REASON_LOOP
+                    break
 
                 if self.front_bumper and not flipped:
                     print(self.time, "FRONT BUMPER - collision")
@@ -877,6 +881,13 @@ class SubTChallenge:
                                     timeout=timedelta(seconds=60), pitch_limit=self.limit_pitch, roll_limit=None)
                 self.use_center = before_center
                 if reason is None or reason != REASON_PITCH_LIMIT:
+                    continue
+            elif reason == REASON_LOOP:
+                # Smaller walldist to reduce the chance that we miss the opening again that we missed before,
+                # which made us end up in a loop.
+                dist, reason = self.follow_wall(radius=self.walldist*0.75, right_wall=not self.use_right_wall,
+                                    timeout=timedelta(seconds=5), pitch_limit=self.limit_pitch, roll_limit=None)
+                if reason is None:
                     continue
 
             if reason is None or reason != REASON_PITCH_LIMIT:
