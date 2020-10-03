@@ -80,7 +80,7 @@
           "driver": "subt.push:Push"
       },
       "radio": {
-          "driver": "radio",
+          "driver": "subt.radio:Radio",
           "in": ["radio", "pose2d", "artf"],
           "out": ["radio", "artf_xyz"],
           "init": {}
