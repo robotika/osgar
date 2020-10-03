@@ -12,7 +12,7 @@ class LoopDetectionTest(TestCase):
                       ((2, 2, 0), forward),
                       ((0, 2, 0), forward),
                       ((0, 0, 0), forward)]
-        detector = LoopDetector()
+        detector = LoopDetector(min_loop_length=5)
         detector.add_all(trajectory)
         loop = detector.loop()
         self.assertEqual(loop, trajectory)
@@ -26,7 +26,7 @@ class LoopDetectionTest(TestCase):
                       ((2, 2, 0), forward),
                       ((0, 2, 0), forward),
                       ((0, 0, 0), forward)]
-        detector = LoopDetector()
+        detector = LoopDetector(min_loop_length=5)
         detector.add_all(trajectory)
         loop = detector.loop()
         self.assertEqual(loop, trajectory[1:])
@@ -40,7 +40,7 @@ class LoopDetectionTest(TestCase):
                       ((2, 2, 0), forward),
                       ((0, 2, 0), forward),
                       ((0, 0, 0), almost_forward)]
-        detector = LoopDetector()
+        detector = LoopDetector(min_loop_length=5)
         detector.add_all(trajectory)
         loop = detector.loop()
         self.assertEqual(loop, trajectory)
@@ -53,7 +53,7 @@ class LoopDetectionTest(TestCase):
                       ((2, 2, 0), forward),
                       ((0, 2, 0), forward),
                       ((0.1, 0.1, 0.1), forward)]
-        detector = LoopDetector()
+        detector = LoopDetector(min_loop_length=5)
         detector.add_all(trajectory)
         loop = detector.loop()
         self.assertEqual(loop, trajectory)
@@ -70,7 +70,7 @@ class LoopDetectionTest(TestCase):
                       ((0, 2, 0), forward),
                       ((0, 1, 0), forward),
                       ((0, 0, 0), forward)]
-        detector = LoopDetector(granularity=2.0)
+        detector = LoopDetector(min_loop_length=5, granularity=2.0)
         detector.add_all(trajectory)
         loop = detector.loop()
         self.assertEqual(loop, trajectory[::2])
@@ -82,7 +82,7 @@ class LoopDetectionTest(TestCase):
                       ((2, 0, 0), forward),
                       ((2, 2, 0), forward),
                       ((0, 2, 0), forward)]
-        detector = LoopDetector()
+        detector = LoopDetector(min_loop_length=5)
         detector.add_all(trajectory)
         loop = detector.loop()
         self.assertIsNone(loop)
@@ -95,7 +95,7 @@ class LoopDetectionTest(TestCase):
                       ((2, 2, 0), forward),
                       ((0, 2, 0), forward),
                       ((0, 0, 1), forward)]
-        detector = LoopDetector()
+        detector = LoopDetector(min_loop_length=5)
         detector.add_all(trajectory)
         loop = detector.loop()
         self.assertIsNone(loop)
@@ -109,7 +109,7 @@ class LoopDetectionTest(TestCase):
                       ((2, 2, 0), forward),
                       ((0, 2, 0), forward),
                       ((0, 0, 0), left)]
-        detector = LoopDetector()
+        detector = LoopDetector(min_loop_length=5)
         detector.add_all(trajectory)
         loop = detector.loop()
         self.assertIsNone(loop)
@@ -122,7 +122,7 @@ class LoopDetectionTest(TestCase):
                       ((1, 1, 0), forward),
                       ((0, 1, 0), forward),
                       ((0, 0, 0), forward)]
-        detector = LoopDetector()
+        detector = LoopDetector(min_loop_length=5)
         detector.add_all(trajectory)
         loop = detector.loop()
         self.assertIsNone(loop)
@@ -135,7 +135,7 @@ class LoopDetectionTest(TestCase):
                       ((100, 100, 0), forward),
                       ((0, 100, 0), forward),
                       ((0, 0, 0), forward)]
-        detector = LoopDetector()
+        detector = LoopDetector(min_loop_length=5)
         detector.add_all(trajectory)
         loop = detector.loop()
         self.assertIsNone(loop)
