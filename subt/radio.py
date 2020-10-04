@@ -9,7 +9,7 @@ from osgar.node import Node
 from osgar.bus import BusShutdownException
 
 
-def Xdraw_lora_positions(arr):
+def draw_positions(arr):
     """
     Draw positions of tripples:
         (time, ID, (x. y, heading))
@@ -22,7 +22,7 @@ def Xdraw_lora_positions(arr):
     for robot_id in robot_ids:
         x = [a[2][0]/1000.0 for a in arr if a[1] == robot_id]
         y = [a[2][1]/1000.0 for a in arr if a[1] == robot_id]
-        line = plt.plot(x, y, '-o', linewidth=2, label='Robot #%d' % robot_id)
+        line = plt.plot(x, y, '-o', linewidth=2, label=f'Robot {robot_id}')
 
 #    plt.xlabel('time (s)')
     plt.axes().set_aspect('equal', 'datalim')
@@ -51,7 +51,8 @@ class Radio(Node):
             arr = literal_eval(packet.decode('ascii'))
             if len(arr) == 3:
                 # position
-                pass
+                if self.verbose:
+                    self.debug_robot_poses.append((self.time, name, arr))  # TODO sim_time_sec
             elif len(arr) == 4:
                 # artifact
                 self.publish('artf_xyz', [arr])  # publish also standard "list" of detected artifacts
@@ -77,7 +78,7 @@ class Radio(Node):
         """
         Debug Draw
         """
-        draw_lora_positions(self.debug_robot_poses)
+        draw_positions(self.debug_robot_poses)
 
 
 # vim: expandtab sw=4 ts=4
