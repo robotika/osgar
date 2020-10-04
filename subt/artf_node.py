@@ -28,6 +28,26 @@ NAME2IGN = {
 }
 
 
+def check_results(result, result_cv):
+    ret = []
+    if len(result) == 0 or len(result_cv) == 0:
+        return ret
+    for r_cv in result_cv:
+        name_cv, score_cv, bbox = r_cv
+        bbox_x1, bbox_y1, bbox_x2, bbox_y2 = bbox
+        for r in result:
+            name, points = r
+            if name != name_cv:
+                continue
+            x = np.array([p[0] for p in points])
+            y = np.array([p[1] for p in points])
+            x_in_bbox = (x > bbox_x1) & (x < bbox_x2)  # arr of boolean values
+            y_in_bbox = (y > bbox_y1) & (y < bbox_y2)  # arr of boolean values
+            if sum(x_in_bbox & y_in_bbox) >= 1:  #at least one point is in the bbox
+                ret.append(r)
+    return ret
+
+
 def result2report(result, depth):
     width = depth.shape[1]
     x_arr = [x for x, y, certainty in result[0][1]]  # ignore multiple objects
@@ -55,7 +75,7 @@ class ArtifactDetectorDNN(Node):
             'survivor': 0.92,
             'backpack': 0.9988,
             'phone': 0.87,
-            'helmet': 0.995,
+            'helmet': 0.5,
             'rope': 0.83
         }
         max_gap = 16
@@ -107,10 +127,11 @@ class ArtifactDetectorDNN(Node):
 
         result = self.detector(img)
         result_cv = self.cv_detector(img)
-        if len(result) > 0 and len(result_cv) > 0:
-            if result[0][0] == result_cv[0][0]: # check artefacts names
-                self.stdout(result, result_cv)
-                report = result2report(result, self.depth)
+        if len(result) > 0 or len(result_cv) > 0:
+            self.stdout(result, result_cv)  # publish the results independent to detection validity
+            checked_result = check_results(result, result_cv)
+            if len(checked_result) > 0:
+                report = result2report(checked_result, self.depth)
                 if report is not None:
                     self.publish('artf', report)
                     self.publish('debug_artf', image)  # JPEG
