@@ -16,6 +16,7 @@ MIN_SCORES = np.array([0.45, 0.3, 0.3, 0.5, 0.3, 1.0])
 
 class CvDetector:
     def __init__(self):
+        self.min_score = MIN_SCORES
         if os.path.exists(PATH_TO_PB_GRAPH) and os.path.exists(PATH_TO_CV_GRAPH):
             graph_path = PATH_TO_PB_GRAPH
             cv_graph = PATH_TO_CV_GRAPH
@@ -31,10 +32,10 @@ class CvDetector:
         if detection is not None:
             num_detections = detection['num_detections']
             for ii in range(num_detections):
-                x, y, w, h = detection['bboxes'][ii]
-                score = detection['scores'][ii]
                 name = detection['classes_names'][ii]
-                ret.append((name, [((x+w)//2, (y+h)//2, score)]))
+                score = detection['scores'][ii]
+                bbox = detection['bboxes'][ii]
+                ret.append((name, score, bbox))
         return ret
 
     def detect(self, img):
@@ -53,7 +54,7 @@ class CvDetector:
         # faster_rcnn_resnet50
 #        classes = cvOut[0, 0, :, 1]
         classes = classes.astype('int32')
-        mask = MIN_SCORES[classes] < scores
+        mask = self.min_score[classes] < scores
 
         num_detections = np.count_nonzero(mask)
         if num_detections > 0:
