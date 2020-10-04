@@ -45,6 +45,7 @@ def check_results(result, result_cv):
             y_in_bbox = (y > bbox_y1) & (y < bbox_y2)  # arr of boolean values
             if np.any(x_in_bbox & y_in_bbox):  # at least one point is in the bbox
                 ret.append(r)
+                result.remove(r)
     return ret
 
 
