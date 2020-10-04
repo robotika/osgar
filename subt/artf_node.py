@@ -43,7 +43,7 @@ def check_results(result, result_cv):
             y = np.array([p[1] for p in points])
             x_in_bbox = (x > bbox_x1) & (x < bbox_x2)  # arr of boolean values
             y_in_bbox = (y > bbox_y1) & (y < bbox_y2)  # arr of boolean values
-            if sum(x_in_bbox & y_in_bbox) >= 1:  #at least one point is in the bbox
+            if np.any(x_in_bbox & y_in_bbox):  # at least one point is in the bbox
                 ret.append(r)
     return ret
 
@@ -127,10 +127,10 @@ class ArtifactDetectorDNN(Node):
 
         result = self.detector(img)
         result_cv = self.cv_detector(img)
-        if len(result) > 0 or len(result_cv) > 0:
+        if result or result_cv:
             self.stdout(result, result_cv)  # publish the results independent to detection validity
             checked_result = check_results(result, result_cv)
-            if len(checked_result) > 0:
+            if checked_result:
                 report = result2report(checked_result, self.depth)
                 if report is not None:
                     self.publish('artf', report)
