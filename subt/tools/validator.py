@@ -169,7 +169,6 @@ def main():
         else:
             limits = iter([1,2,3,4,5])
             current_limit = next(limits)
-            #dist3d = [a[1] for a in arr]
             dist3d = []
             last_xyz = arr[0][-1]
             path_dist = 0
