@@ -81,7 +81,7 @@
               "min_z": -0.2,
               "max_z": 0.4,
               "max_slope": -3.14,
-              "disabled_vertical_diff_limit": 0.698, "vd_comment": "radians(40)"
+              "vertical_diff_limit": 1.4835, "vd_comment": "radians(85)"
             }
           }
       },
