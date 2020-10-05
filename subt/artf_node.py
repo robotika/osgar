@@ -73,11 +73,11 @@ class ArtifactDetectorDNN(Node):
     def create_detector(self):
         model = os.path.join(os.path.dirname(__file__), '../../../mdnet1.64.64.13.4.relu.pth')
         confidence_thresholds = {
-            'survivor': 0.92,
-            'backpack': 0.9988,
-            'phone': 0.87,
-            'helmet': 0.5,
-            'rope': 0.83
+            'survivor': 0.8,
+            'backpack': 0.95,
+            'phone': 0.77,
+            'helmet': 0.9,
+            'rope': 0.8
         }
         max_gap = 16
         min_group_size = 2
