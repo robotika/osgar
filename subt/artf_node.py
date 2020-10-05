@@ -35,7 +35,8 @@ def check_results(result, result_cv):
     for r_cv in result_cv:
         name_cv, score_cv, bbox = r_cv
         bbox_x1, bbox_y1, bbox_x2, bbox_y2 = bbox
-        for r in result:
+        ret_points = []
+        for r in result.copy():
             name, points = r
             if name != name_cv:
                 continue
@@ -44,8 +45,10 @@ def check_results(result, result_cv):
             x_in_bbox = (x > bbox_x1) & (x < bbox_x2)  # arr of boolean values
             y_in_bbox = (y > bbox_y1) & (y < bbox_y2)  # arr of boolean values
             if np.any(x_in_bbox & y_in_bbox):  # at least one point is in the bbox
-                ret.append(r)
+                ret_points.extend(points)
                 result.remove(r)
+        if ret_points:
+            ret.append((name_cv, ret_points))
     return ret
 
 
