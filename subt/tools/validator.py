@@ -1,9 +1,10 @@
 """
   Validate pose3d against ground truth from ignition simulator
 """
-import datetime
+import ast
 
-from osgar.logger import LogReader, lookup_stream_id
+import cv2
+from osgar.logger import LogReader, lookup_stream_id, lookup_stream_names
 from osgar.lib.serialize import deserialize
 import subt.tools.ignstate as ign
 from subt.trace import distance3D
@@ -30,7 +31,7 @@ def evaluate_poses(poses, gt_poses, time_step_sec=1):
             j += 1
         dist = distance3D(poses[i][1:], gt_poses[j][1:])
         diff = [a - b for a, b in zip(poses[i][1:], gt_poses[j][1:])]
-        arr.append((time_limit, dist, *diff))
+        arr.append((time_limit, dist, *diff, gt_poses[j][1:]))
         time_limit += time_step_sec
     return arr
 
@@ -86,7 +87,27 @@ def autodetect_name(logfile):
         arr = deserialize(data)
         robot_name = arr[0].decode('ascii')
         return robot_name
+    _, _, data = next(LogReader(logfile))
+
+    data = ast.literal_eval(str(data, 'ascii'))
+    while data:
+        if data[0] != "--robot-name":
+            del data[0]
+            continue
+        return data[1]
     assert False, "Robot name autodetection failed!"
+
+
+def autodetect_pose3d(logfile):
+    streams = lookup_stream_names(logfile)
+    nodes = set(s.split('.')[0] for s in streams if s.endswith('.pose3d'))
+    if len(nodes) == 1:
+        return nodes.pop()+'.pose3d'
+    if 'offseter' in nodes:
+        return 'offseter.pose3d'
+    if 'localization' in nodes:
+        return 'localization.pose3d'
+    assert False, f"pose3d stream autodetection failed: {nodes}"
 
 
 def main():
@@ -96,7 +117,7 @@ def main():
     parser = argparse.ArgumentParser(__doc__)
     parser.add_argument('logfiles', help='OSGAR logfile(s)', nargs='*')
     parser.add_argument('--ign', help='Ignition "state.tlog", default in current directory', default=str(pathlib.Path("./state.tlog")))
-    parser.add_argument('--pose3d', help='Stream with pose3d data', default='offseter.pose3d')
+    parser.add_argument('--pose3d', help='Stream with pose3d data')
     parser.add_argument('--name', help='Robot name, default is autodetect')
     parser.add_argument('--sec', help='duration of the analyzed part (seconds)',
                         type=float, default=MAX_SIMULATION_DURATION)
@@ -115,6 +136,18 @@ def main():
             sys.exit("no logfiles found in current directory")
 
     ground_truth = ign.read_poses(args.ign, seconds=args.sec)
+    artifacts = ign.read_artifacts(args.ign)
+    img = ign.draw(ground_truth, artifacts)
+    cv2.imwrite(args.ign+'.png', img)
+    if args.draw:
+        cv2.namedWindow("ground truth", cv2.WINDOW_NORMAL)
+        cv2.imshow("ground truth", img)
+        while True:
+            key = cv2.waitKey()
+            if key in (ord('q'), 27):
+                break
+        cv2.destroyWindow("ground truth")
+
     print('Ground truth count:', len(ground_truth))
 
     for logfile in args.logfiles:
@@ -124,7 +157,16 @@ def main():
             robot_name = autodetect_name(logfile)
             print('  Autodetected name:', robot_name)
 
-        pose3d = read_pose3d(logfile, args.pose3d, seconds=args.sec)
+        if robot_name.startswith('T'):
+            print('  skiping teambase')
+            continue
+
+        pose3d_stream = args.pose3d
+        if pose3d_stream is None:
+            pose3d_stream = autodetect_pose3d(logfile)
+            print('  Autodetect pose3d stream:', pose3d_stream)
+
+        pose3d = read_pose3d(logfile, pose3d_stream, seconds=args.sec)
         print('  Trace reduced count:', len(pose3d))
 
         tmp_poses = osgar2arr(pose3d)
@@ -138,7 +180,23 @@ def main():
             if len(tmp_gt) > 0:
                 print('gt   :', tmp_gt[0][0], tmp_gt[-1][0])
         else:
-            dist3d = [a[1] for a in arr]
+            limits = iter([1,2,3,4,5])
+            current_limit = next(limits)
+            dist3d = []
+            last_xyz = arr[0][-1]
+            path_dist = 0
+            for dt, e, x, y, z, gt_xyz in arr:
+                dist3d.append(e)
+                path_dist += distance3D(gt_xyz, last_xyz)
+                last_xyz = gt_xyz
+                if current_limit is not None and e > current_limit:
+                    print(f"  sim_time_sec: {dt:5d}, error: {e:5.2f}m, distance: {distance3D(gt_xyz, [0,0,0]):7.2f}m from origin, path: {path_dist:7.2f}m")
+                    try:
+                        while e > current_limit:
+                            current_limit = next(limits)
+                    except StopIteration:
+                        current_limit = None
+
             print(f"  Maximum error: {max(dist3d):.2f}m -> {'OK' if max(dist3d) < 3 else 'FAIL'}")
             assert min(dist3d) < 0.1, min(dist3d)  # the minimum should be almost zero for correct evaluation
 
@@ -156,8 +214,6 @@ def main():
             ax1.set_xlabel('sim time (s)')
             plt.legend()
             plt.show()
-
-    return arr
 
 
 if __name__ == "__main__":
