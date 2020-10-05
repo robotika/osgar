@@ -90,7 +90,7 @@
           "in": ["sim_time_sec"],
           "out": ["deploy"],
           "init": {
-            "step_sec": 50
+            "radius": 30
           }
       }
     },
@@ -133,6 +133,7 @@
               ["rosmsg.radio", "radio.radio"],
 
               ["rosmsg.sim_time_sec", "breadcrumbs.sim_time_sec"],
+              ["localization.pose3d", "breadcrumbs.pose3d"],
               ["breadcrumbs.deploy", "torospy.deploy"],
 
               ["detector.artf", "app.artf"],

@@ -16,10 +16,10 @@ class ValidatorTest(unittest.TestCase):
 
         gt = [(0, 0, 0, 0), (1, 1, 0, 0), (2, 3, 4, 5)]
         poses = [(1, 2, 0, 0)]
-        self.assertEqual(evaluate_poses(poses, gt), [(1, 1.0, 1, 0, 0)])
+        self.assertEqual(evaluate_poses(poses, gt), [(1, 1.0, 1, 0, 0, (1,0,0))])
 
         poses = [(1, 2, 0, 0), (1, 2.2, 0, 0)]  # duplicate sim_time
-        self.assertEqual(evaluate_poses(poses, gt), [(1, 1.0, 1, 0, 0)])
+        self.assertEqual(evaluate_poses(poses, gt), [(1, 1.0, 1, 0, 0, (1,0,0))])
 
     def test_ign2arr(self):
         vec = Vector3d()

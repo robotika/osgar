@@ -39,11 +39,13 @@ MARKERS = {
 
 
 def read_poses(filename, seconds=3700):
-    offset = [-x for x in get_origin(filename)]
-    ret = []
-
     con = sqlite3.connect(filename)
     cursor = con.cursor()
+
+    world = _read_world(cursor)
+    origin_xyz, artifacts = _parse_artifacts(world)
+    ret = []
+
     cursor.execute(r"SELECT id FROM topics where name LIKE '%/dynamic_pose/info';")
     result = cursor.fetchone()
     dynamic_topic_id = result[0]
@@ -63,9 +65,9 @@ def read_poses(filename, seconds=3700):
             for pose in poses.pose:
                 if "_" in pose.name:
                     continue
-                pose.position.x += offset[0]
-                pose.position.y += offset[1]
-                pose.position.z += offset[2]
+                pose.position.x -= origin_xyz[0]
+                pose.position.y -= origin_xyz[1]
+                pose.position.z -= origin_xyz[2]
                 current[pose.name] = pose.position
             if len(current) > 0:
                 ret.append((timestamp, current))
@@ -75,47 +77,51 @@ def read_poses(filename, seconds=3700):
     return ret
 
 
-def _read_artifacts(filename):
-    """internal version for reading artifacts in Gazebo coordinate system"""
-    ret = []
+def read_artifacts(filename):
     con = sqlite3.connect(filename)
     cursor = con.cursor()
+    world = _read_world(cursor)
+    origin_xyz, artifacts = _parse_artifacts(world)
+    return _offset_artifacts(origin_xyz, artifacts)
+
+
+def _read_world(cursor):
     cursor.execute(f"SELECT id FROM topics WHERE name == '/logs/sdf'")
     result = cursor.fetchone()
     sdf_id = result[0]
     cursor.execute(r"SELECT message, topic_id FROM messages")
     for message, topic_id in cursor:
         if topic_id == sdf_id:
-            world = message
-            break
+            return message
+
+
+def _parse_artifacts(world):
     root = ET.fromstring(world[4:])
     type_re = re.compile('^(backpack|rescue_randy|gas|vent|phone|artifact_origin|rope|helmet)')
+    artifacts = []
+    origin_xyz = None
     for model in root.iterfind("./world/model"):
         name = model.get('name')
         match = type_re.match(name)
         if match:
             kind = match.group(1)
             x, y, z = [float(a) for a in model.find('./pose').text.split()[:3]]
-            ret.append([kind, [x,y,z]])
-    return ret
+            if kind == 'artifact_origin':
+                origin_xyz = [x, y, z]
+            else:
+                artifacts.append([kind, [x,y,z]])
+    return origin_xyz, artifacts
 
 
-def get_origin(filename):
-    artifacts = _read_artifacts(filename)
-    origin = next(filter(lambda a: a[0] == 'artifact_origin', artifacts))[1]
-    return origin
-
-
-def read_artifacts(filename):
-    origin = get_origin(filename)
+def _offset_artifacts(origin_xyz, artifacts):
     ret = []
-    for kind, p in _read_artifacts(filename):
-        ret.append([kind, [a - o for a, o in zip(p, origin)]])
+    for kind, p in artifacts:
+        ret.append([kind, [a - o for a, o in zip(p, origin_xyz)]])
     return ret
 
 
 def draw(poses, artifacts):
-    min_x, min_y = 10_000, 10_000
+    min_x, min_y = -1, -1 # (0,0) always on map
     max_x, max_y = -10_000, -10_000
     for timestamp, sample in poses:
         for k, v in sample.items():
@@ -140,10 +146,10 @@ def draw(poses, artifacts):
     world = np.zeros((height_px, width_px), dtype=np.uint8)
 
     # draw cross at (0,0)
-    #px = int(SCALE * (0 - min_x)) + BORDER_PX
-    #py = int(SCALE * (0 - min_y)) + BORDER_PX
-    #cv2.line(world, (px, py - 20), (px, py + 20), 255, 3)
-    #cv2.line(world, (px - 20, py), (px + 20, py), 255, 3)
+    px = int(SCALE * (0 - min_x)) + BORDER_PX
+    py = int(SCALE * (0 - min_y)) + BORDER_PX
+    cv2.line(world, (px, py - 20), (px, py + 20), 255, 3)
+    cv2.line(world, (px - 20, py), (px + 20, py), 255, 3)
 
     for kind, p in artifacts:
         px = int(SCALE * (p[0] - min_x)) + BORDER_PX
@@ -180,16 +186,16 @@ def main():
     parser.add_argument('-o', '--open', action='store_true', help='open resulting file with browser')
     args = parser.parse_args()
 
+    artifacts = read_artifacts(args.filename)
+
     if args.artifacts:
-        artifacts = read_artifacts(args.filename)
         for kind, p in artifacts:
             formatted = ", ".join(f"{aa:.2f}".rstrip('0').rstrip('.') for aa in p)
             print(f"{kind:<15}", f"[{formatted}]")
         return
 
-    p = read_poses(args.filename, args.s)
-    a = read_artifacts(args.filename)
-    img = draw(p, a)
+    poses = read_poses(args.filename, args.s)
+    img = draw(poses, artifacts)
     cv2.imwrite(args.filename+'.png', img)
     print("created:", args.filename+'.png')
     if args.open:

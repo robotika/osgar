@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 
 from subt.breadcrumbs import Breadcrumbs
-
+from osgar.lib import quaternion
 
 class BreadcrumbsTest(unittest.TestCase):
 
@@ -16,5 +16,19 @@ class BreadcrumbsTest(unittest.TestCase):
         bus.publish.reset_mock()
         bread.on_sim_time_sec(15)
         bus.publish.assert_not_called()
+
+    def test_breadcrumbs_dist(self):
+        bus = bus=MagicMock()
+        bread = Breadcrumbs(bus=bus, config={'radius':10})
+        self.assertEqual(bread.locations, [[0, 0, 0]])
+
+        bread.on_pose3d([[1, 0, 0], quaternion.identity()])
+        self.assertEqual(bread.locations, [[0, 0, 0]])
+        bus.publish.assert_not_called()
+
+        bread.on_pose3d([[11, 0, 0], quaternion.identity()])
+        self.assertEqual(bread.locations, [[0, 0, 0], [11, 0, 0]])
+        bus.publish.assert_called()
+
 
 # vim: expandtab sw=4 ts=4
