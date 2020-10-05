@@ -3,6 +3,7 @@
 """
 import ast
 
+import cv2
 from osgar.logger import LogReader, lookup_stream_id, lookup_stream_names
 from osgar.lib.serialize import deserialize
 import subt.tools.ignstate as ign
@@ -30,7 +31,7 @@ def evaluate_poses(poses, gt_poses, time_step_sec=1):
             j += 1
         dist = distance3D(poses[i][1:], gt_poses[j][1:])
         diff = [a - b for a, b in zip(poses[i][1:], gt_poses[j][1:])]
-        arr.append((time_limit, dist, *diff))
+        arr.append((time_limit, dist, *diff, gt_poses[j][1:]))
         time_limit += time_step_sec
     return arr
 
@@ -135,6 +136,18 @@ def main():
             sys.exit("no logfiles found in current directory")
 
     ground_truth = ign.read_poses(args.ign, seconds=args.sec)
+    artifacts = ign.read_artifacts(args.ign)
+    img = ign.draw(ground_truth, artifacts)
+    cv2.imwrite(args.ign+'.png', img)
+    if args.draw:
+        cv2.namedWindow("ground truth", cv2.WINDOW_NORMAL)
+        cv2.imshow("ground truth", img)
+        while True:
+            key = cv2.waitKey()
+            if key in (ord('q'), 27):
+                break
+        cv2.destroyWindow("ground truth")
+
     print('Ground truth count:', len(ground_truth))
 
     for logfile in args.logfiles:
@@ -167,7 +180,23 @@ def main():
             if len(tmp_gt) > 0:
                 print('gt   :', tmp_gt[0][0], tmp_gt[-1][0])
         else:
-            dist3d = [a[1] for a in arr]
+            limits = iter([1,2,3,4,5])
+            current_limit = next(limits)
+            dist3d = []
+            last_xyz = arr[0][-1]
+            path_dist = 0
+            for dt, e, x, y, z, gt_xyz in arr:
+                dist3d.append(e)
+                path_dist += distance3D(gt_xyz, last_xyz)
+                last_xyz = gt_xyz
+                if current_limit is not None and e > current_limit:
+                    print(f"  sim_time_sec: {dt:5d}, error: {e:5.2f}m, distance: {distance3D(gt_xyz, [0,0,0]):7.2f}m from origin, path: {path_dist:7.2f}m")
+                    try:
+                        while e > current_limit:
+                            current_limit = next(limits)
+                    except StopIteration:
+                        current_limit = None
+
             print(f"  Maximum error: {max(dist3d):.2f}m -> {'OK' if max(dist3d) < 3 else 'FAIL'}")
             assert min(dist3d) < 0.1, min(dist3d)  # the minimum should be almost zero for correct evaluation
 
