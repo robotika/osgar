@@ -46,4 +46,16 @@ class ArtifactDetectorDNNTest(unittest.TestCase):
         checked_result = check_results(result.copy(), result_cv)
         self.assertEqual(checked_result, result)
 
+    def test_merge_two_results(self):
+        result = [('backpack', [(100, 200, 0.9785775), (101, 200, 0.9795098)]),
+                  ('backpack', [(102, 200, 0.9785775), (103, 200, 0.9795098)])
+                  ]
+        result_cv = [['backpack', 0.99990773, [50, 150, 200, 250]]]
+        expected_result = [('backpack', [(100, 200, 0.9785775), (101, 200, 0.9795098),
+                                         (102, 200, 0.9785775), (103, 200, 0.9795098)])
+                           ]
+        checked_result = check_results(result, result_cv)
+        self.assertEqual(checked_result, expected_result)
+
+
 # vim: expandtab sw=4 ts=4
