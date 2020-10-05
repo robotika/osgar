@@ -28,7 +28,8 @@ NAME2IGN = {
 }
 
 
-def check_results(result, result_cv):
+def check_results(result_mdnet, result_cv):
+    result = result_mdnet.copy()
     ret = []
     if len(result) == 0 or len(result_cv) == 0:
         return ret
@@ -42,9 +43,9 @@ def check_results(result, result_cv):
                 continue
             x = np.array([p[0] for p in points])
             y = np.array([p[1] for p in points])
-            x_in_bbox = (x > bbox_x1) & (x < bbox_x2)  # arr of boolean values
-            y_in_bbox = (y > bbox_y1) & (y < bbox_y2)  # arr of boolean values
-            if np.any(x_in_bbox & y_in_bbox):  # at least one point is in the bbox
+            x_in_bbox = np.logical_and((x > bbox_x1), (x < bbox_x2))
+            y_in_bbox = np.logical_and((y > bbox_y1), (y < bbox_y2))
+            if np.any(np.logical_and(x_in_bbox, y_in_bbox)):  # at least one point is in the bbox
                 ret_points.extend(points)
                 result.remove(r)
         if ret_points:
