@@ -30,5 +30,27 @@ class BreadcrumbsTest(unittest.TestCase):
         self.assertEqual(bread.locations, [[0, 0, 0], [11, 0, 0]])
         bus.publish.assert_called()
 
+    def test_external_breadcrumbs(self):
+        bus = bus=MagicMock()
+        bread = Breadcrumbs(bus=bus, config={'radius':10})
+        self.assertEqual(bread.locations, [[0, 0, 0]])
+
+        bus.publish.reset_mock()
+        bread.on_external([11, 0, 0])
+        self.assertEqual(bread.locations, [[0, 0, 0], [11, 0, 0]])
+
+        bread.on_external([5, 0, 0])  # i.e. not within the 10m radius, but it is already placed
+        self.assertEqual(bread.locations, [[0, 0, 0], [11, 0, 0], [5, 0, 0]])
+
+    def test_limited_size(self):
+        bus = MagicMock()
+        bread = Breadcrumbs(bus=bus, config={'radius':10})
+        self.assertEqual(bread.locations, [[0, 0, 0]])
+
+        for x in range(15, 1000, 15):
+            bread.on_pose3d([[x, 0, 0], quaternion.identity()])
+
+        self.assertEqual(len(bread.locations), 1 + 6)
+
 
 # vim: expandtab sw=4 ts=4

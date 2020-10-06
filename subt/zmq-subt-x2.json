@@ -135,6 +135,8 @@
               ["rosmsg.sim_time_sec", "breadcrumbs.sim_time_sec"],
               ["localization.pose3d", "breadcrumbs.pose3d"],
               ["breadcrumbs.deploy", "torospy.deploy"],
+              ["breadcrumbs.location", "radio.breadcrumb"],
+              ["radio.breadcrumb", "breadcrumbs.external"],
 
               ["detector.artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],
