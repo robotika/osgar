@@ -53,7 +53,7 @@ class Breadcrumbs(Node):
 
     def on_external(self, data):
         # external location of new breadcrumb
-        if self.should_deploy(data):
+        if data not in self.locations:
             self.locations.append(data)
 
     def update(self):

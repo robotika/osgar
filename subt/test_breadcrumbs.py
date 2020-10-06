@@ -39,6 +39,9 @@ class BreadcrumbsTest(unittest.TestCase):
         bread.on_external([11, 0, 0])
         self.assertEqual(bread.locations, [[0, 0, 0], [11, 0, 0]])
 
+        bread.on_external([5, 0, 0])  # i.e. not within the 10m radius, but it is already placed
+        self.assertEqual(bread.locations, [[0, 0, 0], [11, 0, 0], [5, 0, 0]])
+
     def test_limited_size(self):
         bus = MagicMock()
         bread = Breadcrumbs(bus=bus, config={'radius':10})
