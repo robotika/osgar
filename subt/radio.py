@@ -69,8 +69,9 @@ class Radio(Node):
 
     def update(self):
         channel = super().update()  # define self.time
-        if channel == 'radio':
-            self.on_radio(self.radio)
+        handler = getattr(self, "on_" + channel, None)
+        if handler is not None:
+            handler(getattr(self, channel))
         elif channel == 'pose2d':
             if self.last_transmit is None or self.time > self.last_transmit + self.min_transmit_dt:
                 self.send_data(bytes(str(self.pose2d), encoding='ascii'))
