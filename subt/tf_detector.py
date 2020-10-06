@@ -11,12 +11,32 @@ PATH_TO_PB_GRAPH = "subt/tf_models/frozen_inference_graph.pb"
 PATH_TO_CV_GRAPH = "subt/tf_models/cv_graph.pbtxt"
 
 ARTF_NAME = np.array(["backpack", "survivor", "phone", "rope", "helmet", "robot"])
-MIN_SCORES = np.array([0.2, 0.2, 0.2, 0.5, 0.3, 0.2])
+MIN_SCORES = np.array([0.84, 0.3, 0.4, 0.2, 0.45, 1.0])
 
 
 class CvDetector:
     def __init__(self):
-        self.cvNet = cv2.dnn.readNetFromTensorflow(PATH_TO_PB_GRAPH, PATH_TO_CV_GRAPH)
+        self.min_score = MIN_SCORES
+        if os.path.exists(PATH_TO_PB_GRAPH) and os.path.exists(PATH_TO_CV_GRAPH):
+            graph_path = PATH_TO_PB_GRAPH
+            cv_graph = PATH_TO_CV_GRAPH
+        else:  # docker
+            graph_path = os.path.join(os.path.dirname(__file__), '../../../frozen_inference_graph.pb')
+            cv_graph = os.path.join(os.path.dirname(__file__), '../../../cv_graph.pbtxt')
+
+        self.cvNet = cv2.dnn.readNetFromTensorflow(graph_path, cv_graph)
+
+    def subt_detector(self, img):
+        ret  = []
+        detection = self.detect(img)
+        if detection is not None:
+            num_detections = detection['num_detections']
+            for ii in range(num_detections):
+                name = detection['classes_names'][ii]
+                score = detection['scores'][ii]
+                bbox = detection['bboxes'][ii]
+                ret.append((name, score, bbox))
+        return ret
 
     def detect(self, img):
         rows = img.shape[0]
@@ -34,7 +54,7 @@ class CvDetector:
         # faster_rcnn_resnet50
 #        classes = cvOut[0, 0, :, 1]
         classes = classes.astype('int32')
-        mask = MIN_SCORES[classes] < scores
+        mask = self.min_score[classes] < scores
 
         num_detections = np.count_nonzero(mask)
         if num_detections > 0:
@@ -121,13 +141,13 @@ if __name__ == "__main__":
     parser.add_argument('--path', help='path to log file, image or directory wit images')
     parser.add_argument('--stream', help='image stream', default='camera.raw')
     parser.add_argument('--cam', help='test with notebook camera', action='store_true')
-    parser.add_argument('--cv', help='run opencv detector', action='store_true')
+    parser.add_argument('--tf', help='run detector with tensorflow', action='store_true')
     args = parser.parse_args()
 
-    if args.cv:
-        detector = CvDetector()
-    else:
+    if args.tf:
         detector = TfDetector()
+    else:
+        detector = CvDetector()
 
     if args.cam:
         cam = cv2.VideoCapture(0)
@@ -151,7 +171,7 @@ if __name__ == "__main__":
                 if img is not None:
                     img = detector.run_on_image(img)
                     cv2.imshow('img', img)
-                    k = cv2.waitKey(500) & 0xFF
+                    k = cv2.waitKey(0) & 0xFF
                     if k == ord("q"):
                         cv2.destroyAllWindows()
                         break
