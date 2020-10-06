@@ -135,13 +135,12 @@ class main:
         # main thread receives data from osgar and sends it to ROS
         while True:
             channel, data = self.bus.listen()
-            print("_"*50)
-            print("receiving:", data)
+            rospy.logdebug("receiving: {} {}".format(channel, data))
             # switch on channel to feed different ROS publishers
             if channel in publishers:
                 publishers[channel].publish(*data)  # just guessing for Empty, where ([],) is wrong
             else:
-                print("ignoring:", channel, data)
+                rospy.loginfo("ignoring: {} {}".format(channel, data))
 
     def imu(self, msg):
         self.imu_count += 1
