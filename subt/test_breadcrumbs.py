@@ -40,7 +40,7 @@ class BreadcrumbsTest(unittest.TestCase):
         self.assertEqual(bread.locations, [[0, 0, 0], [11, 0, 0]])
 
     def test_limited_size(self):
-        bus = bus=MagicMock()
+        bus = MagicMock()
         bread = Breadcrumbs(bus=bus, config={'radius':10})
         self.assertEqual(bread.locations, [[0, 0, 0]])
 
