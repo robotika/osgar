@@ -56,12 +56,13 @@ def check_results(result_mdnet, result_cv):
 def result2report(result, depth):
     width = depth.shape[1]
     x_arr = [x for x, y, certainty in result[0][1]]  # ignore multiple objects
-    dist = [depth[y][x] for x, y, certainty in result[0][1]]  # ignore multiple objects
+    dist = np.array([depth[y][x] for x, y, certainty in result[0][1]])  # ignore multiple objects
     x_min, x_max = min(x_arr), max(x_arr)
     deg_100th = int(round(100 * 69.4 * (width/2 - (x_min + x_max)/2)/width))
-    if 0xFFFF in dist:
+    dist2 = dist[dist != 0xFFFF]
+    if len(dist2) == 0:
         return None  # out of range
-    return [NAME2IGN[result[0][0]], deg_100th, int(np.median(dist))]
+    return [NAME2IGN[result[0][0]], deg_100th, int(np.median(dist2))]
 
 
 class ArtifactDetectorDNN(Node):
