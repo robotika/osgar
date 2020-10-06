@@ -19,6 +19,7 @@ class Breadcrumbs(Node):
 
         self.radius = config.get('radius')
         self.locations = [[0, 0, 0]]  # all locations + fake for the base
+        self.num_avail = 6  # Freyja, config 2
 
     def should_deploy(self, xyz):
         if self.radius is None:
@@ -39,10 +40,11 @@ class Breadcrumbs(Node):
 
     def on_pose3d(self, data):
         xyz, quat = data
-        if self.should_deploy(xyz):
+        if self.should_deploy(xyz) and self.num_avail > 0:
             self.locations.append(xyz)
             self.publish('deploy', [])
             self.publish('location', xyz)
+            self.num_avail -= 1
 
     def on_external(self, data):
         # external location of new breadcrumb

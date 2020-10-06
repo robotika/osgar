@@ -39,4 +39,15 @@ class BreadcrumbsTest(unittest.TestCase):
         bread.on_external([11, 0, 0])
         self.assertEqual(bread.locations, [[0, 0, 0], [11, 0, 0]])
 
+    def test_limited_size(self):
+        bus = bus=MagicMock()
+        bread = Breadcrumbs(bus=bus, config={'radius':10})
+        self.assertEqual(bread.locations, [[0, 0, 0]])
+
+        for x in range(15, 1000, 15):
+            bread.on_pose3d([[x, 0, 0], quaternion.identity()])
+
+        self.assertEqual(len(bread.locations), 1 + 6)
+
+
 # vim: expandtab sw=4 ts=4
