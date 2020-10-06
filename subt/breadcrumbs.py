@@ -29,6 +29,13 @@ class Breadcrumbs(Node):
                 return False
         return True
 
+    def deploy(self):
+        if self.num_avail > 0:
+            self.publish('deploy', [])  # ROS std_msg/Empty expects empty list as input
+            self.num_avail -= 1
+            return True
+        return False
+
     def on_sim_time_sec(self, data):
         if self.start_time is None:
             self.start_time = data
@@ -36,15 +43,13 @@ class Breadcrumbs(Node):
                 self.next_deploy_time = self.start_time + self.step_time
         if self.next_deploy_time is not None and data > self.next_deploy_time:
             self.next_deploy_time += self.step_time
-            self.publish('deploy', [])  # ROS std_msg/Empty expects empty list as input
+            self.deploy()
 
     def on_pose3d(self, data):
         xyz, quat = data
-        if self.should_deploy(xyz) and self.num_avail > 0:
+        if self.should_deploy(xyz) and self.deploy():
             self.locations.append(xyz)
-            self.publish('deploy', [])
             self.publish('location', xyz)
-            self.num_avail -= 1
 
     def on_external(self, data):
         # external location of new breadcrumb
