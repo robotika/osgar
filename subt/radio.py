@@ -33,7 +33,7 @@ def draw_positions(arr):
 class Radio(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('radio', 'artf_xyz')
+        bus.register('radio', 'artf_xyz', 'breadcrumb')
         self.min_transmit_dt = timedelta(seconds=10)  # TODO config?
         self.last_transmit = None
         self.recent_packets = []
@@ -58,6 +58,14 @@ class Radio(Node):
                 self.publish('artf_xyz', [arr])  # publish also standard "list" of detected artifacts
             else:
                 assert False, arr  # unexpected size/type
+        if packet.startswith(b'{'):
+            arr = literal_eval(packet.decode('ascii'))
+            for k, v in arr.items():
+                assert k in ['breadcrumb', ], k
+                self.publish(k, v)
+
+    def on_breadcrumb(self, data):
+        self.send_data(bytes(str({'breadcrumb':data}), encoding='ascii'))
 
     def update(self):
         channel = super().update()  # define self.time
