@@ -30,5 +30,13 @@ class BreadcrumbsTest(unittest.TestCase):
         self.assertEqual(bread.locations, [[0, 0, 0], [11, 0, 0]])
         bus.publish.assert_called()
 
+    def test_external_breadcrumbs(self):
+        bus = bus=MagicMock()
+        bread = Breadcrumbs(bus=bus, config={'radius':10})
+        self.assertEqual(bread.locations, [[0, 0, 0]])
+
+        bus.publish.reset_mock()
+        bread.on_external([11, 0, 0])
+        self.assertEqual(bread.locations, [[0, 0, 0], [11, 0, 0]])
 
 # vim: expandtab sw=4 ts=4

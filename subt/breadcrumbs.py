@@ -44,6 +44,11 @@ class Breadcrumbs(Node):
             self.publish('deploy', [])
             self.publish('location', xyz)
 
+    def on_external(self, data):
+        # external location of new breadcrumb
+        if self.should_deploy(data):
+            self.locations.append(data)
+
     def update(self):
         channel = super().update()
         handler = getattr(self, "on_" + channel, None)
