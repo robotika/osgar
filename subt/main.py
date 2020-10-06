@@ -18,6 +18,7 @@ from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.lib import quaternion
 from osgar.lib.virtual_bumper import VirtualBumper
 from osgar.lib.lidar_pts import equal_scans
+from osgar.lib.loop import LoopDetector
 
 from subt.local_planner import LocalPlanner
 from subt.trace import Trace, distance3D
@@ -43,6 +44,7 @@ REASON_VIRTUAL_BUMPER = 'virtual_bumper'
 REASON_LORA = 'lora'
 REASON_FRONT_BUMPER = 'front_bumper'
 REASON_REAR_BUMPER = 'rear_bumper'
+REASON_LOOP = 'loop'
 
 
 def any_is_none(*args):
@@ -133,6 +135,7 @@ class SubTChallenge:
         self.voltage = []
         self.artifacts = []
         self.trace = Trace()
+        self.loop_detector = LoopDetector()
         self.collision_detector_enabled = False
         self.sim_time_sec = 0
 
@@ -312,6 +315,13 @@ class SubTChallenge:
                     print(self.time, "VIRTUAL BUMPER - collision")
                     self.go_straight(-0.3, timeout=timedelta(seconds=10))
                     reason = REASON_VIRTUAL_BUMPER
+                    break
+
+                loop = self.loop_detector.loop()
+                if loop:
+                    print(self.time, self.sim_time_sec, 'Loop detected')
+                    self.turn(math.radians(160 if self.use_right_wall else -160), timeout=timedelta(seconds=40), with_stop=True)
+                    reason = REASON_LOOP
                     break
 
                 if self.front_bumper and not flipped:
@@ -512,6 +522,7 @@ class SubTChallenge:
                 self.virtual_bumper.update_pose(self.time, pose)
         self.xyz = tuple(xyz)
         self.trace.update_trace(self.xyz)
+        self.loop_detector.add(self.xyz, rot)
 
     def on_acc(self, timestamp, data):
         acc = [x / 1000.0 for x in data]
@@ -871,6 +882,13 @@ class SubTChallenge:
                 self.use_center = before_center
                 if reason is None or reason != REASON_PITCH_LIMIT:
                     continue
+            elif reason == REASON_LOOP:
+                # Smaller walldist to reduce the chance that we miss the opening again that we missed before,
+                # which made us end up in a loop.
+                dist, reason = self.follow_wall(radius=self.walldist*0.75, right_wall=not self.use_right_wall,
+                                    timeout=timedelta(seconds=5), pitch_limit=self.limit_pitch, roll_limit=None)
+                if reason is None:
+                    continue
 
             if reason is None or reason != REASON_PITCH_LIMIT:
                 break
@@ -895,7 +913,7 @@ class SubTChallenge:
         self.stdout('Final xyz (DARPA coord system):', (x + x0, y + y0, z + z0))
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver78!")
+        self.stdout("SubT Challenge Ver79!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()

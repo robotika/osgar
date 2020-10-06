@@ -11,14 +11,14 @@ class LoopDetector:
                        pose_distance_threshold=0.5,
                        granularity=0.3,
                        max_loop_length=100.0,
-                       min_loop_length=5.0):
+                       min_loop_length=10.0):
         self.orientation_similarity_threshold = orientation_similarity_threshold
         self.pose_distance_threshold = pose_distance_threshold
         self.granularity = granularity
         self.max_loop_length = max_loop_length
         self.min_loop_length = min_loop_length
-
         self.trajectory = []
+        self.detected_loop = []
 
 
     def add(self, xyz, orientation):
@@ -33,16 +33,15 @@ class LoopDetector:
         self.trajectory[-1][2] = d
         self.trajectory.append([xyz, orientation, 0])
 
+        self.detected_loop = self.__detect_loop()
+
 
     def add_all(self, poses):
         for pose in poses:
             self.add(*pose)
 
 
-    def loop(self):
-        if not self.trajectory:
-            return None
-
+    def __detect_loop(self):
         loop_candidate = []
         loop_candidate_length = 0.0
         is_loop = False
@@ -71,7 +70,10 @@ class LoopDetector:
             break
 
 
-        return loop_candidate[::-1] if is_loop else None
+        return loop_candidate[::-1] if is_loop else []
+
+    def loop(self):
+        return self.detected_loop if self.detected_loop else None
 
 if __name__ == '__main__':
     import argparse
