@@ -20,6 +20,7 @@ COLORS = [
     (0, 255, 255),
     (255, 0, 255),
     (255, 255, 0),
+    (180, 105, 255), # https://en.wikipedia.org/wiki/Shades_of_pink#Hot_pink
 ]
 SCALE = 10  # 1 pixel is 1dm
 BORDER_PX = 10  # extra border
@@ -37,6 +38,10 @@ MARKERS = {
 
     'artifact_origin': (cv2.MARKER_CROSS, 6),
 }
+
+BREADCRUMB_COLOR = 8
+BREADCRUMB_MARKER = cv2.MARKER_TRIANGLE_DOWN
+
 
 class Vector3d(namedtuple('Vector3dBase', ('x', 'y', 'z'))):
     __slots__ = () # https://docs.python.org/3/library/collections.html#collections.namedtuple
@@ -131,7 +136,7 @@ def _offset_artifacts(origin_xyz, artifacts):
     return ret
 
 
-def draw(poses, artifacts):
+def draw(poses, artifacts, breadcrumbs):
     min_x, min_y = -1, -1 # (0,0) always on map
     max_x, max_y = -10_000, -10_000
     for timestamp, sample in poses:
@@ -145,6 +150,11 @@ def draw(poses, artifacts):
         min_y = min_y if p[1] > min_y else p[1]
         max_x = max_x if p[0] < max_x else p[0]
         max_y = max_y if p[1] < max_y else p[1]
+    for b, p in breadcrumbs.items():
+        min_x = min(min_x, p.x)
+        min_y = min(min_y, p.x)
+        max_x = max(max_x, p.x)
+        max_y = max(max_y, p.y)
 
     # keep some space around so that markers fit
     max_x += 1
@@ -180,6 +190,12 @@ def draw(poses, artifacts):
             py = int(SCALE*(v.y - min_y)) + BORDER_PX
             world[height_px - py - 1, px] = colors[k]
 
+    for b, p in breadcrumbs.items():
+        px = int(SCALE * (p.x - min_x)) + BORDER_PX
+        py = int(SCALE * (p.y - min_y)) + BORDER_PX
+        point = (px, height_px - py - 1)
+        cv2.drawMarker(world, point, BREADCRUMB_COLOR, BREADCRUMB_MARKER, thickness=3)
+
     user_color_map = np.zeros((256, 1, 3), dtype=np.uint8)
     user_color_map[0] = (0, 0, 0)
     for i in range(len(COLORS)):
@@ -212,7 +228,7 @@ def main():
     robot_poses, breadcrumbs = read_poses(args.filename, args.s)
     for b_name, b_xyz in breadcrumbs.items():
         print(f"{b_name}: {b_xyz.x:.2f} {b_xyz.y:.2f} {b_xyz.z:.2f}")
-    img = draw(robot_poses, artifacts)
+    img = draw(robot_poses, artifacts, breadcrumbs)
     cv2.imwrite(args.filename+'.png', img)
     print("created:", args.filename+'.png')
     if args.open:

@@ -137,7 +137,7 @@ def main():
 
     ground_truth, breadcrumbs = ign.read_poses(args.ign, seconds=args.sec)
     artifacts = ign.read_artifacts(args.ign)
-    img = ign.draw(ground_truth, artifacts)
+    img = ign.draw(ground_truth, artifacts, breadcrumbs)
     cv2.imwrite(args.ign+'.png', img)
     if args.draw:
         cv2.namedWindow("ground truth", cv2.WINDOW_NORMAL)
