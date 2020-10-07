@@ -146,6 +146,10 @@ def draw(poses, artifacts):
         max_x = max_x if p[0] < max_x else p[0]
         max_y = max_y if p[1] < max_y else p[1]
 
+    # keep some space around so that markers fit
+    max_x += 1
+    max_y += 1
+
     print(f"min x: {min_x:.2f} y: {min_y:.2f}")
     print(f"max x: {max_x:.2f} y: {max_y:.2f}")
 
