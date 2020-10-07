@@ -33,10 +33,11 @@ class Offseter:
 
         while True:
             dt, channel, data = self.bus.listen()
-            if channel == "origin" and len(data) == 8:
-                robot_name, x, y, z, qa, qb, qc, qd = data
-                origin = [x, y, z]
-                offset = [o - p for o,p in zip(origin, xyz)]
+            if channel == "origin":
+                if len(data) == 8:
+                    robot_name, x, y, z, qa, qb, qc, qd = data
+                    origin = [x, y, z]
+                    offset = [o - p for o,p in zip(origin, xyz)]
             elif channel == "pose3d":
                 xyz, orientation = data
                 xyz_offset = [o + p for o,p in zip(offset, xyz)]
