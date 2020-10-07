@@ -5,8 +5,9 @@ class Offseter:
     def __init__(self, config, bus):
         bus.register("pose3d")
         self.thread = Thread(target=self.run)
-        self.thread.name = bus.name
+        #self.thread.name = bus.name
         self.bus = bus
+        self.is_alive = self.thread.is_alive
 
     def start(self):
         self.thread.start()
@@ -32,10 +33,11 @@ class Offseter:
 
         while True:
             dt, channel, data = self.bus.listen()
-            if channel == "origin" and len(data) == 8:
-                robot_name, x, y, z, qa, qb, qc, qd = data
-                origin = [x, y, z]
-                offset = [o - p for o,p in zip(origin, xyz)]
+            if channel == "origin":
+                if len(data) == 8:
+                    robot_name, x, y, z, qa, qb, qc, qd = data
+                    origin = [x, y, z]
+                    offset = [o - p for o,p in zip(origin, xyz)]
             elif channel == "pose3d":
                 xyz, orientation = data
                 xyz_offset = [o + p for o,p in zip(offset, xyz)]
