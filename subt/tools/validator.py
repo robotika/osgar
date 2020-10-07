@@ -135,7 +135,7 @@ def main():
         if len(args.logfiles) == 0:
             sys.exit("no logfiles found in current directory")
 
-    ground_truth = ign.read_poses(args.ign, seconds=args.sec)
+    ground_truth, breadcrumbs = ign.read_poses(args.ign, seconds=args.sec)
     artifacts = ign.read_artifacts(args.ign)
     img = ign.draw(ground_truth, artifacts)
     cv2.imwrite(args.ign+'.png', img)

@@ -7,6 +7,7 @@ import re
 import sqlite3
 import xml.etree.ElementTree as ET
 
+from collections import namedtuple
 from datetime import timedelta
 
 from subt.ign_pb2 import Pose_V
@@ -37,6 +38,15 @@ MARKERS = {
     'artifact_origin': (cv2.MARKER_CROSS, 6),
 }
 
+class Vector3d(namedtuple('Vector3dBase', ('x', 'y', 'z'))):
+
+    def __sub__(self, other):
+        return Vector3d(*(s - o for s, o in zip(self, other)))
+
+    @staticmethod
+    def from_protob(other):
+        return Vector3d(other.x, other.y, other.z)
+
 
 def read_poses(filename, seconds=3700):
     con = sqlite3.connect(filename)
@@ -44,13 +54,14 @@ def read_poses(filename, seconds=3700):
 
     world = _read_world(cursor)
     origin_xyz, artifacts = _parse_artifacts(world)
-    ret = []
+    robots = []
 
     cursor.execute(r"SELECT id FROM topics where name LIKE '%/dynamic_pose/info';")
     result = cursor.fetchone()
     dynamic_topic_id = result[0]
 
     poses = Pose_V()
+    breadcrumbs = dict()
     try:
         # cannot use WHERE filtering since the state.log is always corrupted
         cursor.execute("SELECT message, topic_id FROM messages")
@@ -60,21 +71,21 @@ def read_poses(filename, seconds=3700):
             poses.ParseFromString(m)
             timestamp = timedelta(seconds=poses.header.stamp.sec, microseconds=poses.header.stamp.nsec / 1000)
             if timestamp > timedelta(seconds=seconds):
-                return ret
+                return robots, breadcrumbs
             current = dict()
             for pose in poses.pose:
-                if "_" in pose.name:
+                if "__breadcrumb___" in pose.name:
+                    breadcrumbs[pose.name] = Vector3d.from_protob(pose.position) - origin_xyz
                     continue
-                pose.position.x -= origin_xyz[0]
-                pose.position.y -= origin_xyz[1]
-                pose.position.z -= origin_xyz[2]
-                current[pose.name] = pose.position
+                if "_" in pose.name: # robots are not allowed to have underscores in names
+                    continue
+                current[pose.name] = Vector3d.from_protob(pose.position) - origin_xyz
             if len(current) > 0:
-                ret.append((timestamp, current))
+                robots.append((timestamp, current))
     except sqlite3.DatabaseError as e:
         print(f"{type(e).__name__}: {e}")
 
-    return ret
+    return robots, breadcrumbs
 
 
 def read_artifacts(filename):
@@ -107,16 +118,16 @@ def _parse_artifacts(world):
             kind = match.group(1)
             x, y, z = [float(a) for a in model.find('./pose').text.split()[:3]]
             if kind == 'artifact_origin':
-                origin_xyz = [x, y, z]
+                origin_xyz = Vector3d(x, y, z)
             else:
-                artifacts.append([kind, [x,y,z]])
+                artifacts.append([kind, Vector3d(x,y,z)])
     return origin_xyz, artifacts
 
 
 def _offset_artifacts(origin_xyz, artifacts):
     ret = []
-    for kind, p in artifacts:
-        ret.append([kind, [a - o for a, o in zip(p, origin_xyz)]])
+    for kind, xyz in artifacts:
+        ret.append([kind, xyz - origin_xyz])
     return ret
 
 
@@ -194,8 +205,10 @@ def main():
             print(f"{kind:<15}", f"[{formatted}]")
         return
 
-    poses = read_poses(args.filename, args.s)
-    img = draw(poses, artifacts)
+    robot_poses, breadcrumbs = read_poses(args.filename, args.s)
+    for b_name, b_xyz in breadcrumbs.items():
+        print(f"{b_name}: {b_xyz.x:.2f} {b_xyz.y:.2f} {b_xyz.z:.2f}")
+    img = draw(robot_poses, artifacts)
     cv2.imwrite(args.filename+'.png', img)
     print("created:", args.filename+'.png')
     if args.open:
