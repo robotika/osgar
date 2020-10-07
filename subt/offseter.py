@@ -5,8 +5,9 @@ class Offseter:
     def __init__(self, config, bus):
         bus.register("pose3d")
         self.thread = Thread(target=self.run)
-        self.thread.name = bus.name
+        #self.thread.name = bus.name
         self.bus = bus
+        self.is_alive = self.thread.is_alive
 
     def start(self):
         self.thread.start()
