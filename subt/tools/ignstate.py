@@ -39,7 +39,7 @@ MARKERS = {
 }
 
 class Vector3d(namedtuple('Vector3dBase', ('x', 'y', 'z'))):
-
+    __slots__ = () # https://docs.python.org/3/library/collections.html#collections.namedtuple
     def __sub__(self, other):
         return Vector3d(*(s - o for s, o in zip(self, other)))
 
