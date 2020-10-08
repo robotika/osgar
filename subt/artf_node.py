@@ -53,7 +53,7 @@ def check_results(result_mdnet, result_cv):
     return ret
 
 
-def result2report(result, depth):
+def result2report(result, depth, fx):
     # return relative XYZ distances to camera
     width = depth.shape[1]
     height = depth.shape[0]
@@ -65,10 +65,9 @@ def result2report(result, depth):
     x_min, x_max = min(x_arr), max(x_arr)
     y_min, y_max = min(y_arr), max(y_arr)
     scale = np.median(dist)
-    # TODO!!!!!! SCALING BASE ON CAMERA fx!!!!!
     rel_x = int(scale)  # relative X-coordinate in front
-    rel_y = int(scale * (width/2 - (x_min + x_max)/2)/width)  # Y-coordinate is to the left
-    rel_z = int(scale * (height/2 - (y_min + y_max)/2)/height)  # Z-up
+    rel_y = int(scale * (width/2 - (x_min + x_max)/2)/fx)  # Y-coordinate is to the left
+    rel_z = int(scale * (height/2 - (y_min + y_max)/2)/fx)  # Z-up
     return [NAME2IGN[result[0][0]], rel_x, rel_y, rel_z]
 
 
@@ -81,6 +80,7 @@ class ArtifactDetectorDNN(Node):
         self.depth = None  # more precise artifact position from depth image
         self.cv_detector = CvDetector().subt_detector
         self.detector = self.create_detector()
+        self.fx = config.get('fx', 554.25469)  # use drone X4 for testing (TODO update all configs!)
 
     def create_detector(self):
         model = os.path.join(os.path.dirname(__file__), '../../../mdnet1.64.64.13.4.relu.pth')
@@ -144,7 +144,7 @@ class ArtifactDetectorDNN(Node):
             self.stdout(result, result_cv)  # publish the results independent to detection validity
             checked_result = check_results(result, result_cv)
             if checked_result:
-                report = result2report(checked_result, self.depth)
+                report = result2report(checked_result, self.depth, self.fx)
                 if report is not None:
                     self.publish('artf', report)
                     self.publish('debug_artf', image)  # JPEG

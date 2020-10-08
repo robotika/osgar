@@ -63,7 +63,7 @@ if __name__ == "__main__":
     import argparse
     from datetime import timedelta
     from osgar.lib.serialize import deserialize
-    from osgar.logger import LogReader, lookup_stream_id
+    from osgar.logger import LogReader, lookup_stream_id, lookup_stream_names
     from ast import literal_eval
 
     parser = argparse.ArgumentParser(description='Test 3D reports')
@@ -71,28 +71,39 @@ if __name__ == "__main__":
     parser.add_argument('--time-limit-sec', '-t', help='cut time in seconds', type=float)
     args = parser.parse_args()
 
+    names = lookup_stream_names(args.logfile)
     stdout_stream_id = lookup_stream_id(args.logfile, 'detector.stdout')
-#    depth_stream_id = lookup_stream_id(args.logfile, 'detector.debug_depth')
+    streams = [stdout_stream_id]
+    if 'detector.debug_depth' in names:
+        depth_stream_id = lookup_stream_id(args.logfile, 'detector.debug_depth')
+        streams.append(depth_stream_id)
+    else:
+        depth_stream_id = None
 
     # dummy depth for loder logfiles
     row = [5000] * 640
     depth = np.array([row] * 360, dtype=np.uint16)
+    fx = 554.25469
     with LogReader(args.logfile,
-                   only_stream_id=stdout_stream_id) as logreader:
+                   only_stream_id=streams) as logreader:
         for time, stream, msg_data in logreader:
             if args.time_limit_sec is not None:
                 if time.total_seconds() > args.time_limit_sec:
                     break
-            assert stream == stdout_stream_id
             data = deserialize(msg_data)
-#            print(time, data)
+            if stream == depth_stream_id:
+                depth = data
+                continue
+
+            assert stream == stdout_stream_id
+            print(time, data)
             try:
-                arr = literal_eval(data)
+                arr = literal_eval(data)  # well the new stdout is not suitable for this :(
             except:
                 arr = None
 
             if arr is not None:
-                ret = result2report(arr, depth)
+                ret = result2report(arr, depth, fx)
                 print(ret)
 
 
