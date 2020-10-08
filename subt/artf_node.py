@@ -54,14 +54,22 @@ def check_results(result_mdnet, result_cv):
 
 
 def result2report(result, depth):
+    # return relative XYZ distances to camera
     width = depth.shape[1]
+    height = depth.shape[0]
     x_arr = [x for x, y, certainty in result[0][1]]  # ignore multiple objects
+    y_arr = [y for x, y, certainty in result[0][1]]  # ignore multiple objects
     dist = [depth[y][x] for x, y, certainty in result[0][1]]  # ignore multiple objects
-    x_min, x_max = min(x_arr), max(x_arr)
-    deg_100th = int(round(100 * 69.4 * (width/2 - (x_min + x_max)/2)/width))
     if 0xFFFF in dist:
         return None  # out of range
-    return [NAME2IGN[result[0][0]], deg_100th, int(np.median(dist))]
+    x_min, x_max = min(x_arr), max(x_arr)
+    y_min, y_max = min(y_arr), max(y_arr)
+    scale = np.median(dist)
+    # TODO!!!!!! SCALING BASE ON CAMERA fx!!!!!
+    rel_x = int(scale)  # relative X-coordinate in front
+    rel_y = int(scale * (width/2 - (x_min + x_max)/2)/width)  # Y-coordinate is to the left
+    rel_z = int(scale * (height/2 - (y_min + y_max)/2)/height)  # Z-up
+    return [NAME2IGN[result[0][0]], rel_x, rel_y, rel_z]
 
 
 class ArtifactDetectorDNN(Node):
