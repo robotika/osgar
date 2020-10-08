@@ -545,16 +545,17 @@ class SubTChallenge:
                 raise Collision()
 
     def on_artf(self, timestamp, data):
-        if self.offset is None:
+        if self.offset is None or self.xyz_quat is None:
             # there can be observed artifact (false) on the start before the coordinate system is defined
             return
-        artifact_data, deg_100th, dist_mm = data
+        artifact_data, dx, dy, dz = data
+        vector = (dx, dy, dz)
+        dx, dy, dz = quaternion.rotate_vector(vector, self.xyz_quat)
         x, y, z = self.xyz
         x0, y0, z0 = self.offset
-        angle, dist = self.yaw + math.radians(deg_100th / 100.0), dist_mm / 1000.0
-        ax = x0 + x + math.cos(angle) * dist
-        ay = y0 + y + math.sin(angle) * dist
-        az = z0 + z
+        ax = x0 + x + dx/1000.0
+        ay = y0 + y + dy/1000.0
+        az = z0 + z + dz/1000.0
         if -20 < ax < 0 and -10 < ay < 10:
             # filter out elements on staging area
             self.stdout(self.time, 'Robot at:', (ax, ay, az))
