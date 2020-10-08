@@ -197,9 +197,9 @@ class main:
     def battery_state(self, msg):
         self.battery_state_count += 1
         rospy.loginfo_throttle(10, "battery_state callback: {}".format(self.battery_state_count))
-        attrs = ('capacity', 'current', 'charge', 'percentage', 'voltage')
-        to_serialize = dict((k,getattr(msg, k)) for k in attrs)
-        self.bus.publish("battery_state", to_serialize)
+        if getattr(self, 'last_battery_secs', None) != msg.header.stamp.secs:
+            self.bus.publish("battery_state", msg.percentage)
+            self.last_battery_secs = msg.header.stamp.secs
 
     def score(self, msg):
         self.score_count += 1
