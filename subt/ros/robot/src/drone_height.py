@@ -51,7 +51,7 @@ class DroneHeightListener:
             elif cmd_vel.angular.z < -MAX_ANGULAR:
                 cmd_vel.angular.z = -MAX_ANGULAR
 
-        self.publisherTwist.publish(cmd_vel)
+            self.publisherTwist.publish(cmd_vel)
 
 
 if __name__ == "__main__":
