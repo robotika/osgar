@@ -64,13 +64,13 @@ class SubTChallengeTest(unittest.TestCase):
         data = ['TYPE_BACKPACK', 5000, -2359, 2222]
         app.offset = 100.0, 2.0, 3.0
         app.xyz = 0, 0, 0
-        app.xyz_quat = quaternion.identity()
+        app.orientation = quaternion.identity()
         bus.publish.reset_mock()
         app.on_artf(None, data)
         bus.publish.assert_called()
         self.assertEqual(bus.method_calls[-1],
                          call.publish('artf_xyz', [['TYPE_BACKPACK', 105000, -359, 5222]]))
-        app.xyz_quat = quaternion.euler_to_quaternion(math.pi/2, 0, 0)
+        app.orientation = quaternion.euler_to_quaternion(math.pi/2, 0, 0)
         bus.publish.reset_mock()
         app.on_artf(None, data)
         bus.publish.assert_called()

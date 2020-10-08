@@ -126,6 +126,7 @@ class SubTChallenge:
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
         self.xyz = None  # 3D position for mapping artifacts - unknown depends on source (pose2d or pose3d)
         self.yaw, self.pitch, self.roll = 0, 0, 0
+        self.orientation = None  # quaternion updated by on_pose3d()
         self.yaw_offset = None  # not defined, use first IMU reading
         self.is_moving = None  # unknown
         self.scan = None  # I should use class Node instead
@@ -497,6 +498,7 @@ class SubTChallenge:
             # we cannot align global coordinates if offset is not known
             return
         xyz, rot = data
+        self.orientation = rot  # quaternion
         ypr = quaternion.euler_zyx(rot)
         x0, y0, z0 = self.offset
 
@@ -545,12 +547,12 @@ class SubTChallenge:
                 raise Collision()
 
     def on_artf(self, timestamp, data):
-        if self.offset is None or self.xyz_quat is None or self.xyz is None:
+        if self.offset is None or self.orientation is None or self.xyz is None:
             # there can be observed artifact (false) on the start before the coordinate system is defined
             return
         artifact_data, dx, dy, dz = data
         vector = [dx, dy, dz]
-        dx, dy, dz = quaternion.rotate_vector(vector, self.xyz_quat)
+        dx, dy, dz = quaternion.rotate_vector(vector, self.orientation)
         x, y, z = self.xyz
         x0, y0, z0 = self.offset
         ax = x0 + x + dx/1000.0
