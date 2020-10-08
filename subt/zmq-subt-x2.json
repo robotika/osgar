@@ -73,7 +73,7 @@
       "fromrospy": {
           "driver": "subt.pull:Pull",
 	      "init": {
-	        "outputs": ["rot", "acc", "orientation"]
+	        "outputs": ["rot", "acc", "orientation", "battery_state", "score"]
 	      }
       },
       "torospy": {
