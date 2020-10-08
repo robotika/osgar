@@ -545,11 +545,11 @@ class SubTChallenge:
                 raise Collision()
 
     def on_artf(self, timestamp, data):
-        if self.offset is None or self.xyz_quat is None:
+        if self.offset is None or self.xyz_quat is None or self.xyz is None:
             # there can be observed artifact (false) on the start before the coordinate system is defined
             return
         artifact_data, dx, dy, dz = data
-        vector = (dx, dy, dz)
+        vector = [dx, dy, dz]
         dx, dy, dz = quaternion.rotate_vector(vector, self.xyz_quat)
         x, y, z = self.xyz
         x0, y0, z0 = self.offset
