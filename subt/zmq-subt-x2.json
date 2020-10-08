@@ -137,7 +137,7 @@
               ["rosmsg.radio", "radio.radio"],
 
               ["rosmsg.sim_time_sec", "breadcrumbs.sim_time_sec"],
-              ["fromrospy.pose3d", "breadcrumbs.pose3d"],
+              ["offseter.pose3d", "breadcrumbs.pose3d"],
               ["breadcrumbs.deploy", "torospy.deploy"],
               ["breadcrumbs.location", "radio.breadcrumb"],
               ["radio.breadcrumb", "breadcrumbs.external"],
