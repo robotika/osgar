@@ -18,6 +18,7 @@ class Teambase(Node):
             self.finish_time = int(self.robot_name[1:])  # T100 is accepted for example
         self.robot_positions = {}
         self.debug_arr = []
+        self.artifacts = []
         self.verbose = False
 
     def on_sim_time_sec(self, data):
@@ -40,7 +41,8 @@ class Teambase(Node):
                     self.debug_arr.append((name, arr))
             elif len(arr) == 4:
                 # artifact
-                pass
+                if arr not in self.artifacts:
+                    self.artifacts.append(arr)
             else:
                 assert False, arr  # unexpected size/type
 
@@ -60,6 +62,12 @@ class Teambase(Node):
             x = [a[1][0] / 1000.0 for a in self.debug_arr if a[0] == robot_id]
             y = [a[1][1] / 1000.0 for a in self.debug_arr if a[0] == robot_id]
             line = plt.plot(x, y, '-o', linewidth=2, label=robot_id)
+
+        artf_types = set([artf for artf, x, y, z in self.artifacts])
+        for artf_type in artf_types:
+            arr_x = [x/1000.0 for artf, x, y, z in self.artifacts if artf == artf_type]
+            arr_y = [y/1000.0 for artf, x, y, z in self.artifacts if artf == artf_type]
+            plt.plot(arr_x, arr_y, 'x', linewidth=2, label=artf_type)
 
         #    plt.xlabel('time (s)')
         plt.axes().set_aspect('equal', 'datalim')
