@@ -550,8 +550,7 @@ class SubTChallenge:
         if self.offset is None or self.orientation is None or self.xyz is None:
             # there can be observed artifact (false) on the start before the coordinate system is defined
             return
-        artifact_data, dx, dy, dz = data
-        vector = [dx, dy, dz]
+        artifact_data, vector = data
         dx, dy, dz = quaternion.rotate_vector(vector, self.orientation)
         x, y, z = self.xyz
         x0, y0, z0 = self.offset

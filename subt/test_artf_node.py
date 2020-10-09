@@ -13,14 +13,14 @@ class ArtifactDetectorDNNTest(unittest.TestCase):
         result = [('backpack', [(60, 180, 0.9785775), (72, 180, 0.9795098), (60, 184, 0.97716093), (72, 184, 0.9782014)])]
         row = [5000]*640
         depth = np.array([row]*360, dtype=np.uint16)
-        self.assertEqual(result2report(result, depth, fx=DRONE_FX), ['TYPE_BACKPACK', 5000, 2291, -18])
+        self.assertEqual(result2report(result, depth, fx=DRONE_FX), ['TYPE_BACKPACK', [5000, 2291, -18]])
 
         row = list(range(640))
         depth = np.array([row]*360, dtype=np.uint16)
-        self.assertEqual(result2report(result, depth, fx=DRONE_FX), ['TYPE_BACKPACK', 66, 30, 0])
+        self.assertEqual(result2report(result, depth, fx=DRONE_FX), ['TYPE_BACKPACK', [66, 30, 0]])
 
         result2 = [('rope', [(400, 180, 0.9785775)])]
-        self.assertEqual(result2report(result2, depth, fx=DRONE_FX), ['TYPE_ROPE', 400, -57, 0])
+        self.assertEqual(result2report(result2, depth, fx=DRONE_FX), ['TYPE_ROPE', [400, -57, 0]])
 
     def test_out_of_range(self):
         result = [('backpack', [(60, 180, 0.9785775), (72, 180, 0.9795098), (60, 184, 0.97716093), (72, 184, 0.9782014)])]

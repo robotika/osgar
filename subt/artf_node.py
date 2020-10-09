@@ -68,7 +68,7 @@ def result2report(result, depth, fx):
     rel_x = int(scale)  # relative X-coordinate in front
     rel_y = int(scale * (width/2 - (x_min + x_max)/2)/fx)  # Y-coordinate is to the left
     rel_z = int(scale * (height/2 - (y_min + y_max)/2)/fx)  # Z-up
-    return [NAME2IGN[result[0][0]], rel_x, rel_y, rel_z]
+    return [NAME2IGN[result[0][0]], [rel_x, rel_y, rel_z]]
 
 
 class ArtifactDetectorDNN(Node):

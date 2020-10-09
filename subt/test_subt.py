@@ -61,7 +61,7 @@ class SubTChallengeTest(unittest.TestCase):
         config = {'virtual_world': True, 'max_speed': 1.0, 'walldist': 0.8, 'timeout': 600, 'symmetric': False, 'right_wall': 'auto'}
         bus = MagicMock()
         app = SubTChallenge(config, bus)
-        data = ['TYPE_BACKPACK', 5000, -2359, 2222]
+        data = ['TYPE_BACKPACK', [5000, -2359, 2222]]
         app.offset = 100.0, 2.0, 3.0
         app.xyz = 0, 0, 0
         app.orientation = quaternion.identity()
