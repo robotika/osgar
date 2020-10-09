@@ -5,7 +5,6 @@
     <remap from="$(arg robot_name)/image_raw/compressed" to="$(arg robot_name)/camera_front/image_raw/compressed"/>
     <remap from="$(arg robot_name)/front/depth" to="$(arg robot_name)/rgbd_front/depth"/>
     <remap from="$(arg robot_name)/points" to="$(arg robot_name)/rgbd_front/points"/>
-    <remap from="$(arg robot_name)/odom" to="$(arg robot_name)/nonexistent_input_odom"/>
   </node>
 
   <!-- ICP Odometry based on front planar lidar -->
