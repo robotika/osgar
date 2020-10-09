@@ -72,9 +72,9 @@
       },
       "fromrospy": {
           "driver": "subt.pull:Pull",
-	      "init": {
-	        "outputs": ["rot", "acc", "orientation", "battery_state", "score"]
-	      }
+          "init": {
+            "outputs": ["rot", "acc", "orientation", "battery_state", "score", "pose3d"]
+          }
       },
       "torospy": {
           "driver": "subt.push:Push"
@@ -92,6 +92,9 @@
           "init": {
             "radius": 30
           }
+      },
+      "offseter": {
+        "driver": "subt.offseter:Offseter"
       }
     },
     "links": [["app.desired_speed", "rosmsg.desired_speed"],
@@ -120,7 +123,7 @@
               ["depth2scan.scan", "app.scan"],
               ["rosmsg.depth", "detector.depth"],
 
-              ["localization.pose3d", "app.pose3d"],
+              ["fromrospy.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
               ["rosmsg.sim_time_sec", "torospy.sim_time_sec"],
 
@@ -133,7 +136,7 @@
               ["rosmsg.radio", "radio.radio"],
 
               ["rosmsg.sim_time_sec", "breadcrumbs.sim_time_sec"],
-              ["localization.pose3d", "breadcrumbs.pose3d"],
+              ["offseter.pose3d", "breadcrumbs.pose3d"],
               ["breadcrumbs.deploy", "torospy.deploy"],
               ["breadcrumbs.location", "radio.breadcrumb"],
               ["radio.breadcrumb", "breadcrumbs.external"],
@@ -141,6 +144,10 @@
               ["detector.artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],
               ["app.artf_xyz", "reporter.artf_xyz"],
-              ["reporter.artf_cmd", "transmitter.raw"]]
+              ["reporter.artf_cmd", "transmitter.raw"],
+
+              ["rosmsg.origin", "offseter.origin"],
+              ["fromrospy.pose3d", "offseter.pose3d"]
+    ]
   }
 }

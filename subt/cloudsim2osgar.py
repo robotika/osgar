@@ -122,6 +122,7 @@ class main:
                     break
             else:
                 rospy.loginfo("freya 1")
+            topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
         else:
             rospy.logerror("unknown configuration")
             return
