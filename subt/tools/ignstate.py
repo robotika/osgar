@@ -173,8 +173,8 @@ def draw(poses, artifacts, breadcrumbs):
     # draw cross at (0,0)
     px = int(SCALE * (0 - min_x)) + BORDER_PX
     py = int(SCALE * (0 - min_y)) + BORDER_PX
-    cv2.line(world, (px, py - 20), (px, py + 20), 255, 3)
-    cv2.line(world, (px - 20, py), (px + 20, py), 255, 3)
+    point = (px, height_px - py - 1)
+    cv2.drawMarker(world, point, 255, cv2.MARKER_CROSS, thickness=3, line_type=cv2.LINE_AA, markerSize=40)
 
     for kind, p in artifacts:
         px = int(SCALE * (p[0] - min_x)) + BORDER_PX
