@@ -123,7 +123,6 @@
               ["depth2scan.scan", "app.scan"],
               ["rosmsg.depth", "detector.depth"],
 
-              ["localization.pose3d", "app.pose3d"],
               ["fromrospy.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
               ["rosmsg.sim_time_sec", "torospy.sim_time_sec"],
