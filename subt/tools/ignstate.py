@@ -23,7 +23,7 @@ COLORS = [
     (180, 105, 255), # https://en.wikipedia.org/wiki/Shades_of_pink#Hot_pink
 ]
 SCALE = 10  # 1 pixel is 1dm
-BORDER_PX = 10  # extra border
+BORDER_PX = 20  # extra border
 
 MARKERS = {
     'backpack': (cv2.MARKER_SQUARE, 3),
@@ -173,14 +173,14 @@ def draw(poses, artifacts, breadcrumbs):
     # draw cross at (0,0)
     px = int(SCALE * (0 - min_x)) + BORDER_PX
     py = int(SCALE * (0 - min_y)) + BORDER_PX
-    cv2.line(world, (px, py - 20), (px, py + 20), 255, 3)
-    cv2.line(world, (px - 20, py), (px + 20, py), 255, 3)
+    point = (px, height_px - py - 1)
+    cv2.drawMarker(world, point, 255, cv2.MARKER_CROSS, thickness=3, line_type=cv2.LINE_AA, markerSize=40)
 
     for kind, p in artifacts:
         px = int(SCALE * (p[0] - min_x)) + BORDER_PX
         py = int(SCALE * (p[1] - min_y)) + BORDER_PX
         point = (px, height_px - py - 1)
-        cv2.drawMarker(world, point, MARKERS[kind][1], markerType=MARKERS[kind][0], thickness=3)
+        cv2.drawMarker(world, point, MARKERS[kind][1], markerType=MARKERS[kind][0], thickness=3, markerSize=40)
 
     for timestamp, sample in poses:
         for k, v in sample.items():
@@ -195,6 +195,14 @@ def draw(poses, artifacts, breadcrumbs):
         py = int(SCALE * (p.y - min_y)) + BORDER_PX
         point = (px, height_px - py - 1)
         cv2.drawMarker(world, point, BREADCRUMB_COLOR, BREADCRUMB_MARKER, thickness=3)
+
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    (_width, line_height), baseline = cv2.getTextSize("A", font, 2, thickness=3)
+    for i, (name, color) in enumerate(colors.items()):
+        px = 0 + BORDER_PX
+        py = i*(line_height+baseline+10) + BORDER_PX
+        point = (px, height_px - py - 1)
+        cv2.putText(world, name, point, font, 2, color, thickness=3)
 
     user_color_map = np.zeros((256, 1, 3), dtype=np.uint8)
     user_color_map[0] = (0, 0, 0)
