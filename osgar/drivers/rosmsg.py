@@ -479,7 +479,7 @@ class ROSMsgParser(Thread):
         Thread.__init__(self)
         self.setDaemon(True)
         outputs = ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "sim_clock", "cmd", "origin", "gas_detected",
-                   "depth:null", "t265_rot", "orientation", "debug", "radio",
+                   "depth:gz", "t265_rot", "orientation", "debug", "radio",
                     "joint_name", "joint_position", "joint_velocity", "joint_effort"]
         self.topics = config.get('topics', [])
         for row in self.topics:
