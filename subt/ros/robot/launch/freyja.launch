@@ -122,7 +122,7 @@
     <param name="odom0" value="$(arg robot_name)/odom"/>
     <!-- ICP odometry from front 2d lidar -->
     <param name="odom1" value="/rtabmap/scan_front/odom"/>
-    <!-- ICP odometry from front 2d lidar -->
+    <!-- ICP odometry from rear 2d lidar -->
     <param name="odom2" value="/rtabmap/scan_rear/odom"/>
     <!-- RGBD odometry from front depth camera -->
     <param name="odom3" value="/rtabmap/rgbd_front/odom"/>
