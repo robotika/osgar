@@ -219,9 +219,8 @@ if __name__ == "__main__":
     with LogReader(args.logfile,
                    only_stream_id=[artf_stream_id, depth_stream_id, result_id, cv_result_id]) as logreader:
         for time, stream, msg_data in logreader:
-            if args.time_limit_sec is not None:
-                if time.total_seconds() > args.time_limit_sec:
-                    break
+            if args.time_limit_sec is not None and time.total_seconds() > args.time_limit_sec:
+                break
             data = deserialize(msg_data)
 
             if stream == depth_stream_id:
