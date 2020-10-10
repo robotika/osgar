@@ -193,20 +193,23 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     names = lookup_stream_names(args.logfile)
+    assert 'detector.artf' in names, names  # XYZ relative offsets
     assert 'detector.debug_depth' in names, names
     assert 'detector.debug_result' in names, names
     assert 'detector.debug_cv_result' in names, names
 
+    artf_stream_id = names.index('detector.artf') + 1
     depth_stream_id = names.index('detector.debug_depth') + 1
     result_id = names.index('detector.debug_result') + 1
     cv_result_id = names.index('detector.debug_cv_result') + 1
 
     depth = None
+    last_artf = None  # reported before debug_depth
     last_result = None
     last_cv_result = None
     fx = 554.25469  # TODO read from config
     with LogReader(args.logfile,
-                   only_stream_id=[depth_stream_id, result_id, cv_result_id]) as logreader:
+                   only_stream_id=[artf_stream_id, depth_stream_id, result_id, cv_result_id]) as logreader:
         for time, stream, msg_data in logreader:
             if args.time_limit_sec is not None:
                 if time.total_seconds() > args.time_limit_sec:
@@ -222,23 +225,29 @@ if __name__ == "__main__":
                 checked_result = check_results(last_result, last_cv_result)
                 assert checked_result  # the debug depth is stored, so there should valid report
                 report = result2report(checked_result, depth, fx)
-                print(report)
-                continue
+                if args.verbose:
+                    print(report)
+                assert last_artf == report, (last_artf, report)
 
-            assert stream in [result_id, cv_result_id]
-            if args.verbose:
-                print(time, data)
-#            arr = literal_eval(data)
-            arr = eval(data)  # workaround for str() serialized numpy array
+            elif stream in [result_id, cv_result_id]:
+                if args.verbose:
+                    print(time, data)
+#                arr = literal_eval(data)
+                arr = eval(data)  # workaround for str() serialized numpy array
 
-            if stream == result_id:
-                last_result = arr
-                continue
+                if stream == result_id:
+                    last_result = arr
+                elif stream == cv_result_id:
+                    last_cv_result = arr
+                else:
+                    assert False, stream
 
-            if stream == cv_result_id:
-                last_cv_result = arr
-                continue
-
-            assert False, stream  # unexpected stream
+            elif stream == artf_stream_id:
+                if args.verbose:
+                    print(time, 'Original report:', data)
+                last_artf = data
+                assert last_artf is not None, time
+            else:
+                assert False, stream  # unexpected stream
 
 # vim: expandtab sw=4 ts=4
