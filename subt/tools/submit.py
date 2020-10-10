@@ -118,7 +118,9 @@ def submit(token, simname, image, world, robots, dont_submit):
 def main(argv):
     token = os.getenv("SUBT_ACCESS_TOKEN")
     if token is None:
-        sys.exit("SUBT_ACCESS_TOKEN environment variable not set")
+        sys.exit("SUBT_ACCESS_TOKEN environment variable not set\n"
+                 "https://subtchallenge.world/settings -> Access Tokens -> Create Token\n"
+                 "assing the token to the SUBT_ACCESS_TOKEN variable")
 
     parser = argparse.ArgumentParser(description='Submit cloudsim run')
     parser.add_argument("config", nargs="?", default=str(pathlib.Path('./run.toml')))
