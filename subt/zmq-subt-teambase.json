@@ -34,6 +34,12 @@
             "endpoint": "tcp://localhost:5555"
           }
       },
+      "fromrospy": {
+          "driver": "subt.pull:Pull",
+          "init": {
+            "outputs": ["score"]
+          }
+      },
       "rosmsg": {
           "driver": "rosmsg",
           "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
