@@ -165,7 +165,7 @@ class ArtifactDetectorDNN(Node):
             # publish the results independent to detection validity
             self.stdout(result, result_cv)  # for debugging in case of crash
             self.publish('debug_result', str(result))
-            self.publish('debug_cv_result', cv_result2list(result_cv))
+            self.publish('debug_cv_result', str(result_cv))
             checked_result = check_results(result, result_cv)
             if checked_result:
                 report = result2report(checked_result, self.depth, self.fx)
