@@ -160,8 +160,6 @@ if __name__ == "__main__":
     import argparse
     from datetime import timedelta
 
-    from numpy import array, int32  # workaround for str() serialized numpy array
-
     from osgar.lib.serialize import deserialize
     from osgar.logger import LogReader, lookup_stream_id, lookup_stream_names
     from ast import literal_eval
@@ -219,13 +217,10 @@ if __name__ == "__main__":
             elif stream in [result_id, cv_result_id]:
                 if args.verbose:
                     print(time, data)
-#                arr = literal_eval(data)
-                arr = eval(data)  # workaround for str() serialized numpy array
-
                 if stream == result_id:
-                    last_result = arr
+                    last_result = data
                 elif stream == cv_result_id:
-                    last_cv_result = arr
+                    last_cv_result = data
                 else:
                     assert False, stream
 
