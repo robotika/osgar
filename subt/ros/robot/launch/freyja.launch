@@ -132,11 +132,11 @@
     <!-- IMU -->
     <param name="imu0" value="$(arg robot_name)/imu/data"/>
 
-    <param name="odom0_differential" value="true"/>
-    <param name="odom1_differential" value="true"/>
-    <param name="odom2_differential" value="true"/>
-    <param name="odom3_differential" value="true"/>
-    <param name="odom4_differential" value="true"/>
+    <param name="odom0_differential" value="false"/>
+    <param name="odom1_differential" value="false"/>
+    <param name="odom2_differential" value="false"/>
+    <param name="odom3_differential" value="false"/>
+    <param name="odom4_differential" value="false"/>
     <param name="pose0_differential" value="false"/>
     <param name="imu0_differential" value="false"/>
 
@@ -151,29 +151,29 @@
 
     <!-- The order of the values is x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az. -->
     <!-- We barely trust the ICP odometry on 2d scan with X and Y coordinates. Totally not anything more 3d. -->
-    <rosparam param="odom0_config">[true, true, false,
+    <rosparam param="odom0_config">[false, false, false,
                                     false, false, false,
-                                    false, false, false,
-                                    false, false, false,
-                                    false, false, false]</rosparam>
-    <rosparam param="odom1_config">[true, true, false,
-                                    false, false, false,
-                                    false, false, false,
+                                    true, true, true,
                                     false, false, false,
                                     false, false, false]</rosparam>
-    <rosparam param="odom2_config">[true, true, false,
+    <rosparam param="odom1_config">[false, false, false,
                                     false, false, false,
-                                    false, false, false,
-                                    false, false, false,
-                                    false, false, false]</rosparam>
-    <rosparam param="odom3_config">[true, true, false,
-                                    false, false, false,
-                                    false, false, false,
+                                    true, true, false,
                                     false, false, false,
                                     false, false, false]</rosparam>
-    <rosparam param="odom4_config">[true, true, true,
+    <rosparam param="odom2_config">[false, false, false,
                                     false, false, false,
+                                    true, true, false,
                                     false, false, false,
+                                    false, false, false]</rosparam>
+    <rosparam param="odom3_config">[false, false, false,
+                                    false, false, false,
+                                    true, true, true,
+                                    false, false, false,
+                                    false, false, false]</rosparam>
+    <rosparam param="odom4_config">[false, false, false,
+                                    false, false, false,
+                                    true, true, true,
                                     false, false, false,
                                     false, false, false]</rosparam>
     <rosparam param="pose0_config">[false, false, true,
@@ -184,8 +184,15 @@
     <rosparam param="imu0_config">[false, false, false,
                                    true,  true,  true,
                                    false, false, false,
-                                   true,  true,  true,
+                                   false,  false,  false,
                                    true,  true,  true] </rosparam>
+
+    <!-- The unit of the threshold is a Mahalanobis distance (i.e. sum) of numbers of sigmas in each dimension -->
+    <rosparam param="odom0_twist_rejection_threshold" value="6"/>
+    <rosparam param="odom1_twist_rejection_threshold" value="6"/>
+    <rosparam param="odom2_twist_rejection_threshold" value="6"/>
+    <rosparam param="odom3_twist_rejection_threshold" value="6"/>
+    <rosparam param="odom4_twist_rejection_threshold" value="6"/>
 
     <!-- When some data arrive late, we are willing to go back in time and correct the estimate. -->
     <param name="smooth_lagged_data" value="true"/>
