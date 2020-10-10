@@ -51,11 +51,9 @@ def validate_robots(robots, timeout):
 
 
 def validate_image(image):
-    image_bytes = bytes(image, 'ascii')
-    images = _cmd('aws', 'ecr', 'list-images', '--repository-name', 'subt/robotika')
-    for img in images.split(b'\n'):
-        parts = img.split(b'\t')
-        if parts[-1] == image_bytes:
+    images = _cmd('aws', 'ecr', 'list-images', '--repository-name', 'subt/robotika', '--output', 'json')
+    for img in json.loads(images)["imageIds"]:
+        if img.get('imageTag') == image:
             return f'200670743174.dkr.ecr.us-east-1.amazonaws.com/subt/robotika:{image}'
     sys.exit(f"image '{image}' not found in aws subt/robotika repository")
 
