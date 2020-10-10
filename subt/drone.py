@@ -29,6 +29,8 @@ class Drone(Node):
 #        self.publisherTwist = rospy.Publisher("/cmd_vel_drone", Twist, queue_size=50)
 
         self.accum = 0.0
+        self.debug_arr = []
+        self.verbose = False
 
     def on_bottom_scan(self, scan):
             self.lastScanDown = scan[0]
@@ -39,6 +41,9 @@ class Drone(Node):
     def on_desired_speed(self, data):
         linear = [data[0]/1000, 0.0, 0.0]
         angular = [0.0, 0.0, math.radians(data[1]/100.0)]
+
+        if self.verbose:
+            self.debug_arr.append((self.time, self.lastScanDown, self.lastScanUp))
 
         if data != [0, 0]:
             self.started = True  # TODO this logic has to be also in "rosmsg.py" and/or "ros_proxy_node.cc"
@@ -64,5 +69,17 @@ class Drone(Node):
         handler = getattr(self, "on_" + channel, None)
         if handler is not None:
             handler(getattr(self, channel))
+
+    def draw(self):
+        import matplotlib.pyplot as plt
+
+        t = [a[0].total_seconds() for a in self.debug_arr]
+        height = [(-a[1], a[2]) for a in self.debug_arr]
+        line = plt.plot(t, height, '-o', linewidth=2)
+
+        plt.xlabel('time (s)')
+        plt.axes().set_aspect('equal', 'datalim')
+        plt.legend()
+        plt.show()
 
 # vim: expandtab sw=4 ts=4
