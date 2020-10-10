@@ -176,9 +176,12 @@ class ArtifactDetectorDNN(Node):
 
 
 if __name__ == "__main__":
-    # run specific test based on recorded stdout
+    # run "replay" without calling detections - only XYZ offset check
     import argparse
     from datetime import timedelta
+
+    from numpy import array, int32  # workaround for str() serialized numpy array
+
     from osgar.lib.serialize import deserialize
     from osgar.logger import LogReader, lookup_stream_id, lookup_stream_names
     from ast import literal_eval
@@ -186,41 +189,56 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Test 3D reports')
     parser.add_argument('logfile', help='OSGAR logfile')
     parser.add_argument('--time-limit-sec', '-t', help='cut time in seconds', type=float)
+    parser.add_argument('--verbose', '-v', help="verbose mode", action='store_true')
     args = parser.parse_args()
 
     names = lookup_stream_names(args.logfile)
-    stdout_stream_id = lookup_stream_id(args.logfile, 'detector.stdout')
-    streams = [stdout_stream_id]
-    if 'detector.debug_depth' in names:
-        depth_stream_id = lookup_stream_id(args.logfile, 'detector.debug_depth')
-        streams.append(depth_stream_id)
-    else:
-        depth_stream_id = None
+    assert 'detector.debug_depth' in names, names
+    assert 'detector.debug_result' in names, names
+    assert 'detector.debug_cv_result' in names, names
 
-    # dummy depth for loder logfiles
-    row = [5000] * 640
-    depth = np.array([row] * 360, dtype=np.uint16)
-    fx = 554.25469
+    depth_stream_id = names.index('detector.debug_depth') + 1
+    result_id = names.index('detector.debug_result') + 1
+    cv_result_id = names.index('detector.debug_cv_result') + 1
+
+    depth = None
+    last_result = None
+    last_cv_result = None
+    fx = 554.25469  # TODO read from config
     with LogReader(args.logfile,
-                   only_stream_id=streams) as logreader:
+                   only_stream_id=[depth_stream_id, result_id, cv_result_id]) as logreader:
         for time, stream, msg_data in logreader:
             if args.time_limit_sec is not None:
                 if time.total_seconds() > args.time_limit_sec:
                     break
             data = deserialize(msg_data)
+
             if stream == depth_stream_id:
                 depth = data
+                # debug_depth is stored ONLY when both detector detect something and it is fused
+                assert last_result is not None
+                assert last_cv_result is not None
+
+                checked_result = check_results(last_result, last_cv_result)
+                assert checked_result  # the debug depth is stored, so there should valid report
+                report = result2report(checked_result, depth, fx)
+                print(report)
                 continue
 
-            assert stream == stdout_stream_id
-            print(time, data)
-            try:
-                arr = literal_eval(data)  # well the new stdout is not suitable for this :(
-            except:
-                arr = None
+            assert stream in [result_id, cv_result_id]
+            if args.verbose:
+                print(time, data)
+#            arr = literal_eval(data)
+            arr = eval(data)  # workaround for str() serialized numpy array
 
-            if arr is not None:
-                ret = result2report(arr, depth, fx)
-                print(ret)
+            if stream == result_id:
+                last_result = arr
+                continue
+
+            if stream == cv_result_id:
+                last_cv_result = arr
+                continue
+
+            assert False, stream  # unexpected stream
 
 # vim: expandtab sw=4 ts=4
