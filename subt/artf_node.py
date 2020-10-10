@@ -203,11 +203,19 @@ if __name__ == "__main__":
     result_id = names.index('detector.debug_result') + 1
     cv_result_id = names.index('detector.debug_cv_result') + 1
 
+    # read config file from log
+    with LogReader(args.logfile, only_stream_id=0) as log:
+        print("original args:", next(log)[-1])  # old arguments
+        config_str = next(log)[-1]
+        config = literal_eval(config_str.decode('ascii'))
+
+    assert 'detector' in config['robot']['modules']
+    fx = config['robot']['modules']['detector']['init']['fx']
+
     depth = None
     last_artf = None  # reported before debug_depth
     last_result = None
     last_cv_result = None
-    fx = 554.25469  # TODO read from config
     with LogReader(args.logfile,
                    only_stream_id=[artf_stream_id, depth_stream_id, result_id, cv_result_id]) as logreader:
         for time, stream, msg_data in logreader:
