@@ -154,6 +154,7 @@
 
               ["fromrospy.bottom_scan", "drone.bottom_scan"],
               ["fromrospy.top_scan", "drone.top_scan"],
+              ["offseter.pose3d", "drone.pose3d"],
 
               ["rosmsg.origin", "offseter.origin"],
               ["fromrospy.pose3d", "offseter.pose3d"]

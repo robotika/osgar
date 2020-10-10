@@ -31,6 +31,7 @@ class Drone(Node):
         self.accum = 0.0
         self.debug_arr = []
         self.verbose = False
+        self.z = None  # last Z coordinate
 
     def on_bottom_scan(self, scan):
             self.lastScanDown = scan[0]
@@ -43,7 +44,7 @@ class Drone(Node):
         angular = [0.0, 0.0, math.radians(data[1]/100.0)]
 
         if self.verbose:
-            self.debug_arr.append((self.time, self.lastScanDown, self.lastScanUp))
+            self.debug_arr.append((self.time, self.z, self.lastScanDown, self.lastScanUp))
 
         if data != [0, 0]:
             self.started = True  # TODO this logic has to be also in "rosmsg.py" and/or "ros_proxy_node.cc"
@@ -63,6 +64,10 @@ class Drone(Node):
 
             self.publish('desired_speed_3d', [linear, angular])
 
+    def on_pose3d(self, data):
+        xyz, quat = data
+        self.z = xyz[2]
+
     def update(self):
         channel = super().update()
 
@@ -74,11 +79,10 @@ class Drone(Node):
         import matplotlib.pyplot as plt
 
         t = [a[0].total_seconds() for a in self.debug_arr]
-        height = [(-a[1], a[2]) for a in self.debug_arr]
-        line = plt.plot(t, height, '-o', linewidth=2)
+        height = [(a[1], a[1] - a[2], a[1] + a[3]) for a in self.debug_arr]
+        plt.plot(t, height, '-o', linewidth=2)
 
         plt.xlabel('time (s)')
-        plt.axes().set_aspect('equal', 'datalim')
         plt.legend()
         plt.show()
 
