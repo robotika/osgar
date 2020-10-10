@@ -927,15 +927,18 @@ class SubTChallenge:
             self.update()
 
         steps = parse_robot_name(self.robot_name)
-        times_sec = [duration for action, duration in steps if action not in ['enter', 'home']]
+        times_sec = [duration for action, duration in steps if action != 'home' and not action.startswith('enter')]
         self.stdout('Using times', times_sec)
 
         for action, duration, in steps:
             if action == 'wait':
+                self.stdout(f'Wait for {duration} seconds')
                 self.wait(timedelta(seconds=duration), use_sim_time=True)
-                self.stdout('Artifacts before start:', self.artifacts)  # seen during wait
+                self.stdout('Artifacts collected during wait:', self.artifacts)
 
-            elif action == 'enter':
+            elif action.startswith('enter'):
+                self.use_right_wall = (action == 'enter-right')
+                self.use_center = (action == 'enter-center')
                 self.play_virtual_part_enter()
 
             elif action in ['left', 'right', 'center']:
