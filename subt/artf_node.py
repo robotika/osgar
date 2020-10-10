@@ -53,26 +53,35 @@ def check_results(result_mdnet, result_cv):
     return ret
 
 
-def result2report(result, depth):
+def result2report(result, depth, fx):
+    # return relative XYZ distances to camera
     width = depth.shape[1]
+    height = depth.shape[0]
     x_arr = [x for x, y, certainty in result[0][1]]  # ignore multiple objects
+    y_arr = [y for x, y, certainty in result[0][1]]  # ignore multiple objects
     dist = [depth[y][x] for x, y, certainty in result[0][1]]  # ignore multiple objects
-    x_min, x_max = min(x_arr), max(x_arr)
-    deg_100th = int(round(100 * 69.4 * (width/2 - (x_min + x_max)/2)/width))
     if 0xFFFF in dist:
         return None  # out of range
-    return [NAME2IGN[result[0][0]], deg_100th, int(np.median(dist))]
+    x_min, x_max = min(x_arr), max(x_arr)
+    y_min, y_max = min(y_arr), max(y_arr)
+    scale = np.median(dist)
+    rel_x = int(scale)  # relative X-coordinate in front
+    rel_y = int(scale * (width/2 - (x_min + x_max)/2)/fx)  # Y-coordinate is to the left
+    rel_z = int(scale * (height/2 - (y_min + y_max)/2)/fx)  # Z-up
+    return [NAME2IGN[result[0][0]], [rel_x, rel_y, rel_z]]
 
 
 class ArtifactDetectorDNN(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register("artf", "dropped", "debug_artf", "debug_depth:gz", "stdout")
+        bus.register("artf", "dropped", "debug_artf", "debug_depth:gz", "stdout",
+                     "debug_result", "debug_cv_result")
         self.time = None
         self.width = None  # not sure if we will need it
         self.depth = None  # more precise artifact position from depth image
         self.cv_detector = CvDetector().subt_detector
         self.detector = self.create_detector()
+        self.fx = config.get('fx', 554.25469)  # use drone X4 for testing (TODO update all configs!)
 
     def create_detector(self):
         model = os.path.join(os.path.dirname(__file__), '../../../mdnet1.64.64.13.4.relu.pth')
@@ -133,13 +142,94 @@ class ArtifactDetectorDNN(Node):
         result = self.detector(img)
         result_cv = self.cv_detector(img)
         if result or result_cv:
-            self.stdout(result, result_cv)  # publish the results independent to detection validity
+            # publish the results independent to detection validity
+            self.stdout(result, result_cv)  # for debugging in case of crash
+            self.publish('debug_result', result)
+            self.publish('debug_cv_result', result_cv)
             checked_result = check_results(result, result_cv)
             if checked_result:
-                report = result2report(checked_result, self.depth)
+                report = result2report(checked_result, self.depth, self.fx)
                 if report is not None:
                     self.publish('artf', report)
                     self.publish('debug_artf', image)  # JPEG
                     self.publish('debug_depth', self.depth)
+
+
+if __name__ == "__main__":
+    # run "replay" without calling detections - only XYZ offset check
+    import argparse
+    from datetime import timedelta
+
+    from osgar.lib.serialize import deserialize
+    from osgar.logger import LogReader, lookup_stream_id, lookup_stream_names
+    from ast import literal_eval
+
+    parser = argparse.ArgumentParser(description='Test 3D reports')
+    parser.add_argument('logfile', help='OSGAR logfile')
+    parser.add_argument('--time-limit-sec', '-t', help='cut time in seconds', type=float)
+    parser.add_argument('--verbose', '-v', help="verbose mode", action='store_true')
+    args = parser.parse_args()
+
+    names = lookup_stream_names(args.logfile)
+    assert 'detector.artf' in names, names  # XYZ relative offsets
+    assert 'detector.debug_depth' in names, names
+    assert 'detector.debug_result' in names, names
+    assert 'detector.debug_cv_result' in names, names
+
+    artf_stream_id = names.index('detector.artf') + 1
+    depth_stream_id = names.index('detector.debug_depth') + 1
+    result_id = names.index('detector.debug_result') + 1
+    cv_result_id = names.index('detector.debug_cv_result') + 1
+
+    # read config file from log
+    with LogReader(args.logfile, only_stream_id=0) as log:
+        print("original args:", next(log)[-1])  # old arguments
+        config_str = next(log)[-1]
+        config = literal_eval(config_str.decode('ascii'))
+
+    assert 'detector' in config['robot']['modules']
+    fx = config['robot']['modules']['detector']['init']['fx']
+
+    depth = None
+    last_artf = None  # reported before debug_depth
+    last_result = None
+    last_cv_result = None
+    with LogReader(args.logfile,
+                   only_stream_id=[artf_stream_id, depth_stream_id, result_id, cv_result_id]) as logreader:
+        for time, stream, msg_data in logreader:
+            if args.time_limit_sec is not None and time.total_seconds() > args.time_limit_sec:
+                break
+            data = deserialize(msg_data)
+
+            if stream == depth_stream_id:
+                depth = data
+                # debug_depth is stored ONLY when both detector detect something and it is fused
+                assert last_result is not None
+                assert last_cv_result is not None
+
+                checked_result = check_results(last_result, last_cv_result)
+                assert checked_result  # the debug depth is stored, so there should valid report
+                report = result2report(checked_result, depth, fx)
+                if args.verbose:
+                    print(report)
+                assert last_artf == report, (last_artf, report)
+
+            elif stream in [result_id, cv_result_id]:
+                if args.verbose:
+                    print(time, data)
+                if stream == result_id:
+                    last_result = data
+                elif stream == cv_result_id:
+                    last_cv_result = data
+                else:
+                    assert False, stream
+
+            elif stream == artf_stream_id:
+                if args.verbose:
+                    print(time, 'Original report:', data)
+                last_artf = data
+                assert last_artf is not None, time
+            else:
+                assert False, stream  # unexpected stream
 
 # vim: expandtab sw=4 ts=4
