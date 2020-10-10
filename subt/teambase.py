@@ -9,7 +9,7 @@ from osgar.node import Node
 class Teambase(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register("broadcast")
+        bus.register("broadcast", "artf_xyz")
 
         self.robot_name = config.get('robot_name')
         self.start_time = None  # unknown
@@ -43,6 +43,9 @@ class Teambase(Node):
                 # artifact
                 if arr not in self.artifacts:
                     self.artifacts.append(arr)
+                    # TODO filtering logic
+                    self.publish('artf_xyz', [arr])  # publish also standard "list" of detected artifacts
+
             else:
                 assert False, arr  # unexpected size/type
 
