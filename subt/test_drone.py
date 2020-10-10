@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import MagicMock, patch, call
 
 from osgar.bus import Bus
-from subt.drone import Drone
+from subt.drone import Drone, MAX_ANGULAR
 
 
 class DroneTest(unittest.TestCase):
@@ -22,6 +22,6 @@ class DroneTest(unittest.TestCase):
         tester.publish('desired_speed', [1000, 9000])
         c.request_stop()
         c.join()
-        self.assertEqual(tester.listen()[2], [[1.0, 0.0, 0.0], [0.0, 0.0, math.pi/2]])
+        self.assertEqual(tester.listen()[2], [[1.0, 0.0, 0.0], [0.0, 0.0, MAX_ANGULAR]])
 
 # vim: expandtab sw=4 ts=4
