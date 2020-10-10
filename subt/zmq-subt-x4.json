@@ -152,6 +152,9 @@
               ["rosmsg.base_station", "reporter.base_station"],
               ["reporter.artf_cmd", "transmitter.raw"],
 
+              ["fromrospy.bottom_scan", "drone.bottom_scan"],
+              ["fromrospy.top_scan", "drone.top_scan"],
+
               ["rosmsg.origin", "offseter.origin"],
               ["fromrospy.pose3d", "offseter.pose3d"]
     ]
