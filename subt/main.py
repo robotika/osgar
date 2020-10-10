@@ -932,8 +932,9 @@ class SubTChallenge:
 
         for action, duration, in steps:
             if action == 'wait':
+                self.stdout(f'Wait for {duration} seconds')
                 self.wait(timedelta(seconds=duration), use_sim_time=True)
-                self.stdout('Artifacts before start:', self.artifacts)  # seen during wait
+                self.stdout('Artifacts collected during wait:', self.artifacts)
 
             elif action.startswith('enter'):
                 self.use_right_wall = (action == 'enter-right')
