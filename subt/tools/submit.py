@@ -24,7 +24,7 @@ WORLDS=dict(
 ROBOTS=dict(
     teambase = "TEAMBASE",
     drone = "SSCI_X4_SENSOR_CONFIG_2",
-    freya = "ROBOTIKA_FREYJA_SENSOR_CONFIG_2",
+    freyja = "ROBOTIKA_FREYJA_SENSOR_CONFIG_2",
 )
 
 
