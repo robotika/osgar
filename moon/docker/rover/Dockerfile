@@ -71,10 +71,9 @@ ENV LD_LIBRARY_PATH=${CMAKE_INSTALL_PREFIX}/lib:${LD_LIBRARY_PATH}
 ARG EIGEN3_VERSION=3.3.7
 WORKDIR /tmp
 RUN set -x && \
-  wget -q http://bitbucket.org/eigen/eigen/get/${EIGEN3_VERSION}.tar.bz2 && \
-  tar xf ${EIGEN3_VERSION}.tar.bz2 && \
-  rm -rf ${EIGEN3_VERSION}.tar.bz2 && \
-  mv eigen-eigen-* eigen-${EIGEN3_VERSION} && \
+  wget -q https://gitlab.com/libeigen/eigen/-/archive/${EIGEN3_VERSION}/eigen-${EIGEN3_VERSION}.tar.bz2 && \
+  tar xf eigen-${EIGEN3_VERSION}.tar.bz2 && \
+  rm -rf eigen-${EIGEN3_VERSION}.tar.bz2 && \
   cd eigen-${EIGEN3_VERSION} && \
   mkdir -p build && \
   cd build && \
@@ -102,7 +101,7 @@ RUN set -x && \
     -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX} \
     -DBUILD_SHARED_LIBS=ON \
     -DBUILD_UNITTESTS=OFF \
-    -DBUILD_WITH_MARCH_NATIVE=ON \
+    -DBUILD_WITH_MARCH_NATIVE=OFF \
     -DG2O_USE_CHOLMOD=OFF \
     -DG2O_USE_CSPARSE=ON \
     -DG2O_USE_OPENGL=OFF \
@@ -200,7 +199,7 @@ RUN set -x && \
   mkdir -p build && \
   cd build && \
   cmake \
-    -DBUILD_WITH_MARCH_NATIVE=ON \
+    -DBUILD_WITH_MARCH_NATIVE=OFF \
     -DUSE_PANGOLIN_VIEWER=OFF \
     -DUSE_SOCKET_PUBLISHER=OFF \
     -DUSE_STACK_TRACE_LOGGER=ON \
@@ -211,14 +210,13 @@ RUN set -x && \
   rm -rf CMakeCache.txt CMakeFiles Makefile cmake_install.cmake example src && \
   chmod -R 777 ./*
 
-# Copy sources to workspace
+# Copy SRCP2 env to workspace
 COPY ./srcp2-competitors /srcp2-competitors/
-COPY ./osgar /osgar/
 
 # OpenVSLAMROS
 WORKDIR /openvslam/ros/1/
 RUN /bin/bash -c 'source /srcp2-competitors/ros_workspace/install/setup.bash; cd /openvslam/ros/1/; catkin_make \
-    -DBUILD_WITH_MARCH_NATIVE=ON \
+    -DBUILD_WITH_MARCH_NATIVE=OFF \
     -DUSE_PANGOLIN_VIEWER=OFF \
     -DUSE_SOCKET_PUBLISHER=OFF \
     -DUSE_STACK_TRACE_LOGGER=ON \
@@ -245,13 +243,17 @@ RUN chmod 777 /rover_workspace
 
 RUN rm -rf /rover_workspace/devel
 RUN rm -rf /rover_workspace/build
+
+RUN  /bin/bash -c "source /openvslam/ros/1/devel/setup.bash; cd /rover_workspace; catkin_make"
+
+RUN echo "source /rover_workspace/devel/setup.bash" >> /root/.bashrc
+
+COPY ./osgar /osgar/
+
 RUN rm -rf /osgar/.git
 RUN rm -rf /osgar/.github
 RUN rm -rf /osgar/research_scripts
 RUN rm -rf /osgar/disparity_images
-RUN  /bin/bash -c "source /openvslam/ros/1/devel/setup.bash; cd /rover_workspace; catkin_make"
-
-RUN echo "source /rover_workspace/devel/setup.bash" >> /root/.bashrc
 
 WORKDIR /
 ENTRYPOINT ["/osgar/moon/docker/rover/entrypoint.bash"]

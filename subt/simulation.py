@@ -68,6 +68,8 @@ class Simulation:
     def main(self):
         log("started")
         self.on_request_origin(datetime.timedelta(), "request_origin", True)
+        # there is no SubT control until pose is received -> trigger it
+        self.on_desired_speed(datetime.timedelta(), "desired_speed", [0, 0])
 
         for _ in range(500):
             packet = self.bus.listen()
@@ -89,7 +91,7 @@ class Simulation:
         # ros_proxy_node.cc keeps sending origin data until robot arrives within 0.3m from (0,0,0)
         # we send it only once
         corrected = [rr - oo for rr, oo in zip(self.xyz, self.origin)]
-        self.bus.publish('origin', [b'X0F100L', *corrected, *self.orientation])
+        self.bus.publish('origin', [b'X100L', *corrected, *self.orientation])
         self.bus.publish('scan', self.scan())
         heading_centidegrees = round(math.degrees(quaternion.heading(self.orientation))*100)
         self.bus.publish('rot', [heading_centidegrees, 0, 0])

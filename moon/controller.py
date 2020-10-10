@@ -5,10 +5,11 @@ import math
 from math import sqrt
 import numpy as np
 import io
-from random import getrandbits
 
 from datetime import timedelta
 from statistics import median
+from shapely.geometry import Point, LineString
+from shapely.geometry.polygon import Polygon
 
 from osgar.bus import BusShutdownException
 from osgar.lib import quaternion
@@ -17,30 +18,36 @@ from osgar.lib.quaternion import euler_zyx, euler_to_quaternion
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.lib.virtual_bumper import VirtualBumper
 
-from moon.moonnode import MoonNode
+from moon.moonnode import MoonNode, LIDAR_BEAM_SPACING
 
 TURN_RADIUS = 8 # radius of circle when turning
 AVOID_RADIUS = 4 # radius to use when going around an obstacle (this means it will not rush to go back to the same direction once it disappears off lidar)
 GO_STRAIGHT = float("inf")
 AVOIDANCE_DURATION = 3000 # milliseconds
 AVOIDANCE_TURN_DURATION = 800
+VIRTUAL_FENCE_LOOK_AHEAD_DISTANCE = 6 # max distance in front of the rover to investigate overlap with unsafe regions for
 
-class ChangeDriverException(Exception):
+class MoonException(Exception):
+    pass
+class ChangeDriverException(MoonException):
     pass
 
-class VSLAMLostException(Exception):
+class VSLAMLostException(MoonException):
     pass
 
-class VSLAMDisabledException(Exception):
+class VSLAMDisabledException(MoonException):
     pass
 
-class VSLAMEnabledException(Exception):
+class VSLAMEnabledException(MoonException):
     pass
 
-class VSLAMFoundException(Exception):
+class VSLAMFoundException(MoonException):
     pass
 
-class VirtualBumperException(Exception):
+class VirtualBumperException(MoonException):
+    pass
+
+class LidarCollisionException(MoonException):
     pass
 
 def pol2cart(rho, phi):
@@ -156,9 +163,6 @@ def min_dist(laser_data):
         return min(laser_data)/1000.0
     return 0
 
-class LidarCollisionException(Exception):
-    pass
-
 
 class LidarCollisionMonitor:
     def __init__(self, robot, threshold_distance=1200):
@@ -234,6 +238,8 @@ class SpaceRoboticsChallenge(MoonNode):
         self.avoidance_start = None
         self.avoidance_turn = None
         self.steering_angle = 0.0
+
+        self.unsafe_location = None
 
         self.default_effort_level = 1000 # default is max speed
 
@@ -450,7 +456,7 @@ class SpaceRoboticsChallenge(MoonNode):
         # measure distance only in 66 degree angle (about the width of the robot 1.5m)
         # however, don't look just ahead (camera angle) or direction of wheels (steering angle)
         # look further in the direction wheels are turned
-        midpoint = int(max(50, min(130, 40 + 50 + 2 * self.steering_angle / 0.0262626260519)))
+        midpoint = int(max(50, min(130, 40 + 50 + 2 * self.steering_angle / LIDAR_BEAM_SPACING)))
         if midpoint < 40 + IDEAL_SAMPLE_SIZE:
             sample_size = midpoint - 40
         elif midpoint > 140 - IDEAL_SAMPLE_SIZE:
@@ -477,6 +483,48 @@ class SpaceRoboticsChallenge(MoonNode):
         before_robot = median_scan[midpoint - sample_size:midpoint + sample_size]
         before_robot.sort();
         self.scan_distance_to_obstacle = median(before_robot[:self.scan_min_window])
+
+        # unless we are already inside unsafe area, augment nearest obstacles with virtual fence values
+        if self.unsafe_location is not None and not self.unsafe_location.contains(Point(self.xyz[0], self.xyz[1])):
+            # calculate position in front of and to the left and right of the robot in the direction of its heading
+            v = np.asmatrix(np.asarray([self.xyz[0], self.xyz[1], 1]))
+            c, s = np.cos(self.steering_angle + self.yaw), np.sin(self.steering_angle + self.yaw)
+            R = np.asmatrix(np.array(((c, -s, 0), (s, c, 0), (0, 0, 1))))
+
+            T = np.asmatrix(np.array(((1, 0, VIRTUAL_FENCE_LOOK_AHEAD_DISTANCE),(0, 1, 0),(0, 0, 1))))
+            pos =  np.dot(R, np.dot(T, np.dot(R.I, v.T)))
+            ls = LineString([(self.xyz[0], self.xyz[1]), (float(pos[0]), float(pos[1]))])
+            intr = self.unsafe_location.intersection(ls)
+            if not intr.is_empty:
+                d = int(1000*(ls.length - intr.length))
+                if self.debug:
+                    print(self.sim_time, self.robot_name, "Virtual fence: decreasing front distance to %d" % d)
+                self.scan_distance_to_obstacle = min(self.scan_distance_to_obstacle, d)
+
+            left_angle = IDEAL_SAMPLE_SIZE * LIDAR_BEAM_SPACING
+            x,y = pol2cart(VIRTUAL_FENCE_LOOK_AHEAD_DISTANCE, left_angle)
+            Tl = np.asmatrix(np.array(((1, 0, x),(0, 1, y),(0, 0, 1))))
+            posL = np.dot(R, np.dot(Tl, np.dot(R.I, v.T)))
+            ls = LineString([(self.xyz[0], self.xyz[1]), (float(posL[0]), float(posL[1]))])
+            intr = self.unsafe_location.intersection(ls)
+            if not intr.is_empty:
+                d = int(1000*(ls.length - intr.length))
+                if self.debug:
+                    print(self.sim_time, self.robot_name, "Virtual fence: decreasing left distance to %d" % d)
+                self.scan_avg_distance_left = min(self.scan_avg_distance_left, d)
+
+            right_angle = -IDEAL_SAMPLE_SIZE * LIDAR_BEAM_SPACING
+            x,y = pol2cart(VIRTUAL_FENCE_LOOK_AHEAD_DISTANCE, right_angle)
+            Tr = np.asmatrix(np.array(((1, 0, x),(0, 1, y),(0, 0, 1))))
+            posR = np.dot(R, np.dot(Tr, np.dot(R.I, v.T)))
+            ls = LineString([(self.xyz[0], self.xyz[1]), (float(posR[0]), float(posR[1]))])
+            intr = self.unsafe_location.intersection(ls)
+            if not intr.is_empty:
+                d = int(1000*(ls.length - intr.length))
+                if self.debug:
+                    print(self.sim_time, self.robot_name, "Virtual fence: decreasing right distance to %d" % d)
+                self.scan_avg_distance_right = min(self.scan_avg_distance_right, d)
+
 
     def on_joint_position(self, data):
         assert self.joint_name is not None
@@ -585,7 +633,7 @@ class SpaceRoboticsChallenge(MoonNode):
                 self.avoidance_turn = AVOID_RADIUS
             else:
                 if self.avoidance_turn is None:
-                    self.avoidance_turn = AVOID_RADIUS if getrandbits(1) == 0 else -AVOID_RADIUS
+                    self.avoidance_turn = AVOID_RADIUS if self.rand.getrandbits(1) == 0 else -AVOID_RADIUS
             turn = self.avoidance_turn
             if (self.debug):
                 print(self.sim_time, self.robot_name, "Seeing object, turning: %d, distance %d" % (turn, self.scan_distance_to_obstacle))
@@ -664,10 +712,10 @@ class SpaceRoboticsChallenge(MoonNode):
         print(self.sim_time, self.robot_name, "move sideways ended at [%.1f,%.1f]" % (self.xyz[0], self.xyz[1]))
 
 
-    def go_straight(self, how_far, timeout=None):
+    def go_straight(self, how_far, with_stop=True, timeout=None):
         print(self.sim_time, self.robot_name, "go_straight %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position)
         if timeout is None:
-            timeout = timedelta(seconds=2*abs(how_far) / self.max_speed)
+            timeout = timedelta(seconds=10 + 2*abs(how_far) / self.max_speed)
 
         start_pose = self.last_position
         if how_far >= 0:
@@ -675,26 +723,34 @@ class SpaceRoboticsChallenge(MoonNode):
         else:
             self.send_speed_cmd(-self.max_speed, 0.0)
         start_time = self.sim_time
+        slowdown_happened = False
         while distance(start_pose, self.last_position) < abs(how_far):
+            if with_stop and not slowdown_happened and abs(distance(start_pose, self.last_position) - abs(how_far)) < 2:
+                self.send_speed_cmd(math.copysign(self.max_speed / 2.0, how_far), 0.0)
+                slowdown_happened = True
+
             self.update()
             if timeout is not None and self.sim_time - start_time > timeout:
                 print(self.sim_time, self.robot_name, "go_straight - timeout at %.1fm" % distance(start_pose, self.last_position))
                 break
         self.send_speed_cmd(0.0, 0.0)
 
-    def turn(self, angle, with_stop=True, speed=0.0, timeout=None):
+    def turn(self, angle, with_stop=True, speed=0.0, ang_speed=None, timeout=None):
         # positive turn - counterclockwise
         print(self.sim_time, self.robot_name, "turn %.1f deg from %.1f deg" % (math.degrees(angle), math.degrees(self.yaw)))
-        if angle >= 0:
-            self.send_speed_cmd(speed, self.max_angular_speed)
-        else:
-            self.send_speed_cmd(speed, -self.max_angular_speed)
+        self.send_speed_cmd(speed, math.copysign(ang_speed if ang_speed is not None else self.max_angular_speed, angle))
+
         start_time = self.sim_time
         # problem with accumulated angle
 
         sum_angle = 0.0
         prev_angle = self.yaw
+        slowdown_happened = False
         while abs(sum_angle) < abs(angle):
+            if with_stop and not slowdown_happened and abs(sum_angle) > abs(angle) - 0.35: # slow rotation down for the last 20deg to improve accuracy
+                self.send_speed_cmd(speed, math.copysign(self.max_angular_speed / 2.0, angle))
+                slowdown_happened = True
+
             self.update()
             sum_angle += normalizeAnglePIPI(self.yaw - prev_angle)
             prev_angle = self.yaw
@@ -703,13 +759,6 @@ class SpaceRoboticsChallenge(MoonNode):
                 break
         if with_stop:
             self.send_speed_cmd(0.0, 0.0)
-            # disable exceptions during wait or rover may brake forever
-            wasException = self.inException
-            self.inException = True
-            self.set_brakes(True)
-            self.wait(timedelta(milliseconds=200))
-            self.set_brakes(False)
-            self.inException = wasException
 
     def wait(self, dt):  # TODO refactor to some common class
         while self.sim_time is None:
@@ -730,7 +779,7 @@ class SpaceRoboticsChallenge(MoonNode):
             elif  self.scan_avg_distance_left * 0.8 > self.scan_avg_distance_right:
                 direction = 1
             else:
-                direction = 1 if getrandbits(1) == 0 else -1
+                direction = 1 if self.rand.getrandbits(1) == 0 else -1
 
         start_pose = self.xyz
         start_time = self.sim_time

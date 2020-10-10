@@ -12,7 +12,7 @@ SCORE="13"
 RANGE_START=0
 RANGE_END=49
 
-SRCP2_WAIT=10
+SRCP2_WAIT=15
 
 UNSUCCESS_LOGS_ONLY=0
 
@@ -99,9 +99,9 @@ esac
 
 now=$(date +"%m%d%Y_%H%M")
 log_dir="${LOG_DIR_PREFIX}/bulklogs_${now}"
-mkdir ${log_dir}
+mkdir "${log_dir}"
 
-echo "Round: ${ROUND}, Score: ${SCORE}; Fail String: ${FAIL_STRING}; Seed range: ${RANGE_START}-${RANGE_END}; Repeat seeds: ${REPEAT_SEED}; Timeout(min): `expr ${TIMEOUT} / 60`; Unsuccessful logs only: ${UNSUCCESS_LOGS_ONLY}; Log dir: ${log_dir}"
+echo "Round: ${ROUND}, Score: ${SCORE}; Fail String: ${FAIL_STRING}; Seed range: ${RANGE_START}-${RANGE_END}; Repeat seeds: ${REPEAT_SEED}; Timeout(min): `expr ${TIMEOUT} / 60`; Unsuccessful logs only: ${UNSUCCESS_LOGS_ONLY}; Log dir: \"${log_dir}\""
 
 for i in $(seq $RANGE_START $RANGE_END)
 do
@@ -109,9 +109,9 @@ do
     for j in $(seq 1 $REPEAT_SEED)
     do
 
-        log_file=${log_dir}/osgar-tty-${now}-seed_${i}_run_${j}.txt
+        log_file="${log_dir}"/osgar-tty-${now}-seed_${i}_run_${j}.txt
 
-        echo "==========" `date` "====== seed:" $i
+        echo "==========" `date` "====== seed:" $i " run: " $j
         $HOME/space-challenge/srcp2-competitors/docker/scripts/launch/roslaunch_docker -q -n --run-round $ROUND -s ${i} >& /dev/null
 
         # wait for SRCP2 simulator to start
@@ -123,29 +123,29 @@ do
                 docker run --init --network=host --rm --name openvslam2 -t openvslam-rospublish -r hauler_1 >& /dev/null &
                 vslam1_id=`docker image ls | grep openvslam1 | head -1 | awk '{print $3}'`
                 vslam2_id=`docker image ls | grep openvslam2 | head -1 | awk '{print $3}'`
-                echo "Running OpenVSLAM images ${vslam1_id} and ${vslam1_id}" >> ${log_file}
+                echo "Running OpenVSLAM images ${vslam1_id} and ${vslam1_id}" >> "${log_file}"
             else
                 docker run --init --network=host --rm --name openvslam -t openvslam-rospublish >& /dev/null &
                 vslam_id=`docker image ls | grep openvslam | head -1 | awk '{print $3}'`
-                echo "Running OpenVSLAM image ${vslam_id}" >> ${log_file}
+                echo "Running OpenVSLAM image ${vslam_id}" >> "${log_file}"
             fi
         fi
 
         osgar_image_id=`docker image ls | grep rover | grep latest | awk '{print $3}'`
         srcp2_image_id=`docker image ls | grep comp | head -1 | awk '{print $3}'`
-        echo "Running OSGAR image ${osgar_image_id}" >> ${log_file}
-        echo "Running SRCP2 image ${srcp2_image_id}" >> ${log_file}
+        echo "Running OSGAR image ${osgar_image_id}" >> "${log_file}"
+        echo "Running SRCP2 image ${srcp2_image_id}" >> "${log_file}"
 
-        timeout $TIMEOUT sh -c "( docker run --rm --network=host -t --name nasa-rover rover:latest /osgar/moon/docker/rover/run_solution.bash -r $ROUND &) 2>&1 | tee -a ${log_file} | grep -m 1 ${FAIL_SWITCH} -e \"${SUCCESS_STRING}\""
+        timeout $TIMEOUT sh -c "( docker run --rm --network=host -t --name nasa-rover rover:latest /osgar/moon/docker/rover/run_solution.bash -u -r $ROUND &) 2>&1 | tee -a \"${log_file}\" | grep -m 1 ${FAIL_SWITCH} -e \"${SUCCESS_STRING}\""
         # timeout exit status 124 means the timeout limit was reached
         timeout_status=$?
-        grep -q "${SUCCESS_STRING}" < ${log_file}
+        grep -q "${SUCCESS_STRING}" < "${log_file}"
         was_found=$?
         if [[ $timeout_status -eq 124 || $was_found -ne 0 || $UNSUCCESS_LOGS_ONLY -eq 0 ]]; then
             for f in $(docker exec -it nasa-rover /bin/bash -c "ls /*.log"); do
                 f=`echo $f | sed 's/\r//g'`
                 readarray -d . -t strarr <<< "$f"
-                docker cp nasa-rover:$f ${log_dir}/${strarr[0]}-seed_${i}_run_${j}.olog;
+                docker cp nasa-rover:$f "${log_dir}"/${strarr[0]}-seed_${i}_run_${j}.olog
             done
         fi
 
@@ -161,5 +161,6 @@ do
         fi
 
         docker kill srcp2-simulation >& /dev/null
+        sleep ${SRCP2_WAIT}
     done
 done

@@ -4,7 +4,7 @@ termtitle() { printf "\033]0;$*\007"; }
 
 trap "kill %1" EXIT
 
-ROBOT="${ROBOT:-X0F200L}"
+ROBOT="${ROBOT:-X200L}"
 WORLD="${WORLD:-urban_circuit_practice_01}"
 CIRCUIT="${CIRCUIT:-urban}"
 CONFIG="${CONFIG:-ROBOTIKA_X2_SENSOR_CONFIG_1}"

@@ -1,17 +1,25 @@
 #!/usr/bin/env python2
 
+from __future__ import print_function
+
 import errno
 import math
 import socket
 import sys
 import threading
 import time
+import operator
+import functools
 
 import rospy
+import rostopic
 import zmq
 import msgpack
 
 from sensor_msgs.msg import Imu, LaserScan
+from nav_msgs.msg import Odometry
+from std_msgs.msg import Empty, Int32
+from sensor_msgs.msg import BatteryState
 
 
 def py3round(f):
@@ -47,6 +55,10 @@ class Bus:
         self.push = context.socket(zmq.PUSH)
         self.push.setsockopt(zmq.LINGER, 100)  # milliseconds
         self.push.bind('tcp://*:5565')
+        self.pull = context.socket(zmq.PULL)
+        self.pull.LINGER = 100
+        self.pull.RCVTIMEO = 100
+        self.pull.bind('tcp://*:5566')
 
     def register(self, *outputs):
         pass
@@ -56,36 +68,83 @@ class Bus:
         with self.lock:
             self.push.send_multipart([channel, raw])
 
+    def listen(self):
+        while not rospy.is_shutdown():
+            try:
+                channel, bytes_data = self.pull.recv_multipart()
+                data = msgpack.unpackb(bytes_data, raw=False)
+                return channel.decode('ascii'), data
+            except zmq.ZMQError as e:
+                if e.errno != zmq.EAGAIN:
+                    rospy.logerr("zmq error")
+                    sys.exit("zmq error")
+        rospy.loginfo("done")
+        sys.exit()
+
 
 class main:
-    def __init__(self):
+    def __init__(self, robot_name):
         # get cloudsim ready
-        robot_name = sys.argv[1]
-        imu_name = '/'+robot_name+'/imu/data'
         wait_for_master()
-        rospy.init_node('imu2osgar', log_level=rospy.DEBUG)
-        rospy.loginfo("waiting for {}".format(imu_name))
-        rospy.wait_for_message(imu_name, Imu)
-        # drone specific code
-        top_scan_name = '/'+robot_name+'/top_scan'
-        rospy.loginfo("waiting for {}".format(top_scan_name))
-        rospy.wait_for_message(top_scan_name, LaserScan)
-        bottom_scan_name = '/'+robot_name+'/bottom_scan'
-        rospy.loginfo("waiting for {}".format(bottom_scan_name))
-        rospy.wait_for_message(bottom_scan_name, LaserScan)
-        # end drone specific code
-        rospy.sleep(2)
-        self.imu_count = 0
-        self.top_scan_count = 0
-        self.bottom_scan_count = 0
-
-        # start
+        rospy.init_node('cloudsim2osgar', log_level=rospy.DEBUG)
         self.bus = Bus()
-        self.bus.register('rot', 'acc', 'orientation', 'top_scan', 'bottom_scan')
-        rospy.Subscriber(imu_name, Imu, self.imu)
-        rospy.Subscriber(top_scan_name, LaserScan, self.top_scan)
-        rospy.Subscriber(bottom_scan_name, LaserScan, self.bottom_scan)
-        rospy.spin()
+
+        # common topics
+        topics = [
+            ('/' + robot_name + '/imu/data', Imu, self.imu, ('rot', 'acc', 'orientation')),
+            ('/' + robot_name + '/battery_state', BatteryState, self.battery_state, ('battery_state',)),
+            ('/subt/score', Int32, self.score, ('score',)),
+        ]
+
+        publishers = {}
+
+        # configuration specific topics
+        robot_description = rospy.get_param("/{}/robot_description".format(robot_name))
+        if "robotika_x2_sensor_config_1" in robot_description:
+            rospy.loginfo("robotika x2")
+        elif "ssci_x2_sensor_config_1" in robot_description:
+            rospy.loginfo("ssci x2")
+        elif "ssci_x4_sensor_config_2" in robot_description:
+            rospy.loginfo("ssci drone")
+            topics.append(('/' + robot_name + '/top_scan', LaserScan, self.top_scan, ('top_scan',)))
+            topics.append(('/' + robot_name + '/bottom_scan', LaserScan, self.bottom_scan, ('bottom_scan',)))
+            topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
+        elif "TeamBase" in robot_description:
+            rospy.loginfo("teambase")
+        elif "robotika_freyja_sensor_config" in robot_description:
+            # possibly fragile detection if freya has bredcrumbs
+            rospy.sleep(1)
+            _publishers, subscribers = rostopic.get_topic_list()
+            for name, type, _ in subscribers:
+                if name == "/{}/breadcrumb/deploy".format(robot_name):
+                    rospy.loginfo("freya 2 (with comms beacons)")
+                    publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
+                    break
+            else:
+                rospy.loginfo("freya 1")
+            topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
+        else:
+            rospy.logerror("unknown configuration")
+            return
+
+        outputs = functools.reduce(operator.add, (t[-1] for t in topics))
+        self.bus.register(outputs)
+
+        for name, type, handler, _ in topics:
+            rospy.loginfo("waiting for {}".format(name))
+            rospy.wait_for_message(name, type)
+            setattr(self, handler.__name__+"_count", 0)
+            rospy.Subscriber(name, type, handler)
+
+        # main thread receives data from osgar and sends it to ROS
+        while True:
+            channel, data = self.bus.listen()
+            rospy.logdebug("receiving: {} {}".format(channel, data))
+            # switch on channel to feed different ROS publishers
+            if channel in publishers:
+                publishers[channel].publish(*data)  # just guessing for Empty, where ([],) is wrong
+            else:
+                rospy.loginfo("ignoring: {} {}".format(channel, data))
 
     def imu(self, msg):
         self.imu_count += 1
@@ -124,10 +183,33 @@ class main:
         rospy.loginfo_throttle(10, "bottom_scan callback: {}".format(self.bottom_scan_count))
         self.bus.publish('bottom_scan', msg.ranges)
 
+    def odom_fused(self, msg):
+        self.odom_fused_count += 1
+        rospy.loginfo_throttle(10, "odom_fused callback: {}".format(self.odom_fused_count))
+
+        position = msg.pose.pose.position
+        orientation = msg.pose.pose.orientation
+
+        xyz = [position.x, position.y, position.z]
+        orientation = [orientation.x, orientation.y, orientation.z, orientation.w]
+
+        self.bus.publish('pose3d', [xyz, orientation])
+
+    def battery_state(self, msg):
+        self.battery_state_count += 1
+        rospy.loginfo_throttle(10, "battery_state callback: {}".format(self.battery_state_count))
+        if getattr(self, 'last_battery_secs', None) != msg.header.stamp.secs:
+            self.bus.publish("battery_state", msg.percentage)
+            self.last_battery_secs = msg.header.stamp.secs
+
+    def score(self, msg):
+        self.score_count += 1
+        rospy.loginfo_throttle(10, "score callback: {}".format(self.score_count))
+        self.bus.publish("score", msg.data)
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("need robot name as argument")
-        raise SystemExit(1)
-    main()
+        print("need robot name as argument", file=sys.stderr)
+        sys.exit(2)
+    main(sys.argv[1])
 

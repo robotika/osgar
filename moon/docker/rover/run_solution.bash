@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-while getopts hr: arg; do
+RUN_UNPAUSED=0
+
+while getopts uhr: arg; do
     case $arg in
 	r)
 	    case $OPTARG in
@@ -12,7 +14,7 @@ while getopts hr: arg; do
 		"2" )
 		    JSONFILES=("moon-excavator-round2.json" "moon-hauler-round2.json")
 		    ROVERSCRIPTS=("rospy_excavator_round2.py --robot_name=excavator_1 --push_port=5555 --pull_port=5556 --reqrep_port=5557" "rospy_hauler_round2.py --robot_name=hauler_1 --push_port=6555 --pull_port=6556 --reqrep_port=6557")
-                    DAEMONS=("rosrun openvslam run_slam -v /openvslam/orb_vocab.dbow2 -c /openvslam/rover_camera_config.yaml -r excavator_1" "rosrun openvslam run_slam -v /openvslam/orb_vocab.dbow2 -c /openvslam/rover_camera_config.yaml -r hauler_1")
+                    DAEMONS=("rosrun openvslam run_slam -v /openvslam/orb_vocab.dbow2 -c /openvslam/rover_camera_config.yaml -r excavator_1")
 		    ;;
 		"3" )
 		    JSONFILES=("moon-round3.json")
@@ -23,19 +25,23 @@ while getopts hr: arg; do
 	    esac
 	    ;;
 	h)
-	    echo "Use -r [1|2|3] to choose the run to execute"
+	    echo "-r [1|2|3] to choose the run to execute"
+	    echo "-u run unpaused"
 	    exit
 	    ;;
+        u)
+            RUN_UNPAUSED=1
+            ;;
 	*)
 	    exit
 	    ;;
     esac
 done
 
-echo "Unpause simulation"
-rosservice call /gazebo/unpause_physics "{}"
-echo "wait a moment"
-sleep 5
+if [[ $RUN_UNPAUSED -eq 1 ]]; then
+    echo "Unpause simulation in 5 sec"
+    ( sleep 5; rosservice call /gazebo/unpause_physics "{}" ) &
+fi
 
 ROBOT_PIDS=()
 ROS_PIDS=()
