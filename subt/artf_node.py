@@ -71,26 +71,6 @@ def result2report(result, depth, fx):
     return [NAME2IGN[result[0][0]], [rel_x, rel_y, rel_z]]
 
 
-def result2list(result):
-    """
-    convert MDNET result to msgpack friendly format
-    """
-    ret = []
-    for artifact, points in result:
-        ret.append([artifact, [list(p) for p in points]])
-    return ret
-
-
-def cv_result2list(result):
-    """
-    convert OpenCV DNN detector result to msgpack friendly format
-    """
-    ret = []
-    for artifact, certainty, bbox in result:
-        ret.append([artifact, certainty, bbox.tolist()])
-    return ret
-
-
 class ArtifactDetectorDNN(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
@@ -164,8 +144,8 @@ class ArtifactDetectorDNN(Node):
         if result or result_cv:
             # publish the results independent to detection validity
             self.stdout(result, result_cv)  # for debugging in case of crash
-            self.publish('debug_result', str(result))
-            self.publish('debug_cv_result', str(result_cv))
+            self.publish('debug_result', result)
+            self.publish('debug_cv_result', result_cv)
             checked_result = check_results(result, result_cv)
             if checked_result:
                 report = result2report(checked_result, self.depth, self.fx)
