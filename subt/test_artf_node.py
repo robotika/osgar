@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from subt.artf_node import result2report, check_results, result2list, cv_result2list
+from subt.artf_node import result2report, check_results
 
 
 DRONE_FX = 554.25469
@@ -59,18 +59,5 @@ class ArtifactDetectorDNNTest(unittest.TestCase):
         checked_result = check_results(result, result_cv)
         self.assertEqual(checked_result, expected_result)
 
-    def test_result2list(self):
-        result = [('backpack', [(20, 4, 0.9549203), (16, 4, 0.96661633), (24, 8, 0.9785418)])]
-        self.assertEqual(result2list(result),
-                         [['backpack', [[20, 4, 0.9549203], [16, 4, 0.96661633], [24, 8, 0.9785418]]]])
-        result = [('backpack', [(624, 20, 0.97964704), (628, 20, 0.98307204), (624, 24, 0.97980016), (628, 24, 0.96485513)])]
-        self.assertEqual(result2list(result),
-                         [['backpack', [[624, 20, 0.97964704], [628, 20, 0.98307204], [624, 24, 0.97980016], [628, 24, 0.96485513]]]])
-
-    def test_cv_result2list(self):
-        result = [('helmet', 0.6372756, np.array([614, 224, 637, 246], dtype=np.int32))]
-        self.assertEqual(cv_result2list(result),
-                         [['helmet', 0.6372756, [614, 224, 637, 246]]])
-        self.assertEqual(cv_result2list([]), [])
 
 # vim: expandtab sw=4 ts=4
