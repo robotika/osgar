@@ -18,7 +18,8 @@ import msgpack
 
 from sensor_msgs.msg import Imu, LaserScan
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Empty
+from std_msgs.msg import Empty, Int32
+from sensor_msgs.msg import BatteryState
 
 
 def py3round(f):
@@ -91,6 +92,8 @@ class main:
         # common topics
         topics = [
             ('/' + robot_name + '/imu/data', Imu, self.imu, ('rot', 'acc', 'orientation')),
+            ('/' + robot_name + '/battery_state', BatteryState, self.battery_state, ('battery_state',)),
+            ('/subt/score', Int32, self.score, ('score',)),
         ]
 
         publishers = {}
@@ -119,6 +122,7 @@ class main:
                     break
             else:
                 rospy.loginfo("freya 1")
+            topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
         else:
             rospy.logerror("unknown configuration")
             return
@@ -190,6 +194,18 @@ class main:
         orientation = [orientation.x, orientation.y, orientation.z, orientation.w]
 
         self.bus.publish('pose3d', [xyz, orientation])
+
+    def battery_state(self, msg):
+        self.battery_state_count += 1
+        rospy.loginfo_throttle(10, "battery_state callback: {}".format(self.battery_state_count))
+        if getattr(self, 'last_battery_secs', None) != msg.header.stamp.secs:
+            self.bus.publish("battery_state", msg.percentage)
+            self.last_battery_secs = msg.header.stamp.secs
+
+    def score(self, msg):
+        self.score_count += 1
+        rospy.loginfo_throttle(10, "score callback: {}".format(self.score_count))
+        self.bus.publish("score", msg.data)
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:

@@ -35,6 +35,8 @@ class DepthParams:
             vertical_diff_limit=np.radians(60),
             # How much of a slope do we still consider "normal".
             max_slope=np.radians(-16),
+            slope_length_scale_factor = 1.0,
+            slope_length_power_factor = 0.0,
             # Despeckling parameters.
             noise_filter_window=(5, 5),
             noise_filter_threshold=20,
@@ -59,6 +61,8 @@ class DepthParams:
         self.vertical_pixel_offset = vertical_pixel_offset
         self.vertical_diff_limit = vertical_diff_limit
         self.max_slope = max_slope
+        self.slope_length_scale_factor = slope_length_scale_factor
+        self.slope_length_power_factor = slope_length_power_factor
         self.noise_filter_window = noise_filter_window
         self.noise_filter_threshold = noise_filter_threshold
         self.lidar_fov = lidar_fov
@@ -145,7 +149,7 @@ def depth2danger(depth_mm, params):
     return danger
 
 
-def depth2dist(depth_mm, params, pitch=None, roll=None):
+def depth2dist(depth_mm, params, pitch=None, roll=None, debug_col=None):
     # return line in mm corresponding to scan
     # optional pitch and roll angles are in radians
     # warning: there is a bug (?) in either Osgar or in SubT and the angles
@@ -165,7 +169,7 @@ def depth2dist(depth_mm, params, pitch=None, roll=None):
                 [[1.0, 0.0, 0.0],
                  [0.0, np.cos(inv_roll), -np.sin(inv_roll)],
                  [0.0, np.sin(inv_roll), np.cos(inv_roll)]])
-    rot = roll_rot * pitch_rot
+    rot = pitch_rot * roll_rot
 
     depth = depth_mm * 0.001  # Converting to meters.
     # 3D coordinates of points detected by the depth camera, converted to
@@ -185,18 +189,22 @@ def depth2dist(depth_mm, params, pitch=None, roll=None):
     slope = np.arctan2(
             rel_xyz[:,:,Z], np.hypot(rel_xyz[:,:,X], rel_xyz[:,:,Y]))
 
-    nearer_x = np.minimum(rxyz[:-params.vertical_pixel_offset,:,X],
-                          rxyz[params.vertical_pixel_offset:,:,X])
     abs_y = np.abs(rxyz[:,:,Y])
-    nearer_abs_y = np.minimum(abs_y[:-params.vertical_pixel_offset,:],
-                              abs_y[params.vertical_pixel_offset:,:])
-    danger = np.logical_and.reduce(np.stack([
+    sensing_area = np.logical_and.reduce(np.stack([
         # It has to be near.
-        nearer_x <= params.max_x,
-        nearer_abs_y <= params.max_y,
+        rxyz[:-params.vertical_pixel_offset,:,X] <= params.max_x,
+        rxyz[params.vertical_pixel_offset:,:,X] <= params.max_x,
+        abs_y[:-params.vertical_pixel_offset,:] <= params.max_y,
+        abs_y[params.vertical_pixel_offset:,:] <= params.max_y,
         # But not too near.
-        nearer_x >= params.min_x,
-        nearer_abs_y >= params.min_y,
+        rxyz[:-params.vertical_pixel_offset,:,X] >= params.min_x,
+        rxyz[params.vertical_pixel_offset:,:,X] >= params.min_x,
+        abs_y[:-params.vertical_pixel_offset,:] >= params.min_y,
+        abs_y[params.vertical_pixel_offset:,:] >= params.min_y]))
+
+    # Surfaces that are vertical enough to be considered not traversable.
+    vertical_obstacle = np.logical_and.reduce(np.stack([
+        sensing_area,
         # It should not be something small on the ground.
         np.maximum(rxyz[:-params.vertical_pixel_offset,:,Z],
                    rxyz[params.vertical_pixel_offset:,:,Z]) >= params.min_z,
@@ -206,9 +214,35 @@ def depth2dist(depth_mm, params, pitch=None, roll=None):
         np.maximum(rxyz[:-params.vertical_pixel_offset, :, Z],
                    rxyz[params.vertical_pixel_offset:, :, Z]) <= params.max_z]))
 
+    # Slopes
+    rel_dists = np.hypot(rel_xyz[:,:,X], rel_xyz[:,:,Y])
+    slopes = np.arctan2(rel_xyz[:,:,Z], rel_dists)
+    # This threshold parametrization, with positive scale and negative power
+    # factor, allows us to accept short/low steep slopes as traversable, yet
+    # mark long steps with smaller slope as dangerous.
+    # Short & low "steps" (=steep slopes)  arise on normal surface bumpiness,
+    # while long steps show up when the robot approaches a cliff with ground at
+    # a lower level below it.
+    slope_thresholds = params.max_slope * ((params.slope_length_scale_factor * rel_dists) ** params.slope_length_power_factor)
+    steep = np.logical_and(sensing_area, slopes < slope_thresholds)
+    if debug_col is not None:
+        for info in enumerate(
+                zip(np.degrees(slopes[:,debug_col]),
+                    rel_dists[:,debug_col],
+                    np.degrees(slope_thresholds[:,debug_col]),
+                    rel_xyz[:,debug_col,:].tolist(),
+                    np.hypot(gxyz[params.vertical_pixel_offset:,debug_col,X],
+                    gxyz[params.vertical_pixel_offset:,debug_col,Y]),
+                    depth[params.vertical_pixel_offset:,debug_col],
+                    steep[:,debug_col])):
+            print(info)
+        print(np.any(steep[:,debug_col]), steep.shape[0] - np.argmax(steep[::-1,debug_col]) - 1)
+
+    noisy_danger = np.logical_or(vertical_obstacle, steep)
+
     # Filter out noise.
     danger = cv2.filter2D(
-            danger.astype(np.float),
+            noisy_danger.astype(np.float),
             -1,
             np.ones(params.noise_filter_window)) > params.noise_filter_threshold
 
@@ -219,49 +253,61 @@ def depth2dist(depth_mm, params, pitch=None, roll=None):
     mask = scan == FAR_AWAY
     scan[mask] = 0
 
-    # down drops
-    low_rxyz = rxyz[params.cam_low:,:]
-    low_gxyz = gxyz[params.cam_low:,:]
-    gdists = np.hypot(low_gxyz[:,:,X], low_gxyz[:,:,Y])
-    slopes = np.arctan2(low_gxyz[:,:,Z], gdists)
-    below_ground = slopes < params.max_slope
-
-    # Let's calculate, where we should see ground.
-    q = params.camera_xyz[Z] / np.maximum(
-            1e-6, (params.camera_xyz[Z] - low_rxyz[:,:,Z]))
-    expected_ground = low_rxyz * np.expand_dims(q, 2)
-    ground_dists = np.hypot(expected_ground[:,:,X], expected_ground[:,:,Y])
-    FAR_AWAY = 1000.
-    scan_down = np.min(
-            np.where(below_ground, ground_dists, FAR_AWAY),
-            axis=0)
-
-    mask = scan_down < FAR_AWAY
-    scan[mask] = scan_down[mask]  # down drop readings are more important then walls
-
     scan = np.array(scan*1000, dtype=np.int32)
     return scan
 
 
 if __name__ == '__main__':
     import argparse
+    import cv2
     import json
     import matplotlib.pyplot as plt
+    from osgar.lib.quaternion import euler_zyx
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('filename', help='NPZ file with depth data')
-    parser.add_argument('--depth-params', type=json.loads,
+    parser.add_argument('--depth-params', type=json.loads, default={},
                         help='Depth processing parameters in json format. ' +
                               'See DepthParams.')
+    parser.add_argument('--debug-column', type=int,
+                        help='Print extra debugging information for this column in the image.')
     args = parser.parse_args()
 
-    with np.load(args.filename) as f:
+    with np.load(args.filename, allow_pickle=True) as f:
         depth = f['depth']
+        try:
+            xyz, rot = f['pose3d']
+            yaw, pitch, roll = euler_zyx(rot)
+
+            # Mimicking Osgar's upside down bug.
+            pitch = -pitch
+            roll = -roll - np.pi
+        except:
+            assert(False)
+            pitch = 0.0
+            roll = 0.0
+
+        try:
+            img = f['img']
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        except:
+            img = None
 
     depth_params = DepthParams(**args.depth_params)
-    dist = depth2dist(depth, depth_params)
+    dist = depth2dist(depth, depth_params, pitch, roll, debug_col=args.debug_column)
 
+    plt.figure(1)
     plt.plot(range(640), dist, 'o-', linewidth=2)
+
+    depth_img = (np.minimum(255*40, depth) / 40).astype(np.uint8)
+    depth_im_color = cv2.applyColorMap(depth_img, cv2.COLORMAP_JET)
+    plt.figure(2)
+    plt.imshow(depth_im_color)
+
+    if img is not None:
+        plt.figure(3)
+        plt.imshow(img)
+
     plt.show()
 
 # vim: expandtab sw=4 ts=4

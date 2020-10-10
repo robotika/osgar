@@ -60,7 +60,7 @@ then
     echo "Robot is Freyja"
     LAUNCH_FILE="robot freyja.launch"
     CONFIG_FILES=("zmq-subt-x2.json" "subt-freyja.json")
-    WALLDIST=1.6
+    WALLDIST=1.0
     SPEED=1.5
 elif $IS_SSCI_X2
 then

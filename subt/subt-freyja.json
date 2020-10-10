@@ -8,19 +8,25 @@
           "limit_roll": 40,
           "return_limit_pitch": 50,
           "return_limit_roll": 50,
-          "obstacle_influence": 1.2,
+          "obstacle_influence": 1.0,
           "speed_policy": "conservative"
         }
       },
       "depth2scan": {
         "init": {
           "depth_params": {
+            "min_x": 0.1,
+            "max_x": 10.0,
+            "min_y": 0.0,
+            "max_y": 10.0,
             "fx": 349.2,
             "camera_xyz": [0.25, 0.0, 0.23],
             "image_size": [640, 360],
             "principal_point": [319.5, 179.5],
             "vertical_diff_limit": 0.698, "vd_comment": "radians(40)",
-            "max_slope": -0.4538, "ms_comment": "radians(-26)"
+            "max_slope": -0.4537856, "ms_comment": "radians(-26)",
+            "slope_length_scale_factor": 0.4,
+            "slope_length_power_factor": -0.05
           }
         }
       }
