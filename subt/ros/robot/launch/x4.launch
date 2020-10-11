@@ -62,11 +62,6 @@
     <remap from="pose" to="$(arg robot_name)/altitude"/>
   </node>
 
-  <node name="fixed_imu" pkg="robot" type="imu_covariance_override.py" args="--orientation-stdev 1e-4 --angular-stdev 2e-4 --acceleration-stdev 1e-2">
-    <remap from="/imu/in" to="$(arg robot_name)/imu/data"/>
-    <remap from="/imu/out" to="$(arg robot_name)/imu/fixed"/>
-  </node>
-
   <!-- Fusion of ICP odometry, RGBD odometry and altitude with IMU data.
        https://github.com/introlab/rtabmap_ros/blob/master/launch/tests/sensor_fusion.launch
        https://answers.ros.org/question/248109/integrating-an-imu-with-rtabmap/
@@ -90,10 +85,10 @@
     <!-- Altitude estimated from air pressure -->
     <param name="pose0" value="$(arg robot_name)/altitude"/>
     <!-- IMU -->
-    <param name="imu0" value="$(arg robot_name)/imu/fixed"/>
+    <param name="imu0" value="$(arg robot_name)/imu/data"/>
 
-    <param name="odom0_differential" value="false"/>
-    <param name="odom1_differential" value="false"/>
+    <param name="odom0_differential" value="true"/>
+    <param name="odom1_differential" value="true"/>
     <param name="pose0_differential" value="false"/>
     <param name="imu0_differential" value="false"/>
 
@@ -106,14 +101,14 @@
 
     <!-- The order of the values is x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az. -->
     <!-- We barely trust the ICP odometry on 2d scan with X and Y coordinates. Totally not anything more 3d. -->
-    <rosparam param="odom0_config">[false, false, false,
+    <rosparam param="odom0_config">[true, true, false,
                                     false, false, false,
-                                    true, true, false,
+                                    false, false, false,
                                     false, false, false,
                                     false, false, false]</rosparam>
-    <rosparam param="odom1_config">[false, false, false,
+    <rosparam param="odom1_config">[true, true, true,
                                     false, false, false,
-                                    true, true, true,
+                                    false, false, false,
                                     false, false, false,
                                     false, false, false]</rosparam>
     <rosparam param="pose0_config">[false, false, true,
@@ -131,10 +126,7 @@
     <param name="smooth_lagged_data" value="true"/>
     <param name="history_length" value="1.0"/>
 
-    <!--
-    <param name="print_diagnostics" value="true"/> 
-    <remap from="/diagnostics" to="$(arg robot_name)/odom_diagnostics"/>
-    -->
+    <!-- <param name="print_diagnostics" value="true"/> -->
 
     <remap from="odometry/filtered" to="/$(arg robot_name)/odom_fused"/>
   </node>
