@@ -84,13 +84,13 @@ class ArtifactDetectorDNN(Node):
         self.fx = config.get('fx', 554.25469)  # use drone X4 for testing (TODO update all configs!)
 
     def create_detector(self):
-        model = os.path.join(os.path.dirname(__file__), '../../../mdnet1.64.64.13.4.relu.pth')
+        model = os.path.join(os.path.dirname(__file__), '../../../mdnet2.64.64.13.4.relu.pth')
         confidence_thresholds = {
             'survivor': 0.8,
-            'backpack': 0.95,
-            'phone': 0.77,
-            'helmet': 0.9,
-            'rope': 0.8
+            'backpack': 0.8,
+            'phone': 0.8,
+            'helmet': 0.54,
+            'rope': 0.9
         }
         max_gap = 16
         min_group_size = 2
