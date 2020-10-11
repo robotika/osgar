@@ -318,7 +318,8 @@ int main(int argc, char** argv)
   initZeroMQ();
 
   g_client.reset(new subt::CommsClient(robot_name));
-  g_client->Bind(&commClientCallback, "", BROADCAST_PORT);
+  g_client->Bind(&commClientCallback, "", BROADCAST_PORT); // from other robots
+  g_client->Bind(&commClientCallback);                     // from darpa basestation
 
   ros::NodeHandle n;
   ros::Subscriber subClock;
