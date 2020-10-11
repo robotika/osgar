@@ -20,25 +20,26 @@ class ArtifactReporter(Node):
             self.publish('artf_cmd', bytes('artf ' + s, encoding='ascii'))
         print('report completed')
 
+    def on_sim_time_sec(self, data):
+        if self.repeat_report_sec is None or self.sim_time_sec % self.repeat_report_sec != 0:
+            return
+        if len(self.artf_xyz) == 0:
+            return
+        # publish all artifacts only on regular update (to avoid LoRA cross-talk)
+        self.publish_artf(self.artf_xyz_accumulated)
+        self.publish('artf_all', self.artf_xyz_accumulated)
+
+    def on_artf_xyz(self, data):
+        for item in self.artf_xyz:
+            if item not in self.artf_xyz_accumulated:
+                self.artf_xyz_accumulated.append(item)
+        self.publish_artf(self.artf_xyz)
+
     def update(self):  # hack, this method should be called run instead!
         channel = super().update()  # define self.time
-        assert channel in ["artf_xyz", "sim_time_sec"], channel
-
-        if channel == 'sim_time_sec':
-            if self.repeat_report_sec is None or self.sim_time_sec % self.repeat_report_sec != 0:
-                return channel
-            if len(self.artf_xyz) == 0:
-                return channel
-            # publish all artifacts only on regular update (to avoid LoRA cross-talk)
-            self.publish_artf(self.artf_xyz_accumulated)
-            self.publish('artf_all', self.artf_xyz_accumulated)
-
-        elif channel == 'artf_xyz':
-            for item in self.artf_xyz:
-                if item not in self.artf_xyz_accumulated:
-                    self.artf_xyz_accumulated.append(item)
-            self.publish_artf(self.artf_xyz)
-
+        handler = getattr(self, "on_" + channel, None)
+        if handler is not None:
+            handler(getattr(self, channel))
         return channel
 
 
