@@ -35,6 +35,9 @@ class ArtifactReporter(Node):
                 self.artf_xyz_accumulated.append(item)
         self.publish_artf(self.artf_xyz)
 
+    def on_base_station(self, data):
+        pass
+
     def update(self):  # hack, this method should be called run instead!
         channel = super().update()  # define self.time
         handler = getattr(self, "on_" + channel, None)
