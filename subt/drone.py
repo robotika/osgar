@@ -111,8 +111,8 @@ class Drone(Node):
 
         t = [a[0].total_seconds() for a in self.debug_arr]
         height = [(a[1], a[1] - a[2], a[1] + a[3], a[4]) for a in self.debug_arr]
-        plt.plot(t, height, '-o', linewidth=2)
-
+        line_obj = plt.plot(t, height, '-o', linewidth=2)
+        plt.legend(iter(line_obj), ('Z', 'Z - bottom', 'Z + top', 'altitude'))
         plt.xlabel('time (s)')
         plt.legend()
         plt.show()
