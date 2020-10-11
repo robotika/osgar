@@ -208,6 +208,12 @@ class main:
         rospy.loginfo_throttle(10, "score callback: {}".format(self.score_count))
         self.bus.publish("score", msg.data)
 
+    def atmospheric_pressure(self, msg):
+        self.atmospheric_pressure_count += 1
+        rospy.loginfo_throttle(10, "atmospheric_pressure callback: {}".format(self.atmospheric_pressure_count))
+        self.bus.publish('atmospheric_pressure', msg.fluid_pressure)
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("need robot name as argument", file=sys.stderr)
