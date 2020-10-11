@@ -188,11 +188,11 @@
                                    true,  true,  true] </rosparam>
 
     <!-- The unit of the threshold is a Mahalanobis distance (i.e. sum) of numbers of sigmas in each dimension -->
-    <rosparam param="odom0_twist_rejection_threshold" value="6"/>
-    <rosparam param="odom1_twist_rejection_threshold" value="6"/>
-    <rosparam param="odom2_twist_rejection_threshold" value="6"/>
-    <rosparam param="odom3_twist_rejection_threshold" value="6"/>
-    <rosparam param="odom4_twist_rejection_threshold" value="6"/>
+    <rosparam param="odom0_twist_rejection_threshold" value="2"/>
+    <rosparam param="odom1_twist_rejection_threshold" value="2"/>
+    <rosparam param="odom2_twist_rejection_threshold" value="2"/>
+    <rosparam param="odom3_twist_rejection_threshold" value="2"/>
+    <rosparam param="odom4_twist_rejection_threshold" value="2"/>
 
     <!-- When some data arrive late, we are willing to go back in time and correct the estimate. -->
     <param name="smooth_lagged_data" value="true"/>
