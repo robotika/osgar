@@ -550,7 +550,6 @@ class ROSMsgParser(Thread):
             s = data[6:].split(b' ')
             addr = s[0]
             msg = b' '.join(s[1:])
-            print(addr, msg)
             if addr == b'base_station':
                 artifact_score = ign_pb2.ArtifactScore()
                 try:
@@ -558,7 +557,7 @@ class ROSMsgParser(Thread):
                 except Exception as e:
                     print(e)
                     print(msg)
-                    # todo: record error to logfile
+                    self.bus.report_error(exception=str(e), msg=msg)
                     return
                 apos = [artifact_score.artifact.pose.position.x,
                         artifact_score.artifact.pose.position.y,
