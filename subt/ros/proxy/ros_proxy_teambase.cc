@@ -88,9 +88,10 @@ void clockCallback(const rosgraph_msgs::Clock::ConstPtr& msg)
 
 void sendReceivedMessage(const std::string &srcAddress, const std::string &data)
 {
-  char buf[10000];  // the limit for messages is 4k?
-  int size = sprintf(buf, "radio %s %s", srcAddress.c_str(), data.c_str());
-  protected_zmq_send(g_responder, buf, size, 0);
+  std::stringstream ss;
+  ss << "radio " << srcAddress << " " << data;
+  auto buf = ss.str();
+  protected_zmq_send(g_responder, buf.c_str(), buf.size(), 0);
 }
 
 void commClientCallback(const std::string &_srcAddress,
