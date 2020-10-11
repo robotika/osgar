@@ -19,7 +19,7 @@ WORLDS=dict(
     cp1 = "Cave Practice 1",
     cp2 = "Cave Practice 2",
     cp3 = "Cave Practice 3",
-    cs  = "Cave Circuit",
+    cc  = "Cave Circuit",
 )
 
 ROBOTS=dict(
