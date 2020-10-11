@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import copy
 import math
 import sys
 
@@ -20,13 +21,14 @@ class AltitudeFromAtmosphericPressure:
 
     def pressureCallback(self, pressure):
         pose = PoseWithCovarianceStamped()
+        pose.header = copy.deepcopy(pressure.header)
         pose.header.frame_id = self.frame_id
         pose.pose.pose.position.z = self.__altitude_from_pressure(pressure.fluid_pressure)
         pose.pose.pose.orientation.w = 1
         # Initialize covariance with dummy values.
         for i in range(6):
             pose.pose.covariance[i * 6 + i] = 1.0
-        PRESSURE_SENSOR_COVARIANCE = 1e-5 ** 2  # No noise modelled with "very little noise."
+        PRESSURE_SENSOR_COVARIANCE = 1e-15 ** 2  # No noise modelled with "very little noise."
         pose.pose.covariance[2 * 6 + 2] = PRESSURE_SENSOR_COVARIANCE
         self.pose_publisher.publish(pose)
 
