@@ -550,17 +550,27 @@ class ROSMsgParser(Thread):
             s = data[6:].split(b' ')
             addr = s[0]
             msg = b' '.join(s[1:])
+            print(addr, msg)
             if addr == b'base_station':
                 artifact_score = ign_pb2.ArtifactScore()
-                artifact_score.ParseFromString(msg)
+                try:
+                    artifact_score.ParseFromString(msg)
+                except Exception as e:
+                    print(e)
+                    print(msg)
+                    # todo: record error to logfile
+                    return
+                apos = [artifact_score.artifact.pose.position.x,
+                        artifact_score.artifact.pose.position.y,
+                        artifact_score.artifact.pose.position.z]
                 new_msg = dict(
                     report_id=artifact_score.report_id,
                     artifact_type=artifact_score.artifact.type,
-                    artifact_position=artifact_score.artifact.position,
+                    artifact_position=apos,
                     report_status=artifact_score.report_status,
                     score_change=artifact_score.score_change,
                 )
-                self.bus.publish('base_station', msg)
+                self.bus.publish('base_station', new_msg)
             else:
                 self.bus.publish('radio', [addr, msg])
             return
