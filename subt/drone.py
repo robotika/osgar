@@ -72,7 +72,7 @@ class Drone(Node):
         angular = [0.0, 0.0, math.radians(data[1]/100.0)]
 
         if self.verbose:
-            self.debug_arr.append((self.time, self.z, self.lastScanDown, self.lastScanUp, self.altitude))
+            self.debug_arr.append((self.time, self.altitude, self.lastScanDown, self.lastScanUp, self.z))
 
         if data != [0, 0]:
             self.started = True  # TODO this logic has to be also in "rosmsg.py" and/or "ros_proxy_node.cc"
@@ -112,7 +112,7 @@ class Drone(Node):
         t = [a[0].total_seconds() for a in self.debug_arr]
         height = [(a[1], a[1] - a[2], a[1] + a[3], a[4]) for a in self.debug_arr]
         line_obj = plt.plot(t, height, '-o', linewidth=2)
-        plt.legend(iter(line_obj), ('Z', 'Z - bottom', 'Z + top', 'altitude'))
+        plt.legend(iter(line_obj), ('altitude', 'alt - bottom', 'alt + top', 'pose3D.z'))
         plt.xlabel('time (s)')
         plt.legend()
         plt.show()
