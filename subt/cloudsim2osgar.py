@@ -19,7 +19,7 @@ import msgpack
 from sensor_msgs.msg import Imu, LaserScan
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty, Int32
-from sensor_msgs.msg import BatteryState
+from sensor_msgs.msg import BatteryState, FluidPressure
 
 
 def py3round(f):
@@ -109,6 +109,7 @@ class main:
             topics.append(('/' + robot_name + '/top_scan', LaserScan, self.top_scan, ('top_scan',)))
             topics.append(('/' + robot_name + '/bottom_scan', LaserScan, self.bottom_scan, ('bottom_scan',)))
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
+            topics.append(('/' + robot_name + '/atmospheric_pressure', FluidPressure, self.atmospheric_pressure, ('atmospheric_pressure',)))
         elif "TeamBase" in robot_description:
             rospy.loginfo("teambase")
         elif "robotika_freyja_sensor_config" in robot_description:

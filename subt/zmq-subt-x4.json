@@ -96,7 +96,8 @@
       "fromrospy": {
           "driver": "subt.pull:Pull",
 	      "init": {
-	        "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan", "pose3d", "battery_state", "score"]
+	        "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan", "pose3d", "battery_state", "score",
+                        "atmospheric_pressure"]
 	      }
       },
       "radio": {
@@ -154,6 +155,7 @@
               ["fromrospy.bottom_scan", "drone.bottom_scan"],
               ["fromrospy.top_scan", "drone.top_scan"],
               ["offseter.pose3d", "drone.pose3d"],
+              ["fromrospy.atmospheric_pressure", "drone.atmospheric_pressure"],
 
               ["rosmsg.origin", "offseter.origin"],
               ["fromrospy.pose3d", "offseter.pose3d"]
