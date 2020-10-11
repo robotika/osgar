@@ -157,6 +157,7 @@
               ["fromrospy.top_scan", "drone.top_scan"],
               ["offseter.pose3d", "drone.pose3d"],
               ["fromrospy.air_pressure", "drone.air_pressure"],
+              ["app.desired_altitude", "drone.desired_altitude"],
 
               ["rosmsg.origin", "offseter.origin"],
               ["fromrospy.pose3d", "offseter.pose3d"]
