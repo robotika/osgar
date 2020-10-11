@@ -53,7 +53,7 @@
     <remap from="pose" to="$(arg robot_name)/altitude"/>
   </node>
 
-  <node name="fixed_imu" pkg="robot" type="imu_covariance_override.py" args="--orientation-stdev 1e-4 --angular-stdev 2e-4 --acceleration-stdev 1e-2">
+  <node name="fixed_imu" pkg="robot" type="imu_covariance_override.py" args="--orientation-stdev 8e-8 --angular-stdev 2e-4 --acceleration-stdev 1e-2">
     <remap from="/imu/in" to="$(arg robot_name)/imu/data"/>
     <remap from="/imu/out" to="$(arg robot_name)/imu/fixed"/>
   </node>
