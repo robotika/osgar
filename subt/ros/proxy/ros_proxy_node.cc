@@ -363,6 +363,7 @@ void Controller::Update(const ros::TimerEvent&)
       // Create subt communication client
       this->client.reset(new subt::CommsClient(this->name));
       this->client->Bind(&Controller::CommClientCallback, this, "", BROADCAST_PORT);
+      this->client->Bind(&Controller::CommClientCallback, this);
 
       // Create a cmd_vel publisher to control a vehicle.
       this->velPub = this->n.advertise<geometry_msgs::Twist>(
