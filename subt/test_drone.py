@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import MagicMock, patch, call
 
 from osgar.bus import Bus
-from subt.drone import Drone, MAX_ANGULAR
+from subt.drone import Drone, MAX_ANGULAR, altitude_from_pressure
 
 
 class DroneTest(unittest.TestCase):
@@ -23,5 +23,8 @@ class DroneTest(unittest.TestCase):
         c.request_stop()
         c.join()
         self.assertEqual(tester.listen()[2], [[1.0, 0.0, 0.0], [0.0, 0.0, MAX_ANGULAR]])
+
+    def test_altitude_from_pressure(self):
+        self.assertEqual(altitude_from_pressure(101323.49836826918), 0.12500215269779752)
 
 # vim: expandtab sw=4 ts=4

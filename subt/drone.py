@@ -13,6 +13,33 @@ PID_P = 1.0  # 0.5
 PID_I = 0.0  # 0.5
 
 
+def altitude_from_pressure(p):
+    # Model and parameters taken from Wikipedia:
+    # https://en.wikipedia.org/wiki/Barometric_formula
+    # I have not yet found corresponding atmospheric model and constants
+    # in Ignition Gazebo.
+
+    # Reference pressure. [Pa]
+    Pb = 101325.00
+    # Reference temperature. [K]
+    Tb = 288.15
+    # Gravitational acceleration. [m/s^2]
+    g0 = 9.80665
+    # Universal gas constant. [J/(mol*K)]
+    R = 8.3144598
+    # Molar mass of air. [kg/mol]
+    M = 0.0289644
+    # Height of reference level. [m]
+    hb = 0
+
+    # The pressure model is:
+    #   p = Pb * exp(-g0 * M * (h - hb) / (R * Tb))
+    # Therefore:
+    h = (math.log(p) - math.log(Pb)) * (R * Tb) / (-g0 * M) + hb
+
+    return h
+
+
 class Drone(Node):
     #class that listens all topics needed for controlling drone height
     def __init__(self, config, bus):
@@ -32,6 +59,7 @@ class Drone(Node):
         self.debug_arr = []
         self.verbose = False
         self.z = None  # last Z coordinate
+        self.altitude = None  # based on air_pressure
 
     def on_bottom_scan(self, scan):
             self.lastScanDown = scan[0]
@@ -44,7 +72,7 @@ class Drone(Node):
         angular = [0.0, 0.0, math.radians(data[1]/100.0)]
 
         if self.verbose:
-            self.debug_arr.append((self.time, self.z, self.lastScanDown, self.lastScanUp))
+            self.debug_arr.append((self.time, self.z, self.lastScanDown, self.lastScanUp, self.altitude))
 
         if data != [0, 0]:
             self.started = True  # TODO this logic has to be also in "rosmsg.py" and/or "ros_proxy_node.cc"
@@ -68,6 +96,9 @@ class Drone(Node):
         xyz, quat = data
         self.z = xyz[2]
 
+    def on_air_pressure(self, data):
+        self.altitude = altitude_from_pressure(data)
+
     def update(self):
         channel = super().update()
 
@@ -79,7 +110,7 @@ class Drone(Node):
         import matplotlib.pyplot as plt
 
         t = [a[0].total_seconds() for a in self.debug_arr]
-        height = [(a[1], a[1] - a[2], a[1] + a[3]) for a in self.debug_arr]
+        height = [(a[1], a[1] - a[2], a[1] + a[3], a[4]) for a in self.debug_arr]
         plt.plot(t, height, '-o', linewidth=2)
 
         plt.xlabel('time (s)')
