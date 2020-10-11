@@ -46,7 +46,7 @@ def parse_robot_name(robot_name):
         if action in ['left', 'right', 'center']:
             # exploration commands
             if not entered:
-                ret.append(('enter', None))
+                ret.append(('enter-' + action, None))
                 entered = True
             sum_t += t
         ret.append((action, t))

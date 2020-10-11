@@ -28,7 +28,8 @@
           "in": ["image", "scan"],
           "out": ["artf", "dropped", "debug_artf", "stdout"],
           "init": {
-            "virtual_world": true
+            "virtual_world": true,
+            "fx": 554.25469
           }
       },
       "reporter": {

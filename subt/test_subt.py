@@ -1,9 +1,11 @@
 import unittest
 import logging
+import math
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 from osgar.bus import Bus
+from osgar.lib import quaternion
 from subt.main import SubTChallenge
 from subt.trace import distance3D
 
@@ -54,6 +56,27 @@ class SubTChallengeTest(unittest.TestCase):
         app.request_stop()
         app.join()
         self.assertTrue(entrance_reached(sim))
+
+    def test_on_artf_xyz(self):
+        config = {'virtual_world': True, 'max_speed': 1.0, 'walldist': 0.8, 'timeout': 600, 'symmetric': False, 'right_wall': 'auto'}
+        bus = MagicMock()
+        app = SubTChallenge(config, bus)
+        data = ['TYPE_BACKPACK', [5000, -2359, 2222]]
+        app.offset = 100.0, 2.0, 3.0
+        app.xyz = 0, 0, 0
+        app.orientation = quaternion.identity()
+        bus.publish.reset_mock()
+        app.on_artf(None, data)
+        bus.publish.assert_called()
+        self.assertEqual(bus.method_calls[-1],
+                         call.publish('artf_xyz', [['TYPE_BACKPACK', 105000, -359, 5222]]))
+        app.orientation = quaternion.euler_to_quaternion(math.pi/2, 0, 0)
+        bus.publish.reset_mock()
+        app.on_artf(None, data)
+        bus.publish.assert_called()
+        self.assertEqual(bus.method_calls[-1],
+                         call.publish('artf_xyz', [['TYPE_BACKPACK', 102359, 7000, 5222]]))
+
 
 if __name__ == "__main__":
     import sys
