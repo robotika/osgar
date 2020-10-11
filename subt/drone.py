@@ -60,6 +60,7 @@ class Drone(Node):
         self.verbose = False
         self.z = None  # last Z coordinate
         self.altitude = None  # based on air_pressure
+        self.desired_altitude = None  # i.e. keep safe distance from up and down obstacles
 
     def on_bottom_scan(self, scan):
             self.lastScanDown = scan[0]
@@ -78,8 +79,12 @@ class Drone(Node):
             self.started = True  # TODO this logic has to be also in "rosmsg.py" and/or "ros_proxy_node.cc"
 
         if self.started:
-            height = min(HEIGHT, (self.lastScanDown + self.lastScanUp) / 2)
-            diff = height - self.lastScanDown
+            if self.desired_altitude is None or self.altitude is None:
+                height = min(HEIGHT, (self.lastScanDown + self.lastScanUp) / 2)
+                diff = height - self.lastScanDown
+            else:
+                diff = self.desired_altitude - self.altitude
+
             self.accum += diff
             desiredVel = max(-MAX_VERTICAL, min(MAX_VERTICAL, PID_P * diff + PID_I * self.accum))
             linear[2] = desiredVel
@@ -98,6 +103,9 @@ class Drone(Node):
 
     def on_air_pressure(self, data):
         self.altitude = altitude_from_pressure(data)
+
+    def on_desired_altitude(self, data):
+        pass  # self.desired_altitude already updated by Node
 
     def update(self):
         channel = super().update()

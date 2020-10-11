@@ -99,7 +99,7 @@ class EmergencyStopMonitor:
 class SubTChallenge:
     def __init__(self, config, bus):
         self.bus = bus
-        bus.register("desired_speed", "pose2d", "artf_xyz", "stdout", "request_origin")
+        bus.register("desired_speed", "pose2d", "artf_xyz", "stdout", "request_origin", "desired_altitude")
         self.traveled_dist = 0.0
         self.time = None
         self.max_speed = config['max_speed']
@@ -409,9 +409,9 @@ class SubTChallenge:
             channel = self.update()
             if (channel == 'scan' and not self.flipped) or (channel == 'scan_back' and self.flipped) or (channel == 'scan360'):
                 if target_distance == MIN_TARGET_DISTANCE:
-                    target_x, target_y = original_trace.where_to(self.xyz, target_distance)[:2]
+                    target_x, target_y, target_z = original_trace.where_to(self.xyz, target_distance)
                 else:
-                    target_x, target_y = self.trace.where_to(self.xyz, target_distance)[:2]
+                    target_x, target_y, target_z = self.trace.where_to(self.xyz, target_distance)
 #                print(self.time, self.xyz, (target_x, target_y), math.degrees(self.yaw))
                 x, y = self.xyz[:2]
                 desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
@@ -419,6 +419,7 @@ class SubTChallenge:
                     desired_direction += math.pi  # symmetry
                     for angle in self.joint_angle_rad:
                         desired_direction -= angle
+                self.bus.publish('desired_altitude', target_z)
 
                 safety = self.go_safely(desired_direction)
                 if safety < 0.2:
@@ -432,6 +433,7 @@ class SubTChallenge:
                         print(self.time, "Recovery to original", target_distance)
 
         print('return_home: dist', distance3D(self.xyz, (0, 0, 0)), 'time(sec)', self.sim_time_sec - start_time)
+        self.bus.publish('desired_altitude', None)
 
     def follow_trace(self, trace, timeout, max_target_distance=5.0, safety_limit=None):
         print('Follow trace')
