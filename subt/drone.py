@@ -6,7 +6,7 @@ import math
 
 from osgar.node import Node
 
-HEIGHT = 2.0
+HEIGHT = -2.0
 EMERGENCY_HEIGHT = 0.5
 MAX_ANGULAR = 0.7
 MAX_VERTICAL = 1
@@ -67,8 +67,11 @@ class Drone(Node):
             H, E, A = 0, 0, 0
             desiredVel = None
             if self.desired_z_speed is None:
-                height = min(HEIGHT, (self.lastScanDown + self.lastScanUp) / 2)
-                diff = height - self.lastScanDown
+                height = min(abs(HEIGHT), (self.lastScanDown + self.lastScanUp) / 2)
+                if HEIGHT > 0 or self.lastScanUp > 30:
+                    diff = height - self.lastScanDown
+                else:
+                    diff = self.lastScanUp - height
                 H = diff
                 desiredVel = PID_P * diff
             else:
