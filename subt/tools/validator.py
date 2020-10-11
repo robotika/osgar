@@ -140,8 +140,8 @@ def main():
     img = ign.draw(ground_truth, artifacts, breadcrumbs)
     cv2.imwrite(args.ign+'.png', img)
     if args.draw:
-        import webbrowser
-        webbrowser.open(args.ign+'.png')
+        from . import startfile
+        startfile.main(args.ign+'.png')
 
     print('Ground truth count:', len(ground_truth))
 
