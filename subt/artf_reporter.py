@@ -15,14 +15,18 @@ class ArtifactReporter(Node):
                                         # position = [x, y, z], flag(scored) = True/False/None
 
     def publish_artf(self, artf_xyz):
-        print(self.time, "DETECTED:")
+        count = 0
         for artf_type, pos, src, scored in artf_xyz:
             if scored is None:
+                if count == 0:
+                    print(self.time, "DETECTED:")
+                count += 1
                 ix, iy, iz = pos
                 print(" ", artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
                 s = '%s %.2f %.2f %.2f\n' % (artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
                 self.publish('artf_cmd', bytes('artf ' + s, encoding='ascii'))
-        print('report completed')
+        if count > 0:
+            print('report completed')
 
     def on_sim_time_sec(self, data):
         if self.repeat_report_sec is None or self.sim_time_sec % self.repeat_report_sec != 0:
