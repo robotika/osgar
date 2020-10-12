@@ -54,9 +54,12 @@ class ArtifactReporter(Node):
 
     def on_base_station(self, data):
         p = data['artifact_position']
-        for i, artf in enumerate(self.artf_xyz_accumulated):
-            if distance3D(p, [x/1000.0 for x in artf[1]]) < 0.1:
-                self.artf_xyz_accumulated[i][-1] = (data['score_change'] > 0)
+        dist = [distance3D(p, [x/1000.0 for x in artf[1]]) for artf in self.artf_xyz_accumulated]
+        if len(dist) > 0 and min(dist) < 0.1:
+            # i.e. it is our report and we have it in the list ... I would almost assert it
+            min_i = dist.index(min(dist))
+            self.artf_xyz_accumulated[min_i][-1] = (data['score_change'] > 0)
+            # TODO? check type
 
     def update(self):
         channel = super().update()  # define self.time
