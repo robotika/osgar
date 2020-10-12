@@ -391,8 +391,8 @@ class SubTChallenge:
             HOME_THRESHOLD = 5.0
         else:
             HOME_THRESHOLD = home_threshold
-        SHORTCUT_RADIUS = 0.5  # 2.3 - avoid pruning for Z coordinate (HACK!)
-        MAX_TARGET_DISTANCE = 1.1  # 5.0 - follow it much more precisely (HACK!)
+        SHORTCUT_RADIUS = 2.3
+        MAX_TARGET_DISTANCE = 5.0
         MIN_TARGET_DISTANCE = 1.0
         assert(MAX_TARGET_DISTANCE > SHORTCUT_RADIUS) # Because otherwise we could end up with a target point more distant from home than the robot.
         print('Wait and get ready for return')
