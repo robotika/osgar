@@ -38,10 +38,19 @@ class ArtifactReporter(Node):
         self.publish('artf_all', self.artf_xyz_accumulated)
 
     def on_artf_xyz(self, data):
-        for item in self.artf_xyz:
-            if item not in self.artf_xyz_accumulated:
+        for item in data:
+            if item[:2] not in [arr[:2] for arr in self.artf_xyz_accumulated]:
+                # new entry with unique (type, position)
                 self.artf_xyz_accumulated.append(item)
-        self.publish_artf(self.artf_xyz)
+            elif item not in self.artf_xyz_accumulated:
+                # existing entry but with different flag (or source)
+                i = [arr[:2] for arr in self.artf_xyz_accumulated].index(item[:2])
+                if item[-1] is True or item[-1] is False:
+                    assert self.artf_xyz_accumulated[i][-1] is None, self.artf_xyz_accumulated[i]
+                    self.artf_xyz_accumulated[i] = item
+                else:
+                    pass  # item.score is None, but we already know the answer -> ignore
+        self.publish_artf(data)
 
     def on_base_station(self, data):
         p = data['artifact_position']

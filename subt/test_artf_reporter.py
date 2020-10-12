@@ -92,6 +92,14 @@ class ArtifactReporterTest(unittest.TestCase):
         reporter.on_base_station(data)
         self.assertEqual(reporter.artf_xyz_accumulated, [['TYPE_BACKPACK', [69845, -4860, 396], 'A150L', False]])
 
+    def test_on_artf_xyz(self):
+        # update from detector or from radio
+        bus = MagicMock()
+        reporter = ArtifactReporter(config={}, bus=bus)
+        reporter.artf_xyz_accumulated = [['TYPE_BACKPACK', [69758, -5143, 533], 'A150L', True], ['TYPE_BACKPACK', [70044, -5289, 438], 'B10W150L', False]]
+        reporter.on_artf_xyz([['TYPE_BACKPACK', [69758, -5143, 533], 'A150L', None]])
+        self.assertEqual(reporter.artf_xyz_accumulated, [['TYPE_BACKPACK', [69758, -5143, 533], 'A150L', True],
+                                         ['TYPE_BACKPACK', [70044, -5289, 438], 'B10W150L', False]])
 
 # vim: expandtab sw=4 ts=4
 
