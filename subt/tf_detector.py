@@ -32,10 +32,10 @@ class CvDetector:
         if detection is not None:
             num_detections = detection['num_detections']
             for ii in range(num_detections):
-                name = detection['classes_names'][ii]
-                score = detection['scores'][ii]
-                bbox = detection['bboxes'][ii]
-                ret.append((name, score, bbox))
+                name = detection['classes_names'][ii].item()
+                score = detection['scores'][ii].item()
+                bbox = detection['bboxes'][ii].tolist()
+                ret.append([name, score, bbox])
         return ret
 
     def detect(self, img):

@@ -94,9 +94,9 @@ class Detector:
             group.sort(key=lambda i: np.hypot(artifacts[i][X] - cx, artifacts[
                 i][Y] - cy))
             category = artifacts[group[0]][CATEGORY]
-            groups.append((category, [(artifacts[i][X], artifacts[i][Y],
-                                       artifacts[i][CONFIDENCE])
-                                      for i in group]))
+            groups.append([category, [[artifacts[i][X].item(), artifacts[i][Y].item(),
+                                       artifacts[i][CONFIDENCE].item()]
+                                      for i in group]])
         return groups
 
     @staticmethod

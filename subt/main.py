@@ -126,6 +126,7 @@ class SubTChallenge:
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
         self.xyz = None  # 3D position for mapping artifacts - unknown depends on source (pose2d or pose3d)
         self.yaw, self.pitch, self.roll = 0, 0, 0
+        self.orientation = None  # quaternion updated by on_pose3d()
         self.yaw_offset = None  # not defined, use first IMU reading
         self.is_moving = None  # unknown
         self.scan = None  # I should use class Node instead
@@ -497,6 +498,7 @@ class SubTChallenge:
             # we cannot align global coordinates if offset is not known
             return
         xyz, rot = data
+        self.orientation = rot  # quaternion
         ypr = quaternion.euler_zyx(rot)
         x0, y0, z0 = self.offset
 
@@ -545,16 +547,16 @@ class SubTChallenge:
                 raise Collision()
 
     def on_artf(self, timestamp, data):
-        if self.offset is None:
+        if self.offset is None or self.orientation is None or self.xyz is None:
             # there can be observed artifact (false) on the start before the coordinate system is defined
             return
-        artifact_data, deg_100th, dist_mm = data
+        artifact_data, vector = data
+        dx, dy, dz = quaternion.rotate_vector(vector, self.orientation)
         x, y, z = self.xyz
         x0, y0, z0 = self.offset
-        angle, dist = self.yaw + math.radians(deg_100th / 100.0), dist_mm / 1000.0
-        ax = x0 + x + math.cos(angle) * dist
-        ay = y0 + y + math.sin(angle) * dist
-        az = z0 + z
+        ax = x0 + x + dx/1000.0
+        ay = y0 + y + dy/1000.0
+        az = z0 + z + dz/1000.0
         if -20 < ax < 0 and -10 < ay < 10:
             # filter out elements on staging area
             self.stdout(self.time, 'Robot at:', (ax, ay, az))
@@ -913,7 +915,7 @@ class SubTChallenge:
         self.stdout('Final xyz (DARPA coord system):', (x + x0, y + y0, z + z0))
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver81!")
+        self.stdout("SubT Challenge Ver82!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
@@ -925,15 +927,18 @@ class SubTChallenge:
             self.update()
 
         steps = parse_robot_name(self.robot_name)
-        times_sec = [duration for action, duration in steps if action not in ['enter', 'home']]
+        times_sec = [duration for action, duration in steps if action != 'home' and not action.startswith('enter')]
         self.stdout('Using times', times_sec)
 
         for action, duration, in steps:
             if action == 'wait':
+                self.stdout(f'Wait for {duration} seconds')
                 self.wait(timedelta(seconds=duration), use_sim_time=True)
-                self.stdout('Artifacts before start:', self.artifacts)  # seen during wait
+                self.stdout('Artifacts collected during wait:', self.artifacts)
 
-            elif action == 'enter':
+            elif action.startswith('enter'):
+                self.use_right_wall = (action == 'enter-right')
+                self.use_center = (action == 'enter-center')
                 self.play_virtual_part_enter()
 
             elif action in ['left', 'right', 'center']:

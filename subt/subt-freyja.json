@@ -12,6 +12,14 @@
           "speed_policy": "conservative"
         }
       },
+      "detector": {
+          "driver": "subt.artf_node:ArtifactDetectorDNN",
+          "in": ["image", "scan"],
+          "out": ["artf", "dropped", "debug_artf", "stdout"],
+          "init": {
+            "fx": 349.2
+          }
+      },
       "depth2scan": {
         "init": {
           "depth_params": {
