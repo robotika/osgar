@@ -2,6 +2,7 @@
   Report detected artifacts
 """
 from osgar.node import Node
+from subt.trace import Trace, distance3D
 
 
 class ArtifactReporter(Node):
@@ -39,7 +40,10 @@ class ArtifactReporter(Node):
         self.publish_artf(self.artf_xyz)
 
     def on_base_station(self, data):
-        pass
+        p = data['artifact_position']
+        for i, artf in enumerate(self.artf_xyz_accumulated):
+            if distance3D(p, [x/1000.0 for x in artf[1]]) < 0.1:
+                self.artf_xyz_accumulated[i][-1] = True
 
     def update(self):
         channel = super().update()  # define self.time

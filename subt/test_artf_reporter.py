@@ -77,5 +77,17 @@ class ArtifactReporterTest(unittest.TestCase):
         bus.publish.assert_has_calls([call('artf_cmd', b'artf TYPE_BACKPACK 0.10 0.20 -0.00\n'),
                                       call('artf_cmd', b'artf TYPE_ROPE 0.01 0.02 0.03\n')])
 
+    def test_on_base_station(self):
+        data = {'report_id': 1, 'artifact_type': 0, 'artifact_position': [69.84, -4.86, 0.4],
+                'report_status': 'scored', 'score_change': 1}
+        bus = MagicMock()
+        reporter = ArtifactReporter(config={}, bus=bus)
+        reporter.on_base_station(data)
+        self.assertEqual(reporter.artf_xyz_accumulated, [])
+        reporter.artf_xyz_accumulated = [['TYPE_BACKPACK', [69845, -4860, 396], 'A150L', None]]
+        reporter.on_base_station(data)
+        self.assertEqual(reporter.artf_xyz_accumulated, [['TYPE_BACKPACK', [69845, -4860, 396], 'A150L', True]])
+
+
 # vim: expandtab sw=4 ts=4
 
