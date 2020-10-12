@@ -240,7 +240,7 @@ def main():
     cv2.imwrite(args.filename+'.png', img)
     print("created:", args.filename+'.png')
     if args.open:
-        from . import startfile
+        from subt.tools import startfile
         startfile.main(args.filename+'.png')
 
 
