@@ -88,6 +88,10 @@ class ArtifactReporterTest(unittest.TestCase):
         reporter.on_base_station(data)
         self.assertEqual(reporter.artf_xyz_accumulated, [['TYPE_BACKPACK', [69845, -4860, 396], 'A150L', True]])
 
+        data['score_change'] = 0  # wrongly reported artifact
+        reporter.on_base_station(data)
+        self.assertEqual(reporter.artf_xyz_accumulated, [['TYPE_BACKPACK', [69845, -4860, 396], 'A150L', False]])
+
 
 # vim: expandtab sw=4 ts=4
 

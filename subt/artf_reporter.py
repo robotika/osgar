@@ -43,7 +43,7 @@ class ArtifactReporter(Node):
         p = data['artifact_position']
         for i, artf in enumerate(self.artf_xyz_accumulated):
             if distance3D(p, [x/1000.0 for x in artf[1]]) < 0.1:
-                self.artf_xyz_accumulated[i][-1] = True
+                self.artf_xyz_accumulated[i][-1] = (data['score_change'] > 0)
 
     def update(self):
         channel = super().update()  # define self.time
