@@ -275,7 +275,7 @@ class SubTChallenge:
         print(self.time, 'stop at', self.time - start_time, self.is_moving)
 
     def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None, flipped=False,
-            pitch_limit=None, roll_limit=None):
+            pitch_limit=None, roll_limit=None, detect_loop=True):
         # make sure that we will start with clean data
         if flipped:
             self.scan = None
@@ -318,7 +318,7 @@ class SubTChallenge:
                     reason = REASON_VIRTUAL_BUMPER
                     break
 
-                loop = self.loop_detector.loop()
+                loop = detect_loop and self.loop_detector.loop()
                 if loop:
                     print(self.time, self.sim_time_sec, 'Loop detected')
                     self.turn(math.radians(160 if self.use_right_wall else -160), timeout=timedelta(seconds=40), with_stop=True)
@@ -888,7 +888,7 @@ class SubTChallenge:
                 # Smaller walldist to reduce the chance that we miss the opening again that we missed before,
                 # which made us end up in a loop.
                 dist, reason = self.follow_wall(radius=self.walldist*0.75, right_wall=not self.use_right_wall,
-                                    timeout=timedelta(seconds=5), pitch_limit=self.limit_pitch, roll_limit=None)
+                                    timeout=timedelta(seconds=5), pitch_limit=self.limit_pitch, roll_limit=None, detect_loop=False)
                 if reason is None:
                     continue
 
