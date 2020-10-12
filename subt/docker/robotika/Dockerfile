@@ -1,6 +1,6 @@
 FROM robotika/subt-base:2020-09-22
 
-ADD http://osgar.robotika.cz/subt/virtual/model/mdnet2.64.64.13.4.relu.pth .
+ADD http://osgar.robotika.cz/subt/virtual/model/mdnet3.64.64.13.4.relu.pth .
 ADD http://osgar.robotika.cz/subt/virtual/model/ssd_inception_v2_201009/frozen_inference_graph.pb .
 ADD http://osgar.robotika.cz/subt/virtual/model/ssd_inception_v2_201009/cv_graph.pbtxt .
 
