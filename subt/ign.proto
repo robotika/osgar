@@ -42,3 +42,19 @@ message Pose_V {
   repeated Pose pose = 2;
 }
 
+message Artifact
+{
+  uint32 type = 1;
+  Pose pose = 2;
+}
+
+message ArtifactScore
+{
+  uint32 report_id = 1;
+  Artifact artifact = 2;
+  Time submitted_datetime = 3;
+  Time sim_time = 4;
+  uint32 run = 5;
+  string report_status = 6;
+  int32 score_change = 7;
+}
