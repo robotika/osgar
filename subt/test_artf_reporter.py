@@ -12,7 +12,7 @@ class ArtifactReporterTest(unittest.TestCase):
         config = {}
         bus = MagicMock()
         reporter = ArtifactReporter(config, bus)
-        bus.listen = MagicMock(return_value=(1, 'artf_xyz', [['BACKPACK', 100, 200, -3]]))
+        bus.listen = MagicMock(return_value=(1, 'artf_xyz', [['BACKPACK', [100, 200, -3], "robot-name", None]]))
         reporter.update()
         bus.publish.assert_called()
         bus.reset_mock()
@@ -27,7 +27,7 @@ class ArtifactReporterTest(unittest.TestCase):
         }
         bus = MagicMock()
         reporter = ArtifactReporter(config, bus)
-        bus.listen = MagicMock(return_value=(1, 'artf_xyz', [['BACKPACK', 100, 200, -3]]))
+        bus.listen = MagicMock(return_value=(1, 'artf_xyz', [['BACKPACK', [100, 200, -3], "name", None]]))
         reporter.update()
         bus.publish.assert_called()
         bus.reset_mock()
@@ -36,7 +36,7 @@ class ArtifactReporterTest(unittest.TestCase):
             reporter.update()
         # well, I am not sure how to ensure only 2 calls :(
         bus.publish.assert_has_calls([call('artf_cmd', b'artf BACKPACK 0.10 0.20 -0.00\n'),
-                                      call('artf_all', [['BACKPACK', 100, 200, -3]]),]*2)
+                                      call('artf_all', [['BACKPACK', [100, 200, -3], "name", None]]),]*2)
 
     def test_artf_empty_repeat(self):
         config = {
@@ -55,9 +55,9 @@ class ArtifactReporterTest(unittest.TestCase):
         }
         bus = MagicMock()
         reporter = ArtifactReporter(config, bus)
-        bus.listen = MagicMock(return_value=(1, 'artf_xyz', [['TYPE_BACKPACK', 100, 200, -3]]))
+        bus.listen = MagicMock(return_value=(1, 'artf_xyz', [['TYPE_BACKPACK', [100, 200, -3], "RoboX", None]]))
         reporter.update()
-        bus.listen = MagicMock(return_value=(1, 'artf_xyz', [['TYPE_ROPE', 10, 20, 30]]))
+        bus.listen = MagicMock(return_value=(1, 'artf_xyz', [['TYPE_ROPE', [10, 20, 30], "RobotX", None]]))
         reporter.update()
         bus.reset_mock()
         sim_time_sec = 0

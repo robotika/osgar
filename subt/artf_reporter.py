@@ -10,14 +10,17 @@ class ArtifactReporter(Node):
         bus.register("artf_cmd", "artf_all")
         self.repeat_report_sec = config.get('repeat_report_sec')
         self.artf_xyz = []
-        self.artf_xyz_accumulated = []
+        self.artf_xyz_accumulated = []  # items are [type, position, source, flag]
+                                        # position = [x, y, z], flag(scored) = True/False/None
 
     def publish_artf(self, artf_xyz):
         print(self.time, "DETECTED:")
-        for artf_type, ix, iy, iz in artf_xyz:
-            print(" ", artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
-            s = '%s %.2f %.2f %.2f\n' % (artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
-            self.publish('artf_cmd', bytes('artf ' + s, encoding='ascii'))
+        for artf_type, pos, src, scored in artf_xyz:
+            if scored is None:
+                ix, iy, iz = pos
+                print(" ", artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
+                s = '%s %.2f %.2f %.2f\n' % (artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
+                self.publish('artf_cmd', bytes('artf ' + s, encoding='ascii'))
         print('report completed')
 
     def on_sim_time_sec(self, data):
@@ -38,7 +41,7 @@ class ArtifactReporter(Node):
     def on_base_station(self, data):
         pass
 
-    def update(self):  # hack, this method should be called run instead!
+    def update(self):
         channel = super().update()  # define self.time
         handler = getattr(self, "on_" + channel, None)
         if handler is not None:
