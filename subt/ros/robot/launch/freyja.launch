@@ -153,8 +153,8 @@
     <!-- The order of the values is x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az. -->
     <!-- We barely trust the ICP odometry on 2d scan with X and Y coordinates. Totally not anything more 3d. -->
     <rosparam param="odom0_config">[false, false, false,
-                                    false, false, false,
-                                    true, true, true,
+                                    false, false, true,
+                                    true, false, false,
                                     false, false, false,
                                     false, false, false]</rosparam>
     <rosparam param="odom1_config">[false, false, false,
