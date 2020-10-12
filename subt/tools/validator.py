@@ -134,6 +134,7 @@ def main():
                 pass
         if len(args.logfiles) == 0:
             sys.exit("no logfiles found in current directory")
+        args.logfiles.sort()
 
     ground_truth, breadcrumbs = ign.read_poses(args.ign, seconds=args.sec)
     artifacts = ign.read_artifacts(args.ign)
