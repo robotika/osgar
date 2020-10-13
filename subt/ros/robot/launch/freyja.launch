@@ -153,7 +153,7 @@
     <!-- The order of the values is x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az. -->
     <!-- We barely trust the ICP odometry on 2d scan with X and Y coordinates. Totally not anything more 3d. -->
     <rosparam param="odom0_config">[false, false, false,
-                                    false, false, true,
+                                    false, false, false,
                                     true, false, false,
                                     false, false, false,
                                     false, false, false]</rosparam>
@@ -190,9 +190,6 @@
 
     <!-- The unit of the threshold is a Mahalanobis distance (i.e. sum) of numbers of sigmas in each dimension -->
     <rosparam param="odom0_twist_rejection_threshold">4</rosparam>
-    <rosparam param="odom2_twist_rejection_threshold">4</rosparam>
-    <rosparam param="odom3_twist_rejection_threshold">4</rosparam>
-    <rosparam param="odom4_twist_rejection_threshold">4</rosparam>
 
     <!-- When some data arrive late, we are willing to go back in time and correct the estimate. -->
     <param name="smooth_lagged_data" value="true"/>
