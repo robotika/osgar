@@ -26,6 +26,9 @@ from osgar.node import Node
 from subt.trace import Trace, distance3D
 
 
+RADIUS = 4.0  # there are probably not two artifacts within sphere of this radius
+
+
 class ArtifactReporter(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
@@ -49,6 +52,14 @@ class ArtifactReporter(Node):
         if count > 0:
             print('report completed')
 
+    def nearest_scored_artifact(self, artf_type, position):
+        # TODO remove 1000x scaling to millimeters - source of headache
+        dist = [distance3D(position, artf[1]) for artf in self.artf_xyz_accumulated
+                if artf[0] == artf_type and artf[-1] is True]
+        if len(dist) == 0:
+            return None  # no nearest for given filter
+        return min(dist)/1000.0  # due to mm scaling
+
     def on_sim_time_sec(self, data):
         if self.repeat_report_sec is None or self.sim_time_sec % self.repeat_report_sec != 0:
             return
@@ -60,13 +71,16 @@ class ArtifactReporter(Node):
 
     def on_artf_xyz(self, data):
         for item in data:
-            if item[:2] not in [arr[:2] for arr in self.artf_xyz_accumulated]:
+            atype, pos, src, scored = item
+            if [atype, pos] not in [arr[:2] for arr in self.artf_xyz_accumulated]:
                 # new entry with unique (type, position)
-                self.artf_xyz_accumulated.append(item)
+                nearest = self.nearest_scored_artifact(atype, pos)
+                if nearest is None or nearest > RADIUS:
+                    self.artf_xyz_accumulated.append(item)
             elif item not in self.artf_xyz_accumulated:
                 # existing entry but with different flag (or source)
                 i = [arr[:2] for arr in self.artf_xyz_accumulated].index(item[:2])
-                if item[-1] is True or item[-1] is False:
+                if scored is True or scored is False:
                     assert self.artf_xyz_accumulated[i][-1] is None, self.artf_xyz_accumulated[i]
                     self.artf_xyz_accumulated[i] = item
                 else:

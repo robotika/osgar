@@ -108,6 +108,18 @@ class ArtifactReporterTest(unittest.TestCase):
         self.assertEqual(reporter.artf_xyz_accumulated, [['TYPE_BACKPACK', [69758, -5143, 533], 'A150L', True],
                                          ['TYPE_BACKPACK', [70044, -5289, 438], 'B10W150L', False]])
 
+    def test_duplicity_reports(self):
+        bus = MagicMock()
+        reporter = ArtifactReporter(config={}, bus=bus)
+        self.assertEqual(len(reporter.artf_xyz_accumulated), 0)
+        reporter.on_artf_xyz([['TYPE_BACKPACK', [69758, -5143, 533], 'A150L', True]])
+        reporter.on_artf_xyz([['TYPE_BACKPACK', [69758 + 1000, -5143, 533], 'A150L', None]])  # 1m offset
+        self.assertEqual(len(reporter.artf_xyz_accumulated), 1)
+
+        # backpack is confirmed and phone is tested as different artifact
+        reporter.on_artf_xyz([['TYPE_PHONE', [69758 + 2000, -5143, 533], 'A150L', None]])  # 2m offset
+        self.assertEqual(len(reporter.artf_xyz_accumulated), 2)
+
 
 # vim: expandtab sw=4 ts=4
 
