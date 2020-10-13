@@ -85,7 +85,7 @@ class ArtifactReporter(Node):
                     self.artf_xyz_accumulated[i] = item
                 else:
                     pass  # item.score is None, but we already know the answer -> ignore
-        self.publish_artf(data)
+        self.publish_artf(self.artf_xyz_accumulated)
 
     def on_base_station(self, data):
         p = data['artifact_position']

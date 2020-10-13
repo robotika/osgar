@@ -115,6 +115,7 @@ class ArtifactReporterTest(unittest.TestCase):
         reporter.on_artf_xyz([['TYPE_BACKPACK', [69758, -5143, 533], 'A150L', True]])
         reporter.on_artf_xyz([['TYPE_BACKPACK', [69758 + 1000, -5143, 533], 'A150L', None]])  # 1m offset
         self.assertEqual(len(reporter.artf_xyz_accumulated), 1)
+        bus.publish.assert_not_called()
 
         # backpack is confirmed and phone is tested as different artifact
         reporter.on_artf_xyz([['TYPE_PHONE', [69758 + 2000, -5143, 533], 'A150L', None]])  # 2m offset
