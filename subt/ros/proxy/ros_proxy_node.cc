@@ -187,9 +187,10 @@ void sendOriginError(std::string& name)
 
 void sendReceivedMessage(const std::string &srcAddress, const std::string &data)
 {
-  char buf[10000];  // the limit for messages is 4k?
-  int size = sprintf(buf, "radio %s %s", srcAddress.c_str(), data.c_str());
-  protected_zmq_send(g_responder, buf, size, 0);
+  std::stringstream ss;
+  ss << "radio " << srcAddress << " " << data;
+  auto buf = ss.str();
+  protected_zmq_send(g_responder, buf.c_str(), buf.size(), 0);
 }
 
 
@@ -363,6 +364,7 @@ void Controller::Update(const ros::TimerEvent&)
       // Create subt communication client
       this->client.reset(new subt::CommsClient(this->name));
       this->client->Bind(&Controller::CommClientCallback, this, "", BROADCAST_PORT);
+      this->client->Bind(&Controller::CommClientCallback, this);
 
       // Create a cmd_vel publisher to control a vehicle.
       this->velPub = this->n.advertise<geometry_msgs::Twist>(

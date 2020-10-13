@@ -11,6 +11,8 @@ import numpy as np
 from osgar.bus import BusShutdownException
 from osgar.lib.quaternion import euler_zyx
 
+from subt import ign_pb2
+
 MAX_TOPIC_NAME_LENGTH = 256
 
 
@@ -479,7 +481,7 @@ class ROSMsgParser(Thread):
         Thread.__init__(self)
         self.setDaemon(True)
         outputs = ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "sim_clock", "cmd", "origin", "gas_detected",
-                   "depth:null", "t265_rot", "orientation", "debug", "radio",
+                   "depth:null", "t265_rot", "orientation", "debug", "radio", "base_station",
                     "joint_name", "joint_position", "joint_velocity", "joint_effort"]
         self.topics = config.get('topics', [])
         for row in self.topics:
@@ -557,7 +559,28 @@ class ROSMsgParser(Thread):
             s = data[6:].split(b' ')
             addr = s[0]
             msg = b' '.join(s[1:])
-            self.bus.publish('radio', [addr, msg])
+            if addr == b'base_station':
+                artifact_score = ign_pb2.ArtifactScore()
+                try:
+                    artifact_score.ParseFromString(msg)
+                except Exception as e:
+                    print(e)
+                    print(msg)
+                    self.bus.report_error(exception=str(e), msg=msg)
+                    return
+                apos = [artifact_score.artifact.pose.position.x,
+                        artifact_score.artifact.pose.position.y,
+                        artifact_score.artifact.pose.position.z]
+                new_msg = dict(
+                    report_id=artifact_score.report_id,
+                    artifact_type=artifact_score.artifact.type,
+                    artifact_position=apos,
+                    report_status=artifact_score.report_status,
+                    score_change=artifact_score.score_change,
+                )
+                self.bus.publish('base_station', new_msg)
+            else:
+                self.bus.publish('radio', [addr, msg])
             return
         if data.startswith(b'points'):
             return

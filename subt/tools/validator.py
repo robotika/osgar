@@ -134,19 +134,15 @@ def main():
                 pass
         if len(args.logfiles) == 0:
             sys.exit("no logfiles found in current directory")
+        args.logfiles.sort()
 
     ground_truth, breadcrumbs = ign.read_poses(args.ign, seconds=args.sec)
     artifacts = ign.read_artifacts(args.ign)
     img = ign.draw(ground_truth, artifacts, breadcrumbs)
     cv2.imwrite(args.ign+'.png', img)
     if args.draw:
-        cv2.namedWindow("ground truth", cv2.WINDOW_NORMAL)
-        cv2.imshow("ground truth", img)
-        while True:
-            key = cv2.waitKey()
-            if key in (ord('q'), 27):
-                break
-        cv2.destroyWindow("ground truth")
+        from . import startfile
+        startfile.main(args.ign+'.png')
 
     print('Ground truth count:', len(ground_truth))
 

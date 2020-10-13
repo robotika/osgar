@@ -275,7 +275,7 @@ class SubTChallenge:
         print(self.time, 'stop at', self.time - start_time, self.is_moving)
 
     def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None, flipped=False,
-            pitch_limit=None, roll_limit=None):
+            pitch_limit=None, roll_limit=None, detect_loop=True):
         # make sure that we will start with clean data
         if flipped:
             self.scan = None
@@ -318,7 +318,7 @@ class SubTChallenge:
                     reason = REASON_VIRTUAL_BUMPER
                     break
 
-                loop = self.loop_detector.loop()
+                loop = detect_loop and self.loop_detector.loop()
                 if loop:
                     print(self.time, self.sim_time_sec, 'Loop detected')
                     self.turn(math.radians(160 if self.use_right_wall else -160), timeout=timedelta(seconds=40), with_stop=True)
@@ -546,6 +546,11 @@ class SubTChallenge:
                 self.collision_detector_enabled = False
                 raise Collision()
 
+    def publish_single_artf_xyz(self, artifact_data, pos):
+        ax, ay, az = pos
+        self.bus.publish('artf_xyz', [
+            [artifact_data, [round(ax * 1000), round(ay * 1000), round(az * 1000)], self.robot_name, None]])
+
     def on_artf(self, timestamp, data):
         if self.offset is None or self.orientation is None or self.xyz is None:
             # there can be observed artifact (false) on the start before the coordinate system is defined
@@ -562,7 +567,7 @@ class SubTChallenge:
             self.stdout(self.time, 'Robot at:', (ax, ay, az))
         else:
             if self.maybe_remember_artifact(artifact_data, (ax, ay, az)):
-                self.bus.publish('artf_xyz', [[artifact_data, round(ax*1000), round(ay*1000), round(az*1000)]])
+                self.publish_single_artf_xyz(artifact_data, (ax, ay, az))
 
     def on_joint_angle(self, timestamp, data):
         # angles for articulated robot in 1/100th of degree
@@ -809,7 +814,7 @@ class SubTChallenge:
                     self.robust_follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=3*self.timeout, dist_limit=3*total_dist,
                             flipped=allow_virtual_flip, pitch_limit=self.return_limit_pitch, roll_limit=self.return_limit_roll)
                 if self.artifacts:
-                    self.bus.publish('artf_xyz', [[artifact_data, round(x*1000), round(y*1000), round(z*1000)]
+                    self.bus.publish('artf_xyz', [[artifact_data, [round(x*1000), round(y*1000), round(z*1000)], self.robot_name, None]
                                               for artifact_data, (x, y, z) in self.artifacts])
         except EmergencyStopException:
             print(self.time, "EMERGENCY STOP - terminating")
@@ -888,7 +893,7 @@ class SubTChallenge:
                 # Smaller walldist to reduce the chance that we miss the opening again that we missed before,
                 # which made us end up in a loop.
                 dist, reason = self.follow_wall(radius=self.walldist*0.75, right_wall=not self.use_right_wall,
-                                    timeout=timedelta(seconds=5), pitch_limit=self.limit_pitch, roll_limit=None)
+                                    timeout=timedelta(seconds=5), pitch_limit=self.limit_pitch, roll_limit=None, detect_loop=False)
                 if reason is None:
                     continue
 
@@ -906,7 +911,7 @@ class SubTChallenge:
         self.return_home(timeout)
         self.send_speed_cmd(0, 0)
         if self.artifacts:
-            self.bus.publish('artf_xyz', [[artifact_data, round(x * 1000), round(y * 1000), round(z * 1000)]
+            self.bus.publish('artf_xyz', [[artifact_data, [round(x * 1000), round(y * 1000), round(z * 1000)], self.robot_name, None]
                                           for artifact_data, (x, y, z) in self.artifacts])
         self.wait(timedelta(seconds=10), use_sim_time=True)
         self.stdout('Final xyz:', self.xyz)
@@ -915,7 +920,7 @@ class SubTChallenge:
         self.stdout('Final xyz (DARPA coord system):', (x + x0, y + y0, z + z0))
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver82!")
+        self.stdout("SubT Challenge Ver84!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
