@@ -1,5 +1,26 @@
 """
-  Report detected artifacts
+  Report and filter shared detected artifacts
+
+The artifacts are reported to "DARPA base station" as [type, position]. The "DARPA base station" answers with
+message, where only "score_changed" has value 1 if it was correctly localized artifact within 5 meters radius (3D).
+
+The implemented solution is using shared array of items [type, position, source, scored]. Type and 3D position
+is the same as for DARPA report. "source" is identification of robot which detected artifact (for example "A1300L").
+"scored" has states: True/False/None. This corresponds to base station answer "score_changed"=1/"score_changed"=0/
+"unknown=no answer".
+
+If ArtifactReporter receives message with scored=None then first verifies if identical type and position is already
+in the pool. If yes, then received message is ignored. There still can be another report already confirmed as
+scored=True so it goes through identical types and if position is within RADIUS then it is rejected (it would need
+4th type - detected but ignored). Note, that in the rules "SubT_Challenge_Cave_Rules.pdf" is nothing about proximity
+of placed artifacts, so there can be two backpacks side by side. RADIUS is only "probabilistic", that it is rather
+duplicity than two artifacts placed side by side.
+
+Artifacts received with scored=True/False replace only scored=None in the pool. Not matching values should assert.
+
+There is a race condition between reporting artifact and spreading this info to other robots. It has to be done
+immediately otherwise other robots may use this time to report independently new found artifact. The only solution
+would be teambase, but then it would be the single point of failure.
 """
 from osgar.node import Node
 from subt.trace import Trace, distance3D
