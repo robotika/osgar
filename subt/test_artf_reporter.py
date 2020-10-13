@@ -84,9 +84,16 @@ class ArtifactReporterTest(unittest.TestCase):
         reporter = ArtifactReporter(config={}, bus=bus)
         reporter.on_base_station(data)
         self.assertEqual(reporter.artf_xyz_accumulated, [])
+        bus.publish.assert_not_called()  # nothing to report/share
         reporter.artf_xyz_accumulated = [['TYPE_BACKPACK', [69845, -4860, 396], 'A150L', None]]
         reporter.on_base_station(data)
         self.assertEqual(reporter.artf_xyz_accumulated, [['TYPE_BACKPACK', [69845, -4860, 396], 'A150L', True]])
+        bus.publish.assert_called()  # make sure that new confirmed artifact is propagated
+
+        bus.reset_mock()
+        reporter.on_base_station(data)
+        self.assertEqual(reporter.artf_xyz_accumulated, [['TYPE_BACKPACK', [69845, -4860, 396], 'A150L', True]])
+        bus.publish.assert_not_called()  # the information did not change - no hurry to spread it
 
         data['score_change'] = 0  # wrongly reported artifact
         reporter.on_base_station(data)
@@ -100,6 +107,7 @@ class ArtifactReporterTest(unittest.TestCase):
         reporter.on_artf_xyz([['TYPE_BACKPACK', [69758, -5143, 533], 'A150L', None]])
         self.assertEqual(reporter.artf_xyz_accumulated, [['TYPE_BACKPACK', [69758, -5143, 533], 'A150L', True],
                                          ['TYPE_BACKPACK', [70044, -5289, 438], 'B10W150L', False]])
+
 
 # vim: expandtab sw=4 ts=4
 

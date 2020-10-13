@@ -79,8 +79,11 @@ class ArtifactReporter(Node):
         if len(dist) > 0 and min(dist) < 0.1:
             # i.e. it is our report and we have it in the list ... I would almost assert it
             min_i = dist.index(min(dist))
+            was_unknown = self.artf_xyz_accumulated[min_i][-1] is None
             self.artf_xyz_accumulated[min_i][-1] = (data['score_change'] > 0)
-            # TODO? check type
+            # TODO? check type - we decided to ignore it for Cave Circuit
+            if was_unknown:
+                self.publish('artf_all', self.artf_xyz_accumulated)  # broadcast new update
 
     def update(self):
         channel = super().update()  # define self.time
