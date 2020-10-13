@@ -34,11 +34,11 @@ class Trace:
         self.trace = pruned.trace
 
 
-    def where_to(self, xyz, max_target_distance):
+    def where_to(self, xyz, max_target_distance, z_weight=0.2):
         # looking for a target point within max_target_distance nearest to the start
         for _ in range(8):
             for target in self.trace:
-                if distance3D(target, xyz, [1.0, 1.0, 3.0]) < max_target_distance:
+                if distance3D(target, xyz, [1.0, 1.0, z_weight]) < max_target_distance:
                     return target
             # if the robot deviated too far from the trajectory, we need to look for more distant target points
             max_target_distance *= 1.5
