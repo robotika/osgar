@@ -27,4 +27,16 @@ class DroneTest(unittest.TestCase):
     def test_altitude_from_pressure(self):
         self.assertEqual(altitude_from_pressure(101323.49836826918), 0.12500215269779752)
 
+    def test_regular_update(self):
+        bus = MagicMock()
+        drone = Drone(bus=bus, config={})
+        drone.on_desired_speed([1000, 0])  # fly forward for ever
+        bus.publish.assert_called_with('desired_speed_3d', [[1.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
+
+        bus.reset_mock()
+        drone.on_top_scan([10.1])  # order is unfortunately not defined -> extra trigger is on bottom scan
+        drone.on_bottom_scan([0.1])
+        bus.publish.assert_called_with('desired_speed_3d', [[1.0, 0.0, 0.7], [0.0, 0.0, 0.0]])
+
+
 # vim: expandtab sw=4 ts=4
