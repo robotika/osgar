@@ -7,6 +7,7 @@ import math
 from osgar.node import Node
 
 HEIGHT = 2.0
+EMERGENCY_HEIGHT = 0.5
 MAX_ANGULAR = 0.7
 MAX_VERTICAL = 0.7
 PID_P = 1.0  # 0.5
@@ -68,6 +69,12 @@ class Drone(Node):
                 diff = height - self.lastScanDown
             else:
                 diff = self.desired_altitude - self.altitude
+                if min(self.lastScanDown, self.lastScanUp) < EMERGENCY_HEIGHT:
+                    print(self.time, 'Emergency limit', self.lastScanDown, self.lastScanUp)
+                    # temporary switch to keep safe height from bottom/top
+                    height = min(HEIGHT, (self.lastScanDown + self.lastScanUp) / 2)
+                    diff = height - self.lastScanDown
+
             self.accum += diff
             desiredVel = max(-MAX_VERTICAL, min(MAX_VERTICAL, PID_P * diff + PID_I * self.accum))
             self.linear[2] = desiredVel
