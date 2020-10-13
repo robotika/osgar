@@ -147,6 +147,10 @@ class ROSMsgParserTest(unittest.TestCase):
 
         clock_data = b'\x08\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00'  # clock 3s
         r.slot_raw(timestamp=None, data=clock_data)
+        bus.publish.assert_called_with('sim_time_sec', 3)  # initially desired speed is None -> no cmd
+
+        r.slot_desired_speed(timestamp=None, data=[0, 0])
+        r.slot_raw(timestamp=None, data=clock_data)
         # ... asserting that the last call has been made in a particular way
         bus.publish.assert_called_with('cmd', b'cmd_vel 0.000000 0.000000')
 
@@ -154,5 +158,9 @@ class ROSMsgParserTest(unittest.TestCase):
         r.slot_desired_speed_3d(timestamp=None, data=[[1, 2, 3], [4, 5, 6]])
         r.slot_raw(timestamp=None, data=clock_data)
         bus.publish.assert_called_with('cmd', b'cmd_vel_3d 1.000000 2.000000 3.000000 4.000000 5.000000 6.000000')
+
+    def test_publish_undefined_desired_speed(self):
+        # for the drone it is important not to send any command until the very first desired speed is received
+        pass
 
 # vim: expandtab sw=4 ts=4
