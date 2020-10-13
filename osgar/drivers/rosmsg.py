@@ -504,8 +504,8 @@ class ROSMsgParser(Thread):
         self.count = 0
         self.downsample = config.get('downsample', 1)
 
-        self.desired_speed = 0.0  # m/s
-        self.desired_angular_speed = 0.0
+        self.desired_speed = None  # m/s
+        self.desired_angular_speed = None
         # alternative 3D speed description used in ROS Twist message
         self.desired_speed_3d, self.desired_angular_speed_3d = None, None
         self.gas_detected = None  # this SubT Virtual specific :-(
@@ -515,8 +515,11 @@ class ROSMsgParser(Thread):
     def publish_desired_speed(self):
         if self.desired_speed is not None:
             cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
-        else:
+        elif self.desired_speed_3d is not None:
             cmd = b'cmd_vel_3d %f %f %f %f %f %f' % tuple(self.desired_speed_3d + self.desired_angular_speed_3d)
+        else:
+            # desired speed is not defined - valid state for waiting drone - do not send anything!
+            return
         self.bus.publish('cmd', cmd)
 
     def get_packet(self):
