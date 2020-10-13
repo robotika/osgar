@@ -915,7 +915,7 @@ class SubTChallenge:
         self.stdout('Final xyz (DARPA coord system):', (x + x0, y + y0, z + z0))
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver82!")
+        self.stdout("SubT Challenge Ver84!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
