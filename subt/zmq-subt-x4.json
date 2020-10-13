@@ -58,6 +58,13 @@
             "endpoint": "tcp://localhost:5555"
           }
       },
+      "drone": {
+          "driver": "subt.drone:Drone",
+          "in": ["desired_speed"],
+          "out": ["desired_speed_3d"],
+          "init": {
+          }
+      },
       "rosmsg": {
           "driver": "rosmsg",
           "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
@@ -102,7 +109,8 @@
         "driver": "subt.offseter:Offseter"
       }
     },
-    "links": [["app.desired_speed", "rosmsg.desired_speed"],
+    "links": [["app.desired_speed", "drone.desired_speed"],
+              ["drone.desired_speed_3d", "rosmsg.desired_speed_3d"],
               ["app.stdout", "rosmsg.stdout"],
               ["app.request_origin", "rosmsg.request_origin"],
               ["rosmsg.origin", "app.origin"],
