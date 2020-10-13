@@ -20,7 +20,8 @@
             "limit_roll": 90,
             "limit_pitch": 90,
             "return_limit_roll": 90,
-            "return_limit_pitch": 90
+            "return_limit_pitch": 90,
+            "trace_z_weight": 3.0
           }
       },
       "detector": {
