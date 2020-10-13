@@ -33,7 +33,7 @@
           }
       },
       "reporter": {
-          "driver": "subt.artifacts:ArtifactReporter",
+          "driver": "subt.artf_reporter:ArtifactReporter",
           "in": ["artf_xyz"],
           "out": ["artf_cmd"],
           "init": {
@@ -56,6 +56,13 @@
           "init": {
             "mode": "PULL",
             "endpoint": "tcp://localhost:5555"
+          }
+      },
+      "drone": {
+          "driver": "subt.drone:Drone",
+          "in": ["desired_speed"],
+          "out": ["desired_speed_3d"],
+          "init": {
           }
       },
       "rosmsg": {
@@ -89,7 +96,8 @@
       "fromrospy": {
           "driver": "subt.pull:Pull",
 	      "init": {
-	        "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan", "pose3d", "battery_state", "score"]
+	        "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan", "pose3d", "battery_state", "score",
+                        "air_pressure"]
 	      }
       },
       "radio": {
@@ -102,7 +110,8 @@
         "driver": "subt.offseter:Offseter"
       }
     },
-    "links": [["app.desired_speed", "rosmsg.desired_speed"],
+    "links": [["app.desired_speed", "drone.desired_speed"],
+              ["drone.desired_speed_3d", "rosmsg.desired_speed_3d"],
               ["app.stdout", "rosmsg.stdout"],
               ["app.request_origin", "rosmsg.request_origin"],
               ["rosmsg.origin", "app.origin"],
@@ -141,7 +150,13 @@
               ["detector.artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],
               ["app.artf_xyz", "reporter.artf_xyz"],
+              ["rosmsg.base_station", "reporter.base_station"],
               ["reporter.artf_cmd", "transmitter.raw"],
+
+              ["fromrospy.bottom_scan", "drone.bottom_scan"],
+              ["fromrospy.top_scan", "drone.top_scan"],
+              ["offseter.pose3d", "drone.pose3d"],
+              ["fromrospy.air_pressure", "drone.air_pressure"],
 
               ["rosmsg.origin", "offseter.origin"],
               ["fromrospy.pose3d", "offseter.pose3d"]

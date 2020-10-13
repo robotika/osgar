@@ -69,13 +69,13 @@ class SubTChallengeTest(unittest.TestCase):
         app.on_artf(None, data)
         bus.publish.assert_called()
         self.assertEqual(bus.method_calls[-1],
-                         call.publish('artf_xyz', [['TYPE_BACKPACK', 105000, -359, 5222]]))
+                         call.publish('artf_xyz', [['TYPE_BACKPACK', [105000, -359, 5222], None, None]]))
         app.orientation = quaternion.euler_to_quaternion(math.pi/2, 0, 0)
         bus.publish.reset_mock()
         app.on_artf(None, data)
         bus.publish.assert_called()
         self.assertEqual(bus.method_calls[-1],
-                         call.publish('artf_xyz', [['TYPE_BACKPACK', 102359, 7000, 5222]]))
+                         call.publish('artf_xyz', [['TYPE_BACKPACK', [102359, 7000, 5222], None, None]]))
 
 
 if __name__ == "__main__":
