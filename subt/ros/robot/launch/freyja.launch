@@ -101,6 +101,11 @@
     <remap from="pose" to="$(arg robot_name)/altitude"/>
   </node>
 
+  <!-- Location in the staging area. -->
+  <node name="pose_from_artifact_origin" pkg="proxy" type="pose_from_artifact_origin" args="$(arg robot_name) odom">
+    <remap from="pose_from_origin" to="$(arg robot_name)/pose_from_origin"/>
+  </node>
+
   <!-- Fusion of wheel odometry, ICP odometries, RGBD odometries and altitude with IMU data.
        https://github.com/introlab/rtabmap_ros/blob/master/launch/tests/sensor_fusion.launch
        https://answers.ros.org/question/248109/integrating-an-imu-with-rtabmap/
@@ -129,6 +134,8 @@
     <param name="odom4" value="/rtabmap/rgbd_rear/odom"/>
     <!-- Altitude estimated from air pressure -->
     <param name="pose0" value="$(arg robot_name)/altitude"/>
+    <!-- Information about location in the staging area. -->
+    <param name="pose1" value="$(arg robot_name)/pose_from_origin"/>
     <!-- IMU -->
     <param name="imu0" value="$(arg robot_name)/imu/data"/>
 
@@ -138,6 +145,7 @@
     <param name="odom3_differential" value="false"/>
     <param name="odom4_differential" value="false"/>
     <param name="pose0_differential" value="false"/>
+    <param name="pose1_differential" value="false"/>
     <param name="imu0_differential" value="false"/>
 
     <param name="odom0_relative" value="false"/>
@@ -146,6 +154,7 @@
     <param name="odom3_relative" value="false"/>
     <param name="odom4_relative" value="false"/>
     <param name="pose0_relative" value="true"/>
+    <param name="pose1_relative" value="true"/>
     <param name="imu0_relative" value="false"/>
 
     <param name="imu0_remove_gravitational_acceleration" value="true"/>
@@ -179,6 +188,11 @@
                                     false, false, false]</rosparam>
     <rosparam param="pose0_config">[false, false, true,
                                     false, false, false,
+                                    false, false, false,
+                                    false, false, false,
+                                    false, false, false]</rosparam>
+    <rosparam param="pose1_config">[true, true, true,
+                                    true, true, true,
                                     false, false, false,
                                     false, false, false,
                                     false, false, false]</rosparam>
