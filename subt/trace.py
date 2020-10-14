@@ -10,11 +10,11 @@ def distance3D(xyz1, xyz2, weights=[1.0, 1.0, 1.0]):
 
 class Trace:
     def __init__(self, step=TRACE_STEP):
-        self.trace = [(0, 0, 0)]  # traveled 3D positions
+        self.trace = []  # unknown start position
         self.step = step
 
     def update_trace(self, pos_xyz):
-        if distance3D(self.trace[-1], pos_xyz) >= self.step:
+        if len(self.trace) == 0 or distance3D(self.trace[-1], pos_xyz) >= self.step:
             self.trace.append(pos_xyz)
 
     def prune(self, radius=None):
@@ -23,6 +23,10 @@ class Trace:
             radius = self.step
 
         pruned = Trace(step=self.step)
+        if len(self.trace) > 0:
+            # keep the very first position in pruned version
+            pruned.update_trace(self.trace[0])
+
         open_end = 1
         while open_end < len(self.trace):
             best = open_end
@@ -49,11 +53,11 @@ class Trace:
         self.trace.reverse()
 
     def add_line_to(self, xyz):
-        last = self.trace[-1]
-        size = distance3D(last, xyz)
-        dx, dy, dz = xyz[0] - last[0], xyz[1] - last[1], xyz[2] - last[2]
-        for i in range(1, int(size/self.step)):
-            s = self.step * i/size
-            self.trace.append((last[0] + s*dx, last[1] + s*dy, last[2] + s*dz))
+        if len(self.trace) > 0:
+            last = self.trace[-1]
+            size = distance3D(last, xyz)
+            dx, dy, dz = xyz[0] - last[0], xyz[1] - last[1], xyz[2] - last[2]
+            for i in range(1, int(size/self.step)):
+                s = self.step * i/size
+                self.trace.append((last[0] + s*dx, last[1] + s*dy, last[2] + s*dz))
         self.trace.append(xyz)
-
