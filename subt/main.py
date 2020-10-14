@@ -813,7 +813,8 @@ class SubTChallenge:
         """
         Navigate to the base station tile end
         """
-        trace = Trace()  # starts by default at (0, 0, 0) and the robots are placed X = -7.5m (variable Y)
+        trace = Trace()
+        trace.update_trace(tuple(self.xyz))
         trace.add_line_to((-4.5, 0, self.height_above_ground))  # in front of the tunnel/entrance
         if self.use_right_wall:
             entrance_offset = -0.5
