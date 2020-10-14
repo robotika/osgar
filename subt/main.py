@@ -565,7 +565,7 @@ class SubTChallenge:
         ax = x0 + x + dx/1000.0
         ay = y0 + y + dy/1000.0
         az = z0 + z + dz/1000.0
-        if -20 < ax < 0 and -10 < ay < 10:
+        if -50 < ax < 0 and -25 < ay < 25:  # Urban (-20 < ax < 0 and -10 < ay < 10)
             # filter out elements on staging area
             self.stdout(self.time, 'Robot at:', (ax, ay, az))
         else:
@@ -923,7 +923,7 @@ class SubTChallenge:
         self.stdout('Final xyz (DARPA coord system):', (x + x0, y + y0, z + z0))
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver84!")
+        self.stdout("SubT Challenge Ver85!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
