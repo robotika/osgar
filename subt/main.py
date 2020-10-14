@@ -571,7 +571,6 @@ class SubTChallenge:
         if self.origin is None:  # accept only initial offset
             self.robot_name = data[0].decode('ascii')
             if len(data) == 8:
-                self.xyz_quat = data[1:4]
                 self.origin = data[1:4]
                 qx, qy, qz, qw = data[4:]
                 self.origin_quat = qx, qy, qz, qw  # quaternion
