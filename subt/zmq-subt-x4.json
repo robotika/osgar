@@ -136,7 +136,7 @@
               ["rosmsg.depth", "detector.depth"],
 
               ["fromrospy.rot", "app.rot"],
-              ["fromrospy.pose3d", "app.pose3d"],
+              ["offseter.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
               ["rosmsg.sim_time_sec", "reporter.sim_time_sec"],
 
