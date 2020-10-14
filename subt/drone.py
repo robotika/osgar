@@ -47,12 +47,14 @@ class Drone(Node):
         super().__init__(config, bus)
         bus.register("desired_speed_3d")
 
+        self.count = 0 # count of bottom messages
         self.lastScanDown = 0.0
         self.lastScanUp = 0.0
         self.started = False
 
         self.accum = 0.0
         self.debug_arr = []
+        self.debug_arr2 = []
         self.verbose = False
         self.z = None  # last Z coordinate
         self.altitude = None  # based on air_pressure
@@ -64,9 +66,11 @@ class Drone(Node):
 
     def send_speed_cmd(self):
         if self.started:
+            H, E, A = 0, 0, 0
             if self.desired_altitude is None or self.altitude is None:
                 height = min(HEIGHT, (self.lastScanDown + self.lastScanUp) / 2)
                 diff = height - self.lastScanDown
+                H = diff
             else:
                 diff = self.desired_altitude - self.altitude
                 if min(self.lastScanDown, self.lastScanUp) < EMERGENCY_HEIGHT:
@@ -74,6 +78,9 @@ class Drone(Node):
                     # temporary switch to keep safe height from bottom/top
                     height = min(HEIGHT, (self.lastScanDown + self.lastScanUp) / 2)
                     diff = height - self.lastScanDown
+                    E = diff
+                else:
+                    A = diff
 
             self.accum += diff
             desiredVel = max(-MAX_VERTICAL, min(MAX_VERTICAL, PID_P * diff + PID_I * self.accum))
@@ -86,8 +93,11 @@ class Drone(Node):
                 self.angular[2] = -MAX_ANGULAR
 
             self.publish('desired_speed_3d', [self.linear, self.angular])
+            if self.verbose:
+                self.debug_arr2.append((self.count, H, E, A))
 
     def on_bottom_scan(self, scan):
+        self.count += 1
         self.lastScanDown = scan[0]
         self.send_speed_cmd()
 
@@ -126,11 +136,18 @@ class Drone(Node):
     def draw(self):
         import matplotlib.pyplot as plt
 
-        t = [a[0].total_seconds() for a in self.debug_arr]
-        height = [(a[1], a[1] - a[2], a[1] + a[3], a[4]) for a in self.debug_arr]
-        line_obj = plt.plot(t, height, '-o', linewidth=2)
-        plt.legend(iter(line_obj), ('altitude', 'alt - bottom', 'alt + top', 'pose3D.z'))
-        plt.xlabel('time (s)')
+        #t = [a[0].total_seconds() for a in self.debug_arr]
+        #height = [(a[1], a[1] - a[2], a[1] + a[3], a[4]) for a in self.debug_arr]
+        #line_obj = plt.plot(t, height, '-o', linewidth=2)
+        #plt.legend(iter(line_obj), ('altitude', 'alt - bottom', 'alt + top', 'pose3D.z'))
+        #plt.xlabel('time (s)')
+        x = [count for count, H, E, A in self.debug_arr2]
+        a = [A for count, H, E, A in self.debug_arr2]
+        e = [E for count, H, E, A in self.debug_arr2]
+        h = [H for count, H, E, A in self.debug_arr2]
+        plt.plot(x, a)
+        plt.plot(x, e)
+        plt.plot(x, h)
         plt.legend()
         plt.show()
 
