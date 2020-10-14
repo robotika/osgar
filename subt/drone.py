@@ -7,6 +7,7 @@ import math
 from osgar.node import Node
 
 HEIGHT = 2.0
+EMERGENCY_HEIGHT = 0.5
 MAX_ANGULAR = 0.7
 MAX_VERTICAL = 0.7
 PID_P = 1.0  # 0.5
@@ -55,6 +56,7 @@ class Drone(Node):
         self.verbose = False
         self.z = None  # last Z coordinate
         self.altitude = None  # based on air_pressure
+        self.desired_altitude = None  # i.e. keep safe distance from up and down obstacles
 
         # keep last command for independent update of XY and Z
         self.linear = [0.0, 0.0, 0.0]
@@ -62,8 +64,17 @@ class Drone(Node):
 
     def send_speed_cmd(self):
         if self.started:
-            height = min(HEIGHT, (self.lastScanDown + self.lastScanUp) / 2)
-            diff = height - self.lastScanDown
+            if self.desired_altitude is None or self.altitude is None:
+                height = min(HEIGHT, (self.lastScanDown + self.lastScanUp) / 2)
+                diff = height - self.lastScanDown
+            else:
+                diff = self.desired_altitude - self.altitude
+                if min(self.lastScanDown, self.lastScanUp) < EMERGENCY_HEIGHT:
+                    print(self.time, 'Emergency limit', self.lastScanDown, self.lastScanUp)
+                    # temporary switch to keep safe height from bottom/top
+                    height = min(HEIGHT, (self.lastScanDown + self.lastScanUp) / 2)
+                    diff = height - self.lastScanDown
+
             self.accum += diff
             desiredVel = max(-MAX_VERTICAL, min(MAX_VERTICAL, PID_P * diff + PID_I * self.accum))
             self.linear[2] = desiredVel
@@ -101,6 +112,9 @@ class Drone(Node):
 
     def on_air_pressure(self, data):
         self.altitude = altitude_from_pressure(data)
+
+    def on_desired_altitude(self, data):
+        pass  # self.desired_altitude already updated by Node
 
     def update(self):
         channel = super().update()

@@ -99,7 +99,7 @@ class EmergencyStopMonitor:
 class SubTChallenge:
     def __init__(self, config, bus):
         self.bus = bus
-        bus.register("desired_speed", "pose2d", "artf_xyz", "stdout", "request_origin")
+        bus.register("desired_speed", "pose2d", "artf_xyz", "stdout", "request_origin", "desired_altitude")
         self.traveled_dist = 0.0
         self.time = None
         self.max_speed = config['max_speed']
@@ -122,6 +122,7 @@ class SubTChallenge:
         self.speed_policy = config.get('speed_policy', 'always_forward')
         assert(self.speed_policy in ['always_forward', 'conservative'])
         self.height_above_ground = config.get('height_above_ground', 0.0)
+        self.trace_z_weight = config.get('trace_z_weight', 0.2)  # Z is important for drones ~ 3.0
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
         self.xyz = None  # 3D position for mapping artifacts - unknown depends on source (pose2d or pose3d)
@@ -409,9 +410,9 @@ class SubTChallenge:
             channel = self.update()
             if (channel == 'scan' and not self.flipped) or (channel == 'scan_back' and self.flipped) or (channel == 'scan360'):
                 if target_distance == MIN_TARGET_DISTANCE:
-                    target_x, target_y = original_trace.where_to(self.xyz, target_distance)[:2]
+                    target_x, target_y, target_z = original_trace.where_to(self.xyz, target_distance, self.trace_z_weight)
                 else:
-                    target_x, target_y = self.trace.where_to(self.xyz, target_distance)[:2]
+                    target_x, target_y, target_z = self.trace.where_to(self.xyz, target_distance, self.trace_z_weight)
 #                print(self.time, self.xyz, (target_x, target_y), math.degrees(self.yaw))
                 x, y = self.xyz[:2]
                 desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
@@ -419,6 +420,7 @@ class SubTChallenge:
                     desired_direction += math.pi  # symmetry
                     for angle in self.joint_angle_rad:
                         desired_direction -= angle
+                self.bus.publish('desired_altitude', target_z)
 
                 safety = self.go_safely(desired_direction)
                 if safety < 0.2:
@@ -432,6 +434,7 @@ class SubTChallenge:
                         print(self.time, "Recovery to original", target_distance)
 
         print('return_home: dist', distance3D(self.xyz, (0, 0, 0)), 'time(sec)', self.sim_time_sec - start_time)
+        self.bus.publish('desired_altitude', None)
 
     def follow_trace(self, trace, timeout, max_target_distance=5.0, safety_limit=None):
         print('Follow trace')
@@ -440,7 +443,7 @@ class SubTChallenge:
         print('MD', self.xyz, distance3D(self.xyz, trace.trace[0]), trace.trace)
         while distance3D(self.xyz, trace.trace[0]) > END_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
             if self.update() in ['scan', 'scan360']:
-                target_x, target_y = trace.where_to(self.xyz, max_target_distance)[:2]
+                target_x, target_y = trace.where_to(self.xyz, max_target_distance, self.trace_z_weight)[:2]
                 x, y = self.xyz[:2]
                 desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
                 safety = self.go_safely(desired_direction)
