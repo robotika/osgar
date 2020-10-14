@@ -14,7 +14,7 @@ class Trace:
         self.step = step
 
     def update_trace(self, pos_xyz):
-        if len(self.trace) == 0 or distance3D(self.trace[-1], pos_xyz) >= self.step:
+        if not self.trace or distance3D(self.trace[-1], pos_xyz) >= self.step:
             self.trace.append(pos_xyz)
 
     def prune(self, radius=None):
@@ -23,7 +23,7 @@ class Trace:
             radius = self.step
 
         pruned = Trace(step=self.step)
-        if len(self.trace) > 0:
+        if self.trace:
             # keep the very first position in pruned version
             pruned.update_trace(self.trace[0])
 
@@ -53,7 +53,7 @@ class Trace:
         self.trace.reverse()
 
     def add_line_to(self, xyz):
-        if len(self.trace) > 0:
+        if self.trace:
             last = self.trace[-1]
             size = distance3D(last, xyz)
             dx, dy, dz = xyz[0] - last[0], xyz[1] - last[1], xyz[2] - last[2]
