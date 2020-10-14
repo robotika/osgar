@@ -42,7 +42,7 @@ class SimLogger:
 class Simulation:
 
     def __init__(self, bus, end_condition, world=None):
-        bus.register('scan', 'rot', 'orientation', 'sim_time_sec', 'origin', 'pose2d', 'acc', 'artf')
+        bus.register('scan', 'rot', 'orientation', 'sim_time_sec', 'origin', 'pose2d', 'acc', 'artf', 'pose3d')
         self.bus = bus
         self.end_condition = end_condition
         self.world = world if world is not None else MultiLineString()
@@ -129,6 +129,7 @@ class Simulation:
         self.bus.publish('orientation', self.orientation)
         self.bus.publish('rot', [heading_centidegrees, 0, 0])
         self.bus.publish('pose2d', [x_mm, y_mm, heading_centidegrees])
+        self.bus.publish('pose3d', [[a - b for a, b, in zip(self.xyz, self.origin)], self.orientation])
         self.bus.publish('sim_time_sec', self.time.total_seconds())
         self.bus.publish('scan', self.scan())
 
