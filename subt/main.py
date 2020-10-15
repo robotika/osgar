@@ -423,8 +423,6 @@ class SubTChallenge:
                 d = distance3D(self.xyz, [target_x, target_y, target_z])
                 time_to_target = d/self.max_speed
                 desired_z_speed = (target_z - self.xyz[2]) / time_to_target
-                #print(desired_z_speed)
-                #self.bus.publish('desired_altitude', target_z)
                 self.bus.publish('desired_z_speed', desired_z_speed)
 
                 safety = self.go_safely(desired_direction)
