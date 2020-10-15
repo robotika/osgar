@@ -29,7 +29,7 @@ PoseFromArtifactOrigin::PoseFromArtifactOrigin(const std::string& robot_name, co
   origin_client = node_handle.serviceClient<subt_msgs::PoseFromArtifact>("/subt/pose_from_artifact_origin", true);
   origin_rpc.request.robot_name.data = robot_name;
 
-  timer = node_handle.createTimer(ros::Duration(0.02), &PoseFromArtifactOrigin::Update, this);
+  timer = node_handle.createTimer(ros::Duration(0.2), &PoseFromArtifactOrigin::Update, this);
   pose_publisher = node_handle.advertise<geometry_msgs::PoseWithCovarianceStamped>("/pose_from_origin", 100);
   published_pose.header.frame_id = frame_id;
   published_pose.header.seq = 0;
