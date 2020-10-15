@@ -57,6 +57,8 @@
     <remap from="pose_from_origin" to="$(arg robot_name)/pose_from_origin"/>
   </node>
 
+  <node name="imu_pruner" type="drop" pkg="topic_tools" args="$(arg robot_name)/imu/data 4 5 $(arg robot_name)/imu/pruned" />
+
   <!-- Fusion of ICP odometry, RGBD odometry and altitude with IMU data.
        https://github.com/introlab/rtabmap_ros/blob/master/launch/tests/sensor_fusion.launch
        https://answers.ros.org/question/248109/integrating-an-imu-with-rtabmap/
@@ -82,7 +84,7 @@
     <!-- Information about location in the staging area. -->
     <param name="pose1" value="$(arg robot_name)/pose_from_origin"/>
     <!-- IMU -->
-    <param name="imu0" value="$(arg robot_name)/imu/data"/>
+    <param name="imu0" value="$(arg robot_name)/imu/pruned"/>
 
     <param name="odom0_differential" value="false"/>
     <param name="odom1_differential" value="false"/>
