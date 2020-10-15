@@ -9,9 +9,8 @@ from osgar.node import Node
 HEIGHT = 2.0
 EMERGENCY_HEIGHT = 0.5
 MAX_ANGULAR = 0.7
-MAX_VERTICAL = 0.7
+MAX_VERTICAL = 1
 PID_P = 2.0  # 0.5
-PID_I = 0.0  # 0.5
 
 
 def altitude_from_pressure(p):
@@ -52,13 +51,12 @@ class Drone(Node):
         self.lastScanUp = 0.0
         self.started = False
 
-        self.accum = 0.0
         self.debug_arr = []
         self.debug_arr2 = []
         self.verbose = False
         self.z = None  # last Z coordinate
         self.altitude = None  # based on air_pressure
-        self.desired_altitude = None  # i.e. keep safe distance from up and down obstacles
+        self.desired_z_speed = None  # i.e. keep safe distance from up and down obstacles
 
         # keep last command for independent update of XY and Z
         self.linear = [0.0, 0.0, 0.0]
@@ -67,23 +65,29 @@ class Drone(Node):
     def send_speed_cmd(self):
         if self.started:
             H, E, A = 0, 0, 0
-            if self.desired_altitude is None or self.altitude is None:
+            desiredVel = None
+            if self.desired_z_speed is None:
                 height = min(HEIGHT, (self.lastScanDown + self.lastScanUp) / 2)
                 diff = height - self.lastScanDown
                 H = diff
+                desiredVel = PID_P * diff
             else:
-                diff = self.desired_altitude - self.altitude
                 if min(self.lastScanDown, self.lastScanUp) < EMERGENCY_HEIGHT:
                     print(self.time, 'Emergency limit', self.lastScanDown, self.lastScanUp)
                     # temporary switch to keep safe height from bottom/top
-                    height = min(HEIGHT, (self.lastScanDown + self.lastScanUp) / 2)
-                    diff = height - self.lastScanDown
+                    down = self.lastScanDown - EMERGENCY_HEIGHT
+                    up = self.lastScanUp - EMERGENCY_HEIGHT
+                    if up < 0:
+                        diff = -up
+                    else:
+                        diff = down
                     E = diff
+                    desiredVel = PID_P * diff
                 else:
-                    A = diff
+                    A = self.desired_z_speed
+                    desiredVel = self.desired_z_speed
 
-            self.accum += diff
-            desiredVel = max(-MAX_VERTICAL, min(MAX_VERTICAL, PID_P * diff + PID_I * self.accum))
+            desiredVel = max(-MAX_VERTICAL, min(MAX_VERTICAL, desiredVel))
             self.linear[2] = desiredVel
 
             #this is because drone can't handle too aggressive rotation
@@ -116,6 +120,9 @@ class Drone(Node):
 
         self.send_speed_cmd()
 
+    def on_desired_z_speed(self, z_speed):
+        self.desired_z_speed = z_speed
+
     def on_pose3d(self, data):
         xyz, quat = data
         self.z = xyz[2]
@@ -132,6 +139,9 @@ class Drone(Node):
         handler = getattr(self, "on_" + channel, None)
         if handler is not None:
             handler(getattr(self, channel))
+        else:
+            assert False, "unknown input {channel}"
+
 
     def draw(self):
         import matplotlib.pyplot as plt
