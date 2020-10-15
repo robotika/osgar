@@ -399,10 +399,13 @@ class SubTChallenge:
         self.trace.prune(SHORTCUT_RADIUS)
         self.wait(dt=timedelta(seconds=2.0))
         print('done.')
+        home_position = self.trace.start_position()
+        if home_position is None:
+            return  # empty trace, no start -> we are at home
         start_time = self.sim_time_sec
         target_distance = MAX_TARGET_DISTANCE
         count_down = 0
-        while distance3D(self.xyz, (0, 0, 0)) > HOME_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
+        while distance3D(self.xyz, home_position) > HOME_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
             channel = self.update()
             if (channel == 'scan' and not self.flipped) or (channel == 'scan_back' and self.flipped) or (channel == 'scan360'):
                 if target_distance == MIN_TARGET_DISTANCE:
@@ -429,7 +432,7 @@ class SubTChallenge:
                         target_distance = MAX_TARGET_DISTANCE
                         print(self.time, "Recovery to original", target_distance)
 
-        print('return_home: dist', distance3D(self.xyz, (0, 0, 0)), 'time(sec)', self.sim_time_sec - start_time)
+        print('return_home: dist', distance3D(self.xyz, home_position), 'time(sec)', self.sim_time_sec - start_time)
         self.bus.publish('desired_altitude', None)
 
     def follow_trace(self, trace, timeout, max_target_distance=5.0, safety_limit=None):
