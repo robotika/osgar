@@ -99,7 +99,7 @@ class EmergencyStopMonitor:
 class SubTChallenge:
     def __init__(self, config, bus):
         self.bus = bus
-        bus.register("desired_speed", "pose2d", "artf_xyz", "stdout", "request_origin", "desired_altitude")
+        bus.register("desired_speed", "pose2d", "artf_xyz", "stdout", "request_origin", "desired_altitude", "desired_z_speed")
         self.traveled_dist = 0.0
         self.time = None
         self.max_speed = config['max_speed']
@@ -419,7 +419,13 @@ class SubTChallenge:
                     desired_direction += math.pi  # symmetry
                     for angle in self.joint_angle_rad:
                         desired_direction -= angle
-                self.bus.publish('desired_altitude', target_z)
+
+                d = distance3D(self.xyz, [target_x, target_y, target_z])
+                time_to_target = d/self.max_speed
+                desired_z_speed = (target_z - self.xyz[2]) / time_to_target
+                #print(desired_z_speed)
+                #self.bus.publish('desired_altitude', target_z)
+                self.bus.publish('desired_z_speed', desired_z_speed)
 
                 safety = self.go_safely(desired_direction)
                 if safety < 0.2:
