@@ -437,7 +437,7 @@ class SubTChallenge:
                         print(self.time, "Recovery to original", target_distance)
 
         print('return_home: dist', distance3D(self.xyz, home_position), 'time(sec)', self.sim_time_sec - start_time)
-        self.bus.publish('desired_altitude', None)
+        self.bus.publish('desired_z_speed', None)
 
     def follow_trace(self, trace, timeout, max_target_distance=5.0, safety_limit=None):
         print('Follow trace')
