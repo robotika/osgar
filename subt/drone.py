@@ -77,10 +77,12 @@ class Drone(Node):
                     # temporary switch to keep safe height from bottom/top
                     down = self.lastScanDown - EMERGENCY_HEIGHT
                     up = self.lastScanUp - EMERGENCY_HEIGHT
-                    if up < 0:
-                        diff = -up
+                    if up < 0 and down < 0:
+                        diff = (up - down) / 2
+                    elif up < 0:
+                        diff = up
                     else:
-                        diff = down
+                        diff = -down
                     E = diff
                     desiredVel = PID_P * diff
                 else:
