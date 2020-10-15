@@ -49,3 +49,10 @@ class Test(unittest.TestCase):
         t.add_line_to((10, 0, 0))
         self.assertEqual(t.trace[-1], (10, 0, 0))
         self.assertEqual(len(t.trace), 11)
+
+    def test_start_position(self):
+        t = Trace(1.0)
+        self.assertIsNone(t.start_position())
+        t.update_trace((10, 20, 30))  # the start does not have to be (0, 0, 0) any more
+        self.assertEqual(t.start_position(), (10, 20, 30))
+

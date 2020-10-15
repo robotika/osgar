@@ -61,3 +61,8 @@ class Trace:
                 s = self.step * i/size
                 self.trace.append((last[0] + s*dx, last[1] + s*dy, last[2] + s*dz))
         self.trace.append(xyz)
+
+    def start_position(self):
+        if self.trace:
+            return self.trace[0]
+        return None
