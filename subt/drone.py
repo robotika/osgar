@@ -141,13 +141,14 @@ class Drone(Node):
         #line_obj = plt.plot(t, height, '-o', linewidth=2)
         #plt.legend(iter(line_obj), ('altitude', 'alt - bottom', 'alt + top', 'pose3D.z'))
         #plt.xlabel('time (s)')
-        x = [count for count, H, E, A in self.debug_arr2]
+        x = [count/50.0 for count, H, E, A in self.debug_arr2]  # bottom lidar runnig at 50Hz
         a = [A for count, H, E, A in self.debug_arr2]
         e = [E for count, H, E, A in self.debug_arr2]
         h = [H for count, H, E, A in self.debug_arr2]
         plt.plot(x, a)
         plt.plot(x, e)
         plt.plot(x, h)
+        plt.xlabel('sim time (s)')
         plt.legend()
         plt.show()
 
