@@ -99,7 +99,7 @@ class EmergencyStopMonitor:
 class SubTChallenge:
     def __init__(self, config, bus):
         self.bus = bus
-        bus.register("desired_speed", "pose2d", "artf_xyz", "stdout", "request_origin", "desired_altitude", "desired_z_speed")
+        bus.register("desired_speed", "pose2d", "artf_xyz", "stdout", "request_origin", "desired_z_speed")
         self.traveled_dist = 0.0
         self.time = None
         self.max_speed = config['max_speed']
