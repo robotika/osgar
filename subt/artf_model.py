@@ -4,7 +4,7 @@ import torch
 
 ARTIFACT_CATEGORIES = dict((name, artf_id) for artf_id, name in enumerate([
     'nothing', 'backpack', 'phone', 'survivor', 'vent', 'robot', 'helmet',
-    'rope'
+    'rope', 'breadcrumb'
     #'drill', 'toolbox', 'fire_extinguisher', 'electrical_box', 'radio', 'valve'
 ]))
 
@@ -406,8 +406,8 @@ if __name__ == '__main__':
                         type=json.loads,
                         default={
                             "type": "mdnet0",
-                            "embedding-size-0": 16,
-                            "embedding-size-1": 16,
+                            "embedding-size-0": 64,
+                            "embedding-size-1": 64,
                             "activation": "relu",
                             "dropout-probability": 0.4
                         })
