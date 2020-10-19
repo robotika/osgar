@@ -14,13 +14,14 @@
             "virtual_bumper_radius": 10.0,
             "virtual_world": true,
             "speed_policy": "conservative",
-            "obstacle_influence": 1.2,
+            "obstacle_influence": 1.4,
             "max_obstacle_distance": 3.0,
             "height_above_ground": 2.0,
             "limit_roll": 90,
             "limit_pitch": 90,
             "return_limit_roll": 90,
-            "return_limit_pitch": 90
+            "return_limit_pitch": 90,
+            "trace_z_weight": 1.0
           }
       },
       "detector": {
@@ -33,7 +34,7 @@
           }
       },
       "reporter": {
-          "driver": "subt.artifacts:ArtifactReporter",
+          "driver": "subt.artf_reporter:ArtifactReporter",
           "in": ["artf_xyz"],
           "out": ["artf_cmd"],
           "init": {
@@ -56,6 +57,13 @@
           "init": {
             "mode": "PULL",
             "endpoint": "tcp://localhost:5555"
+          }
+      },
+      "drone": {
+          "driver": "subt.drone:Drone",
+          "in": ["desired_speed"],
+          "out": ["desired_speed_3d"],
+          "init": {
           }
       },
       "rosmsg": {
@@ -89,7 +97,8 @@
       "fromrospy": {
           "driver": "subt.pull:Pull",
 	      "init": {
-	        "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan", "pose3d", "battery_state", "score"]
+	        "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan", "pose3d", "battery_state", "score",
+                        "air_pressure"]
 	      }
       },
       "radio": {
@@ -102,7 +111,8 @@
         "driver": "subt.offseter:Offseter"
       }
     },
-    "links": [["app.desired_speed", "rosmsg.desired_speed"],
+    "links": [["app.desired_speed", "drone.desired_speed"],
+              ["drone.desired_speed_3d", "rosmsg.desired_speed_3d"],
               ["app.stdout", "rosmsg.stdout"],
               ["app.request_origin", "rosmsg.request_origin"],
               ["rosmsg.origin", "app.origin"],
@@ -126,7 +136,7 @@
               ["rosmsg.depth", "detector.depth"],
 
               ["fromrospy.rot", "app.rot"],
-              ["fromrospy.pose3d", "app.pose3d"],
+              ["offseter.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
               ["rosmsg.sim_time_sec", "reporter.sim_time_sec"],
 
@@ -141,7 +151,14 @@
               ["detector.artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],
               ["app.artf_xyz", "reporter.artf_xyz"],
+              ["rosmsg.base_station", "reporter.base_station"],
               ["reporter.artf_cmd", "transmitter.raw"],
+
+              ["fromrospy.bottom_scan", "drone.bottom_scan"],
+              ["fromrospy.top_scan", "drone.top_scan"],
+              ["offseter.pose3d", "drone.pose3d"],
+              ["fromrospy.air_pressure", "drone.air_pressure"],
+              ["app.desired_z_speed", "drone.desired_z_speed"],
 
               ["rosmsg.origin", "offseter.origin"],
               ["fromrospy.pose3d", "offseter.pose3d"]

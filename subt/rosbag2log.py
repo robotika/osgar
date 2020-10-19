@@ -223,6 +223,7 @@ def main():
                 args.filenames.append(str(p))
         if len(args.filenames) == 0:
             sys.exit("no logfiles found in current directory")
+        args.filenames.sort()
 
     for filename in args.filenames:
         print("processing:", filename)

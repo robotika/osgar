@@ -99,7 +99,7 @@ class EmergencyStopMonitor:
 class SubTChallenge:
     def __init__(self, config, bus):
         self.bus = bus
-        bus.register("desired_speed", "pose2d", "artf_xyz", "stdout", "request_origin")
+        bus.register("desired_speed", "pose2d", "artf_xyz", "stdout", "request_origin", "desired_z_speed")
         self.traveled_dist = 0.0
         self.time = None
         self.max_speed = config['max_speed']
@@ -122,6 +122,7 @@ class SubTChallenge:
         self.speed_policy = config.get('speed_policy', 'always_forward')
         assert(self.speed_policy in ['always_forward', 'conservative'])
         self.height_above_ground = config.get('height_above_ground', 0.0)
+        self.trace_z_weight = config.get('trace_z_weight', 0.2)  # Z is important for drones ~ 3.0
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
         self.xyz = None  # 3D position for mapping artifacts - unknown depends on source (pose2d or pose3d)
@@ -156,10 +157,6 @@ class SubTChallenge:
         self.origin = None  # unknown initial position
         self.origin_quat = quaternion.identity()
 
-        self.offset = None  # the offset between robot frame and world frame is not known on start
-        if 'init_offset' in config:
-            x, y, z = [d/1000.0 for d in config['init_offset']]
-            self.offset = (x, y, z)
         self.init_path = None
         if 'init_path' in config:
             pts_s = [s.split(',') for s in config['init_path'].split(';')]
@@ -275,7 +272,7 @@ class SubTChallenge:
         print(self.time, 'stop at', self.time - start_time, self.is_moving)
 
     def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None, flipped=False,
-            pitch_limit=None, roll_limit=None):
+            pitch_limit=None, roll_limit=None, detect_loop=True):
         # make sure that we will start with clean data
         if flipped:
             self.scan = None
@@ -318,7 +315,7 @@ class SubTChallenge:
                     reason = REASON_VIRTUAL_BUMPER
                     break
 
-                loop = self.loop_detector.loop()
+                loop = detect_loop and self.loop_detector.loop()
                 if loop:
                     print(self.time, self.sim_time_sec, 'Loop detected')
                     self.turn(math.radians(160 if self.use_right_wall else -160), timeout=timedelta(seconds=40), with_stop=True)
@@ -402,16 +399,19 @@ class SubTChallenge:
         self.trace.prune(SHORTCUT_RADIUS)
         self.wait(dt=timedelta(seconds=2.0))
         print('done.')
+        home_position = self.trace.start_position()
+        if home_position is None:
+            return  # empty trace, no start -> we are at home
         start_time = self.sim_time_sec
         target_distance = MAX_TARGET_DISTANCE
         count_down = 0
-        while distance3D(self.xyz, (0, 0, 0)) > HOME_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
+        while distance3D(self.xyz, home_position) > HOME_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
             channel = self.update()
             if (channel == 'scan' and not self.flipped) or (channel == 'scan_back' and self.flipped) or (channel == 'scan360'):
                 if target_distance == MIN_TARGET_DISTANCE:
-                    target_x, target_y = original_trace.where_to(self.xyz, target_distance)[:2]
+                    target_x, target_y, target_z = original_trace.where_to(self.xyz, target_distance, self.trace_z_weight)
                 else:
-                    target_x, target_y = self.trace.where_to(self.xyz, target_distance)[:2]
+                    target_x, target_y, target_z = self.trace.where_to(self.xyz, target_distance, self.trace_z_weight)
 #                print(self.time, self.xyz, (target_x, target_y), math.degrees(self.yaw))
                 x, y = self.xyz[:2]
                 desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
@@ -419,6 +419,11 @@ class SubTChallenge:
                     desired_direction += math.pi  # symmetry
                     for angle in self.joint_angle_rad:
                         desired_direction -= angle
+
+                d = distance3D(self.xyz, [target_x, target_y, target_z])
+                time_to_target = d/self.max_speed
+                desired_z_speed = (target_z - self.xyz[2]) / time_to_target
+                self.bus.publish('desired_z_speed', desired_z_speed)
 
                 safety = self.go_safely(desired_direction)
                 if safety < 0.2:
@@ -431,7 +436,8 @@ class SubTChallenge:
                         target_distance = MAX_TARGET_DISTANCE
                         print(self.time, "Recovery to original", target_distance)
 
-        print('return_home: dist', distance3D(self.xyz, (0, 0, 0)), 'time(sec)', self.sim_time_sec - start_time)
+        print('return_home: dist', distance3D(self.xyz, home_position), 'time(sec)', self.sim_time_sec - start_time)
+        self.bus.publish('desired_z_speed', None)
 
     def follow_trace(self, trace, timeout, max_target_distance=5.0, safety_limit=None):
         print('Follow trace')
@@ -440,7 +446,7 @@ class SubTChallenge:
         print('MD', self.xyz, distance3D(self.xyz, trace.trace[0]), trace.trace)
         while distance3D(self.xyz, trace.trace[0]) > END_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
             if self.update() in ['scan', 'scan360']:
-                target_x, target_y = trace.where_to(self.xyz, max_target_distance)[:2]
+                target_x, target_y = trace.where_to(self.xyz, max_target_distance, self.trace_z_weight)[:2]
                 x, y = self.xyz[:2]
                 desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
                 safety = self.go_safely(desired_direction)
@@ -460,8 +466,6 @@ class SubTChallenge:
     def on_pose2d(self, timestamp, data):
         if self.xyz is None:
             self.xyz = 0, 0, 0
-        if self.offset is None:
-            return
         x, y, heading = data
         pose = (x / 1000.0, y / 1000.0, math.radians(heading / 100.0))
         if self.last_position is not None:
@@ -479,8 +483,7 @@ class SubTChallenge:
         x += math.cos(self.pitch) * math.cos(self.yaw) * dist
         y += math.cos(self.pitch) * math.sin(self.yaw) * dist
         z += math.sin(self.pitch) * dist
-        x0, y0, z0 = self.offset
-        self.last_send_time = self.bus.publish('pose2d', [round((x + x0) * 1000), round((y + y0) * 1000),
+        self.last_send_time = self.bus.publish('pose2d', [round(x * 1000), round(y * 1000),
                                     round(math.degrees(self.yaw) * 100)])
         if self.virtual_bumper is not None:
             if self.is_virtual:
@@ -491,16 +494,9 @@ class SubTChallenge:
         self.trace.update_trace(self.xyz)
 
     def on_pose3d(self, timestamp, data):
-        if self.xyz is None:
-            # to avoid deadlock when we are waiting for offset but it is defined after self.xyz is not None
-            self.xyz = tuple(data[0])
-        if self.offset is None:
-            # we cannot align global coordinates if offset is not known
-            return
         xyz, rot = data
         self.orientation = rot  # quaternion
         ypr = quaternion.euler_zyx(rot)
-        x0, y0, z0 = self.offset
 
         pose = (xyz[0], xyz[1], ypr[0])
         if self.last_position is not None:
@@ -515,7 +511,7 @@ class SubTChallenge:
         self.last_position = pose
         self.traveled_dist += dist
         x, y, z = xyz
-        self.last_send_time = self.bus.publish('pose2d', [round((x + x0) * 1000), round((y + y0) * 1000),
+        self.last_send_time = self.bus.publish('pose2d', [round(x * 1000), round(y * 1000),
                                     round(math.degrees(self.yaw) * 100)])
         if self.virtual_bumper is not None:
             if self.is_virtual:
@@ -546,23 +542,27 @@ class SubTChallenge:
                 self.collision_detector_enabled = False
                 raise Collision()
 
+    def publish_single_artf_xyz(self, artifact_data, pos):
+        ax, ay, az = pos
+        self.bus.publish('artf_xyz', [
+            [artifact_data, [round(ax * 1000), round(ay * 1000), round(az * 1000)], self.robot_name, None]])
+
     def on_artf(self, timestamp, data):
-        if self.offset is None or self.orientation is None or self.xyz is None:
+        if self.orientation is None or self.xyz is None:
             # there can be observed artifact (false) on the start before the coordinate system is defined
             return
         artifact_data, vector = data
         dx, dy, dz = quaternion.rotate_vector(vector, self.orientation)
         x, y, z = self.xyz
-        x0, y0, z0 = self.offset
-        ax = x0 + x + dx/1000.0
-        ay = y0 + y + dy/1000.0
-        az = z0 + z + dz/1000.0
-        if -20 < ax < 0 and -10 < ay < 10:
+        ax = x + dx/1000.0
+        ay = y + dy/1000.0
+        az = z + dz/1000.0
+        if -50 < ax < 0 and -25 < ay < 25:  # Urban (-20 < ax < 0 and -10 < ay < 10)
             # filter out elements on staging area
             self.stdout(self.time, 'Robot at:', (ax, ay, az))
         else:
             if self.maybe_remember_artifact(artifact_data, (ax, ay, az)):
-                self.bus.publish('artf_xyz', [[artifact_data, round(ax*1000), round(ay*1000), round(az*1000)]])
+                self.publish_single_artf_xyz(artifact_data, (ax, ay, az))
 
     def on_joint_angle(self, timestamp, data):
         # angles for articulated robot in 1/100th of degree
@@ -578,7 +578,6 @@ class SubTChallenge:
         if self.origin is None:  # accept only initial offset
             self.robot_name = data[0].decode('ascii')
             if len(data) == 8:
-                self.xyz_quat = data[1:4]
                 self.origin = data[1:4]
                 qx, qy, qz, qw = data[4:]
                 self.origin_quat = qx, qy, qz, qw  # quaternion
@@ -682,12 +681,12 @@ class SubTChallenge:
         """
         Navigate along line
         """
-        dx, dy, __ = self.offset
+        x0, y0, z0 = self.xyz
         trace = Trace()
-        trace.add_line_to((-dx, -dy, 0))
+        trace.add_line_to((x0, y0, z0))
         if path is not None:
             for x, y in path:
-                trace.add_line_to((x - dx, y - dy, 0))
+                trace.add_line_to((x - x0, y - y0, z0))
         trace.reverse()
         self.follow_trace(trace, timeout=timedelta(seconds=120), max_target_distance=2.5, safety_limit=0.2)
 
@@ -747,7 +746,7 @@ class SubTChallenge:
         try:
             with EmergencyStopMonitor(self):
                 allow_virtual_flip = self.symmetric
-                if distance(self.offset, (0, 0)) > 0.1 or self.init_path is not None:
+                if distance(self.xyz, (0, 0)) > 0.1 or self.init_path is not None:
                     self.system_nav_trace(self.init_path)
 
 #                self.go_straight(2.5)  # go to the tunnel entrance - commented our for testing
@@ -809,7 +808,7 @@ class SubTChallenge:
                     self.robust_follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=3*self.timeout, dist_limit=3*total_dist,
                             flipped=allow_virtual_flip, pitch_limit=self.return_limit_pitch, roll_limit=self.return_limit_roll)
                 if self.artifacts:
-                    self.bus.publish('artf_xyz', [[artifact_data, round(x*1000), round(y*1000), round(z*1000)]
+                    self.bus.publish('artf_xyz', [[artifact_data, [round(x*1000), round(y*1000), round(z*1000)], self.robot_name, None]
                                               for artifact_data, (x, y, z) in self.artifacts])
         except EmergencyStopException:
             print(self.time, "EMERGENCY STOP - terminating")
@@ -821,16 +820,16 @@ class SubTChallenge:
         """
         Navigate to the base station tile end
         """
-        dx, dy, dz = self.offset
-        trace = Trace()  # starts by default at (0, 0, 0) and the robots are placed X = -7.5m (variable Y)
-        trace.add_line_to((-4.5 - dx, -dy, self.height_above_ground))  # in front of the tunnel/entrance
+        trace = Trace()
+        trace.update_trace(tuple(self.xyz))
+        trace.add_line_to((-4.5, 0, self.height_above_ground))  # in front of the tunnel/entrance
         if self.use_right_wall:
             entrance_offset = -0.5
         elif self.use_center:
             entrance_offset = 0
         else:
             entrance_offset = 0.5
-        trace.add_line_to((0.5 - dx, -dy + entrance_offset, dz + self.height_above_ground))  # 0.5m inside, towards the desired wall.
+        trace.add_line_to((0.5, entrance_offset, self.height_above_ground))  # 0.5m inside, towards the desired wall.
         trace.reverse()
         self.follow_trace(trace, timeout=timedelta(seconds=30), max_target_distance=2.5, safety_limit=0.2)
 
@@ -845,16 +844,13 @@ class SubTChallenge:
 
         if self.origin is not None:
             x, y, z = self.origin
-            x1, y1, z1 = self.xyz
-            self.offset = x - x1, y - y1, z - z1
-            self.stdout('Offset:', self.offset)
             heading = quaternion.heading(self.origin_quat)
             self.stdout('heading', math.degrees(heading), 'angle', math.degrees(math.atan2(-y, -x)), 'dist', math.hypot(x, y))
 
             self.go_to_entrance()
         else:
             # lost in tunnel
-            self.stdout('Lost in tunnel:', self.origin_error, self.offset)
+            self.stdout('Lost in tunnel:', self.origin_error)
 
     def play_virtual_part_explore(self):
         start_time = self.sim_time_sec
@@ -888,7 +884,7 @@ class SubTChallenge:
                 # Smaller walldist to reduce the chance that we miss the opening again that we missed before,
                 # which made us end up in a loop.
                 dist, reason = self.follow_wall(radius=self.walldist*0.75, right_wall=not self.use_right_wall,
-                                    timeout=timedelta(seconds=5), pitch_limit=self.limit_pitch, roll_limit=None)
+                                    timeout=timedelta(seconds=5), pitch_limit=self.limit_pitch, roll_limit=None, detect_loop=False)
                 if reason is None:
                     continue
 
@@ -906,16 +902,14 @@ class SubTChallenge:
         self.return_home(timeout)
         self.send_speed_cmd(0, 0)
         if self.artifacts:
-            self.bus.publish('artf_xyz', [[artifact_data, round(x * 1000), round(y * 1000), round(z * 1000)]
+            self.bus.publish('artf_xyz', [[artifact_data, [round(x * 1000), round(y * 1000), round(z * 1000)], self.robot_name, None]
                                           for artifact_data, (x, y, z) in self.artifacts])
         self.wait(timedelta(seconds=10), use_sim_time=True)
         self.stdout('Final xyz:', self.xyz)
-        x, y, z = self.xyz
-        x0, y0, z0 = self.offset
-        self.stdout('Final xyz (DARPA coord system):', (x + x0, y + y0, z + z0))
+        self.stdout('Final xyz (DARPA coord system):', self.xyz)
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver82!")
+        self.stdout("SubT Challenge Ver92!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
@@ -994,7 +988,6 @@ def main():
     parser_run.add_argument('--timeout', help='seconds of exploring before going home (default: %(default)s)',
                             type=int, default=10*60)
     parser_run.add_argument('--log', nargs='?', help='record log filename')
-    parser_run.add_argument('--init-offset', help='inital 3D offset accepted as a string of comma separated values (meters)')
     parser_run.add_argument('--init-path', help='inital path to be followed from (0, 0). 2D coordinates are separated by ;')
     parser_run.add_argument('--start-paused', dest='start_paused', action='store_true',
                             help='start robota Paused and wait for LoRa Contine command')
@@ -1031,9 +1024,6 @@ def main():
         else:
             cfg['robot']['modules']['app']['init']['right_wall'] = args.side == 'right'
         cfg['robot']['modules']['app']['init']['timeout'] = args.timeout
-        if args.init_offset is not None:
-            x, y, z = [float(x) for x in args.init_offset.split(',')]
-            cfg['robot']['modules']['app']['init']['init_offset'] = [int(x*1000), int(y*1000), int(z*1000)]
         if args.init_path is not None:
             cfg['robot']['modules']['app']['init']['init_path'] = args.init_path
 

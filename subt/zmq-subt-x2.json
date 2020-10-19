@@ -26,7 +26,7 @@
           }
       },
       "reporter": {
-          "driver": "subt.artifacts:ArtifactReporter",
+          "driver": "subt.artf_reporter:ArtifactReporter",
           "in": ["artf_xyz"],
           "out": ["artf_cmd"],
           "init": {
@@ -123,8 +123,9 @@
               ["depth2scan.scan", "app.scan"],
               ["rosmsg.depth", "detector.depth"],
 
-              ["fromrospy.pose3d", "app.pose3d"],
+              ["offseter.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
+              ["rosmsg.sim_time_sec", "reporter.sim_time_sec"],
               ["rosmsg.sim_time_sec", "torospy.sim_time_sec"],
 
               ["rosmsg.gas_detected", "detector.gas_detected"],
@@ -144,6 +145,7 @@
               ["detector.artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],
               ["app.artf_xyz", "reporter.artf_xyz"],
+              ["rosmsg.base_station", "reporter.base_station"],
               ["reporter.artf_cmd", "transmitter.raw"],
 
               ["rosmsg.origin", "offseter.origin"],

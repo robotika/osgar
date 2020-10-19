@@ -240,8 +240,8 @@ def main():
     cv2.imwrite(args.filename+'.png', img)
     print("created:", args.filename+'.png')
     if args.open:
-        import webbrowser
-        webbrowser.open(args.filename+'.png')
+        from subt.tools import startfile
+        startfile.main(args.filename+'.png')
 
 
 if __name__ == "__main__":

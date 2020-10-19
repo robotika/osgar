@@ -11,6 +11,8 @@ import numpy as np
 from osgar.bus import BusShutdownException
 from osgar.lib.quaternion import euler_zyx
 
+from subt import ign_pb2
+
 MAX_TOPIC_NAME_LENGTH = 256
 
 
@@ -479,7 +481,7 @@ class ROSMsgParser(Thread):
         Thread.__init__(self)
         self.setDaemon(True)
         outputs = ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "sim_clock", "cmd", "origin", "gas_detected",
-                   "depth:null", "t265_rot", "orientation", "debug", "radio",
+                   "depth:null", "t265_rot", "orientation", "debug", "radio", "base_station",
                     "joint_name", "joint_position", "joint_velocity", "joint_effort"]
         self.topics = config.get('topics', [])
         for row in self.topics:
@@ -502,11 +504,23 @@ class ROSMsgParser(Thread):
         self.count = 0
         self.downsample = config.get('downsample', 1)
 
-        self.desired_speed = 0.0  # m/s
-        self.desired_angular_speed = 0.0
+        self.desired_speed = None  # m/s
+        self.desired_angular_speed = None
+        # alternative 3D speed description used in ROS Twist message
+        self.desired_speed_3d, self.desired_angular_speed_3d = None, None
         self.gas_detected = None  # this SubT Virtual specific :-(
 
         self.joint_name = None  # unknown
+
+    def publish_desired_speed(self):
+        if self.desired_speed is not None:
+            cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
+        elif self.desired_speed_3d is not None:
+            cmd = b'cmd_vel_3d %f %f %f %f %f %f' % tuple(self.desired_speed_3d + self.desired_angular_speed_3d)
+        else:
+            # desired speed is not defined - valid state for waiting drone - do not send anything!
+            return
+        self.bus.publish('cmd', cmd)
 
     def get_packet(self):
         data = self._buf
@@ -548,7 +562,28 @@ class ROSMsgParser(Thread):
             s = data[6:].split(b' ')
             addr = s[0]
             msg = b' '.join(s[1:])
-            self.bus.publish('radio', [addr, msg])
+            if addr == b'base_station':
+                artifact_score = ign_pb2.ArtifactScore()
+                try:
+                    artifact_score.ParseFromString(msg)
+                except Exception as e:
+                    print(e)
+                    print(msg)
+                    self.bus.report_error(exception=str(e), msg=msg)
+                    return
+                apos = [artifact_score.artifact.pose.position.x,
+                        artifact_score.artifact.pose.position.y,
+                        artifact_score.artifact.pose.position.z]
+                new_msg = dict(
+                    report_id=artifact_score.report_id,
+                    artifact_type=artifact_score.artifact.type,
+                    artifact_position=apos,
+                    report_status=artifact_score.report_status,
+                    score_change=artifact_score.score_change,
+                )
+                self.bus.publish('base_station', new_msg)
+            else:
+                self.bus.publish('radio', [addr, msg])
             return
         if data.startswith(b'points'):
             return
@@ -578,8 +613,7 @@ class ROSMsgParser(Thread):
                                      for angle in rot])
 
             #workaround for not existing /clock on MOBoS
-            cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
-            self.bus.publish('cmd', cmd)
+            self.publish_desired_speed()
 
         elif frame_id.endswith(b'/base_link/imu_sensor'):  # self.topic_type == 'std_msgs/Imu':
             acc, rot, orientation = parse_imu(packet)
@@ -596,8 +630,7 @@ class ROSMsgParser(Thread):
 
             ms = self.timestamp_nsec//1000000
             if self.timestamp_sec > 0 and ms % 50 == 0:  # 20Hz
-                cmd = b'cmd_vel %f %f' % (self.desired_speed, self.desired_angular_speed)
-                self.bus.publish('cmd', cmd)
+                self.publish_desired_speed()
         elif frame_id.endswith(b'/gas_detected'):
             # send only status change
             if self.gas_detected != parse_bool(packet):
@@ -638,6 +671,11 @@ class ROSMsgParser(Thread):
 
     def slot_desired_speed(self, timestamp, data):
         self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
+        self.desired_speed_3d, self.desired_angular_speed_3d = None, None
+
+    def slot_desired_speed_3d(self, timestamp, data):
+        self.desired_speed, self.desired_angular_speed = None, None
+        self.desired_speed_3d, self.desired_angular_speed_3d = data
 
     def slot_stdout(self, timestamp, data):
         cmd = b'stdout ' + bytes(data, 'utf-8')  # redirect to ROS_INFO
@@ -659,6 +697,8 @@ class ROSMsgParser(Thread):
                     self.slot_raw(timestamp, data)
                 elif channel == 'desired_speed':
                     self.slot_desired_speed(timestamp, data)
+                elif channel == 'desired_speed_3d':
+                    self.slot_desired_speed_3d(timestamp, data)
                 elif channel == 'stdout':
                     self.slot_stdout(timestamp, data)
                 elif channel == 'request_origin':

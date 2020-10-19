@@ -44,6 +44,8 @@ class SubTChallengeTest(unittest.TestCase):
         sim = simulation.Simulation(bus.handle('sim'), end_condition=entrance_reached)
         g_logger.info("connecting:")
         for o in bus.handle('sim').out:
+            if o == 'pose2d':
+                continue  # connect 'pose3d' only
             g_logger.info(f'  sim.{o} → app.{o}')
             bus.connect(f'sim.{o}', f'app.{o}')
         for o in bus.handle('app').out:
@@ -62,20 +64,19 @@ class SubTChallengeTest(unittest.TestCase):
         bus = MagicMock()
         app = SubTChallenge(config, bus)
         data = ['TYPE_BACKPACK', [5000, -2359, 2222]]
-        app.offset = 100.0, 2.0, 3.0
-        app.xyz = 0, 0, 0
+        app.xyz = 100.0, 2.0, 3.0
         app.orientation = quaternion.identity()
         bus.publish.reset_mock()
         app.on_artf(None, data)
         bus.publish.assert_called()
         self.assertEqual(bus.method_calls[-1],
-                         call.publish('artf_xyz', [['TYPE_BACKPACK', 105000, -359, 5222]]))
+                         call.publish('artf_xyz', [['TYPE_BACKPACK', [105000, -359, 5222], None, None]]))
         app.orientation = quaternion.euler_to_quaternion(math.pi/2, 0, 0)
         bus.publish.reset_mock()
         app.on_artf(None, data)
         bus.publish.assert_called()
         self.assertEqual(bus.method_calls[-1],
-                         call.publish('artf_xyz', [['TYPE_BACKPACK', 102359, 7000, 5222]]))
+                         call.publish('artf_xyz', [['TYPE_BACKPACK', [102359, 7000, 5222], None, None]]))
 
 
 if __name__ == "__main__":
