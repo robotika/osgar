@@ -42,10 +42,9 @@ class Teambase(Node):
             elif len(arr) == 4:
                 # artifact
                 if arr not in self.artifacts:
+                    print(self.time, 'received:', arr)
                     self.artifacts.append(arr)
-                    # TODO filtering logic
                     self.publish('artf_xyz', [arr])  # publish also standard "list" of detected artifacts
-
             else:
                 assert False, arr  # unexpected size/type
 
@@ -66,10 +65,11 @@ class Teambase(Node):
             y = [a[1][1] / 1000.0 for a in self.debug_arr if a[0] == robot_id]
             line = plt.plot(x, y, '-o', linewidth=2, label=robot_id)
 
-        artf_types = set([artf for artf, x, y, z in self.artifacts])
+        artf_types = set([artf[0] for artf in self.artifacts])
         for artf_type in artf_types:
-            arr_x = [x/1000.0 for artf, x, y, z in self.artifacts if artf == artf_type]
-            arr_y = [y/1000.0 for artf, x, y, z in self.artifacts if artf == artf_type]
+            pos = [pos for artf, pos, src, scored in self.artifacts if artf == artf_type]
+            arr_x = [x/1000.0 for x, y, z in pos]
+            arr_y = [y/1000.0 for x, y, z in pos]
             plt.plot(arr_x, arr_y, 'x', linewidth=2, label=artf_type)
 
         #    plt.xlabel('time (s)')
