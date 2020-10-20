@@ -71,6 +71,8 @@ class Drone(Node):
                 if HEIGHT > 0 or self.lastScanUp > 30:
                     diff = height - self.lastScanDown
                 else:
+                    # fly in the middle
+                    height = (self.lastScanDown + self.lastScanUp) / 2
                     diff = self.lastScanUp - height
                 H = diff
                 desiredVel = PID_P * diff
