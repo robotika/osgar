@@ -54,7 +54,10 @@ def check_results(result_mdnet, result_cv):
 
 
 def result2report(result, depth, fx):
-    # return relative XYZ distances to camera
+    """return relative XYZ distances to camera"""
+    if depth is None:
+        return None  # ignore detected artifacts for missing depth data
+                     # typically some glitch on start
     width = depth.shape[1]
     height = depth.shape[0]
     x_arr = [x for x, y, certainty in result[0][1]]  # ignore multiple objects
