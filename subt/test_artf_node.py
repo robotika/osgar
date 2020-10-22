@@ -59,5 +59,10 @@ class ArtifactDetectorDNNTest(unittest.TestCase):
         checked_result = check_results(result, result_cv)
         self.assertEqual(checked_result, expected_result)
 
+    def test_report_without_depth(self):
+        result = [('backpack', [(100, 200, 0.9785775), (101, 200, 0.9795098)]),
+                  ('backpack', [(102, 200, 0.9785775), (103, 200, 0.9795098)])
+                  ]
+        self.assertIsNone(result2report(result, depth=None, fx=100))
 
 # vim: expandtab sw=4 ts=4
