@@ -34,7 +34,6 @@ while [ -z "$ROBOT_DESCRIPTION" ]; do
 done
 echo "Robot description is '$ROBOT_DESCRIPTION'"
 
-grep -q ssci_x2_sensor_config <<< $ROBOT_DESCRIPTION && IS_SSCI_X2=true || IS_SSCI_X2=false
 grep -q ssci_x4_sensor_config <<< $ROBOT_DESCRIPTION && IS_X4=true || IS_X4=false
 grep -q TeamBase <<< $ROBOT_DESCRIPTION && IS_TEAMBASE=true || IS_TEAMBASE=false
 grep -q robotika_freyja_sensor_config <<< $ROBOT_DESCRIPTION && IS_FREYJA=true || IS_FREYJA=false
@@ -61,13 +60,6 @@ then
     LAUNCH_FILE="robot freyja.launch"
     CONFIG_FILES=("zmq-subt-x2.json" "subt-freyja.json")
     WALLDIST=1.0
-    SPEED=1.5
-elif $IS_SSCI_X2
-then
-    echo "Robot is SSCI X2"
-    LAUNCH_FILE="robot ssci-x2.launch"
-    CONFIG_FILES=("zmq-subt-x2.json" "subt-ssci-x2.json")
-    WALLDIST=1.6
     SPEED=1.5
 else
     echo "Robot is default X2 wheeled robot"
