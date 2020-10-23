@@ -25,11 +25,9 @@ def euler_zyx(quaternion):
 
 
 class K2Controller:
-    ''' Converts atmospheric presure to altitude.
-
-    The resulting altitude is represented as a z coordinate in an otherwise
-    empty Pose message. It is relative to the starting altitude.
-    '''
+    """
+      4WD controller for robot Kloubak K2
+    """
     def __init__(self, robot_name):
         self.robot_name = robot_name
         self.joint_listener = tf.TransformListener()
