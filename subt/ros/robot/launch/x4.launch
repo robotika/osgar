@@ -140,16 +140,20 @@
     <remap from="odometry/filtered" to="/$(arg robot_name)/odom_fused"/>
   </node>
 
-  <node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
-    <param name="resolution" value="0.1" />
+  <node name="rtabmap" pkg="rtabmap_ros" type="rtabmap">
+    <param name="frame_id" type="string" value="$(arg robot_name)"/>
+    <param name="odom_frame_id" type="string" value="odom"/>
 
-    <!-- fixed map frame (set to 'map' if SLAM or localization running!) -->
-    <param name="frame_id" type="string" value="/$(arg robot_name)/odom_fused" />
+    <param name="subscribe_depth" type="bool" value="false"/>
+    <param name="subscribe_rgbd" type="bool" value="true"/>
+    <param name="subscribe_scan" type="bool" value="false"/>
+    <param name="subscribe_scan_cloud" type="bool" value="false"/>
+    <param name="subscribe_odom_info" type="bool" value="false"/>
 
-    <!-- maximum range to integrate (speedup!) -->
-    <param name="sensor_model/max_range" value="100.0" />
-
-    <!-- data source to integrate (PointCloud2) -->
-    <remap from="cloud_in" to="$(arg robot_name)/rgbd_camera/depth/points" />
+    <!-- Inputs -->
+    <remap from="rgb/image" to="$(arg robot_name)/front/optical/image_raw"/>
+    <remap from="rgb/camera_info" to="$(arg robot_name)/front/optical/camera_info"/>
+    <remap from="depth/image" to="$(arg robot_name)/front/optical/depth"/>
   </node>
+
 </launch>
