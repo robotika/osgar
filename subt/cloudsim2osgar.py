@@ -102,8 +102,6 @@ class main:
         robot_description = rospy.get_param("/{}/robot_description".format(robot_name))
         if "robotika_x2_sensor_config_1" in robot_description:
             rospy.loginfo("robotika x2")
-        elif "ssci_x2_sensor_config_1" in robot_description:
-            rospy.loginfo("ssci x2")
         elif "ssci_x4_sensor_config_2" in robot_description:
             rospy.loginfo("ssci drone")
             topics.append(('/' + robot_name + '/top_scan', LaserScan, self.top_scan, ('top_scan',)))
