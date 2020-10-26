@@ -124,6 +124,7 @@ class main:
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/camera_front/image_raw/compressed', CompressedImage, self.image_front, ('image_front',)))
             topics.append(('/' + robot_name + '/camera_rear/image_raw/compressed', CompressedImage, self.image_rear, ('image_rear',)))
+            topics.append(('/' + robot_name + '/scan_front', LaserScan, self.scan_front, ('scan_front',)))
         else:
             rospy.logerror("unknown configuration")
             return
@@ -222,6 +223,12 @@ class main:
         self.image_rear_count += 1
         rospy.loginfo_throttle(10, "image_rear callback: {}".format(self.image_rear_count))
         self.bus.publish('image_rear', msg.data)
+
+    def scan_front(self, msg):
+        self.scan_front_count += 1
+        rospy.loginfo_throttle(10, "scan_front callback: {}".format(self.scan_front_count))
+        scan = [int(x * 1000) if msg.range_min < x < msg.range_max else 0 for x in msg.ranges]
+        self.bus.publish('scan_front', scan)
 
 
 if __name__ == '__main__':
