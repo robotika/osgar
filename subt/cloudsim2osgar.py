@@ -125,6 +125,7 @@ class main:
             topics.append(('/' + robot_name + '/camera_front/image_raw/compressed', CompressedImage, self.image_front, ('image_front',)))
             topics.append(('/' + robot_name + '/camera_rear/image_raw/compressed', CompressedImage, self.image_rear, ('image_rear',)))
             topics.append(('/' + robot_name + '/scan_front', LaserScan, self.scan_front, ('scan_front',)))
+            topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
         else:
             rospy.logerror("unknown configuration")
             return
@@ -229,6 +230,12 @@ class main:
         rospy.loginfo_throttle(10, "scan_front callback: {}".format(self.scan_front_count))
         scan = [int(x * 1000) if msg.range_min < x < msg.range_max else 0 for x in msg.ranges]
         self.bus.publish('scan_front', scan)
+
+    def scan_rear(self, msg):
+        self.scan_rear_count += 1
+        rospy.loginfo_throttle(10, "scan_rear callback: {}".format(self.scan_rear_count))
+        scan = [int(x * 1000) if msg.range_min < x < msg.range_max else 0 for x in msg.ranges]
+        self.bus.publish('scan_rear', scan)
 
 
 if __name__ == '__main__':
