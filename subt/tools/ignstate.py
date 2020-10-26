@@ -54,19 +54,26 @@ class Vector3d(namedtuple('Vector3dBase', ('x', 'y', 'z'))):
 
 
 def read_poses(filename, seconds=3700):
+    robots_all = []
+    breadcrumbs_all = dict()
+    for timestamp, robots, breadcrumbs in iter_poses(filename, seconds):
+        robots_all.append((timestamp, robots))
+        breadcrumbs_all.update(breadcrumbs)
+    return robots_all, breadcrumbs_all
+
+
+def iter_poses(filename, seconds=3700):
     con = sqlite3.connect(filename)
     cursor = con.cursor()
 
     world = _read_world(cursor)
     origin_xyz, artifacts = _parse_artifacts(world)
-    robots = []
 
     cursor.execute(r"SELECT id FROM topics where name LIKE '%/dynamic_pose/info';")
     result = cursor.fetchone()
     dynamic_topic_id = result[0]
 
     poses = Pose_V()
-    breadcrumbs = dict()
     try:
         # cannot use WHERE filtering since the state.log is always corrupted
         cursor.execute("SELECT message, topic_id FROM messages")
@@ -76,21 +83,18 @@ def read_poses(filename, seconds=3700):
             poses.ParseFromString(m)
             timestamp = timedelta(seconds=poses.header.stamp.sec, microseconds=poses.header.stamp.nsec / 1000)
             if timestamp > timedelta(seconds=seconds):
-                return robots, breadcrumbs
-            current = dict()
+                return
+            robots = dict()
+            breadcrumbs = dict()
             for pose in poses.pose:
                 if "__breadcrumb___" in pose.name:
                     breadcrumbs[pose.name] = Vector3d.from_protob(pose.position) - origin_xyz
                     continue
-                if "_" in pose.name: # robots are not allowed to have underscores in names
-                    continue
-                current[pose.name] = Vector3d.from_protob(pose.position) - origin_xyz
-            if len(current) > 0:
-                robots.append((timestamp, current))
+                if "_" not in pose.name: # robots are not allowed to have underscores in names
+                    robots[pose.name] = Vector3d.from_protob(pose.position) - origin_xyz
+            yield timestamp, robots, breadcrumbs
     except sqlite3.DatabaseError as e:
         print(f"{type(e).__name__}: {e}")
-
-    return robots, breadcrumbs
 
 
 def read_artifacts(filename):
