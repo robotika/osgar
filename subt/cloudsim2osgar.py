@@ -16,7 +16,7 @@ import rostopic
 import zmq
 import msgpack
 
-from sensor_msgs.msg import Imu, LaserScan
+from sensor_msgs.msg import Imu, LaserScan, CompressedImage
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty, Int32
 from sensor_msgs.msg import BatteryState, FluidPressure
@@ -122,6 +122,7 @@ class main:
             else:
                 rospy.loginfo("freya 1")
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
+            topics.append(('/' + robot_name + '/camera_front/image_raw/compressed', CompressedImage, self.image_front, ('image_front',)))
         else:
             rospy.logerror("unknown configuration")
             return
@@ -210,6 +211,11 @@ class main:
         self.air_pressure_count += 1
         rospy.loginfo_throttle(10, "air_pressure callback: {}".format(self.air_pressure_count))
         self.bus.publish('air_pressure', msg.fluid_pressure)
+
+    def image_front(self, msg):
+        self.image_front_count += 1
+        rospy.loginfo_throttle(10, "image_front callback: {}".format(self.image_front_count))
+        self.bus.publish('image_front', msg.data)
 
 
 if __name__ == '__main__':
