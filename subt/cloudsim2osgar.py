@@ -132,6 +132,8 @@ class main:
             topics.append(('/' + robot_name + '/rgbd_rear/depth', Image, self.depth_rear, ('depth_rear',)))
         elif "explorer_r2_sensor_config" in robot_description:
             rospy.loginfo("explorer R2")
+            topics.append(('/' + robot_name + '/rs_front/color/image/compressed', CompressedImage, self.image_front, ('image_front',)))
+            topics.append(('/' + robot_name + '/rs_front/depth/image', Image, self.depth_front, ('depth_front',)))
         else:
             rospy.logerr("unknown configuration")
             return
