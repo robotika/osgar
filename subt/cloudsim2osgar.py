@@ -128,7 +128,7 @@ class main:
             topics.append(('/' + robot_name + '/scan_front', LaserScan, self.scan_front, ('scan_front',)))
             topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
         else:
-            rospy.logerror("unknown configuration")
+            rospy.logerr("unknown configuration")
             return
 
         outputs = functools.reduce(operator.add, (t[-1] for t in topics))
