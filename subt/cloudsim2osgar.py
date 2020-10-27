@@ -129,6 +129,7 @@ class main:
             topics.append(('/' + robot_name + '/scan_front', LaserScan, self.scan_front, ('scan_front',)))
             topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
             topics.append(('/' + robot_name + '/rgbd_front/depth', Image, self.depth_front, ('depth_front',)))
+            topics.append(('/' + robot_name + '/rgbd_rear/depth', Image, self.depth_rear, ('depth_rear',)))
         else:
             rospy.logerror("unknown configuration")
             return
@@ -240,9 +241,7 @@ class main:
         scan = [int(x * 1000) if msg.range_min < x < msg.range_max else 0 for x in msg.ranges]
         self.bus.publish('scan_rear', scan)
 
-    def depth_front(self, msg):
-        self.depth_front_count += 1
-        rospy.loginfo_throttle(10, "depth_front callback: {}".format(self.depth_front_count))
+    def convert_depth(self, msg):
         if msg.encoding == '32FC1':
             # depth is array of floats, OSGAR uses uint16 in millimeters
             # cut min & max (-inf and inf are used for clipping)
@@ -254,8 +253,17 @@ class main:
             arr = np.frombuffer(msg.data, dtype=np.dtype('H'))
         else:
             assert False, msg.encoding  # unsupported encoding
-        data = np.array(arr).reshape((msg.height, msg.width))
-        self.bus.publish('depth_front', data)
+        return np.array(arr).reshape((msg.height, msg.width))
+
+    def depth_front(self, msg):
+        self.depth_front_count += 1
+        rospy.loginfo_throttle(10, "depth_front callback: {}".format(self.depth_front_count))
+        self.bus.publish('depth_front', convert_depth(msg))
+
+    def depth_rear(self, msg):
+        self.depth_rear_count += 1
+        rospy.loginfo_throttle(10, "depth_rear callback: {}".format(self.depth_rear_count))
+        self.bus.publish('depth_rear', convert_depth(msg))
 
 
 if __name__ == '__main__':

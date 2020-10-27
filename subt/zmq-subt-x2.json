@@ -74,7 +74,7 @@
           "driver": "subt.pull:Pull",
           "init": {
             "outputs": ["rot", "acc", "orientation", "battery_state", "score", "pose3d",
-                        "image_front", "image_rear", "scan_front", "scan_rear", "depth_front"]
+                        "image_front", "image_rear", "scan_front", "scan_rear", "depth_front", "depth_rear"]
           }
       },
       "torospy": {
