@@ -53,20 +53,29 @@ class Vector3d(namedtuple('Vector3dBase', ('x', 'y', 'z'))):
         return Vector3d(other.x, other.y, other.z)
 
 
-def read_poses(filename, seconds=3700):
+def read_poses(filename, seconds=3700, hz=250):
+    robots_all = []
+    breadcrumbs_all = dict()
+    for timestamp, robots, breadcrumbs in iter_poses(filename, seconds, hz):
+        robots_all.append((timestamp, robots))
+        breadcrumbs_all.update(breadcrumbs)
+    return robots_all, breadcrumbs_all
+
+
+def iter_poses(filename, seconds=3700, hz=250):
     con = sqlite3.connect(filename)
     cursor = con.cursor()
 
     world = _read_world(cursor)
     origin_xyz, artifacts = _parse_artifacts(world)
-    robots = []
 
     cursor.execute(r"SELECT id FROM topics where name LIKE '%/dynamic_pose/info';")
     result = cursor.fetchone()
     dynamic_topic_id = result[0]
 
     poses = Pose_V()
-    breadcrumbs = dict()
+    next_timestamp = timedelta(seconds=0)
+    diff_timestamp = timedelta(seconds=1/hz)
     try:
         # cannot use WHERE filtering since the state.log is always corrupted
         cursor.execute("SELECT message, topic_id FROM messages")
@@ -76,21 +85,21 @@ def read_poses(filename, seconds=3700):
             poses.ParseFromString(m)
             timestamp = timedelta(seconds=poses.header.stamp.sec, microseconds=poses.header.stamp.nsec / 1000)
             if timestamp > timedelta(seconds=seconds):
-                return robots, breadcrumbs
-            current = dict()
+                return
+            if timestamp < next_timestamp:
+                continue
+            robots = dict()
+            breadcrumbs = dict()
             for pose in poses.pose:
                 if "__breadcrumb___" in pose.name:
                     breadcrumbs[pose.name] = Vector3d.from_protob(pose.position) - origin_xyz
                     continue
-                if "_" in pose.name: # robots are not allowed to have underscores in names
-                    continue
-                current[pose.name] = Vector3d.from_protob(pose.position) - origin_xyz
-            if len(current) > 0:
-                robots.append((timestamp, current))
+                if "_" not in pose.name: # robots are not allowed to have underscores in names
+                    robots[pose.name] = Vector3d.from_protob(pose.position) - origin_xyz
+            yield timestamp, robots, breadcrumbs
+            next_timestamp += diff_timestamp
     except sqlite3.DatabaseError as e:
         print(f"{type(e).__name__}: {e}")
-
-    return robots, breadcrumbs
 
 
 def read_artifacts(filename):
@@ -233,7 +242,7 @@ def main():
             print(f"{kind:<15}", f"[{formatted}]")
         return
 
-    robot_poses, breadcrumbs = read_poses(args.filename, args.s)
+    robot_poses, breadcrumbs = read_poses(args.filename, args.s, hz=50)
     for b_name, b_xyz in breadcrumbs.items():
         print(f"{b_name}: {b_xyz.x:.2f} {b_xyz.y:.2f} {b_xyz.z:.2f}")
     img = draw(robot_poses, artifacts, breadcrumbs)
