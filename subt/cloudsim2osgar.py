@@ -14,8 +14,9 @@ import functools
 import rospy
 import rostopic
 import zmq
+import numpy as np
 
-from sensor_msgs.msg import Imu, LaserScan, CompressedImage
+from sensor_msgs.msg import Imu, LaserScan, CompressedImage, Image
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty, Int32
 from sensor_msgs.msg import BatteryState, FluidPressure
@@ -127,6 +128,7 @@ class main:
             topics.append(('/' + robot_name + '/camera_rear/image_raw/compressed', CompressedImage, self.image_rear, ('image_rear',)))
             topics.append(('/' + robot_name + '/scan_front', LaserScan, self.scan_front, ('scan_front',)))
             topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
+            topics.append(('/' + robot_name + '/rgbd_front/depth', Image, self.depth_front, ('depth_front',)))
         else:
             rospy.logerror("unknown configuration")
             return
@@ -237,6 +239,15 @@ class main:
         rospy.loginfo_throttle(10, "scan_rear callback: {}".format(self.scan_rear_count))
         scan = [int(x * 1000) if msg.range_min < x < msg.range_max else 0 for x in msg.ranges]
         self.bus.publish('scan_rear', scan)
+
+    def depth_front(self, msg):
+        self.depth_front_count += 1
+        rospy.loginfo_throttle(10, "depth_front callback: {}".format(self.depth_front_count))
+        assert msg.encoding == b'16UC1', msg.encoding  # make sure it is depth data
+        # depth is array as uint16, similar to OSGAR
+        arr = np.frombuffer(msg.data, dtype=np.dtype('H'))
+        data = np.array(arr).reshape((msg.height, msg.width))
+        self.bus.publish('depth_front', data)
 
 
 if __name__ == '__main__':
