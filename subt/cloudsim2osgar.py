@@ -14,13 +14,14 @@ import functools
 import rospy
 import rostopic
 import zmq
-import msgpack
 
 from sensor_msgs.msg import Imu, LaserScan, CompressedImage
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty, Int32
 from sensor_msgs.msg import BatteryState, FluidPressure
 
+sys.path.append("/osgar-ws/src/osgar/osgar/lib")
+import serialize as osgar_serialize
 
 def py3round(f):
     if abs(round(f) - f) == 0.5:
@@ -64,7 +65,7 @@ class Bus:
         pass
 
     def publish(self, channel, data):
-        raw = msgpack.packb(data, use_bin_type=True)
+        raw = osgar_serialize.serialize(data)
         with self.lock:
             self.push.send_multipart([channel, raw])
 
@@ -72,7 +73,7 @@ class Bus:
         while not rospy.is_shutdown():
             try:
                 channel, bytes_data = self.pull.recv_multipart()
-                data = msgpack.unpackb(bytes_data, raw=False)
+                data = osgar_serialize.deserialize(bytes_data)
                 return channel.decode('ascii'), data
             except zmq.ZMQError as e:
                 if e.errno != zmq.EAGAIN:
@@ -242,5 +243,8 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("need robot name as argument", file=sys.stderr)
         sys.exit(2)
-    main(sys.argv[1])
+    try:
+        main(sys.argv[1])
+    except rospy.exceptions.ROSInterruptException:
+        rospy.loginfo("shutdown")
 
