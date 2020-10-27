@@ -258,12 +258,12 @@ class main:
     def depth_front(self, msg):
         self.depth_front_count += 1
         rospy.loginfo_throttle(10, "depth_front callback: {}".format(self.depth_front_count))
-        self.bus.publish('depth_front', convert_depth(msg))
+        self.bus.publish('depth_front', self.convert_depth(msg))
 
     def depth_rear(self, msg):
         self.depth_rear_count += 1
         rospy.loginfo_throttle(10, "depth_rear callback: {}".format(self.depth_rear_count))
-        self.bus.publish('depth_rear', convert_depth(msg))
+        self.bus.publish('depth_rear', self.convert_depth(msg))
 
 
 if __name__ == '__main__':
