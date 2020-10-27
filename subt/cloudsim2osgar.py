@@ -130,6 +130,8 @@ class main:
             topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
             topics.append(('/' + robot_name + '/rgbd_front/depth', Image, self.depth_front, ('depth_front',)))
             topics.append(('/' + robot_name + '/rgbd_rear/depth', Image, self.depth_rear, ('depth_rear',)))
+        elif "explorer_r2_sensor_config" in robot_description:
+            rospy.loginfo("explorer R2")
         else:
             rospy.logerr("unknown configuration")
             return
