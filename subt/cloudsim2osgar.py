@@ -243,9 +243,17 @@ class main:
     def depth_front(self, msg):
         self.depth_front_count += 1
         rospy.loginfo_throttle(10, "depth_front callback: {}".format(self.depth_front_count))
-        assert msg.encoding == b'16UC1', msg.encoding  # make sure it is depth data
-        # depth is array as uint16, similar to OSGAR
-        arr = np.frombuffer(msg.data, dtype=np.dtype('H'))
+        if msg.encoding == '32FC1':
+            # depth is array of floats, OSGAR uses uint16 in millimeters
+            # cut min & max (-inf and inf are used for clipping)
+            arr = np.frombuffer(msg.data, dtype=np.dtype('f')) * 1000
+            arr = np.clip(arr, 1, 0xFFFF)
+            arr = np.ndarray.astype(arr, dtype=np.dtype('H'))
+        elif msg.encoding == '16UC1':
+            # depth is array as uint16, similar to OSGAR
+            arr = np.frombuffer(msg.data, dtype=np.dtype('H'))
+        else:
+            assert False, msg.encoding  # unsupported encoding
         data = np.array(arr).reshape((msg.height, msg.width))
         self.bus.publish('depth_front', data)
 
