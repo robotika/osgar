@@ -123,8 +123,8 @@ class main:
             else:
                 rospy.loginfo("freya 1")
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
-            topics.append(('/' + robot_name + '/camera_front/image_raw/compressed', CompressedImage, self.image_front, ('image_front',)))
-            topics.append(('/' + robot_name + '/camera_rear/image_raw/compressed', CompressedImage, self.image_rear, ('image_rear',)))
+            topics.append(('/' + robot_name + '/rgbd_front/image_raw/compressed', CompressedImage, self.image_front, ('image_front',)))
+            topics.append(('/' + robot_name + '/rgbd_rear/image_raw/compressed', CompressedImage, self.image_rear, ('image_rear',)))
             topics.append(('/' + robot_name + '/scan_front', LaserScan, self.scan_front, ('scan_front',)))
             topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
         else:
