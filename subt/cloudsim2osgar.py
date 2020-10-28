@@ -16,7 +16,7 @@ import rostopic
 import zmq
 import numpy as np
 
-from sensor_msgs.msg import Imu, LaserScan, CompressedImage, Image
+from sensor_msgs.msg import Imu, LaserScan, CompressedImage, Image, PointCloud2
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty, Int32
 from sensor_msgs.msg import BatteryState, FluidPressure
@@ -134,6 +134,7 @@ class main:
             rospy.loginfo("explorer R2")
             topics.append(('/' + robot_name + '/rs_front/color/image/compressed', CompressedImage, self.image_front, ('image_front',)))
             topics.append(('/' + robot_name + '/rs_front/depth/image', Image, self.depth_front, ('depth_front',)))
+            topics.append(('/' + robot_name + '/points', PointCloud2, self.points, ('scan360',)))
         else:
             rospy.logerr("unknown configuration")
             return
@@ -263,6 +264,15 @@ class main:
         self.depth_rear_count += 1
         rospy.loginfo_throttle(10, "depth_rear callback: {}".format(self.depth_rear_count))
         self.bus.publish('depth_rear', self.convert_depth(msg))
+
+    def convert_points(self, msg):
+        assert False, (msg.height, msg.width, msg.point_step, msg.row_step)
+        pass
+
+    def points(self, msg):
+        self.points_count += 1
+        rospy.loginfo_throttle(10, "points callback: {}".format(self.points_count))
+        self.bus.publish('scan360', self.convert_points(msg))
 
 
 if __name__ == '__main__':
