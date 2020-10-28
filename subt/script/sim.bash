@@ -27,7 +27,7 @@ LOG_DIR="$(pwd)/ign-logs/$(date +%Y-%m-%dT%H.%M.%S)"
 echo $CIRCUIT
 echo $LOG_DIR
 echo $ROBOT
-echo WORLD
+echo $WORLD
 mkdir -p $LOG_DIR
 
 trap 'echo; echo $CIRCUIT; echo $LOG_DIR; echo $ROBOT; echo $WORLD; echo;' EXIT
