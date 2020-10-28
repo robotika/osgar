@@ -274,7 +274,7 @@ class main:
         assert msg.row_step == 320000, msg.row_step
         ret = []
         for i in range(msg.height * msg.width):
-            pt = struct.unpack_from('<ffff', msg.data, pos + i * 32)
+            pt = struct.unpack_from('<ffff', msg.data, i * 32)
             assert pt[3] == 0.0, pt
             ret.append(pt[:3])
         return ret
