@@ -131,7 +131,7 @@ class main:
             topics.append(('/' + robot_name + '/rgbd_front/depth', Image, self.depth_front, ('depth_front',)))
             topics.append(('/' + robot_name + '/rgbd_rear/depth', Image, self.depth_rear, ('depth_rear',)))
         else:
-            rospy.logerror("unknown configuration")
+            rospy.logerr("unknown configuration")
             return
 
         outputs = functools.reduce(operator.add, (t[-1] for t in topics))
