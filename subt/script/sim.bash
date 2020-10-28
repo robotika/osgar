@@ -30,7 +30,20 @@ echo $ROBOT
 echo $WORLD
 mkdir -p $LOG_DIR
 
-trap 'echo; echo $CIRCUIT; echo $LOG_DIR; echo $ROBOT; echo $WORLD; echo;' EXIT
+function on_exit {
+  echo
+  echo "     log dir: $LOG_DIR"
+  echo "     circuit: $CIRCUIT"
+  echo "  robot name: $ROBOT"
+  echo "robot config: $CONFIG"
+  echo "       world: $WORLD"
+  echo
+  echo -n "score: "
+  cat $LOG_DIR/score.yml
+  cat $LOG_DIR/summary.yml
+}
+
+trap on_exit EXIT
 
 DOCKER_OPTS="--volume ${LOG_DIR}:/tmp/ign/logs --name sim"
 export DOCKER_OPTS
