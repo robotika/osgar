@@ -134,7 +134,7 @@ class main:
             rospy.loginfo("explorer R2")
             topics.append(('/' + robot_name + '/rs_front/color/image/compressed', CompressedImage, self.image_front, ('image_front',)))
             topics.append(('/' + robot_name + '/rs_front/depth/image', Image, self.depth_front, ('depth_front',)))
-            topics.append(('/' + robot_name + '/points', PointCloud2, self.points, ('scan360',)))
+            topics.append(('/' + robot_name + '/points', PointCloud2, self.points, ('points',)))
         else:
             rospy.logerr("unknown configuration")
             return
@@ -281,7 +281,7 @@ class main:
     def points(self, msg):
         self.points_count += 1
         rospy.loginfo_throttle(10, "points callback: {}".format(self.points_count))
-        self.bus.publish('scan360', self.convert_points(msg))
+        self.bus.publish('points', self.convert_points(msg))
 
 
 if __name__ == '__main__':
