@@ -242,17 +242,12 @@ class main:
         self.bus.publish('scan_rear', scan)
 
     def convert_depth(self, msg):
-        if msg.encoding == '32FC1':
-            # depth is array of floats, OSGAR uses uint16 in millimeters
-            # cut min & max (-inf and inf are used for clipping)
-            arr = np.frombuffer(msg.data, dtype=np.dtype('f')) * 1000
-            arr = np.clip(arr, 1, 0xFFFF)
-            arr = np.ndarray.astype(arr, dtype=np.dtype('H'))
-        elif msg.encoding == '16UC1':
-            # depth is array as uint16, similar to OSGAR
-            arr = np.frombuffer(msg.data, dtype=np.dtype('H'))
-        else:
-            assert False, msg.encoding  # unsupported encoding
+        assert msg.encoding == '32FC1', msg.encoding  # unsupported encoding
+        # depth is array of floats, OSGAR uses uint16 in millimeters
+        # cut min & max (-inf and inf are used for clipping)
+        arr = np.frombuffer(msg.data, dtype=np.dtype('f')) * 1000
+        arr = np.clip(arr, 1, 0xFFFF)
+        arr = np.ndarray.astype(arr, dtype=np.dtype('H'))
         return np.array(arr).reshape((msg.height, msg.width))
 
     def depth_front(self, msg):
