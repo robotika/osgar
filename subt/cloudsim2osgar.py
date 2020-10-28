@@ -10,6 +10,7 @@ import threading
 import time
 import operator
 import functools
+import struct
 
 import rospy
 import rostopic
