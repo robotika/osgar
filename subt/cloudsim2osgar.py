@@ -266,8 +266,17 @@ class main:
         self.bus.publish('depth_rear', self.convert_depth(msg))
 
     def convert_points(self, msg):
-        assert False, (msg.height, msg.width, msg.point_step, msg.row_step)
-        pass
+        # accept only Velodyne VLC-16 (for the ver0)
+        assert msg.height == 16, msg.height
+        assert msg.width == 10000, msg.width
+        assert msg.point_step == 32, msg.point_step
+        assert msg.row_step == 320000, msg.row_step
+        ret = []
+        for i in range(msg.height * msg.width):
+            pt = struct.unpack_from('<ffff', msg.data, pos + i * 32)
+            assert pt[3] == 0.0, pt
+            ret.append(pt[:3])
+        return ret
 
     def points(self, msg):
         self.points_count += 1
