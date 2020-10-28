@@ -81,6 +81,13 @@
       "torospy": {
           "driver": "subt.push:Push"
       },
+      "points2scan": {
+          "driver": "subt.points2scan:PointsToScan",
+          "in": ["points"],
+          "out": ["scan360"],
+          "init": {
+          }
+      },
       "radio": {
           "driver": "subt.radio:Radio",
           "in": ["radio", "pose2d", "artf"],
@@ -151,7 +158,10 @@
               ["reporter.artf_cmd", "transmitter.raw"],
 
               ["rosmsg.origin", "offseter.origin"],
-              ["fromrospy.pose3d", "offseter.pose3d"]
+              ["fromrospy.pose3d", "offseter.pose3d"],
+
+              ["fromrospy.points", "points2scan.points"],
+              ["points2scan.scan360", "app.scan360"]
     ]
   }
 }
