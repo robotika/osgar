@@ -29,3 +29,5 @@ ENV ROSCONSOLE_FORMAT='${time} ${severity} ${node} ${logger}: ${message}'
 
 RUN ln -s /osgar-ws/src/osgar/subt/docker/robotika/Makefile .
 RUN ln -s /osgar-ws/src/osgar/subt/docker/robotika/run_solution.bash .
+
+RUN pip install -i https://osgar.robotika.cz/subt/pip/ octomap-python==1.8.0.post12
