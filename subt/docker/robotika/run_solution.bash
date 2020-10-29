@@ -66,7 +66,7 @@ elif $IS_EXPLORER_R2
 then
     echo "Robot is Explorer R2"
     LAUNCH_FILE="robot r2.launch"
-    CONFIG_FILES=("zmq-subt-x2.json")
+    CONFIG_FILES=("config/r2.json")
     WALLDIST=1.0
     SPEED=1.5
 else
