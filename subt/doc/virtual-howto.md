@@ -31,20 +31,17 @@ docker pull osrf/subt-virtual-testbed:cloudsim_bridge_latest
 It is necessary to run also simulation and bridge in other two terminals:
 - terminal 1
     ```
-    xhost +local:root
-    ROBOT=X0F200L WORLD=urban_circuit_practice_01 ./subt/script/sim.bash
+    ROBOT=X100L WORLD=simple_cave_01 ./subt/script/sim.bash
     ```
-    Note, that `xhost` workaround is not secure and it is current workaround how to start the process for the first time,
-    open screen session and then use the simulator remotely via ssh.
 
 - terminal 2
     ```
-    ROBOT=X0F200L WORLD=urban_circuit_practice_01 ./subt/script/bridge.bash
+    ROBOT=X100L WORLD=simple_cave_01 ./subt/script/bridge.bash
     ```
 
 Note, that configuration and robot name is variable. The command above with
-robot name X0F200L encodes waiting for 0 s, exploring for 200 s and navigating
-along a wall on the left. Our own ROBOTIKA_X2_SENSOR_CONFIG_1 is used. It is
+robot name X100L encodes exploring for 100 s and navigating
+along a wall on the left. Our own ROBOTIKA_X2_SENSOR_CONFIG_1 is used by default. It is
 a small robot, 30m lidar, 640x380 RGBD camera and gas detector.
 
 The unittest should display number of received messages for scan, image, imu, odometry and clock. After 10000 clock
@@ -66,15 +63,16 @@ solution not covered by this HOWTO.
 ```commandline
 ./subt/docker/run.bash robotika
 ```
-which by default runs `./src/osgar/subt/docker/robotika/run_solution.bash` inside the container.
-To get a shell inside the docker instead, run
+which by default runs `/osgar-ws/run_solution.bash` which itself is soft link to
+`/osgar-ws/src/osgar/subt/docker/robotika/run_solution.bash` inside the container.
+To get a shell inside the container instead, run
 ```commandline
 ./subt/docker/run.bash robotika bash
 ```
 and you can call `run_solution.bash` when you are ready.
 
 A copy of `osgar` directory from the time of the build of the image is located
-at `/home/developer/subt_solution/osgar`. For local development it is advantageous
+at `/osgar-ws/src/osgar/`. For local development it is advantageous
 to mount your `osgar` directory from the host over this directory in the container.
 
 ```commandline
@@ -82,16 +80,15 @@ to mount your `osgar` directory from the host over this directory in the contain
 ```
 
 When you do so, you can edit the files as you are used to. To rebuild the ROS
-nodes from within the running container, switch to `/osgar-ws/build/` directory
-and call `make`. After that running
-`./src/osgar/subt/docker/robotika/run_solution.bash` will run the rebuilt version.
+nodes from within the running container, call `make` in `/osgar-ws/` directory
+After that running `/osgar-ws/run_solution.bash` will run the rebuilt version.
 
 At this moment you should see waiting for ROS master, debug count outputs of received messages
 (similarly as in unittest) and Python3 outputs of robot navigating towards the gate. The exploration reports
 number and type of received messages by OSGAR.
 
-There is a logfile available when the robot finishes. It is in the current
-directory with name zmq*.log. It is necessary to upload the logfile (for example
+There is a logfile available when the robot finishes in `/osgar-ws/logs/`.
+It is necessary to copy the logfile (for example
 via `docker cp`) to the host for further analysis, otherwise
 it will be lost with the termination of the container.
 
