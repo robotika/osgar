@@ -101,9 +101,6 @@
           "init": {
             "radius": 30
           }
-      },
-      "offseter": {
-        "driver": "subt.offseter:Offseter"
       }
     },
     "links": [["app.desired_speed", "rosmsg.desired_speed"],
@@ -132,7 +129,6 @@
               ["depth2scan.scan", "app.scan"],
               ["rosmsg.depth", "detector.depth"],
 
-              ["offseter.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
               ["rosmsg.sim_time_sec", "reporter.sim_time_sec"],
               ["rosmsg.sim_time_sec", "torospy.sim_time_sec"],
@@ -146,7 +142,7 @@
               ["rosmsg.radio", "radio.radio"],
 
               ["rosmsg.sim_time_sec", "breadcrumbs.sim_time_sec"],
-              ["offseter.pose3d", "breadcrumbs.pose3d"],
+              ["localization.pose3d", "breadcrumbs.pose3d"],
               ["breadcrumbs.deploy", "torospy.deploy"],
               ["breadcrumbs.location", "radio.breadcrumb"],
               ["radio.breadcrumb", "breadcrumbs.external"],
@@ -157,10 +153,8 @@
               ["rosmsg.base_station", "reporter.base_station"],
               ["reporter.artf_cmd", "transmitter.raw"],
 
-              ["rosmsg.origin", "offseter.origin"],
-              ["fromrospy.pose3d", "offseter.pose3d"],
-
               ["fromrospy.points", "points2scan.points"],
+              ["localization.pose3d", "app.pose3d"],
               ["points2scan.scan360", "app.scan360"]
     ]
   }
