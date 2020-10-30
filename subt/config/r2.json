@@ -122,12 +122,12 @@
               ["rosmsg.scan", "detector.scan"],
               ["rosmsg.scan", "depth2scan.scan"],
 
-              ["rosmsg.image", "detector.image"],
-              ["rosmsg.image", "app.image"],
+              ["fromrospy.image_front", "detector.image"],
+              ["fromrospy.image_front", "app.image"],
 
-              ["rosmsg.depth", "depth2scan.depth"],
+              ["fromrospy.depth", "depth2scan.depth"],
               ["depth2scan.scan", "app.scan"],
-              ["rosmsg.depth", "detector.depth"],
+              ["fromrospy.depth", "detector.depth"],
 
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
               ["rosmsg.sim_time_sec", "reporter.sim_time_sec"],
