@@ -74,19 +74,11 @@
           "driver": "subt.pull:Pull",
           "init": {
             "outputs": ["rot", "acc", "orientation", "battery_state", "score", "pose3d",
-                        "image_front", "image_rear", "scan_front", "scan_rear", "depth_front:null", "depth_rear:null",
-                        "points:gz"]
+                        "image_front", "image_rear", "scan_front", "scan_rear", "depth_front:null", "depth_rear:null"]
           }
       },
       "torospy": {
           "driver": "subt.push:Push"
-      },
-      "points2scan": {
-          "driver": "subt.points2scan:PointsToScan",
-          "in": ["points"],
-          "out": ["scan360"],
-          "init": {
-          }
       },
       "radio": {
           "driver": "subt.radio:Radio",
@@ -158,10 +150,7 @@
               ["reporter.artf_cmd", "transmitter.raw"],
 
               ["rosmsg.origin", "offseter.origin"],
-              ["fromrospy.pose3d", "offseter.pose3d"],
-
-              ["fromrospy.points", "points2scan.points"],
-              ["points2scan.scan360", "app.scan360"]
+              ["fromrospy.pose3d", "offseter.pose3d"]
     ]
   }
 }
