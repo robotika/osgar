@@ -272,8 +272,8 @@ class main:
         assert msg.width == 10000, msg.width
         assert msg.point_step == 32, msg.point_step
         assert msg.row_step == 320000, msg.row_step
-        arr = np.frombuffer(msg.data, dtype=np.dtype('f'))
-        return np.array(arr).reshape((msg.height, msg.width, 4))  # TODO keep only (x, y, z)
+        arr = np.frombuffer(msg.data, dtype=np.float64)
+        return arr.reshape((msg.height, msg.width, 4))  # TODO keep only (x, y, z)
 
     def points(self, msg):
         self.points_count += 1
