@@ -125,9 +125,9 @@
               ["fromrospy.image_front", "detector.image"],
               ["fromrospy.image_front", "app.image"],
 
-              ["fromrospy.depth", "depth2scan.depth"],
+              ["fromrospy.depth_front", "depth2scan.depth"],
               ["depth2scan.scan", "app.scan"],
-              ["fromrospy.depth", "detector.depth"],
+              ["fromrospy.depth_front", "detector.depth"],
 
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
               ["rosmsg.sim_time_sec", "reporter.sim_time_sec"],
