@@ -18,15 +18,16 @@ class PointsToScan(Node):
 
     def on_points(self, data):
         self.debug_arr = data
-        #print(self.points.shape)
         scan = [0] * 360
-        for x, y, z in data:
+        assert data.shape == (16, 10000, 3), data.shape
+        for x, y, z in data.reshape(16 * 10000, 3):
             if -0.5 < z < 1:
                 angle_i = int(math.degrees(math.atan2(y, x))) + 180  # starting on back
                 if angle_i < 0:
                     angle_i += 360
-                if angle_i > 360:
+                if angle_i >= 360:
                     angle_i -= 360
+                assert 0 <= angle_i < 360, angle_i
                 dist_i = int(math.hypot(x, y) * 1000)
                 if dist_i > 400:  # mm, blind zone
                     if scan[angle_i] == 0 or scan[angle_i] > dist_i:
@@ -45,9 +46,10 @@ class PointsToScan(Node):
     def draw(self):
         import matplotlib.pyplot as plt
 
+        data = self.debug_arr.reshape(16 * 10000, 3)
         for z_min, z_max, color in [(-100, -0.5, 'gray'), (1, 100, 'blue'), (-0.5, 1, 'red')]:
-            arr_x = [x for x, y, z in self.debug_arr if z_min < z < z_max]
-            arr_y = [y for x, y, z in self.debug_arr if z_min < z < z_max]
+            arr_x = [x for x, y, z in data if z_min < z < z_max]
+            arr_y = [y for x, y, z in data if z_min < z < z_max]
             plt.plot(arr_x, arr_y, 'o', linewidth=2, color=color)
 
         plt.axes().set_aspect('equal', 'datalim')

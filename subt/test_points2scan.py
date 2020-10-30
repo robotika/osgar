@@ -13,7 +13,7 @@ class PointsToScanTest(unittest.TestCase):
         bus = MagicMock()
         conv = PointsToScan(bus=bus, config={})
 
-        data = []
+        data = np.zeros((16, 10000, 3), dtype=np.float32)
         conv.on_points(data)
         bus.publish.assert_called()
 
