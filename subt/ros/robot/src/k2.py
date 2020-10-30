@@ -7,23 +7,6 @@ from geometry_msgs.msg import Twist
 import rospy
 import tf
 
-def normalize(quaternion):
-    x0, y0, z0, w0 = quaternion
-    sqr_size = x0*x0 + y0*y0 + z0*z0 + w0*w0
-    if abs(sqr_size - 1.0) > 0.00001:
-        k = math.sqrt(sqr_size)
-        x0, y0, z0, w0 = x0/k, y0/k, z0/k, w0/k
-    return [x0, y0, z0, w0]
-
-
-def euler_zyx(quaternion):
-    x0, y0, z0, w0 = normalize(quaternion)
-    ax =  math.atan2(2*(w0*x0+y0*z0), 1-2*(x0*x0+y0*y0))
-    ay =  math.asin(2*(w0*y0-z0*x0))
-    az =  math.atan2(2*(w0*z0+x0*y0), 1-2*(y0*y0+z0*z0))
-    return [az, ay, ax]
-
-
 class K2Controller:
     """
       4WD controller for robot Kloubak K2
@@ -77,7 +60,7 @@ class K2Controller:
             # Not ready yet.
             return
 
-        current_joint_angle = euler_zyx(joint_rot)[0]
+        current_joint_angle = tf.transformations.euler_from_quaternion(joint_rot)[2]
 
         front_cmd = Twist()
         rear_cmd = Twist()
