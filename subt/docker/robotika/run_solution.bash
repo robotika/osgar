@@ -1,17 +1,7 @@
 #!/usr/bin/env bash
 
-# disable crazy threading behavior inside openblas
-# https://github.com/xianyi/OpenBLAS#setting-the-number-of-threads-using-environment-variables
-export OMP_NUM_THREADS=1
-
 # adjust so that local logs look similar to cloudsim logs
 export ROSCONSOLE_FORMAT='${time} ${severity} ${node} ${logger}: ${message}'
-
-# get directory where this bash script lives
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
-# enable ROS DEBUG output to see if messages are being dropped
-export ROSCONSOLE_CONFIG_FILE="${DIR}/rosconsole.config"
 
 # when signal received just exit
 trap "exit;" HUP INT TERM
