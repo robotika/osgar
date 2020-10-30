@@ -16,29 +16,30 @@ class PointsToScan(Node):
         bus.register("scan360")
         self.debug_arr = []
 
+    def on_points(self, data):
+        self.debug_arr = data
+        #print(self.points.shape)
+        scan = [0] * 360
+        for x, y, z in data:
+            if -0.5 < z < 1:
+                angle_i = int(math.degrees(math.atan2(y, x))) + 180  # starting on back
+                if angle_i < 0:
+                    angle_i += 360
+                if angle_i > 360:
+                    angle_i -= 360
+                dist_i = int(math.hypot(x, y) * 1000)
+                if dist_i > 400:  # mm, blind zone
+                    if scan[angle_i] == 0 or scan[angle_i] > dist_i:
+                        scan[angle_i] = dist_i
+        self.publish('scan360', scan)
+
     def update(self):
         channel = super().update()
-        assert channel in ["points"], channel
-
-        if channel == 'points':
-            self.debug_arr = self.points
-            print(len(self.points))
-            scan = [0] * 360
-            for x, y, z in self.points:
-                if -0.5 < z < 1:
-                    angle_i = int(math.degrees(math.atan2(y, x))) + 180  # starting on back
-                    if angle_i < 0:
-                        angle_i += 360
-                    if angle_i > 360:
-                        angle_i -= 360
-                    dist_i = int(math.hypot(x, y) * 1000)
-                    if dist_i > 400:  # mm, blind zone
-                        if scan[angle_i] == 0 or scan[angle_i] > dist_i:
-                            scan[angle_i] = dist_i
-            self.publish('scan360', scan)
+        handler = getattr(self, "on_" + channel, None)
+        if handler is not None:
+            handler(getattr(self, channel))
         else:
             assert False, channel  # unsupported channel
-
         return channel
 
     def draw(self):
