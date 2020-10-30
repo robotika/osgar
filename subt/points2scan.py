@@ -18,21 +18,13 @@ class PointsToScan(Node):
 
     def on_points(self, data):
         self.debug_arr = data
-        scan = [0] * 360
-        assert data.shape == (16, 10000, 3), data.shape
-        for x, y, z in data.reshape(16 * 10000, 3):
-            if -0.5 < z < 1:
-                angle_i = int(math.degrees(math.atan2(y, x))) + 180  # starting on back
-                if angle_i < 0:
-                    angle_i += 360
-                if angle_i >= 360:
-                    angle_i -= 360
-                assert 0 <= angle_i < 360, angle_i
-                dist_i = int(math.hypot(x, y) * 1000)
-                if dist_i > 400:  # mm, blind zone
-                    if scan[angle_i] == 0 or scan[angle_i] > dist_i:
-                        scan[angle_i] = dist_i
-        self.publish('scan360', scan)
+        index = (np.arange(360) * (10000/360)).astype(int)
+        xyz = data[8][index]  # mid index for 16 lidars
+        X, Y, Z = xyz[:, 0], xyz[:, 1], xyz[:, 2]
+        dist_i = (np.hypot(X, Y) * 1000).astype(int)
+        mask = dist_i < 400
+        dist_i[mask] = 0
+        self.publish('scan360', dist_i.tolist())
 
     def update(self):
         channel = super().update()
