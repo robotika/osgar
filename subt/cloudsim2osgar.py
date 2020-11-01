@@ -14,13 +14,15 @@ import functools
 import rospy
 import rostopic
 import zmq
-import msgpack
+import numpy as np
 
-from sensor_msgs.msg import Imu, LaserScan
+from sensor_msgs.msg import Imu, LaserScan, CompressedImage, Image
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty, Int32
 from sensor_msgs.msg import BatteryState, FluidPressure
 
+sys.path.append("/osgar-ws/src/osgar/osgar/lib")
+import serialize as osgar_serialize
 
 def py3round(f):
     if abs(round(f) - f) == 0.5:
@@ -73,7 +75,7 @@ class Bus:
         pass
 
     def publish(self, channel, data):
-        raw = msgpack.packb(data, use_bin_type=True)
+        raw = osgar_serialize.serialize(data)
         with self.lock:
             self.push.send_multipart([channel, raw])
 
@@ -81,7 +83,7 @@ class Bus:
         while not rospy.is_shutdown():
             try:
                 channel, bytes_data = self.pull.recv_multipart()
-                data = msgpack.unpackb(bytes_data, raw=False)
+                data = osgar_serialize.deserialize(bytes_data)
                 return channel.decode('ascii'), data
             except zmq.ZMQError as e:
                 if e.errno != zmq.EAGAIN:
@@ -110,8 +112,6 @@ class main:
         robot_description = rospy.get_param("/{}/robot_description".format(robot_name))
         if "robotika_x2_sensor_config_1" in robot_description:
             rospy.loginfo("robotika x2")
-        elif "ssci_x2_sensor_config_1" in robot_description:
-            rospy.loginfo("ssci x2")
         elif "ssci_x4_sensor_config_2" in robot_description:
             rospy.loginfo("ssci drone")
             topics.append(('/' + robot_name + '/top_scan', LaserScan, self.top_scan, ('top_scan',)))
@@ -134,8 +134,14 @@ class main:
             else:
                 rospy.loginfo("k2 1 (basic)")
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
+            topics.append(('/' + robot_name + '/rgbd_front/image_raw/compressed', CompressedImage, self.image_front, ('image_front',)))
+            topics.append(('/' + robot_name + '/rgbd_rear/image_raw/compressed', CompressedImage, self.image_rear, ('image_rear',)))
+            topics.append(('/' + robot_name + '/scan_front', LaserScan, self.scan_front, ('scan_front',)))
+            topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
+            topics.append(('/' + robot_name + '/rgbd_front/depth', Image, self.depth_front, ('depth_front',)))
+            topics.append(('/' + robot_name + '/rgbd_rear/depth', Image, self.depth_rear, ('depth_rear',)))
         else:
-            rospy.logerror("unknown configuration")
+            rospy.logerr("unknown configuration")
             return
 
         if "robotika_kloubak_sensor_config" in robot_description:
@@ -228,10 +234,54 @@ class main:
         rospy.loginfo_throttle(10, "air_pressure callback: {}".format(self.air_pressure_count))
         self.bus.publish('air_pressure', msg.fluid_pressure)
 
+    def image_front(self, msg):
+        self.image_front_count += 1
+        rospy.loginfo_throttle(10, "image_front callback: {}".format(self.image_front_count))
+        self.bus.publish('image_front', msg.data)
+
+    def image_rear(self, msg):
+        self.image_rear_count += 1
+        rospy.loginfo_throttle(10, "image_rear callback: {}".format(self.image_rear_count))
+        self.bus.publish('image_rear', msg.data)
+
+    def scan_front(self, msg):
+        self.scan_front_count += 1
+        rospy.loginfo_throttle(10, "scan_front callback: {}".format(self.scan_front_count))
+        scan = [int(x * 1000) if msg.range_min < x < msg.range_max else 0 for x in msg.ranges]
+        self.bus.publish('scan_front', scan)
+
+    def scan_rear(self, msg):
+        self.scan_rear_count += 1
+        rospy.loginfo_throttle(10, "scan_rear callback: {}".format(self.scan_rear_count))
+        scan = [int(x * 1000) if msg.range_min < x < msg.range_max else 0 for x in msg.ranges]
+        self.bus.publish('scan_rear', scan)
+
+    def convert_depth(self, msg):
+        assert msg.encoding == '32FC1', msg.encoding  # unsupported encoding
+        # depth is array of floats, OSGAR uses uint16 in millimeters
+        # cut min & max (-inf and inf are used for clipping)
+        arr = np.frombuffer(msg.data, dtype=np.dtype('f')) * 1000
+        arr = np.clip(arr, 1, 0xFFFF)
+        arr = np.ndarray.astype(arr, dtype=np.dtype('H'))
+        return np.array(arr).reshape((msg.height, msg.width))
+
+    def depth_front(self, msg):
+        self.depth_front_count += 1
+        rospy.loginfo_throttle(10, "depth_front callback: {}".format(self.depth_front_count))
+        self.bus.publish('depth_front', self.convert_depth(msg))
+
+    def depth_rear(self, msg):
+        self.depth_rear_count += 1
+        rospy.loginfo_throttle(10, "depth_rear callback: {}".format(self.depth_rear_count))
+        self.bus.publish('depth_rear', self.convert_depth(msg))
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("need robot name as argument", file=sys.stderr)
         sys.exit(2)
-    main(sys.argv[1])
+    try:
+        main(sys.argv[1])
+    except rospy.exceptions.ROSInterruptException:
+        rospy.loginfo("shutdown")
 

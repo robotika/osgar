@@ -1,17 +1,7 @@
 #!/usr/bin/env bash
 
-# disable crazy threading behavior inside openblas
-# https://github.com/xianyi/OpenBLAS#setting-the-number-of-threads-using-environment-variables
-export OMP_NUM_THREADS=1
-
 # adjust so that local logs look similar to cloudsim logs
 export ROSCONSOLE_FORMAT='${time} ${severity} ${node} ${logger}: ${message}'
-
-# get directory where this bash script lives
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
-# enable ROS DEBUG output to see if messages are being dropped
-export ROSCONSOLE_CONFIG_FILE="${DIR}/rosconsole.config"
 
 # when signal received just exit
 trap "exit;" HUP INT TERM
@@ -34,7 +24,6 @@ while [ -z "$ROBOT_DESCRIPTION" ]; do
 done
 echo "Robot description is '$ROBOT_DESCRIPTION'"
 
-grep -q ssci_x2_sensor_config <<< $ROBOT_DESCRIPTION && IS_SSCI_X2=true || IS_SSCI_X2=false
 grep -q ssci_x4_sensor_config <<< $ROBOT_DESCRIPTION && IS_X4=true || IS_X4=false
 grep -q TeamBase <<< $ROBOT_DESCRIPTION && IS_TEAMBASE=true || IS_TEAMBASE=false
 grep -q robotika_freyja_sensor_config <<< $ROBOT_DESCRIPTION && IS_FREYJA=true || IS_FREYJA=false
@@ -62,13 +51,6 @@ then
     LAUNCH_FILE="robot freyja.launch"
     CONFIG_FILES=("zmq-subt-x2.json" "subt-freyja.json")
     WALLDIST=1.0
-    SPEED=1.5
-elif $IS_SSCI_X2
-then
-    echo "Robot is SSCI X2"
-    LAUNCH_FILE="robot ssci-x2.launch"
-    CONFIG_FILES=("zmq-subt-x2.json" "subt-ssci-x2.json")
-    WALLDIST=1.6
     SPEED=1.5
 elif $IS_K2
 then
