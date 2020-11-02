@@ -30,6 +30,15 @@ def py3round(f):
     return int(round(f))
 
 
+def has_breadcrumbs(robot_name):
+    # possibly fragile detection if robot has bredcrumbs
+    rospy.sleep(1)
+    _publishers, subscribers = rostopic.get_topic_list()
+    for name, type, _ in subscribers:
+        if name == "/{}/breadcrumb/deploy".format(robot_name):
+            return True
+    return False
+
 def wait_for_master():
     """Return when /use_sim_time is set in rosparams. If rospy.init_node is called before /use_sim_time
     is set, it uses real time."""
@@ -93,7 +102,6 @@ class main:
 
         # common topics
         topics = [
-            ('/' + robot_name + '/imu/data', Imu, self.imu, ('rot', 'acc', 'orientation')),
             ('/' + robot_name + '/battery_state', BatteryState, self.battery_state, ('battery_state',)),
             ('/subt/score', Int32, self.score, ('score',)),
         ]
@@ -113,16 +121,18 @@ class main:
         elif "TeamBase" in robot_description:
             rospy.loginfo("teambase")
         elif "robotika_freyja_sensor_config" in robot_description:
-            # possibly fragile detection if freya has bredcrumbs
-            rospy.sleep(1)
-            _publishers, subscribers = rostopic.get_topic_list()
-            for name, type, _ in subscribers:
-                if name == "/{}/breadcrumb/deploy".format(robot_name):
-                    rospy.loginfo("freya 2 (with comms beacons)")
-                    publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
-                    break
+            if has_breadcrumbs(robot_name):
+                rospy.loginfo("freya 2 (with comms beacons)")
+                publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
             else:
-                rospy.loginfo("freya 1")
+                rospy.loginfo("freya 1 (basic)")
+            topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
+        elif "robotika_kloubak_sensor_config" in robot_description:
+            if has_breadcrumbs(robot_name):
+                rospy.loginfo("k2 2 (with comms beacons)")
+                publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
+            else:
+                rospy.loginfo("k2 1 (basic)")
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/rgbd_front/image_raw/compressed', CompressedImage, self.image_front, ('image_front',)))
             topics.append(('/' + robot_name + '/rgbd_rear/image_raw/compressed', CompressedImage, self.image_rear, ('image_rear',)))
@@ -138,6 +148,11 @@ class main:
         else:
             rospy.logerr("unknown configuration")
             return
+
+        if "robotika_kloubak_sensor_config" in robot_description:
+            topics.append(('/' + robot_name + '/imu/front/data', Imu, self.imu, ('rot', 'acc', 'orientation')))
+        else:
+            topics.append(('/' + robot_name + '/imu/data', Imu, self.imu, ('rot', 'acc', 'orientation')))
 
         outputs = functools.reduce(operator.add, (t[-1] for t in topics))
         self.bus.register(outputs)

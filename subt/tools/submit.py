@@ -26,6 +26,7 @@ ROBOTS=dict(
     teambase = "TEAMBASE",
     drone = "SSCI_X4_SENSOR_CONFIG_2",
     freyja = "ROBOTIKA_FREYJA_SENSOR_CONFIG_2",
+    k2 = "ROBOTIKA_KLOUBAK_SENSOR_CONFIG_2",
 )
 
 
