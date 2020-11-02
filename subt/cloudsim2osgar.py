@@ -272,7 +272,8 @@ class main:
         assert msg.point_step == 32, msg.point_step
         assert msg.row_step == 320000, msg.row_step
         arr = np.frombuffer(msg.data, dtype=np.float32)
-        return arr.reshape((msg.height, msg.width, 8))[:, :, 0:3]  # keep only (x, y, z)
+        points3d = arr.reshape((msg.height, msg.width, 8))[:, :, 0:3]  # keep only (x, y, z)
+        return points3d[:, ::10, :]  # downsample to everh 10th
 
     def points(self, msg):
         self.points_count += 1

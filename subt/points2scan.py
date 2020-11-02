@@ -17,8 +17,9 @@ class PointsToScan(Node):
         self.debug_arr = []
 
     def on_points(self, data):
+        assert data.shape == (16, 1000, 3), data.shape
         self.debug_arr = data
-        index = (np.arange(360) * (10000/360)).astype(int)
+        index = (np.arange(360) * (1000/360)).astype(int)
         xyz = data[8][index]  # mid index for 16 lidars
         X, Y, Z = xyz[:, 0], xyz[:, 1], xyz[:, 2]
         dist_i = (np.hypot(X, Y) * 1000).astype(int)
@@ -38,7 +39,7 @@ class PointsToScan(Node):
     def draw(self):
         import matplotlib.pyplot as plt
 
-        data = self.debug_arr.reshape(16 * 10000, 3)
+        data = self.debug_arr.reshape(16 * 1000, 3)
         for z_min, z_max, color in [(-100, -0.5, 'gray'), (1, 100, 'blue'), (-0.5, 1, 'red')]:
             arr_x = [x for x, y, z in data if z_min < z < z_max]
             arr_y = [y for x, y, z in data if z_min < z < z_max]
