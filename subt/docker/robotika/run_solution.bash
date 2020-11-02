@@ -58,7 +58,7 @@ then
     echo "Robot is Explorer R2"
     LAUNCH_FILE="robot r2.launch"
     CONFIG_FILES=("config/r2.json")
-    WALLDIST=1.0
+    WALLDIST=1.5
     SPEED=1.5
 elif $IS_K2
 then
