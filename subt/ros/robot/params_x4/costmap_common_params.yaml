@@ -1,0 +1,13 @@
+obstacle_range: 10.0
+raytrace_range: 25.0
+max_obstacle_height: 10.0
+footprint: [[ 0.14,  0.16], [-0.14,  0.16], [-0.14, -0.16], [ 0.14, -0.16]]
+#footprint_padding: 0.05
+footprint_padding: 0.01
+#footprint: [[ 0,  0], [-0,  0], [-0, -0], [ 0, -0]]
+
+#robot_radius: ir_of_robot
+transform_tolerance: 1
+
+controller_patience: 2.0
+

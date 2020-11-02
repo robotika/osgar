@@ -4,7 +4,7 @@ ADD http://osgar.robotika.cz/subt/virtual/model/mdnet3.64.64.13.4.relu.pth .
 ADD http://osgar.robotika.cz/subt/virtual/model/ssd_inception_v2_201009/frozen_inference_graph.pb .
 ADD http://osgar.robotika.cz/subt/virtual/model/ssd_inception_v2_201009/cv_graph.pbtxt .
 
-RUN sudo apt-get update && sudo apt install -y ros-melodic-teleop-twist-keyboard
+RUN sudo apt-get update && sudo apt install -y ros-melodic-teleop-twist-keyboard ros-melodic-move-base ros-melodic-slam-gmapping
 
 ENTRYPOINT ["./src/osgar/subt/docker/robotika/entrypoint.bash"]
 
