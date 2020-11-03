@@ -72,6 +72,7 @@ def main():
         format='%(name)-12s %(levelname)-8s %(message)s',
         #datefmt='%Y-%m-%d %H:%M',
     )
+    logging.getLogger("matplotlib").setLevel(logging.INFO)
     parser = argparse.ArgumentParser(description='Replay module from log')
     parser.add_argument('logfile', help='recorded log file')
     parser.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')

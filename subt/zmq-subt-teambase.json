@@ -11,7 +11,7 @@
           }
       },
       "reporter": {
-          "driver": "subt.artifacts:ArtifactReporter",
+          "driver": "subt.artf_reporter:ArtifactReporter",
           "in": ["artf_xyz"],
           "out": ["artf_cmd"],
           "init": {}
@@ -50,6 +50,7 @@
 
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
               ["app.broadcast", "rosmsg.broadcast"],
+              ["rosmsg.radio", "app.radio"],
 
               ["app.artf_xyz", "reporter.artf_xyz"],
               ["reporter.artf_cmd", "transmitter.raw"]]

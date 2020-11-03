@@ -205,6 +205,9 @@ class LogBusHandler:
     def sleep(self, secs):
         pass
 
+    def shutdown(self):
+        raise SystemExit()
+
     def report_error(self, err):
         print(self.time, err)
 
@@ -231,6 +234,9 @@ class LogBusHandlerInputsOnly:
         return self.time
 
     def sleep(self, secs):
+        pass
+
+    def shutdown(self):
         pass
 
     def report_error(self, err):

@@ -6,7 +6,7 @@
 #   http://wiki.ros.org/Bags/Format/2.0
 import os
 import struct
-
+import tarfile
 
 MAX_RECORD_SIZE = 100000000
 
@@ -159,64 +159,82 @@ def extract_log(gen, out_name, append=False, verbose=False):
                         print(d, len(d))
 
 
-if __name__ == "__main__":
-    import argparse
-    import tarfile
-
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('filename', help='ROS bag file or tar(.gz)')
-    parser.add_argument('-a', '--all', help='extract all robot_data* files', action='store_true')
-    parser.add_argument('-v', '--verbose', help='verbose mode', action='store_true')
-    args = parser.parse_args()
-
-    if args.filename.endswith('.tar') or args.filename.endswith('.tar.gz'):
+def process_tar(filepath, all, verbose):
         # In: "ver41p3-91c332d3-2066-466c-a9b9-e3418bbeb0a9-A10F900L.tar"
         # Out: "aws-ver41p3-A10F900L.log"
-        s = os.path.basename(args.filename).split('-')
+        s = os.path.basename(filepath).split('-')
         name = 'aws-' + s[0] + '-' + s[-1].split('.')[0] + '.log'
         letter = s[-1][0]
-        out_name = os.path.join(os.path.dirname(args.filename), name)
+        out_name = os.path.join(os.path.dirname(filepath), name)
         robot_data_0_processed = False
         robot_data_1_processed = False
-        with tarfile.open(args.filename, "r") as tar:
+        with tarfile.open(filepath, "r") as tar:
             for member in tar.getmembers():
                 if member.name.startswith('robot_data_0.bag'):
                     print(member.name, "->", name)
                     f = tar.extractfile(member)
-                    extract_log(read_rosbag_fd_gen(f, verbose=args.verbose), out_name, verbose=args.verbose)
+                    extract_log(read_rosbag_fd_gen(f, verbose=verbose), out_name, verbose=verbose)
                     robot_data_0_processed = True
                 elif member.name.startswith('robot_data_1.bag'):
-                    if not args.all:
+                    if not all:
                         print(member.name, "->", "SKIPPED")
                         continue
                     print(member.name, "->", name)
                     assert robot_data_0_processed
                     f = tar.extractfile(member)
-                    extract_log(read_rosbag_fd_gen(f, verbose=args.verbose), out_name, append=True, verbose=args.verbose)
+                    extract_log(read_rosbag_fd_gen(f, verbose=verbose), out_name, append=True, verbose=verbose)
                     robot_data_1_processed = True
                 elif member.name.startswith('robot_data_2.bag'):
-                    if not args.all:
+                    if not all:
                         print(member.name, "->", "SKIPPED")
                         continue
                     print(member.name, "->", name)
                     assert robot_data_0_processed
                     assert robot_data_1_processed
                     f = tar.extractfile(member)
-                    extract_log(read_rosbag_fd_gen(f, verbose=args.verbose), out_name, append=True, verbose=args.verbose)
+                    extract_log(read_rosbag_fd_gen(f, verbose=verbose), out_name, append=True, verbose=verbose)
                 elif member.name.endswith('rosout.log'):
                     rosout_name = letter + '-rosout.log'
                     print(member.name, "->", rosout_name)
-                    with open(os.path.join(os.path.dirname(args.filename), rosout_name), 'wb') as f:
+                    with open(os.path.join(os.path.dirname(filepath), rosout_name), 'wb') as f:
                         f.write(tar.extractfile(member).read())
                 elif (member.name in ['server_console.log'] or member.name.endswith('.yml') or
                       member.name.startswith('subt_urban_') or member.name.startswith('subt_cave_') or
-                      (member.name.startswith('state.tlog') and args.all)):
+                      (member.name.startswith('state.tlog') and all)):
                     print(member.name)
-                    with open(os.path.join(os.path.dirname(args.filename), member.name.replace(':', '_')), 'wb') as f:
+                    with open(os.path.join(os.path.dirname(filepath), member.name.replace(':', '_')), 'wb') as f:
                         f.write(tar.extractfile(member).read())
-    else:
-        out_name = os.path.join(os.path.dirname(args.filename), 'tmp.log')
-        extract_log(read_rosbag_gen(args.filename), out_name, verbose=args.verbose)
 
+
+def main():
+    import argparse
+    import pathlib
+    import sys
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('filenames', help='ROS bag file(s) or tar(.gz)', nargs='*')
+    #parser.add_argument('-a', '--all', help='extract all robot_data* files', action='store_true')
+    parser.add_argument('--debug', help='debug output', action='store_true')
+    args = parser.parse_args()
+
+    if args.filenames == []:
+        for p in pathlib.Path('.').iterdir():
+            if p.suffixes == ['.tar', '.gz'] or p.suffixes == ['.tar']:
+                args.filenames.append(str(p))
+        if len(args.filenames) == 0:
+            sys.exit("no logfiles found in current directory")
+        args.filenames.sort()
+
+    for filename in args.filenames:
+        print("processing:", filename)
+        if filename.endswith('.tar') or filename.endswith('.tar.gz'):
+            process_tar(filename, all=True, verbose=args.debug)
+        else:
+            out_name = os.path.join(os.path.dirname(filename), 'tmp.log')
+            extract_log(read_rosbag_gen(filename), out_name, verbose=args.debug)
+
+
+if __name__ == "__main__":
+    main()
 # vim: expandtab sw=4 ts=4 
 

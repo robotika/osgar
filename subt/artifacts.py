@@ -432,24 +432,6 @@ class ArtifactDetector(Node):
             self.best_depth = None
 
 
-class ArtifactReporter(Node):
-    def __init__(self, config, bus):
-        super().__init__(config, bus)
-        bus.register("artf_cmd")
-
-    def update(self):  # hack, this method should be called run instead!
-        channel = super().update()  # define self.time
-        assert channel == "artf_xyz", channel
-
-        print(self.time, "DETECTED:")
-        for artf_type, ix, iy, iz in self.artf_xyz:
-            print(" ", artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
-            s = '%s %.2f %.2f %.2f\n' % (artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
-            self.publish('artf_cmd', bytes('artf ' + s, encoding='ascii'))
-
-        print('report completed')
-
-
 def debug2dir(filename, out_dir):
     from osgar.logger import LogReader, lookup_stream_names
     from osgar.lib.serialize import deserialize
