@@ -99,11 +99,13 @@ rosrun proxy sendlog.py $LOG_FILE &
 echo "Starting osgar"
 if $IS_TEAMBASE
 then
-    $PYTHON -m subt.teambase ${CONFIG_FILE_PATHS[@]} --robot-name $ROBOT_NAME --log $LOG_FILE --note "run teambase"
+    $PYTHON -m subt.teambase ${CONFIG_FILE_PATHS[@]} --robot-name $ROBOT_NAME --log $LOG_FILE --note "run teambase" &
 else
-    $PYTHON -m subt run ${CONFIG_FILE_PATHS[@]} --log $LOG_FILE --side auto --walldist $WALLDIST --speed $SPEED --note "run_solution.bash"
+    $PYTHON -m subt run ${CONFIG_FILE_PATHS[@]} --log $LOG_FILE --side auto --walldist $WALLDIST --speed $SPEED --note "run_solution.bash" &
 fi
 
+echo "Expecting signals while waiting for osgar to finish..."
+wait $!
 
 
 echo "Sleep and finish"
