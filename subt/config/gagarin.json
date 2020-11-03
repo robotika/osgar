@@ -96,10 +96,10 @@
       },
       "fromrospy": {
           "driver": "subt.pull:Pull",
-	      "init": {
-	        "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan", "pose3d", "battery_state", "score",
-                        "air_pressure"]
-	      }
+          "init": {
+            "outputs": ["rot", "acc", "orientation", "battery_state", "score",
+                        "air_pressure", "depth_front:gz", "image_front", "points:gz"]
+          }
       },
       "radio": {
           "driver": "subt.radio:Radio",
@@ -154,8 +154,6 @@
               ["rosmsg.base_station", "reporter.base_station"],
               ["reporter.artf_cmd", "transmitter.raw"],
 
-              ["fromrospy.bottom_scan", "drone.bottom_scan"],
-              ["fromrospy.top_scan", "drone.top_scan"],
               ["offseter.pose3d", "drone.pose3d"],
               ["fromrospy.air_pressure", "drone.air_pressure"],
               ["app.desired_z_speed", "drone.desired_z_speed"],

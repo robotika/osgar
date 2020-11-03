@@ -122,6 +122,10 @@ class main:
             rospy.loginfo("teambase")
         elif "GAGARIN" in robot_description:
             rospy.loginfo("GAGARIN")
+            topics.append(('/' + robot_name + '/front/image_raw/compressed', CompressedImage, self.image_front, ('image_front',)))
+            topics.append(('/' + robot_name + '/front/image_raw', Image, self.depth_front, ('depth_front',)))
+            topics.append(('/' + robot_name + '/points', PointCloud2, self.points, ('points',)))
+            topics.append(('/' + robot_name + '/air_pressure', FluidPressure, self.air_pressure, ('air_pressure',)))
         elif "robotika_freyja_sensor_config" in robot_description:
             if has_breadcrumbs(robot_name):
                 rospy.loginfo("freya 2 (with comms beacons)")
