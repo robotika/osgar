@@ -240,35 +240,54 @@ def main(argv):
     print(f"robots:  ")
     for name, kind in robots.items():
         print(f"  {name:>10s}: {kind}")
+    print()
 
     _prune_containers(client, robots)
     _xauth()
     logdir.mkdir()
+
+    should_stop = False
+    def _sigint(signum, frame):
+        nonlocal should_stop
+        print("got signal")
+        should_stop = True
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+    signal.signal(signal.SIGINT, _sigint)
+
     sim = _run_sim(client, circuit, logdir, world, robots)
     to_stop = [sim]
     to_wait = []
     for name, kind in robots.items():
-        b = _run_bridge(client, circuit, world, name, kind)
-        to_stop.append(b)
-        r = _run_robot(client, logdir, image, name)
-        to_wait.append(r)
+        if not should_stop:
+            b = _run_bridge(client, circuit, world, name, kind)
+            to_stop.append(b)
+        if not should_stop:
+            r = _run_robot(client, logdir, image, name)
+            to_wait.append(r)
 
-    print("Waiting for robot containers to finish....")
-    for r in to_wait:
-        r.wait()
+    if not should_stop:
+        print("Waiting for robot containers to finish....")
+        import time
+        while not should_stop and len(to_wait) > 0:
+            time.sleep(1)
+            print(f"shoud_stop: {should_stop}", f"len(to_wait): {len(to_wait)}")
+            for r in to_wait:
+                r.reload()
+            to_wait = [r for r in to_wait if r.status != "exited"]
 
-    for s in to_stop:
+    for r in to_wait: r.kill(signal.SIGINT) # robot containers respond to signals
+    for r in to_wait: r.wait()
+
+    for s in to_wait + to_stop:
         try:
-            print(f"Stopping {s.name} container... {s.status}")
-            #s.kill(signal.SIGINT) # not working because they don't forward signals
+            s.reload()
+            if s.status == "exited":
+                print(f"Container {s.name} exited.")
+            else:
+                print(f"Stopping {s.name} container...")
+            #s.kill(signal.SIGINT) # not working because ign containers don't forward signals
             s.stop()
-        except docker.errors.APIError as e:
-            print(e)
-
-    for s in to_stop:
-        try:
-            print(f"Waiting for {s.name} container... {s.status}")
-            s.wait()
         except docker.errors.APIError as e:
             print(e)
 
