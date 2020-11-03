@@ -80,7 +80,13 @@ roslaunch $LAUNCH_FILE --wait robot_name:=$ROBOT_NAME &
 
 /osgar-ws/src/osgar/subt/cloudsim2osgar.py $ROBOT_NAME &
 
-LOG_FILE=/osgar-ws/logs/$(basename ${CONFIG_FILES[-1]} .json)-$(date +%Y-%m-%dT%H.%M.%S).log
+if [ -f "$1" ];
+then
+  LOG_FILE="$1"
+else
+  LOG_FILE=/osgar-ws/logs/$(basename ${CONFIG_FILES[-1]} .json)-$(date +%Y-%m-%dT%H.%M.%S).log
+fi
+
 CONFIG_FILE_PATHS=()
 for CONFIG_FILE in ${CONFIG_FILES[@]};
 do
