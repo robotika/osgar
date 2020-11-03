@@ -4,11 +4,11 @@
 export ROSCONSOLE_FORMAT='${time} ${severity} ${node} ${logger}: ${message}'
 
 # when signal received just exit
-trap "exit;" HUP INT TERM
+trap "echo 'got signal... exiting'; exit;" HUP INT TERM
 
 # when exiting, send SIGINT to all processes in current process group
 # and wait for them to finish
-trap "kill -s SIGINT 0; wait" EXIT
+trap "echo 'exiting... killing children...';  kill -s SIGINT 0; wait" EXIT
 
 echo "Waiting for robot name"
 while [ -z "$ROBOT_NAME" ]; do
