@@ -46,6 +46,10 @@ add_executable(ros_proxy_teambase ros_proxy_teambase.cc)
 add_dependencies(ros_proxy_teambase ${catkin_EXPORTED_TARGETS})
 target_link_libraries(ros_proxy_teambase ${catkin_LIBRARIES} -lzmq)
 
+add_executable(pose_from_artifact_origin pose_from_artifact_origin.cc)
+add_dependencies(pose_from_artifact_origin ${catkin_EXPORTED_TARGETS})
+target_link_libraries(pose_from_artifact_origin ${catkin_LIBRARIES})
+
 ###########
 ## Tests ##
 ###########
@@ -60,7 +64,7 @@ install(DIRECTORY launch/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
 
 # Mark executables and/or libraries for installation
-install(TARGETS ros_proxy ros_proxy_teambase
+install(TARGETS pose_from_artifact_origin ros_proxy ros_proxy_teambase
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

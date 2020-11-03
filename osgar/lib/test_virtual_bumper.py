@@ -72,5 +72,23 @@ class VirtualBumperTest(unittest.TestCase):
         vb.update_pose(timedelta(seconds=37.808329), (2.525, -0.014, -0.0089011791851))
         self.assertFalse(vb.collision())
 
+    def test_turn_in_place(self):
+        # first current version without checking angle
+        vb = VirtualBumper(timedelta(seconds=2), dist_radius_limit=0.1)
+        vb.update_desired_speed(0.0, math.pi/2)
+        self.assertTrue(vb.should_be_moving)
+        vb.update_pose(timedelta(seconds=0), (0.0, 0.0, 0.0))
+        vb.update_pose(timedelta(seconds=1), (0.0, 0.0, math.pi/2))
+        vb.update_pose(timedelta(seconds=2), (0.0, 0.0, math.pi))
+        self.assertTrue(vb.collision())
+
+        # now with angle
+        vb = VirtualBumper(timedelta(seconds=2), dist_radius_limit=0.1, angle_limit=math.pi/2)
+        vb.update_desired_speed(0.0, math.pi/2)
+        self.assertTrue(vb.should_be_moving)
+        vb.update_pose(timedelta(seconds=0), (0.0, 0.0, 0.0))
+        vb.update_pose(timedelta(seconds=1), (0.0, 0.0, math.pi/2))
+        vb.update_pose(timedelta(seconds=2), (0.0, 0.0, math.pi))
+        self.assertFalse(vb.collision())
 
 # vim: expandtab sw=4 ts=4

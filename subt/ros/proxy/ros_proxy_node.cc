@@ -187,9 +187,10 @@ void sendOriginError(std::string& name)
 
 void sendReceivedMessage(const std::string &srcAddress, const std::string &data)
 {
-  char buf[10000];  // the limit for messages is 4k?
-  int size = sprintf(buf, "radio %s %s", srcAddress.c_str(), data.c_str());
-  protected_zmq_send(g_responder, buf, size, 0);
+  std::stringstream ss;
+  ss << "radio " << srcAddress << " " << data;
+  auto buf = ss.str();
+  protected_zmq_send(g_responder, buf.c_str(), buf.size(), 0);
 }
 
 
@@ -363,6 +364,7 @@ void Controller::Update(const ros::TimerEvent&)
       // Create subt communication client
       this->client.reset(new subt::CommsClient(this->name));
       this->client->Bind(&Controller::CommClientCallback, this, "", BROADCAST_PORT);
+      this->client->Bind(&Controller::CommClientCallback, this);
 
       // Create a cmd_vel publisher to control a vehicle.
       this->velPub = this->n.advertise<geometry_msgs::Twist>(
@@ -602,8 +604,25 @@ void Controller::receiveZmqThread(Controller * self)
       }
       else
       {
-        ROS_INFO_STREAM("MD bad parsing" << c << " " << buffer);
-        break;
+        double sx, sy, sz;
+        double ax, ay, az;
+
+        int c = sscanf(buffer, "cmd_vel_3d %lf %lf %lf %lf %lf %lf", &sx, &sy, &sz, &ax, &ay, &az);
+        if(c == 6)
+        {
+          msg.linear.x = sx;
+          msg.linear.y = sy;
+          msg.linear.z = sz;
+          msg.angular.x = ax;
+          msg.angular.y = ay;
+          msg.angular.z = az;
+          self->velPub.publish(msg);
+        }
+        else
+        {
+          ROS_INFO_STREAM("MD bad parsing" << c << " " << buffer);
+          break;
+        }
       }
     }
   }
