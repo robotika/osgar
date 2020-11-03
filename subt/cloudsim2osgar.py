@@ -16,7 +16,7 @@ import rostopic
 import zmq
 import numpy as np
 
-from sensor_msgs.msg import Imu, LaserScan, CompressedImage, Image
+from sensor_msgs.msg import Imu, LaserScan, CompressedImage, Image, PointCloud2
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty, Int32
 from sensor_msgs.msg import BatteryState, FluidPressure
@@ -140,6 +140,11 @@ class main:
             topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
             topics.append(('/' + robot_name + '/rgbd_front/depth', Image, self.depth_front, ('depth_front',)))
             topics.append(('/' + robot_name + '/rgbd_rear/depth', Image, self.depth_rear, ('depth_rear',)))
+        elif "explorer_r2_sensor_config" in robot_description:
+            rospy.loginfo("explorer R2")
+            topics.append(('/' + robot_name + '/rs_front/color/image/compressed', CompressedImage, self.image_front, ('image_front',)))
+            topics.append(('/' + robot_name + '/rs_front/depth/image', Image, self.depth_front, ('depth_front',)))
+            topics.append(('/' + robot_name + '/points', PointCloud2, self.points, ('points',)))
         else:
             rospy.logerr("unknown configuration")
             return
@@ -274,6 +279,21 @@ class main:
         self.depth_rear_count += 1
         rospy.loginfo_throttle(10, "depth_rear callback: {}".format(self.depth_rear_count))
         self.bus.publish('depth_rear', self.convert_depth(msg))
+
+    def convert_points(self, msg):
+        # accept only Velodyne VLC-16 (for the ver0)
+        assert msg.height == 16, msg.height
+        assert msg.width == 10000, msg.width
+        assert msg.point_step == 32, msg.point_step
+        assert msg.row_step == 320000, msg.row_step
+        arr = np.frombuffer(msg.data, dtype=np.float32)
+        points3d = arr.reshape((msg.height, msg.width, 8))[:, :, 0:3]  # keep only (x, y, z)
+        return points3d[:, ::10, :]  # downsample to everh 10th
+
+    def points(self, msg):
+        self.points_count += 1
+        rospy.loginfo_throttle(10, "points callback: {}".format(self.points_count))
+        self.bus.publish('points', self.convert_points(msg))
 
 
 if __name__ == '__main__':
