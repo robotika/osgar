@@ -72,7 +72,7 @@ elif $IS_GAGARIN
 then
     echo "Robot is GAGARIN"
     LAUNCH_FILE="robot gagarin.launch"
-    CONFIG_FILES=("zmq-subt-x4.json")
+    CONFIG_FILES=("config/gagarin.json")
     WALLDIST=1.6
     SPEED=1.5
 else
