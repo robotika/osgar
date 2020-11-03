@@ -104,6 +104,7 @@ else
     $PYTHON -m subt run ${CONFIG_FILE_PATHS[@]} --log $LOG_FILE --side auto --walldist $WALLDIST --speed $SPEED --note "run_solution.bash" &
 fi
 
+# https://linuxconfig.org/how-to-propagate-a-signal-to-child-processes-from-a-bash-script
 echo "Expecting signals while waiting for osgar to finish..."
 wait $!
 
