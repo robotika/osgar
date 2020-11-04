@@ -4,11 +4,11 @@
 export ROSCONSOLE_FORMAT='${time} ${severity} ${node} ${logger}: ${message}'
 
 # when signal received just exit
-trap "exit;" HUP INT TERM
+trap "echo 'got signal... exiting'; exit;" HUP INT TERM
 
 # when exiting, send SIGINT to all processes in current process group
 # and wait for them to finish
-trap "kill -s SIGINT 0; wait" EXIT
+trap "echo 'exiting... killing children...';  kill -s SIGINT 0; wait" EXIT
 
 echo "Waiting for robot name"
 while [ -z "$ROBOT_NAME" ]; do
@@ -80,7 +80,13 @@ roslaunch $LAUNCH_FILE --wait robot_name:=$ROBOT_NAME &
 
 /osgar-ws/src/osgar/subt/cloudsim2osgar.py $ROBOT_NAME &
 
-LOG_FILE=/osgar-ws/logs/$(basename ${CONFIG_FILES[-1]} .json)-$(date +%Y-%m-%dT%H.%M.%S).log
+if [ -f "$1" ];
+then
+  LOG_FILE="$1"
+else
+  LOG_FILE=/osgar-ws/logs/$(basename ${CONFIG_FILES[-1]} .json)-$(date +%Y-%m-%dT%H.%M.%S).log
+fi
+
 CONFIG_FILE_PATHS=()
 for CONFIG_FILE in ${CONFIG_FILES[@]};
 do
@@ -93,11 +99,14 @@ rosrun proxy sendlog.py $LOG_FILE &
 echo "Starting osgar"
 if $IS_TEAMBASE
 then
-    $PYTHON -m subt.teambase ${CONFIG_FILE_PATHS[@]} --robot-name $ROBOT_NAME --log $LOG_FILE --note "run teambase"
+    $PYTHON -m subt.teambase ${CONFIG_FILE_PATHS[@]} --robot-name $ROBOT_NAME --log $LOG_FILE --note "run teambase" &
 else
-    $PYTHON -m subt run ${CONFIG_FILE_PATHS[@]} --log $LOG_FILE --side auto --walldist $WALLDIST --speed $SPEED --note "run_solution.bash"
+    $PYTHON -m subt run ${CONFIG_FILE_PATHS[@]} --log $LOG_FILE --side auto --walldist $WALLDIST --speed $SPEED --note "run_solution.bash" &
 fi
 
+# https://linuxconfig.org/how-to-propagate-a-signal-to-child-processes-from-a-bash-script
+echo "Expecting signals while waiting for osgar to finish..."
+wait $!
 
 
 echo "Sleep and finish"
