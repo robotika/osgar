@@ -7,7 +7,7 @@ local_costmap:
 
 
   global_frame: odom
-  robot_base_frame: X300L/base_link
+  robot_base_frame: defined_in_launch
   update_frequency: 30.0
   publish_frequency: 30.0
   static_map: false
@@ -24,9 +24,9 @@ local_costmap:
     observation_sources: laser_scan_sensor
 
     laser_scan_sensor: {
-      sensor_frame: X300L/base_link/front_laser,
+      sensor_frame: defined_in_launch,
       data_type: LaserScan,
-      topic: "X300L/front_scan",
+      topic: "defined_in_launch",
       expected_update_rate: 0.5,
       marking: true,
       clearing: true,
