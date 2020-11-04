@@ -106,7 +106,6 @@ def _run_docker(client, name, image, command, mounts={}):
         device_requests=[
             docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])
         ],
-        #remove = True,
         privileged = True,
         network_mode = "host",
         environment = {
@@ -117,7 +116,9 @@ def _run_docker(client, name, image, command, mounts={}):
         #stdout = True,
         #stderr = True,
         #security_opt = ["seccomp=unconfined"],
-        #stdin_open = True,
+        stdin_open = True, # docker -i
+        tty = True,        # docker -t
+        detach = True,     # docker -d
         #entrypoint="/bin/bash",
         #command = "/opt/ros/melodic/bin/rviz",
         mounts = [
@@ -126,7 +127,6 @@ def _run_docker(client, name, image, command, mounts={}):
             docker.types.Mount("/etc/localtime", "/etc/localtime", "bind", read_only=True),
             docker.types.Mount("/dev/input/", "/dev/input/", "bind"),
         ],
-        detach = True,
     )
     opts["mounts"] += mounts
     return client.containers.run(image, **opts)
