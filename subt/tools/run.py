@@ -99,7 +99,7 @@ def validate_circuit(world):
     sys.exit(f"autodetection of circuit failed for world {world}")
 
 
-def _run_docker(client, name, image, command, mounts=[]):
+def _create_docker(client, name, image, command, mounts=[], environment={}):
     opts = dict(
         name = name,
         command = command,
@@ -108,7 +108,7 @@ def _run_docker(client, name, image, command, mounts=[]):
             docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])
         ],
         privileged = True,
-        network_mode = "host",
+        #network_mode = "host",
         environment = {
             "DISPLAY": os.environ["DISPLAY"],
             "QT_X11_NO_MITSHM": 1,
@@ -130,10 +130,23 @@ def _run_docker(client, name, image, command, mounts=[]):
         ],
     )
     opts["mounts"] += mounts
-    return client.containers.run(image, **opts)
+    opts["environment"].update(environment)
+    return client.containers.create(image, **opts)
 
 
 def _run_sim(client, circuit, logdir, world, robots):
+    print("Creating/attaching 'sim-net'")
+    try:
+        simnet = client.networks.get("simnet")
+    except docker.errors.NotFound:
+        ipam_pool = docker.types.IPAMPool(
+            subnet='172.28.0.0/16',
+        )
+        ipam_config = docker.types.IPAMConfig(
+            pool_configs=[ipam_pool]
+        )
+        simnet = client.networks.create("simnet", ipam=ipam_config)
+
     print("Starting 'sim' container...")
     command = [
         "cloudsim_sim.ign",
@@ -145,15 +158,36 @@ def _run_sim(client, circuit, logdir, world, robots):
     mounts = [
         docker.types.Mount("/tmp/ign/logs", str(logdir), "bind"),
     ]
-    for name, kind in robots.items():
+    environment = dict(
+        IGN_PARTITION="sim",
+        IGN_IP="172.28.1.1",
+    )
+    for n, (name, kind) in enumerate(robots.items(), start=1):
         command += [
-            f"robotName1:={name}",
-            f"robotConfig1:={kind}"
+            f"robotName{n}:={name}",
+            f"robotConfig{n}:={kind}"
         ]
-    return _run_docker(client, "sim", "osrf/subt-virtual-testbed:cloudsim_sim_latest", command, mounts)
+    sim = _create_docker(client, "sim", "osrf/subt-virtual-testbed:cloudsim_sim_latest", command, mounts, environment)
+    print(f"  connecting to simnet as 172.28.1.1")
+    simnet.connect(sim, ipv4_address="172.28.1.1")
+    sim.start()
+    return sim
 
 
-def _run_bridge(client, circuit, world, name, kind):
+def _run_bridge(client, circuit, world, name, kind, n):
+    relay_name = f"relay{n}net"
+    print(f"Creating/attaching '{relay_name}'")
+    try:
+        relaynet = client.networks.get(relay_name)
+    except docker.errors.NotFound:
+        ipam_pool = docker.types.IPAMPool(
+            subnet=f'172.{28+n}.0.0/16',
+        )
+        ipam_config = docker.types.IPAMConfig(
+            pool_configs=[ipam_pool]
+        )
+        relaynet = client.networks.create(f"relay{n}net", ipam=ipam_config)
+
     bridge_name = f"{name}-bridge"
     print(f"Starting `{bridge_name}` ({kind}) container...")
     command = [
@@ -162,10 +196,22 @@ def _run_bridge(client, circuit, world, name, kind):
         f"robotName1:={name}",
         f"robotConfig1:={kind}"
     ]
-    return _run_docker(client, bridge_name, "osrf/subt-virtual-testbed:cloudsim_bridge_latest", command)
+    environment = dict(
+        IGN_PARTITION="sim",
+        IGN_IP=f"172.28.1.{n+1}",
+        ROS_MASTER_URI=f"http://172.{28+n}.1.1:11311"
+    )
+    bridge = _create_docker(client, bridge_name, "osrf/subt-virtual-testbed:cloudsim_bridge_latest", command, environment=environment)
+    simnet = client.networks.get("simnet")
+    print(f"  connecting to simnet as 172.28.1.{n+1}")
+    simnet.connect(bridge, ipv4_address=f"172.28.1.{n+1}")
+    print(f"  connecting to {relay_name} as 172.{28+n}.1.1")
+    relaynet.connect(bridge, ipv4_address=f"172.{28+n}.1.1")
+    bridge.start()
+    return bridge
 
-
-def _run_robot(client, logdir, image, name):
+def _run_robot(client, logdir, image, name, n):
+    relay_name = f"relay{n}net"
     print(f"Starting `{name}` container...")
     host_file = str(logdir/f"{name}.log")
     container_file = f"/osgar-ws/logs/{name}.log"
@@ -174,7 +220,16 @@ def _run_robot(client, logdir, image, name):
     mounts = [
         docker.types.Mount(container_file, host_file, "bind"),
     ]
-    return _run_docker(client, name, image, command, mounts)
+    environment = dict(
+        ROS_MASTER_URI=f"http://172.{28+n}.1.1:11311"
+    )
+    robot = _create_docker(client, name, image, command, mounts, environment)
+    relaynet = client.networks.get(relay_name)
+    print(f"  connecting to {relay_name} as 172.{28+1}.1.2")
+    relaynet.connect(robot, ipv4_address=f"172.{28+n}.1.2")
+    robot.start()
+    return robot
+
 
 
 def _cmd(*args, input=None):
@@ -263,12 +318,12 @@ def main(argv):
     sim = _run_sim(client, circuit, logdir, world, robots)
     to_stop = [sim]
     to_wait = []
-    for name, kind in robots.items():
+    for n, (name, kind) in enumerate(robots.items(), start=1):
         if not should_stop:
-            b = _run_bridge(client, circuit, world, name, kind)
+            b = _run_bridge(client, circuit, world, name, kind, n)
             to_stop.append(b)
         if not should_stop:
-            r = _run_robot(client, logdir, image, name)
+            r = _run_robot(client, logdir, image, name, n)
             to_wait.append(r)
 
     if not should_stop:
