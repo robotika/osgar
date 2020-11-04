@@ -5,6 +5,7 @@ import pathlib
 import re
 import signal
 import subprocess
+import time
 
 import docker
 import docker.errors
@@ -213,7 +214,7 @@ def main(argv):
     parser.add_argument("-n", action="store_true", help="dry run")
     args = parser.parse_args(argv)
 
-    config_file = pathlib.Path(args.config).absolute()
+    config_file = pathlib.Path(args.config).resolve()
     if not config_file.is_file():
         sys.exit(f"{config_file} not found")
 
@@ -245,6 +246,10 @@ def main(argv):
     _prune_containers(client, robots)
     _xauth()
     logdir.mkdir()
+    symlink = config_file.with_name(config_file.stem)
+    if symlink.exists():
+        symlink.unlink()
+    symlink.symlink_to(f"{strnow}-{config_file.stem}")
 
     should_stop = False
     def _sigint(signum, frame):
@@ -268,12 +273,13 @@ def main(argv):
 
     if not should_stop:
         print("Waiting for robot containers to finish....")
-        import time
         while not should_stop and len(to_wait) > 0:
             time.sleep(1)
-            #print(f"shoud_stop: {should_stop}", f"len(to_wait): {len(to_wait)}")
             for r in to_wait:
                 r.reload()
+            for r in to_wait:
+                if r.status == "exited":
+                    print(f"Container {r.name} exited.")
             to_wait = [r for r in to_wait if r.status != "exited"]
 
     if len(to_wait) > 0:
