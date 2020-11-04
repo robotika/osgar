@@ -127,6 +127,12 @@ class main:
             else:
                 rospy.loginfo("freya 1 (basic)")
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
+            topics.append(('/' + robot_name + '/rgbd_front/image_raw/compressed', CompressedImage, self.image_front, ('image_front',)))
+            topics.append(('/' + robot_name + '/rgbd_rear/image_raw/compressed', CompressedImage, self.image_rear, ('image_rear',)))
+            topics.append(('/' + robot_name + '/scan_front', LaserScan, self.scan_front, ('scan_front',)))
+            topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
+            topics.append(('/' + robot_name + '/rgbd_front/depth', Image, self.depth_front, ('depth_front',)))
+            topics.append(('/' + robot_name + '/rgbd_rear/depth', Image, self.depth_rear, ('depth_rear',)))
         elif "robotika_kloubak_sensor_config" in robot_description:
             if has_breadcrumbs(robot_name):
                 rospy.loginfo("k2 2 (with comms beacons)")
@@ -134,12 +140,6 @@ class main:
             else:
                 rospy.loginfo("k2 1 (basic)")
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
-            topics.append(('/' + robot_name + '/rgbd_front/image_raw/compressed', CompressedImage, self.image_front, ('image_front',)))
-            topics.append(('/' + robot_name + '/rgbd_rear/image_raw/compressed', CompressedImage, self.image_rear, ('image_rear',)))
-            topics.append(('/' + robot_name + '/scan_front', LaserScan, self.scan_front, ('scan_front',)))
-            topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
-            topics.append(('/' + robot_name + '/rgbd_front/depth', Image, self.depth_front, ('depth_front',)))
-            topics.append(('/' + robot_name + '/rgbd_rear/depth', Image, self.depth_rear, ('depth_rear',)))
         elif "explorer_r2_sensor_config" in robot_description:
             rospy.loginfo("explorer R2")
             topics.append(('/' + robot_name + '/rs_front/color/image/compressed', CompressedImage, self.image_front, ('image_front',)))
