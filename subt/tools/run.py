@@ -99,7 +99,7 @@ def validate_circuit(world):
     sys.exit(f"autodetection of circuit failed for world {world}")
 
 
-def _run_docker(client, name, image, command, mounts={}):
+def _run_docker(client, name, image, command, mounts=[]):
     opts = dict(
         name = name,
         command = command,
@@ -281,6 +281,14 @@ def main(argv):
                 if r.status == "exited":
                     print(f"Container {r.name} exited.")
             to_wait = [r for r in to_wait if r.status != "exited"]
+            for s in to_stop:
+                s.reload()
+                if s.status == "exited":
+                    print(f"Container {s.name} unexpectedly exited.")
+                    break
+            else:
+                continue
+            break
 
     if len(to_wait) > 0:
         print("Stopping robot containers...")
