@@ -249,7 +249,7 @@ def main(argv):
     should_stop = False
     def _sigint(signum, frame):
         nonlocal should_stop
-        print("got signal")
+        print("got signal, stopping")
         should_stop = True
         signal.signal(signal.SIGINT, signal.SIG_IGN)
 
@@ -271,15 +271,17 @@ def main(argv):
         import time
         while not should_stop and len(to_wait) > 0:
             time.sleep(1)
-            print(f"shoud_stop: {should_stop}", f"len(to_wait): {len(to_wait)}")
+            #print(f"shoud_stop: {should_stop}", f"len(to_wait): {len(to_wait)}")
             for r in to_wait:
                 r.reload()
             to_wait = [r for r in to_wait if r.status != "exited"]
 
-    for r in to_wait: r.kill(signal.SIGINT) # robot containers respond to signals
-    for r in to_wait: r.wait()
+    if len(to_wait) > 0:
+        print("Stopping robot containers...")
+        for r in to_wait: r.kill(signal.SIGINT) # robot containers respond to signals
+        for r in to_wait: r.wait()
 
-    for s in to_wait + to_stop:
+    for s in to_stop:
         try:
             s.reload()
             if s.status == "exited":
@@ -287,9 +289,15 @@ def main(argv):
             else:
                 print(f"Stopping {s.name} container...")
             #s.kill(signal.SIGINT) # not working because ign containers don't forward signals
-            s.stop()
+            s.stop(timeout=0) # there is no point in waiting since nobody is listening for signals
         except docker.errors.APIError as e:
             print(e)
+
+    if should_stop:
+        # [How to be a proper program](https://www.cons.org/cracauer/sigint.html)
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        os.killpg(os.getpid(), signal.SIGINT) # signal.raise_signal(signal.SIGINT) available only since python 3.8
+
 
 
 if __name__ == "__main__":
