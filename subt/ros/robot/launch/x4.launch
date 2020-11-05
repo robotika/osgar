@@ -6,11 +6,29 @@
     <remap from="$(arg robot_name)/cmd_vel" to="$(arg robot_name)/cmd_vel_osgar_intentionally_incorrect" />
   </node>
   <!-- NAVIGATION -->
-  <node pkg="gmapping" type="slam_gmapping" name="gmapping_node">
+  <!--node pkg="gmapping" type="slam_gmapping" name="gmapping_node">
     <param name="map_frame"  value="odom"/>
     <param name="base_frame" value="$(arg robot_name)/base_link"/>
     <param name="transform_publish_period"  value="0"/>
     <remap from="scan" to="$(arg robot_name)/front_scan"/>
+  </node-->
+  <node name="laserscan_to_pointcloud" pkg="robot" type="laserscan_to_pointcloud.py">
+    <remap from="scan" to="$(arg robot_name)/front_scan" />
+    <remap from="points" to="$(arg robot_name)/front_points" />
+  </node>
+  <node ns="mapping" pkg="octomap_server" type="octomap_server_node" name="octomap">
+    <remap from="cloud_in" to="/$(arg robot_name)/front_points"/>
+    <param name="frame_id" value="odom"/>
+    <!--
+      <param name="base_frame_id" value="$(arg robot_name)"/>
+      <param name="filter_ground" value="true"/>
+      <param name="ground_filter/angle" value="0.78"/>
+    -->
+    <!--
+      <param name="pointcloud_max_z" value="1.5"/>
+    -->
+    <param name="sensor_model/hit" value="0.95"/>
+    <param name="sensor_model/miss" value="0.05"/>
   </node>
 
   <node pkg="move_base" type="move_base" respawn="false" name="move_base">
@@ -25,8 +43,7 @@
     <param name="local_costmap/robot_base_frame" value="$(arg robot_name)/base_link"/>
     <param name="local_costmap/obstacles/laser_scan_sensor/sensor_frame" value="$(arg robot_name)/base_link/front_laser"/>
     <param name="local_costmap/obstacles/laser_scan_sensor/topic" value="$(arg robot_name)/front_scan"/>
-	    <!--remap from="map" to="/rtabmap/grid_map" /-->
-    <!--remap from="map" to="/map" /-->
+    <remap from="map" to="/mapping/projected_map" />
     <remap from="odom" to="$(arg robot_name)/odom_fused" />
     <remap from="cmd_vel" to="$(arg robot_name)/cmd_vel_osgar"/>
   </node>
