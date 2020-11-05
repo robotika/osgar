@@ -320,14 +320,17 @@ def main(argv=None):
 
     sim = _run_sim(client, circuit, logdir, world, robots)
     to_stop = [sim]
+    stdout = [sim]
     to_wait = []
     for n, (name, kind) in enumerate(robots.items(), start=1):
         if not should_stop:
             b = _run_bridge(client, circuit, world, name, kind, n)
             to_stop.append(b)
+            stdout.append(b)
         if not should_stop:
             r = _run_robot(client, logdir, image, name, n)
             to_wait.append(r)
+            stdout.append(r)
 
     if not should_stop:
         print("Waiting for robot containers to finish....")
@@ -364,6 +367,11 @@ def main(argv=None):
             s.stop(timeout=0) # there is no point in waiting since nobody is listening for signals
         except docker.errors.APIError as e:
             print(e)
+
+    for s in stdout:
+        with open(logdir / f"{s.name}-stdout.txt", "wb") as f:
+            f.write(s.logs())
+        s.remove()
 
     if should_stop:
         # [How to be a proper program](https://www.cons.org/cracauer/sigint.html)
