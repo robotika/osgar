@@ -60,6 +60,9 @@ ROBOTS=dict(
     teambase = "TEAMBASE",
     drone = "SSCI_X4_SENSOR_CONFIG_2",
     freyja = "ROBOTIKA_FREYJA_SENSOR_CONFIG_2",
+    k2 = "ROBOTIKA_KLOUBAK_SENSOR_CONFIG_2",
+    r2 = "EXPLORER_R2_SENSOR_CONFIG_2",
+    x2 = "ROBOTIKA_X2_SENSOR_CONFIG_1",
 )
 
 XAUTH = pathlib.Path("/tmp/.docker.xauth")
@@ -208,7 +211,7 @@ def _prune_containers(client, robots):
                 sys.exit(str(e))
 
 
-def main(argv):
+def main(argv=None):
     parser = argparse.ArgumentParser(description='Submit cloudsim run')
     parser.add_argument("config", nargs="?", default=str(pathlib.Path('./run.toml')))
     parser.add_argument("-n", action="store_true", help="dry run")
