@@ -2,7 +2,6 @@
 
 from __future__ import print_function
 
-import errno
 import math
 import socket
 import sys
@@ -29,35 +28,6 @@ def py3round(f):
         return int(2.0 * round(f / 2.0))
     return int(round(f))
 
-
-def has_breadcrumbs(robot_name):
-    # possibly fragile detection if robot has bredcrumbs
-    rospy.sleep(1)
-    _publishers, subscribers = rostopic.get_topic_list()
-    for name, type, _ in subscribers:
-        if name == "/{}/breadcrumb/deploy".format(robot_name):
-            return True
-    return False
-
-def wait_for_master():
-    """Return when /use_sim_time is set in rosparams. If rospy.init_node is called before /use_sim_time
-    is set, it uses real time."""
-    print("Waiting for rosmaster")
-    start = time.time()
-    last_params = []
-    while not rospy.is_shutdown():
-        try:
-            params = rospy.get_param_names()
-            if params != last_params:
-                print(time.time()-start, params)
-                if '/use_sim_time' in params:
-                    return True
-                last_params = params
-            time.sleep(0.01)
-        except socket.error as serr:
-            if serr.errno != errno.ECONNREFUSED:
-                raise serr  # re-raise error if its not the one we want
-            time.sleep(0.5)
 
 class Bus:
     def __init__(self):
@@ -94,9 +64,7 @@ class Bus:
 
 
 class main:
-    def __init__(self, robot_name):
-        # get cloudsim ready
-        wait_for_master()
+    def __init__(self, robot_name, robot_config):
         rospy.init_node('cloudsim2osgar', log_level=rospy.DEBUG)
         self.bus = Bus()
 
@@ -110,29 +78,22 @@ class main:
 
         # configuration specific topics
         robot_description = rospy.get_param("/{}/robot_description".format(robot_name))
-        if "robotika_x2_sensor_config_1" in robot_description:
+        if robot_config == "ROBOTIKA_X2_SENSOR_CONFIG_1":
             rospy.loginfo("robotika x2")
-        elif "ssci_x4_sensor_config_2" in robot_description:
+        elif robot_config == "SSCI_X4_SENSOR_CONFIG_2":
             rospy.loginfo("ssci drone")
             topics.append(('/' + robot_name + '/top_scan', LaserScan, self.top_scan, ('top_scan',)))
             topics.append(('/' + robot_name + '/bottom_scan', LaserScan, self.bottom_scan, ('bottom_scan',)))
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/air_pressure', FluidPressure, self.air_pressure, ('air_pressure',)))
-        elif "TeamBase" in robot_description:
+        elif robot_config == "TEAMBASE":
             rospy.loginfo("teambase")
-        elif "robotika_freyja_sensor_config" in robot_description:
-            if has_breadcrumbs(robot_name):
+        elif robot_config.startswith("ROBOTIKA_FREYJA_SENSOR_CONFIG"):
+            if robot_config.endswith("_2"):
                 rospy.loginfo("freya 2 (with comms beacons)")
                 publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
             else:
                 rospy.loginfo("freya 1 (basic)")
-            topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
-        elif "robotika_kloubak_sensor_config" in robot_description:
-            if has_breadcrumbs(robot_name):
-                rospy.loginfo("k2 2 (with comms beacons)")
-                publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
-            else:
-                rospy.loginfo("k2 1 (basic)")
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/rgbd_front/image_raw/compressed', CompressedImage, self.image_front, ('image_front',)))
             topics.append(('/' + robot_name + '/rgbd_rear/image_raw/compressed', CompressedImage, self.image_rear, ('image_rear',)))
@@ -140,7 +101,14 @@ class main:
             topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
             topics.append(('/' + robot_name + '/rgbd_front/depth', Image, self.depth_front, ('depth_front',)))
             topics.append(('/' + robot_name + '/rgbd_rear/depth', Image, self.depth_rear, ('depth_rear',)))
-        elif "explorer_r2_sensor_config" in robot_description:
+        elif robot_config.startswith("ROBOTIKA_KLOUBAK_SENSOR_CONFIG"):
+            if robot_config.endswith("_2"):
+                rospy.loginfo("k2 2 (with comms beacons)")
+                publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
+            else:
+                rospy.loginfo("k2 1 (basic)")
+            topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
+        elif robot_config.startswith("EXPLORER_R2_SENSOR_CONFIG"):
             rospy.loginfo("explorer R2")
             topics.append(('/' + robot_name + '/rs_front/color/image/compressed', CompressedImage, self.image_front, ('image_front',)))
             topics.append(('/' + robot_name + '/rs_front/depth/image', Image, self.depth_front, ('depth_front',)))
@@ -149,7 +117,7 @@ class main:
             rospy.logerr("unknown configuration")
             return
 
-        if "robotika_kloubak_sensor_config" in robot_description:
+        if robot_config.startswith("ROBOTIKA_KLOUBAK_SENSOR_CONFIG"):
             topics.append(('/' + robot_name + '/imu/front/data', Imu, self.imu, ('rot', 'acc', 'orientation')))
         else:
             topics.append(('/' + robot_name + '/imu/data', Imu, self.imu, ('rot', 'acc', 'orientation')))
@@ -297,11 +265,11 @@ class main:
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("need robot name as argument", file=sys.stderr)
+    if len(sys.argv) < 3:
+        print("need robot name and config as arguments", file=sys.stderr)
         sys.exit(2)
     try:
-        main(sys.argv[1])
+        main(sys.argv[1], sys.argv[2])
     except rospy.exceptions.ROSInterruptException:
         rospy.loginfo("shutdown")
 
