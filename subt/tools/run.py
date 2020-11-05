@@ -353,8 +353,14 @@ def main(argv=None):
 
     if len(to_wait) > 0:
         print("Stopping robot containers...")
-        for r in to_wait: r.kill(signal.SIGINT) # robot containers respond to signals
-        for r in to_wait: r.wait()
+        for r in to_wait:
+            r.kill(signal.SIGINT) # robot containers should respond to signals
+        for r in to_wait:
+            try:
+                r.wait(timeout=10)
+            except Exception: # requests.exceptions.ReadTimeout:
+                print(f"Container {r.name} ignored SIGINT! Stopping anyway.")
+                r.stop(timeout=0)
 
     for s in to_stop:
         try:
