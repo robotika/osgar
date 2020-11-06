@@ -11,8 +11,7 @@ class LaserScanToPointCloud:
         self.laserScanSubscriber = rospy.Subscriber("/scan", LaserScan, self.laserScanCallback)
 
     def laserScanCallback(self, data):
-        cloudOut = self.laserProj.projectLaser(data)
-        self.pointCloudPublisher.publish(cloudOut)
+        self.pointCloudPublisher.publish(self.laserProj.projectLaser(data))
 
 
 
