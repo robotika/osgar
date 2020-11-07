@@ -121,7 +121,7 @@
           "in": ["sim_time_sec"],
           "out": ["detach"],
           "init": {
-            "release_at": 10
+            "release_at": 30
           }
       }
     },
