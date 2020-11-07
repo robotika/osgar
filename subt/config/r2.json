@@ -115,6 +115,14 @@
           "init": {
             "radius": 30
           }
+      },
+      "marsupial": {
+          "driver": "subt.marsupial:Marsupial",
+          "in": ["sim_time_sec"],
+          "out": ["detach"],
+          "init": {
+            "release_at": 10
+          }
       }
     },
     "links": [["app.desired_speed", "rosmsg.desired_speed"],
@@ -158,6 +166,9 @@
               ["breadcrumbs.deploy", "torospy.deploy"],
               ["breadcrumbs.location", "radio.breadcrumb"],
               ["radio.breadcrumb", "breadcrumbs.external"],
+
+              ["rosmsg.sim_time_sec", "marsupial.sim_time_sec"],
+              ["marsupial.detach", "torospy.detach"],
 
               ["detector.artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],

@@ -113,6 +113,7 @@ class main:
             topics.append(('/' + robot_name + '/rs_front/color/image/compressed', CompressedImage, self.image_front, ('image_front',)))
             topics.append(('/' + robot_name + '/rs_front/depth/image', Image, self.depth_front, ('depth_front',)))
             topics.append(('/' + robot_name + '/points', PointCloud2, self.points, ('points',)))
+            publishers['detach'] = rospy.Publisher('/' + robot_name + '/detach', Empty, queue_size=1)
         else:
             rospy.logerr("unknown configuration")
             return
