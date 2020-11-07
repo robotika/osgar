@@ -18,7 +18,7 @@ class Marsupial(Node):
         self.drone_available = True
 
     def detach(self):
-        self.publish('deploy', [])  # ROS std_msg/Empty expects empty list as input
+        self.publish('detach', [])  # ROS std_msg/Empty expects empty list as input
         self.drone_available = False
 
     def on_sim_time_sec(self, data):

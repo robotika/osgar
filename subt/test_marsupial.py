@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 from subt.marsupial import Marsupial
 from osgar.lib import quaternion
@@ -13,6 +13,7 @@ class MarsupialTest(unittest.TestCase):
         bus.publish.assert_not_called()
         robot.on_sim_time_sec(14)
         bus.publish.assert_called()
+        bus.publish.assert_has_calls([call('detach', [])])
         bus.publish.reset_mock()
         robot.on_sim_time_sec(15)
         bus.publish.assert_not_called()
