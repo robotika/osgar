@@ -237,7 +237,7 @@ def main():
     artifacts = read_artifacts(args.filename)
 
     if args.artifacts:
-        for kind, p in artifacts:
+        for kind, p in sorted(artifacts):
             formatted = ", ".join(f"{aa:.2f}".rstrip('0').rstrip('.') for aa in p)
             print(f"{kind:<15}", f"[{formatted}]")
         return
