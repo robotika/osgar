@@ -121,7 +121,8 @@ def _read_world(cursor):
 
 
 def _parse_artifacts(world):
-    root = ET.fromstring(world[4:])
+    start = world.find(b"<sdf")
+    root = ET.fromstring(world[start:])
     type_re = re.compile('^(backpack|rescue_randy|gas|vent|phone|artifact_origin|rope|helmet)')
     artifacts = []
     origin_xyz = None
