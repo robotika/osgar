@@ -86,6 +86,7 @@ class main:
             topics.append(('/' + robot_name + '/bottom_scan', LaserScan, self.bottom_scan, ('bottom_scan',)))
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/air_pressure', FluidPressure, self.air_pressure, ('air_pressure',)))
+            publishers['detach'] = rospy.Publisher('/' + robot_name + '/detach', Empty, queue_size=1)
         elif robot_config == "TEAMBASE":
             rospy.loginfo("teambase")
         elif robot_config.startswith("ROBOTIKA_FREYJA_SENSOR_CONFIG"):
@@ -113,7 +114,6 @@ class main:
             topics.append(('/' + robot_name + '/rs_front/color/image/compressed', CompressedImage, self.image_front, ('image_front',)))
             topics.append(('/' + robot_name + '/rs_front/depth/image', Image, self.depth_front, ('depth_front',)))
             topics.append(('/' + robot_name + '/points', PointCloud2, self.points, ('points',)))
-            publishers['detach'] = rospy.Publisher('/A100L/detach', Empty, queue_size=1)  # TODO proper child detection
         else:
             rospy.logerr("unknown configuration")
             return

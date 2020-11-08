@@ -109,6 +109,14 @@
       },
       "offseter": {
         "driver": "subt.offseter:Offseter"
+      },
+      "marsupial": {
+          "driver": "subt.marsupial:Marsupial",
+          "in": ["sim_time_sec"],
+          "out": ["detach"],
+          "init": {
+            "release_at": 30
+          }
       }
     },
     "links": [["app.desired_speed", "drone.desired_speed"],
@@ -147,6 +155,9 @@
               ["radio.artf_xyz", "reporter.artf_xyz"],
               ["radio.radio", "rosmsg.broadcast"],
               ["rosmsg.radio", "radio.radio"],
+
+              ["rosmsg.sim_time_sec", "marsupial.sim_time_sec"],
+              ["marsupial.detach", "torospy.detach"],
 
               ["detector.artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],
