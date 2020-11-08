@@ -8,10 +8,20 @@ import pathlib
 
 import toml
 
+# See https://pkg.go.dev/gitlab.com/ignitionrobotics/web/cloudsim/simulations for original names
 WORLDS=dict(
     up1 = "Urban Practice 1",
     up2 = "Urban Practice 2",
     up3 = "Urban Practice 3",
+    uc1 = "Urban Circuit World 1",
+    uc2 = "Urban Circuit World 2",
+    uc3 = "Urban Circuit World 3",
+    uc4 = "Urban Circuit World 4",
+    uc5 = "Urban Circuit World 5",
+    uc6 = "Urban Circuit World 6",
+    uc7 = "Urban Circuit World 7",
+    uc8 = "Urban Circuit World 8",
+
     cq  = "Cave Qualification",
     cs1 = "Cave Simple 1",
     cs2 = "Cave Simple 2",
