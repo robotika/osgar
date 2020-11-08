@@ -2,97 +2,61 @@
 <launch>
   <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)" output="screen">
     <remap from="$(arg robot_name)/front_scan" to="$(arg robot_name)/scan_front"/>
-    <remap from="$(arg robot_name)/image_raw/compressed" to="$(arg robot_name)/camera_front/image_raw/compressed"/>
+    <remap from="$(arg robot_name)/image_raw/compressed" to="$(arg robot_name)/rgbd_front/image_raw/compressed"/>
     <remap from="$(arg robot_name)/front/depth" to="$(arg robot_name)/rgbd_front/depth"/>
     <remap from="$(arg robot_name)/points" to="$(arg robot_name)/rgbd_front/points"/>
   </node>
 
-  <!-- ICP Odometry based on front planar lidar -->
-  <node pkg="rtabmap_ros" type="icp_odometry" name="icp_odometry_front">
-    <param name="database_path" type="string" value=""/>
-    <param name="subscribe_scan" type="bool" value="true"/>
-    <param name="frame_id" type="string" value="$(arg robot_name)"/>
-    <param name="odom_frame_id" type="string" value="odom"/>
-    <param name="publish_tf" type="bool" value="false"/>
-    <param name="publish_null_when_lost" type="bool" value="false"/>
-
-    <param name="Reg/Strategy" type="string" value="1"/>
-    <param name="OdomF2M/BundleAdjustment" type="string" value="0"/>
-    <param name="Icp/MaxTranslation" type="string" value="0.3"/>
-    <param name="Icp/MaxCorrespondenceDistance" type="string" value="0.15"/>
+  <!-- Combining front RGBD depth and image data into a single message. -->
+  <node pkg="nodelet" type="nodelet" name="rgbd_sync_front" args="standalone rtabmap_ros/rgbd_sync">
     <!-- Inputs -->
-    <remap from="scan" to="/$(arg robot_name)/scan_front"/>
-    <!-- Outputs -->
-    <remap from="odom" to="/rtabmap/scan_front/odom" />
-    <remap from="odom_info" to="/rtabmap/scan_front/odom_info"/>
-    <remap from="odom_last_frame" to="/rtabmap/scan_front/odom_last_frame"/>
-    <remap from="odom_local_map" to="/rtabmap/scan_front/odom_local_map"/>
-    <remap from="odom_local_scan_map" to="/rtabmap/scan_front/odom_local_scan_map"/>
-    <remap from="odom_filtered_input_scan" to="/rtabmap/scan_front/odom_filtered_input_scan"/>
-    <remap from="scan_cloud" to="/rtabmap/scan_front/scan_cloud"/>
-  </node>
-
-  <!-- ICP Odometry based on rear planar lidar -->
-  <node pkg="rtabmap_ros" type="icp_odometry" name="icp_odometry_rear">
-    <param name="database_path" type="string" value=""/>
-    <param name="subscribe_scan" type="bool" value="true"/>
-    <param name="frame_id" type="string" value="$(arg robot_name)"/>
-    <param name="odom_frame_id" type="string" value="odom"/>
-    <param name="publish_tf" type="bool" value="false"/>
-    <param name="publish_null_when_lost" type="bool" value="false"/>
-
-    <param name="Reg/Strategy" type="string" value="1"/>
-    <param name="OdomF2M/BundleAdjustment" type="string" value="0"/>
-    <param name="Icp/MaxTranslation" type="string" value="0.3"/>
-    <param name="Icp/MaxCorrespondenceDistance" type="string" value="0.15"/>
-    <!-- Inputs -->
-    <remap from="scan" to="/$(arg robot_name)/scan_rear"/>
-    <!-- Outputs -->
-    <remap from="odom" to="/rtabmap/scan_rear/odom" />
-    <remap from="odom_info" to="/rtabmap/scan_rear/odom_info"/>
-    <remap from="odom_last_frame" to="/rtabmap/scan_rear/odom_last_frame"/>
-    <remap from="odom_local_map" to="/rtabmap/scan_rear/odom_local_map"/>
-    <remap from="odom_local_scan_map" to="/rtabmap/scan_rear/odom_local_scan_map"/>
-    <remap from="odom_filtered_input_scan" to="/rtabmap/scan_rear/odom_filtered_input_scan"/>
-    <remap from="scan_cloud" to="/rtabmap/scan_rear/scan_cloud"/>
-  </node>
-
-  <!-- RGBD odometry based on front depth camera -->
-  <node pkg="rtabmap_ros" type="rgbd_odometry" name="rgbd_odometry_front">
-    <param name="database_path" type="string" value=""/>
-    <param name="frame_id" type="string" value="$(arg robot_name)"/>
-    <param name="odom_frame_id" type="string" value="odom"/>
-    <param name="publish_tf" type="bool" value="false"/>
-    <param name="publish_null_when_lost" type="bool" value="false"/>
-    <!-- Inputs -->
-    <remap from="rgb/image" to="$(arg robot_name)/rgbd_front/optical/image_raw"/>
+    <remap from="rgb/image" to="/$(arg robot_name)/rgbd_front/optical/image_raw"/>
     <remap from="rgb/camera_info" to="$(arg robot_name)/rgbd_front/optical/camera_info"/>
-    <remap from="depth/image" to="$(arg robot_name)/rgbd_front/optical/depth"/>
-    <!-- Outputs -->
-    <remap from="odom" to="/rtabmap/rgbd_front/odom" />
-    <remap from="odom_info" to="/rtabmap/rgbd_front/odom_info"/>
-    <remap from="odom_last_frame" to="/rtabmap/rgbd_front/odom_last_frame"/>
-    <remap from="odom_local_map" to="/rtabmap/rgbd_front/odom_local_map"/>
-    <remap from="odom_local_scan_map" to="/rtabmap/rgbd_front/odom_local_scan_map"/>
+    <remap from="depth/image" to="/$(arg robot_name)/rgbd_front/optical/depth"/>
+    <!-- Output -->
+    <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/front/compressed"/>
+    <remap from="rgbd_image" to="/rtabmap/rgbd/front"/>
   </node>
 
-  <!-- RGBD odometry based on rear depth camera -->
-  <node pkg="rtabmap_ros" type="rgbd_odometry" name="rgbd_odometry_rear">
+  <!-- Combining rear RGBD depth and image data into a single message. -->
+  <node pkg="nodelet" type="nodelet" name="rgbd_sync_rear" args="standalone rtabmap_ros/rgbd_sync">
+    <!-- Inputs -->
+    <remap from="rgb/image" to="/$(arg robot_name)/rgbd_rear/optical/image_raw"/>
+    <remap from="rgb/camera_info" to="/$(arg robot_name)/rgbd_rear/optical/camera_info"/>
+    <remap from="depth/image" to="/$(arg robot_name)/rgbd_rear/optical/depth"/>
+    <!-- Output -->
+    <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/rear/compressed"/>
+    <remap from="rgbd_image" to="/rtabmap/rgbd/rear"/>
+  </node>
+
+  <!-- RGBD odometry -->
+  <node ns="rtabmap/rgbd" pkg="rtabmap_ros" type="rgbd_odometry" name="rgbd_odometry">
     <param name="database_path" type="string" value=""/>
     <param name="frame_id" type="string" value="$(arg robot_name)"/>
     <param name="odom_frame_id" type="string" value="odom"/>
+    <param name="guess_frame_id" type="string" value="odom"/>
     <param name="publish_tf" type="bool" value="false"/>
     <param name="publish_null_when_lost" type="bool" value="false"/>
+    <param name="subscribe_rgbd" type="bool" value="true"/>
+    <param name="rgbd_cameras" value="2"/>
+    <!-- Finding correspondences with the guess cannot be done with multiple cameras -->
+    <param name="Vis/CorGuessWinSize" value="0"/>
+    <!-- Default estimation type does not work with multiple cameras. -->
+    <param name="Vis/EstimationType" value="0"/>
+    <!-- Bundle adjustment does not work with multiple cameras. -->
+    <param name="OdomF2M/BundleAdjustment" value="0"/>
+    <!-- This robot cannot move left or up, at least unless something strange is happening. -->
+    <param name="Odom/Holonomic" value="false"/>
+    <!-- Internal Kalman filtering smoothes the estimate, which in turn prevents "our" Kalman from being confused by big input odometry jumps. -->
+    <param name="Odom/FilteringStrategy" value="1"/>
+    <!-- GFTT/ORB is the default, but if somebody wants to experiment ...
+         For some of the worlds, simpler features, such as FAST, may turn out better. -->
+    <param name="Vis/FeatureType" value="8"/> <!-- [0=SURF 1=SIFT 2=ORB 3=FAST/FREAK 4=FAST/BRIEF 5=GFTT/FREAK 6=GFTT/BRIEF 7=BRISK 8=GFTT/ORB 9=KAZE 10=ORB-OCTREE 11=SuperPoint Torch.] -->
     <!-- Inputs -->
-    <remap from="rgb/image" to="$(arg robot_name)/rgbd_rear/optical/image_raw"/>
-    <remap from="rgb/camera_info" to="$(arg robot_name)/rgbd_rear/optical/camera_info"/>
-    <remap from="depth/image" to="$(arg robot_name)/rgbd_rear/optical/depth"/>
-    <!-- Outputs -->
-    <remap from="odom" to="/rtabmap/rgbd_rear/odom" />
-    <remap from="odom_info" to="/rtabmap/rgbd_rear/odom_info"/>
-    <remap from="odom_last_frame" to="/rtabmap/rgbd_rear/odom_last_frame"/>
-    <remap from="odom_local_map" to="/rtabmap/rgbd_rear/odom_local_map"/>
-    <remap from="odom_local_scan_map" to="/rtabmap/rgbd_rear/odom_local_scan_map"/>
+    <remap from="rgbd_image0" to="front/compressed"/>
+    <remap from="rgbd_image1" to="rear/compressed"/>
+    <!-- Undocumented supported input, helps maintaining the right direction. -->
+    <remap from="imu" to="/$(arg robot_name)/imu/data"/>
   </node>
 
   <!-- Estimating altitude from atmospheric pressure. -->
@@ -124,14 +88,8 @@
 
     <!-- Wheel odometry -->
     <param name="odom0" value="$(arg robot_name)/odom"/>
-    <!-- ICP odometry from front 2d lidar -->
-    <param name="odom1" value="/rtabmap/scan_front/odom"/>
-    <!-- ICP odometry from rear 2d lidar -->
-    <param name="odom2" value="/rtabmap/scan_rear/odom"/>
-    <!-- RGBD odometry from front depth camera -->
-    <param name="odom3" value="/rtabmap/rgbd_front/odom"/>
-    <!-- RGBD odometry from rear depth camera -->
-    <param name="odom4" value="/rtabmap/rgbd_rear/odom"/>
+    <!-- RGBD odometry from both front and rear depth cameras -->
+    <param name="odom1" value="/rtabmap/rgbd/odom"/>
     <!-- Altitude estimated from air pressure -->
     <param name="pose0" value="$(arg robot_name)/altitude"/>
     <!-- Information about location in the staging area. -->
@@ -141,18 +99,12 @@
 
     <param name="odom0_differential" value="false"/>
     <param name="odom1_differential" value="false"/>
-    <param name="odom2_differential" value="false"/>
-    <param name="odom3_differential" value="false"/>
-    <param name="odom4_differential" value="false"/>
     <param name="pose0_differential" value="false"/>
     <param name="pose1_differential" value="false"/>
     <param name="imu0_differential" value="false"/>
 
     <param name="odom0_relative" value="false"/>
     <param name="odom1_relative" value="false"/>
-    <param name="odom2_relative" value="false"/>
-    <param name="odom3_relative" value="false"/>
-    <param name="odom4_relative" value="false"/>
     <param name="pose0_relative" value="true"/>
     <param name="pose1_relative" value="true"/>
     <param name="imu0_relative" value="false"/>
@@ -160,28 +112,14 @@
     <param name="imu0_remove_gravitational_acceleration" value="true"/>
 
     <!-- The order of the values is x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az. -->
-    <!-- We barely trust the ICP odometry on 2d scan with X and Y coordinates. Totally not anything more 3d. -->
+    <!-- We only take forward velocity from the wheel-based odometry, because nothing else, including rotation velocity, can be trusted. -->
     <rosparam param="odom0_config">[false, false, false,
                                     false, false, false,
                                     true, false, false,
                                     false, false, false,
                                     false, false, false]</rosparam>
+    <!-- We take vx, vy and vz instead of x, y and z, because visual odometry can drift arbitrarily far because of not supporting all avilable sensors. -->
     <rosparam param="odom1_config">[false, false, false,
-                                    false, false, false,
-                                    true, true, false,
-                                    false, false, false,
-                                    false, false, false]</rosparam>
-    <rosparam param="odom2_config">[false, false, false,
-                                    false, false, false,
-                                    true, true, false,
-                                    false, false, false,
-                                    false, false, false]</rosparam>
-    <rosparam param="odom3_config">[false, false, false,
-                                    false, false, false,
-                                    true, true, true,
-                                    false, false, false,
-                                    false, false, false]</rosparam>
-    <rosparam param="odom4_config">[false, false, false,
                                     false, false, false,
                                     true, true, true,
                                     false, false, false,
@@ -200,21 +138,51 @@
                                    true,  true,  true,
                                    false, false, false,
                                    true,  true,  true,
-                                   true,  true,  true] </rosparam>
+                                   true,  true,  true]</rosparam>
 
-    <!-- The unit of the threshold is a Mahalanobis distance (i.e. sum) of numbers of sigmas in each dimension -->
+    <!-- When the robot starts slipping or spinning wheels in the air, we need to start ignoring wheel-based odometry.
+         The unit of the threshold is a Mahalanobis distance (i.e. sum) of numbers of sigmas in each dimension -->
     <rosparam param="odom0_twist_rejection_threshold">4</rosparam>
+
+    <!-- Trying to not have data stuck in a TCP buffer. -->
+    <rosparam param="odom0_nodelay">true</rosparam>
+    <rosparam param="odom1_nodelay">true</rosparam>
+    <rosparam param="pose0_nodelay">true</rosparam>
+    <rosparam param="pose1_nodelay">true</rosparam>
+    <rosparam param="imu0_nodelay">true</rosparam>
+
+    <!-- Setting some physical constraints. -->
+    <rosparam param="acceleration_limits">[10.6, 0.0, 0.0,
+                                           0.0, 0.0, 1.6]</rosparam>
+    <rosparam param="deceleration_limits">[10.6, 0.0, 0.0,
+                                           0.0, 0.0, 1.6]</rosparam>
 
     <!-- When some data arrive late, we are willing to go back in time and correct the estimate. -->
     <param name="smooth_lagged_data" value="true"/>
     <param name="history_length" value="1.0"/>
 
-    <!-- -->
+    <!--
     <param name="print_diagnostics" value="true"/>
     <remap from="/diagnostics" to="$(arg robot_name)/odom_diagnostics"/>
-    <!-- -->
+    -->
 
+    <!-- Output -->
     <remap from="odometry/filtered" to="/$(arg robot_name)/odom_fused"/>
+  </node>
+
+  <!-- Merging both RGBD cameras into a single stream. -->
+  <node pkg="topic_tools" type="relay" name="points_merge_front" args="$(arg robot_name)/rgbd_front/points $(arg robot_name)/rgbd_all/points"/>
+  <node pkg="topic_tools" type="relay" name="points_merge_rear" args="$(arg robot_name)/rgbd_rear/points $(arg robot_name)/rgbd_all/points"/>
+
+  <node ns="mapping" pkg="octomap_server" type="octomap_server_node" name="octomap">
+    <remap from="cloud_in" to="/$(arg robot_name)/rgbd_all/points"/>
+    <param name="frame_id" value="odom"/>
+    <!-- In case we want to filter out ceilings.
+    <param name="pointcloud_max_z" value="1.5"/>
+    -->
+    <!-- We trust the simulated sensor a lot more than what default parameters expect. -->
+    <param name="sensor_model/hit" value="0.95"/>
+    <param name="sensor_model/miss" value="0.05"/>
   </node>
 
 </launch>
