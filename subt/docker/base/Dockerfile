@@ -40,6 +40,8 @@ RUN /bin/sh -c 'echo "deb [trusted=yes] http://packages.ros.org/ros/ubuntu $(lsb
     python-rosinstall \
     ros-melodic-desktop \
     ros-melodic-joystick-drivers \
+    ros-melodic-octomap-server \
+    ros-melodic-octomap-rviz-plugins \
     ros-melodic-pointcloud-to-laserscan \
     ros-melodic-robot-localization \
     ros-melodic-rotors-control \
