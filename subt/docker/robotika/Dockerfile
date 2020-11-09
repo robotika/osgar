@@ -5,7 +5,7 @@ RUN curl -O# http://osgar.robotika.cz/subt/virtual/model/mdnet3.64.64.13.4.relu.
 RUN curl -O# http://osgar.robotika.cz/subt/virtual/model/ssd_inception_v2_201009/frozen_inference_graph.pb
 RUN curl -O# http://osgar.robotika.cz/subt/virtual/model/ssd_inception_v2_201009/cv_graph.pbtxt
 
-RUN sudo apt-get update && sudo apt install -y ros-melodic-teleop-twist-keyboard
+RUN sudo apt-get update && sudo apt install -y ros-melodic-teleop-twist-keyboard python-laser-geometry
 
 ENTRYPOINT ["./src/osgar/subt/docker/robotika/entrypoint.bash"]
 
