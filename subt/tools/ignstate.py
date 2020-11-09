@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 from collections import namedtuple
 from datetime import timedelta
 
-from subt.ign_pb2 import Pose_V
+from subt.ign_pb2 import Pose_V, StringMsg
 
 COLORS = [
     (255, 255, 255),
@@ -122,12 +122,13 @@ def _read_world(cursor):
     cursor.execute(r"SELECT message, topic_id FROM messages")
     for message, topic_id in cursor:
         if topic_id == sdf_id:
-            return message
+            world = StringMsg()
+            world.ParseFromString(message)
+            return world.data
 
 
 def _parse_artifacts(world):
-    start = world.find(b"<sdf")
-    root = ET.fromstring(world[start:])
+    root = ET.fromstring(world)
     type_re = re.compile('^(backpack|rescue_randy|gas|vent|phone|artifact_origin|rope|helmet|drill|extinguisher)')
     artifacts = []
     origin_xyz = None
