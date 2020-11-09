@@ -1,0 +1,175 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["emergency_stop", "pose2d", "scan", "rot", "artf",
+                 "sim_time_sec", "acc", "origin"],
+          "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout", "request_origin"],
+          "init": {
+            "max_speed": 0.5,
+            "symmetric": false,
+            "virtual_bumper_sec": 60,
+            "virtual_bumper_radius": 10.0,
+            "virtual_world": true
+          }
+      },
+      "localization": {
+        "driver": "subt.odoimuloc:Localization"
+      },
+      "detector": {
+          "driver": "subt.artf_node:ArtifactDetectorDNN",
+          "in": ["image", "scan"],
+          "out": ["artf", "dropped", "debug_artf", "stdout"],
+          "init": {
+          }
+      },
+      "reporter": {
+          "driver": "subt.artf_reporter:ArtifactReporter",
+          "in": ["artf_xyz"],
+          "out": ["artf_cmd"],
+          "init": {
+            "repeat_report_sec": 10
+          }
+      },
+      "transmitter": {
+          "driver": "zeromq",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+            "mode": "PUSH",
+            "endpoint": "tcp://localhost:5556"
+          }
+      },
+      "receiver": {
+          "driver": "zeromq",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+            "mode": "PULL",
+            "endpoint": "tcp://localhost:5555"
+          }
+      },
+      "rosmsg": {
+          "driver": "rosmsg",
+          "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
+          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin", "gas_detected", "orientation"],
+          "init": {
+          }
+      },
+      "depth2scan": {
+          "driver": "subt.depth2scan:DepthToScan",
+          "in": ["depth", "scan"],
+          "out": ["scan"],
+          "init": {
+            "depth_params": {
+              "fx": 277.1,
+              "camera_xyz": [0.565, 0.0, 0.245],
+              "image_size": [320, 240],
+              "principal_point": [160.5, 120.5],
+              "vertical_pixel_offset": 16,
+              "lidar_fov": 6.283185307179586,
+              "lidar_trusted_zone": 2.0,
+              "min_x": 0.1,
+              "max_x": 10.0,
+              "min_y": 0.0,
+              "max_y": 10.0,
+              "min_z": -0.2,
+              "max_z": 0.4,
+              "vertical_diff_limit": 0.698, "vd_comment": "radians(40)",
+              "max_slope": -0.4537856, "ms_comment": "radians(-26)",
+              "slope_length_scale_factor": 0.4,
+              "slope_length_power_factor": -0.05
+            }
+          }
+      },
+      "fromrospy": {
+          "driver": "subt.pull:Pull",
+          "init": {
+            "outputs": ["rot", "acc", "orientation", "battery_state", "score", "pose3d",
+                        "image_front", "image_rear", "scan_front", "scan_rear", "depth_front:null", "depth_rear:null",
+                        "points:gz"]
+          }
+      },
+      "torospy": {
+          "driver": "subt.push:Push"
+      },
+      "points2scan": {
+          "driver": "subt.points2scan:PointsToScan",
+          "in": ["points"],
+          "out": ["scan360"],
+          "init": {
+          }
+      },
+      "radio": {
+          "driver": "subt.radio:Radio",
+          "in": ["radio", "pose2d", "artf"],
+          "out": ["radio", "artf_xyz"],
+          "init": {}
+      },
+      "breadcrumbs": {
+          "driver": "subt.breadcrumbs:Breadcrumbs",
+          "in": ["sim_time_sec"],
+          "out": ["deploy"],
+          "init": {
+            "radius": 30
+          }
+      }
+    },
+    "links": [["app.desired_speed", "rosmsg.desired_speed"],
+              ["app.stdout", "rosmsg.stdout"],
+              ["app.request_origin", "rosmsg.request_origin"],
+              ["rosmsg.origin", "app.origin"],
+
+              ["rosmsg.origin",     "localization.origin"],
+              ["rosmsg.pose2d",     "localization.odom"],
+              ["fromrospy.orientation", "localization.orientation"],
+
+              ["receiver.raw", "rosmsg.raw"],
+              ["rosmsg.cmd", "transmitter.raw"],
+
+              ["fromrospy.rot", "app.rot"],
+              ["fromrospy.rot", "depth2scan.rot"],
+              ["fromrospy.acc", "app.acc"],
+
+              ["rosmsg.scan", "detector.scan"],
+
+              ["fromrospy.image_front", "detector.image"],
+              ["fromrospy.image_front", "app.image"],
+
+              ["fromrospy.depth_front", "depth2scan.depth"],
+              ["fromrospy.depth_front", "detector.depth"],
+
+              ["rosmsg.sim_time_sec", "app.sim_time_sec"],
+              ["rosmsg.sim_time_sec", "reporter.sim_time_sec"],
+              ["rosmsg.sim_time_sec", "torospy.sim_time_sec"],
+
+              ["rosmsg.gas_detected", "detector.gas_detected"],
+
+              ["app.pose2d", "radio.pose2d"],
+              ["reporter.artf_all", "radio.artf"],
+              ["radio.artf_xyz", "reporter.artf_xyz"],
+              ["radio.radio", "rosmsg.broadcast"],
+              ["rosmsg.radio", "radio.radio"],
+
+              ["rosmsg.sim_time_sec", "breadcrumbs.sim_time_sec"],
+              ["localization.pose3d", "breadcrumbs.pose3d"],
+              ["breadcrumbs.deploy", "torospy.deploy"],
+              ["breadcrumbs.location", "radio.breadcrumb"],
+              ["radio.breadcrumb", "breadcrumbs.external"],
+
+              ["detector.artf", "app.artf"],
+              ["detector.stdout", "rosmsg.stdout"],
+              ["app.artf_xyz", "reporter.artf_xyz"],
+              ["rosmsg.base_station", "reporter.base_station"],
+              ["reporter.artf_cmd", "transmitter.raw"],
+
+              ["localization.pose3d", "app.pose3d"],
+
+              ["fromrospy.points", "points2scan.points"],
+              ["points2scan.scan360", "depth2scan.scan"],
+              ["depth2scan.scan", "app.scan360"]
+    ]
+  }
+}

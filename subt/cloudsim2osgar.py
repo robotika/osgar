@@ -2,7 +2,6 @@
 
 from __future__ import print_function
 
-import errno
 import math
 import socket
 import sys
@@ -16,7 +15,7 @@ import rostopic
 import zmq
 import numpy as np
 
-from sensor_msgs.msg import Imu, LaserScan, CompressedImage, Image
+from sensor_msgs.msg import Imu, LaserScan, CompressedImage, Image, PointCloud2
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty, Int32
 from sensor_msgs.msg import BatteryState, FluidPressure
@@ -29,26 +28,6 @@ def py3round(f):
         return int(2.0 * round(f / 2.0))
     return int(round(f))
 
-
-def wait_for_master():
-    """Return when /use_sim_time is set in rosparams. If rospy.init_node is called before /use_sim_time
-    is set, it uses real time."""
-    print("Waiting for rosmaster")
-    start = time.time()
-    last_params = []
-    while not rospy.is_shutdown():
-        try:
-            params = rospy.get_param_names()
-            if params != last_params:
-                print(time.time()-start, params)
-                if '/use_sim_time' in params:
-                    return True
-                last_params = params
-            time.sleep(0.01)
-        except socket.error as serr:
-            if serr.errno != errno.ECONNREFUSED:
-                raise serr  # re-raise error if its not the one we want
-            time.sleep(0.5)
 
 class Bus:
     def __init__(self):
@@ -85,15 +64,12 @@ class Bus:
 
 
 class main:
-    def __init__(self, robot_name):
-        # get cloudsim ready
-        wait_for_master()
+    def __init__(self, robot_name, robot_config):
         rospy.init_node('cloudsim2osgar', log_level=rospy.DEBUG)
         self.bus = Bus()
 
         # common topics
         topics = [
-            ('/' + robot_name + '/imu/data', Imu, self.imu, ('rot', 'acc', 'orientation')),
             ('/' + robot_name + '/battery_state', BatteryState, self.battery_state, ('battery_state',)),
             ('/subt/score', Int32, self.score, ('score',)),
         ]
@@ -102,27 +78,22 @@ class main:
 
         # configuration specific topics
         robot_description = rospy.get_param("/{}/robot_description".format(robot_name))
-        if "robotika_x2_sensor_config_1" in robot_description:
+        if robot_config == "ROBOTIKA_X2_SENSOR_CONFIG_1":
             rospy.loginfo("robotika x2")
-        elif "ssci_x4_sensor_config_2" in robot_description:
+        elif robot_config == "SSCI_X4_SENSOR_CONFIG_2":
             rospy.loginfo("ssci drone")
             topics.append(('/' + robot_name + '/top_scan', LaserScan, self.top_scan, ('top_scan',)))
             topics.append(('/' + robot_name + '/bottom_scan', LaserScan, self.bottom_scan, ('bottom_scan',)))
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/air_pressure', FluidPressure, self.air_pressure, ('air_pressure',)))
-        elif "TeamBase" in robot_description:
+        elif robot_config == "TEAMBASE":
             rospy.loginfo("teambase")
-        elif "robotika_freyja_sensor_config" in robot_description:
-            # possibly fragile detection if freya has bredcrumbs
-            rospy.sleep(1)
-            _publishers, subscribers = rostopic.get_topic_list()
-            for name, type, _ in subscribers:
-                if name == "/{}/breadcrumb/deploy".format(robot_name):
-                    rospy.loginfo("freya 2 (with comms beacons)")
-                    publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
-                    break
+        elif robot_config.startswith("ROBOTIKA_FREYJA_SENSOR_CONFIG"):
+            if robot_config.endswith("_2"):
+                rospy.loginfo("freya 2 (with comms beacons)")
+                publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
             else:
-                rospy.loginfo("freya 1")
+                rospy.loginfo("freya 1 (basic)")
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/rgbd_front/image_raw/compressed', CompressedImage, self.image_front, ('image_front',)))
             topics.append(('/' + robot_name + '/rgbd_rear/image_raw/compressed', CompressedImage, self.image_rear, ('image_rear',)))
@@ -130,9 +101,26 @@ class main:
             topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
             topics.append(('/' + robot_name + '/rgbd_front/depth', Image, self.depth_front, ('depth_front',)))
             topics.append(('/' + robot_name + '/rgbd_rear/depth', Image, self.depth_rear, ('depth_rear',)))
+        elif robot_config.startswith("ROBOTIKA_KLOUBAK_SENSOR_CONFIG"):
+            if robot_config.endswith("_2"):
+                rospy.loginfo("k2 2 (with comms beacons)")
+                publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
+            else:
+                rospy.loginfo("k2 1 (basic)")
+            topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
+        elif robot_config.startswith("EXPLORER_R2_SENSOR_CONFIG"):
+            rospy.loginfo("explorer R2")
+            topics.append(('/' + robot_name + '/rs_front/color/image/compressed', CompressedImage, self.image_front, ('image_front',)))
+            topics.append(('/' + robot_name + '/rs_front/depth/image', Image, self.depth_front, ('depth_front',)))
+            topics.append(('/' + robot_name + '/points', PointCloud2, self.points, ('points',)))
         else:
             rospy.logerr("unknown configuration")
             return
+
+        if robot_config.startswith("ROBOTIKA_KLOUBAK_SENSOR_CONFIG"):
+            topics.append(('/' + robot_name + '/imu/front/data', Imu, self.imu, ('rot', 'acc', 'orientation')))
+        else:
+            topics.append(('/' + robot_name + '/imu/data', Imu, self.imu, ('rot', 'acc', 'orientation')))
 
         outputs = functools.reduce(operator.add, (t[-1] for t in topics))
         self.bus.register(outputs)
@@ -260,13 +248,28 @@ class main:
         rospy.loginfo_throttle(10, "depth_rear callback: {}".format(self.depth_rear_count))
         self.bus.publish('depth_rear', self.convert_depth(msg))
 
+    def convert_points(self, msg):
+        # accept only Velodyne VLC-16 (for the ver0)
+        assert msg.height == 16, msg.height
+        assert msg.width == 10000, msg.width
+        assert msg.point_step == 32, msg.point_step
+        assert msg.row_step == 320000, msg.row_step
+        arr = np.frombuffer(msg.data, dtype=np.float32)
+        points3d = arr.reshape((msg.height, msg.width, 8))[:, :, 0:3]  # keep only (x, y, z)
+        return points3d[:, ::10, :]  # downsample to everh 10th
+
+    def points(self, msg):
+        self.points_count += 1
+        rospy.loginfo_throttle(10, "points callback: {}".format(self.points_count))
+        self.bus.publish('points', self.convert_points(msg))
+
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("need robot name as argument", file=sys.stderr)
+    if len(sys.argv) < 3:
+        print("need robot name and config as arguments", file=sys.stderr)
         sys.exit(2)
     try:
-        main(sys.argv[1])
+        main(sys.argv[1], sys.argv[2])
     except rospy.exceptions.ROSInterruptException:
         rospy.loginfo("shutdown")
 
