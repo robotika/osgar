@@ -58,3 +58,9 @@ message ArtifactScore
   string report_status = 6;
   int32 score_change = 7;
 }
+
+message StringMsg
+{
+  Header header = 1;
+  string data = 2;
+}
