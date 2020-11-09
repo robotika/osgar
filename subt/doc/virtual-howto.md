@@ -22,12 +22,28 @@ docker pull osrf/subt-virtual-testbed:cloudsim_sim_latest
 docker pull osrf/subt-virtual-testbed:cloudsim_bridge_latest
 ```
 
+## Precoditions
+
+3D X server needs to be running under the same user that is going to be running the simulation.
+If the X server runs display `:0` the variable `DISPLAY` needs to be set and exported
+```
+export DISPLAY=:0
+```
+Also `XAUTHORITY` variable needs to be set to point to the location of the XAuthority file. Example on
+ubuntu could be
+```
+$ echo $XAUTHORITY
+/run/user/1000/gdm/Xauthority
+```
+Another possiblity is to run `xhost +` to disable the security on the X server.
+
+The main point here is that the simulation can find and access the 3D X server.
+
 ## Build and run locally simple unittest image
 ```
 ./subt/docker/build.bash unittest
 ./subt/docker/run.bash unittest
 ```
-
 It is necessary to run also simulation and bridge in other two terminals:
 - terminal 1
     ```
