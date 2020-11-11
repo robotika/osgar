@@ -174,7 +174,7 @@
   <node pkg="topic_tools" type="relay" name="points_merge_front" args="$(arg robot_name)/rgbd_front/points $(arg robot_name)/rgbd_all/points"/>
   <node pkg="topic_tools" type="relay" name="points_merge_rear" args="$(arg robot_name)/rgbd_rear/points $(arg robot_name)/rgbd_all/points"/>
 
-  <anode ns="mapping" pkg="octomap_server" type="octomap_server_node" name="octomap">
+  <node if="0" ns="mapping" pkg="octomap_server" type="octomap_server_node" name="octomap">
     <remap from="cloud_in" to="/$(arg robot_name)/rgbd_all/points"/>
     <param name="frame_id" value="odom"/>
     <!-- In case we want to filter out ceilings.
@@ -183,6 +183,6 @@
     <!-- We trust the simulated sensor a lot more than what default parameters expect. -->
     <param name="sensor_model/hit" value="0.95"/>
     <param name="sensor_model/miss" value="0.05"/>
-  </anode>
+  </node>
 
 </launch>
