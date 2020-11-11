@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='ign.proto',
   package='',
   syntax='proto3',
-  serialized_pb=_b('\n\tign.proto\"!\n\x04Time\x12\x0b\n\x03sec\x18\x01 \x01(\x03\x12\x0c\n\x04nsec\x18\x02 \x01(\x05\"\\\n\x06Header\x12\x14\n\x05stamp\x18\x01 \x01(\x0b\x32\x05.Time\x12\x19\n\x04\x64\x61ta\x18\x02 \x03(\x0b\x32\x0b.Header.Map\x1a!\n\x03Map\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x03(\t\"D\n\x08Vector3d\x12\x17\n\x06header\x18\x01 \x01(\x0b\x32\x07.Header\x12\t\n\x01x\x18\x02 \x01(\x01\x12\t\n\x01y\x18\x03 \x01(\x01\x12\t\n\x01z\x18\x04 \x01(\x01\"Q\n\nQuaternion\x12\x17\n\x06header\x18\x01 \x01(\x0b\x32\x07.Header\x12\t\n\x01x\x18\x02 \x01(\x01\x12\t\n\x01y\x18\x03 \x01(\x01\x12\t\n\x01z\x18\x04 \x01(\x01\x12\t\n\x01w\x18\x05 \x01(\x01\"x\n\x04Pose\x12\x17\n\x06header\x18\x01 \x01(\x0b\x32\x07.Header\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\n\n\x02id\x18\x03 \x01(\r\x12\x1b\n\x08position\x18\x04 \x01(\x0b\x32\t.Vector3d\x12 \n\x0borientation\x18\x05 \x01(\x0b\x32\x0b.Quaternion\"6\n\x06Pose_V\x12\x17\n\x06header\x18\x01 \x01(\x0b\x32\x07.Header\x12\x13\n\x04pose\x18\x02 \x03(\x0b\x32\x05.Pose\"-\n\x08\x41rtifact\x12\x0c\n\x04type\x18\x01 \x01(\r\x12\x13\n\x04pose\x18\x02 \x01(\x0b\x32\x05.Pose\"\xb5\x01\n\rArtifactScore\x12\x11\n\treport_id\x18\x01 \x01(\r\x12\x1b\n\x08\x61rtifact\x18\x02 \x01(\x0b\x32\t.Artifact\x12!\n\x12submitted_datetime\x18\x03 \x01(\x0b\x32\x05.Time\x12\x17\n\x08sim_time\x18\x04 \x01(\x0b\x32\x05.Time\x12\x0b\n\x03run\x18\x05 \x01(\r\x12\x15\n\rreport_status\x18\x06 \x01(\t\x12\x14\n\x0cscore_change\x18\x07 \x01(\x05\x62\x06proto3')
+  serialized_pb=_b('\n\tign.proto\"!\n\x04Time\x12\x0b\n\x03sec\x18\x01 \x01(\x03\x12\x0c\n\x04nsec\x18\x02 \x01(\x05\"\\\n\x06Header\x12\x14\n\x05stamp\x18\x01 \x01(\x0b\x32\x05.Time\x12\x19\n\x04\x64\x61ta\x18\x02 \x03(\x0b\x32\x0b.Header.Map\x1a!\n\x03Map\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x03(\t\"D\n\x08Vector3d\x12\x17\n\x06header\x18\x01 \x01(\x0b\x32\x07.Header\x12\t\n\x01x\x18\x02 \x01(\x01\x12\t\n\x01y\x18\x03 \x01(\x01\x12\t\n\x01z\x18\x04 \x01(\x01\"Q\n\nQuaternion\x12\x17\n\x06header\x18\x01 \x01(\x0b\x32\x07.Header\x12\t\n\x01x\x18\x02 \x01(\x01\x12\t\n\x01y\x18\x03 \x01(\x01\x12\t\n\x01z\x18\x04 \x01(\x01\x12\t\n\x01w\x18\x05 \x01(\x01\"x\n\x04Pose\x12\x17\n\x06header\x18\x01 \x01(\x0b\x32\x07.Header\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\n\n\x02id\x18\x03 \x01(\r\x12\x1b\n\x08position\x18\x04 \x01(\x0b\x32\t.Vector3d\x12 \n\x0borientation\x18\x05 \x01(\x0b\x32\x0b.Quaternion\"6\n\x06Pose_V\x12\x17\n\x06header\x18\x01 \x01(\x0b\x32\x07.Header\x12\x13\n\x04pose\x18\x02 \x03(\x0b\x32\x05.Pose\"-\n\x08\x41rtifact\x12\x0c\n\x04type\x18\x01 \x01(\r\x12\x13\n\x04pose\x18\x02 \x01(\x0b\x32\x05.Pose\"\xb5\x01\n\rArtifactScore\x12\x11\n\treport_id\x18\x01 \x01(\r\x12\x1b\n\x08\x61rtifact\x18\x02 \x01(\x0b\x32\t.Artifact\x12!\n\x12submitted_datetime\x18\x03 \x01(\x0b\x32\x05.Time\x12\x17\n\x08sim_time\x18\x04 \x01(\x0b\x32\x05.Time\x12\x0b\n\x03run\x18\x05 \x01(\r\x12\x15\n\rreport_status\x18\x06 \x01(\t\x12\x14\n\x0cscore_change\x18\x07 \x01(\x05\"2\n\tStringMsg\x12\x17\n\x06header\x18\x01 \x01(\x0b\x32\x07.Header\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\tb\x06proto3')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -457,6 +457,44 @@ _ARTIFACTSCORE = _descriptor.Descriptor(
   serialized_end=702,
 )
 
+
+_STRINGMSG = _descriptor.Descriptor(
+  name='StringMsg',
+  full_name='StringMsg',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='header', full_name='StringMsg.header', index=0,
+      number=1, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='data', full_name='StringMsg.data', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=704,
+  serialized_end=754,
+)
+
 _HEADER_MAP.containing_type = _HEADER
 _HEADER.fields_by_name['stamp'].message_type = _TIME
 _HEADER.fields_by_name['data'].message_type = _HEADER_MAP
@@ -471,6 +509,7 @@ _ARTIFACT.fields_by_name['pose'].message_type = _POSE
 _ARTIFACTSCORE.fields_by_name['artifact'].message_type = _ARTIFACT
 _ARTIFACTSCORE.fields_by_name['submitted_datetime'].message_type = _TIME
 _ARTIFACTSCORE.fields_by_name['sim_time'].message_type = _TIME
+_STRINGMSG.fields_by_name['header'].message_type = _HEADER
 DESCRIPTOR.message_types_by_name['Time'] = _TIME
 DESCRIPTOR.message_types_by_name['Header'] = _HEADER
 DESCRIPTOR.message_types_by_name['Vector3d'] = _VECTOR3D
@@ -479,6 +518,7 @@ DESCRIPTOR.message_types_by_name['Pose'] = _POSE
 DESCRIPTOR.message_types_by_name['Pose_V'] = _POSE_V
 DESCRIPTOR.message_types_by_name['Artifact'] = _ARTIFACT
 DESCRIPTOR.message_types_by_name['ArtifactScore'] = _ARTIFACTSCORE
+DESCRIPTOR.message_types_by_name['StringMsg'] = _STRINGMSG
 
 Time = _reflection.GeneratedProtocolMessageType('Time', (_message.Message,), dict(
   DESCRIPTOR = _TIME,
@@ -543,6 +583,13 @@ ArtifactScore = _reflection.GeneratedProtocolMessageType('ArtifactScore', (_mess
   # @@protoc_insertion_point(class_scope:ArtifactScore)
   ))
 _sym_db.RegisterMessage(ArtifactScore)
+
+StringMsg = _reflection.GeneratedProtocolMessageType('StringMsg', (_message.Message,), dict(
+  DESCRIPTOR = _STRINGMSG,
+  __module__ = 'ign_pb2'
+  # @@protoc_insertion_point(class_scope:StringMsg)
+  ))
+_sym_db.RegisterMessage(StringMsg)
 
 
 # @@protoc_insertion_point(module_scope)
