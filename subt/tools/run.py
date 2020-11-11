@@ -213,6 +213,7 @@ def _run_bridge(client, circuit, world, name, kind, n):
     bridge.start()
     return bridge
 
+
 def _run_robot(client, logdir, image, name, n):
     relay_name = f"relay{n}net"
     print(f"Starting `{name}` container...")
@@ -232,7 +233,6 @@ def _run_robot(client, logdir, image, name, n):
     relaynet.connect(robot, ipv4_address=f"172.{28+n}.1.2")
     robot.start()
     return robot
-
 
 
 def _cmd(*args, input=None):
@@ -379,11 +379,18 @@ def main(argv=None):
             f.write(s.logs())
         s.remove()
 
+    networks = client.networks.list()
+    network_names = { "simnet" }
+    network_names.update(f"relay{n+1}net" for n in range(len(robots)))
+    for net in networks:
+        if net.name in network_names:
+            print(f"Removing {net.name} network...")
+            net.remove()
+
     if should_stop:
         # [How to be a proper program](https://www.cons.org/cracauer/sigint.html)
         signal.signal(signal.SIGINT, signal.SIG_DFL)
         os.killpg(os.getpid(), signal.SIGINT) # signal.raise_signal(signal.SIGINT) available only since python 3.8
-
 
 
 if __name__ == "__main__":
