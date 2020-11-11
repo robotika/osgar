@@ -36,6 +36,7 @@ RUN /bin/sh -c 'echo "deb [trusted=yes] http://packages.ros.org/ros/ubuntu $(lsb
  && apt-get update \
  && apt-get install -y \
     python-catkin-tools \
+    python-laser-geometry \
     python-rosdep \
     python-rosinstall \
     ros-melodic-desktop \
