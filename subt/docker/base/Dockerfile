@@ -40,8 +40,8 @@ RUN /bin/sh -c 'echo "deb [trusted=yes] http://packages.ros.org/ros/ubuntu $(lsb
     python-rosinstall \
     ros-melodic-desktop \
     ros-melodic-joystick-drivers \
-    ros-melodic-octomap-server \
     ros-melodic-octomap-rviz-plugins \
+    ros-melodic-octomap-server \
     ros-melodic-pointcloud-to-laserscan \
     ros-melodic-robot-localization \
     ros-melodic-rotors-control \
@@ -53,9 +53,7 @@ RUN /bin/sh -c 'echo "deb [trusted=yes] http://packages.ros.org/ros/ubuntu $(lsb
  && rosdep init \
  && apt-get clean
 
-# sdformat8-sdf conflicts with sdformat-sdf installed from gazebo
-# so we need to workaround this using a force overwrite
-# Do this before installing ign-gazebo
+# add gazebo package repository
 RUN /bin/sh -c 'echo "deb [trusted=yes] http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list' \
  && /bin/sh -c 'wget http://packages.osrfoundation.org/gazebo.key -O - | apt-key add -' \
  && /bin/sh -c 'apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654'
@@ -69,6 +67,7 @@ RUN apt-get update \
 
 SHELL ["/bin/bash", "-c"]
 
+# build osrf/subt repository
 FROM stage1 as build
 WORKDIR /tmp
 RUN mkdir subt-ws \
@@ -79,6 +78,7 @@ RUN mkdir subt-ws \
 
 FROM stage1
 
+# copy the binary packages of osrf/subt
 COPY --from=build /opt/subt/ /opt/subt/
 COPY --from=build /tmp/subt-ws/src/.git/refs/heads/master /opt/subt/HEAD
 
@@ -86,16 +86,14 @@ WORKDIR /osgar-ws
 
 RUN /usr/bin/python3 -m venv env
 
-RUN ./env/bin/pip install --no-cache-dir --upgrade pip
+RUN ./env/bin/pip install --no-cache-dir --upgrade pip wheel setuptools
 
 RUN ./env/bin/pip install --no-cache-dir \
   "msgpack==1.0.0" \
-  "numpy==1.19.2" \
-  "opencv-python==4.4.0.42" \
+  "numpy==1.19.4" \
+  "opencv-python==4.4.0.46" \
+  "protobuf==3.13.0" \
   "pyzmq==19.0.2"
-
-RUN ./env/bin/pip install --no-cache-dir \
-  "http://osgar.robotika.cz/subt/pip/tensorflow/tensorflow-2.2.0rc3-cp36-cp36m-linux_x86_64.whl"
 
 RUN ./env/bin/pip install --no-cache-dir \
   "torch==1.5.0+cu101" -f https://download.pytorch.org/whl/torch_stable.html
