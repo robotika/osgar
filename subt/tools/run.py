@@ -113,9 +113,9 @@ def _create_docker(client, name, image, command, mounts=[], environment={}):
         privileged = True,
         #network_mode = "host",
         environment = {
-            "DISPLAY": os.environ["DISPLAY"],
-            "QT_X11_NO_MITSHM": 1,
-            "XAUTHORITY": str(XAUTH),
+            #"DISPLAY": os.environ["DISPLAY"],
+            #"QT_X11_NO_MITSHM": 1,
+            #"XAUTHORITY": str(XAUTH),
         },
         #stdout = True,
         #stderr = True,
@@ -126,10 +126,10 @@ def _create_docker(client, name, image, command, mounts=[], environment={}):
         #entrypoint="/bin/bash",
         #command = "/opt/ros/melodic/bin/rviz",
         mounts = [
-            docker.types.Mount(str(XAUTH), str(XAUTH), "bind"),
-            docker.types.Mount("/tmp/.X11-unix/", "/tmp/.X11-unix/", "bind"),
+            #docker.types.Mount(str(XAUTH), str(XAUTH), "bind"),
+            #docker.types.Mount("/tmp/.X11-unix/", "/tmp/.X11-unix/", "bind"),
             docker.types.Mount("/etc/localtime", "/etc/localtime", "bind", read_only=True),
-            docker.types.Mount("/dev/input/", "/dev/input/", "bind"),
+            #docker.types.Mount("/dev/input/", "/dev/input/", "bind"),
         ],
     )
     opts["mounts"] += mounts
@@ -170,7 +170,7 @@ def _run_sim(client, circuit, logdir, world, robots):
             f"robotName{n}:={name}",
             f"robotConfig{n}:={kind}"
         ]
-    sim = _create_docker(client, "sim", "osrf/subt-virtual-testbed:cloudsim_sim_latest", command, mounts, environment)
+    sim = _create_docker(client, "sim", "cloudsim:latest", command, mounts, environment)
     print(f"  connecting to simnet as 172.28.1.1")
     simnet.connect(sim, ipv4_address="172.28.1.1")
     sim.start()
