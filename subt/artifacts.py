@@ -232,9 +232,7 @@ class ArtifactDetector(Node):
             setattr(self, channel, data)
 
             # handling special artifact "gas", which is not requiring image
-            if channel == "gas_detected":
-                self.handle_gas_artifact(data)
-            elif channel == "co2":
+            if channel == "co2":
                 if self.gas_best is None or self.gas_best < data:
                     self.gas_best = data
                     self.gas_best_count = 10

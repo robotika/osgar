@@ -25,6 +25,12 @@
           "init": {
           }
       },
+      "gas_detector": {
+          "driver": "subt.artf_gas:ArtifactGasDetector",
+          "in": ["gas_detected"],
+          "out": ["artf"],
+          "init": {}
+      },
       "reporter": {
           "driver": "subt.artf_reporter:ArtifactReporter",
           "in": ["artf_xyz"],
@@ -129,7 +135,8 @@
               ["rosmsg.sim_time_sec", "reporter.sim_time_sec"],
               ["rosmsg.sim_time_sec", "torospy.sim_time_sec"],
 
-              ["rosmsg.gas_detected", "detector.gas_detected"],
+              ["rosmsg.gas_detected", "gas_detector.gas_detected"],
+              ["gas_detector.artf", "app.artf"],
 
               ["app.pose2d", "radio.pose2d"],
               ["reporter.artf_all", "radio.artf"],
