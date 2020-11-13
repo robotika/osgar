@@ -35,7 +35,8 @@ ubuntu could be
 $ echo $XAUTHORITY
 /run/user/1000/gdm/Xauthority
 ```
-Another possiblity is to run `xhost +` to disable the security on the X server.
+Another possiblity is to run `xhost +` to disable the security on the X server or `xhost +local:` to allow
+any local user to access the X server.
 
 The main point here is that the simulation can find and access the 3D X server.
 
