@@ -62,8 +62,16 @@ def has_breadcrumbs(robot_name):
     return False
 
 
+def check_marsupials(robot_name):
+    publishers, subscribers = rostopic.get_topic_list()
+    for name, _, _ in subscribers:
+        if 'detach' in name:
+            rospy.loginfo('Marsupial: ' + name)
+
+
 def detect_config(robot_name):
     robot_description = rospy.get_param("/{}/robot_description".format(robot_name))
+    check_marsupials(robot_name)
     if "robotika_x2_sensor_config_1" in robot_description:
         return "ROBOTIKA_X2_SENSOR_CONFIG_1"
     elif "ssci_x4_sensor_config_2" in robot_description:
