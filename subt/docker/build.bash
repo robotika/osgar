@@ -41,7 +41,7 @@ image_plus_tag=$image_name:$datetime_tag
 
 shift
 
-docker build --rm -t $image_plus_tag -f $DIR/$image_name/Dockerfile $(git rev-parse --show-toplevel)
+docker build --rm --network host -t $image_plus_tag -f $DIR/$image_name/Dockerfile $(git rev-parse --show-toplevel)
 docker tag $image_plus_tag $image_name:latest
 
 echo
