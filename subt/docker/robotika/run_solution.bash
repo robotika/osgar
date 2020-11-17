@@ -108,7 +108,7 @@ sleep 30
 
 # DO NOT CALL /subt/finish for group of robots!
 #
-if $IS_TEAMBASE
+if [ $ROBOT_CONFIG == "TEAMBASE" ]
 then
     echo "TEAMBASE is terminating all robots"
     rosservice call '/subt/finish' true
