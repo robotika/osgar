@@ -121,7 +121,6 @@
           "in": ["sim_time_sec"],
           "out": ["detach"],
           "init": {
-            "release_at": 30
           }
       }
     },
@@ -164,6 +163,7 @@
               ["rosmsg.radio", "radio.radio"],
 
               ["rosmsg.sim_time_sec", "marsupial.sim_time_sec"],
+              ["rosmsg.origin", "marsupial.origin"],
               ["marsupial.detach", "torospy.detach"],
 
               ["detector.artf", "app.artf"],

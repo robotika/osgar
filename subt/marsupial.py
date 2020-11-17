@@ -6,6 +6,7 @@ from ast import literal_eval
 
 from osgar.node import Node
 from subt.trace import distance3D
+from subt.name_decoder import parse_robot_name
 
 
 class Marsupial(Node):
@@ -14,7 +15,7 @@ class Marsupial(Node):
         bus.register("detach")
 
         self.start_time = None  # unknown
-        self.release_at = config.get('release_at')
+        self.release_at = config.get('release_at')  # not defined yet
         self.drone_available = True
 
     def detach(self):
@@ -31,10 +32,21 @@ class Marsupial(Node):
         if self.start_time + self.release_at <= data and self.drone_available:
             self.detach()
 
+    def on_origin(self, data):
+        if self.release_at is None:
+            robot_name = data[0].decode('ascii')
+            print(robot_name)
+            cmd_list = parse_robot_name(robot_name)
+            if len(cmd_list) > 0:
+                if cmd_list[0][0] == 'wait':
+                    self.release_at = cmd_list[0][1]
+
     def update(self):
         channel = super().update()
         handler = getattr(self, "on_" + channel, None)
         if handler is not None:
             handler(getattr(self, channel))
+        else:
+            assert False, channel  # not supported
 
 # vim: expandtab sw=4 ts=4
