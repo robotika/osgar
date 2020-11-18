@@ -86,7 +86,7 @@ class main:
             topics.append(('/' + robot_name + '/bottom_scan', LaserScan, self.bottom_scan, ('bottom_scan',)))
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/air_pressure', FluidPressure, self.air_pressure, ('air_pressure',)))
-            if robot_is_marsupial:
+            if robot_is_marsupial == 'true':
                 rospy.loginfo("X4 is marsupial")
                 publishers['detach'] = rospy.Publisher('/' + robot_name + '/detach', Empty, queue_size=1)
         elif robot_config == "TEAMBASE":
