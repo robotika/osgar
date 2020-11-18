@@ -107,6 +107,9 @@
                         "air_pressure"]
 	      }
       },
+      "torospy": {
+          "driver": "subt.push:Push"
+      },
       "radio": {
           "driver": "subt.radio:Radio",
           "in": ["radio", "pose2d", "artf"],
