@@ -164,6 +164,7 @@
               ["radio.artf_xyz", "reporter.artf_xyz"],
               ["radio.radio", "rosmsg.broadcast"],
               ["rosmsg.radio", "radio.radio"],
+              ["rosmsg.sim_time_sec", "radio.sim_time_sec"],
 
               ["rosmsg.sim_time_sec", "marsupial.sim_time_sec"],
               ["rosmsg.origin", "marsupial.origin"],
