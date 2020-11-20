@@ -2,10 +2,7 @@
   Dual robots - typically a UGV taking care of UAV
   https://en.wikipedia.org/wiki/Marsupial
 """
-from ast import literal_eval
-
 from osgar.node import Node
-from subt.trace import distance3D
 from subt.name_decoder import parse_robot_name
 
 
