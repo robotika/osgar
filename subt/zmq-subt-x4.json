@@ -121,7 +121,7 @@
       },
       "marsupial": {
           "driver": "subt.marsupial:Marsupial",
-          "in": ["sim_time_sec"],
+          "in": ["origin", "sim_time_sec"],
           "out": ["detach"],
           "init": {
           }
