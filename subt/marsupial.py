@@ -1,7 +1,12 @@
 """
   Dual robots - typically a UGV taking care of UAV
   https://en.wikipedia.org/wiki/Marsupial
+
+  This marsupial node is necessary for the "child", i.e. drone, which can call "detach" itself.
+  There is no need to communicate this with the parent (UGV).
 """
+# For more details see https://github.com/osrf/subt/issues/697
+
 from osgar.node import Node
 from subt.name_decoder import parse_robot_name
 
