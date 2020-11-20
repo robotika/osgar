@@ -36,16 +36,16 @@ class Radio(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('radio', 'artf_xyz', 'breadcrumb')
-        self.min_transmit_dt = timedelta(seconds=10)  # TODO config?
+        self.min_transmit_dt = 10
         self.last_transmit = None
+        self.sim_time_sec = None
         self.recent_packets = []
         self.verbose = config.get('verbose', False)
         self.debug_robot_poses = []
 
     def send_data(self, channel, data):
         raw = serialize([channel, data])
-        self.last_transmit = self.publish('radio', raw)
-        return self.last_transmit
+        self.publish('radio', raw)
 
     def on_radio(self, data):
         src, packet = data
@@ -63,8 +63,11 @@ class Radio(Node):
         self.send_data('breadcrumb', data)
 
     def on_pose2d(self, data):
-        if self.last_transmit is None or self.time > self.last_transmit + self.min_transmit_dt:
+        if self.sim_time_sec is None:
+            return
+        if self.last_transmit is None or self.sim_time_sec > self.last_transmit + self.min_transmit_dt:
             self.send_data('pose2d', data)
+            self.last_transmit = self.sim_time_sec
 
     def on_artf(self, data):
         self.send_data('artf', data)
