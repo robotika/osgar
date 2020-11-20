@@ -67,6 +67,10 @@ class Radio(Node):
     def on_breadcrumb(self, data):
         self.send_data(bytes(str({'breadcrumb':data}), encoding='ascii'))
 
+    def on_sim_time_sec(self, data):
+        to_send = bytes([i % 256 for i in range(data)])
+        self.send_data(to_send)
+
     def update(self):
         channel = super().update()  # define self.time
         handler = getattr(self, "on_" + channel, None)
