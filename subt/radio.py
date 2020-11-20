@@ -68,7 +68,7 @@ class Radio(Node):
         self.send_data(bytes(str({'breadcrumb':data}), encoding='ascii'))
 
     def on_sim_time_sec(self, data):
-        to_send = bytes([i % 256 for i in range(data)])
+        to_send = bytes([i % 256 for i in range(data * 50)])
         self.send_data(to_send)
 
     def update(self):
