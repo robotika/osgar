@@ -62,6 +62,17 @@ def has_breadcrumbs(robot_name):
     return False
 
 
+def is_marsupial(robot_name):
+    prefix = "/{}/".format(robot_name)
+    detach_name = prefix + "detach"
+    publishers, subscribers = rostopic.get_topic_list()
+    for name, _, _ in subscribers:
+        if name == detach_name:
+            rospy.loginfo('Marsupial: ' + name)
+            return True
+    return False
+
+
 def detect_config(robot_name):
     robot_description = rospy.get_param("/{}/robot_description".format(robot_name))
     if "robotika_x2_sensor_config_1" in robot_description:
@@ -94,6 +105,7 @@ def main():
     wait_for_bridge(robot_name)
     robot_config = detect_config(robot_name)
     rospy.set_param("/robot_config", robot_config)
+    rospy.set_param("/robot_is_marsupial", is_marsupial(robot_name))
 
 
 if __name__ == '__main__':
