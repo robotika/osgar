@@ -76,9 +76,7 @@ class Radio(Node):
 
     def on_sim_time_sec(self, data):
         self.sim_time_sec = data  # duplicate for super().update(), used just for easier unittesting
-        # experimental code to confirm overflow at 1500 bytes
-        to_send = bytes([i % 256 for i in range(data)])
-        self.send_data('sim_time_sec', to_send)
+        self.send_data('sim_time_sec', data)
 
     def update(self):
         channel = super().update()  # define self.time
