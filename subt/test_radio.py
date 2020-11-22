@@ -11,14 +11,14 @@ class RadioTest(unittest.TestCase):
 
     def test_on_radio(self):
         # virtual world
-        data = [b'A0F150L', serialize(['artf', ['TYPE_RESCUE_RANDY', 15982, 104845, 3080]])]
+        data = [b'A0F150L', serialize([13, 'artf', ['TYPE_RESCUE_RANDY', 15982, 104845, 3080]])]
         bus = MagicMock()
         dev = Radio(bus=bus, config={})
         bus.reset_mock()
         dev.on_radio(data)
         bus.publish.assert_called()
 
-        data = [b'A0F150L', serialize(['pose2d', [11896, 7018, -11886]])]
+        data = [b'A0F150L', serialize([0, 'pose2d', [11896, 7018, -11886]])]
         bus.reset_mock()
         dev.on_radio(data)
         bus.publish.assert_not_called()
@@ -31,9 +31,9 @@ class RadioTest(unittest.TestCase):
         dev.on_breadcrumb(data)
         bus.publish.assert_called()
         self.assertEqual(bus.method_calls[0],
-                         call.publish('radio', serialize(['breadcrumb', [29.929257253892082, -1.5821685677914703, 1.575092509709292]])))
+                         call.publish('radio', serialize([0, 'breadcrumb', [29.929257253892082, -1.5821685677914703, 1.575092509709292]])))
 
-        new_msg = serialize(['breadcrumb', [29.929257253892082, -1.5821685677914703, 1.575092509709292]])
+        new_msg = serialize([0, 'breadcrumb', [29.929257253892082, -1.5821685677914703, 1.575092509709292]])
         bus.reset_mock()
         dev.on_radio([b'A1300L', new_msg])
         bus.publish.assert_called()
@@ -44,7 +44,10 @@ class RadioTest(unittest.TestCase):
         bus.reset_mock()
         dev.send_data('dummy_artf', [1, 2, 3])
         bus.publish.assert_called()
-        self.assertEqual(bus.method_calls[0],
-                         call.publish('radio', serialize(['dummy_artf', [1, 2, 3]])))
+        self.assertEqual(bus.method_calls[-1],
+                         call.publish('radio', serialize([0, 'dummy_artf', [1, 2, 3]])))
+        dev.send_data('dummy_artf', [1, 2, 3])
+        self.assertEqual(bus.method_calls[-1],
+                         call.publish('radio', serialize([1, 'dummy_artf', [1, 2, 3]])))
 
 # vim: expandtab sw=4 ts=4

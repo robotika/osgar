@@ -36,21 +36,23 @@ class Radio(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('radio', 'artf_xyz', 'breadcrumb')
-        self.min_transmit_dt = 10
+        self.min_transmit_dt = 0  # i.e. every sim_time_sec -> every simulated second
         self.last_transmit = None
         self.sim_time_sec = None
         self.recent_packets = []
         self.verbose = config.get('verbose', False)
         self.debug_robot_poses = []
+        self.message_counter = 0
 
     def send_data(self, channel, data):
-        raw = serialize([channel, data])
+        raw = serialize([self.message_counter, channel, data])
         self.publish('radio', raw)
+        self.message_counter += 1
 
     def on_radio(self, data):
         src, packet = data
         name = src.decode('ascii')
-        channel, msg_data = deserialize(packet)
+        __, channel, msg_data = deserialize(packet)
         if channel == 'artf':
             self.publish('artf_xyz', msg_data)  # topic rename - beware of limits 1500bytes!
         elif channel == 'breadcrumb':
