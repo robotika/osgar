@@ -9,7 +9,7 @@ from osgar.node import Node
 class Teambase(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register("broadcast")
+        bus.register()
 
         self.robot_name = config.get('robot_name')
         self.start_time = None  # unknown
@@ -26,6 +26,12 @@ class Teambase(Node):
             self.start_time = data
         if self.finish_time is not None and data - self.start_time > self.finish_time:
             self.request_stop()
+
+    def on_robot_xyz(self, data):
+        name, arr = data
+        self.robot_positions[name] = arr
+        if self.verbose:
+            self.debug_arr.append((name, arr))
 
     def Xon_radio(self, data):
         src, packet = data
