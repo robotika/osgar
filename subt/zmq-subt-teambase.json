@@ -41,6 +41,12 @@
           "init": {
             "downsample": 2
           }
+      },
+      "radio": {
+          "driver": "subt.radio:Radio",
+          "in": ["radio", "pose3d", "artf", "sim_time_sec"],
+          "out": ["radio", "artf_xyz"],
+          "init": {}
       }
     },
     "links": [["app.stdout", "rosmsg.stdout"],
@@ -51,6 +57,12 @@
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
               ["app.broadcast", "rosmsg.broadcast"],
               ["rosmsg.radio", "app.radio"],
+
+              ["rosmsg.radio", "radio.radio"],
+              ["rosmsg.sim_time_sec", "radio.sim_time_sec"],
+              ["radio.artf_xyz", "app.artf_xyz"],
+              ["radio.robot_xyz", "app.robot_xyz"],
+              ["radio.radio", "rosmsg.broadcast"],
 
               ["app.artf_xyz", "reporter.artf_xyz"],
               ["reporter.artf_cmd", "transmitter.raw"]]

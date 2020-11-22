@@ -22,14 +22,12 @@ class Teambase(Node):
         self.verbose = False
 
     def on_sim_time_sec(self, data):
-        # broadcast simulation time every second
-        self.publish('broadcast', b'%d' % data)
         if self.start_time is None:
             self.start_time = data
         if self.finish_time is not None and data - self.start_time > self.finish_time:
             self.request_stop()
 
-    def on_radio(self, data):
+    def Xon_radio(self, data):
         src, packet = data
         name = src.decode('ascii')
         if packet.startswith(b'['):

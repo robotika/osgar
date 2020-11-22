@@ -35,7 +35,7 @@ def draw_positions(arr):
 class Radio(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('radio', 'artf_xyz', 'breadcrumb')
+        bus.register('radio', 'artf_xyz', 'breadcrumb', 'robot_xyz')
         self.min_transmit_dt = 0  # i.e. every sim_time_sec -> every simulated second
         self.last_transmit = None
         self.sim_time_sec = None
@@ -57,9 +57,10 @@ class Radio(Node):
             self.publish('artf_xyz', msg_data)  # topic rename - beware of limits 1500bytes!
         elif channel == 'breadcrumb':
             self.publish(channel, msg_data)
-        elif channel == 'pose2d':
+        elif channel == 'xyz':
+            self.publish('robot_xyz', [name, msg_data])
             if self.verbose:
-                self.debug_robot_poses.append((self.time, name, msg_data))  # TODO sim_time_sec
+                self.debug_robot_poses.append((self.time, name, msg_data))
 
     def on_breadcrumb(self, data):
         self.send_data('breadcrumb', data)

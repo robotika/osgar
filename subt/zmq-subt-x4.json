@@ -112,7 +112,7 @@
       },
       "radio": {
           "driver": "subt.radio:Radio",
-          "in": ["radio", "pose2d", "artf"],
+          "in": ["radio", "pose3d", "artf", "sim_time_sec"],
           "out": ["radio", "artf_xyz"],
           "init": {}
       },
