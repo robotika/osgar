@@ -50,4 +50,17 @@ class RadioTest(unittest.TestCase):
         self.assertEqual(bus.method_calls[-1],
                          call.publish('radio', serialize([1, 'dummy_artf', [1, 2, 3]])))
 
+    def test_pose3d(self):
+        bus = MagicMock()
+        dev = Radio(bus=bus, config={})
+        bus.reset_mock()
+        data = [[-5.999917943872727, 4.999913526023388, 0.12287766016353471], [6.229389211972107e-12, -7.943606405014296e-12, 1.5034993858140517e-12, 1.0]]
+        dev.on_pose3d(data)
+        bus.publish.assert_not_called()  # not defined sim_time
+        dev.on_sim_time_sec(13)
+        dev.on_pose3d(data)
+        bus.publish.assert_called()
+        self.assertEqual(bus.method_calls[-1],
+                         call.publish('radio', serialize([1, 'xyz', [13, [-5.999917943872727, 4.999913526023388, 0.12287766016353471]]])))
+
 # vim: expandtab sw=4 ts=4

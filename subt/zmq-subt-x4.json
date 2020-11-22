@@ -159,7 +159,7 @@
               ["rosmsg.gas_detected", "gas_detector.gas_detected"],
               ["gas_detector.artf", "app.artf"],
 
-              ["app.pose2d", "radio.pose2d"],
+              ["offseter.pose3d", "radio.pose3d"],
               ["reporter.artf_all", "radio.artf"],
               ["radio.artf_xyz", "reporter.artf_xyz"],
               ["radio.radio", "rosmsg.broadcast"],

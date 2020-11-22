@@ -64,17 +64,18 @@ class Radio(Node):
     def on_breadcrumb(self, data):
         self.send_data('breadcrumb', data)
 
-    def on_pose2d(self, data):
+    def on_pose3d(self, data):
         if self.sim_time_sec is None:
             return
         if self.last_transmit is None or self.sim_time_sec > self.last_transmit + self.min_transmit_dt:
-            self.send_data('pose2d', data)
+            self.send_data('xyz', [self.sim_time_sec, data[0]])
             self.last_transmit = self.sim_time_sec
 
     def on_artf(self, data):
         self.send_data('artf', data)
 
     def on_sim_time_sec(self, data):
+        self.sim_time_sec = data  # duplicate for super().update(), used just for easier unittesting
         # experimental code to confirm overflow at 1500 bytes
         to_send = bytes([i % 256 for i in range(data)])
         self.send_data('sim_time_sec', to_send)
