@@ -64,8 +64,8 @@ class Teambase(Node):
         print('Robot IDs', robot_ids)
 
         for robot_id in robot_ids:
-            x = [a[1][0] / 1000.0 for a in self.debug_arr if a[0] == robot_id]
-            y = [a[1][1] / 1000.0 for a in self.debug_arr if a[0] == robot_id]
+            x = [a[1][1][0] for a in self.debug_arr if a[0] == robot_id]
+            y = [a[1][1][1] for a in self.debug_arr if a[0] == robot_id]
             line = plt.plot(x, y, '-o', linewidth=2, label=robot_id)
 
         artf_types = set([artf[0] for artf in self.artifacts])
