@@ -33,23 +33,11 @@ class Teambase(Node):
         if self.verbose:
             self.debug_arr.append((name, arr))
 
-    def Xon_radio(self, data):
-        src, packet = data
-        name = src.decode('ascii')
-        if packet.startswith(b'['):
-            arr = literal_eval(packet.decode('ascii'))
-            if len(arr) == 3:
-                # position
-                self.robot_positions[name] = arr
-                if self.verbose:
-                    self.debug_arr.append((name, arr))
-            elif len(arr) == 4:
-                # artifact
-                if arr not in self.artifacts:
-                    print(self.time, 'received:', arr)
-                    self.artifacts.append(arr)
-            else:
-                assert False, arr  # unexpected size/type
+    def on_artf_xyz(self, data):
+        for arr in data:
+            if arr not in self.artifacts:
+                print(self.time, 'received:', arr)
+                self.artifacts.append(arr)
 
     def update(self):
         channel = super().update()
@@ -57,6 +45,8 @@ class Teambase(Node):
         handler = getattr(self, "on_" + channel, None)
         if handler is not None:
             handler(getattr(self, channel))
+        else:
+            assert False, channel  # not supported channel
 
     def draw(self):
         import matplotlib.pyplot as plt
