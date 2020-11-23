@@ -323,15 +323,6 @@ void Controller::CommClientCallback(const std::string &_srcAddress,
                                     const uint32_t _dstPort,
                                     const std::string &_data)
 {
-  subt::msgs::ArtifactScore res;
-  if (!res.ParseFromString(_data))
-  {
-    ROS_INFO("Message Contents[%s]", _data.c_str());
-  }
-
-  // Add code to handle communication callbacks.
-  ROS_INFO("Message from [%s] to [%s] on port [%u]:\n [%s]", _srcAddress.c_str(),
-      _dstAddress.c_str(), _dstPort, res.DebugString().c_str());
   sendReceivedMessage(_srcAddress, _data);
 }
 
@@ -583,8 +574,7 @@ void Controller::receiveZmqThread(Controller * self)
     }
     else if(strncmp(buffer, "broadcast ", 10) == 0)
     {
-        std::string content(buffer + 10);
-        ROS_INFO_STREAM("BROADCAST RECEIVED " << content);
+        std::string content(buffer + 10, size - 10);
         if(self->broadcast(content))
         {
           ROS_INFO("MD BROADCAST SUCCESS\n");
