@@ -1,7 +1,6 @@
 import unittest
 from unittest.mock import MagicMock
 import datetime
-import math
 
 from subt.offseter import Offseter
 from osgar.bus import Bus
@@ -23,7 +22,7 @@ class OffseterTest(unittest.TestCase):
         tester.publish('pose3d', [[2.2540965890777053e-05, -1.7848595179941423e-05, -5.095526932796975e-12], [0, 0, 0, 1]])
         c.request_stop()
         c.join()
-        self.assertEqual(c.yaw_offset, math.pi)
+        self.assertIsNotNone(c.init_quat)
 
 # vim: expandtab sw=4 ts=4
 

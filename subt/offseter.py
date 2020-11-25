@@ -1,4 +1,3 @@
-import math
 from threading import Thread
 
 from osgar.bus import BusShutdownException
@@ -13,7 +12,7 @@ class Offseter:
         #self.thread.name = bus.name
         self.bus = bus
         self.is_alive = self.thread.is_alive
-        self.yaw_offset = None  # unknown
+        self.init_quat = None  # unknown
 
     def start(self):
         self.thread.start()
@@ -30,13 +29,8 @@ class Offseter:
                 if len(data) == 8:
                     robot_name, x, y, z, qa, qb, qc, qd = data
                     origin = [x, y, z]
-                    yaw = quaternion.heading((qa, qb, qc, qd))
-                    if self.yaw_offset is None:
-                        # normalize yaw offset only to 0 (normal) and PI (Marsupial)
-                        if abs(yaw) < 0.1:
-                            self.yaw_offset = 0.0
-                        else:
-                            self.yaw_offset = math.pi
+                    if self.init_quat is None:
+                        self.init_quat = (qa, qb, qc, qd)
             elif channel == "pose3d":
                 xyz, orientation = data
             else:
