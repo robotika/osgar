@@ -21,7 +21,6 @@ class OffseterTest(unittest.TestCase):
         tester.publish('origin', [1000, 9000])
         c.request_stop()
         c.join()
-        self.assertEqual(tester.listen()[2], [[1.0, 0.0, 0.0], [0.0, 0.0, MAX_ANGULAR]])
 
 
 # vim: expandtab sw=4 ts=4

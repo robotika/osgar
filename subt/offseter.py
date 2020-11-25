@@ -1,4 +1,6 @@
 from threading import Thread
+from osgar.bus import BusShutdownException
+
 
 class Offseter:
 
@@ -15,7 +17,7 @@ class Offseter:
     def join(self, timeout=None):
         self.thread.join(timeout=timeout)
 
-    def run(self):
+    def _run(self):
         origin = None
         xyz = None
         while None in (origin, xyz):
@@ -45,6 +47,11 @@ class Offseter:
             else:
                 raise RuntimeError(f"unknown channel '{channel}'")
 
+    def run(self):
+        try:
+            self._run()
+        except BusShutdownException:
+            pass
 
     def request_stop(self):
         self.bus.shutdown()
