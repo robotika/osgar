@@ -12,7 +12,7 @@ class Offseter:
         #self.thread.name = bus.name
         self.bus = bus
         self.is_alive = self.thread.is_alive
-        self.init_quat = None  # unknown
+        self.init_quat = None  # unknown rotation
 
     def start(self):
         self.thread.start()
@@ -41,14 +41,13 @@ class Offseter:
         while True:
             dt, channel, data = self.bus.listen()
             if channel == "origin":
-                if len(data) == 8:
-                    robot_name, x, y, z, qa, qb, qc, qd = data
-                    origin = [x, y, z]
-                    offset = [o - p for o,p in zip(origin, xyz)]
+                pass  # do not update offset estimate
             elif channel == "pose3d":
                 xyz, orientation = data
-                xyz_offset = [o + p for o,p in zip(offset, xyz)]
-                self.bus.publish("pose3d", [xyz_offset, orientation])
+                xyz2 = quaternion.rotate_vector(xyz, self.init_quat)
+                xyz_offset = [o + p for o,p in zip(offset, xyz2)]
+                orientation_offset = quaternion.multiply(orientation, self.init_quat)
+                self.bus.publish("pose3d", [xyz_offset, orientation_offset])
             else:
                 raise RuntimeError(f"unknown channel '{channel}'")
 
