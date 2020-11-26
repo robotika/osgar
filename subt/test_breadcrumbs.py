@@ -52,5 +52,13 @@ class BreadcrumbsTest(unittest.TestCase):
 
         self.assertEqual(len(bread.locations), 1 + 6)
 
+    def test_num_available(self):
+        bus = MagicMock()
+        bread = Breadcrumbs(bus=bus, config={'radius':10})
+        self.assertEqual(bread.num_avail, 6)
+
+        bread = Breadcrumbs(bus=bus, config={'radius':10, 'num': 12})
+        self.assertEqual(bread.num_avail, 12)
+
 
 # vim: expandtab sw=4 ts=4
