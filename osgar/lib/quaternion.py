@@ -31,6 +31,7 @@ def identity():
     return [0, 0, 0, 1]
 
 def rotate_vector(vector, quaternion):
+    # https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation
     qvector = vector + [0]
     con = conjugate(quaternion)
     part1 = multiply(quaternion, qvector)

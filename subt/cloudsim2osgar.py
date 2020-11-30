@@ -112,7 +112,11 @@ class main:
                 rospy.loginfo("k2 1 (basic)")
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
         elif robot_config.startswith("EXPLORER_R2_SENSOR_CONFIG"):
-            rospy.loginfo("explorer R2")
+            if robot_config.endswith("_2"):
+                rospy.loginfo("explorer R2 #2 (with comms beacons)")
+                publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
+            else:
+                rospy.loginfo("explorer R2 #1 (basic)")
             topics.append(('/' + robot_name + '/rs_front/color/image/compressed', CompressedImage, self.image_front, ('image_front',)))
             topics.append(('/' + robot_name + '/rs_front/depth/image', Image, self.depth_front, ('depth_front',)))
             topics.append(('/' + robot_name + '/points', PointCloud2, self.points, ('points',)))
