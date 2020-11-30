@@ -119,7 +119,8 @@
           "in": ["sim_time_sec"],
           "out": ["deploy"],
           "init": {
-            "radius": 30
+            "radius": 30,
+            "num": 12
           }
       }
     },

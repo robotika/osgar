@@ -19,7 +19,7 @@ class Breadcrumbs(Node):
 
         self.radius = config.get('radius')
         self.locations = [[0, 0, 0]]  # all locations + fake for the base
-        self.num_avail = 6  # Freyja, config 2
+        self.num_avail = config.get('num', 6)  # Freyja, config 2
 
     def should_deploy(self, xyz):
         if self.radius is None:
