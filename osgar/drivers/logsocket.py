@@ -70,6 +70,8 @@ class LogTCPBase(LogSocket):
     """
     def __init__(self, config, bus):
         soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # https://stackoverflow.com/questions/31826762/python-socket-send-immediately
+        soc.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         super().__init__(soc, config, bus)
 
     def _send(self, data):
