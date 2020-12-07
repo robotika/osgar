@@ -1,7 +1,7 @@
 FROM robotika/subt-base:2020-11-11
 
 # ADD always downloads the file to calculate checksum, RUN checksum only the cmdline
-RUN curl -O# http://osgar.robotika.cz/subt/virtual/model/mdnet3.64.64.13.4.relu.pth 2>&1
+RUN curl -O# http://osgar.robotika.cz/subt/virtual/model/mdnet4.64.64.13.4.relu.pth 2>&1
 RUN curl -O# http://osgar.robotika.cz/subt/virtual/model/ssd_inception_v2_201009/frozen_inference_graph.pb 2>&1
 RUN curl -O# http://osgar.robotika.cz/subt/virtual/model/ssd_inception_v2_201009/cv_graph.pbtxt 2>&1
 
