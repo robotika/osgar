@@ -71,6 +71,7 @@ class LogTCPBase(LogSocket):
     def __init__(self, config, bus):
         soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # https://stackoverflow.com/questions/31826762/python-socket-send-immediately
+        # https://stackoverflow.com/questions/3761276/when-should-i-use-tcp-nodelay-and-when-tcp-cork
         soc.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         super().__init__(soc, config, bus)
 
