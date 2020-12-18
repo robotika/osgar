@@ -12,7 +12,7 @@ from osgar.lib.serialize import serialize, deserialize
 #  Payload size is limited to 1500 bytes - CommsClient::SendTo()
 
 SIZE_LIMIT = 1000  # just guess, not to reach the limit
-CUT_NUM = 50  # guess how many positions will fit in the limit
+CUT_NUM = 40  # limit number of positions to fit 1500 bytes limit (50 positions = 1620 bytes)
 
 
 def get_intervals(seq):
