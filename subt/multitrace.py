@@ -92,6 +92,17 @@ class MultiTraceManager(Node):
         return channel
 
     def draw(self):
-        pass
+        import matplotlib.pyplot as plt
+        robot_ids = sorted(self.traces)
+        print('Robot IDs', robot_ids)
+
+        for robot_id in robot_ids:
+            x = [a[1][0] for a in self.traces[robot_id]]
+            y = [a[1][1] for a in self.traces[robot_id]]
+            line = plt.plot(x, y, '-o', linewidth=2, label=robot_id)
+
+        plt.axes().set_aspect('equal', 'datalim')
+        plt.legend()
+        plt.show()
 
 # vim: expandtab sw=4 ts=4
