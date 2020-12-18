@@ -177,6 +177,8 @@
   <node ns="mapping" pkg="octomap_server" type="octomap_server_node" name="octomap">
     <remap from="cloud_in" to="/$(arg robot_name)/rgbd_all/points"/>
     <param name="frame_id" value="odom"/>
+    <!-- resolution in meters per pixel -->
+    <param name="resolution" value="0.5" />
     <!-- In case we want to filter out ceilings.
     <param name="pointcloud_max_z" value="1.5"/>
     -->
