@@ -56,12 +56,22 @@ class MultiTraceManager(Node):
         self.publish_trace_info()
 
     def on_trace_info(self, data):
-        needs_update = False
-        for name in self.traces.keys():
-            if name not in data:
-                needs_update = True
-        if needs_update:
-            self.publish('robot_trace', self.traces)
+        update = {}
+        for name, positions in self.traces.items():
+            if name in data:
+                part = []
+                for t, xyz in positions:
+                    for from_index, to_index in data[name]:
+                        if from_index <= t <= to_index:
+                            break
+                    else:
+                        part.append([t, xyz])
+                if len(part) > 0:
+                    update[name] = part
+            else:
+                update[name] = positions
+        if len(update) > 0:
+            self.publish('robot_trace', update)
 
     def update(self):
         channel = super().update()  # define self.time

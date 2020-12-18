@@ -17,14 +17,14 @@ class MultiTraceManagerTest(unittest.TestCase):
                          call.publish('trace_info', {'A150L': [[505, 506]]}))
 
         bus.reset_mock()
-        mtm.on_trace_info({'B100R': [1, 10]})
+        mtm.on_trace_info({'B100R': [[1, 10]]})
         bus.publish.assert_called()
         self.assertEqual(bus.method_calls[-1],
                          call.publish('robot_trace', {'A150L': [[505, [6.127597694909277, 2.640278491024048, 1.9188244676330934]],
                                                                 [506, [5.07939188538461, 2.0835104023227147, 1.9305388336683675]]]}))
 
         bus.reset_mock()
-        mtm.on_trace_info({'A150L': [505, 506]})
+        mtm.on_trace_info({'A150L': [[505, 506]]})
         bus.publish.assert_not_called()
 
     def test_on_robot_trace(self):
@@ -48,5 +48,17 @@ class MultiTraceManagerTest(unittest.TestCase):
         self.assertEqual(get_intervals([1, 2, 3, 4]), [[1, 4]])
         self.assertEqual(get_intervals([]), [])
         self.assertEqual(get_intervals([1, 3, 5]), [[1, 1], [3, 3], [5, 5]])
+
+    def test_partial_update(self):
+        bus = MagicMock()
+        mtm = MultiTraceManager(bus=bus, config={})
+        for i in range(10):
+            mtm.on_robot_xyz(['A10L', [i, [2*i, 0, 0]]])
+
+        bus.reset_mock()
+        mtm.on_trace_info({'A10L': [[1, 8]]})
+        bus.publish.assert_called()
+        self.assertEqual(bus.method_calls[-1],
+                         call.publish('robot_trace', {'A10L': [[0, [0, 0, 0]], [9, [18, 0, 0]]]}))
 
 # vim: expandtab sw=4 ts=4
