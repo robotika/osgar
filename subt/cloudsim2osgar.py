@@ -65,7 +65,7 @@ class Bus:
 
 
 class main:
-    def __init__(self, robot_name, robot_config):
+    def __init__(self, robot_name, robot_config, robot_is_marsupial):
         rospy.init_node('cloudsim2osgar', log_level=rospy.DEBUG)
         self.bus = Bus()
 
@@ -87,6 +87,9 @@ class main:
             topics.append(('/' + robot_name + '/bottom_scan', LaserScan, self.bottom_scan, ('bottom_scan',)))
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/air_pressure', FluidPressure, self.air_pressure, ('air_pressure',)))
+            if robot_is_marsupial == 'true':
+                rospy.loginfo("X4 is marsupial")
+                publishers['detach'] = rospy.Publisher('/' + robot_name + '/detach', Empty, queue_size=1)
         elif robot_config == "TEAMBASE":
             rospy.loginfo("teambase")
         elif robot_config.startswith("ROBOTIKA_FREYJA_SENSOR_CONFIG"):
@@ -111,7 +114,11 @@ class main:
                 rospy.loginfo("k2 1 (basic)")
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
         elif robot_config.startswith("EXPLORER_R2_SENSOR_CONFIG"):
-            rospy.loginfo("explorer R2")
+            if robot_config.endswith("_2"):
+                rospy.loginfo("explorer R2 #2 (with comms beacons)")
+                publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
+            else:
+                rospy.loginfo("explorer R2 #1 (basic)")
             topics.append(('/' + robot_name + '/rs_front/color/image/compressed', CompressedImage, self.image_front, ('image_front',)))
             topics.append(('/' + robot_name + '/rs_front/depth/image', Image, self.depth_front, ('depth_front',)))
             topics.append(('/' + robot_name + '/points', PointCloud2, self.points, ('points',)))
@@ -272,11 +279,11 @@ class main:
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
-        print("need robot name and config as arguments", file=sys.stderr)
+    if len(sys.argv) < 4:
+        print("need robot name, config and is_marsupial as arguments", file=sys.stderr)
         sys.exit(2)
     try:
-        main(sys.argv[1], sys.argv[2])
+        main(sys.argv[1], sys.argv[2], sys.argv[3])
     except rospy.exceptions.ROSInterruptException:
         rospy.loginfo("shutdown")
 

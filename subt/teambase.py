@@ -9,7 +9,7 @@ from osgar.node import Node
 class Teambase(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register("broadcast")
+        bus.register()
 
         self.robot_name = config.get('robot_name')
         self.start_time = None  # unknown
@@ -22,30 +22,22 @@ class Teambase(Node):
         self.verbose = False
 
     def on_sim_time_sec(self, data):
-        # broadcast simulation time every second
-        self.publish('broadcast', b'%d' % data)
         if self.start_time is None:
             self.start_time = data
         if self.finish_time is not None and data - self.start_time > self.finish_time:
             self.request_stop()
 
-    def on_radio(self, data):
-        src, packet = data
-        name = src.decode('ascii')
-        if packet.startswith(b'['):
-            arr = literal_eval(packet.decode('ascii'))
-            if len(arr) == 3:
-                # position
-                self.robot_positions[name] = arr
-                if self.verbose:
-                    self.debug_arr.append((name, arr))
-            elif len(arr) == 4:
-                # artifact
-                if arr not in self.artifacts:
-                    print(self.time, 'received:', arr)
-                    self.artifacts.append(arr)
-            else:
-                assert False, arr  # unexpected size/type
+    def on_robot_xyz(self, data):
+        name, arr = data
+        self.robot_positions[name] = arr
+        if self.verbose:
+            self.debug_arr.append((name, arr))
+
+    def on_artf_xyz(self, data):
+        for arr in data:
+            if arr not in self.artifacts:
+                print(self.time, 'received:', arr)
+                self.artifacts.append(arr)
 
     def update(self):
         channel = super().update()
@@ -53,6 +45,8 @@ class Teambase(Node):
         handler = getattr(self, "on_" + channel, None)
         if handler is not None:
             handler(getattr(self, channel))
+        else:
+            assert False, channel  # not supported channel
 
     def draw(self):
         import matplotlib.pyplot as plt
@@ -60,8 +54,8 @@ class Teambase(Node):
         print('Robot IDs', robot_ids)
 
         for robot_id in robot_ids:
-            x = [a[1][0] / 1000.0 for a in self.debug_arr if a[0] == robot_id]
-            y = [a[1][1] / 1000.0 for a in self.debug_arr if a[0] == robot_id]
+            x = [a[1][1][0] for a in self.debug_arr if a[0] == robot_id]
+            y = [a[1][1][1] for a in self.debug_arr if a[0] == robot_id]
             line = plt.plot(x, y, '-o', linewidth=2, label=robot_id)
 
         artf_types = set([artf[0] for artf in self.artifacts])

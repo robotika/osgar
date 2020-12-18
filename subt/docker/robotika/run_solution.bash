@@ -18,6 +18,9 @@ echo "Robot name is '$ROBOT_NAME'"
 ROBOT_CONFIG=$(rosparam get /robot_config)
 echo "Robot config is '$ROBOT_CONFIG'"
 
+ROBOT_IS_MARSUPIAL=$(rosparam get /robot_is_marsupial)
+echo "Robot is marsupial '$ROBOT_IS_MARSUPIAL'"
+
 # Defaults
 WALLDIST=0.8
 SPEED=1.0
@@ -72,7 +75,7 @@ echo "Starting ros<->osgar proxy"
 # http://wiki.ros.org/roslaunch/Commandline%20Tools#line-45 
 roslaunch $LAUNCH_FILE --wait robot_name:=$ROBOT_NAME &
 
-/osgar-ws/src/osgar/subt/cloudsim2osgar.py $ROBOT_NAME $ROBOT_CONFIG &
+/osgar-ws/src/osgar/subt/cloudsim2osgar.py $ROBOT_NAME $ROBOT_CONFIG $ROBOT_IS_MARSUPIAL &
 
 if [ -f "$1" ];
 then
@@ -108,7 +111,7 @@ sleep 30
 
 # DO NOT CALL /subt/finish for group of robots!
 #
-if $IS_TEAMBASE
+if [ $ROBOT_CONFIG == "TEAMBASE" ]
 then
     echo "TEAMBASE is terminating all robots"
     rosservice call '/subt/finish' true

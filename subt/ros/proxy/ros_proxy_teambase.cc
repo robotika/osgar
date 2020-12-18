@@ -287,8 +287,7 @@ void receiveZmqThread()
     }
     else if(strncmp(buffer, "broadcast ", 10) == 0)
     {
-        std::string content(buffer + 10);
-        ROS_INFO_STREAM("BROADCAST RECEIVED " << content);
+        std::string content(buffer + 10, size - 10);
         if(broadcast(content))
         {
           ROS_INFO("MD BROADCAST SUCCESS\n");

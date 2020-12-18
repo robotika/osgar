@@ -162,9 +162,11 @@ def extract_log(gen, out_name, append=False, verbose=False):
 def process_tar(filepath, all, verbose):
         # In: "ver41p3-91c332d3-2066-466c-a9b9-e3418bbeb0a9-A10F900L.tar"
         # Out: "aws-ver41p3-A10F900L.log"
-        s = os.path.basename(filepath).split('-')
-        name = 'aws-' + s[0] + '-' + s[-1].split('.')[0] + '.log'
-        letter = s[-1][0]
+        basename_without_ext = os.path.basename(filepath).split('.', 1)[0]
+        s = basename_without_ext.split('-')
+        robot_name = s[-2] if s[-1] == "commsbridge" else s[-1]
+        name = robot_name + ".log"
+        letter = robot_name[0]
         out_name = os.path.join(os.path.dirname(filepath), name)
         robot_data_0_processed = False
         robot_data_1_processed = False

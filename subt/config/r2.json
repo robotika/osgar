@@ -110,7 +110,7 @@
       },
       "radio": {
           "driver": "subt.radio:Radio",
-          "in": ["radio", "pose2d", "artf"],
+          "in": ["radio", "pose3d", "artf", "sim_time_sec"],
           "out": ["radio", "artf_xyz"],
           "init": {}
       },
@@ -119,7 +119,8 @@
           "in": ["sim_time_sec"],
           "out": ["deploy"],
           "init": {
-            "radius": 30
+            "radius": 30,
+            "num": 12
           }
       }
     },
@@ -154,11 +155,12 @@
               ["rosmsg.gas_detected", "gas_detector.gas_detected"],
               ["gas_detector.artf", "app.artf"],
 
-              ["app.pose2d", "radio.pose2d"],
+              ["localization.pose3d", "radio.pose3d"],
               ["reporter.artf_all", "radio.artf"],
               ["radio.artf_xyz", "reporter.artf_xyz"],
               ["radio.radio", "rosmsg.broadcast"],
               ["rosmsg.radio", "radio.radio"],
+              ["rosmsg.sim_time_sec", "radio.sim_time_sec"],
 
               ["rosmsg.sim_time_sec", "breadcrumbs.sim_time_sec"],
               ["localization.pose3d", "breadcrumbs.pose3d"],

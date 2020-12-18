@@ -1,24 +1,25 @@
 import cv2
 import numpy as np
+import random
 import torch
 
 ARTIFACT_CATEGORIES = dict((name, artf_id) for artf_id, name in enumerate([
     'nothing', 'backpack', 'phone', 'survivor', 'vent', 'robot', 'helmet',
-    'rope', 'breadcrumb'
-    #'drill', 'toolbox', 'fire_extinguisher', 'electrical_box', 'radio', 'valve'
+    'rope', 'breadcrumb', 'drill', 'fire_extinguisher'
+    #'toolbox', 'electrical_box', 'radio', 'valve'
 ]))
 
 
 class SubtDataset(torch.utils.data.Dataset):
     def __init__(self,
-                 labels_config,
+                 labels,
+                 img_root,
                  downscale,
                  receptive_field,
                  transform=None,
                  num_transforms=4,
                  a_few_negatives=200,
                  nothing_stride=10):
-        import json
         import os
         import PIL
 
@@ -27,13 +28,9 @@ class SubtDataset(torch.utils.data.Dataset):
             transform = torchvision.transforms.CenterCrop(receptive_field)
             num_transforms = 1
 
-        with open(labels_config, 'r') as labels_file:
-            labels = json.loads(labels_file.read())
-
         self.patches = []
         self.artifacts = []
         self.origins = []
-        img_root = os.path.dirname(labels_config)
 
         blacklist = [
             ('backpack', '../virtual/backpack/backpack3.jpg'),  # ?
@@ -81,7 +78,7 @@ class SubtDataset(torch.utils.data.Dataset):
             ('survivor', '../virtual/survivor/rgbd/ji-ver54-saveX-0023.jpg'),
             ('survivor', '../virtual/survivor/survivor-far.jpg')
         ]
-        for label in labels.values():
+        for label in labels:
             img_path = os.path.join(img_root, label['filename'])
             img = cv2.imread(img_path, cv2.IMREAD_COLOR)
             img = img[::downscale, ::downscale, :]
@@ -160,6 +157,45 @@ class SubtDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         return (self.patches[idx], ARTIFACT_CATEGORIES[self.artifacts[idx]],
                 self.origins[idx])
+
+def __async_dataset_loader(output_queue, *args, **kwargs):
+    output_queue.put(SubtDataset(*args, **kwargs))
+
+def load_dataset(labels_config, workers=1,  *args, **kwargs):
+    assert(workers > 0)
+    import json
+    import os
+
+    with open(labels_config, 'r') as labels_file:
+        labels = json.loads(labels_file.read())
+    random.shuffle(labels)
+    img_root = os.path.dirname(labels_config)
+
+    if workers == 1:
+        # No need for the overhead of running asynchronously.
+        return SubtDataset(labels, img_root, *args, **kwargs)
+
+    import multiprocessing
+    sharded_labels = [[]] * workers
+    for i, label in enumerate(labels.values()):
+        sharded_labels[(i % workers)].append(label)
+    result_queue = multiprocessing.Queue()
+    loaders = [multiprocessing.Process(
+        target=lambda: __async_dataset_loader(
+            result_queue, label_shard, img_root, *args, **kwargs))
+        for label_shard in sharded_labels]
+    for i, loader in enumerate(loaders):
+        print('Starting loader:', i)
+        loader.start()
+    partial_datasets = []
+    for i in range(workers):
+        print('Getting partial datasets:', i)
+        partial_datasets.append(result_queue.get())
+    for i, loader in enumerate(loaders):
+        print('Waiting for loader:', i)
+        loader.join()
+        print('Loader', i, 'done.')
+    return torch.utils.data.ChainDataset(partial_datasets)
 
 
 class ChannelFirst(torch.nn.Module):
@@ -421,11 +457,11 @@ if __name__ == '__main__':
                         help='Training batch size.')
     parser.add_argument('--epochs',
                         type=int,
-                        default=1000,
+                        default=230,
                         help='Number of training epochs')
     parser.add_argument('--num-training-transforms',
                         type=int,
-                        default=64,
+                        default=32,
                         help='Number for random transormations of training ' +
                         'patches.')
     parser.add_argument('--num-testing-transforms',
@@ -435,7 +471,7 @@ if __name__ == '__main__':
                         'patches.')
     parser.add_argument('--a-few-negatives',
                         type=int,
-                        default=200,
+                        default=32,
                         help='Number of negatives taken per image.')
     parser.add_argument('--nothing-stride',
                         type=int,
@@ -466,7 +502,9 @@ if __name__ == '__main__':
         'pin_memory': False
     } if use_cuda else {}
     device = torch.device("cuda" if use_cuda else "cpu")
+    print('Device:', device)
     torch.manual_seed(41)
+    random.seed(41)
 
     image_transforms = torchvision.transforms.Compose([
         torchvision.transforms.RandomAffine(
@@ -480,8 +518,9 @@ if __name__ == '__main__':
                                            saturation=(0.8, 1.2),
                                            hue=0.02)
     ])
-    training_set = SubtDataset(
+    training_set = load_dataset(
         labels_config=args.labels,
+        workers=args.num_loading_workers,
         downscale=args.downscale,
         receptive_field=args.receptive_field,
         transform=(image_transforms if args.num_testing_transforms else None),
@@ -490,21 +529,22 @@ if __name__ == '__main__':
         nothing_stride=args.nothing_stride)
     training_loader = torch.utils.data.DataLoader(training_set,
                                                   batch_size=args.batch_size,
-                                                  shuffle=True,
                                                   **kwargs)
+    print('Loaded traning set.')
 
-    test_set = SubtDataset(labels_config=args.labels,
-                           downscale=args.downscale,
-                           receptive_field=args.receptive_field,
-                           transform=image_transforms,
-                           num_transforms=args.num_testing_transforms,
-                           a_few_negatives=args.a_few_negatives,
-                           nothing_stride=args.nothing_stride)
+    test_set = load_dataset(labels_config=args.labels,
+                            workers=args.num_loading_workers,
+                            downscale=args.downscale,
+                            receptive_field=args.receptive_field,
+                            transform=image_transforms,
+                            num_transforms=args.num_testing_transforms,
+                            a_few_negatives=args.a_few_negatives,
+                            nothing_stride=args.nothing_stride)
     test_set = training_set
     test_loader = torch.utils.data.DataLoader(test_set,
                                               batch_size=args.batch_size,
-                                              shuffle=False,
                                               **kwargs)
+    print('Loaded test set.')
 
     # No downscaling during training, because dataset loader already takes care
     # of that.
@@ -512,6 +552,7 @@ if __name__ == '__main__':
     args.model_config['receptive-field'] = args.receptive_field
     args.model_config['categories'] = ARTIFACT_CATEGORIES
     model = create_model(args.model_config)
+    print('Created model.')
 
     model = model.float()
     if use_cuda:

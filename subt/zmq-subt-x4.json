@@ -107,14 +107,24 @@
                         "air_pressure"]
 	      }
       },
+      "torospy": {
+          "driver": "subt.push:Push"
+      },
       "radio": {
           "driver": "subt.radio:Radio",
-          "in": ["radio", "pose2d", "artf"],
+          "in": ["radio", "pose3d", "artf", "sim_time_sec"],
           "out": ["radio", "artf_xyz"],
           "init": {}
       },
       "offseter": {
         "driver": "subt.offseter:Offseter"
+      },
+      "marsupial": {
+          "driver": "subt.marsupial:Marsupial",
+          "in": ["origin", "sim_time_sec"],
+          "out": ["detach"],
+          "init": {
+          }
       }
     },
     "links": [["app.desired_speed", "drone.desired_speed"],
@@ -149,11 +159,16 @@
               ["rosmsg.gas_detected", "gas_detector.gas_detected"],
               ["gas_detector.artf", "app.artf"],
 
-              ["app.pose2d", "radio.pose2d"],
+              ["offseter.pose3d", "radio.pose3d"],
               ["reporter.artf_all", "radio.artf"],
               ["radio.artf_xyz", "reporter.artf_xyz"],
               ["radio.radio", "rosmsg.broadcast"],
               ["rosmsg.radio", "radio.radio"],
+              ["rosmsg.sim_time_sec", "radio.sim_time_sec"],
+
+              ["rosmsg.sim_time_sec", "marsupial.sim_time_sec"],
+              ["rosmsg.origin", "marsupial.origin"],
+              ["marsupial.detach", "torospy.detach"],
 
               ["detector.artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],
