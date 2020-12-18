@@ -14,12 +14,31 @@ class MultiTraceManager(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('robot_trace', 'trace_info')
+        self.traces = {}
+
+    def publish_trace_info(self):
+        info = {}
+        for name in sorted(self.traces.keys()):
+            info[name] = [p[0] for p in self.traces[name]]
+        self.publish('trace_info', info)
 
     def on_robot_trace(self, data):
         pass
 
     def on_robot_xyz(self, data):
-        pass
+        name, position = data
+        if name not in self.traces:
+            self.traces[name] = []
+        self.traces[name].append(position)
+        self.publish_trace_info()
+
+    def on_trace_info(self, data):
+        needs_update = False
+        for name in self.traces.keys():
+            if name not in data:
+                needs_update = True
+        if needs_update:
+            self.publish('robot_trace', self.traces)
 
     def update(self):
         channel = super().update()  # define self.time
