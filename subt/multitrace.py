@@ -23,7 +23,14 @@ class MultiTraceManager(Node):
         self.publish('trace_info', info)
 
     def on_robot_trace(self, data):
-        pass
+        for name, positions in data.items():
+            if name in self.traces:
+                for p in positions:
+                    if p not in self.traces[name]:
+                        self.traces[name].append(p)
+                self.traces[name] = sorted(self.traces[name])
+            else:
+                self.traces[name] = positions
 
     def on_robot_xyz(self, data):
         name, position = data
