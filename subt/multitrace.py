@@ -11,6 +11,10 @@ from osgar.lib.serialize import serialize, deserialize
 # Note:
 #  Payload size is limited to 1500 bytes - CommsClient::SendTo()
 
+SIZE_LIMIT = 1000  # just guess, not to reach the limit
+CUT_NUM = 50  # guess how many positions will fit in the limit
+
+
 def get_intervals(seq):
     ret = []
     if len(seq) == 0:
@@ -71,7 +75,12 @@ class MultiTraceManager(Node):
             else:
                 update[name] = positions
         if len(update) > 0:
-            self.publish('robot_trace', update)
+            if len(str(update)) < SIZE_LIMIT:
+                self.publish('robot_trace', update)
+            else:
+                # cut first part for now
+                for name in update:
+                    self.publish('robot_trace', {name : update[name][:CUT_NUM]})
 
     def update(self):
         channel = super().update()  # define self.time

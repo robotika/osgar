@@ -61,4 +61,16 @@ class MultiTraceManagerTest(unittest.TestCase):
         self.assertEqual(bus.method_calls[-1],
                          call.publish('robot_trace', {'A10L': [[0, [0, 0, 0]], [9, [18, 0, 0]]]}))
 
+    def test_too_large_update(self):
+        bus = MagicMock()
+        mtm = MultiTraceManager(bus=bus, config={})
+        for i in range(1000):
+            mtm.on_robot_xyz(['A10L', [i, [2*i, 0, 0]]])
+
+        bus.reset_mock()
+        mtm.on_trace_info({'B10R': [[1, 8]]})
+        bus.publish.assert_called()
+        # AssertionError: 20362 not less than 1000
+        self.assertLess(len(str(bus.method_calls[-1][1])), 1000)
+
 # vim: expandtab sw=4 ts=4
