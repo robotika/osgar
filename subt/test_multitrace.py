@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import MagicMock, patch, call
 
-from subt.multitrace import MultiTraceManager
+from subt.multitrace import MultiTraceManager, get_intervals
 
 
 class MultiTraceManagerTest(unittest.TestCase):
@@ -14,7 +14,7 @@ class MultiTraceManagerTest(unittest.TestCase):
         mtm.on_robot_xyz(['A150L', [506, [5.07939188538461, 2.0835104023227147, 1.9305388336683675]]])
         bus.publish.assert_called()
         self.assertEqual(bus.method_calls[-1],
-                         call.publish('trace_info', {'A150L': [505, 506]}))
+                         call.publish('trace_info', {'A150L': [[505, 506]]}))
 
         bus.reset_mock()
         mtm.on_trace_info({'B100R': [1, 10]})
@@ -37,5 +37,16 @@ class MultiTraceManagerTest(unittest.TestCase):
         self.assertEqual(len(mtm.traces['A150L']), 3)
         mtm.on_robot_trace({'A150L': [[500, [10.098783014125825, 2.4058896366987415, 2.0341068401239615]]]})
         self.assertEqual(len(mtm.traces['A150L']), 3)
+
+        bus.reset_mock()
+        mtm.publish_trace_info()
+        bus.publish.assert_called()
+        self.assertEqual(bus.method_calls[-1],
+                         call.publish('trace_info', {'A150L': [[500, 500], [505, 506]]}))
+
+    def test_get_intervals(self):
+        self.assertEqual(get_intervals([1, 2, 3, 4]), [[1, 4]])
+        self.assertEqual(get_intervals([]), [])
+        self.assertEqual(get_intervals([1, 3, 5]), [[1, 1], [3, 3], [5, 5]])
 
 # vim: expandtab sw=4 ts=4

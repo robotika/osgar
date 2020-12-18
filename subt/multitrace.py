@@ -10,6 +10,22 @@ from osgar.lib.serialize import serialize, deserialize
 
 # Note:
 #  Payload size is limited to 1500 bytes - CommsClient::SendTo()
+
+def get_intervals(seq):
+    ret = []
+    if len(seq) == 0:
+        return ret
+    prev = seq[0]
+    start = prev
+    for i in seq[1:]:
+        if prev + 1 != i:
+            ret.append([start, prev])
+            start = i
+        prev = i
+    ret.append([start, prev])
+    return ret
+
+
 class MultiTraceManager(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
@@ -19,7 +35,7 @@ class MultiTraceManager(Node):
     def publish_trace_info(self):
         info = {}
         for name in sorted(self.traces.keys()):
-            info[name] = [p[0] for p in self.traces[name]]
+            info[name] = get_intervals([p[0] for p in self.traces[name]])
         self.publish('trace_info', info)
 
     def on_robot_trace(self, data):
