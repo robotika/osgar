@@ -1,6 +1,9 @@
 """
   Multi-Trace-Manager for Virtual SubT
 
+The MTM has input "robot_xyz" and publishes overview info of known positions of other robots "trace_info".
+This "trace_info" contains list of time intervals for each known robot. The response is then "robot_trace"
+which is limited in size and contains missing bits of received "trace_info".
 """
 from datetime import timedelta
 
