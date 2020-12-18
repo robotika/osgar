@@ -75,6 +75,12 @@ class Radio(Node):
     def on_artf(self, data):
         self.send_data('artf', data)
 
+    def on_trace_info(self, data):
+        self.send_data('trace_info', data)
+
+    def on_robot_trace(self, data):
+        self.send_data('robot_trace', data)
+
     def on_sim_time_sec(self, data):
         self.sim_time_sec = data  # duplicate for super().update(), used just for easier unittesting
         self.send_data('sim_time_sec', data)
