@@ -70,7 +70,7 @@ class AugmentedScan(Node):
         if self.barrier is None or self.xyz is None or self.quat is None:
             self.publish('scan', data)
         else:
-            assert len(data) == 692, len(data)  # a bit strange resolution for the drone?!
+            assert len(data) == 920, len(data)  # a bit strange resolution for the drone?!
             assert len(self.barrier) == 2, self.barrier  # expected 1 barrier [[x, y, z], radius]
             arr = np.array(self.barrier[0]) - np.array(self.xyz)
             tmp = compute_scan360(arr, radius=self.barrier[1])
