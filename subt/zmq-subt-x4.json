@@ -131,6 +131,13 @@
           "in": ["robot_xyz", "trace_info", "robot_trace"],
           "out": ["trace_info", "robot_trace"],
           "init": {}
+      },
+      "augmenter": {
+          "driver": "subt.augmented_scan:AugmentedScan",
+          "in": ["scan", "pose3d"],
+          "out": ["scan"],
+          "init": {
+          }
       }
     },
     "links": [["app.desired_speed", "drone.desired_speed"],
@@ -154,7 +161,9 @@
               ["rosmsg.image", "app.image"],
 
               ["rosmsg.depth", "depth2scan.depth"],
-              ["depth2scan.scan", "app.scan360"],
+              ["depth2scan.scan", "augmenter.scan360"],
+              ["offseter.pose3d", "augmenter.pose3d"],
+              ["augmenter.scan360", "app.scan360"],
               ["rosmsg.depth", "detector.depth"],
 
               ["fromrospy.rot", "app.rot"],
