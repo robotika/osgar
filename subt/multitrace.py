@@ -113,6 +113,7 @@ class MultiTraceManager(Node):
         Alternative 3D plot not available via --draw. At the moment the view is very limited
         but it is an example how 3D points can be shown/analyzed.
         """
+        # https://matplotlib.org/mpl_toolkits/mplot3d/tutorial.html
         import matplotlib as mpl
         from mpl_toolkits.mplot3d import Axes3D
         import matplotlib.pyplot as plt
