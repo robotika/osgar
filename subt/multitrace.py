@@ -108,4 +108,29 @@ class MultiTraceManager(Node):
         plt.legend()
         plt.show()
 
+    def draw3d(self):
+        """
+        Alternative 3D plot not available via --draw. At the moment the view is very limited
+        but it is an example how 3D points can be shown/analyzed.
+        """
+        import matplotlib as mpl
+        from mpl_toolkits.mplot3d import Axes3D
+        import matplotlib.pyplot as plt
+
+        robot_ids = sorted(self.traces)
+        print('Robot IDs', robot_ids)
+
+        mpl.rcParams['legend.fontsize'] = 10
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+
+        for robot_id in robot_ids:
+            x = [a[1][0] for a in self.traces[robot_id]]
+            y = [a[1][1] for a in self.traces[robot_id]]
+            z = [a[1][2] for a in self.traces[robot_id]]
+            ax.plot(x, y, z, 'o-', label=robot_id)
+            ax.legend()
+
+        plt.show()
+
 # vim: expandtab sw=4 ts=4
