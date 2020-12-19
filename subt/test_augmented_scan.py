@@ -29,7 +29,7 @@ class AugmentedScanTest(unittest.TestCase):
         augmenter.on_pose3d([[8, 5, 0], quaternion.identity()])
         scan = [5000] * 270
         augmenter.on_scan(scan)
-        scan2 = [1000] * 31 + [5000] * 239
+        scan2 = [5000] * 105 + [1000] * 61 + [5000] * 104
         bus.publish.assert_called_with('scan', scan2)
 
 # vim: expandtab sw=4 ts=4

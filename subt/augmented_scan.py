@@ -10,6 +10,7 @@ import math
 import numpy as np
 
 from osgar.node import Node
+from osgar.lib import quaternion
 
 
 UNLIMITED = 0xFFFF
@@ -53,7 +54,9 @@ class AugmentedScan(Node):
         else:
             assert len(self.barrier) == 2, self.barrier  # expected 1 barrier [[x, y, z], radius]
             arr = np.array(self.barrier[0]) - np.array(self.xyz)
-            tmp = compute_scan360(arr, radius=self.barrier[1])[:270]
+            tmp = compute_scan360(arr, radius=self.barrier[1])
+            index = int(math.degrees(quaternion.heading(self.quat)))
+            tmp = np.concatenate((tmp, tmp, tmp))[index+360-135:index+360+135]
             scan = np.array(data, dtype=np.uint16)
             mask = (scan == 0)
             scan[mask] = UNLIMITED
