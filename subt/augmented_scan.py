@@ -46,7 +46,7 @@ class AugmentedScan(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("scan", "scan360")
-        self.barrier = [[10.0, 0.0, 0.0], 5.0]  # experiment, was None  # updated remotely via Node
+        self.barrier = [[20.0, 0.0, 0.0], 5.0]  # experiment, was None  # updated remotely via Node
         self.xyz, self.quat = None, None
 
     def on_scan(self, data):
