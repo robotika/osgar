@@ -8,7 +8,6 @@
 import math
 
 import numpy as np
-from scipy.interpolate import interp1d  # quick and dirty workaround - to be removed
 
 from osgar.node import Node
 from osgar.lib import quaternion
@@ -17,13 +16,13 @@ from osgar.lib import quaternion
 UNLIMITED = 0xFFFF
 
 
-def compute_scan360(xyz, radius, limit=10.0):
+def compute_scan360(xyz, radius, num_samples=360, limit=10.0):
     """
     compute raw scan with 360 degrees
     - ignore yaw, higher resolution, offset and Z coordinate
     - use maxuint16 for unlimited
     """
-    scan = np.zeros(shape=(360,), dtype=np.uint16)
+    scan = np.zeros(shape=(num_samples,), dtype=np.uint16)
     scan[:] = UNLIMITED
     x, y, z = xyz
     dist = math.hypot(x, y)
@@ -31,10 +30,10 @@ def compute_scan360(xyz, radius, limit=10.0):
         # cut of sphere is always a circle
         angle = math.atan2(y, x)  # central angle
         variation = math.asin(radius/dist)
-        i = int(math.degrees(angle))
-        j = int(math.degrees(variation))
+        i = int(num_samples * angle/(2*math.pi))
+        j = int(num_samples * variation/(2*math.pi))
         if i < 0:
-            i += 360
+            i += num_samples
         value = int((dist - radius) * 1000)
         scan[max(0, i-j):i+j+1] = value
         if i - j < 0:
@@ -71,17 +70,16 @@ class AugmentedScan(Node):
             self.publish('scan', data)
         else:
             assert len(data) == 920, len(data)  # a bit strange resolution for the drone?!
+            num_samples = len(data)
             assert len(self.barrier) == 2, self.barrier  # expected 1 barrier [[x, y, z], radius]
             arr = np.array(self.barrier[0]) - np.array(self.xyz)
-            tmp = compute_scan360(arr, radius=self.barrier[1])
-            index = int(math.degrees(quaternion.heading(self.quat)))
-            tmp = np.concatenate((tmp, tmp, tmp))[index+360-180:index+360+180]
+            tmp = compute_scan360(arr, radius=self.barrier[1], num_samples=num_samples)
+            index = int(num_samples * quaternion.heading(self.quat)/(2*math.pi)) + num_samples//2
+            tmp = np.concatenate((tmp, tmp, tmp))[index+num_samples-num_samples//2:index+num_samples+num_samples//2]
             scan = np.array(data, dtype=np.uint16)
             mask = (scan == 0)
             scan[mask] = UNLIMITED
-            xp = np.arange(0, len(tmp), len(tmp)/len(scan))
-            nearest = interp1d(np.arange(len(scan)), scan, kind='nearest')
-            scan = np.minimum(scan, nearest(xp))
+            scan = np.minimum(scan, tmp)
             mask = (scan == UNLIMITED)
             scan[mask] = 0
             self.publish('scan360', scan.tolist())
