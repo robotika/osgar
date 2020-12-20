@@ -21,6 +21,7 @@ def compute_scan360(xyz, radius, num_samples=360, limit=10.0):
     compute raw scan with 360 degrees
     - ignore yaw, higher resolution, offset and Z coordinate
     - use maxuint16 for unlimited
+    - index array from angle=0 (i.e. not as scan, which is -135deg or -180deg)
     """
     scan = np.zeros(shape=(num_samples,), dtype=np.uint16)
     scan[:] = UNLIMITED
@@ -74,7 +75,7 @@ class AugmentedScan(Node):
             assert len(self.barrier) == 2, self.barrier  # expected 1 barrier [[x, y, z], radius]
             arr = np.array(self.barrier[0]) - np.array(self.xyz)
             tmp = compute_scan360(arr, radius=self.barrier[1], num_samples=num_samples)
-            index = int(num_samples * quaternion.heading(self.quat)/(2*math.pi)) + num_samples//2
+            index = int(num_samples * quaternion.heading(self.quat)/(2*math.pi))
             tmp = np.concatenate((tmp, tmp, tmp))[index+num_samples-num_samples//2:index+num_samples+num_samples//2]
             scan = np.array(data, dtype=np.uint16)
             mask = (scan == 0)
