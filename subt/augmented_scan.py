@@ -39,6 +39,8 @@ def compute_scan360(xyz, radius, num_samples=360, limit=10.0):
         scan[max(0, i-j):i+j+1] = value
         if i - j < 0:
             scan[i-j:] = value
+        if i + j > num_samples:
+            scan[:i+j-num_samples+1] = value
     return scan
 
 
