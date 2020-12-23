@@ -86,6 +86,7 @@ class main:
             topics.append(('/' + robot_name + '/bottom_scan', LaserScan, self.bottom_scan, ('bottom_scan',)))
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/air_pressure', FluidPressure, self.air_pressure, ('air_pressure',)))
+            topics.append(('/' + robot_name + '/front_scan', LaserScan, self.scan360, ('scan360',)))
             if robot_is_marsupial == 'true':
                 rospy.loginfo("X4 is marsupial")
                 publishers['detach'] = rospy.Publisher('/' + robot_name + '/detach', Empty, queue_size=1)
@@ -235,6 +236,13 @@ class main:
         rospy.loginfo_throttle(10, "scan_rear callback: {}".format(self.scan_rear_count))
         scan = [int(x * 1000) if msg.range_min < x < msg.range_max else 0 for x in msg.ranges]
         self.bus.publish('scan_rear', scan)
+
+    def scan360(self, msg):
+        # 3rd copy, i.e. almost time for refactoring ...
+        self.scan360_count += 1
+        rospy.loginfo_throttle(10, "scan360 callback: {}".format(self.scan360_count))
+        scan = [int(x * 1000) if msg.range_min < x < msg.range_max else 0 for x in msg.ranges]
+        self.bus.publish('scan360', scan)
 
     def convert_depth(self, msg):
         assert msg.encoding == '32FC1', msg.encoding  # unsupported encoding
