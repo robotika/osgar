@@ -70,7 +70,7 @@ class AugmentedScan(Node):
 
     def on_scan360(self, data):
         if self.barrier is None or self.xyz is None or self.quat is None:
-            self.publish('scan', data)
+            self.publish('scan360', data)
         else:
             assert len(data) == 920, len(data)  # a bit strange resolution for the drone?!
             num_samples = len(data)
