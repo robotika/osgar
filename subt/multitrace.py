@@ -94,6 +94,9 @@ class MultiTraceManager(Node):
             assert False, channel  # not supported
         return channel
 
+    def detect_vertical_shaft(self, trace):
+        return None
+
     def draw(self):
         import matplotlib.pyplot as plt
         robot_ids = sorted(self.traces)

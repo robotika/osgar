@@ -73,4 +73,10 @@ class MultiTraceManagerTest(unittest.TestCase):
         # AssertionError: 20362 not less than 1000
         self.assertLess(len(str(bus.method_calls[-1][1])), 1000)
 
+    def test_detect_vertical_shaft(self):
+        bus = MagicMock()
+        mtm = MultiTraceManager(bus=bus, config={})
+        trace = []
+        self.assertIsNone(mtm.detect_vertical_shaft(trace))
+
 # vim: expandtab sw=4 ts=4
