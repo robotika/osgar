@@ -35,7 +35,7 @@ def draw_positions(arr):
 class Radio(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('radio', 'artf_xyz', 'breadcrumb', 'robot_xyz')
+        bus.register('radio', 'artf_xyz', 'breadcrumb', 'robot_xyz', 'trace_info', 'robot_trace')
         self.min_transmit_dt = 0  # i.e. every sim_time_sec -> every simulated second
         self.last_transmit = None
         self.sim_time_sec = None
@@ -55,7 +55,7 @@ class Radio(Node):
         __, channel, msg_data = deserialize(packet)
         if channel == 'artf':
             self.publish('artf_xyz', msg_data)  # topic rename - beware of limits 1500bytes!
-        elif channel == 'breadcrumb':
+        elif channel in ['breadcrumb', 'trace_info', 'robot_trace']:
             self.publish(channel, msg_data)
         elif channel == 'xyz':
             self.publish('robot_xyz', [name, msg_data])
@@ -74,6 +74,12 @@ class Radio(Node):
 
     def on_artf(self, data):
         self.send_data('artf', data)
+
+    def on_trace_info(self, data):
+        self.send_data('trace_info', data)
+
+    def on_robot_trace(self, data):
+        self.send_data('robot_trace', data)
 
     def on_sim_time_sec(self, data):
         self.sim_time_sec = data  # duplicate for super().update(), used just for easier unittesting

@@ -47,6 +47,12 @@
           "in": ["radio", "pose3d", "artf", "sim_time_sec"],
           "out": ["radio", "artf_xyz"],
           "init": {}
+      },
+      "mtm": {
+          "driver": "subt.multitrace:MultiTraceManager",
+          "in": ["robot_xyz", "trace_info", "robot_trace"],
+          "out": ["trace_info", "robot_trace"],
+          "init": {}
       }
     },
     "links": [["app.stdout", "rosmsg.stdout"],
@@ -61,6 +67,12 @@
               ["radio.artf_xyz", "app.artf_xyz"],
               ["radio.robot_xyz", "app.robot_xyz"],
               ["radio.radio", "rosmsg.broadcast"],
+
+              ["radio.robot_xyz", "mtm.robot_xyz"],
+              ["radio.trace_info", "mtm.trace_info"],
+              ["radio.robot_trace", "mtm.robot_trace"],
+              ["mtm.trace_info", "radio.trace_info"],
+              ["mtm.robot_trace", "radio.robot_trace"],
 
               ["app.artf_xyz", "reporter.artf_xyz"],
               ["reporter.artf_cmd", "transmitter.raw"]]

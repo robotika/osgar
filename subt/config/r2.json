@@ -122,6 +122,12 @@
             "radius": 30,
             "num": 12
           }
+      },
+      "mtm": {
+          "driver": "subt.multitrace:MultiTraceManager",
+          "in": ["robot_xyz", "trace_info", "robot_trace"],
+          "out": ["trace_info", "robot_trace"],
+          "init": {}
       }
     },
     "links": [["app.desired_speed", "rosmsg.desired_speed"],
@@ -161,6 +167,12 @@
               ["radio.radio", "rosmsg.broadcast"],
               ["rosmsg.radio", "radio.radio"],
               ["rosmsg.sim_time_sec", "radio.sim_time_sec"],
+
+              ["radio.robot_xyz", "mtm.robot_xyz"],
+              ["radio.trace_info", "mtm.trace_info"],
+              ["radio.robot_trace", "mtm.robot_trace"],
+              ["mtm.trace_info", "radio.trace_info"],
+              ["mtm.robot_trace", "radio.robot_trace"],
 
               ["rosmsg.sim_time_sec", "breadcrumbs.sim_time_sec"],
               ["localization.pose3d", "breadcrumbs.pose3d"],
