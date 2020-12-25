@@ -74,4 +74,11 @@ class QuaternionTest(TestCase):
                 qq = quaternion.from_rotation_matrix(rotmat)
                 self.assertListAlmostEqual(q, qq)
 
+    def test_angle_between(self):
+        # ver96aug2 - 14bdc22e-92d9-4ef5-b459-7469724dea28 - ValueError: math domain error
+        # AssertionError: 1.0000000006479999
+        a = [1.7878716536074317e-05, 1.7878705030082886e-05, -1.656903543248786e-12, 0.9999999997613517]
+        b = [1.7878712250642573e-05, 1.7878701928288437e-05, 3.354137256707306e-13, 0.9999999997613518]
+        quaternion.angle_between(a, b)
+
 # vim: expandtab sw=4 ts=4
