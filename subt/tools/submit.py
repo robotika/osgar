@@ -10,6 +10,7 @@ import toml
 
 # See https://pkg.go.dev/gitlab.com/ignitionrobotics/web/cloudsim/simulations for original names
 WORLDS=dict(
+    tq  = "Tunnel Qualification",
     tp1 = "Tunnel Practice 1",
     tp2 = "Tunnel Practice 2",
     tp3 = "Tunnel Practice 3",
@@ -22,6 +23,7 @@ WORLDS=dict(
     tc7 = "Tunnel Circuit World 7",
     tc8 = "Tunnel Circuit World 8",
 
+    uq  = "Urban Qualification",
     up1 = "Urban Practice 1",
     up2 = "Urban Practice 2",
     up3 = "Urban Practice 3",
