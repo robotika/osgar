@@ -105,7 +105,8 @@ class main:
             topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
             topics.append(('/' + robot_name + '/rgbd_front/depth', Image, self.depth_front, ('depth_front',)))
             topics.append(('/' + robot_name + '/rgbd_rear/depth', Image, self.depth_rear, ('depth_rear',)))
-            topics.append(('/mapping/octomap_binary', Octomap, self.octomap, ('octomap',)))
+            if robot_name.endswith('XM'):
+                topics.append(('/mapping/octomap_binary', Octomap, self.octomap, ('octomap',)))
         elif robot_config.startswith("ROBOTIKA_KLOUBAK_SENSOR_CONFIG"):
             if robot_config.endswith("_2"):
                 rospy.loginfo("k2 2 (with comms beacons)")
