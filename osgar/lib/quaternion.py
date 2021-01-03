@@ -101,7 +101,8 @@ def from_rotation_matrix(rotation_matrix):
 def angle_between(quaternion0, quaternion1):
     # https://math.stackexchange.com/questions/90081/quaternion-distance
     inner_product = sum(a * b for (a, b) in zip(quaternion0, quaternion1))
-    return math.acos(2 * inner_product**2 - 1)
+    val = 2 * inner_product**2 - 1
+    return math.acos(max(-1.0, min(1.0, val)))
 
 
 # vim: expandtab sw=4 ts=4
