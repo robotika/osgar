@@ -29,6 +29,7 @@ all_drivers = dict(
     timer="osgar.drivers.timer:Timer",
     realsense="osgar.drivers.realsense:RealSense",
     velodyne="osgar.drivers.velodyne:Velodyne",
+    tello="osgar.drivers.tello:TelloDrone",
 )
 
 
