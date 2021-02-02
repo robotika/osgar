@@ -1,0 +1,34 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "maria": {
+          "driver": "tello",
+          "in": ["status", "video"],
+          "out": ["cmd"],
+          "init": {}
+      },
+      "udp_cmd": {
+          "driver": "udp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"host": "192.168.10.1", "port": 8889, "timeout": 3.0}
+      },
+      "udp_status": {
+          "driver": "udp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"host": "", "port": 8890, "timeout": 3.0}
+      },
+      "udp_video": {
+          "driver": "udp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"host": "", "port": 11111, "timeout": 3.0}
+      }
+    },
+    "links": [["tello.cmd", "udp_cmd.raw"],
+              ["udp_status.raw", "tello.status"],
+              ["udp_video.raw", "tello.video"]]
+  }
+}
