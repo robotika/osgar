@@ -15,7 +15,7 @@ class TelloDrone(Node):
         bus.register('cmd')
 
     def run(self):
-        self.publish('cmd', b'battery?')
+        self.publish('cmd', b'command')
         try:
             while True:
                 self.update()

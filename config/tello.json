@@ -18,7 +18,7 @@
           "driver": "udp",
           "in": ["raw"],
           "out": ["raw"],
-          "init": {"host": "", "port": 9000, "timeout": 3.0}
+          "init": {"host": "", "port": 8890, "timeout": 3.0}
       },
       "udp_video": {
           "driver": "udp",
