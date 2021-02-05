@@ -24,7 +24,7 @@
           "driver": "udp",
           "in": ["raw"],
           "out": ["raw"],
-          "init": {"host": "", "port": 11111, "timeout": 3.0}
+          "init": {"host": "", "port": 11111, "timeout": 3.0, "bufsize": 4096}
       }
     },
     "links": [["tello.cmd", "udp_cmd.raw"],
