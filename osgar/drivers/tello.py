@@ -31,6 +31,7 @@ class TelloDrone(Node):
         self.buf = b''
         self.debug_arr = []
         self.verbose = False
+        self.frame_index = 1  # save as "frame0001.bin"
         self.tasks = [
             [2, b'streamon'],
             [3, b'takeoff'],
@@ -58,6 +59,9 @@ class TelloDrone(Node):
         print(len(data))
         if len(data) < 1460:
             print(len(self.buf))
+            with open('out/frame%04d.bin' % self.frame_index, 'wb') as f:
+                f.write(self.buf)
+            self.frame_index += 1
             # save_h264_img(self.buf)
             self.buf = b''
 
