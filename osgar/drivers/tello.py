@@ -29,9 +29,13 @@ class TelloDrone(Node):
         bus.register('cmd')
         self.battery = None
         self.buf = b''
+        self.debug_arr = []
+        self.verbose = False
         self.tasks = [
             [2, b'streamon'],
-            [5, b'streamoff']
+            [3, b'takeoff'],
+            [5, b'land'],
+            [8, b'streamoff']
         ]
 
     def on_status(self, data):
@@ -43,8 +47,12 @@ class TelloDrone(Node):
                 self.battery = int(item[4:])
                 if prev != self.battery:
                     print('Battery:', prev, '->', self.battery)
+            elif item.startswith(b'tof:'):
+                if self.verbose:
+                    self.debug_arr.append((self.time.total_seconds(), int(item[4:])))
 
     def on_video(self, data):
+        return  # hack
         assert len(data) <= 1460, len(data)
         self.buf += data
         print(len(data))
@@ -72,5 +80,13 @@ class TelloDrone(Node):
                         self.tasks = self.tasks[1:]
         except BusShutdownException:
             pass
+
+    def draw(self):
+        import matplotlib.pyplot as plt
+        t = [x for x, y in self.debug_arr]
+        tof = [y/100.0 for x, y in self.debug_arr]
+        plt.plot(t, tof, '-o', linewidth=2)
+        plt.xlabel('time (s)')
+        plt.show()
 
 # vim: expandtab sw=4 ts=4
