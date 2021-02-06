@@ -17,6 +17,7 @@ PORT = 11111
 def read_thread():
     cap = cv2.VideoCapture(f'udp://@{HOST}:{PORT}')
     i = 0
+    video = None
     while True:
         grabbed, img = cap.read()
         print(i)
@@ -25,6 +26,13 @@ def read_thread():
         key = cv2.waitKey(100)
         if not grabbed or key == 27:
             break
+        if video is None:
+            height, width, _ = img.shape
+            video = cv2.VideoWriter('video.avi', cv2.VideoWriter_fourcc(*'XVID'), 30, (width, height))
+        video.write(img)
+
+    if video is not None:
+        video.release()
     cap.release()
 
 
