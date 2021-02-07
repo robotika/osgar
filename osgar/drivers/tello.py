@@ -35,7 +35,7 @@ class TelloDrone(Node):
         self.tasks = [
             [1, b'streamon'],
             [2, b'takeoff'],
-            [10, b'cv 360'],
+            [10, b'cw 360'],
             [20, b'land'],
             [22, b'streamoff']
         ]
