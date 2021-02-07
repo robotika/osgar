@@ -28,6 +28,7 @@
       }
     },
     "links": [["tello.cmd", "udp_cmd.raw"],
+              ["udp_cmd.raw", "tello.cmd_ack"],
               ["udp_status.raw", "tello.status"],
               ["udp_video.raw", "tello.video"]]
   }

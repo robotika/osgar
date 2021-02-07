@@ -38,6 +38,11 @@ class TelloDrone(Node):
             [5, b'land'],
             [8, b'streamoff']
         ]
+        self.last_cmd = None
+
+    def on_cmd_ack(self, data):
+        print(self.time, '---', self.last_cmd, data)
+        self.last_cmd = None
 
     def on_status(self, data):
         s = data.strip().split(b';')
@@ -47,7 +52,7 @@ class TelloDrone(Node):
                 prev = self.battery
                 self.battery = int(item[4:])
                 if prev != self.battery:
-                    print('Battery:', prev, '->', self.battery)
+                    print(self.time, 'Battery:', prev, '->', self.battery)
             elif item.startswith(b'tof:'):
                 if self.verbose:
                     self.debug_arr.append((self.time.total_seconds(), int(item[4:])))
@@ -79,8 +84,10 @@ class TelloDrone(Node):
             while True:
                 self.update()
                 if len(self.tasks) > 0:
-                    if self.time.total_seconds() > self.tasks[0][0]:
-                        self.publish('cmd', self.tasks[0][1])
+                    if self.time.total_seconds() > self.tasks[0][0] and self.last_cmd is None:
+                        self.last_cmd = self.tasks[0][1]
+                        print(self.time, 'SEND', self.last_cmd)
+                        self.publish('cmd', self.last_cmd)
                         self.tasks = self.tasks[1:]
         except BusShutdownException:
             pass
