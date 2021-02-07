@@ -23,7 +23,7 @@ def read_thread():
         print(i)
         i += 1
         cv2.imshow('Paula', img)
-        key = cv2.waitKey(100)
+        key = cv2.waitKey(1)
         if not grabbed or key == 27:
             break
         if video is None:
@@ -37,7 +37,7 @@ def read_thread():
 
 
 def create_video(filename, output_name):
-    reader = Thread(target=read_thread)
+    reader = Thread(target=read_thread, daemon=True)
     reader.start()
     soc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     names = lookup_stream_names(filename)
@@ -55,7 +55,7 @@ def create_video(filename, output_name):
         prev_time = timestamp
         soc.sendto(data, (HOST, PORT))
     print('Replay completed!')
-    reader.join()
+    reader.join(timeout=3.0)
     print('Reading completed!')
 
 
