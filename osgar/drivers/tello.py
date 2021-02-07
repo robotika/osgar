@@ -33,10 +33,11 @@ class TelloDrone(Node):
         self.verbose = False
         self.frame_index = 1  # save as "frame0001.bin"
         self.tasks = [
-            [2, b'streamon'],
-            [3, b'takeoff'],
-            [5, b'land'],
-            [8, b'streamoff']
+            [1, b'streamon'],
+            [2, b'takeoff'],
+            [10, b'cv 360'],
+            [20, b'land'],
+            [22, b'streamoff']
         ]
         self.last_cmd = None
 
