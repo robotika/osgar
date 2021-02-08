@@ -30,6 +30,7 @@ def read_thread():
             height, width, _ = img.shape
             video = cv2.VideoWriter('video.avi', cv2.VideoWriter_fourcc(*'XVID'), 30, (width, height))
         video.write(img)
+        cv2.imwrite('out3/img%04d.jpg' % i, img)
 
     if video is not None:
         video.release()
