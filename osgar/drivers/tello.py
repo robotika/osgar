@@ -57,6 +57,9 @@ class TelloDrone(Node):
             elif item.startswith(b'tof:'):
                 if self.verbose:
                     self.debug_arr.append((self.time.total_seconds(), int(item[4:])))
+            elif item.startswith(b'yaw:'):
+                if self.verbose:
+                    print(self.time, item)
 
     def on_video(self, data):
         return  # hack
