@@ -36,6 +36,8 @@ class TelloDrone(Node):
             [1, b'streamon'],
             [2, b'takeoff'],
             [10, b'cw 360'],
+            [11, b'up 30'],
+            [12, b'cw 360'],
             [20, b'land'],
             [22, b'streamoff']
         ]
