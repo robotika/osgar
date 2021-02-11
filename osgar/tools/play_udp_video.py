@@ -14,7 +14,7 @@ HOST = '127.0.0.1'
 PORT = 11111
 
 
-def read_thread():
+def read_thread(video_name=None, out_dir=None):
     cap = cv2.VideoCapture(f'udp://@{HOST}:{PORT}')
     i = 0
     video = None
@@ -26,19 +26,21 @@ def read_thread():
         key = cv2.waitKey(1)
         if not grabbed or key == 27:
             break
-        if video is None:
+        if video is None and video_name is not None:
             height, width, _ = img.shape
-            video = cv2.VideoWriter('video.avi', cv2.VideoWriter_fourcc(*'XVID'), 30, (width, height))
-        video.write(img)
-        cv2.imwrite('out3/img%04d.jpg' % i, img)
+            video = cv2.VideoWriter(video_name, cv2.VideoWriter_fourcc(*'XVID'), 30, (width, height))
+        if video is not None:
+            video.write(img)
+        if out_dir is not None:
+            cv2.imwrite(out_dir + '/img%04d.jpg' % i, img)
 
     if video is not None:
         video.release()
     cap.release()
 
 
-def create_video(filename, output_name):
-    reader = Thread(target=read_thread, daemon=True)
+def create_video(filename, output_name, out_dir):
+    reader = Thread(target=read_thread, daemon=True, args=(output_name, out_dir,))
     reader.start()
     soc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     names = lookup_stream_names(filename)
@@ -64,9 +66,10 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('logfile', help='Logfile with H264 frames')
-    parser.add_argument('--out', help='Video output filename', default='out.avi')
+    parser.add_argument('--video', help='Video output filename')
+    parser.add_argument('--out-dir', help='Output directory for JPEG images')
     args = parser.parse_args()
 
-    create_video(args.logfile, args.out)
+    create_video(args.logfile, args.video, args.out_dir)
 
 # vim: expandtab sw=4 ts=4
