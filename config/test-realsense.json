@@ -7,7 +7,10 @@
           "init": {
             "depth_subsample": 3,
             "pose_subsample": 20,
-            "depth_rgb": true
+            "depth_rgb": true,
+            "depth_resolution": [640, 480],
+            "rgb_resolution": [640, 480],
+            "depth_fps": 30
           }
       }
     },
