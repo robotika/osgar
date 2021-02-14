@@ -51,6 +51,9 @@ class RealSense(Node):
         self.depth_subsample = config.get("depth_subsample", 3)
         self.pose_subsample = config.get("pose_subsample", 20)
         self.depth_rgb = config.get("depth_rgb", False)
+        self.default_depth_resolution = config.get("depth_resolution", [640, 480])
+        self.default_rgb_resolution = config.get("rgb_resolution", [640, 480])
+        self.depth_fps = config.get("depth_fps", 30)
         self.pose_pipeline = None  # not initialized yet
         self.depth_pipeline = None
         self.finished = None
@@ -148,9 +151,11 @@ class RealSense(Node):
         if enable_depth:
             self.depth_pipeline = rs.pipeline(ctx)
             depth_cfg = rs.config()
-            depth_cfg.enable_stream(rs.stream.depth, 640, 360, rs.format.z16, 30)
+            w, h = self.default_depth_resolution
+            depth_cfg.enable_stream(rs.stream.depth, w, h, rs.format.z16, self.depth_fps)
             if self.depth_rgb:
-                depth_cfg.enable_stream(rs.stream.color, 960, 540, rs.format.bgr8, 30)
+                w, h = self.default_rgb_resolution
+                depth_cfg.enable_stream(rs.stream.color, w, h, rs.format.bgr8, self.depth_fps)
             self.depth_pipeline.start(depth_cfg, self.depth_callback)
 
         if not enable_pose and not enable_depth:
