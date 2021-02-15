@@ -130,7 +130,8 @@ class RealSense(Node):
             serial_number = device.get_info(rs.camera_info.serial_number)
             intro = f"Found {name} (S/N: {serial_number}): "
             product_line = device.get_info(rs.camera_info.product_line)
-            if product_line == "D400":
+            print(product_line)
+            if product_line in ["D400", "L500"]:
                 info_msg = "Enabling streams: depth"
                 enable_depth = True
                 if self.depth_rgb:
