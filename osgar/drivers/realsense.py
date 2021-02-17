@@ -46,18 +46,19 @@ def t265_to_osgar_orientation(t265_orientation):
 class RealSense(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('pose2d', 'pose3d', 'pose_raw', 'orientation', 'depth:gz', 'color')
+        bus.register('pose2d', 'pose3d', 'pose_raw', 'orientation', 'depth:gz', 'color', 'infra')
         self.verbose = config.get('verbose', False)
         self.depth_subsample = config.get("depth_subsample", 3)
         self.pose_subsample = config.get("pose_subsample", 20)
         self.depth_rgb = config.get("depth_rgb", False)
+        self.depth_infra = config.get("depth_infra", False)
         self.default_depth_resolution = config.get("depth_resolution", [640, 480])
         self.default_rgb_resolution = config.get("rgb_resolution", [640, 480])
         self.depth_fps = config.get("depth_fps", 30)
         self.pose_pipeline = None  # not initialized yet
         self.depth_pipeline = None
         self.finished = None
-        if self.depth_rgb:
+        if self.depth_rgb or self.depth_infra:
             import cv2
             global cv2
 
@@ -105,6 +106,12 @@ class RealSense(Node):
                 color_image = np.asanyarray(color_frame.as_video_frame().get_data())
                 __, data = cv2.imencode('*.jpeg', color_image)
 
+            if self.depth_infra:
+                infra_frame = frameset.as_frameset().get_infrared_frame()
+                assert infra_frame.is_video_frame()
+                infra_image = np.asanyarray(infra_frame.as_video_frame().get_data())
+                __, infra_data = cv2.imencode('*.jpeg', infra_image)
+
         except Exception as e:
             print(e)
             self.finished.set()
@@ -113,6 +120,8 @@ class RealSense(Node):
         self.publish('depth', depth_image)
         if self.depth_rgb:
             self.publish('color', data.tobytes())
+        if self.depth_infra:
+            self.publish('infra', infra_data.tobytes())
 
 
     def start(self):
@@ -136,6 +145,8 @@ class RealSense(Node):
                 enable_depth = True
                 if self.depth_rgb:
                     info_msg += ", depth_rgb"
+                if self.depth_infra:
+                    info_msg += ", depth_infra"
                 g_logger.info(intro + info_msg)
             elif product_line == "T200":
                 enable_pose = True
@@ -157,6 +168,9 @@ class RealSense(Node):
             if self.depth_rgb:
                 w, h = self.default_rgb_resolution
                 depth_cfg.enable_stream(rs.stream.color, w, h, rs.format.bgr8, self.depth_fps)
+            if self.depth_infra:
+                w, h = self.default_depth_resolution
+                depth_cfg.enable_stream(rs.stream.infrared, w, h, rs.format.y8, self.depth_fps)
             self.depth_pipeline.start(depth_cfg, self.depth_callback)
 
         if not enable_pose and not enable_depth:
