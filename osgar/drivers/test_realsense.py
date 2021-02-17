@@ -222,10 +222,11 @@ class RealSenseTest(unittest.TestCase):
         logger = MagicMock()
         logger.write = MagicMock(return_value=datetime.timedelta(microseconds=9721))
         bus = Bus(logger)
-        c = RealSense(bus=bus.handle('rs'), config={"depth_rgb": True})
+        c = RealSense(bus=bus.handle('rs'), config={"depth_rgb": True, "depth_infra": True})
         tester = bus.handle('tester')
         bus.connect('rs.depth', 'tester.depth')
         bus.connect('rs.color', 'tester.color')
+        bus.connect('rs.infra', 'tester.infra')
         frameset = MagicMock()
         frameset.is_frameset.return_value = True
         frame = frameset.as_frameset.return_value.get_depth_frame.return_value
@@ -240,17 +241,28 @@ class RealSenseTest(unittest.TestCase):
         color_frame.is_video_frame.return_value = True
         color_frame.as_video_frame.return_value.get_data.return_value = np.asarray([[0, 100, 255]], dtype=np.uint8)
 
+        infra_frame = frameset.as_frameset.return_value.get_infrared_frame.return_value
+        infra_frame.get_timestamp.return_value = 0
+        infra_frame.get_frame_number.return_value = 0
+        infra_frame.is_video_frame.return_value = True
+        infra_frame.as_video_frame.return_value.get_data.return_value = np.asarray([[0, 100]], dtype=np.uint8)
+
         c.depth_callback(frameset)
         dt, channel_1, depth = tester.listen()
         dt, channel_2, color = tester.listen()
+        dt, channel_3, infra = tester.listen()
         depth_expected = np.asanyarray([1,2])
         color_expected = np.asanyarray([[0, 100, 255]], dtype=np.uint8)
+        infra_expected = np.asanyarray([[0, 100]], dtype=np.uint8)
         self.assertEqual(channel_1, 'depth')
         self.assertEqual(channel_2, 'color')
+        self.assertEqual(channel_3, 'infra')
         color = cv2.imdecode(np.frombuffer(color, dtype=np.uint8), 0)
+        infra = cv2.imdecode(np.frombuffer(infra, dtype=np.uint8), 0)
         self.assertEqual(depth.shape, depth_expected.shape)
         self.assertEqual(depth.dtype, depth_expected.dtype)
         self.assertTrue(np.array_equal(depth, depth_expected))
         self.assertEqual(color.shape, color_expected.shape)
+        self.assertEqual(infra.shape, infra_expected.shape)
 
 # vim: expandtab sw=4 ts=4
