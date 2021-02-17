@@ -88,6 +88,8 @@ class main:
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/air_pressure', FluidPressure, self.air_pressure, ('air_pressure',)))
             topics.append(('/' + robot_name + '/front_scan', LaserScan, self.scan360, ('scan360',)))
+            if robot_name.endswith('XM'):
+                topics.append(('/mapping/octomap_binary', Octomap, self.octomap, ('octomap',)))
             if robot_is_marsupial == 'true':
                 rospy.loginfo("X4 is marsupial")
                 publishers['detach'] = rospy.Publisher('/' + robot_name + '/detach', Empty, queue_size=1)
