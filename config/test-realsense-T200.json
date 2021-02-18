@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "realsense",
+          "init": {
+            "device": "T200",
+            "pose_subsample": 20
+          }
+      }
+    },
+    "links": []
+  }
+}
