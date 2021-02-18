@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "realsense",
+          "init": {
+            "device": "D400",
+            "depth_subsample": 3,
+            "depth_rgb": true,
+            "depth_resolution": [640, 480],
+            "rgb_resolution": [640, 480],
+            "depth_fps": 30
+          }
+      }
+    },
+    "links": []
+  }
+}
