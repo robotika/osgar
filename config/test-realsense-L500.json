@@ -5,6 +5,7 @@
       "app": {
           "driver": "realsense",
           "init": {
+            "device": "L500",
             "depth_subsample": 6,
             "depth_rgb": true,
             "depth_infra": true,
