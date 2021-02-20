@@ -17,9 +17,9 @@ class PointsToScan(Node):
         self.debug_arr = []
 
     def on_points(self, data):
-        assert data.shape == (16, 1000, 3), data.shape
+        assert data.shape == (16, 1800, 3), data.shape
         self.debug_arr = data
-        index = (np.arange(360) * (1000/360)).astype(int)
+        index = (np.arange(360) * (1800/360)).astype(int)
         xyz = data[8][index]  # mid index for 16 lidars
         X, Y, Z = xyz[:, 0], xyz[:, 1], xyz[:, 2]
         dist_i = (np.hypot(X, Y) * 1000).astype(int)

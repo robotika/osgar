@@ -13,8 +13,7 @@ class PointsToScanTest(unittest.TestCase):
         bus = MagicMock()
         conv = PointsToScan(bus=bus, config={})
 
-        orig_data = np.zeros((16, 10000, 3), dtype=np.float32)
-        data = orig_data[:, ::10, :]  # downsample to everh 10th
+        data = np.zeros((16, 1800, 3), dtype=np.float32)
         conv.on_points(data)
         bus.publish.assert_called()
 

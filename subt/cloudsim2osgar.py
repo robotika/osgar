@@ -88,6 +88,8 @@ class main:
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/air_pressure', FluidPressure, self.air_pressure, ('air_pressure',)))
             topics.append(('/' + robot_name + '/front_scan', LaserScan, self.scan360, ('scan360',)))
+            if robot_name.endswith('XM'):
+                topics.append(('/mapping/octomap_binary', Octomap, self.octomap, ('octomap',)))
             if robot_is_marsupial == 'true':
                 rospy.loginfo("X4 is marsupial")
                 publishers['detach'] = rospy.Publisher('/' + robot_name + '/detach', Empty, queue_size=1)
@@ -269,12 +271,12 @@ class main:
     def convert_points(self, msg):
         # accept only Velodyne VLC-16 (for the ver0)
         assert msg.height == 16, msg.height
-        assert msg.width == 10000, msg.width
+        assert msg.width == 1800, msg.width
         assert msg.point_step == 32, msg.point_step
-        assert msg.row_step == 320000, msg.row_step
+        assert msg.row_step == 57600, msg.row_step
         arr = np.frombuffer(msg.data, dtype=np.float32)
         points3d = arr.reshape((msg.height, msg.width, 8))[:, :, 0:3]  # keep only (x, y, z)
-        return points3d[:, ::10, :]  # downsample to everh 10th
+        return points3d
 
     def points(self, msg):
         self.points_count += 1
