@@ -104,7 +104,7 @@
           "driver": "subt.pull:Pull",
 	      "init": {
 	        "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan", "pose3d", "battery_state", "score",
-                        "air_pressure", "scan360"]
+                        "air_pressure", "scan360", "octomap:gz"]
 	      }
       },
       "torospy": {

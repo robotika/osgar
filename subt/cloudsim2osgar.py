@@ -19,6 +19,7 @@ from sensor_msgs.msg import Imu, LaserScan, CompressedImage, Image, PointCloud2
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty, Int32
 from sensor_msgs.msg import BatteryState, FluidPressure
+from octomap_msgs.msg import Octomap
 
 sys.path.append("/osgar-ws/src/osgar/osgar/lib")
 import serialize as osgar_serialize
@@ -87,6 +88,8 @@ class main:
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/air_pressure', FluidPressure, self.air_pressure, ('air_pressure',)))
             topics.append(('/' + robot_name + '/front_scan', LaserScan, self.scan360, ('scan360',)))
+            if robot_name.endswith('XM'):
+                topics.append(('/mapping/octomap_binary', Octomap, self.octomap, ('octomap',)))
             if robot_is_marsupial == 'true':
                 rospy.loginfo("X4 is marsupial")
                 publishers['detach'] = rospy.Publisher('/' + robot_name + '/detach', Empty, queue_size=1)
@@ -105,6 +108,8 @@ class main:
             topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
             topics.append(('/' + robot_name + '/rgbd_front/depth', Image, self.depth_front, ('depth_front',)))
             topics.append(('/' + robot_name + '/rgbd_rear/depth', Image, self.depth_rear, ('depth_rear',)))
+            if robot_name.endswith('XM'):
+                topics.append(('/mapping/octomap_binary', Octomap, self.octomap, ('octomap',)))
         elif robot_config.startswith("ROBOTIKA_KLOUBAK_SENSOR_CONFIG"):
             if robot_config.endswith("_2"):
                 rospy.loginfo("k2 2 (with comms beacons)")
@@ -266,17 +271,22 @@ class main:
     def convert_points(self, msg):
         # accept only Velodyne VLC-16 (for the ver0)
         assert msg.height == 16, msg.height
-        assert msg.width == 10000, msg.width
+        assert msg.width == 1800, msg.width
         assert msg.point_step == 32, msg.point_step
-        assert msg.row_step == 320000, msg.row_step
+        assert msg.row_step == 57600, msg.row_step
         arr = np.frombuffer(msg.data, dtype=np.float32)
         points3d = arr.reshape((msg.height, msg.width, 8))[:, :, 0:3]  # keep only (x, y, z)
-        return points3d[:, ::10, :]  # downsample to everh 10th
+        return points3d
 
     def points(self, msg):
         self.points_count += 1
         rospy.loginfo_throttle(10, "points callback: {}".format(self.points_count))
         self.bus.publish('points', self.convert_points(msg))
+
+    def octomap(self, msg):
+        self.octomap_count += 1
+        rospy.loginfo_throttle(10, "octomap callback: {}".format(self.octomap_count))
+        self.bus.publish('octomap', msg.data)
 
 
 if __name__ == '__main__':

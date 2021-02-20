@@ -172,29 +172,37 @@ def process_tar(filepath, all, verbose):
         robot_data_1_processed = False
         with tarfile.open(filepath, "r") as tar:
             for member in tar.getmembers():
-                if member.name.startswith('robot_data_0.bag'):
-                    print(member.name, "->", name)
-                    f = tar.extractfile(member)
-                    extract_log(read_rosbag_fd_gen(f, verbose=verbose), out_name, verbose=verbose)
-                    robot_data_0_processed = True
-                elif member.name.startswith('robot_data_1.bag'):
-                    if not all:
-                        print(member.name, "->", "SKIPPED")
-                        continue
-                    print(member.name, "->", name)
-                    assert robot_data_0_processed
-                    f = tar.extractfile(member)
-                    extract_log(read_rosbag_fd_gen(f, verbose=verbose), out_name, append=True, verbose=verbose)
-                    robot_data_1_processed = True
-                elif member.name.startswith('robot_data_2.bag'):
-                    if not all:
-                        print(member.name, "->", "SKIPPED")
-                        continue
-                    print(member.name, "->", name)
-                    assert robot_data_0_processed
-                    assert robot_data_1_processed
-                    f = tar.extractfile(member)
-                    extract_log(read_rosbag_fd_gen(f, verbose=verbose), out_name, append=True, verbose=verbose)
+                if member.name.startswith('robot_data_'):
+                    # new names contain hash of simulation and robot name, i.e.
+                    # robot_data_affcd00f-3ccf-4ebc-9620-d41635d7044e-r-1_A600L_0.bag
+                    # robot_data_affcd00f-3ccf-4ebc-9620-d41635d7044e-r-1_A600L_1.bag
+                    #   OR
+                    # robot_data_affcd00f-3ccf-4ebc-9620-d41635d7044e-r-1_C300R_0.bag.active
+                    if '_0.bag' in member.name:
+                        print(member.name, "->", name)
+                        f = tar.extractfile(member)
+                        extract_log(read_rosbag_fd_gen(f, verbose=verbose), out_name, verbose=verbose)
+                        robot_data_0_processed = True
+                    elif '_1.bag' in member.name:
+                        if not all:
+                            print(member.name, "->", "SKIPPED")
+                            continue
+                        print(member.name, "->", name)
+                        assert robot_data_0_processed
+                        f = tar.extractfile(member)
+                        extract_log(read_rosbag_fd_gen(f, verbose=verbose), out_name, append=True, verbose=verbose)
+                        robot_data_1_processed = True
+                    elif '_2.bag' in member.name:
+                        if not all:
+                            print(member.name, "->", "SKIPPED")
+                            continue
+                        print(member.name, "->", name)
+                        assert robot_data_0_processed
+                        assert robot_data_1_processed
+                        f = tar.extractfile(member)
+                        extract_log(read_rosbag_fd_gen(f, verbose=verbose), out_name, append=True, verbose=verbose)
+                    else:
+                        assert False, member.name  # unexpected "robot_data_" rosbag name
                 elif member.name.endswith('rosout.log'):
                     rosout_name = letter + '-rosout.log'
                     print(member.name, "->", rosout_name)

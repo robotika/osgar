@@ -29,6 +29,7 @@ MIN_SCORES = np.array(list(NAMES_AND_SCORES.values()))
 
 class CvDetector:
     def __init__(self):
+        cv2.setNumThreads(3)
         self.min_score = MIN_SCORES
         if os.path.exists(PATH_TO_PB_GRAPH) and os.path.exists(PATH_TO_CV_GRAPH):
             graph_path = PATH_TO_PB_GRAPH

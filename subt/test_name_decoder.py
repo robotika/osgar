@@ -41,5 +41,13 @@ class NameDecoderTest(unittest.TestCase):
         steps = parse_robot_name('A100C')
         self.assertEqual(steps, [('enter-center', None), ('center', 100), ('home', 200)])
 
+    def test_extra_params(self):
+        # enable extra mapping
+        steps = parse_robot_name('A100LXM')
+        self.assertEqual(steps, [('enter-left', None), ('left', 100), ('home', 200)])
+
+        steps = parse_robot_name('X100L')
+        self.assertEqual(steps, [('enter-left', None), ('left', 100), ('home', 200)])
+
 # vim: expandtab sw=4 ts=4
 
