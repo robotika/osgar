@@ -4,7 +4,7 @@ pyusb==1.1.0
 opencv-python==4.4.0.42
 requests==2.24.0
 pyzmq==19.0.2
-pyrealsense2==2.31.0.1235; python_version < '3.8'
+pyrealsense2==2.41.0.2666; python_version < '3.8'
 numpy==1.19.2
 protobuf==3.13.0
 Shapely==1.7.1
