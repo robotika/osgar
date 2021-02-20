@@ -8,6 +8,9 @@ New coding:
 
 The last action is by default Home. There is no default direction.
 The time for Home is optional (default is 2 times sum of previous exploration).
+
+There is also eXtended or eXtra part of optional parameters separated by 'X' character.
+Currently only 'M' is used for enable mapping, i.e. name ends with 'XM'.
 """
 
 def split_multi(s, delimiters):
@@ -32,6 +35,8 @@ def parse_robot_name(robot_name):
         'W': 'wait',
         'H': 'home'
     }
+    # remove extra parameters (encoded after 'X')
+    robot_name = robot_name[0] + robot_name[1:].split('X')[0]
     parts = split_multi(robot_name[1:], options.keys())
     ret = []
     sum_t = 0
