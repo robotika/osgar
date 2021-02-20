@@ -137,28 +137,14 @@ class RealSense(Node):
     def start(self):
         self.finished = threading.Event()
         ctx = rs.context()
-        enable_pose, enable_depth = False, False
         if self.device in ["D400", "L500"]:
             info_msg = "Enabling streams: depth"
-            enable_depth = True
             if self.depth_rgb:
                 info_msg += ", depth_rgb"
             if self.depth_infra:
                 info_msg += ", depth_infra"
             g_logger.info(info_msg)
-        elif self.device == "T200":
-            enable_pose = True
-            g_logger.info("Enabling pose stream")
 
-        if enable_pose:
-            self.pose_pipeline = rs.pipeline(ctx)
-            pose_cfg = rs.config()
-            if self.ser_number:
-                pose_cfg.enable_device(self.ser_number)
-            pose_cfg.enable_stream(rs.stream.pose)
-            self.pose_pipeline.start(pose_cfg, self.pose_callback)
-
-        if enable_depth:
             self.depth_pipeline = rs.pipeline(ctx)
             depth_cfg = rs.config()
             if self.ser_number:
@@ -173,7 +159,16 @@ class RealSense(Node):
                 depth_cfg.enable_stream(rs.stream.infrared, w, h, rs.format.y8, self.depth_fps)
             self.depth_pipeline.start(depth_cfg, self.depth_callback)
 
-        if not enable_pose and not enable_depth:
+        elif self.device == "T200":
+            g_logger.info("Enabling pose stream")
+            self.pose_pipeline = rs.pipeline(ctx)
+            pose_cfg = rs.config()
+            if self.ser_number:
+                pose_cfg.enable_device(self.ser_number)
+            pose_cfg.enable_stream(rs.stream.pose)
+            self.pose_pipeline.start(pose_cfg, self.pose_callback)
+
+        else:
             self.finished.set()
 
     def request_stop(self):
