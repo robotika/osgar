@@ -157,7 +157,15 @@ class RealSense(Node):
             if self.depth_infra:
                 w, h = self.default_depth_resolution
                 depth_cfg.enable_stream(rs.stream.infrared, w, h, rs.format.y8, self.depth_fps)
-            self.depth_pipeline.start(depth_cfg, self.depth_callback)
+            if depth_cfg.can_resolve(self.depth_pipeline):
+                self.depth_pipeline.start(depth_cfg, self.depth_callback)
+            else:
+                err_msg = "Can not resolve the configuration filters for depth device."
+                if self.ser_number:
+                    err_msg += " Serial number: %s" % self.ser_number
+                g_logger.error(err_msg)
+                self.depth_pipeline = None
+                self.finished.set()
 
         elif self.device == "T200":
             g_logger.info("Enabling pose stream")
@@ -166,7 +174,15 @@ class RealSense(Node):
             if self.ser_number:
                 pose_cfg.enable_device(self.ser_number)
             pose_cfg.enable_stream(rs.stream.pose)
-            self.pose_pipeline.start(pose_cfg, self.pose_callback)
+            if pose_cfg.can_resolve(self.pose_pipeline):
+                self.pose_pipeline.start(pose_cfg, self.pose_callback)
+            else:
+                err_msg = "Can not resolve the configuration filters for pose device."
+                if self.ser_number:
+                    err_msg += " Serial number: %s" %self.ser_number
+                g_logger.error(err_msg)
+                self.pose_pipeline = None
+                self.finished.set()
 
         else:
             self.finished.set()
