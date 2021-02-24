@@ -66,7 +66,10 @@ class RealSense(Node):
         else:
             g_logger.warning("Device is not specified in the config!")
 
-        self.ser_number = config.get('ser_number')
+        self.serial_number = config.get('serial_number')
+        if not self.serial_number:
+            g_logger.info("Serial number is not set. Use rs-enumerate-devices tool to get camera information.")
+            # https://github.com/IntelRealSense/librealsense/tree/master/tools/enumerate-devices
         self.verbose = config.get('verbose', False)
         self.pose_pipeline = None  # not initialized yet
         self.depth_pipeline = None
@@ -147,8 +150,8 @@ class RealSense(Node):
 
             self.depth_pipeline = rs.pipeline(ctx)
             depth_cfg = rs.config()
-            if self.ser_number:
-                depth_cfg.enable_device(self.ser_number)
+            if self.serial_number:
+                depth_cfg.enable_device(self.serial_number)
             w, h = self.default_depth_resolution
             depth_cfg.enable_stream(rs.stream.depth, w, h, rs.format.z16, self.depth_fps)
             if self.depth_rgb:
@@ -161,8 +164,8 @@ class RealSense(Node):
                 self.depth_pipeline.start(depth_cfg, self.depth_callback)
             else:
                 err_msg = "Can not resolve the configuration filters for depth device."
-                if self.ser_number:
-                    err_msg += " Serial number: %s" % self.ser_number
+                if self.serial_number:
+                    err_msg += " Serial number: %s" % self.serial_number
                 g_logger.error(err_msg)
                 self.depth_pipeline = None
                 self.finished.set()
@@ -171,15 +174,15 @@ class RealSense(Node):
             g_logger.info("Enabling pose stream")
             self.pose_pipeline = rs.pipeline(ctx)
             pose_cfg = rs.config()
-            if self.ser_number:
-                pose_cfg.enable_device(self.ser_number)
+            if self.serial_number:
+                pose_cfg.enable_device(self.serial_number)
             pose_cfg.enable_stream(rs.stream.pose)
             if pose_cfg.can_resolve(self.pose_pipeline):
                 self.pose_pipeline.start(pose_cfg, self.pose_callback)
             else:
                 err_msg = "Can not resolve the configuration filters for pose device."
-                if self.ser_number:
-                    err_msg += " Serial number: %s" %self.ser_number
+                if self.serial_number:
+                    err_msg += " Serial number: %s" %self.serial_number
                 g_logger.error(err_msg)
                 self.pose_pipeline = None
                 self.finished.set()
