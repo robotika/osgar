@@ -238,18 +238,18 @@ def frontiers(img, draw=False):
     mask2 = mask_up | mask_down
     mask = np.vstack([z, mask2, z]) | mask
 
-    if draw:
-        xy = np.where(mask)
-        score = np.zeros(len(xy[0]))
-        for i in range(len(xy[0])):
-            x, y = xy[0][i]-512, 512-xy[1][i]
-            score[i] = math.hypot(x, y) * 0.03
-            for j in range(len(xy[0])):
-                x2, y2 = xy[0][j]-512, 512-xy[1][j]
-                dist = math.hypot(x - x2, y - y2)
-                if dist < 10:  # ~ 5 meters
-                    score[i] += 1.0
+    xy = np.where(mask)
+    score = np.zeros(len(xy[0]))
+    for i in range(len(xy[0])):
+        x, y = xy[0][i]-512, 512-xy[1][i]
+        score[i] = math.hypot(x, y) * 0.03
+        for j in range(len(xy[0])):
+            x2, y2 = xy[0][j]-512, 512-xy[1][j]
+            dist = math.hypot(x - x2, y - y2)
+            if dist < 10:  # ~ 5 meters
+                score[i] += 1.0
 
+    if draw:
         import matplotlib.pyplot as plt
         line = plt.plot(xy[1]-512, 512-xy[0], 'bo')
         m = score > 3*max(score)/4
@@ -258,9 +258,25 @@ def frontiers(img, draw=False):
         plt.axes().set_aspect('equal', 'datalim')
         plt.show()
 
+    from osgar.lib.pplanner import find_path
+    driveable = white[:1023, :1023] | white[1:, :1023] | white[1:, 1:] | white[:1023, 1:]
+    i = np.argmax(score)
+    limit_score = 3*max(score)/4
+    goals = [(xy[1][i], xy[0][i]) for i in range(len(xy[0])) if score[i] > limit_score]
+    path = find_path(driveable, (527, 529), goals, verbose=False)
+
     img[mask, 0] = 255  # pink
     img[mask, 1] = 0
     img[mask, 2] = 255
+
+    if path is not None:
+        for x, y in path:
+            img[y][x][0] = 255
+            img[y][x][1] = 0
+            img[y][x][2] = 0
+    else:
+        print('Path not found!')
+
     return img
 
 
