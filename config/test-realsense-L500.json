@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "realsense",
+          "init": {
+            "device": "L500",
+            "depth_subsample": 6,
+            "depth_rgb": true,
+            "depth_infra": true,
+            "depth_resolution": [1024, 768],
+            "rgb_resolution": [1280, 720],
+            "depth_fps": 30
+          }
+      }
+    },
+    "links": []
+  }
+}

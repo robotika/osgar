@@ -32,11 +32,7 @@ class RealSenseTest(unittest.TestCase):
     def test_detect_pose(self):
         bus = MagicMock()
         with patch('osgar.drivers.realsense.rs') as rs:
-            ctx = rs.context.return_value
-            device = MagicMock()
-            device.get_info.return_value = "T200"
-            ctx.query_devices.return_value = [device]
-            c = RealSense(bus=bus.handle('rs'), config={})
+            c = RealSense(bus=bus.handle('rs'), config={"device": "T200"})
             c.start()
             self.assertTrue(c.pose_pipeline.start.called)
             self.assertEqual(c.depth_pipeline, None)
@@ -46,30 +42,10 @@ class RealSenseTest(unittest.TestCase):
     def test_detect_depth(self):
         bus = MagicMock()
         with patch('osgar.drivers.realsense.rs') as rs:
-            ctx = rs.context.return_value
-            device = MagicMock()
-            device.get_info.return_value = "D400"
-            ctx.query_devices.return_value = [device]
-            c = RealSense(bus=bus.handle('rs'), config={})
+            c = RealSense(bus=bus.handle('rs'), config={"device": "D400"})
             c.start()
             self.assertTrue(c.depth_pipeline.start.called)
             self.assertEqual(c.pose_pipeline, None)
-            c.request_stop()
-            c.join()
-
-    def test_detect_pose_depth(self):
-        bus = MagicMock()
-        with patch('osgar.drivers.realsense.rs') as rs:
-            ctx = rs.context.return_value
-            pose_device = MagicMock()
-            pose_device.get_info.return_value = "T200"
-            depth_device = MagicMock()
-            depth_device.get_info.return_value = "D400"
-            ctx.query_devices.return_value = [pose_device, depth_device]
-            c = RealSense(bus=bus.handle('rs'), config={})
-            c.start()
-            self.assertTrue(c.pose_pipeline.start.called)
-            self.assertTrue(c.depth_pipeline.start.called)
             c.request_stop()
             c.join()
 
@@ -81,7 +57,7 @@ class RealSenseTest(unittest.TestCase):
             [Translation(0, 0, -1), [1000, 0, 0]], # forward
             [Translation(-1, 0, 0), [0, 1000, 0]], # left
         ]
-        c = RealSense(bus=bus.handle('rs'), config={})
+        c = RealSense(bus=bus.handle('rs'), config={"device": "T200"})
         tester = bus.handle('tester')
         bus.connect('rs.pose2d', 'tester.pose2d')
 
@@ -124,7 +100,7 @@ class RealSenseTest(unittest.TestCase):
             # osgar turns round y axis -90
             [Rotation(0.7071068, 0, 0, 0.7071068), [0, -0.7071068, 0, 0.7071068]]
         ]
-        c = RealSense(bus=bus.handle('rs'), config={})
+        c = RealSense(bus=bus.handle('rs'), config={"device": "T200"})
         tester = bus.handle('tester')
         bus.connect('rs.orientation', 'tester.orientation')
         for input, output in moves:
@@ -156,7 +132,7 @@ class RealSenseTest(unittest.TestCase):
             [Rotation(0, -0.7071068, 0, 0.7071068), [0, 0, -90*100]], # facing right
             [Rotation(0, -0.9999619, 0, 0.0087265), [0, 0, -179*100]],  # facing backwards
         ]
-        c = RealSense(bus=bus.handle('rs'), config={})
+        c = RealSense(bus=bus.handle('rs'), config={"device": "T200"})
         tester = bus.handle('tester')
         bus.connect('rs.pose2d', 'tester.pose2d')
         for input, output in moves:
@@ -196,7 +172,7 @@ class RealSenseTest(unittest.TestCase):
             # osgar turns round y axis -90, moving z 1
             [[Translation(0, 1, 0), Rotation(0.7071068, 0, 0, 0.7071068)], [[0, 0, 1], [0, -0.7071068, 0, 0.7071068]]]
         ]
-        c = RealSense(bus=bus.handle('rs'), config={})
+        c = RealSense(bus=bus.handle('rs'), config={"device": "T200"})
         tester = bus.handle('tester')
         bus.connect('rs.pose3d', 'tester.pose3d')
         for input, output in moves:
@@ -222,10 +198,11 @@ class RealSenseTest(unittest.TestCase):
         logger = MagicMock()
         logger.write = MagicMock(return_value=datetime.timedelta(microseconds=9721))
         bus = Bus(logger)
-        c = RealSense(bus=bus.handle('rs'), config={"depth_rgb": True})
+        c = RealSense(bus=bus.handle('rs'), config={"device": "D400", "depth_rgb": True, "depth_infra": True})
         tester = bus.handle('tester')
         bus.connect('rs.depth', 'tester.depth')
         bus.connect('rs.color', 'tester.color')
+        bus.connect('rs.infra', 'tester.infra')
         frameset = MagicMock()
         frameset.is_frameset.return_value = True
         frame = frameset.as_frameset.return_value.get_depth_frame.return_value
@@ -240,17 +217,28 @@ class RealSenseTest(unittest.TestCase):
         color_frame.is_video_frame.return_value = True
         color_frame.as_video_frame.return_value.get_data.return_value = np.asarray([[0, 100, 255]], dtype=np.uint8)
 
+        infra_frame = frameset.as_frameset.return_value.get_infrared_frame.return_value
+        infra_frame.get_timestamp.return_value = 0
+        infra_frame.get_frame_number.return_value = 0
+        infra_frame.is_video_frame.return_value = True
+        infra_frame.as_video_frame.return_value.get_data.return_value = np.asarray([[0, 100]], dtype=np.uint8)
+
         c.depth_callback(frameset)
         dt, channel_1, depth = tester.listen()
         dt, channel_2, color = tester.listen()
+        dt, channel_3, infra = tester.listen()
         depth_expected = np.asanyarray([1,2])
         color_expected = np.asanyarray([[0, 100, 255]], dtype=np.uint8)
+        infra_expected = np.asanyarray([[0, 100]], dtype=np.uint8)
         self.assertEqual(channel_1, 'depth')
         self.assertEqual(channel_2, 'color')
+        self.assertEqual(channel_3, 'infra')
         color = cv2.imdecode(np.frombuffer(color, dtype=np.uint8), 0)
+        infra = cv2.imdecode(np.frombuffer(infra, dtype=np.uint8), 0)
         self.assertEqual(depth.shape, depth_expected.shape)
         self.assertEqual(depth.dtype, depth_expected.dtype)
         self.assertTrue(np.array_equal(depth, depth_expected))
         self.assertEqual(color.shape, color_expected.shape)
+        self.assertEqual(infra.shape, infra_expected.shape)
 
 # vim: expandtab sw=4 ts=4

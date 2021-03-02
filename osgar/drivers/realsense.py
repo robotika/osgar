@@ -46,17 +46,34 @@ def t265_to_osgar_orientation(t265_orientation):
 class RealSense(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('pose2d', 'pose3d', 'pose_raw', 'orientation', 'depth:gz', 'color')
+        self.device = config.get('device')
+
+        if self.device == 'T200':
+            bus.register('pose2d', 'pose3d', 'pose_raw', 'orientation')
+            self.pose_subsample = config.get("pose_subsample", 20)
+        elif self.device in ['D400', 'L500']:
+            bus.register('depth:gz', 'color', 'infra')
+            self.depth_subsample = config.get("depth_subsample", 3)
+            self.depth_rgb = config.get("depth_rgb", False)
+            self.depth_infra = config.get("depth_infra", False)
+            self.default_depth_resolution = config.get("depth_resolution", [640, 360])
+            self.default_rgb_resolution = config.get("rgb_resolution", [640, 360])
+            self.depth_fps = config.get("depth_fps", 30)
+
+            if self.depth_rgb or self.depth_infra:
+                import cv2
+                global cv2
+        else:
+            g_logger.warning("Device is not specified in the config!")
+
+        self.serial_number = config.get('serial_number')
+        if not self.serial_number:
+            g_logger.info("Serial number is not set. Use rs-enumerate-devices tool to get camera information.")
+            # https://github.com/IntelRealSense/librealsense/tree/master/tools/enumerate-devices
         self.verbose = config.get('verbose', False)
-        self.depth_subsample = config.get("depth_subsample", 3)
-        self.pose_subsample = config.get("pose_subsample", 20)
-        self.depth_rgb = config.get("depth_rgb", False)
         self.pose_pipeline = None  # not initialized yet
         self.depth_pipeline = None
         self.finished = None
-        if self.depth_rgb:
-            import cv2
-            global cv2
 
     def pose_callback(self, frame):
         try:
@@ -102,6 +119,12 @@ class RealSense(Node):
                 color_image = np.asanyarray(color_frame.as_video_frame().get_data())
                 __, data = cv2.imencode('*.jpeg', color_image)
 
+            if self.depth_infra:
+                infra_frame = frameset.as_frameset().get_infrared_frame()
+                assert infra_frame.is_video_frame()
+                infra_image = np.asanyarray(infra_frame.as_video_frame().get_data())
+                __, infra_data = cv2.imencode('*.jpeg', infra_image)
+
         except Exception as e:
             print(e)
             self.finished.set()
@@ -110,50 +133,61 @@ class RealSense(Node):
         self.publish('depth', depth_image)
         if self.depth_rgb:
             self.publish('color', data.tobytes())
+        if self.depth_infra:
+            self.publish('infra', infra_data.tobytes())
 
 
     def start(self):
         self.finished = threading.Event()
         ctx = rs.context()
-        device_list = ctx.query_devices()
-        if len(device_list) == 0:
-            g_logger.warning("No RealSense devices detected!")
-            self.finished.set()
-            return
+        if self.device in ["D400", "L500"]:
+            info_msg = "Enabling streams: depth"
+            if self.depth_rgb:
+                info_msg += ", depth_rgb"
+            if self.depth_infra:
+                info_msg += ", depth_infra"
+            g_logger.info(info_msg)
 
-        enable_pose, enable_depth = False, False
-        for device in device_list:
-            name = device.get_info(rs.camera_info.name)
-            serial_number = device.get_info(rs.camera_info.serial_number)
-            intro = f"Found {name} (S/N: {serial_number}): "
-            product_line = device.get_info(rs.camera_info.product_line)
-            if product_line == "D400":
-                info_msg = "Enabling streams: depth"
-                enable_depth = True
-                if self.depth_rgb:
-                    info_msg += ", depth_rgb"
-                g_logger.info(intro + info_msg)
-            elif product_line == "T200":
-                enable_pose = True
-                g_logger.info(intro + "Enabling pose stream")
-            else:
-                g_logger.warning(f"Unknown type: {product_line}")
-
-        if enable_pose:
-            self.pose_pipeline = rs.pipeline(ctx)
-            pose_cfg = rs.config()
-            pose_cfg.enable_stream(rs.stream.pose)
-            self.pose_pipeline.start(pose_cfg, self.pose_callback)
-
-        if enable_depth:
             self.depth_pipeline = rs.pipeline(ctx)
             depth_cfg = rs.config()
-            depth_cfg.enable_stream(rs.stream.depth, 640, 360, rs.format.z16, 30)
+            if self.serial_number:
+                depth_cfg.enable_device(self.serial_number)
+            w, h = self.default_depth_resolution
+            depth_cfg.enable_stream(rs.stream.depth, w, h, rs.format.z16, self.depth_fps)
             if self.depth_rgb:
-                depth_cfg.enable_stream(rs.stream.color, 960, 540, rs.format.bgr8, 30)
-            self.depth_pipeline.start(depth_cfg, self.depth_callback)
+                w, h = self.default_rgb_resolution
+                depth_cfg.enable_stream(rs.stream.color, w, h, rs.format.bgr8, self.depth_fps)
+            if self.depth_infra:
+                w, h = self.default_depth_resolution
+                depth_cfg.enable_stream(rs.stream.infrared, w, h, rs.format.y8, self.depth_fps)
+            if depth_cfg.can_resolve(self.depth_pipeline):
+                self.depth_pipeline.start(depth_cfg, self.depth_callback)
+            else:
+                err_msg = "Can not resolve the configuration filters for depth device."
+                if self.serial_number:
+                    err_msg += " Serial number: %s" % self.serial_number
+                g_logger.error(err_msg)
+                self.depth_pipeline = None
+                self.finished.set()
 
-        if not enable_pose and not enable_depth:
+        elif self.device == "T200":
+            g_logger.info("Enabling pose stream")
+            self.pose_pipeline = rs.pipeline(ctx)
+            pose_cfg = rs.config()
+            if self.serial_number:
+                pose_cfg.enable_device(self.serial_number)
+            pose_cfg.enable_stream(rs.stream.pose)
+            if pose_cfg.can_resolve(self.pose_pipeline):
+                self.pose_pipeline.start(pose_cfg, self.pose_callback)
+            else:
+                err_msg = "Can not resolve the configuration filters for pose device."
+                if self.serial_number:
+                    err_msg += " Serial number: %s" %self.serial_number
+                g_logger.error(err_msg)
+                self.pose_pipeline = None
+                self.finished.set()
+
+        else:
             self.finished.set()
 
     def request_stop(self):
