@@ -7,7 +7,7 @@ import time
 import rospy
 import std_msgs.msg
 
-ROSBAG_SIZE_LIMIT = 3000000000  #3GB
+ROSBAG_SIZE_LIMIT = 2 * 1048576000  # 2GB
 
 
 def main(*args):
