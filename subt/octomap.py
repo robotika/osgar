@@ -11,6 +11,7 @@ import cv2
 
 from osgar.node import Node
 from subt.trace import distance3D
+from osgar.lib.pplanner import find_path
 
 # http://www.arminhornung.de/Research/pub/hornung13auro.pdf
 # 00: unknown; 01: occupied; 10: free; 11: inner node with child next in the stream
@@ -139,6 +140,45 @@ def xyz2img(img, xyz, color, level=2):
     return img
 
 
+def data2stack(data):
+    stack = [[]]
+    unknown = []
+    free = []
+    occupied = []
+    for i in range(len(data) // 2):
+        prefix = stack.pop(0)
+        d = struct.unpack_from('<H', data, i * 2)[0]
+        for rot in range(14, -2, -2):  # range(0, 16, 2):
+            val = (d & (0x3 << rot)) >> rot
+            if val == 3:
+                stack.insert(0, prefix + [rot // 2])
+            elif val == 2:
+                occupied.append(prefix + [rot // 2])
+            elif val == 1:
+                free.append(prefix + [rot // 2])
+            elif val == 0:
+                unknown.append(prefix + [rot // 2])
+    assert len(stack) == 0, len(stack)
+    return occupied, free, unknown
+
+
+def data2maplevel(data, level):
+    """
+    Convert Octomap data to image/level
+    """
+    img = np.zeros((1024, 1024, 3), dtype=np.uint8)
+
+    occupied, free, unknown = data2stack(data)
+    xyz = seq2xyz(free)
+    xyz2img(img, xyz, color=(0xFF, 0xFF, 0xFF), level=level)
+
+    xyz = seq2xyz(occupied)
+    xyz2img(img, xyz, color=(0x00, 0x00, 0xFF), level=level)
+
+    xyz = seq2xyz(unknown)
+    xyz2img(img, xyz, color=(0, 0xFF, 0), level=level)
+    return img
+
 
 class Octomap(Node):
     def __init__(self, config, bus):
@@ -147,12 +187,17 @@ class Octomap(Node):
         self.prev_data = None
         self.time_limit_sec = 60
         self.debug_arr = []
-        self.waypoints = [[x, 0, 0] for x in range(10)]  # experimental trigger of navigation
+        self.waypoints = None  # experimental trigger of navigation
+        self.start_xyz = None
+        self.sim_time_sec = None
+        self.pose3d = None
 
     def on_sim_time_sec(self, data):
         pass
 
     def on_pose3d(self, data):
+        if self.start_xyz is None:
+            self.start_xyz = data[0]
         x, y, z = data[0]
         if math.hypot(x - 3, y) < 2 and self.waypoints is not None:
             # in the tunnel
@@ -160,31 +205,14 @@ class Octomap(Node):
             self.publish('waypoints', self.waypoints)
             self.waypoints = None
 
-    def on_octomap(self, data):
+    def on_octomap_obsolete(self, data):
         return  # do not worry about ocotomap for this test
         if self.time.total_seconds() < self.time_limit_sec:
             return
         assert len(data) % 2 == 0, len(data)
         data = bytes([(d + 256)%256 for d in data])
 
-        stack = [[]]
-        unknown = []
-        free = []
-        occupied = []
-        for i in range(len(data)//2):
-            prefix = stack.pop(0)
-            d = struct.unpack_from('<H', data, i * 2)[0]
-            for rot in range(14, -2, -2):  #range(0, 16, 2):
-                val = (d & (0x3 << rot)) >> rot
-                if val == 3:
-                    stack.insert(0, prefix + [rot//2])
-                elif val == 2:
-                    occupied.append(prefix + [rot // 2])
-                elif val == 1:
-                    free.append(prefix + [rot // 2])
-                elif val == 0:
-                    unknown.append(prefix + [rot // 2])
-        assert len(stack) == 0, len(stack)
+        occupied, free, unknown = data2stack(data)
 
         xyz = seq2xyz(occupied)
         self.debug_arr.append(xyz)
@@ -221,6 +249,26 @@ class Octomap(Node):
         plt.show()
         assert 0, "END"
 
+    def on_octomap(self, data):
+#        if self.sim_time_sec is None or self.sim_time_sec < 10: #self.time_limit_sec:
+        if self.pose3d is None or self.time.total_seconds() < self.time_limit_sec:
+            return
+        self.time_limit_sec += 60
+
+        assert len(data) % 2 == 0, len(data)
+        data = bytes([(d + 256) % 256 for d in data])
+
+        x = self.pose3d[0][0] - self.start_xyz[0]
+        y = self.pose3d[0][1] - self.start_xyz[1]
+        start = int(512 + 2*x), int(512 - 2*y)
+        img = data2maplevel(data, level=1)  # 0.5m above the ground?
+        img2, path = frontiers(img, start)
+        cv2.circle(img2, start, radius=2, color=(39, 127, 255), thickness=-1)
+        cv2.imwrite('octo_cut.png', img2)
+
+        if path is not None:
+            self.waypoints = [((x - 512)/2 + self.start_xyz[0], (512 - y)/2 + self.start_xyz[1], 0) for x, y in path]
+
     def update(self):
         channel = super().update()
         handler = getattr(self, "on_" + channel, None)
@@ -231,7 +279,7 @@ class Octomap(Node):
 
 
 ###############################################################################
-def frontiers(img, draw=False):
+def frontiers(img, start, draw=False):
     green = (img[:, :, 0] == 0) & (img[:, :, 1] == 255) & (img[:, :, 2] == 0)
     white = (img[:, :, 0] == 255) & (img[:, :, 1] == 255) & (img[:, :, 2] == 255)
 
@@ -267,12 +315,11 @@ def frontiers(img, draw=False):
         plt.axes().set_aspect('equal', 'datalim')
         plt.show()
 
-    from osgar.lib.pplanner import find_path
     driveable = white[:1023, :1023] | white[1:, :1023] | white[1:, 1:] | white[:1023, 1:]
     i = np.argmax(score)
     limit_score = 3*max(score)/4
     goals = [(xy[1][i], xy[0][i]) for i in range(len(xy[0])) if score[i] > limit_score]
-    path = find_path(driveable, (527, 529), goals, verbose=False)
+    path = find_path(driveable, start, goals, verbose=False)
 
     img[mask, 0] = 255  # pink
     img[mask, 1] = 0
@@ -286,7 +333,7 @@ def frontiers(img, draw=False):
     else:
         print('Path not found!')
 
-    return img
+    return img, path
 
 
 if __name__ == "__main__":
