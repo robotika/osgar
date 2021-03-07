@@ -109,6 +109,9 @@
           "in": ["robot_xyz", "trace_info", "robot_trace"],
           "out": ["trace_info", "robot_trace"],
           "init": {}
+      },
+      "octomap": {
+        "driver": "subt.octomap:Octomap"
       }
     },
     "links": [["app.desired_speed", "rosmsg.desired_speed"],
@@ -169,6 +172,9 @@
               ["app.artf_xyz", "reporter.artf_xyz"],
               ["rosmsg.base_station", "reporter.base_station"],
               ["reporter.artf_cmd", "transmitter.raw"],
+
+              ["fromrospy.octomap", "octomap.octomap"],
+              ["offseter.pose3d", "octomap.pose3d"],
 
               ["rosmsg.origin", "offseter.origin"],
               ["fromrospy.pose3d", "offseter.pose3d"]

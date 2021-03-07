@@ -143,18 +143,25 @@ def xyz2img(img, xyz, color, level=2):
 class Octomap(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register("size")
+        bus.register('waypoints')
         self.prev_data = None
         self.time_limit_sec = 60
         self.debug_arr = []
+        self.waypoints = [[x, 0, 0] for x in range(10)]  # experimental trigger of navigation
 
     def on_sim_time_sec(self, data):
         pass
 
     def on_pose3d(self, data):
-        pass
+        x, y, z = data[0]
+        if math.hypot(x - 3, y) < 2 and self.waypoints is not None:
+            # in the tunnel
+            print(data)
+            self.publish('waypoints', self.waypoints)
+            self.waypoints = None
 
     def on_octomap(self, data):
+        return  # do not worry about ocotomap for this test
         if self.time.total_seconds() < self.time_limit_sec:
             return
         assert len(data) % 2 == 0, len(data)
@@ -219,6 +226,8 @@ class Octomap(Node):
         handler = getattr(self, "on_" + channel, None)
         if handler is not None:
             handler(getattr(self, channel))
+        else:
+            assert False, channel  # unknown channel
 
 
 ###############################################################################
