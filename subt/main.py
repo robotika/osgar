@@ -137,6 +137,7 @@ class SubTChallenge:
         self.voltage = []
         self.artifacts = []
         self.trace = Trace()
+        self.waypoints = None  # external waypoints for navigation
         self.loop_detector = LoopDetector()
         self.collision_detector_enabled = False
         self.sim_time_sec = 0
@@ -287,6 +288,14 @@ class SubTChallenge:
         while self.sim_time_sec - start_time < (timeout + last_pause_time + current_pause_time).total_seconds():
             try:
                 channel = self.update()
+                if channel == 'waypoints':
+                    tmp_trace = Trace()
+                    tmp_trace.trace = self.waypoints
+                    self.waypoints = None
+                    tmp_trace.reverse()
+                    self.follow_trace(tmp_trace, timeout=timedelta(minutes=10))  # hmm, external parameter?
+                    continue
+
                 if (channel == 'scan' and not self.flipped) or (channel == 'scan_back' and self.flipped) or channel == 'scan360':
                     if self.pause_start_time is None:
                         if self.use_center:
@@ -586,6 +595,9 @@ class SubTChallenge:
             else:
                 self.stdout('Origin ERROR received')
                 self.origin_error = True
+
+    def on_waypoints(self, timestamp, data):
+        self.waypoints = data
 
     def update(self):
         packet = self.bus.listen()
