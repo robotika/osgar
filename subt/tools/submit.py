@@ -133,7 +133,7 @@ def submit(token, simname, image, world, robots, dont_submit):
         'Private-Token': token
     }
 
-    req = requests.Request('POST', url="https://cloudsim.ignitionrobotics.org/1.0/simulations", files=data,
+    req = requests.Request('POST', url="https://cloudsim.subtchallenge.world/1.0/simulations", files=data,
                            headers=headers).prepare()
 
     if dont_submit:
