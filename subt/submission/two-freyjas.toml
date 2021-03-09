@@ -1,0 +1,8 @@
+world = "uc1"
+timeout = 2000
+image = "ver99rev2"
+
+[robots]
+A900LXM = "freyja"
+B900RXM = "freyja"
+
