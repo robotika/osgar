@@ -9,7 +9,8 @@ import pathlib
 import toml
 
 # See https://pkg.go.dev/gitlab.com/ignitionrobotics/web/cloudsim/simulations for original names
-WORLDS=dict(
+WORLDS = dict(
+    tq  = "Tunnel Qualification",
     tp1 = "Tunnel Practice 1",
     tp2 = "Tunnel Practice 2",
     tp3 = "Tunnel Practice 3",
@@ -22,6 +23,7 @@ WORLDS=dict(
     tc7 = "Tunnel Circuit World 7",
     tc8 = "Tunnel Circuit World 8",
 
+    uq  = "Urban Qualification",
     up1 = "Urban Practice 1",
     up2 = "Urban Practice 2",
     up3 = "Urban Practice 3",
@@ -50,6 +52,8 @@ WORLDS=dict(
     cc6 = "Cave Circuit World 6",
     cc7 = "Cave Circuit World 7",
     cc8 = "Cave Circuit World 8",
+
+    fq = "Finals Qualification",
 )
 
 ROBOTS=dict(
@@ -87,7 +91,7 @@ def validate_image(image):
     images = _cmd('aws', 'ecr', 'list-images', '--repository-name', 'subt/robotika', '--output', 'json')
     for img in json.loads(images)["imageIds"]:
         if img.get('imageTag') == image:
-            return f'200670743174.dkr.ecr.us-east-1.amazonaws.com/subt/robotika:{image}'
+            return f'138467776890.dkr.ecr.us-east-1.amazonaws.com/subt/robotika:{image}'
     sys.exit(f"image '{image}' not found in aws subt/robotika repository")
 
 
@@ -129,7 +133,7 @@ def submit(token, simname, image, world, robots, dont_submit):
         'Private-Token': token
     }
 
-    req = requests.Request('POST', url="https://cloudsim.ignitionrobotics.org/1.0/simulations", files=data,
+    req = requests.Request('POST', url="https://cloudsim.subtchallenge.world/1.0/simulations", files=data,
                            headers=headers).prepare()
 
     if dont_submit:

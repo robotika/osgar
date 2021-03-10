@@ -14,8 +14,8 @@ import toml
 
 from pprint import pprint
 
-WORLDS=dict(
-    #TUNNEL
+WORLDS = dict(
+    # TUNNEL
     tq  = "tunnel_qual_ign",
     ts1 = "simple_tunnel_01",
     ts2 = "simple_tunnel_02",
@@ -46,7 +46,7 @@ WORLDS=dict(
     uc7 = "urban_circuit_07",
     uc8 = "urban_circuit_08",
 
-    #CAVE
+    # CAVE
     cq  = "cave_qual",
     cs1 = "simple_cave_01",
     cs2 = "simple_cave_02",
@@ -54,6 +54,9 @@ WORLDS=dict(
     cp1 = "cave_circuit_practice_01",
     cp2 = "cave_circuit_practice_02",
     cp3 = "cave_circuit_practice_03",
+
+    # FINALS
+    fq="finals_qual",
 )
 
 ROBOTS=dict(
@@ -96,7 +99,7 @@ def validate_image(client, image):
 
 
 def validate_circuit(world):
-    for c in "tunnel", "urban", "cave":
+    for c in "tunnel", "urban", "cave", "finals":
         if c in world:
             return c
     sys.exit(f"autodetection of circuit failed for world {world}")
