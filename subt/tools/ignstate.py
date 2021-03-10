@@ -132,7 +132,7 @@ def _parse_artifacts(world):
     type_re = re.compile('^(backpack|rescue_randy|gas|vent|phone|artifact_origin|rope|helmet|drill|extinguisher)')
     artifacts = []
     origin_xyz = None
-    for model in root.iterfind("./world/model"):
+    for model in root.iterfind("./model"):
         name = model.get('name')
         match = type_re.match(name)
         if match:
