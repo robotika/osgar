@@ -199,9 +199,8 @@ class Octomap(Node):
         if self.start_xyz is None:
             self.start_xyz = data[0]
         x, y, z = data[0]
-        if math.hypot(x - 3, y) < 2 and self.waypoints is not None:
-            # in the tunnel
-            print(data)
+        if self.waypoints is not None:
+            print('Waypoints', data[0], self.waypoints[0], self.waypoints[-1])
             self.publish('waypoints', self.waypoints)
             self.waypoints = None
 
