@@ -260,14 +260,14 @@ class Octomap(Node):
 
         x = self.pose3d[0][0] - self.start_xyz[0]
         y = self.pose3d[0][1] - self.start_xyz[1]
-        start = int(512 + 2*x), int(512 - 2*y)
+        start = int(512 + 4*x), int(512 - 4*y)
         img = data2maplevel(data, level=1)  # 0.5m above the ground?
         img2, path = frontiers(img, start)
         cv2.circle(img2, start, radius=2, color=(39, 127, 255), thickness=-1)
         cv2.imwrite('octo_cut.png', img2)
 
         if path is not None:
-            self.waypoints = [((x - 512)/2 + self.start_xyz[0], (512 - y)/2 + self.start_xyz[1], 0) for x, y in path]
+            self.waypoints = [((x - 512)/4 + self.start_xyz[0], (512 - y)/4 + self.start_xyz[1], 0) for x, y in path]
 
     def update(self):
         channel = super().update()
