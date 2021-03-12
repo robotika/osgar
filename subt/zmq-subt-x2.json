@@ -144,6 +144,7 @@
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
               ["rosmsg.sim_time_sec", "reporter.sim_time_sec"],
               ["rosmsg.sim_time_sec", "torospy.sim_time_sec"],
+              ["rosmsg.sim_time_sec", "octomap.sim_time_sec"],
 
               ["rosmsg.gas_detected", "gas_detector.gas_detected"],
               ["gas_detector.artf", "app.artf"],
