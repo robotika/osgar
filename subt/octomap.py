@@ -185,7 +185,7 @@ class Octomap(Node):
         super().__init__(config, bus)
         bus.register('waypoints')
         self.prev_data = None
-        self.time_limit_sec = 60
+        self.time_limit_sec = None  # initialized with the first sim_time_sec
         self.debug_arr = []
         self.waypoints = None  # experimental trigger of navigation
         self.start_xyz = None
@@ -193,7 +193,8 @@ class Octomap(Node):
         self.pose3d = None
 
     def on_sim_time_sec(self, data):
-        pass
+        if self.time_limit_sec is None:
+            self.time_limit_sec = data
 
     def on_pose3d(self, data):
         if self.start_xyz is None:
@@ -249,10 +250,9 @@ class Octomap(Node):
         assert 0, "END"
 
     def on_octomap(self, data):
-#        if self.sim_time_sec is None or self.sim_time_sec < 10: #self.time_limit_sec:
-        if self.pose3d is None or self.time.total_seconds() < self.time_limit_sec:
+        if self.sim_time_sec is None or self.pose3d is None or self.sim_time_sec < self.time_limit_sec:
             return
-        self.time_limit_sec += 60
+        self.time_limit_sec += 15  # simulated
 
         assert len(data) % 2 == 0, len(data)
         data = bytes([(d + 256) % 256 for d in data])
