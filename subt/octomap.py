@@ -155,10 +155,20 @@ def frontiers(img, start, draw=False):
         plt.show()
 
     driveable = white[:1023, :1023] | white[1:, :1023] | white[1:, 1:] | white[:1023, 1:]
+
+    # use 1 pixel surounding
+    d = driveable[:, :]
+    d2 = d[1:, :] & d[:-1, :]
+    d3 = d2[:, 1:] & d2[:, :-1]
+    z = np.zeros((1022, 1), dtype=np.bool)
+    d = np.hstack([z, d3, z])
+    z = np.zeros((1, 1024), dtype=np.bool)
+    driveable = np.vstack([z, d, z])
+
     i = np.argmax(score)
     limit_score = 3*max(score)/4
     goals = [(xy[1][i], xy[0][i]) for i in range(len(xy[0])) if score[i] > limit_score]
-    path = find_path(driveable, start, goals, verbose=False)
+    path = find_path(driveable[1:, 1:], start, goals, verbose=False)
 
     img[mask, 0] = 255  # pink
     img[mask, 1] = 0
