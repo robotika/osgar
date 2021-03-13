@@ -278,7 +278,7 @@ class Octomap(Node):
             self.video_writer.write(img2)
 
         if path is not None:
-            self.waypoints = [((x - 512)/4 + self.start_xyz[0], (512 - y)/4 + self.start_xyz[1], 0) for x, y in path]
+            self.waypoints = [[(x - 512)/4 + self.start_xyz[0], (512 - y)/4 + self.start_xyz[1], 0] for x, y in path]
 
     def update(self):
         channel = super().update()
