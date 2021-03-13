@@ -1,30 +1,25 @@
 """
   OSGAR breadcrumbs dispenser for Virtual
 """
-from ast import literal_eval
 import struct
-from collections import defaultdict
 import math
 
 import numpy as np
 import cv2
 
 from osgar.node import Node
-from subt.trace import distance3D
 from osgar.lib.pplanner import find_path
 
 # http://www.arminhornung.de/Research/pub/hornung13auro.pdf
 # 00: unknown; 01: occupied; 10: free; 11: inner node with child next in the stream
 
-map2name = {
-    0x0: 'unknown',
-    0x1: 'occupied',
-    0x2: 'free',
-    0x3: 'node'
-}
-
 
 def seq2xyz(seq_arr):
+    """
+    Convert octomap sequence (0..7) into XYZ coordinate
+    :param seq_arr: list of parent-child sequences for one of given type (free, occupied, unknown)
+    :return: list of XYZ boxes with their "size category" (shorted the sequence bigger the voxel)
+    """
     xyz = []
     max_len = max([len(s) for s in seq_arr])
     for seq in seq_arr:
@@ -43,6 +38,14 @@ def seq2xyz(seq_arr):
 
 
 def xyz2img(img, xyz, color, level=2):
+    """
+    Draw given list of voxels into existing image
+    :param img: I/O image
+    :param xyz: list of voxels (xyz and "size")
+    :param color: to be used for drawing
+    :param level: Z-level for the cut
+    :return: updated image
+    """
     for pos, size in xyz:
         x, y, z = pos
         assert 1 <= size <= 16, size
@@ -64,6 +67,11 @@ def xyz2img(img, xyz, color, level=2):
 
 
 def data2stack(data):
+    """
+    Convert binary ocotomap data into three lists (occupied, free, unknown)
+    :param data: binary octomap data (depth first)
+    :return: (occupied, free, unknown) lists of sequences
+    """
     stack = [[]]
     unknown = []
     free = []
@@ -104,6 +112,13 @@ def data2maplevel(data, level):
 
 
 def frontiers(img, start, draw=False):
+    """
+    Find path to the best frontier (free-unknown transition)
+    :param img: color image with free=white, unknown=green
+    :param start: start pixel
+    :param draw: debug frontiers in pyplot
+    :return: extended image with drawn start and path, path
+    """
     green = (img[:, :, 0] == 0) & (img[:, :, 1] == 255) & (img[:, :, 2] == 0)
     white = (img[:, :, 0] == 255) & (img[:, :, 1] == 255) & (img[:, :, 2] == 255)
 
@@ -180,8 +195,8 @@ class Octomap(Node):
 
     def on_pose3d(self, data):
         if self.start_xyz is None:
+            # the octomap starts with robot position at (0, 0, 0) - correction offset is needed
             self.start_xyz = data[0]
-        x, y, z = data[0]
         if self.waypoints is not None:
             print('Waypoints', data[0], self.waypoints[0], self.waypoints[-1])
             self.publish('waypoints', self.waypoints)
@@ -190,8 +205,9 @@ class Octomap(Node):
     def on_octomap(self, data):
         if self.sim_time_sec is None or self.pose3d is None or self.sim_time_sec < self.time_limit_sec:
             return
-        self.time_limit_sec += 15  # simulated
+        self.time_limit_sec += 15  # simulated seconds
 
+        # bit unlucky conversion from existing Python2 data
         assert len(data) % 2 == 0, len(data)
         data = bytes([(d + 256) % 256 for d in data])
 
@@ -201,7 +217,7 @@ class Octomap(Node):
         img = data2maplevel(data, level=1)  # 0.5m above the ground?
         img2, path = frontiers(img, start)
         cv2.circle(img2, start, radius=2, color=(39, 127, 255), thickness=-1)
-        cv2.imwrite('octo_cut.png', img2)
+        cv2.imwrite('octo_cut.png', img2)  # used for replay debugging
 
         if self.video_outfile is not None:
             if self.video_writer is None:
