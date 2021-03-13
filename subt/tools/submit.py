@@ -11,6 +11,9 @@ import toml
 # See https://pkg.go.dev/gitlab.com/ignitionrobotics/web/cloudsim/simulations for original names
 WORLDS = dict(
     tq  = "Tunnel Qualification",
+    ts1 = "Simple Tunnel 1",  # Yes, tunnel has swapped word "simple" and "tunnel" :(
+    ts2 = "Simple Tunnel 2",
+    ts3 = "Simple Tunnel 3",
     tp1 = "Tunnel Practice 1",
     tp2 = "Tunnel Practice 2",
     tp3 = "Tunnel Practice 3",
