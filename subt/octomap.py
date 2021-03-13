@@ -222,7 +222,7 @@ class Octomap(Node):
     def on_octomap(self, data):
         if self.sim_time_sec is None or self.pose3d is None or self.sim_time_sec < self.time_limit_sec:
             return
-        self.time_limit_sec += 15  # simulated seconds
+        self.time_limit_sec += 5  # simulated seconds
 
         # bit unlucky conversion from existing Python2 data
         assert len(data) % 2 == 0, len(data)
