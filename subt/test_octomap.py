@@ -4,7 +4,7 @@ import os
 
 import cv2
 
-from subt.octomap import Octomap, draw_map
+from subt.octomap import Octomap, data2maplevel
 
 
 class OctomapTest(unittest.TestCase):
@@ -13,17 +13,8 @@ class OctomapTest(unittest.TestCase):
         with open(os.path.join(os.path.dirname(__file__), 'test_data', 'freyja-octomap.bin'), 'rb') as f:
             data = f.read()
         self.assertEqual(len(data), 57278)
-        img = draw_map(data)
-        cv2.imwrite('octo.jpg', img)
-
-    def Xtest_numpy(self):
-        bus = MagicMock()
-        conv = PointsToScan(bus=bus, config={})
-
-        orig_data = np.zeros((16, 10000, 3), dtype=np.float32)
-        data = orig_data[:, ::10, :]  # downsample to everh 10th
-        conv.on_points(data)
-        bus.publish.assert_called()
+        img = data2maplevel(data, level=2)
+        cv2.imwrite('octo.png', img)
 
 # vim: expandtab sw=4 ts=4
 
