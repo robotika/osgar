@@ -191,6 +191,8 @@ class Octomap(Node):
         self.start_xyz = None
         self.sim_time_sec = None
         self.pose3d = None
+        self.video_writer = None
+        self.video_outfile = None  # 'octo.mp4'  # optional video output generation
 
     def on_sim_time_sec(self, data):
         if self.time_limit_sec is None:
@@ -264,6 +266,16 @@ class Octomap(Node):
         img2, path = frontiers(img, start)
         cv2.circle(img2, start, radius=2, color=(39, 127, 255), thickness=-1)
         cv2.imwrite('octo_cut.png', img2)
+
+        if self.video_outfile is not None:
+            if self.video_writer is None:
+                fps = 1
+                height, width = img2.shape[:2]
+                self.video_writer = cv2.VideoWriter(self.video_outfile,
+                                         cv2.VideoWriter_fourcc(*"mp4v"),
+                                         fps,
+                                         (width, height))
+            self.video_writer.write(img2)
 
         if path is not None:
             self.waypoints = [((x - 512)/4 + self.start_xyz[0], (512 - y)/4 + self.start_xyz[1], 0) for x, y in path]
