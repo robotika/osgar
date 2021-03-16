@@ -1,5 +1,5 @@
 """
-  OSGAR breadcrumbs dispenser for Virtual
+  ROS Binary Octomap parsing and processing
 """
 import struct
 import math
