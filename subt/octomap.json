@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "fromrospy": {
+          "driver": "subt.pull:Pull",
+          "init": {
+            "outputs": ["rot", "acc", "orientation", "battery_state", "score", "pose3d",
+                        "image_front", "image_rear", "scan_front", "scan_rear", "depth_front:null", "depth_rear:null",
+                        "octomap:gz"]
+          }
+      },
+      "octomap": {
+        "driver": "subt.octomap:Octomap"
+      }
+    },
+    "links": [["fromrospy.octomap", "octomap.octomap"]
+    ]
+  }
+}
