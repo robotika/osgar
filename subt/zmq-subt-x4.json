@@ -133,7 +133,10 @@
           "init": {}
       },
       "octomap": {
-        "driver": "subt.octomap:Octomap"
+        "driver": "subt.octomap:Octomap",
+          "init": {
+            "zlevel": 2.0
+          }
       }
     },
     "links": [["app.desired_speed", "drone.desired_speed"],
