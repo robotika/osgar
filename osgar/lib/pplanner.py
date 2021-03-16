@@ -4,6 +4,15 @@ Simple Path Planner
 
 
 def find_path(img, start, finish, verbose=False):
+    """
+    Find path in 2D image using Dijstra algorithm and 4-neighbor connecitivity
+    https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
+    :param img: 2D binary image
+    :param start: pair (x, y)
+    :param finish: list of pairs (x, y)
+    :param verbose: true for debugging
+    :return: path (list of coordinates) or None if path not found
+    """
     max_x, max_y = img.shape
 
     if not (0 <= start[0] < max_x and 0 <=start[1] < max_y):
@@ -12,34 +21,33 @@ def find_path(img, start, finish, verbose=False):
     if not img[start[1]][start[0]]:
         return None
 
-    queue = [(start, None)]
+    queue = [(start, None)]  # start location has no predecessor
 
     expanded = set()
     prev = {}
 
 
-    ret = None
     while len(queue) > 0:
-        head, queue = queue[0], queue[1:]
+        (node, node_prev), queue = queue[0], queue[1:]
         if verbose:
-            print(head)
-        if head[0] in expanded:
+            print((node, node_prev))
+        if node in expanded:
             continue
-        expanded.add(head[0])
+        expanded.add(node)
 
-        if head[0] in finish:
-            ret = [head[0]]
-            p = head[1]
+        if node in finish:
+            ret = [node]
+            p = node_prev
             while p is not None:
                 ret.append(p)
                 p = prev[p]
             ret = list(reversed(ret))
-            break
+            return ret
 
-        assert head[0] not in prev, head
-        prev[head[0]] = head[1]
+        assert node not in prev, (node, node_prev)
+        prev[node] = node_prev
 
-        x, y = head[0]
+        x, y = node
         if x + 1 < max_x and img[y][x + 1] and (x + 1, y) not in expanded:
             queue.append(((x + 1, y), (x, y)))
         if x > 0 and img[y][x - 1] and (x - 1, y) not in expanded:
@@ -49,6 +57,6 @@ def find_path(img, start, finish, verbose=False):
         if y > 0 and img[y - 1][x] and (x, y - 1) not in expanded:
             queue.append(((x, y - 1), (x, y)))
 
-    return ret
+    return None
 
 # vim: expandtab sw=4 ts=4
