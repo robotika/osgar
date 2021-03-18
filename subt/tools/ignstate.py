@@ -35,8 +35,8 @@ MARKERS = {
     'drill': (cv2.MARKER_TRIANGLE_DOWN, 9),
     'extinguisher': (cv2.MARKER_DIAMOND,10),
 
-    'gas': (cv2.MARKER_TRIANGLE_UP, 1),  # Urban
-    'vent': (cv2.MARKER_STAR, 4),
+    'gas': (cv2.MARKER_STAR, 1),  # Urban
+    'vent': (cv2.MARKER_SQUARE, 1),
 
     'helmet': (cv2.MARKER_TRIANGLE_UP, 1),  # Cave
     'rope': (cv2.MARKER_STAR, 4),
