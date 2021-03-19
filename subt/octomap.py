@@ -212,6 +212,7 @@ class Octomap(Node):
         self.video_writer = None
         self.video_outfile = None  # 'octo.mp4'  # optional video output generation
         self.zlevel = config.get('zlevel', 0.5)
+        self.resolution = config.get('resolution', 0.5)
 
     def on_sim_time_sec(self, data):
         if self.time_limit_sec is None:
@@ -238,7 +239,7 @@ class Octomap(Node):
         x = self.pose3d[0][0] - self.start_xyz[0]
         y = self.pose3d[0][1] - self.start_xyz[1]
         start = int(512 + 2*x), int(512 - 2*y)
-        img = data2maplevel(data, level=int(round(self.zlevel/0.5)))  # 0.5m above the ground?
+        img = data2maplevel(data, level=int(round(self.zlevel/self.resolution)))
         img2, path = frontiers(img, start)
         cv2.circle(img2, start, radius=0, color=(39, 127, 255), thickness=-1)
         cv2.imwrite('octo_cut.png', img2)  # used for replay debugging
