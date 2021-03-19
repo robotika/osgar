@@ -154,28 +154,29 @@ def frontiers(img, start, draw=False):
         plt.axes().set_aspect('equal', 'datalim')
         plt.show()
 
-    driveable = white[:, :]
+    drivable = white
 
-    # use 1 pixel surounding
-    d = driveable[:, :]
-    d2 = d[2:, :] & d[1:-1, :] & d[:-2, :]
-    d3 = d2[:, 2:] & d2[:, 1:-1] & d2[:, :-2]
+    # use 1 pixel surrounding
+    drivable_safe_y = drivable[2:, :] & drivable[1:-1, :] & drivable[:-2, :]
+    drivable_safe_xy = drivable_safe_y[:, 2:] & drivable_safe_y[:, 1:-1] & drivable_safe_y[:, :-2]
+    # add non-drivable frame to match original image size
     z = np.zeros((1022, 1), dtype=np.bool)
-    d = np.hstack([z, d3, z])
+    tmp = np.hstack([z, drivable_safe_xy, z])
     z = np.zeros((1, 1024), dtype=np.bool)
-    driveable = np.vstack([z, d, z])
+    drivable = np.vstack([z, tmp, z])
 
-    img[driveable, 0] = 128  # gray
-    img[driveable, 1] = 128
-    img[driveable, 2] = 128
+    img[drivable, : ] = 128  # gray
 
     i = np.argmax(score)
     limit_score = 3*max(score)/4
+    # select goal positions above the limit_score
+    # note, that the "safe path" does not touch external boundary so it would never find path
+    # to frontier. As a workaround add also all 8-neighbors of frontiers.
     goals = []
-    for dx in range(-1, 2):
-        for dy in range(-1, 2):
+    for dx in [-1, 0, 1]:
+        for dy in [-1, 0, 1]:
             goals.extend([(xy[1][i] + dx, xy[0][i] + dy) for i in range(len(xy[0])) if score[i] > limit_score])
-    path = find_path(driveable, start, goals, verbose=False)
+    path = find_path(drivable, start, goals, verbose=False)
 
     img[mask, 0] = 255  # pink
     img[mask, 1] = 0
