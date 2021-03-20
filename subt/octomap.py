@@ -13,6 +13,12 @@ from osgar.lib.pplanner import find_path
 # http://www.arminhornung.de/Research/pub/hornung13auro.pdf
 # 00: unknown; 01: occupied; 10: free; 11: inner node with child next in the stream
 
+UNKNOWN = 128   # color=(0, 0xFF, 0)
+FREE = 255      # color=(0xFF, 0xFF, 0xFF)
+OCCUPIED = 1    # color=(0x00, 0x00, 0xFF)  ... just to be != 0, which is original unknown/black/undefined
+FRONTIER = 196  # color=(0xFF, 0x00, 0xFF)
+PATH     = 64   # color=(0xFF, 0x00, 0x00)
+
 
 def seq2xyz(seq_arr):
     """
@@ -42,7 +48,7 @@ def xyz2img(img, xyz, color, level=2):
     Draw given list of voxels into existing image
     :param img: I/O image
     :param xyz: list of voxels (xyz and "size")
-    :param color: to be used for drawing
+    :param color: to be used for drawing - now only "palette color"
     :param level: Z-level for the cut
     :return: updated image
     """
@@ -54,15 +60,9 @@ def xyz2img(img, xyz, color, level=2):
             if d > 100:
                 # do not try to fill extra large (unknown) squares, for now
                 continue
-            for dx in range(d):
-                for dy in range(d):
-                    px = 512 + x + dx
-                    py = 512 - y - dy
-                    if 0 <= px < 1024 and 0 <= py < 1024:
-                        assert (img[py, px, 0], img[py, px, 1], img[py, px, 2]) == (0, 0, 0), (px, py, img[py, px, :], color, z, size)
-                        img[py, px, 0] = color[0]
-                        img[py, px, 1] = color[1]
-                        img[py, px, 2] = color[2]
+            px = 512 + x
+            py = 512 - y
+            img[max(0, py-d+1):min(1024, py+1), max(0, px):min(1024, px+d)] = color
     return img
 
 
@@ -97,17 +97,17 @@ def data2maplevel(data, level):
     """
     Convert Octomap data to image/level
     """
-    img = np.zeros((1024, 1024, 3), dtype=np.uint8)
+    img = np.zeros((1024, 1024), dtype=np.uint8)
 
     occupied, free, unknown = data2stack(data)
     xyz = seq2xyz(free)
-    xyz2img(img, xyz, color=(0xFF, 0xFF, 0xFF), level=level)
+    xyz2img(img, xyz, color=FREE, level=level)
 
     xyz = seq2xyz(occupied)
-    xyz2img(img, xyz, color=(0x00, 0x00, 0xFF), level=level)
+    xyz2img(img, xyz, color=OCCUPIED, level=level)
 
     xyz = seq2xyz(unknown)
-    xyz2img(img, xyz, color=(0, 0xFF, 0), level=level)
+    xyz2img(img, xyz, color=UNKNOWN, level=level)
     return img
 
 
@@ -119,8 +119,8 @@ def frontiers(img, start, draw=False):
     :param draw: debug frontiers in pyplot
     :return: extended image with drawn start and path, path
     """
-    green = (img[:, :, 0] == 0) & (img[:, :, 1] == 255) & (img[:, :, 2] == 0)
-    white = (img[:, :, 0] == 255) & (img[:, :, 1] == 255) & (img[:, :, 2] == 255)
+    green = img[:, :] == UNKNOWN
+    white = img[:, :] == FREE
 
     mask_right = green[:, 2:] & white[:, 1:-1]
     mask_left = green[:, :-2] & white[:, 1:-1]
@@ -135,6 +135,10 @@ def frontiers(img, start, draw=False):
     mask = np.vstack([z, mask2, z]) | mask
 
     xy = np.where(mask)
+    if len(xy[0]) == 0:
+        # there are no frontiers, i.e. no exploration path
+        return img, None
+
     score = np.zeros(len(xy[0]))
     for i in range(len(xy[0])):
         x, y = xy[0][i]-512, 512-xy[1][i]
@@ -165,9 +169,6 @@ def frontiers(img, start, draw=False):
     z = np.zeros((1, 1024), dtype=np.bool)
     drivable = np.vstack([z, tmp, z])
 
-    img[drivable, : ] = 128  # gray
-
-    i = np.argmax(score)
     limit_score = 3*max(score)/4
     # select goal positions above the limit_score
     # note, that the "safe path" does not touch external boundary so it would never find path
@@ -183,15 +184,11 @@ def frontiers(img, start, draw=False):
     goals = set(map(tuple, goals))
     path = find_path(drivable, start, goals, verbose=False)
 
-    img[mask, 0] = 255  # pink
-    img[mask, 1] = 0
-    img[mask, 2] = 255
+    img[mask] = FRONTIER
 
     if path is not None:
         for x, y in path:
-            img[y][x][0] = 255
-            img[y][x][1] = 0
-            img[y][x][2] = 0
+            img[y][x] = PATH
     else:
         print('Path not found!')
 
@@ -239,8 +236,15 @@ class Octomap(Node):
         x = self.pose3d[0][0] - self.start_xyz[0]
         y = self.pose3d[0][1] - self.start_xyz[1]
         start = int(512 + 2*x), int(512 - 2*y)
-        img = data2maplevel(data, level=int(round(self.zlevel/self.resolution)))
-        img2, path = frontiers(img, start)
+        level = int(round(self.zlevel / self.resolution))
+        img = data2maplevel(data, level=level)
+        img_minus = data2maplevel(data, level=level-1)
+        img_plus = data2maplevel(data, level=level+1)
+        imgX, path = frontiers(img.copy(), start)  # this image is modified in place anyway
+        img2 = np.zeros((1024, 1024, 3), dtype=np.uint8)
+        img2[:, :, 0] = img_minus  # TODO switch to color image for display
+        img2[:, :, 1] = img
+        img2[:, :, 2] = img_plus
         cv2.circle(img2, start, radius=0, color=(39, 127, 255), thickness=-1)
         cv2.imwrite('octo_cut.png', img2)  # used for replay debugging
 
