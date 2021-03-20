@@ -293,7 +293,7 @@ class SubTChallenge:
                     tmp_trace.trace = self.waypoints
                     self.waypoints = None
                     tmp_trace.reverse()
-                    self.follow_trace(tmp_trace, timeout=timedelta(minutes=10))  # hmm, external parameter?
+                    self.follow_trace(tmp_trace, timeout=timedelta(seconds=10), max_target_distance=2)  # hmm, external parameter?
                     continue
 
                 if (channel == 'scan' and not self.flipped) or (channel == 'scan_back' and self.flipped) or channel == 'scan360':
