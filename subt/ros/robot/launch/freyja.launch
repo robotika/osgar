@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-  <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)" output="screen">
+  <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)">
     <remap from="$(arg robot_name)/front_scan" to="$(arg robot_name)/scan_front"/>
     <remap from="$(arg robot_name)/image_raw/compressed" to="$(arg robot_name)/rgbd_front/image_raw/compressed"/>
     <remap from="$(arg robot_name)/front/depth" to="$(arg robot_name)/rgbd_front/depth"/>
@@ -43,20 +43,73 @@
     <param name="Vis/CorGuessWinSize" value="0"/>
     <!-- Default estimation type does not work with multiple cameras. -->
     <param name="Vis/EstimationType" value="0"/>
+    <!-- Number of feature points to detect. Defaults to 1000 -->
+    <param name="Vis/MaxFeatures" value="2000"/>
     <!-- Bundle adjustment does not work with multiple cameras. -->
     <param name="OdomF2M/BundleAdjustment" value="0"/>
     <!-- This robot cannot move left or up, at least unless something strange is happening. -->
     <param name="Odom/Holonomic" value="false"/>
     <!-- Internal Kalman filtering smoothes the estimate, which in turn prevents "our" Kalman from being confused by big input odometry jumps. -->
     <param name="Odom/FilteringStrategy" value="1"/>
+    <param name="Odom/ResetCountdown" type="string" value="4"/>
+    <param name="OdomF2M/MaxSize" value="8000"/>
+    <param name="OdomF2M/ValidDepthRatio" value="1.0"/>
     <!-- GFTT/ORB is the default, but if somebody wants to experiment ...
          For some of the worlds, simpler features, such as FAST, may turn out better. -->
-    <param name="Vis/FeatureType" value="8"/> <!-- [0=SURF 1=SIFT 2=ORB 3=FAST/FREAK 4=FAST/BRIEF 5=GFTT/FREAK 6=GFTT/BRIEF 7=BRISK 8=GFTT/ORB 9=KAZE 10=ORB-OCTREE 11=SuperPoint Torch.] -->
+    <param name="Vis/FeatureType" value="4"/> <!-- [0=SURF 1=SIFT 2=ORB 3=FAST/FREAK 4=FAST/BRIEF 5=GFTT/FREAK 6=GFTT/BRIEF 7=BRISK 8=GFTT/ORB 9=KAZE 10=ORB-OCTREE 11=SuperPoint Torch.] -->
+    <param name="FAST/GridCols" value="4"/>
+    <param name="FAST/GridRows" value="4"/>
     <!-- Inputs -->
     <remap from="rgbd_image0" to="front/compressed"/>
     <remap from="rgbd_image1" to="rear/compressed"/>
     <!-- Undocumented supported input, helps maintaining the right direction. -->
     <remap from="imu" to="/$(arg robot_name)/imu/data"/>
+  </node>
+
+  <!-- ICP Odometry based on front lidar -->
+  <node ns="rtabmap/icp/front" pkg="rtabmap_ros" type="icp_odometry" name="icp_odometry_front" output="screen">
+    <param name="database_path" type="string" value=""/>
+    <param name="subscribe_scan" type="bool" value="true"/>
+    <param name="frame_id" type="string" value="$(arg robot_name)"/>
+    <param name="odom_frame_id" type="string" value="odom"/>
+    <param name="guess_frame_id" type="string" value="odom"/>
+    <param name="publish_tf" type="bool" value="false"/>
+    <param name="publish_null_when_lost" type="bool" value="false"/>
+
+    <param name="Reg/Strategy" type="string" value="1"/>
+    <param name="OdomF2M/BundleAdjustment" type="string" value="0"/>
+    <param name="Odom/ResetCountdown" type="string" value="2"/>
+    <param name="Icp/MaxTranslation" type="string" value="3.0"/>
+    <param name="Icp/MaxCorrespondenceDistance" type="string" value="0.5"/>
+    <!-- This robot cannot move left or up, at least unless something strange is happening. -->
+    <param name="Odom/Holonomic" value="false"/>
+    <!-- Internal Kalman filtering smoothes the estimate, which in turn prevents "our" Kalman from being confused by big input odometry jumps. -->
+    <param name="Odom/FilteringStrategy" value="1"/>
+    <!-- Inputs -->
+    <remap from="scan" to="/$(arg robot_name)/scan_front"/>
+  </node>
+
+  <!-- ICP Odometry based on rear lidar -->
+  <node ns="rtabmap/icp/rear" pkg="rtabmap_ros" type="icp_odometry" name="icp_odometry_rear" output="screen">
+    <param name="database_path" type="string" value=""/>
+    <param name="subscribe_scan" type="bool" value="true"/>
+    <param name="frame_id" type="string" value="$(arg robot_name)"/>
+    <param name="odom_frame_id" type="string" value="odom"/>
+    <param name="guess_frame_id" type="string" value="odom"/>
+    <param name="publish_tf" type="bool" value="false"/>
+    <param name="publish_null_when_lost" type="bool" value="false"/>
+
+    <param name="Reg/Strategy" type="string" value="1"/>
+    <param name="OdomF2M/BundleAdjustment" type="string" value="0"/>
+    <param name="Odom/ResetCountdown" type="string" value="2"/>
+    <param name="Icp/MaxTranslation" type="string" value="3.0"/>
+    <param name="Icp/MaxCorrespondenceDistance" type="string" value="0.5"/>
+    <!-- This robot cannot move left or up, at least unless something strange is happening. -->
+    <param name="Odom/Holonomic" value="false"/>
+    <!-- Internal Kalman filtering smoothes the estimate, which in turn prevents "our" Kalman from being confused by big input odometry jumps. -->
+    <param name="Odom/FilteringStrategy" value="1"/>
+    <!-- Inputs -->
+    <remap from="scan" to="/$(arg robot_name)/scan_rear"/>
   </node>
 
   <!-- Estimating altitude from atmospheric pressure. -->
@@ -69,6 +122,9 @@
   <node name="pose_from_artifact_origin" pkg="proxy" type="pose_from_artifact_origin" args="$(arg robot_name) odom">
     <remap from="pose_from_origin" to="$(arg robot_name)/pose_from_origin"/>
   </node>
+
+  <!-- Adding a missing transform to make wheel odometry meaningful. -->
+  <node pkg="tf" type="static_transform_publisher" name="wheel_odom_transform" args="0 0 0 0 0 0 /odom /$(arg robot_name)/odom 100" />
 
   <!-- Fusion of wheel odometry, ICP odometries, RGBD odometries and altitude with IMU data.
        https://github.com/introlab/rtabmap_ros/blob/master/launch/tests/sensor_fusion.launch
@@ -90,6 +146,10 @@
     <param name="odom0" value="$(arg robot_name)/odom"/>
     <!-- RGBD odometry from both front and rear depth cameras -->
     <param name="odom1" value="/rtabmap/rgbd/odom"/>
+    <!-- ICP odometry from front lidar -->
+    <param name="odom2" value="/rtabmap/icp/front/odom"/>
+    <!-- ICP odometry from rear lidar -->
+    <param name="odom3" value="/rtabmap/icp/rear/odom"/>
     <!-- Altitude estimated from air pressure -->
     <param name="pose0" value="$(arg robot_name)/altitude"/>
     <!-- Information about location in the staging area. -->
@@ -99,12 +159,16 @@
 
     <param name="odom0_differential" value="false"/>
     <param name="odom1_differential" value="false"/>
+    <param name="odom2_differential" value="false"/>
+    <param name="odom3_differential" value="false"/>
     <param name="pose0_differential" value="false"/>
     <param name="pose1_differential" value="false"/>
     <param name="imu0_differential" value="false"/>
 
     <param name="odom0_relative" value="false"/>
     <param name="odom1_relative" value="false"/>
+    <param name="odom2_relative" value="false"/>
+    <param name="odom3_relative" value="false"/>
     <param name="pose0_relative" value="true"/>
     <param name="pose1_relative" value="true"/>
     <param name="imu0_relative" value="false"/>
@@ -118,10 +182,21 @@
                                     true, false, false,
                                     false, false, false,
                                     false, false, false]</rosparam>
-    <!-- We take vx, vy and vz instead of x, y and z, because visual odometry can drift arbitrarily far because of not supporting all avilable sensors. -->
+    <!-- We take vx, vy and vz instead of x, y and z, because visual odometry can drift arbitrarily far because of not supporting all available sensors. -->
     <rosparam param="odom1_config">[false, false, false,
                                     false, false, false,
                                     true, true, true,
+                                    false, false, false,
+                                    false, false, false]</rosparam>
+    <!-- Taking vx and vy, because x and y can drift arbitrarily. Z axis is meaningless, because we are estimating from planar lidars. -->
+    <rosparam param="odom2_config">[false, false, false,
+                                    false, false, false,
+                                    true, true, false,
+                                    false, false, false,
+                                    false, false, false]</rosparam>
+    <rosparam param="odom3_config">[false, false, false,
+                                    false, false, false,
+                                    true, true, false,
                                     false, false, false,
                                     false, false, false]</rosparam>
     <rosparam param="pose0_config">[false, false, true,
@@ -143,10 +218,14 @@
     <!-- When the robot starts slipping or spinning wheels in the air, we need to start ignoring wheel-based odometry.
          The unit of the threshold is a Mahalanobis distance (i.e. sum) of numbers of sigmas in each dimension -->
     <rosparam param="odom0_twist_rejection_threshold">4</rosparam>
+    <rosparam param="odom2_twist_rejection_threshold">2</rosparam>
+    <rosparam param="odom3_twist_rejection_threshold">2</rosparam>
 
     <!-- Trying to not have data stuck in a TCP buffer. -->
     <rosparam param="odom0_nodelay">true</rosparam>
     <rosparam param="odom1_nodelay">true</rosparam>
+    <rosparam param="odom2_nodelay">true</rosparam>
+    <rosparam param="odom3_nodelay">true</rosparam>
     <rosparam param="pose0_nodelay">true</rosparam>
     <rosparam param="pose1_nodelay">true</rosparam>
     <rosparam param="imu0_nodelay">true</rosparam>
