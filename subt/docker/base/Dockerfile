@@ -1,4 +1,4 @@
-FROM nvidia/cuda:10.1-cudnn7-runtime-ubuntu18.04 as stage1
+FROM nvidia/cuda:11.2.2-cudnn8-runtime-ubuntu18.04 as stage1
 
 RUN apt-get update \
  && apt-get install -y \
@@ -59,10 +59,11 @@ RUN /bin/sh -c 'echo "deb [trusted=yes] http://packages.osrfoundation.org/gazebo
  && /bin/sh -c 'wget http://packages.osrfoundation.org/gazebo.key -O - | apt-key add -' \
  && /bin/sh -c 'apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654'
 
-# install ign-blueprint
+# install ign-blueprint and libignition-launch3-dev
 RUN apt-get update \
 &&  apt-get install -y \
     ignition-blueprint \
+    libignition-launch3-dev \
     ros-melodic-ros-ign \
  && apt-get clean
 
@@ -97,7 +98,7 @@ RUN ./env/bin/pip install --no-cache-dir \
   "pyzmq==19.0.2"
 
 RUN ./env/bin/pip install --no-cache-dir \
-  "torch==1.5.0+cu101" -f https://download.pytorch.org/whl/torch_stable.html
+  "torch==1.8.0+cu111" -f https://download.pytorch.org/whl/torch_stable.html
 
 ENV NVIDIA_VISIBLE_DEVICES ${NVIDIA_VISIBLE_DEVICES:-all}
 ENV NVIDIA_DRIVER_CAPABILITIES ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics,compat32,utility
