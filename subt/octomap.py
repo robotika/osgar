@@ -173,9 +173,14 @@ def frontiers(img, start, draw=False):
     # note, that the "safe path" does not touch external boundary so it would never find path
     # to frontier. As a workaround add also all 8-neighbors of frontiers.
     goals = []
+    xy = np.array(xy)[:, score > limit_score]
     for dx in [-1, 0, 1]:
         for dy in [-1, 0, 1]:
-            goals.extend([(xy[1][i] + dx, xy[0][i] + dy) for i in range(len(xy[0])) if score[i] > limit_score])
+            goals.append(xy + np.repeat(np.asarray([[dy], [dx]]), xy.shape[1], axis=1))
+    goals = np.hstack(goals).T[:, ::-1]
+
+    # the path planner currently expects goals as tuple (x, y) and operation "in"
+    goals = set(map(tuple, goals))
     path = find_path(drivable, start, goals, verbose=False)
 
     img[mask, 0] = 255  # pink
