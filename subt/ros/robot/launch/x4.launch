@@ -30,22 +30,27 @@
     <remap from="scan_cloud" to="/rtabmap/scan/scan_cloud"/>
   </node>
 
-  <node pkg="rtabmap_ros" type="rgbd_odometry" name="rgbd_odometry">
+  <!-- Combining front RGBD depth and image data into a single message. -->
+  <node pkg="nodelet" type="nodelet" name="rgbd_sync_front" args="standalone rtabmap_ros/rgbd_sync">
+    <!-- Inputs -->
+    <remap from="rgb/image" to="/$(arg robot_name)/front/optical/image_raw"/>
+    <remap from="rgb/camera_info" to="$(arg robot_name)/front/optical/camera_info"/>
+    <remap from="depth/image" to="/$(arg robot_name)/front/optical/depth"/>
+    <!-- Output -->
+    <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/compressed"/>
+    <remap from="rgbd_image" to="/rtabmap/rgbd"/>
+  </node>
+
+  <!-- RGBD odometry -->
+  <node ns="rtabmap/rgbd" pkg="rtabmap_ros" type="rgbd_odometry" name="rgbd_odometry">
     <param name="database_path" type="string" value=""/>
     <param name="frame_id" type="string" value="$(arg robot_name)"/>
     <param name="odom_frame_id" type="string" value="odom"/>
     <param name="publish_tf" type="bool" value="false"/>
     <param name="publish_null_when_lost" type="bool" value="false"/>
+    <param name="subscribe_rgbd" type="bool" value="true"/>
     <!-- Inputs -->
-    <remap from="rgb/image" to="$(arg robot_name)/front/optical/image_raw"/>
-    <remap from="rgb/camera_info" to="$(arg robot_name)/front/optical/camera_info"/>
-    <remap from="depth/image" to="$(arg robot_name)/front/optical/depth"/>
-    <!-- Outputs -->
-    <remap from="odom" to="/rtabmap/rgbd/odom" />
-    <remap from="odom_info" to="/rtabmap/rgbd/odom_info"/>
-    <remap from="odom_last_frame" to="/rtabmap/rgbd/odom_last_frame"/>
-    <remap from="odom_local_map" to="/rtabmap/rgbd/odom_local_map"/>
-    <remap from="odom_local_scan_map" to="/rtabmap/rgbd/odom_local_scan_map"/>
+    <remap from="rgbd_image" to="compressed"/>
   </node>
 
   <node name="altimeter" pkg="robot" type="altitude_from_atmospheric_pressure.py" args="odom">
@@ -140,8 +145,22 @@
     <remap from="odometry/filtered" to="/$(arg robot_name)/odom_fused"/>
   </node>
 
+  <node pkg="nodelet" type="nodelet" name="pcl_manager" args="manager" output="screen" />
+
+  <!-- Run a passthrough filter to remove drone propellers -->
+  <node pkg="nodelet" type="nodelet" name="passthrough" args="load pcl/PassThrough pcl_manager" output="screen">
+    <remap from="~input" to="/$(arg robot_name)/rgbd_camera/depth/points" />
+    <remap from="/passthrough/output" to="/$(arg robot_name)/rgbd_camera/depth/points_cleaned" />
+    <rosparam>
+      filter_field_name: z
+      filter_limit_min: 0.31
+      filter_limit_max: 100.0
+      filter_limit_negative: False
+    </rosparam>
+  </node>
+
   <node if="$(eval arg('robot_name').endswith('XM'))" ns="mapping" pkg="octomap_server" type="octomap_server_node" name="octomap">
-    <remap from="cloud_in" to="/$(arg robot_name)/rgbd_camera/depth/points"/>
+    <remap from="cloud_in" to="/$(arg robot_name)/rgbd_camera/depth/points_cleaned"/>
     <param name="frame_id" value="odom"/>
     <!-- resolution in meters per voxel -->
     <param name="resolution" value="0.5" />
