@@ -119,20 +119,27 @@ def frontiers(img, start, draw=False):
     :param draw: debug frontiers in pyplot
     :return: extended image with drawn start and path, path
     """
-    green = img[:, :] == UNKNOWN
-    white = img[:, :] == FREE
+    size = img.shape
+    green = img[:, :, :] == UNKNOWN
+    white = img[:, :, :] == FREE
 
-    mask_right = green[:, 2:] & white[:, 1:-1]
-    mask_left = green[:, :-2] & white[:, 1:-1]
+    mask_right = green[:, 2:, :] & white[:, 1:-1, :]
+    mask_left = green[:, :-2, :] & white[:, 1:-1, :]
     mask = mask_left | mask_right
-    z = np.zeros((1024, 1), dtype=np.bool)
+    z = np.zeros((size[0], 1, size[2]), dtype=np.bool)
     mask = np.hstack([z, mask, z])
 
-    mask_up = green[2:, :] & white[1:-1, :]
-    mask_down = green[:-2, :] & white[1:-1, :]
-    z = np.zeros((1, 1024), dtype=np.bool)
+    mask_up = green[2:, :, :] & white[1:-1, :, :]
+    mask_down = green[:-2, :, :] & white[1:-1, :, :]
+    z = np.zeros((1, size[1], size[2]), dtype=np.bool)
     mask2 = mask_up | mask_down
     mask = np.vstack([z, mask2, z]) | mask
+
+    z_mask_up = green[:, :, 2:] & white[:, :, 1:-1]
+    z_mask_down = green[:, :, :-2] & white[:, :, 1:-1]
+    z = np.zeros((size[0], size[1], 1), dtype=np.bool)
+    mask3 = z_mask_up | z_mask_down
+#    mask = np.concatenate([z, mask3, z], axis=2) | mask
 
     xy = np.where(mask)
     if len(xy[0]) == 0:
@@ -164,9 +171,9 @@ def frontiers(img, start, draw=False):
     drivable_safe_y = drivable[2:, :] & drivable[1:-1, :] & drivable[:-2, :]
     drivable_safe_xy = drivable_safe_y[:, 2:] & drivable_safe_y[:, 1:-1] & drivable_safe_y[:, :-2]
     # add non-drivable frame to match original image size
-    z = np.zeros((1022, 1), dtype=np.bool)
+    z = np.zeros((size[0] - 2, 1, size[2]), dtype=np.bool)
     tmp = np.hstack([z, drivable_safe_xy, z])
-    z = np.zeros((1, 1024), dtype=np.bool)
+    z = np.zeros((1, size[1], size[2]), dtype=np.bool)
     drivable = np.vstack([z, tmp, z])
 
     limit_score = 3*max(score)/4
@@ -177,17 +184,19 @@ def frontiers(img, start, draw=False):
     xy = np.array(xy)[:, score > limit_score]
     for dx in [-1, 0, 1]:
         for dy in [-1, 0, 1]:
-            goals.append(xy + np.repeat(np.asarray([[dy], [dx]]), xy.shape[1], axis=1))
-    goals = np.hstack(goals).T[:, ::-1]
+            for dz in [0]:  #[-1, 0, 1]:
+                goals.append(xy + np.repeat(np.asarray([[dy], [dx], [dz]]), xy.shape[1], axis=1))
+    goals = np.hstack(goals).T[:, [1, 0, 2]]
 
     # the path planner currently expects goals as tuple (x, y) and operation "in"
     goals = set(map(tuple, goals))
+    print('LEN', len(goals))
     path = find_path(drivable, start, goals, verbose=False)
 
     img[mask] = FRONTIER
 
     if path is not None:
-        for x, y in path:
+        for x, y, z in path:
             img[y][x] = PATH
     else:
         print('Path not found!')
@@ -210,6 +219,7 @@ class Octomap(Node):
         self.video_outfile = None  # 'octo.mp4'  # optional video output generation
         self.zlevel = config.get('zlevel', 0.5)
         self.resolution = config.get('resolution', 0.5)
+        self.verbose = False
 
     def on_sim_time_sec(self, data):
         if self.time_limit_sec is None:
@@ -235,17 +245,31 @@ class Octomap(Node):
 
         x = self.pose3d[0][0] - self.start_xyz[0]
         y = self.pose3d[0][1] - self.start_xyz[1]
-        start = int(512 + 2*x), int(512 - 2*y)
-        level = int(round(self.zlevel / self.resolution))
-        img = data2maplevel(data, level=level)
-        img_minus = data2maplevel(data, level=level-1)
-        img_plus = data2maplevel(data, level=level+1)
-        imgX, path = frontiers(img.copy(), start)  # this image is modified in place anyway
+        z = self.pose3d[0][2] - self.start_xyz[2]
+        start = int(512 + 2*x), int(512 - 2*y), int(z/self.resolution)
+        NUM_Z_LEVELS = 5
+        img3d = np.zeros((1024, 1024, NUM_Z_LEVELS), dtype=np.uint8)
+        for level in range(NUM_Z_LEVELS):
+            img3d[:, :, level] = data2maplevel(data, level=level)
+
+        if self.verbose:
+            for i in range(NUM_Z_LEVELS):
+                cv2.imwrite('octo_%03d.png' % i, img3d[:, :, i])
+
         img2 = np.zeros((1024, 1024, 3), dtype=np.uint8)
-        img2[:, :, 0] = img_minus  # TODO switch to color image for display
-        img2[:, :, 1] = img
-        img2[:, :, 2] = img_plus
-        cv2.circle(img2, start, radius=0, color=(39, 127, 255), thickness=-1)
+        img2[:, :, 0] = img3d[:, :, start[2]]
+        img2[:, :, 1] = img3d[:, :, start[2]]
+        img2[:, :, 2] = img3d[:, :, start[2]]
+        __, path = frontiers(img3d, start)  # this image is modified in place anyway
+        f = np.where(img3d == FRONTIER)
+        for x, y, z in zip(f[1], f[0], f[2]):
+            if z == start[2]:
+                cv2.circle(img2, (x, y), radius=0, color=(255, 0, 255), thickness=-1)
+        if path is not None:
+            for x, y, z in path:
+                cv2.circle(img2, (x, y), radius=0, color=(255, 0, 0), thickness=-1)
+
+        cv2.circle(img2, start[:2], radius=0, color=(39, 127, 255), thickness=-1)
         cv2.imwrite('octo_cut.png', img2)  # used for replay debugging
 
         if self.video_outfile is not None:
@@ -259,7 +283,10 @@ class Octomap(Node):
             self.video_writer.write(img2)
 
         if path is not None:
-            self.waypoints = [[(x - 512)/2 + self.start_xyz[0], (512 - y)/2 + self.start_xyz[1], self.zlevel] for x, y in path]
+            self.waypoints = [[(x - 512)/2 + self.start_xyz[0],
+                               (512 - y)/2 + self.start_xyz[1],
+                               z * self.resolution]
+                              for x, y, z in path]
 
     def update(self):
         channel = super().update()
