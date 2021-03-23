@@ -247,7 +247,7 @@ class Octomap(Node):
         y = self.pose3d[0][1] - self.start_xyz[1]
         z = self.pose3d[0][2] - self.start_xyz[2]
         start = int(512 + 2*x), int(512 - 2*y), int(z/self.resolution)
-        NUM_Z_LEVELS = 5
+        NUM_Z_LEVELS = 10
         img3d = np.zeros((1024, 1024, NUM_Z_LEVELS), dtype=np.uint8)
         for level in range(NUM_Z_LEVELS):
             img3d[:, :, level] = data2maplevel(data, level=level)
@@ -257,9 +257,10 @@ class Octomap(Node):
                 cv2.imwrite('octo_%03d.png' % i, img3d[:, :, i])
 
         img2 = np.zeros((1024, 1024, 3), dtype=np.uint8)
-        img2[:, :, 0] = img3d[:, :, start[2]]
-        img2[:, :, 1] = img3d[:, :, start[2]]
-        img2[:, :, 2] = img3d[:, :, start[2]]
+        level = max(0, min(NUM_Z_LEVELS - 1, start[2]))
+        img2[:, :, 0] = img3d[:, :, level]
+        img2[:, :, 1] = img3d[:, :, level]
+        img2[:, :, 2] = img3d[:, :, level]
         __, path = frontiers(img3d, start)  # this image is modified in place anyway
         f = np.where(img3d == FRONTIER)
         for x, y, z in zip(f[1], f[0], f[2]):
@@ -299,16 +300,56 @@ class Octomap(Node):
 
 if __name__ == "__main__":
     import argparse
+    from osgar.lib.serialize import deserialize
+    from osgar.logger import LogReader, lookup_stream_id
 
-    parser = argparse.ArgumentParser("Analyze ocotomap slice")
-    parser.add_argument('imgpath', help='path to PNG slice image')
+    parser = argparse.ArgumentParser("Analyze ocotomap data")
+    parser.add_argument('logfile', help='path to logfile with octomap data')
     parser.add_argument('--out', help='output path to PNG image', default='out.png')
     parser.add_argument('--draw', action='store_true', help='draw pyplot frontiers')
     args = parser.parse_args()
 
-    img = cv2.imread(args.imgpath, 1)
-    img2 = frontiers(img, args.draw)
-    cv2.imwrite(args.out, img2)
+    octomap_stream_id = lookup_stream_id(args.logfile, 'fromrospy.octomap')
+    pose3d_stream_id = lookup_stream_id(args.logfile, 'fromrospy.pose3d')
+    pose3d = None
+    x, y, z = 0, 0, 0
+    resolution = 0.5
+    with LogReader(args.logfile,
+               only_stream_id=[octomap_stream_id, pose3d_stream_id]) as logreader:
+        level = 2
+        for time, stream, data in logreader:
+            data = deserialize(data)
+            if stream != octomap_stream_id:
+                assert stream == pose3d_stream_id, stream
+                pose3d = data
+                x = pose3d[0][0]
+                y = pose3d[0][1]
+                z = pose3d[0][2]
+                start = int(512 + 2 * x), int(512 - 2 * y), int(z / resolution)
+                continue
 
+            assert len(data) % 2 == 0, len(data)  # TODO fix this in cloudsim2osgar
+            data = bytes([(d + 256) % 256 for d in data])
+
+            paused = False
+            while True:
+                img = data2maplevel(data, level=level)
+                cv2.circle(img, start[:2], radius=0, color=(39, 127, 255), thickness=-1)
+                img = cv2.resize(img[256+128:-256-128, 256+128:-256-128], img.shape)
+                cv2.imshow('Octomap', img)
+                pose_str = '(%.02f, %.02f, %.02f)' % tuple(pose3d[0]) if pose3d is not None else 'None'
+                cv2.setWindowTitle('Octomap', f'Octomap {time}, {pose_str}, level={level}' + (' (paused)' if paused else ''))
+                key = cv2.waitKey(1) & 0xFF
+                KEY_Q = ord('q')
+                if key == KEY_Q:
+                    break
+                if key == ord(' '):
+                    paused = not paused
+                if ord('0') <= key <= ord('9'):
+                    level = key - ord('0')
+                if not paused:
+                    break
+            if key == KEY_Q:
+                break
 
 # vim: expandtab sw=4 ts=4
