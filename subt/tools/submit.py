@@ -56,7 +56,10 @@ WORLDS = dict(
     cc7 = "Cave Circuit World 7",
     cc8 = "Cave Circuit World 8",
 
-    fq = "Finals Qualification",
+    fq  = "Finals Qualification",
+    fp1 = "Finals Practice 1",
+    fp2 = "Finals Practice 2",
+    fp3 = "Finals Practice 3",
 )
 
 ROBOTS=dict(
