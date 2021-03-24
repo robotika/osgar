@@ -1,8 +1,8 @@
-world = "uc1"
+world = "fp1"
 timeout = 2000
-image = "ver99rev2"
+image = "ver101cuda"
 
 [robots]
-A900LXM = "freyja"
-B900RXM = "freyja"
+A900L = "freyja"
+B900R = "freyja"
 
