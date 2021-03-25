@@ -23,6 +23,7 @@ COLORS = [
     (180, 105, 255), # https://en.wikipedia.org/wiki/Shades_of_pink#Hot_pink
     (80, 127, 255), # coral https://www.rapidtables.com/web/color/orange-color.html
     (0, 0, 255),
+    (255, 255, 0),  # cyan
 ]
 SCALE = 10  # 1 pixel is 1dm
 BORDER_PX = 20  # extra border
@@ -40,6 +41,8 @@ MARKERS = {
 
     'helmet': (cv2.MARKER_TRIANGLE_UP, 1),  # Cave
     'rope': (cv2.MARKER_STAR, 4),
+
+    'cube': (cv2.MARKER_SQUARE, 11),  # Finals
 
     'artifact_origin': (cv2.MARKER_CROSS, 6),
 }
@@ -129,7 +132,7 @@ def _read_world(cursor):
 
 def _parse_artifacts(world):
     root = ET.fromstring(world)
-    type_re = re.compile('^(backpack|rescue_randy|gas|vent|phone|artifact_origin|rope|helmet|drill|extinguisher)')
+    type_re = re.compile('^(backpack|rescue_randy|gas|vent|phone|artifact_origin|rope|helmet|drill|extinguisher|cube)')
     artifacts = []
     origin_xyz = None
     for model in root.iterfind("./model"):
