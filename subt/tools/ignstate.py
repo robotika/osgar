@@ -23,7 +23,7 @@ COLORS = [
     (180, 105, 255), # https://en.wikipedia.org/wiki/Shades_of_pink#Hot_pink
     (80, 127, 255), # coral https://www.rapidtables.com/web/color/orange-color.html
     (0, 0, 255),
-    (255, 255, 0),  # tyrkys
+    (255, 255, 0),  # cyan
 ]
 SCALE = 10  # 1 pixel is 1dm
 BORDER_PX = 20  # extra border
