@@ -220,6 +220,10 @@ bool parseArtf(char *input_str, subt::msgs::Artifact& artifact)
         {
           type = subt::ArtifactType::TYPE_ROPE;
         }
+        if(strcmp(buf, "TYPE_CUBE") == 0)
+        {
+          type = subt::ArtifactType::TYPE_CUBE;
+        }
 
         artifact.set_type(static_cast<uint32_t>(type));
 
