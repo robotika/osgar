@@ -130,8 +130,8 @@
               ["fromrospy.rot", "depth2scan.rot"],
               ["fromrospy.acc", "app.acc"],
 
-              ["rosmsg.scan", "detector.scan"],
-              ["rosmsg.scan", "depth2scan.scan"],
+              ["fromrospy.scan_front", "detector.scan"],
+              ["fromrospy.scan_front", "depth2scan.scan"],
 
               ["fromrospy.image_front", "detector.image"],
               ["fromrospy.image_front", "app.image"],
