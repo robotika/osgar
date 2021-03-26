@@ -146,8 +146,6 @@
               ["fromrospy.rot", "depth2scan.rot"],
               ["fromrospy.acc", "app.acc"],
 
-              ["rosmsg.scan", "detector.scan"],
-
               ["fromrospy.image_front", "detector.image"],
               ["fromrospy.image_front", "app.image"],
 
