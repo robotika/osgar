@@ -104,7 +104,7 @@
           "driver": "subt.pull:Pull",
 	      "init": {
 	        "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan", "pose3d", "battery_state", "score",
-                        "air_pressure", "scan360", "octomap:gz"]
+                        "image_front", "depth_front:null","air_pressure", "scan360", "octomap:gz"]
 	      }
       },
       "torospy": {
@@ -156,12 +156,12 @@
               ["fromrospy.scan360", "detector.scan"],
               ["fromrospy.scan360", "depth2scan.scan"],
 
-              ["rosmsg.image", "detector.image"],
-              ["rosmsg.image", "app.image"],
+              ["fromrospy.image_front", "detector.image"],
+              ["fromrospy.image_front", "app.image"],
 
-              ["rosmsg.depth", "depth2scan.depth"],
+              ["fromrospy.depth_front", "depth2scan.depth"],
               ["depth2scan.scan", "app.scan360"],
-              ["rosmsg.depth", "detector.depth"],
+              ["fromrospy.depth_front", "detector.depth"],
 
               ["fromrospy.rot", "app.rot"],
               ["offseter.pose3d", "app.pose3d"],
