@@ -117,6 +117,12 @@ class main:
             else:
                 rospy.loginfo("k2 1 (basic)")
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
+            topics.append(('/' + robot_name + '/rgbd_front/image_raw/compressed', CompressedImage, self.image_front, ('image_front',)))
+            topics.append(('/' + robot_name + '/rgbd_rear/image_raw/compressed', CompressedImage, self.image_rear, ('image_rear',)))
+            topics.append(('/' + robot_name + '/front_scan', LaserScan, self.scan_front, ('scan_front',)))
+            topics.append(('/' + robot_name + '/rear_scan', LaserScan, self.scan_rear, ('scan_rear',)))
+            topics.append(('/' + robot_name + '/rgbd_front/depth', Image, self.depth_front, ('depth_front',)))
+            topics.append(('/' + robot_name + '/rgbd_rear/depth', Image, self.depth_rear, ('depth_rear',)))
         elif robot_config.startswith("EXPLORER_R2_SENSOR_CONFIG"):
             if robot_config.endswith("_2"):
                 rospy.loginfo("explorer R2 #2 (with comms beacons)")
