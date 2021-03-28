@@ -161,7 +161,7 @@ bool artifactTypeFromString(const std::string& type_text,
   if (type_lookup == conversion.end()) {
     return false;
   }
-  type_enum = type_lookup.second;
+  type_enum = type_lookup->second;
   return true;
 }
 
@@ -399,7 +399,7 @@ bool parseArtf(char *input_str, subt::msgs::Artifact& artifact)
         subt::ArtifactType type;
         if (!artifactTypeFromString(buf, type)) {
             // report an error, return
-            ROS_ERROR("Unknown artifact %s", buf)
+            ROS_ERROR("Unknown artifact %s", buf);
             return false;
         }
         /*
