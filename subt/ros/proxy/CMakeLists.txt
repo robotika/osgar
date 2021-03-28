@@ -38,11 +38,11 @@ include_directories(
 )
 
 ## Declare a C++ executable
-add_executable(ros_proxy ros_proxy_node.cc)
+add_executable(ros_proxy ros_proxy_node.cc artifact_type_from_string.cc)
 add_dependencies(ros_proxy ${catkin_EXPORTED_TARGETS})
 target_link_libraries(ros_proxy ${catkin_LIBRARIES} -lzmq)
 
-add_executable(ros_proxy_teambase ros_proxy_teambase.cc)
+add_executable(ros_proxy_teambase ros_proxy_teambase.cc artifact_type_from_string.cc)
 add_dependencies(ros_proxy_teambase ${catkin_EXPORTED_TARGETS})
 target_link_libraries(ros_proxy_teambase ${catkin_LIBRARIES} -lzmq)
 

@@ -47,6 +47,11 @@
 #include <zmq.h>
 #include <assert.h>
 
+extern bool artifactTypeFromString(const std::string& type_text,
+                            subt::ArtifactType& type_enum);
+
+
+
 const uint32_t BROADCAST_PORT = 4142u; // default is 4100 and collides with artifact messages
 
 #define ROSBAG_SIZE_LIMIT 3000000000L  // 3GB
@@ -135,42 +140,6 @@ void sendReceivedMessage(const std::string &srcAddress, const std::string &data)
   ss << "radio " << srcAddress << " " << data;
   auto buf = ss.str();
   protected_zmq_send(g_responder, buf.c_str(), buf.size(), 0);
-}
-
-// If we were willing to go all the way to C++17, I would consider returning
-// std::optional<subt::ArtifactType> instead of returning a bool and having
-// an output function parameter.
-bool artifactTypeFromString(const std::string& type_text,
-                            subt::ArtifactType& type_enum) {
-  // This may need c++11 or higher. I hope we support that, because anything
-  // below that is torturing ourselves without needing to.
-  //
-  // The static initialization also assumes single-threading. If multiple threads
-  // can call the conversion function at the same time, we can remove `static`
-  // and pay the cost of the function building the map at every call. Or do
-  // something else about it.
-  //
-  // In big O notation, std::unordered_map is a better choice than std::map.
-  // But this map is so small, that I am not sure if it is the case right here.
-  static const std::map<std::string, subt::ArtifactType> conversion = {
-    {"TYPE_BACKPACK", subt::ArtifactType::TYPE_BACKPACK},
-    {"TYPE_DRILL", subt::ArtifactType::TYPE_DRILL},
-    {"TYPE_EXTINGUISHER", subt::ArtifactType::TYPE_EXTINGUISHER},
-    {"TYPE_PHONE", subt::ArtifactType::TYPE_PHONE},
-    {"TYPE_RESCUE_RANDY", subt::ArtifactType::TYPE_RESCUE_RANDY},
-    {"TYPE_VENT", subt::ArtifactType::TYPE_VENT},
-    {"TYPE_GAS", subt::ArtifactType::TYPE_GAS},
-    {"TYPE_HELMET", subt::ArtifactType::TYPE_HELMET},
-    {"TYPE_ROPE", subt::ArtifactType::TYPE_ROPE},
-    {"TYPE_CUBE", subt::ArtifactType::TYPE_CUBE},
-  };
-
-  const auto type_lookup = conversion.find(type_text);
-  if (type_lookup == conversion.end()) {
-    return false;
-  }
-  type_enum = type_lookup->second;
-  return true;
 }
 
 
