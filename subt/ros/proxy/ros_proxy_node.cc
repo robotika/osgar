@@ -18,7 +18,7 @@
 // Goal:
 //   - handle all artifacts, ROS communication
 //   - send speed commands
-//   - redirect Odom, Scan and Image messages to Python3 (via ZeroMQ?)
+//   - redirect Odom messages to Python3 (via ZeroMQ?)
 
 #include <chrono>
 #include <thread>
@@ -27,11 +27,7 @@
 
 #include <geometry_msgs/Twist.h>
 #include <rosgraph_msgs/Clock.h>
-#include <sensor_msgs/LaserScan.h>
-#include <sensor_msgs/CompressedImage.h>
 #include <nav_msgs/Odometry.h>
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/PointCloud2.h>
 
 #include <subt_msgs/PoseFromArtifact.h>
 #include <ros/ros.h>
@@ -58,12 +54,8 @@ const uint32_t BROADCAST_PORT = 4142u; // default is 4100 and collides with arti
 
 int g_countClock = 0;
 uint32_t g_clockPrevSec = 0;
-int g_countScan = 0;
-int g_countImage = 0;
 int g_countOdom = 0;
 int g_countGas = 0;
-int g_countDepth = 0;
-int g_countPoints = 0;
 
 int g_countUpdates = 0;
 int g_countReceives = 0;
@@ -104,24 +96,6 @@ void clockCallback(const rosgraph_msgs::Clock::ConstPtr& msg)
   g_countClock++;
 }
 
-void scanCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
-{
-  ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  protected_zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
-  if(g_countScan % 100 == 0)
-    ROS_INFO("received Scan %d", g_countScan);
-  g_countScan++;
-}
-
-void imageCallback(const sensor_msgs::CompressedImage::ConstPtr& msg)
-{
-  ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  protected_zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
-  if(g_countImage % 100 == 0)
-    ROS_INFO("received Image %d", g_countImage);
-  g_countImage++;
-}
-
 void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
 {
   ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
@@ -138,36 +112,6 @@ void gasCallback(const std_msgs::Bool::ConstPtr& msg)
   if(g_countGas % 100 == 0)
     ROS_INFO("received Gas %d", g_countGas);
   g_countGas++;
-}
-
-void depthCallback(const sensor_msgs::Image::ConstPtr& msg)
-{
-  ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  std::string s("depth");
-  unsigned char *buf = sm.buf.get();
-  size_t size = sm.num_bytes;
-  size_t i;
-  for(i = 0; i < size; i++)
-    s += buf[i];
-  protected_zmq_send(g_responder, s.c_str(), size + 5, 0);
-  if(g_countDepth % 100 == 0)
-    ROS_INFO("received Depth %d", g_countDepth);
-  g_countDepth++;
-}
-
-void pointsCallback(const sensor_msgs::PointCloud2::ConstPtr& msg)
-{
-  ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  std::string s("points");
-  unsigned char *buf = sm.buf.get();
-  size_t size = sm.num_bytes;
-  size_t i;
-  for(i = 0; i < size; i++)
-    s += buf[i];
-  protected_zmq_send(g_responder, s.c_str(), size + 6, 0);
-  if(g_countPoints % 100 == 0)
-    ROS_INFO("received Points %d", g_countPoints);
-  g_countPoints++;
 }
 
 void sendOrigin(std::string& name, double x, double y, double z,
@@ -231,13 +175,8 @@ class Controller
   subt_msgs::PoseFromArtifact originSrv;
 
   ros::Subscriber subClock;
-  ros::Subscriber subScan;
-  ros::Subscriber subImage;
-  ros::Subscriber subImage2;  // workaround for two identical topics with different name
   ros::Subscriber subOdom;
   ros::Subscriber subGas;
-  ros::Subscriber subDepth;
-  ros::Subscriber subPoints;
 
   /// \brief Timer that trigger the update function.
   private: ros::Timer updateTimer;
@@ -354,15 +293,8 @@ void Controller::Update(const ros::TimerEvent&)
           this->name + "/cmd_vel", 1);
 
       this->subClock  = n.subscribe("/clock", 1000, clockCallback);
-      this->subScan = n.subscribe(this->name + "/front_scan", 1000, scanCallback);
-      this->subImage = n.subscribe(this->name + "/front/image_raw/compressed", 1000, imageCallback);
-      this->subImage2 = n.subscribe(this->name + "/image_raw/compressed", 1000, imageCallback);
       this->subOdom = n.subscribe(this->name + "/odom", 1000, odomCallback);
       this->subGas = n.subscribe(this->name + "/gas_detected", 1000, gasCallback);
-
-      // Robot specific sensors
-      this->subDepth = n.subscribe(this->name + "/front/depth", 1000, depthCallback);  // RGBD camera
-      this->subPoints = n.subscribe(this->name + "/points", 1000, pointsCallback);  // 3D Lidar (Velodyne)
 
       // Create a cmd_vel publisher to control a vehicle.
       this->originClient = this->n.serviceClient<subt_msgs::PoseFromArtifact>(
