@@ -154,9 +154,17 @@ bool artifactTypeFromString(const std::string& type_text,
   // But this map is so small, that I am not sure if it is the case right here.
   static const std::map<std::string, subt::ArtifactType> conversion = {
     {"TYPE_BACKPACK", subt::ArtifactType::TYPE_BACKPACK},
-    // ...
+    {"TYPE_DRILL", subt::ArtifactType::TYPE_DRILL},
+    {"TYPE_EXTINGUISHER", subt::ArtifactType::TYPE_EXTINGUISHER},
+    {"TYPE_PHONE", subt::ArtifactType::TYPE_PHONE},
+    {"TYPE_RESCUE_RANDY", subt::ArtifactType::TYPE_RESCUE_RANDY},
+    {"TYPE_VENT", subt::ArtifactType::TYPE_VENT},
+    {"TYPE_GAS", subt::ArtifactType::TYPE_GAS},
+    {"TYPE_HELMET", subt::ArtifactType::TYPE_HELMET},
+    {"TYPE_ROPE", subt::ArtifactType::TYPE_ROPE},
     {"TYPE_CUBE", subt::ArtifactType::TYPE_CUBE},
   };
+
   const auto type_lookup = conversion.find(type_text);
   if (type_lookup == conversion.end()) {
     return false;
@@ -402,70 +410,7 @@ bool parseArtf(char *input_str, subt::msgs::Artifact& artifact)
             ROS_ERROR("Unknown artifact %s", buf);
             return false;
         }
-        /*
-        if(strcmp(buf, "TYPE_BACKPACK") == 0)
-        {
-          type = subt::ArtifactType::TYPE_BACKPACK;
-        }
-        if(strcmp(buf, "TYPE_DUCT") == 0)
-        {
-          type = subt::ArtifactType::TYPE_DUCT;
-        }
-        if(strcmp(buf, "TYPE_DRILL") == 0)
-        {
-          type = subt::ArtifactType::TYPE_DRILL;
-        }
-        if(strcmp(buf, "TYPE_ELECTRICAL_BOX") == 0)
-        {
-          type = subt::ArtifactType::TYPE_ELECTRICAL_BOX;
-        }
-        if(strcmp(buf, "TYPE_EXTINGUISHER") == 0)
-        {
-          type = subt::ArtifactType::TYPE_EXTINGUISHER;
-        }
-        if(strcmp(buf, "TYPE_PHONE") == 0)
-        {
-          type = subt::ArtifactType::TYPE_PHONE;
-        }
-        if(strcmp(buf, "TYPE_RADIO") == 0)
-        {
-          type = subt::ArtifactType::TYPE_RADIO;
-        }
-        if(strcmp(buf, "TYPE_RESCUE_RANDY") == 0)
-        {
-          type = subt::ArtifactType::TYPE_RESCUE_RANDY;
-        }
-        if(strcmp(buf, "TYPE_TOOLBOX") == 0)
-        {
-          type = subt::ArtifactType::TYPE_TOOLBOX;
-        }
-        if(strcmp(buf, "TYPE_VALVE") == 0)
-        {
-          type = subt::ArtifactType::TYPE_VALVE;
-        }
-        if(strcmp(buf, "TYPE_VENT") == 0)
-        {
-          type = subt::ArtifactType::TYPE_VENT;
-        }
-        if(strcmp(buf, "TYPE_GAS") == 0)
-        {
-          type = subt::ArtifactType::TYPE_GAS;
-        }
-        if(strcmp(buf, "TYPE_HELMET") == 0)
-        {
-          type = subt::ArtifactType::TYPE_HELMET;
-        }
-        if(strcmp(buf, "TYPE_ROPE") == 0)
-        {
-          type = subt::ArtifactType::TYPE_ROPE;
-        }
-        if(strcmp(buf, "TYPE_CUBE") == 0)
-        {
-          type = subt::ArtifactType::TYPE_CUBE;
-        }*/
-
         artifact.set_type(static_cast<uint32_t>(type));
-
         ROS_INFO_STREAM("MD enum = " << static_cast<uint32_t>(type));
         return true;
   }
