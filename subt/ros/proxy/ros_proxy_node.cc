@@ -305,14 +305,6 @@ Controller::Controller(const std::string &_name)
   ros::service::waitForService("/subt/start", -1);
   ros::service::waitForService("/subt/pose_from_artifact_origin", -1);
 
-  // Waiting from some message related to robot so that we know the robot is already in the simulation
-  ROS_INFO_STREAM("Waiting for " << this->name << "/front/depth");
-  ros::topic::waitForMessage<sensor_msgs::Image>(this->name + "/front/depth", this->n);
-
-  ROS_INFO_STREAM("Sleeping 1 simulated second to let simulation start up");
-  ros::Duration(1).sleep();
-  ROS_INFO_STREAM("Simulation hopefully up and running");
-
   this->updateTimer = this->n.createTimer(ros::Duration(0.05), &Controller::Update, this);
   this->m_receiveZmq = std::thread(Controller::receiveZmqThread, this);
 }
