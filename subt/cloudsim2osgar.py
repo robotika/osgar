@@ -16,7 +16,7 @@ import tf
 import zmq
 import numpy as np
 
-from sensor_msgs.msg import Imu, LaserScan, CompressedImage, Image, PointCloud2
+from sensor_msgs.msg import Imu, LaserScan, PointCloud2
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty, Int32, String
 from sensor_msgs.msg import BatteryState, FluidPressure
@@ -133,9 +133,9 @@ class main:
                 publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
             else:
                 rospy.loginfo("explorer R2 #1 (basic)")
-            topics.append(('/' + robot_name + '/rs_front/color/image/compressed', CompressedImage, self.image_front, ('image_front',)))
-            topics.append(('/' + robot_name + '/rs_front/depth/image', Image, self.depth_front, ('depth_front',)))
             topics.append(('/' + robot_name + '/points', PointCloud2, self.points, ('points',)))
+            topics.append(('/rtabmap/rgbd/front/compressed', RGBDImage, self.rgbd_front, ('rgbd_front',)))
+            topics.append(('/rtabmap/rgbd/rear/compressed', RGBDImage, self.rgbd_rear, ('rgbd_rear',)))
         else:
             rospy.logerr("unknown configuration")
             return
@@ -263,16 +263,6 @@ class main:
         rospy.loginfo_throttle(10, "air_pressure callback: {}".format(self.air_pressure_count))
         self.bus.publish('air_pressure', msg.fluid_pressure)
 
-    def image_front(self, msg):
-        self.image_front_count += 1
-        rospy.loginfo_throttle(10, "image_front callback: {}".format(self.image_front_count))
-        self.bus.publish('image_front', msg.data)
-
-    def image_rear(self, msg):
-        self.image_rear_count += 1
-        rospy.loginfo_throttle(10, "image_rear callback: {}".format(self.image_rear_count))
-        self.bus.publish('image_rear', msg.data)
-
     def scan_front(self, msg):
         self.scan_front_count += 1
         rospy.loginfo_throttle(10, "scan_front callback: {}".format(self.scan_front_count))
@@ -300,16 +290,6 @@ class main:
         arr = np.clip(arr, 1, 0xFFFF)
         arr = np.ndarray.astype(arr, dtype=np.dtype('H'))
         return np.array(arr).reshape((msg.height, msg.width))
-
-    def depth_front(self, msg):
-        self.depth_front_count += 1
-        rospy.loginfo_throttle(10, "depth_front callback: {}".format(self.depth_front_count))
-        self.bus.publish('depth_front', self.convert_depth(msg))
-
-    def depth_rear(self, msg):
-        self.depth_rear_count += 1
-        rospy.loginfo_throttle(10, "depth_rear callback: {}".format(self.depth_rear_count))
-        self.bus.publish('depth_rear', self.convert_depth(msg))
 
     def convert_rgbd(self, msg):
         # Pose of the robot relative to starting position.
