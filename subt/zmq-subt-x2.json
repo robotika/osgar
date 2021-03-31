@@ -129,8 +129,6 @@
               ["fromrospy.scan_front", "detector.scan"],
               ["fromrospy.scan_front", "depth2scan.scan"],
 
-              ["fromrospy.image_front", "app.image"],
-
               ["fromrospy.rgbd_front", "depth2scan.rgbd"],
               ["fromrospy.rgbd_front", "detector.rgbd"],
               ["fromrospy.rgbd_rear", "detector.rgbd"],
