@@ -40,8 +40,8 @@
 #include <zmq.h>
 #include <assert.h>
 
-extern bool artifactTypeFromString(const std::string& type_text,
-                            subt::ArtifactType& type_enum);
+
+bool artifactTypeFromString(const std::string& type_text, subt::ArtifactType& type_enum);
 
 
 const uint32_t BROADCAST_PORT = 4142u; // default is 4100 and collides with artifact messages

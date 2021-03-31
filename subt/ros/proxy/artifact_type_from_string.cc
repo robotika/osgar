@@ -19,15 +19,9 @@
 #include <subt_ign/protobuf/artifact.pb.h>
 
 
-// If we were willing to go all the way to C++17, I would consider returning
-// std::optional<subt::ArtifactType> instead of returning a bool and having
-// an output function parameter.
 bool artifactTypeFromString(const std::string& type_text,
                             subt::ArtifactType& type_enum) {
-  // This may need c++11 or higher. I hope we support that, because anything
-  // below that is torturing ourselves without needing to.
-  //
-  // The static initialization also assumes single-threading. If multiple threads
+  // The static initialization assumes single-threading. If multiple threads
   // can call the conversion function at the same time, we can remove `static`
   // and pay the cost of the function building the map at every call. Or do
   // something else about it.
