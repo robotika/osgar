@@ -26,8 +26,8 @@
       },
       "detector": {
           "driver": "subt.artf_node:ArtifactDetectorDNN",
-          "in": ["image", "scan"],
-          "out": ["artf", "dropped", "debug_artf", "stdout"],
+          "in": ["rgbd", "scan"],
+          "out": ["localized_artf", "dropped", "debug_artf", "stdout"],
           "init": {
             "virtual_world": true,
             "fx": 554.25469
@@ -82,7 +82,7 @@
       },
       "depth2scan": {
           "driver": "subt.depth2scan:DepthToScan",
-          "in": ["depth", "scan"],
+          "in": ["rgbd", "scan"],
           "out": ["scan"],
           "init": {
             "depth_params": {
@@ -104,7 +104,7 @@
           "driver": "subt.pull:Pull",
 	      "init": {
 	        "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan", "pose3d", "battery_state", "score",
-                        "image_front", "depth_front:null","air_pressure", "scan360", "octomap:gz"]
+                        "rgbd_front", "air_pressure", "scan360", "octomap:gz", "origin"]
 	      }
       },
       "torospy": {
@@ -115,9 +115,6 @@
           "in": ["radio", "pose3d", "artf", "sim_time_sec"],
           "out": ["radio", "artf_xyz"],
           "init": {}
-      },
-      "offseter": {
-        "driver": "subt.offseter:Offseter"
       },
       "marsupial": {
           "driver": "subt.marsupial:Marsupial",
@@ -149,22 +146,19 @@
               ["rosmsg.cmd", "transmitter.raw"],
 
               ["rosmsg.rot", "app.rot"],
-              ["fromrospy.rot", "depth2scan.rot"],
               ["rosmsg.acc", "app.acc"],
               ["rosmsg.orientation", "app.orientation"],
 
               ["fromrospy.scan360", "detector.scan"],
               ["fromrospy.scan360", "depth2scan.scan"],
 
-              ["fromrospy.image_front", "detector.image"],
-              ["fromrospy.image_front", "app.image"],
+              ["fromrospy.rgbd_front", "detector.rgbd"],
 
-              ["fromrospy.depth_front", "depth2scan.depth"],
+              ["fromrospy.rgbd_front", "depth2scan.rgbd"],
               ["depth2scan.scan", "app.scan360"],
-              ["fromrospy.depth_front", "detector.depth"],
 
               ["fromrospy.rot", "app.rot"],
-              ["offseter.pose3d", "app.pose3d"],
+              ["fromrospy.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
               ["rosmsg.sim_time_sec", "reporter.sim_time_sec"],
               ["rosmsg.sim_time_sec", "octomap.sim_time_sec"],
@@ -172,7 +166,7 @@
               ["rosmsg.gas_detected", "gas_detector.gas_detected"],
               ["gas_detector.artf", "app.artf"],
 
-              ["offseter.pose3d", "radio.pose3d"],
+              ["fromrospy.pose3d", "radio.pose3d"],
               ["reporter.artf_all", "radio.artf"],
               ["radio.artf_xyz", "reporter.artf_xyz"],
               ["radio.radio", "rosmsg.broadcast"],
@@ -189,7 +183,7 @@
               ["rosmsg.origin", "marsupial.origin"],
               ["marsupial.detach", "torospy.detach"],
 
-              ["detector.artf", "app.artf"],
+              ["detector.localized_artf", "app.artf"],
               ["detector.stdout", "rosmsg.stdout"],
               ["app.artf_xyz", "reporter.artf_xyz"],
               ["rosmsg.base_station", "reporter.base_station"],
@@ -197,16 +191,13 @@
 
               ["fromrospy.bottom_scan", "drone.bottom_scan"],
               ["fromrospy.top_scan", "drone.top_scan"],
-              ["offseter.pose3d", "drone.pose3d"],
+              ["fromrospy.pose3d", "drone.pose3d"],
               ["fromrospy.air_pressure", "drone.air_pressure"],
               ["app.desired_z_speed", "drone.desired_z_speed"],
 
               ["fromrospy.octomap", "octomap.octomap"],
-              ["offseter.pose3d", "octomap.pose3d"],
-              ["octomap.waypoints", "app.waypoints"],
-
-              ["rosmsg.origin", "offseter.origin"],
-              ["fromrospy.pose3d", "offseter.pose3d"]
+              ["fromrospy.pose3d", "octomap.pose3d"],
+              ["octomap.waypoints", "app.waypoints"]
     ]
   }
 }

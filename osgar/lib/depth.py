@@ -102,10 +102,9 @@ def _rotation_matrix(yaw, pitch, roll):
     return roll_m @ pitch_m @ yaw_m
 
 
-def depth2danger(depth_mm, params):
+def depth2danger(depth, params):
     # COPY & PASTE - refactoring needed!
 
-    depth = depth_mm * 0.001  # Converting to meters.
     # 3D coordinates of points detected by the depth camera, converted to
     # robot's coordinate system.
     xyz = (params.ps * np.expand_dims(depth, axis=Z) +
@@ -149,7 +148,7 @@ def depth2danger(depth_mm, params):
     return danger
 
 
-def depth2dist(depth_mm, params, pitch=None, roll=None, debug_col=None):
+def depth2dist(depth, params, pitch=None, roll=None, debug_col=None):
     # return line in mm corresponding to scan
     # optional pitch and roll angles are in radians
     # warning: there is a bug (?) in either Osgar or in SubT and the angles
@@ -158,20 +157,17 @@ def depth2dist(depth_mm, params, pitch=None, roll=None, debug_col=None):
     roll_rot = np.asmatrix(np.eye(3))
     # http://planning.cs.uiuc.edu/node102.html
     if pitch is not None:
-        inv_pitch = -pitch # Pitch corrected for the upside down bug.
         pitch_rot = np.matrix(
-                [[np.cos(inv_pitch), 0.0, np.sin(inv_pitch)],
+                [[np.cos(pitch), 0.0, np.sin(pitch)],
                  [0.0, 1.0, 0.0],
-                 [-np.sin(inv_pitch), 0.0, np.cos(inv_pitch)]])
+                 [-np.sin(pitch), 0.0, np.cos(pitch)]])
     if roll is not None:
-        inv_roll = -(roll + np.pi) # Roll corrected for the upside down bug.
         roll_rot = np.matrix(
                 [[1.0, 0.0, 0.0],
-                 [0.0, np.cos(inv_roll), -np.sin(inv_roll)],
-                 [0.0, np.sin(inv_roll), np.cos(inv_roll)]])
+                 [0.0, np.cos(roll), -np.sin(roll)],
+                 [0.0, np.sin(roll), np.cos(roll)]])
     rot = pitch_rot * roll_rot
 
-    depth = depth_mm * 0.001  # Converting to meters.
     # 3D coordinates of points detected by the depth camera, converted to
     # robot's coordinate system.
     rxyz = (params.ps * np.expand_dims(depth, axis=Z) +
@@ -255,6 +251,15 @@ def depth2dist(depth_mm, params, pitch=None, roll=None, debug_col=None):
 
     scan = np.array(scan*1000, dtype=np.int32)
     return scan
+
+
+def decompress(data):
+    # RTABMap compresses float32 depth data into RGBA channes of a PNG image.
+    # It does not, however, store information about endiannes. All we can do is
+    # hope that the current machine and the data origin machine have the same
+    # one.
+    return cv2.imdecode(np.frombuffer(data, np.uint8),
+                        cv2.IMREAD_UNCHANGED).view(dtype=np.float32)[:,:,0]
 
 
 if __name__ == '__main__':
