@@ -40,6 +40,10 @@
 #include <zmq.h>
 #include <assert.h>
 
+
+bool artifactTypeFromString(const std::string& type_text, subt::ArtifactType& type_enum);
+
+
 const uint32_t BROADCAST_PORT = 4142u; // default is 4100 and collides with artifact messages
 
 int g_countClock = 0;
@@ -164,65 +168,12 @@ bool parseArtf(char *input_str, subt::msgs::Artifact& artifact)
         artifact.mutable_pose()->mutable_position()->set_z(z);
 
         subt::ArtifactType type;
-        if(strcmp(buf, "TYPE_BACKPACK") == 0)
-        {
-          type = subt::ArtifactType::TYPE_BACKPACK;
+        if (!artifactTypeFromString(buf, type)) {
+            // report an error, return
+            ROS_ERROR("Unknown artifact %s", buf);
+            return false;
         }
-        if(strcmp(buf, "TYPE_DUCT") == 0)
-        {
-          type = subt::ArtifactType::TYPE_DUCT;
-        }
-        if(strcmp(buf, "TYPE_DRILL") == 0)
-        {
-          type = subt::ArtifactType::TYPE_DRILL;
-        }
-        if(strcmp(buf, "TYPE_ELECTRICAL_BOX") == 0)
-        {
-          type = subt::ArtifactType::TYPE_ELECTRICAL_BOX;
-        }
-        if(strcmp(buf, "TYPE_EXTINGUISHER") == 0)
-        {
-          type = subt::ArtifactType::TYPE_EXTINGUISHER;
-        }
-        if(strcmp(buf, "TYPE_PHONE") == 0)
-        {
-          type = subt::ArtifactType::TYPE_PHONE;
-        }
-        if(strcmp(buf, "TYPE_RADIO") == 0)
-        {
-          type = subt::ArtifactType::TYPE_RADIO;
-        }
-        if(strcmp(buf, "TYPE_RESCUE_RANDY") == 0)
-        {
-          type = subt::ArtifactType::TYPE_RESCUE_RANDY;
-        }
-        if(strcmp(buf, "TYPE_TOOLBOX") == 0)
-        {
-          type = subt::ArtifactType::TYPE_TOOLBOX;
-        }
-        if(strcmp(buf, "TYPE_VALVE") == 0)
-        {
-          type = subt::ArtifactType::TYPE_VALVE;
-        }
-        if(strcmp(buf, "TYPE_VENT") == 0)
-        {
-          type = subt::ArtifactType::TYPE_VENT;
-        }
-        if(strcmp(buf, "TYPE_GAS") == 0)
-        {
-          type = subt::ArtifactType::TYPE_GAS;
-        }
-        if(strcmp(buf, "TYPE_HELMET") == 0)
-        {
-          type = subt::ArtifactType::TYPE_HELMET;
-        }
-        if(strcmp(buf, "TYPE_ROPE") == 0)
-        {
-          type = subt::ArtifactType::TYPE_ROPE;
-        }
-
         artifact.set_type(static_cast<uint32_t>(type));
-
         ROS_INFO_STREAM("MD enum = " << static_cast<uint32_t>(type));
         return true;
   }
