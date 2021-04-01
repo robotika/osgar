@@ -110,6 +110,11 @@
       "torospy": {
           "driver": "subt.push:Push"
       },
+      "logimage": {
+          "driver": "subt.image_extractor:ImageExtractor",
+          "in": ["rgbd"],
+          "out": ["image", "depth"]
+      },
       "radio": {
           "driver": "subt.radio:Radio",
           "in": ["radio", "pose3d", "artf", "sim_time_sec"],
@@ -197,7 +202,9 @@
 
               ["fromrospy.octomap", "octomap.octomap"],
               ["fromrospy.pose3d", "octomap.pose3d"],
-              ["octomap.waypoints", "app.waypoints"]
+              ["octomap.waypoints", "app.waypoints"],
+
+              ["fromrospy.rgbd_front", "logimage.rgbd"]
     ]
   }
 }
