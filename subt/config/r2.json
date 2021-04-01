@@ -20,8 +20,8 @@
       },
       "detector": {
           "driver": "subt.artf_node:ArtifactDetectorDNN",
-          "in": ["image", "scan"],
-          "out": ["artf", "dropped", "debug_artf", "stdout"],
+          "in": ["rgbd", "scan"],
+          "out": ["localized_artf", "dropped", "debug_artf", "debug_rgbd", "debug_result", "debug_cv_result", "stdout"],
           "init": {
           }
       },
@@ -66,7 +66,7 @@
       },
       "depth2scan": {
           "driver": "subt.depth2scan:DepthToScan",
-          "in": ["depth", "scan"],
+          "in": ["rgbd", "scan"],
           "out": ["scan"],
           "init": {
             "depth_params": {
@@ -94,7 +94,7 @@
           "driver": "subt.pull:Pull",
           "init": {
             "outputs": ["rot", "acc", "orientation", "battery_state", "score", "pose3d",
-                        "image_front", "image_rear", "scan_front", "scan_rear", "depth_front:null", "depth_rear:null",
+                        "scan_front", "scan_rear", "rgbd_front", "rgbd_rear", "origin",
                         "points:gz"]
           }
       },
@@ -143,14 +143,11 @@
               ["rosmsg.cmd", "transmitter.raw"],
 
               ["fromrospy.rot", "app.rot"],
-              ["fromrospy.rot", "depth2scan.rot"],
               ["fromrospy.acc", "app.acc"],
 
-              ["fromrospy.image_front", "detector.image"],
-              ["fromrospy.image_front", "app.image"],
+              ["fromrospy.rgbd_front", "detector.rgbd"],
 
-              ["fromrospy.depth_front", "depth2scan.depth"],
-              ["fromrospy.depth_front", "detector.depth"],
+              ["fromrospy.rgbd_front", "rgbd2scan.depth"],
 
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
               ["rosmsg.sim_time_sec", "reporter.sim_time_sec"],
@@ -178,7 +175,7 @@
               ["breadcrumbs.location", "radio.breadcrumb"],
               ["radio.breadcrumb", "breadcrumbs.external"],
 
-              ["detector.artf", "app.artf"],
+              ["detector.localized_artf", "app.localized_artf"],
               ["detector.stdout", "rosmsg.stdout"],
               ["app.artf_xyz", "reporter.artf_xyz"],
               ["rosmsg.base_station", "reporter.base_station"],

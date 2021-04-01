@@ -1,13 +1,35 @@
 <?xml version="1.0"?>
 <launch>
   <!-- K2 movement controller -->
-  <node name="k2" pkg="robot" type="k2.py" output="screen" args="$(arg robot_name)">
+  <node name="k2" pkg="robot" type="k2.py" args="$(arg robot_name)">
     <remap from="cmd_vel/input" to="$(arg robot_name)/cmd_vel"/>
     <remap from="cmd_vel/output/front" to="$(arg robot_name)/cmd_vel/front"/>
     <remap from="cmd_vel/output/rear" to="$(arg robot_name)/cmd_vel/rear"/>
   </node>
 
   <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)" output="screen">
+  </node>
+
+  <!-- Combining front RGBD depth and image data into a single message. -->
+  <node pkg="nodelet" type="nodelet" name="rgbd_sync_front" args="standalone rtabmap_ros/rgbd_sync">
+    <!-- Inputs -->
+    <remap from="rgb/image" to="/$(arg robot_name)/rgbd_front/optical/image_raw"/>
+    <remap from="rgb/camera_info" to="$(arg robot_name)/rgbd_front/optical/camera_info"/>
+    <remap from="depth/image" to="/$(arg robot_name)/rgbd_front/optical/depth"/>
+    <!-- Output -->
+    <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/front/compressed"/>
+    <remap from="rgbd_image" to="/rtabmap/rgbd/front"/>
+  </node>
+
+  <!-- Combining rear RGBD depth and image data into a single message. -->
+  <node pkg="nodelet" type="nodelet" name="rgbd_sync_rear" args="standalone rtabmap_ros/rgbd_sync">
+    <!-- Inputs -->
+    <remap from="rgb/image" to="/$(arg robot_name)/rgbd_rear/optical/image_raw"/>
+    <remap from="rgb/camera_info" to="/$(arg robot_name)/rgbd_rear/optical/camera_info"/>
+    <remap from="depth/image" to="/$(arg robot_name)/rgbd_rear/optical/depth"/>
+    <!-- Output -->
+    <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/rear/compressed"/>
+    <remap from="rgbd_image" to="/rtabmap/rgbd/rear"/>
   </node>
 
   <!-- ICP Odometry based on front planar lidar -->

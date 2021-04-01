@@ -63,7 +63,7 @@
   </node>
 
   <!-- ICP Odometry based on front lidar -->
-  <node ns="rtabmap/icp/front" pkg="rtabmap_ros" type="icp_odometry" name="icp_odometry_front" output="screen">
+  <node ns="rtabmap/icp/front" pkg="rtabmap_ros" type="icp_odometry" name="icp_odometry_front">
     <param name="database_path" type="string" value=""/>
     <param name="subscribe_scan" type="bool" value="true"/>
     <param name="frame_id" type="string" value="$(arg robot_name)"/>
@@ -86,7 +86,7 @@
   </node>
 
   <!-- ICP Odometry based on rear lidar -->
-  <node ns="rtabmap/icp/rear" pkg="rtabmap_ros" type="icp_odometry" name="icp_odometry_rear" output="screen">
+  <node ns="rtabmap/icp/rear" pkg="rtabmap_ros" type="icp_odometry" name="icp_odometry_rear">
     <param name="database_path" type="string" value=""/>
     <param name="subscribe_scan" type="bool" value="true"/>
     <param name="frame_id" type="string" value="$(arg robot_name)"/>

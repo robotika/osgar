@@ -8,8 +8,8 @@ import numpy as np
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
-from osgar.lib.depth import depth2dist, DepthParams
-from osgar.lib.mathex import normalizeAnglePIPI
+from osgar.lib.depth import depth2dist, DepthParams, decompress as decompress_depth
+from osgar.lib.quaternion import multiply as multiply_quaternions, euler_zyx
 
 
 FRAC = math.tan(math.radians(60)) / 360
@@ -17,7 +17,7 @@ FRAC = math.tan(math.radians(60)) / 360
 
 def vertical_scan(depth, column):
     # return two arrays x and y
-    arr = np.array(depth[:, column], np.int32)
+    arr = np.array(depth[:, column] * 1000, np.int32)
     x = arr
     a = FRAC * (np.arange(len(arr), 0, -1) - 180)
     y = x * a + 560
@@ -166,30 +166,32 @@ class DepthToScan(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("scan")
-        self.depth = None  # initialize inputs
+        self.rgbd = None  # initialize inputs
         self.scan = None
         self.verbose = False
-        self.scale = np.array([1/math.cos(math.radians(30*(i-80)/80)) for i in range(160)])
-        self.yaw, self.pitch, self.roll = None, None, None  # unknown values
         self.depth_params = DepthParams(**config.get('depth_params', {}))
 
     def update(self):
         channel = super().update()
-        assert channel in ["depth", "scan", "rot"], channel
+        assert channel in ["scan", "rgbd"], channel
 
-        if channel == 'depth':
-            pass
-        elif channel == 'scan':
-            if self.depth is None:
+        if channel == 'scan':
+            depth = None
+            if self.rgbd is not None:
+                robot_pose, camera_pose, __rgb_compressed, depth_compressed = self.rgbd
+                __robot_xyz, robot_rotation = robot_pose
+                __camera_xyz, camera_rotation = camera_pose
+                full_rotation = multiply_quaternions(robot_rotation, camera_rotation)
+                __yaw, pitch, roll = euler_zyx(full_rotation)
+                depth = decompress_depth(depth_compressed)
+
+            if depth is None:
                 self.publish('scan', self.scan)
                 return channel  # when no depth data are available ...
-            depth_scan = depth2dist(self.depth, self.depth_params, self.pitch, self.roll)
+
+            depth_scan = depth2dist(depth, self.depth_params, pitch, roll)
             new_scan = adjust_scan(self.scan, depth_scan, self.depth_params)
             self.publish('scan', new_scan.tolist())
-        elif channel == 'rot':
-            self.yaw, self.pitch, self.roll = [normalizeAnglePIPI(math.radians(x/100)) for x in self.rot]
-        else:
-            assert False, channel  # unsupported channel
 
         return channel
 

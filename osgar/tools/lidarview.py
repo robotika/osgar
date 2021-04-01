@@ -19,7 +19,7 @@ from osgar.logger import LogIndexedReader, lookup_stream_names
 from osgar.lib.serialize import deserialize
 from osgar.lib.config import get_class_by_name
 from osgar.lib import quaternion
-from osgar.lib.depth import depth2danger, DepthParams
+from osgar.lib.depth import depth2danger, DepthParams, decompress as decompress_depth
 
 
 WINDOW_SIZE = 1600, 1000  # controlled by --window-size
@@ -196,11 +196,12 @@ g_danger_binary_image = False
 
 def get_image(data):
     """Extract JPEG or RGBD depth image"""
+    global g_depth
     # https://stackoverflow.com/questions/12569452/how-to-identify-numpy-types-in-python
     if isinstance(data, np.ndarray):
         # https://www.learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
         if g_danger_binary_image:
-            img = np.array(depth2danger(data, g_depth_params) * 255, dtype=np.uint8)
+            img = np.array(depth2danger(data / 1000, g_depth_params) * 255, dtype=np.uint8)
             im_color = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
         else:
             img = np.array(np.minimum(255*40, data)/40, dtype=np.uint8)
@@ -208,8 +209,11 @@ def get_image(data):
 
         # https://stackoverflow.com/questions/19306211/opencv-cv2-image-to-pygame-image
         image = pygame.image.frombuffer(im_color.tostring(), im_color.shape[1::-1], "RGB")
-        global g_depth
         g_depth = data
+    elif isinstance(data, tuple):
+        img_data, depth_data = data
+        image = pygame.image.load(io.BytesIO(img_data), 'JPG').convert()
+        g_depth = decompress_depth(depth_data)
     elif data is not None:
         image = pygame.image.load(io.BytesIO(data), 'JPG').convert()
     else:
@@ -239,7 +243,7 @@ class Frame:
 class Framer:
     """Creates frames from log entries. Packs together closest scan, pose and camera picture."""
     def __init__(self, filepath, lidar_name=None, lidar2_name=None, pose2d_name=None, pose3d_name=None, camera_name=None,
-                 camera2_name=None, bbox_name=None, joint_name=None, keyframes_name=None, title_name=None,
+                 camera2_name=None, bbox_name=None, rgbd_name=None, joint_name=None, keyframes_name=None, title_name=None,
                  lidar_up_name=None, lidar_down_name=None):
         self.log = LogIndexedReader(filepath)
         self.current = 0
@@ -259,6 +263,7 @@ class Framer:
         self.lidar2_id = None
         self.camera2_id = None
         self.bbox_id = None
+        self.rgbd_id = None
         self.joint_id = None
         self.keyframes_id = None
         self.title_id = []
@@ -279,6 +284,8 @@ class Framer:
             self.camera2_id = names.index(camera2_name) + 1
         if bbox_name is not None:
             self.bbox_id = names.index(bbox_name) + 1
+        if rgbd_name is not None:
+            self.rgbd_id = names.index(rgbd_name) + 1
         if joint_name is not None:
             self.joint_id = names.index(joint_name) + 1
         if keyframes_name is not None:
@@ -375,6 +382,13 @@ class Framer:
                     return timestamp, self.frame, self.pose, self.pose3d, self.scan, self.scan2, self.image, self.image2, self.bbox, self.joint, keyframe, self.title, False
             elif stream_id == self.camera2_id:
                 self.image2 = get_image(deserialize(data))
+            elif stream_id == self.rgbd_id:
+                _, _, img_data, depth_data = deserialize(data)
+                self.image = get_image((img_data, depth_data))
+                if self.lidar_id is None:
+                    keyframe = self.keyframe
+                    self.keyframe = False
+                    return timestamp, self.frame, self.pose, self.pose3d, self.scan, self.scan2, self.image, self.image2, self.bbox, self.joint, keyframe, self.title, False
             elif stream_id == self.joint_id:
                 self.joint = deserialize(data)
             elif stream_id == self.pose3d_id:
@@ -644,6 +658,8 @@ def main(args_in=None, startswith=None):
     parser.add_argument('--camera2', help='stream ID for 2nd JPEG images')
     parser.add_argument('--bbox', help='stream ID for detection bounding box')
 
+    parser.add_argument('--rgbd', help='stream ID for RGBD')
+
     parser.add_argument('--joint', help='stream ID joint angle for articulated robots (Kloubak)')
 
     parser.add_argument('--keyframes', help='stream ID typically for artifacts detection')
@@ -676,7 +692,7 @@ def main(args_in=None, startswith=None):
         args.logfile = max(g, key=lambda a: a.stat().st_mtime)
         print(args.logfile)
 
-    if not any([args.lidar, args.pose2d, args.pose3d, args.camera]):
+    if not any([args.lidar, args.pose2d, args.pose3d, args.camera, args.rgbd]):
         print("Available streams:")
         for stream in lookup_stream_names(args.logfile):
             print("  ", stream)
@@ -705,7 +721,7 @@ def main(args_in=None, startswith=None):
     g_rotation_offset_rad = math.radians(args.rotate)
     g_lidar_fov_deg = args.deg
     with Framer(args.logfile, lidar_name=args.lidar, lidar2_name=args.lidar2, pose2d_name=args.pose2d, pose3d_name=args.pose3d,
-                camera_name=args.camera, camera2_name=args.camera2, bbox_name=args.bbox, joint_name=args.joint,
+                camera_name=args.camera, camera2_name=args.camera2, bbox_name=args.bbox, rgbd_name=args.rgbd, joint_name=args.joint,
                 keyframes_name=args.keyframes, title_name=args.title, lidar_up_name=args.lidar_up, lidar_down_name=args.lidar_down) as framer:
         lidarview(framer, caption_filename=filename, callback=callback, callback_img=callback_img, out_video=args.create_video, jump=args.jump)
 

@@ -21,7 +21,7 @@
       "detector": {
           "driver": "subt.artf_node:ArtifactDetectorDNN",
           "in": ["image", "scan"],
-          "out": ["artf", "dropped", "debug_artf", "stdout"],
+          "out": ["localized_artf", "dropped", "debug_artf", "debug_rgbd", "debug_result", "debug_cv_result", "stdout"],
           "init": {
           }
       },
@@ -80,7 +80,7 @@
           "driver": "subt.pull:Pull",
           "init": {
             "outputs": ["rot", "acc", "orientation", "battery_state", "score", "pose3d",
-                        "image_front", "image_rear", "scan_front", "scan_rear", "depth_front:null", "depth_rear:null",
+                        "scan_front", "scan_rear", "rgbd_front", "rgbd_rear", "origin",
                         "octomap:gz"]
           }
       },
@@ -100,9 +100,6 @@
           "init": {
             "radius": 30
           }
-      },
-      "offseter": {
-        "driver": "subt.offseter:Offseter"
       },
       "mtm": {
           "driver": "subt.multitrace:MultiTraceManager",
@@ -127,20 +124,18 @@
               ["rosmsg.cmd", "transmitter.raw"],
 
               ["fromrospy.rot", "app.rot"],
-              ["fromrospy.rot", "depth2scan.rot"],
               ["fromrospy.acc", "app.acc"],
 
               ["fromrospy.scan_front", "detector.scan"],
               ["fromrospy.scan_front", "depth2scan.scan"],
 
-              ["fromrospy.image_front", "detector.image"],
-              ["fromrospy.image_front", "app.image"],
+              ["fromrospy.rgbd_front", "depth2scan.rgbd"],
+              ["fromrospy.rgbd_front", "detector.rgbd"],
+              ["fromrospy.rgbd_rear", "detector.rgbd"],
 
-              ["fromrospy.depth_front", "depth2scan.depth"],
               ["depth2scan.scan", "app.scan"],
-              ["fromrospy.depth_front", "detector.depth"],
 
-              ["offseter.pose3d", "app.pose3d"],
+              ["fromrospy.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
               ["rosmsg.sim_time_sec", "reporter.sim_time_sec"],
               ["rosmsg.sim_time_sec", "torospy.sim_time_sec"],
@@ -149,7 +144,7 @@
               ["rosmsg.gas_detected", "gas_detector.gas_detected"],
               ["gas_detector.artf", "app.artf"],
 
-              ["offseter.pose3d", "radio.pose3d"],
+              ["fromrospy.pose3d", "radio.pose3d"],
               ["reporter.artf_all", "radio.artf"],
               ["radio.artf_xyz", "reporter.artf_xyz"],
               ["radio.radio", "rosmsg.broadcast"],
@@ -163,23 +158,20 @@
               ["mtm.robot_trace", "radio.robot_trace"],
 
               ["rosmsg.sim_time_sec", "breadcrumbs.sim_time_sec"],
-              ["offseter.pose3d", "breadcrumbs.pose3d"],
+              ["fromrospy.pose3d", "breadcrumbs.pose3d"],
               ["breadcrumbs.deploy", "torospy.deploy"],
               ["breadcrumbs.location", "radio.breadcrumb"],
               ["radio.breadcrumb", "breadcrumbs.external"],
 
-              ["detector.artf", "app.artf"],
+              ["detector.localized_artf", "app.localized_artf"],
               ["detector.stdout", "rosmsg.stdout"],
               ["app.artf_xyz", "reporter.artf_xyz"],
               ["rosmsg.base_station", "reporter.base_station"],
               ["reporter.artf_cmd", "transmitter.raw"],
 
               ["fromrospy.octomap", "octomap.octomap"],
-              ["offseter.pose3d", "octomap.pose3d"],
-              ["octomap.waypoints", "app.waypoints"],
-
-              ["rosmsg.origin", "offseter.origin"],
-              ["fromrospy.pose3d", "offseter.pose3d"]
+              ["fromrospy.pose3d", "octomap.pose3d"],
+              ["octomap.waypoints", "app.waypoints"]
     ]
   }
 }

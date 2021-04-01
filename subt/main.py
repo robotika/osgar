@@ -556,6 +556,17 @@ class SubTChallenge:
         self.bus.publish('artf_xyz', [
             [artifact_data, [round(ax * 1000), round(ay * 1000), round(az * 1000)], self.robot_name, None]])
 
+    def handle_artf(self, artifact_data, world_xyz):
+        ax, ay, az = world_xyz
+        if -20 < ax < 0 and -10 < ay < 10:  # AND of currently available staging areas
+            # Urban (-20 < ax < 0 and -10 < ay < 10)
+            # Cave  (-50 < ax < 0 and -25 < ay < 25)
+            # filter out elements on staging area
+            self.stdout(self.time, 'Robot at:', (ax, ay, az))
+        else:
+            if self.maybe_remember_artifact(artifact_data, (ax, ay, az)):
+                self.publish_single_artf_xyz(artifact_data, (ax, ay, az))
+
     def on_artf(self, timestamp, data):
         if self.orientation is None or self.xyz is None:
             # there can be observed artifact (false) on the start before the coordinate system is defined
@@ -566,14 +577,10 @@ class SubTChallenge:
         ax = x + dx/1000.0
         ay = y + dy/1000.0
         az = z + dz/1000.0
-        if -20 < ax < 0 and -10 < ay < 10:  # AND of currently available staging areas
-            # Urban (-20 < ax < 0 and -10 < ay < 10)
-            # Cave  (-50 < ax < 0 and -25 < ay < 25)
-            # filter out elements on staging area
-            self.stdout(self.time, 'Robot at:', (ax, ay, az))
-        else:
-            if self.maybe_remember_artifact(artifact_data, (ax, ay, az)):
-                self.publish_single_artf_xyz(artifact_data, (ax, ay, az))
+        self.handle_artf(artifact_data, (ax, ay, az))
+
+    def on_localized_artf(self, timestamp, data):
+        self.handle_artf(*data)
 
     def on_joint_angle(self, timestamp, data):
         # angles for articulated robot in 1/100th of degree
@@ -923,7 +930,7 @@ class SubTChallenge:
         self.stdout('Final xyz (DARPA coord system):', self.xyz)
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver101!")
+        self.stdout("SubT Challenge Ver102!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()

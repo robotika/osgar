@@ -12,17 +12,21 @@ import functools
 
 import rospy
 import rostopic
+import tf
 import zmq
 import numpy as np
 
-from sensor_msgs.msg import Imu, LaserScan, CompressedImage, Image, PointCloud2
+from sensor_msgs.msg import Imu, LaserScan, PointCloud2
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Empty, Int32
+from std_msgs.msg import Empty, Int32, String
 from sensor_msgs.msg import BatteryState, FluidPressure
 from octomap_msgs.msg import Octomap
+from subt_msgs.srv import PoseFromArtifact
+from rtabmap_ros.msg import RGBDImage
 
 sys.path.append("/osgar-ws/src/osgar/osgar/lib")
 import serialize as osgar_serialize
+from quaternion import multiply as multiply_quaternions, rotate_vector
 
 def py3round(f):
     if abs(round(f) - f) == 0.5:
@@ -68,6 +72,7 @@ class main:
     def __init__(self, robot_name, robot_config, robot_is_marsupial):
         rospy.init_node('cloudsim2osgar', log_level=rospy.DEBUG)
         self.bus = Bus()
+        self.robot_name = robot_name
 
         # common topics
         topics = [
@@ -76,6 +81,8 @@ class main:
         ]
 
         publishers = {}
+
+        self.tf = tf.TransformListener()
 
         # configuration specific topics
         robot_description = rospy.get_param("/{}/robot_description".format(robot_name))
@@ -88,8 +95,7 @@ class main:
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/air_pressure', FluidPressure, self.air_pressure, ('air_pressure',)))
             topics.append(('/' + robot_name + '/front_scan', LaserScan, self.scan360, ('scan360',)))
-            topics.append(('/' + robot_name + '/front/image_raw/compressed', CompressedImage, self.image_front, ('image_front',)))
-            topics.append(('/' + robot_name + '/front/depth', Image, self.depth_front, ('depth_front',)))
+            topics.append(('/rtabmap/rgbd/compressed', RGBDImage, self.rgbd_front, ('rgbd_front',)))
             if robot_name.endswith('XM'):
                 topics.append(('/mapping/octomap_binary', Octomap, self.octomap, ('octomap',)))
             if robot_is_marsupial == 'true':
@@ -104,12 +110,10 @@ class main:
             else:
                 rospy.loginfo("freya 1 (basic)")
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
-            topics.append(('/' + robot_name + '/rgbd_front/image_raw/compressed', CompressedImage, self.image_front, ('image_front',)))
-            topics.append(('/' + robot_name + '/rgbd_rear/image_raw/compressed', CompressedImage, self.image_rear, ('image_rear',)))
             topics.append(('/' + robot_name + '/scan_front', LaserScan, self.scan_front, ('scan_front',)))
             topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
-            topics.append(('/' + robot_name + '/rgbd_front/depth', Image, self.depth_front, ('depth_front',)))
-            topics.append(('/' + robot_name + '/rgbd_rear/depth', Image, self.depth_rear, ('depth_rear',)))
+            topics.append(('/rtabmap/rgbd/front/compressed', RGBDImage, self.rgbd_front, ('rgbd_front',)))
+            topics.append(('/rtabmap/rgbd/rear/compressed', RGBDImage, self.rgbd_rear, ('rgbd_rear',)))
             if robot_name.endswith('XM'):
                 topics.append(('/mapping/octomap_binary', Octomap, self.octomap, ('octomap',)))
         elif robot_config.startswith("ROBOTIKA_KLOUBAK_SENSOR_CONFIG"):
@@ -119,21 +123,19 @@ class main:
             else:
                 rospy.loginfo("k2 1 (basic)")
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
-            topics.append(('/' + robot_name + '/rgbd_front/image_raw/compressed', CompressedImage, self.image_front, ('image_front',)))
-            topics.append(('/' + robot_name + '/rgbd_rear/image_raw/compressed', CompressedImage, self.image_rear, ('image_rear',)))
             topics.append(('/' + robot_name + '/scan_front', LaserScan, self.scan_front, ('scan_front',)))
             topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
-            topics.append(('/' + robot_name + '/rgbd_front/depth', Image, self.depth_front, ('depth_front',)))
-            topics.append(('/' + robot_name + '/rgbd_rear/depth', Image, self.depth_rear, ('depth_rear',)))
+            topics.append(('/rtabmap/rgbd/front/compressed', RGBDImage, self.rgbd_front, ('rgbd_front',)))
+            topics.append(('/rtabmap/rgbd/rear/compressed', RGBDImage, self.rgbd_rear, ('rgbd_rear',)))
         elif robot_config.startswith("EXPLORER_R2_SENSOR_CONFIG"):
             if robot_config.endswith("_2"):
                 rospy.loginfo("explorer R2 #2 (with comms beacons)")
                 publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
             else:
                 rospy.loginfo("explorer R2 #1 (basic)")
-            topics.append(('/' + robot_name + '/rs_front/color/image/compressed', CompressedImage, self.image_front, ('image_front',)))
-            topics.append(('/' + robot_name + '/rs_front/depth/image', Image, self.depth_front, ('depth_front',)))
             topics.append(('/' + robot_name + '/points', PointCloud2, self.points, ('points',)))
+            topics.append(('/rtabmap/rgbd/front/compressed', RGBDImage, self.rgbd_front, ('rgbd_front',)))
+            topics.append(('/rtabmap/rgbd/rear/compressed', RGBDImage, self.rgbd_rear, ('rgbd_rear',)))
         else:
             rospy.logerr("unknown configuration")
             return
@@ -143,8 +145,34 @@ class main:
         else:
             topics.append(('/' + robot_name + '/imu/data', Imu, self.imu, ('rot', 'acc', 'orientation')))
 
-        outputs = functools.reduce(operator.add, (t[-1] for t in topics))
+        outputs = functools.reduce(operator.add, (t[-1] for t in topics)) + ('origin',)
         self.bus.register(outputs)
+
+        # origin
+        self.origin = None
+        try:
+            ORIGIN_SERVICE_NAME = "/subt/pose_from_artifact_origin"
+            rospy.wait_for_service(ORIGIN_SERVICE_NAME)
+            origin_service = rospy.ServiceProxy(ORIGIN_SERVICE_NAME, PoseFromArtifact)
+            origin_request = String()
+            origin_request.data = robot_name
+            origin_response = origin_service(origin_request)
+            if origin_response.success:
+                origin_pose = origin_response.pose.pose
+                origin_position = origin_response.pose.pose.position
+                origin_orientation = origin_response.pose.pose.orientation
+                self.origin = (
+                        (origin_position.x, origin_position.y, origin_position.z),
+                        (origin_orientation.x, origin_orientation.y, origin_orientation.z,
+                            origin_orientation.w))
+        except rospy.ServiceException:
+            rospy.logerror("Failed to get origin.")
+        if self.origin is None:
+            # Lack of ccordinates signals an error.
+            self.bus.publish('origin', (robot_name,))
+        else:
+            origin_msg = (robot_name,) + self.origin[0] + self.origin[1]
+            self.bus.publish('origin', origin_msg)
 
         for name, type, handler, _ in topics:
             rospy.loginfo("waiting for {}".format(name))
@@ -203,13 +231,20 @@ class main:
         self.odom_fused_count += 1
         rospy.loginfo_throttle(10, "odom_fused callback: {}".format(self.odom_fused_count))
 
-        position = msg.pose.pose.position
-        orientation = msg.pose.pose.orientation
+        raw_position = msg.pose.pose.position
+        raw_orientation = msg.pose.pose.orientation
 
-        xyz = [position.x, position.y, position.z]
-        orientation = [orientation.x, orientation.y, orientation.z, orientation.w]
+        raw_xyz = [raw_position.x, raw_position.y, raw_position.z]
+        raw_quat = [raw_orientation.x, raw_orientation.y, raw_orientation.z, raw_orientation.w]
 
-        self.bus.publish('pose3d', [xyz, orientation])
+        origin_translation, origin_rotation = self.origin
+
+        full_orientation = multiply_quaternions(origin_rotation, raw_quat)
+        full_translation = [sum(v) for v in zip(
+            origin_translation,
+            rotate_vector(raw_xyz, origin_rotation))]
+
+        self.bus.publish('pose3d', [full_translation, full_orientation])
 
     def battery_state(self, msg):
         self.battery_state_count += 1
@@ -227,16 +262,6 @@ class main:
         self.air_pressure_count += 1
         rospy.loginfo_throttle(10, "air_pressure callback: {}".format(self.air_pressure_count))
         self.bus.publish('air_pressure', msg.fluid_pressure)
-
-    def image_front(self, msg):
-        self.image_front_count += 1
-        rospy.loginfo_throttle(10, "image_front callback: {}".format(self.image_front_count))
-        self.bus.publish('image_front', msg.data)
-
-    def image_rear(self, msg):
-        self.image_rear_count += 1
-        rospy.loginfo_throttle(10, "image_rear callback: {}".format(self.image_rear_count))
-        self.bus.publish('image_rear', msg.data)
 
     def scan_front(self, msg):
         self.scan_front_count += 1
@@ -266,15 +291,50 @@ class main:
         arr = np.ndarray.astype(arr, dtype=np.dtype('H'))
         return np.array(arr).reshape((msg.height, msg.width))
 
-    def depth_front(self, msg):
-        self.depth_front_count += 1
-        rospy.loginfo_throttle(10, "depth_front callback: {}".format(self.depth_front_count))
-        self.bus.publish('depth_front', self.convert_depth(msg))
+    def convert_rgbd(self, msg):
+        # Pose of the robot relative to starting position.
+        try:
+            robot_pose = self.tf.lookupTransform('odom', self.robot_name, rospy.Time(0))
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            return None
+        # Pose of the robot in the world coordinate frame, i.e. likely a non-zero initial
+        # position.
+        if self.origin is not None:
+            origin_translation, origin_rotation = self.origin
+            raw_robot_translation, raw_robot_rotation = robot_pose
+            full_robot_rotation = multiply_quaternions(origin_rotation, raw_robot_rotation)
+            full_robot_translation = [sum(v) for v in zip(
+                origin_translation,
+                rotate_vector(raw_robot_translation, origin_rotation))]
+            robot_pose = full_robot_translation, full_robot_rotation
+        # Position of the camera relative to the robot.
+        try:
+            camera_xyz, camera_rot = self.tf.lookupTransform(
+                    self.robot_name, msg.header.frame_id, rospy.Time(0))
+            # RTABMAP produces rotation in a visual coordinate frame (Z axis
+            # forward), but we need to match the world frame (X axis forward)
+            # of robot_pose.
+            VISUAL_TO_WORLD = [0.5, -0.5, 0.5, 0.5]
+            camera_pose = camera_xyz, multiply_quaternions(VISUAL_TO_WORLD, camera_rot)
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            return None
+        rgb = msg.rgb_compressed.data
+        d = msg.depth_compressed.data
+        return (robot_pose, camera_pose, rgb, d)
 
-    def depth_rear(self, msg):
-        self.depth_rear_count += 1
-        rospy.loginfo_throttle(10, "depth_rear callback: {}".format(self.depth_rear_count))
-        self.bus.publish('depth_rear', self.convert_depth(msg))
+    def rgbd_front(self, msg):
+        self.rgbd_front_count += 1
+        rospy.loginfo_throttle(10, "rgbd_front callback: {}".format(self.rgbd_front_count))
+        rgbd = self.convert_rgbd(msg)
+        if rgbd is not None:
+            self.bus.publish('rgbd_front', rgbd)
+
+    def rgbd_rear(self, msg):
+        self.rgbd_rear_count += 1
+        rospy.loginfo_throttle(10, "rgbd_rear callback: {}".format(self.rgbd_rear_count))
+        rgbd = self.convert_rgbd(msg)
+        if rgbd is not None:
+            self.bus.publish('rgbd_rear', rgbd)
 
     def convert_points(self, msg):
         # accept only Velodyne VLC-16 (for the ver0)

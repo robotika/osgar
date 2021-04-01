@@ -16,6 +16,8 @@ except ImportError:
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
+from osgar.lib.depth import decompress as decompress_depth
+from osgar.lib.quaternion import rotate_vector
 from subt.artifacts import (RESCUE_RANDY, BACKPACK, PHONE, HELMET, ROPE, EXTINGUISHER, DRILL, VENT)
 
 
@@ -56,7 +58,13 @@ def check_results(result_mdnet, result_cv):
     return ret
 
 
-def result2report(result, depth, fx):
+def transform(transformation, xyz):
+    shift, rotation = transformation
+    rotated = rotate_vector(xyz, rotation)
+    return [sum(v) for v in zip(rotated, shift)]
+
+
+def result2report(result, depth, fx, robot_pose, camera_pose, max_depth):
     """return relative XYZ distances to camera"""
     if depth is None:
         return None  # ignore detected artifacts for missing depth data
@@ -66,21 +74,26 @@ def result2report(result, depth, fx):
     x_arr = [x for x, y, certainty in result[0][1]]  # ignore multiple objects
     y_arr = [y for x, y, certainty in result[0][1]]  # ignore multiple objects
     dist = [depth[y][x] for x, y, certainty in result[0][1]]  # ignore multiple objects
-    if 0xFFFF in dist:
+    if any(d == 0 or d > max_depth for d in dist):
         return None  # out of range
     x_min, x_max = min(x_arr), max(x_arr)
     y_min, y_max = min(y_arr), max(y_arr)
     scale = np.median(dist)
-    rel_x = int(scale)  # relative X-coordinate in front
-    rel_y = int(scale * (width/2 - (x_min + x_max)/2)/fx)  # Y-coordinate is to the left
-    rel_z = int(scale * (height/2 - (y_min + y_max)/2)/fx)  # Z-up
-    return [NAME2IGN[result[0][0]], [rel_x, rel_y, rel_z]]
+    # Coordinate of the artifact relative to the camera.
+    camera_rel = [scale,  # relative X-coordinate in front
+                  scale * (width/2 - (x_min + x_max)/2)/fx,  # Y-coordinate is to the left
+                  scale * (height/2 - (y_min + y_max)/2)/fx]  # Z-up
+    # Coordinate of the artifact relative to the robot.
+    robot_rel = transform(camera_pose, camera_rel)
+    # Global coordinate of the artifact.
+    world_xyz = transform(robot_pose, robot_rel)
+    return [NAME2IGN[result[0][0]], world_xyz]
 
 
 class ArtifactDetectorDNN(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register("artf", "dropped", "debug_artf", "debug_depth:gz", "stdout",
+        bus.register("localized_artf", "dropped", "debug_rgbd", "stdout",
                      "debug_result", "debug_cv_result")
         self.time = None
         self.width = None  # not sure if we will need it
@@ -88,6 +101,7 @@ class ArtifactDetectorDNN(Node):
         self.cv_detector = CvDetector().subt_detector
         self.detector = self.create_detector()
         self.fx = config.get('fx', 554.25469)  # use drone X4 for testing (TODO update all configs!)
+        self.max_depth = config.get('max_depth', 10.0)
 
     def create_detector(self):
         model = os.path.join(os.path.dirname(__file__), '../../../mdnet4.64.64.13.4.relu.pth')
@@ -111,9 +125,9 @@ class ArtifactDetectorDNN(Node):
         return Detector(model, confidence_thresholds, categories, device,
                         max_gap, min_group_size)
 
-    def wait_for_image(self):
+    def wait_for_rgbd(self):
         channel = ""
-        while channel != "image":
+        while channel != "rgbd":
             self.time, channel, data = self.listen()
             setattr(self, channel, data)
         return self.time
@@ -135,14 +149,16 @@ class ArtifactDetectorDNN(Node):
                 dropped = -1
                 timestamp = now
                 while timestamp <= now:
-                    timestamp = self.wait_for_image()
+                    timestamp = self.wait_for_rgbd()
                     dropped += 1
-                self.detect(self.image)
+                self.detect(self.rgbd)
         except BusShutdownException:
             pass
 
-    def detect(self, image):
-        img = cv2.imdecode(np.fromstring(image, dtype=np.uint8), 1)
+    def detect(self, rgbd):
+        robot_pose, camera_pose, image_data, depth_data = rgbd
+        img = cv2.imdecode(np.fromstring(image_data, dtype=np.uint8), 1)
+        depth = decompress_depth(depth_data)
         if self.width is None:
             self.stdout('Image resolution', img.shape)
             self.width = img.shape[1]
@@ -156,11 +172,11 @@ class ArtifactDetectorDNN(Node):
             self.publish('debug_cv_result', result_cv)
             checked_result = check_results(result, result_cv)
             if checked_result:
-                report = result2report(checked_result, self.depth, self.fx)
+                report = result2report(checked_result, depth, self.fx,
+                        robot_pose, camera_pose, self.max_depth)
                 if report is not None:
-                    self.publish('artf', report)
-                    self.publish('debug_artf', image)  # JPEG
-                    self.publish('debug_depth', self.depth)
+                    self.publish('localized_artf', report)
+                    self.publish('debug_rgbd', rgbd)
 
 
 if __name__ == "__main__":
@@ -176,16 +192,17 @@ if __name__ == "__main__":
     parser.add_argument('logfile', help='OSGAR logfile')
     parser.add_argument('--time-limit-sec', '-t', help='cut time in seconds', type=float)
     parser.add_argument('--verbose', '-v', help="verbose mode", action='store_true')
+    parser.add_argument('--module-name', '-m', help='name of the detector module in the log', default='detector')
     args = parser.parse_args()
 
     names = lookup_stream_names(args.logfile)
-    assert 'detector.artf' in names, names  # XYZ relative offsets
-    assert 'detector.debug_depth' in names, names
+    assert 'detector.localized_artf' in names, names  # XYZ world coordinates
+    assert 'detector.debug_rgbd' in names, names
     assert 'detector.debug_result' in names, names
     assert 'detector.debug_cv_result' in names, names
 
-    artf_stream_id = names.index('detector.artf') + 1
-    depth_stream_id = names.index('detector.debug_depth') + 1
+    artf_stream_id = names.index('detector.localized_artf') + 1
+    rgbd_stream_id = names.index('detector.debug_rgbd') + 1
     result_id = names.index('detector.debug_result') + 1
     cv_result_id = names.index('detector.debug_cv_result') + 1
 
@@ -196,28 +213,29 @@ if __name__ == "__main__":
         config = literal_eval(config_str.decode('ascii'))
 
     assert 'detector' in config['robot']['modules']
-    fx = config['robot']['modules']['detector']['init']['fx']
+    fx = config['robot']['modules'][args.module_name]['init']['fx']
+    max_depth = config['robot']['modules'][args.module_name]['init']['max_depth']
 
-    depth = None
-    last_artf = None  # reported before debug_depth
+    last_artf = None  # reported before debug_rgbd
     last_result = None
     last_cv_result = None
     with LogReader(args.logfile,
-                   only_stream_id=[artf_stream_id, depth_stream_id, result_id, cv_result_id]) as logreader:
+                   only_stream_id=[artf_stream_id, rgbd_stream_id, result_id, cv_result_id]) as logreader:
         for time, stream, msg_data in logreader:
             if args.time_limit_sec is not None and time.total_seconds() > args.time_limit_sec:
                 break
             data = deserialize(msg_data)
 
-            if stream == depth_stream_id:
-                depth = data
-                # debug_depth is stored ONLY when both detector detect something and it is fused
+            if stream == rgbd_stream_id:
+                robot_pose, camera_pose, __rgb, depth = data
+                # debug_rgbd is stored ONLY when both detectors detect something and it is fused
                 assert last_result is not None
                 assert last_cv_result is not None
 
                 checked_result = check_results(last_result, last_cv_result)
-                assert checked_result  # the debug depth is stored, so there should valid report
-                report = result2report(checked_result, depth, fx)
+                assert checked_result  # the debug rgbd is stored, so there should be a valid report
+                report = result2report(checked_result, decompress_depth(depth),
+                        fx, robot_pose, camera_pose, max_depth)
                 if args.verbose:
                     print(report)
                 assert last_artf == report, (last_artf, report)
