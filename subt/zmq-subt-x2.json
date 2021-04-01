@@ -80,7 +80,7 @@
           "driver": "subt.pull:Pull",
           "init": {
             "outputs": ["rot", "acc", "orientation", "battery_state", "score", "pose3d",
-                        "scan_front", "scan_rear", "rgbd_front", "rgbd_rear", "origin",
+                        "scan_front", "scan_rear", "rgbd_front:null", "rgbd_rear:null", "origin",
                         "octomap:gz"]
           }
       },
