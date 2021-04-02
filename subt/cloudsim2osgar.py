@@ -153,13 +153,13 @@ class main:
         origin_retry_delay = 0.2
         ORIGIN_RETRY_EXPONENTIAL_BACKOFF = 1.3
         MAX_ORIGIN_RETRY_DELAY = 2.0
+        ORIGIN_SERVICE_NAME = "/subt/pose_from_artifact_origin"
+        rospy.wait_for_service(ORIGIN_SERVICE_NAME)
+        origin_service = rospy.ServiceProxy(ORIGIN_SERVICE_NAME, PoseFromArtifact)
+        origin_request = String()
+        origin_request.data = robot_name
         while self.origin is None:
             try:
-                ORIGIN_SERVICE_NAME = "/subt/pose_from_artifact_origin"
-                rospy.wait_for_service(ORIGIN_SERVICE_NAME)
-                origin_service = rospy.ServiceProxy(ORIGIN_SERVICE_NAME, PoseFromArtifact)
-                origin_request = String()
-                origin_request.data = robot_name
                 origin_response = origin_service(origin_request)
                 if origin_response.success:
                     origin_pose = origin_response.pose.pose
