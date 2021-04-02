@@ -80,12 +80,28 @@
           "driver": "subt.pull:Pull",
           "init": {
             "outputs": ["rot", "acc", "orientation", "battery_state", "score", "pose3d",
-                        "scan_front", "scan_rear", "rgbd_front", "rgbd_rear", "origin",
+                        "scan_front", "scan_rear", "rgbd_front:null", "rgbd_rear:null", "origin",
                         "octomap:gz"]
           }
       },
       "torospy": {
           "driver": "subt.push:Push"
+      },
+      "logimage": {
+          "driver": "subt.image_extractor:ImageExtractor",
+          "in": ["rgbd"],
+          "out": ["image", "depth"],
+          "init": {
+            "image_sampling": 3
+          }
+      },
+      "logimage_rear": {
+          "driver": "subt.image_extractor:ImageExtractor",
+          "in": ["rgbd"],
+          "out": ["image", "depth"],
+          "init": {
+            "image_sampling": 10
+          }
       },
       "radio": {
           "driver": "subt.radio:Radio",
@@ -171,7 +187,10 @@
 
               ["fromrospy.octomap", "octomap.octomap"],
               ["fromrospy.pose3d", "octomap.pose3d"],
-              ["octomap.waypoints", "app.waypoints"]
+              ["octomap.waypoints", "app.waypoints"],
+
+              ["fromrospy.rgbd_front", "logimage.rgbd"],
+              ["fromrospy.rgbd_rear", "logimage_rear.rgbd"]
     ]
   }
 }
