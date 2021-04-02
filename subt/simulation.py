@@ -42,12 +42,11 @@ class SimLogger:
 class Simulation:
 
     def __init__(self, bus, end_condition, world=None):
-        bus.register('scan', 'rot', 'orientation', 'sim_time_sec', 'origin', 'pose2d', 'acc', 'artf', 'pose3d')
+        bus.register('scan', 'rot', 'orientation', 'sim_time_sec', 'origin', 'robot_name', 'pose2d', 'acc', 'artf', 'pose3d')
         self.bus = bus
         self.end_condition = end_condition
         self.world = world if world is not None else MultiLineString()
         self._handlers = collections.defaultdict(lambda: self.on_default)
-        self.set_handler('request_origin', self.on_request_origin)
         self.set_handler('desired_speed', self.on_desired_speed)
         self.set_handler('pose2d', self.on_pose)
         self.set_handler('pose3d', self.on_pose)
@@ -67,7 +66,7 @@ class Simulation:
 
     def main(self):
         log("started")
-        self.on_request_origin(datetime.timedelta(), "request_origin", True)
+        self.warmup()
         # there is no SubT control until pose is received -> trigger it
         self.on_desired_speed(datetime.timedelta(), "desired_speed", [0, 0])
 
@@ -86,12 +85,11 @@ class Simulation:
     def on_default(self, dt, channel, data):
         log(dt, channel, data)
 
-    def on_request_origin(self, dt, channel, data):
-        log(dt, channel, data)
-        # ros_proxy_node.cc keeps sending origin data until robot arrives within 0.3m from (0,0,0)
-        # we send it only once
+    def warmup(self):
         corrected = [rr - oo for rr, oo in zip(self.xyz, self.origin)]
-        self.bus.publish('origin', [b'X100L', *corrected, *self.orientation])
+        ROBOT_NAME = b'X100L'
+        self.bus.publish('origin', [ROBOT_NAME, *corrected, *self.orientation])
+        self.bus.publish('robot_name', ROBOT_NAME)
         self.bus.publish('scan', self.scan())
         heading_centidegrees = round(math.degrees(quaternion.heading(self.orientation))*100)
         self.bus.publish('rot', [heading_centidegrees, 0, 0])

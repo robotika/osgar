@@ -5,8 +5,8 @@
       "app": {
           "driver": "application",
           "in": ["emergency_stop", "pose2d", "scan", "rot", "artf",
-                 "sim_time_sec", "acc", "origin"],
-          "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout", "request_origin"],
+                 "sim_time_sec", "acc", "robot_name"],
+          "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout"],
           "init": {
             "max_speed": 0.5,
             "symmetric": false,
@@ -14,9 +14,6 @@
             "virtual_bumper_radius": 10.0,
             "virtual_world": true
           }
-      },
-      "localization": {
-        "driver": "subt.odoimuloc:Localization"
       },
       "detector": {
           "driver": "subt.artf_node:ArtifactDetectorDNN",
@@ -81,7 +78,7 @@
           "init": {
             "outputs": ["rot", "acc", "orientation", "battery_state", "score", "pose3d",
                         "scan_front", "scan_rear", "rgbd_front:null", "rgbd_rear:null", "origin",
-                        "octomap:gz"]
+                        "robot_name", "octomap:gz"]
           }
       },
       "torospy": {
@@ -129,12 +126,7 @@
     },
     "links": [["app.desired_speed", "rosmsg.desired_speed"],
               ["app.stdout", "rosmsg.stdout"],
-              ["app.request_origin", "rosmsg.request_origin"],
-              ["rosmsg.origin", "app.origin"],
-
-              ["rosmsg.origin",     "localization.origin"],
-              ["rosmsg.pose2d",     "localization.odom"],
-              ["fromrospy.orientation", "localization.orientation"],
+              ["fromrospy.robot_name", "app.robot_name"],
 
               ["receiver.raw", "rosmsg.raw"],
               ["rosmsg.cmd", "transmitter.raw"],

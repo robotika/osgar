@@ -29,7 +29,6 @@
 #include <rosgraph_msgs/Clock.h>
 #include <nav_msgs/Odometry.h>
 
-#include <subt_msgs/PoseFromArtifact.h>
 #include <ros/ros.h>
 #include <std_srvs/SetBool.h>
 #include <rosgraph_msgs/Clock.h>
@@ -119,21 +118,6 @@ void gasCallback(const std_msgs::Bool::ConstPtr& msg)
   g_countGas++;
 }
 
-void sendOrigin(std::string& name, double x, double y, double z,
-                double qx, double qy, double qz, double qw)
-{
-  char buf[1000];
-  int size = sprintf(buf, "origin %s %lf %lf %lf  %lf %lf %lf %lf", name.c_str(), x, y, z, qx, qy, qz, qw);
-  protected_zmq_send(g_responder, buf, size, 0);
-}
-
-void sendOriginError(std::string& name)
-{
-  char buf[1000];
-  int size = sprintf(buf, "origin %s ERROR", name.c_str());
-  protected_zmq_send(g_responder, buf, size, 0);
-}
-
 void sendReceivedMessage(const std::string &srcAddress, const std::string &data)
 {
   std::stringstream ss;
@@ -173,21 +157,12 @@ class Controller
   /// \brief Communication client.
   private: std::unique_ptr<subt::CommsClient> client;
 
-  /// \brief Client to request pose from origin.
-  ros::ServiceClient originClient;
-
-  /// \brief Service to request pose from origin.
-  subt_msgs::PoseFromArtifact originSrv;
-
   ros::Subscriber subClock;
   ros::Subscriber subOdom;
   ros::Subscriber subGas;
 
   /// \brief Timer that trigger the update function.
   private: ros::Timer updateTimer;
-
-  /// \brief True if robot has arrived at destination.
-  public: bool arrived{false};
 
   /// \brief True if started.
   private: bool started{false};
@@ -197,8 +172,6 @@ class Controller
 
   /// \brief Name of this robot.
   private: std::string name;
-
-  private: double prev_dist2{0.0};
 
   public: bool ReportArtifact(subt::msgs::Artifact& artifact)
   {
@@ -241,13 +214,12 @@ Controller::Controller(const std::string &_name)
 {
   this->name = _name;
 
-  ROS_INFO("Waiting for /clock, /subt/start, and /subt/pose_from_artifact_origin");
+  ROS_INFO("Waiting for /clock and /subt/start");
 
   ros::topic::waitForMessage<rosgraph_msgs::Clock>("/clock", this->n);
 
   // Wait for the start service to be ready.
   ros::service::waitForService("/subt/start", -1);
-  ros::service::waitForService("/subt/pose_from_artifact_origin", -1);
 
   this->updateTimer = this->n.createTimer(ros::Duration(0.05), &Controller::Update, this);
   this->m_receiveZmq = std::thread(Controller::receiveZmqThread, this);
@@ -300,59 +272,9 @@ void Controller::Update(const ros::TimerEvent&)
       this->subClock  = n.subscribe("/clock", 1000, clockCallback);
       this->subOdom = n.subscribe(this->name + "/odom", 1000, odomCallback);
       this->subGas = n.subscribe(this->name + "/gas_detected", 1000, gasCallback);
-
-      // Create a cmd_vel publisher to control a vehicle.
-      this->originClient = this->n.serviceClient<subt_msgs::PoseFromArtifact>(
-          "/subt/pose_from_artifact_origin", true);
-      this->originSrv.request.robot_name.data = this->name;
     }
     else
       return;
-  }
-
-  if (this->arrived) {
-    this->updateTimer.stop();
-    return;
-  }
-
-  bool call = this->originClient.call(this->originSrv);
-  // Query current robot position w.r.t. entrance
-  if (!call || !this->originSrv.response.success)
-  {
-    ROS_ERROR("Failed to call pose_from_artifact_origin service, \
-robot may not exist, be outside staging area, or the service is \
-not available.");
-
-    sendOriginError(this->name);
-    this->arrived = true; // give up ... is it good idea?
-    this->updateTimer.stop();
-
-    // Stop robot
-    geometry_msgs::Twist msg;
-    this->velPub.publish(msg);
-    return;
-  }
-
-  auto pose = this->originSrv.response.pose.pose;
-  // send position to Python3 code
-  sendOrigin(this->name, pose.position.x, pose.position.y, pose.position.z,
-             pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w);
-
-  // Distance to goal
-  double dist = sqrt(pose.position.x * pose.position.x + pose.position.y * pose.position.y);
-
-  if(abs(prev_dist2 - dist) > 1.0)
-  {
-    ROS_INFO_STREAM("MD robot pose " << pose.position.x << " " << pose.position.y << " dist=" << dist);
-    prev_dist2 = dist;
-  }
-
-  // Arrived
-  if (dist < 0.3 || pose.position.x >= -0.3)
-  {
-    this->arrived = true;
-    this->updateTimer.stop();
-    ROS_INFO("Arrived at entrance!");
   }
 }
 
@@ -424,11 +346,6 @@ void Controller::receiveZmqThread(Controller * self)
     if(strncmp(buffer, "stdout ", 7) == 0)
     {
       ROS_INFO("Python3: %s", buffer);
-    }
-    else if(strncmp(buffer, "request_origin", 14) == 0)
-    {
-      self->arrived = false;  // re-enable origin query
-      self->updateTimer.start();
     }
     else if(strncmp(buffer, "artf ", 5) == 0)
     {
