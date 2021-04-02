@@ -99,7 +99,7 @@ class EmergencyStopMonitor:
 class SubTChallenge:
     def __init__(self, config, bus):
         self.bus = bus
-        bus.register("desired_speed", "pose2d", "artf_xyz", "stdout", "request_origin", "desired_z_speed")
+        bus.register("desired_speed", "pose2d", "artf_xyz", "stdout", "desired_z_speed")
         self.traveled_dist = 0.0
         self.time = None
         self.max_speed = config['max_speed']
@@ -155,15 +155,12 @@ class SubTChallenge:
         self.rear_bumper = False
 
         self.last_send_time = None
-        self.origin = None  # unknown initial position
-        self.origin_quat = quaternion.identity()
 
         self.init_path = None
         if 'init_path' in config:
             pts_s = [s.split(',') for s in config['init_path'].split(';')]
             self.init_path = [(float(x), float(y)) for x, y in pts_s]
-        self.origin_error = False
-        self.robot_name = None  # received with origin
+        self.robot_name = None
         scan_subsample = config.get('scan_subsample', 1)
         obstacle_influence = config.get('obstacle_influence', 0.8)
         direction_adherence = math.radians(config.get('direction_adherence', 90))
@@ -592,16 +589,8 @@ class SubTChallenge:
     def on_bumpers_rear(self, timestamp, data):
         self.rear_bumper = max(data)  # array of boolean values where True means collision
 
-    def on_origin(self, timestamp, data):
-        if self.origin is None:  # accept only initial offset
-            self.robot_name = data[0].decode('ascii')
-            if len(data) == 8:
-                self.origin = data[1:4]
-                qx, qy, qz, qw = data[4:]
-                self.origin_quat = qx, qy, qz, qw  # quaternion
-            else:
-                self.stdout('Origin ERROR received')
-                self.origin_error = True
+    def on_robot_name(self, timestamp, data):
+        self.robot_name = data.decode('ascii')
 
     def on_waypoints(self, timestamp, data):
         self.waypoints = data
@@ -854,25 +843,6 @@ class SubTChallenge:
         trace.reverse()
         self.follow_trace(trace, timeout=timedelta(seconds=30), max_target_distance=2.5, safety_limit=0.2)
 
-    def play_virtual_part_enter(self):
-        self.stdout("Waiting for origin ...")
-        self.origin = None  # invalidate origin
-        self.origin_error = False
-        self.bus.publish('request_origin', True)
-        while self.origin is None and not self.origin_error:
-            self.update()
-        self.stdout('Origin:', self.origin, self.robot_name)
-
-        if self.origin is not None:
-            x, y, z = self.origin
-            heading = quaternion.heading(self.origin_quat)
-            self.stdout('heading', math.degrees(heading), 'angle', math.degrees(math.atan2(-y, -x)), 'dist', math.hypot(x, y))
-
-            self.go_to_entrance()
-        else:
-            # lost in tunnel
-            self.stdout('Lost in tunnel:', self.origin_error)
-
     def play_virtual_part_explore(self):
         start_time = self.sim_time_sec
         for loop in range(100):
@@ -954,7 +924,7 @@ class SubTChallenge:
             elif action.startswith('enter'):
                 self.use_right_wall = (action == 'enter-right')
                 self.use_center = (action == 'enter-center')
-                self.play_virtual_part_enter()
+                self.go_to_entrance()
 
             elif action in ['left', 'right', 'center']:
                 self.timeout = timedelta(seconds=duration)

@@ -145,40 +145,46 @@ class main:
         else:
             topics.append(('/' + robot_name + '/imu/data', Imu, self.imu, ('rot', 'acc', 'orientation')))
 
-        outputs = functools.reduce(operator.add, (t[-1] for t in topics)) + ('origin',)
+        outputs = functools.reduce(operator.add, (t[-1] for t in topics)) + ('origin', 'robot_name',)
         self.bus.register(outputs)
 
         # origin
         self.origin = None
-        try:
-            ORIGIN_SERVICE_NAME = "/subt/pose_from_artifact_origin"
-            rospy.wait_for_service(ORIGIN_SERVICE_NAME)
-            origin_service = rospy.ServiceProxy(ORIGIN_SERVICE_NAME, PoseFromArtifact)
-            origin_request = String()
-            origin_request.data = robot_name
-            origin_response = origin_service(origin_request)
-            if origin_response.success:
-                origin_pose = origin_response.pose.pose
-                origin_position = origin_response.pose.pose.position
-                origin_orientation = origin_response.pose.pose.orientation
-                self.origin = (
-                        (origin_position.x, origin_position.y, origin_position.z),
-                        (origin_orientation.x, origin_orientation.y, origin_orientation.z,
-                            origin_orientation.w))
-        except rospy.ServiceException:
-            rospy.logerror("Failed to get origin.")
-        if self.origin is None:
-            # Lack of ccordinates signals an error.
-            self.bus.publish('origin', (robot_name,))
-        else:
-            origin_msg = (robot_name,) + self.origin[0] + self.origin[1]
-            self.bus.publish('origin', origin_msg)
+        origin_retry_delay = 0.2
+        ORIGIN_RETRY_EXPONENTIAL_BACKOFF = 1.3
+        MAX_ORIGIN_RETRY_DELAY = 2.0
+        ORIGIN_SERVICE_NAME = "/subt/pose_from_artifact_origin"
+        rospy.wait_for_service(ORIGIN_SERVICE_NAME)
+        origin_service = rospy.ServiceProxy(ORIGIN_SERVICE_NAME, PoseFromArtifact)
+        origin_request = String()
+        origin_request.data = robot_name
+        while self.origin is None:
+            try:
+                origin_response = origin_service(origin_request)
+                if origin_response.success:
+                    origin_pose = origin_response.pose.pose
+                    origin_position = origin_response.pose.pose.position
+                    origin_orientation = origin_response.pose.pose.orientation
+                    self.origin = (
+                            (origin_position.x, origin_position.y, origin_position.z),
+                            (origin_orientation.x, origin_orientation.y, origin_orientation.z,
+                                origin_orientation.w))
+            except rospy.ServiceException:
+                rospy.logerror("Failed to get origin. Trying again.")
+                time.sleep(origin_retry_delay)
+                origin_retry_delay = min(
+                        MAX_ORIGIN_RETRY_DELAY,
+                        ORIGIN_RETRY_EXPONENTIAL_BACKOFF * origin_retry_delay)
+        origin_msg = (robot_name,) + self.origin[0] + self.origin[1]
+        self.bus.publish('origin', origin_msg)
 
         for name, type, handler, _ in topics:
             rospy.loginfo("waiting for {}".format(name))
             rospy.wait_for_message(name, type)
             setattr(self, handler.__name__+"_count", 0)
             rospy.Subscriber(name, type, handler)
+
+        self.bus.publish('robot_name', robot_name)
 
         # main thread receives data from osgar and sends it to ROS
         while True:

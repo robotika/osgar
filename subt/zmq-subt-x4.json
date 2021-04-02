@@ -5,8 +5,8 @@
       "app": {
           "driver": "application",
           "in": ["emergency_stop", "pose2d", "pose3d", "scan", "rot", "artf",
-                 "sim_time_sec", "acc", "origin"],
-          "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout", "request_origin"],
+                 "sim_time_sec", "acc", "robot_name"],
+          "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout"],
           "init": {
             "max_speed": 0.5,
             "symmetric": false,
@@ -103,9 +103,9 @@
       "fromrospy": {
           "driver": "subt.pull:Pull",
 	      "init": {
-	        "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan", "pose3d", "battery_state", "score",
-                        "rgbd_front:null", "air_pressure", "scan360", "octomap:gz", "origin"]
-	      }
+              "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan", "pose3d", "battery_state", "score",
+                          "rgbd_front:null", "air_pressure", "scan360", "octomap:gz", "origin", "robot_name"]
+          }
       },
       "torospy": {
           "driver": "subt.push:Push"
@@ -123,7 +123,7 @@
       },
       "marsupial": {
           "driver": "subt.marsupial:Marsupial",
-          "in": ["origin", "sim_time_sec"],
+          "in": ["robot_name", "sim_time_sec"],
           "out": ["detach"],
           "init": {
           }
@@ -144,8 +144,7 @@
     "links": [["app.desired_speed", "drone.desired_speed"],
               ["drone.desired_speed_3d", "rosmsg.desired_speed_3d"],
               ["app.stdout", "rosmsg.stdout"],
-              ["app.request_origin", "rosmsg.request_origin"],
-              ["rosmsg.origin", "app.origin"],
+              ["fromrospy.robot_name", "app.robot_name"],
 
               ["receiver.raw", "rosmsg.raw"],
               ["rosmsg.cmd", "transmitter.raw"],
@@ -185,7 +184,7 @@
               ["mtm.robot_trace", "radio.robot_trace"],
 
               ["rosmsg.sim_time_sec", "marsupial.sim_time_sec"],
-              ["rosmsg.origin", "marsupial.origin"],
+              ["fromrospy.robot_name", "marsupial.robot_name"],
               ["marsupial.detach", "torospy.detach"],
 
               ["detector.localized_artf", "app.artf"],

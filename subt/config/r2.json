@@ -5,8 +5,8 @@
       "app": {
           "driver": "application",
           "in": ["emergency_stop", "pose2d", "scan", "rot", "artf",
-                 "sim_time_sec", "acc", "origin"],
-          "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout", "request_origin"],
+                 "sim_time_sec", "acc", "robot_name"],
+          "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout"],
           "init": {
             "max_speed": 0.5,
             "symmetric": false,
@@ -95,7 +95,7 @@
           "init": {
             "outputs": ["rot", "acc", "orientation", "battery_state", "score", "pose3d",
                         "scan_front", "scan_rear", "rgbd_front", "rgbd_rear", "origin",
-                        "points:gz"]
+                        "robot_name", "points:gz"]
           }
       },
       "torospy": {
@@ -132,10 +132,9 @@
     },
     "links": [["app.desired_speed", "rosmsg.desired_speed"],
               ["app.stdout", "rosmsg.stdout"],
-              ["app.request_origin", "rosmsg.request_origin"],
-              ["rosmsg.origin", "app.origin"],
+              ["fromrospy.robot_name", "app.robot_name"],
 
-              ["rosmsg.origin",     "localization.origin"],
+              ["fromrospy.origin",     "localization.origin"],
               ["rosmsg.pose2d",     "localization.odom"],
               ["fromrospy.orientation", "localization.orientation"],
 

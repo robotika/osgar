@@ -34,9 +34,9 @@ class Marsupial(Node):
         if self.start_time + self.release_at <= data and self.drone_available:
             self.detach()
 
-    def on_origin(self, data):
+    def on_robot_name(self, data):
         if self.release_at is None:
-            robot_name = data[0].decode('ascii')
+            robot_name = data.decode('ascii')
             print(robot_name)
             cmd_list = parse_robot_name(robot_name)
             if len(cmd_list) > 0:
