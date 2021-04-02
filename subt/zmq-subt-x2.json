@@ -90,7 +90,18 @@
       "logimage": {
           "driver": "subt.image_extractor:ImageExtractor",
           "in": ["rgbd"],
-          "out": ["image", "depth"]
+          "out": ["image", "depth"],
+          "init": {
+            "image_sampling": 3
+          }
+      },
+      "logimage_rear": {
+          "driver": "subt.image_extractor:ImageExtractor",
+          "in": ["rgbd"],
+          "out": ["image", "depth"],
+          "init": {
+            "image_sampling": 10
+          }
       },
       "radio": {
           "driver": "subt.radio:Radio",
@@ -178,7 +189,8 @@
               ["fromrospy.pose3d", "octomap.pose3d"],
               ["octomap.waypoints", "app.waypoints"],
 
-              ["fromrospy.rgbd_front", "logimage.rgbd"]
+              ["fromrospy.rgbd_front", "logimage.rgbd"],
+              ["fromrospy.rgbd_rear", "logimage_rear.rgbd"]
     ]
   }
 }

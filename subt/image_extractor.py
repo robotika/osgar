@@ -15,15 +15,22 @@ class ImageExtractor(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("image", "depth:gz")
+        self.image_sampling = config.get('image_sampling', 1)  # no drop
+        self.depth_sampling = config.get('depth_sampling', -1)  # do not log depth
+        self.index = 0
 
     def on_rgbd(self, data):
         robot_pose, camera_pose, rgb_compressed, depth_compressed = data
-        self.publish('image', rgb_compressed)
 
-        arr = decompress_depth(depth_compressed) * 1000
-        arr = np.clip(arr, 1, 0xFFFF)
-        arr = np.ndarray.astype(arr, dtype=np.dtype('H'))
-        self.publish('depth', arr)
+        if self.image_sampling > 0 and self.index % self.image_sampling == 0:
+            self.publish('image', rgb_compressed)
+
+        if self.depth_sampling > 0 and self.index % self.depth_sampling == 0:
+            arr = decompress_depth(depth_compressed) * 1000
+            arr = np.clip(arr, 1, 0xFFFF)
+            arr = np.ndarray.astype(arr, dtype=np.dtype('H'))
+            self.publish('depth', arr)
+        self.index += 1
 
     def update(self):
         channel = super().update()
