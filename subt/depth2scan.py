@@ -170,6 +170,7 @@ class DepthToScan(Node):
         self.scan = None
         self.verbose = False
         self.depth_params = DepthParams(**config.get('depth_params', {}))
+        self.filter_fog = config.get('filter_fog', False)
 
     def update(self):
         channel = super().update()
@@ -189,8 +190,14 @@ class DepthToScan(Node):
                 self.publish('scan', self.scan)
                 return channel  # when no depth data are available ...
 
+            if self.filter_fog:
+                depth = cv2.medianBlur(depth, 5)
+                scan = cv2.medianBlur(np.asarray(self.scan, dtype=np.uint16), 5)[:,0]
+            else:
+                scan = self.scan
+
             depth_scan = depth2dist(depth, self.depth_params, pitch, roll)
-            new_scan = adjust_scan(self.scan, depth_scan, self.depth_params)
+            new_scan = adjust_scan(scan, depth_scan, self.depth_params)
             self.publish('scan', new_scan.tolist())
 
         return channel

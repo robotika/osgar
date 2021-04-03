@@ -97,7 +97,8 @@
               "max_z": 0.4,
               "max_slope": -3.14,
               "vertical_diff_limit": 1.4835, "vd_comment": "radians(85)"
-            }
+            },
+            "filter_fog": true
           }
       },
       "fromrospy": {
