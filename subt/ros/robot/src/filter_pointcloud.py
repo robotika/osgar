@@ -22,17 +22,40 @@ class FilterPointCloud:
 #        self.points_publisher = rospy.Publisher("/output_points", PointCloud2, queue_size = 1)
         self.points_publisher = rospy.Publisher("/points_cleaned", PointCloud2, queue_size=1)
 
+        # create flat "infinity" background
+        size = 640 * 480
+        self.inf_x = np.zeros(size, dtype=np.float32)
+        self.inf_y = np.zeros(size, dtype=np.float32)
+        self.inf_z = np.zeros(size, dtype=np.float32)
+        fx = 554.25469
+        Z_VALUE = 11.0
+        for x in range(640):
+            for y in range(480):
+                pos = y * 640
+                self.inf_x[pos] = Z_VALUE * (x - 320.5)/fx
+                self.inf_y[pos] = Z_VALUE * (240.5 - y)/fx
+                self.inf_z[pos] = Z_VALUE
+
     def points_callback(self, msg):
         assert msg.height == 480, msg.height
         assert msg.width == 640, msg.width
         assert msg.point_step == 24, msg.point_step
         assert msg.row_step == 640 * 24, msg.row_step
         arr = np.frombuffer(msg.data, dtype=np.float32)
-        x = arr[::6]
-        y = arr[1::6]
-        z = arr[2::6]
+        x = arr[::6].copy()
+        y = arr[1::6].copy()
+        z = arr[2::6].copy()
+
+        # limit infinite readings to 11 meters (out of range)
         mask = x == float('inf')
-        print('num inf', sum(mask))
+        x[mask] = self.inf_x[mask]
+        y[mask] = self.inf_y[mask]
+        z[mask] = self.inf_z[mask]
+
+        mask = z < 0.31  # propellers
+        x[mask] = float('-inf')
+        y[mask] = float('-inf')
+        z[mask] = float('-inf')
 
         fields = [PointField('x', 0, PointField.FLOAT32, 1),
                   PointField('y', 4, PointField.FLOAT32, 1),
