@@ -27,6 +27,8 @@ def seq2xyz(seq_arr):
     :return: list of XYZ boxes with their "size category" (shorted the sequence bigger the voxel)
     """
     xyz = []
+    if len(seq_arr) == 0:
+        return xyz
     max_len = max([len(s) for s in seq_arr])
     for seq in seq_arr:
         d = 2 ** (max_len - 1)
