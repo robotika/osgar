@@ -28,13 +28,13 @@ class FilterPointCloud:
         self.inf_y = np.zeros(size, dtype=np.float32)
         self.inf_z = np.zeros(size, dtype=np.float32)
         fx = 554.25469
-        Z_VALUE = 11.0
+        MAX_VALUE = 11.0
         for x in range(640):
             for y in range(480):
-                pos = y * 640
-                self.inf_x[pos] = Z_VALUE * (x - 320.5)/fx
-                self.inf_y[pos] = Z_VALUE * (240.5 - y)/fx
-                self.inf_z[pos] = Z_VALUE
+                pos = y * 640 + x
+                self.inf_x[pos] = MAX_VALUE
+                self.inf_y[pos] = MAX_VALUE * (320.5 - x)/fx
+                self.inf_z[pos] = MAX_VALUE * (240.5 - y)/fx
 
     def points_callback(self, msg):
         assert msg.height == 480, msg.height
@@ -52,7 +52,7 @@ class FilterPointCloud:
         y[mask] = self.inf_y[mask]
         z[mask] = self.inf_z[mask]
 
-        mask = z < 0.31  # propellers
+        mask = x < 0.31  # propellers
         x[mask] = float('-inf')
         y[mask] = float('-inf')
         z[mask] = float('-inf')
