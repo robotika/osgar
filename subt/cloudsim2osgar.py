@@ -73,7 +73,7 @@ class main:
         rospy.init_node('cloudsim2osgar', log_level=rospy.DEBUG)
         self.bus = Bus()
         self.robot_name = robot_name
-        self.prev_gas_detected = False
+        self.prev_gas_detected = None  # report on change including the first reading
 
         # common topics
         topics = [
