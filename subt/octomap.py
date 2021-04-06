@@ -219,7 +219,8 @@ class Octomap(Node):
         self.pose3d = None
         self.video_writer = None
         self.video_outfile = None  # 'octo.mp4'  # optional video output generation
-        self.zlevel = config.get('zlevel', 0.5)
+        self.min_z = config.get('min_z', 0.5)  # should be multiply of "resolution"
+        self.max_z = config.get('max_z', 0.5)  # the limits are included
         self.resolution = config.get('resolution', 0.5)
         self.verbose = False
 
@@ -248,18 +249,18 @@ class Octomap(Node):
         x = self.pose3d[0][0] - self.start_xyz[0]
         y = self.pose3d[0][1] - self.start_xyz[1]
         z = self.pose3d[0][2] - self.start_xyz[2]
-        start = int(512 + 2*x), int(512 - 2*y), int(z/self.resolution)
-        NUM_Z_LEVELS = 10
-        img3d = np.zeros((1024, 1024, NUM_Z_LEVELS), dtype=np.uint8)
-        for level in range(NUM_Z_LEVELS):
-            img3d[:, :, level] = data2maplevel(data, level=level)
+        start = int(512 + 2*x), int(512 - 2*y), int((z - self.min_z)/self.resolution)
+        num_z_levels = int(round((self.max_z - self.min_z)/self.resolution)) + 1
+        img3d = np.zeros((1024, 1024, num_z_levels), dtype=np.uint8)
+        for level in range(num_z_levels):
+            img3d[:, :, level] = data2maplevel(data, level=level + int(round(self.min_z/self.resolution)))
 
         if self.verbose:
-            for i in range(NUM_Z_LEVELS):
+            for i in range(num_z_levels):
                 cv2.imwrite('octo_%03d.png' % i, img3d[:, :, i])
 
         img2 = np.zeros((1024, 1024, 3), dtype=np.uint8)
-        level = max(0, min(NUM_Z_LEVELS - 1, start[2]))
+        level = max(0, min(num_z_levels - 1, start[2]))
         img2[:, :, 0] = img3d[:, :, level]
         img2[:, :, 1] = img3d[:, :, level]
         img2[:, :, 2] = img3d[:, :, level]
@@ -288,7 +289,7 @@ class Octomap(Node):
         if path is not None:
             self.waypoints = [[(x - 512)/2 + self.start_xyz[0],
                                (512 - y)/2 + self.start_xyz[1],
-                               z * self.resolution]
+                               z * self.resolution + self.min_z]
                               for x, y, z in path]
 
     def update(self):
