@@ -4,8 +4,7 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["emergency_stop", "pose2d", "pose3d", "scan", "rot", "artf",
-                 "sim_time_sec", "acc", "robot_name"],
+          "in": ["emergency_stop", "pose3d", "scan", "artf", "sim_time_sec", "acc", "robot_name"],
           "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout"],
           "init": {
             "max_speed": 0.5,
@@ -74,8 +73,8 @@
       },
       "rosmsg": {
           "driver": "rosmsg",
-          "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
-          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin", "gas_detected", "orientation"],
+          "in": ["slot_raw", "desired_speed_3d", "tick", "stdout"],
+          "out": ["sim_time_sec", "cmd"],
           "init": {
             "downsample": 2
           }
@@ -104,8 +103,8 @@
       "fromrospy": {
           "driver": "subt.pull:Pull",
 	      "init": {
-              "outputs": ["rot", "acc", "orientation", "top_scan", "bottom_scan", "pose3d", "battery_state", "score",
-                          "rgbd_front:null", "air_pressure", "scan360", "octomap:gz", "origin", "robot_name"]
+              "outputs": ["acc", "top_scan", "bottom_scan", "pose3d", "battery_state", "score", "gas_detected",
+                          "rgbd_front:null", "air_pressure", "scan360", "octomap:gz", "robot_name"]
           }
       },
       "torospy": {
@@ -150,9 +149,7 @@
               ["receiver.raw", "rosmsg.raw"],
               ["rosmsg.cmd", "transmitter.raw"],
 
-              ["rosmsg.rot", "app.rot"],
-              ["rosmsg.acc", "app.acc"],
-              ["rosmsg.orientation", "app.orientation"],
+              ["fromrospy.acc", "app.acc"],
 
               ["fromrospy.scan360", "detector.scan"],
               ["fromrospy.scan360", "depth2scan.scan"],
@@ -162,13 +159,12 @@
               ["fromrospy.rgbd_front", "depth2scan.rgbd"],
               ["depth2scan.scan", "app.scan360"],
 
-              ["fromrospy.rot", "app.rot"],
               ["fromrospy.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
               ["rosmsg.sim_time_sec", "reporter.sim_time_sec"],
               ["rosmsg.sim_time_sec", "octomap.sim_time_sec"],
 
-              ["rosmsg.gas_detected", "gas_detector.gas_detected"],
+              ["fromrospy.gas_detected", "gas_detector.gas_detected"],
               ["gas_detector.artf", "app.artf"],
 
               ["fromrospy.pose3d", "radio.pose3d"],
