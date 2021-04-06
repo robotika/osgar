@@ -18,6 +18,7 @@ NAMES_AND_SCORES = {'backpack': 0.36,
                     'fire_extinguisher': 0.1,
                     'drill': 0.1,
                     'vent': 0.1,
+                    'cube': 0.1,
                     'robot': 1.0,
                     'breadcrumb': 1.0,
                     'nothing': 1.0
