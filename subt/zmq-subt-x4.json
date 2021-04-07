@@ -188,7 +188,7 @@
               ["fromrospy.robot_name", "marsupial.robot_name"],
               ["marsupial.detach", "torospy.detach"],
 
-              ["detector.localized_artf", "app.artf"],
+              ["detector.localized_artf", "app.localized_artf"],
               ["detector.stdout", "rosmsg.stdout"],
               ["app.artf_xyz", "reporter.artf_xyz"],
               ["rosmsg.base_station", "reporter.base_station"],
