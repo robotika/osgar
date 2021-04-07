@@ -469,36 +469,6 @@ class SubTChallenge:
         assert callback in self.monitors
         self.monitors.remove(callback)
 
-    def on_pose2d(self, timestamp, data):
-        if self.xyz is None:
-            self.xyz = 0, 0, 0
-        x, y, heading = data
-        pose = (x / 1000.0, y / 1000.0, math.radians(heading / 100.0))
-        if self.last_position is not None:
-            self.is_moving = (self.last_position != pose)
-            dist = math.hypot(pose[0] - self.last_position[0], pose[1] - self.last_position[1])
-            direction = ((pose[0] - self.last_position[0]) * math.cos(self.last_position[2]) +
-                         (pose[1] - self.last_position[1]) * math.sin(self.last_position[2]))
-            if direction < 0:
-                dist = -dist
-        else:
-            dist = 0.0
-        self.last_position = pose
-        self.traveled_dist += dist
-        x, y, z = self.xyz
-        x += math.cos(self.pitch) * math.cos(self.yaw) * dist
-        y += math.cos(self.pitch) * math.sin(self.yaw) * dist
-        z += math.sin(self.pitch) * dist
-        self.last_send_time = self.bus.publish('pose2d', [round(x * 1000), round(y * 1000),
-                                    round(math.degrees(self.yaw) * 100)])
-        if self.virtual_bumper is not None:
-            if self.is_virtual:
-                self.virtual_bumper.update_pose(timedelta(seconds=self.sim_time_sec), pose)
-            else:
-                self.virtual_bumper.update_pose(self.time, pose)
-        self.xyz = x, y, z
-        self.trace.update_trace(self.xyz)
-
     def on_pose3d(self, timestamp, data):
         xyz, rot = data
         self.orientation = rot  # quaternion
@@ -525,6 +495,10 @@ class SubTChallenge:
             else:
                 self.virtual_bumper.update_pose(self.time, pose)
         self.xyz = tuple(xyz)
+        if self.yaw_offset is None:
+            self.yaw_offset = -ypr[0]
+        tmp_yaw, self.pitch, self.roll = ypr
+        self.yaw = tmp_yaw + self.yaw_offset
         self.trace.update_trace(self.xyz)
         self.loop_detector.add(self.xyz, rot)
 
@@ -646,12 +620,6 @@ class SubTChallenge:
                     self.scan = data[index45deg:-index45deg]
                 if self.local_planner is not None:
                     self.local_planner.update(data)
-            elif channel == 'rot':
-                temp_yaw, self.pitch, self.roll = [normalizeAnglePIPI(math.radians(x/100)) for x in data]
-                if self.yaw_offset is None:
-                    self.yaw_offset = -temp_yaw
-                self.yaw = temp_yaw + self.yaw_offset
-
             elif channel == 'sim_time_sec':
                 self.sim_time_sec = data
             elif channel == 'voltage':
@@ -907,7 +875,7 @@ class SubTChallenge:
         self.stdout('robot_name:', self.robot_name)
 
         # wait for critical data
-        while any_is_none(self.scan, self.yaw_offset, self.xyz):
+        while any_is_none(self.scan, self.xyz):
             # self.xyz is initialized by pose2d or pose3d depending on robot type
             self.update()
 

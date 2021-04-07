@@ -18,7 +18,7 @@ import numpy as np
 
 from sensor_msgs.msg import Imu, LaserScan, PointCloud2
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Empty, Int32, String
+from std_msgs.msg import Empty, Bool, Int32, String
 from sensor_msgs.msg import BatteryState, FluidPressure
 from octomap_msgs.msg import Octomap
 from subt_msgs.srv import PoseFromArtifact
@@ -73,11 +73,13 @@ class main:
         rospy.init_node('cloudsim2osgar', log_level=rospy.DEBUG)
         self.bus = Bus()
         self.robot_name = robot_name
+        self.prev_gas_detected = None  # report on change including the first reading
 
         # common topics
         topics = [
             ('/' + robot_name + '/battery_state', BatteryState, self.battery_state, ('battery_state',)),
             ('/subt/score', Int32, self.score, ('score',)),
+            ('/' + robot_name + '/gas_detected', Bool, self.gas_detected, ('gas_detected', )),
         ]
 
         publishers = {}
@@ -133,6 +135,7 @@ class main:
                 publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
             else:
                 rospy.loginfo("explorer R2 #1 (basic)")
+            topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/points', PointCloud2, self.points, ('points',)))
             topics.append(('/rtabmap/rgbd/front/compressed', RGBDImage, self.rgbd_front, ('rgbd_front',)))
             topics.append(('/rtabmap/rgbd/rear/compressed', RGBDImage, self.rgbd_rear, ('rgbd_rear',)))
@@ -141,11 +144,11 @@ class main:
             return
 
         if robot_config.startswith("ROBOTIKA_KLOUBAK_SENSOR_CONFIG"):
-            topics.append(('/' + robot_name + '/imu/front/data', Imu, self.imu, ('rot', 'acc', 'orientation')))
+            topics.append(('/' + robot_name + '/imu/front/data', Imu, self.imu, ('acc',)))
         else:
-            topics.append(('/' + robot_name + '/imu/data', Imu, self.imu, ('rot', 'acc', 'orientation')))
+            topics.append(('/' + robot_name + '/imu/data', Imu, self.imu, ('acc',)))
 
-        outputs = functools.reduce(operator.add, (t[-1] for t in topics)) + ('origin', 'robot_name',)
+        outputs = functools.reduce(operator.add, (t[-1] for t in topics)) + ('robot_name',)
         self.bus.register(outputs)
 
         # origin
@@ -175,8 +178,6 @@ class main:
                 origin_retry_delay = min(
                         MAX_ORIGIN_RETRY_DELAY,
                         ORIGIN_RETRY_EXPONENTIAL_BACKOFF * origin_retry_delay)
-        origin_msg = (robot_name,) + self.origin[0] + self.origin[1]
-        self.bus.publish('origin', origin_msg)
 
         for name, type, handler, _ in topics:
             rospy.loginfo("waiting for {}".format(name))
@@ -200,19 +201,8 @@ class main:
         self.imu_count += 1
         rospy.loginfo_throttle(10, "imu callback: {}".format(self.imu_count))
         acc = [msg.linear_acceleration.x, msg.linear_acceleration.y, msg.linear_acceleration.z]
-        orientation = [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w]
 
-        # copy & paste from rosmsg
-        q0, q1, q2, q3 = orientation  # quaternion
-        x = math.atan2(2 * (q0 * q1 + q2 * q3), 1 - 2 * (q1 * q1 + q2 * q2))
-        y = math.asin(2 * (q0 * q2 - q3 * q1))
-        z = math.atan2(2 * (q0 * q3 + q1 * q2), 1 - 2 * (q2 * q2 + q3 * q3))
-        rot = [x, y, z]
-        # end of copy & paste from rosmsg
-
-        self.bus.publish('rot', [py3round(math.degrees(angle) * 100) for angle in rot])
         self.bus.publish('acc', [py3round(x * 1000) for x in acc])
-        self.bus.publish('orientation', orientation)
         # preliminary suggestion for combined message
         #angular_velocity = [msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z]
         #data = [
@@ -361,6 +351,14 @@ class main:
         self.octomap_count += 1
         rospy.loginfo_throttle(10, "octomap callback: {}".format(self.octomap_count))
         self.bus.publish('octomap', msg.data)
+
+    def gas_detected(self, msg):
+        self.gas_detected_count += 1
+        rospy.loginfo_throttle(10, "gas_detected callback: {}".format(self.gas_detected_count))
+        detected = msg.data
+        if detected != self.prev_gas_detected:
+            self.bus.publish('gas_detected', detected)
+            self.prev_gas_detected = detected
 
 
 if __name__ == '__main__':

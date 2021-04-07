@@ -1,7 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-  <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)">
-  </node>
+  <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)"/>
 
   <!-- Combining front RGBD depth and image data into a single message. -->
   <node pkg="nodelet" type="nodelet" name="rgbd_sync_front" args="standalone rtabmap_ros/rgbd_sync">

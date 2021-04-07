@@ -7,8 +7,7 @@
     <remap from="cmd_vel/output/rear" to="$(arg robot_name)/cmd_vel/rear"/>
   </node>
 
-  <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)" output="screen">
-  </node>
+  <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)" output="screen"/>
 
   <!-- Combining front RGBD depth and image data into a single message. -->
   <node pkg="nodelet" type="nodelet" name="rgbd_sync_front" args="standalone rtabmap_ros/rgbd_sync">

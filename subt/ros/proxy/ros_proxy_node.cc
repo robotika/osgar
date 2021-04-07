@@ -18,7 +18,6 @@
 // Goal:
 //   - handle all artifacts, ROS communication
 //   - send speed commands
-//   - redirect Odom messages to Python3 (via ZeroMQ?)
 
 #include <chrono>
 #include <thread>
@@ -27,7 +26,6 @@
 
 #include <geometry_msgs/Twist.h>
 #include <rosgraph_msgs/Clock.h>
-#include <nav_msgs/Odometry.h>
 
 #include <ros/ros.h>
 #include <std_srvs/SetBool.h>
@@ -58,8 +56,6 @@ const uint32_t BROADCAST_PORT = 4142u; // default is 4100 and collides with arti
 
 int g_countClock = 0;
 uint32_t g_clockPrevSec = 0;
-int g_countOdom = 0;
-int g_countGas = 0;
 
 int g_countUpdates = 0;
 int g_countReceives = 0;
@@ -98,24 +94,6 @@ void clockCallback(const rosgraph_msgs::Clock::ConstPtr& msg)
   if(g_countClock % 1000 == 0)
     ROS_INFO("received Clock %d ", g_countClock);
   g_countClock++;
-}
-
-void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
-{
-  ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  protected_zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
-  if(g_countOdom % 100 == 0)
-    ROS_INFO("received Odom %d", g_countOdom);
-  g_countOdom++;
-}
-
-void gasCallback(const std_msgs::Bool::ConstPtr& msg)
-{
-  ros::SerializedMessage sm = ros::serialization::serializeMessage(*msg);
-  protected_zmq_send(g_responder, sm.buf.get(), sm.num_bytes, 0);
-  if(g_countGas % 100 == 0)
-    ROS_INFO("received Gas %d", g_countGas);
-  g_countGas++;
 }
 
 void sendReceivedMessage(const std::string &srcAddress, const std::string &data)
@@ -158,8 +136,6 @@ class Controller
   private: std::unique_ptr<subt::CommsClient> client;
 
   ros::Subscriber subClock;
-  ros::Subscriber subOdom;
-  ros::Subscriber subGas;
 
   /// \brief Timer that trigger the update function.
   private: ros::Timer updateTimer;
@@ -270,8 +246,6 @@ void Controller::Update(const ros::TimerEvent&)
           this->name + "/cmd_vel", 1);
 
       this->subClock  = n.subscribe("/clock", 1000, clockCallback);
-      this->subOdom = n.subscribe(this->name + "/odom", 1000, odomCallback);
-      this->subGas = n.subscribe(this->name + "/gas_detected", 1000, gasCallback);
     }
     else
       return;
