@@ -214,7 +214,7 @@ if __name__ == "__main__":
 
     assert 'detector' in config['robot']['modules']
     fx = config['robot']['modules'][args.module_name]['init']['fx']
-    max_depth = config['robot']['modules'][args.module_name]['init']['max_depth']
+    max_depth = config['robot']['modules'][args.module_name]['init'].get('max_depth', 10.0)
 
     last_artf = None  # reported before debug_rgbd
     last_result = None
