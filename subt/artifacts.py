@@ -436,21 +436,22 @@ def debug2dir(filename, out_dir):
     from osgar.lib.serialize import deserialize
 
     names = lookup_stream_names(filename)
-    assert 'detector.debug_artf' in names, names
-    assert 'detector.artf' in names, names
+    assert 'detector.debug_rgbd' in names, names
+    assert 'detector.localized_artf' in names, names
     assert 'rosmsg.sim_time_sec' in names, names
-    image_id = names.index('detector.debug_artf') + 1
-    artf_id = names.index('detector.artf') + 1
+    rgbd_id = names.index('detector.debug_rgbd') + 1
+    artf_id = names.index('detector.localized_artf') + 1
     sim_sec_id = names.index('rosmsg.sim_time_sec') + 1
     sim_time_sec = None
     image = None
     artf = None
-    for dt, channel, data in LogReader(filename, only_stream_id=[image_id, artf_id, sim_sec_id]):
+    for dt, channel, data in LogReader(filename, only_stream_id=[rgbd_id, artf_id, sim_sec_id]):
         data = deserialize(data)
         if channel == sim_sec_id:
             sim_time_sec = data
-        elif channel == image_id:
-            image = data
+        elif channel == rgbd_id:
+            robot_pose, camera_pose, rgb_compressed, depth_compressed = data
+            image = rgb_compressed
             assert artf is not None
             time_sec = sim_time_sec if sim_time_sec is not None else int(dt.total_seconds())
             name = os.path.basename(filename)[:-4] + '-' + artf[0] + '-' + str(time_sec) + '.jpg'
