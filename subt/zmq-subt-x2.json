@@ -21,6 +21,13 @@
           "init": {
           }
       },
+      "detector_rear": {
+          "driver": "subt.artf_node:ArtifactDetectorDNN",
+          "in": ["rgbd", "scan"],
+          "out": ["localized_artf", "dropped", "debug_artf", "debug_rgbd", "debug_result", "debug_cv_result", "stdout"],
+          "init": {
+          }
+      },
       "gas_detector": {
           "driver": "subt.artf_gas:ArtifactGasDetector",
           "in": ["gas_detected"],
@@ -134,11 +141,12 @@
               ["fromrospy.acc", "app.acc"],
 
               ["fromrospy.scan_front", "detector.scan"],
+              ["fromrospy.scan_rear", "detector_rear.scan"],
               ["fromrospy.scan_front", "depth2scan.scan"],
 
               ["fromrospy.rgbd_front", "depth2scan.rgbd"],
               ["fromrospy.rgbd_front", "detector.rgbd"],
-              ["fromrospy.rgbd_rear", "detector.rgbd"],
+              ["fromrospy.rgbd_rear", "detector_rear.rgbd"],
 
               ["depth2scan.scan", "app.scan"],
 
@@ -172,6 +180,8 @@
 
               ["detector.localized_artf", "app.localized_artf"],
               ["detector.stdout", "rosmsg.stdout"],
+              ["detector_rear.localized_artf", "app.localized_artf"],
+              ["detector_rear.stdout", "rosmsg.stdout"],
               ["app.artf_xyz", "reporter.artf_xyz"],
               ["rosmsg.base_station", "reporter.base_station"],
               ["reporter.artf_cmd", "transmitter.raw"],

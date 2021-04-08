@@ -16,6 +16,11 @@
             "fx": 337.22
           }
       },
+      "detector_rear": {
+          "init": {
+            "fx": 337.22
+          }
+      },
       "depth2scan": {
         "init": {
           "depth_params": {
