@@ -431,16 +431,16 @@ class ArtifactDetector(Node):
             self.best_depth = None
 
 
-def debug2dir(filename, out_dir):
+def debug2dir(filename, out_dir, detector_name):
     from osgar.logger import LogReader, lookup_stream_names
     from osgar.lib.serialize import deserialize
 
     names = lookup_stream_names(filename)
-    assert 'detector.debug_rgbd' in names, names
-    assert 'detector.localized_artf' in names, names
+    assert detector_name + '.debug_rgbd' in names, names
+    assert detector_name + '.localized_artf' in names, names
     assert 'rosmsg.sim_time_sec' in names, names
-    rgbd_id = names.index('detector.debug_rgbd') + 1
-    artf_id = names.index('detector.localized_artf') + 1
+    rgbd_id = names.index(detector_name + '.debug_rgbd') + 1
+    artf_id = names.index(detector_name + '.localized_artf') + 1
     sim_sec_id = names.index('rosmsg.sim_time_sec') + 1
     sim_time_sec = None
     image = None
@@ -473,12 +473,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run artifact detection and classification for given JPEG image')
     parser.add_argument('filename', help='JPEG filename')
     parser.add_argument('--debug2dir', help='dump clasified debug images into directory')
+    parser.add_argument('--detector-name', help='detector module name (detector, detector_rear)', default='detector')
     parser.add_argument('--depth', help='filename of depth image for tested together with JPEG image')
     parser.add_argument('-v', '--verbose', help='verbose mode', action='store_true')
     args = parser.parse_args()
 
     if args.debug2dir is not None:
-        debug2dir(args.filename, args.debug2dir)
+        debug2dir(args.filename, args.debug2dir, args.detector_name)
         sys.exit()
 
     with open(args.filename.replace('.npz', '.jpg'), 'rb') as f:
