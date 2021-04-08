@@ -19,8 +19,8 @@ class OctomapTest(unittest.TestCase):
 
     def test_frontiers(self):
         # no frontiers in totally unknown world
-        img = np.zeros((1024, 1024), dtype=np.uint8)
-        __, path = frontiers(img, start=(512, 512))
+        img = np.zeros((1024, 1024, 1), dtype=np.uint8)
+        __, path = frontiers(img, start=(512, 512, 0))
         self.assertIsNone(path)
 
 # vim: expandtab sw=4 ts=4
