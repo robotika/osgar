@@ -143,6 +143,16 @@ def adjust_scan(scan, depth_scan, depth_params):
 
     depth_scan[depth_scan == DEPTH_NO_MEASUREMENT] = LIDAR_NO_MEASUREMENT
     new_scan = lidar_scan
+    # If depth camera did not detect any obstacle, but lidar knows there is
+    # an obstacle beyond the range of depth camera detection, we take the
+    # information from lidar.
+    depth_scan = np.where(
+            np.logical_and(
+                depth_scan == LIDAR_NO_MEASUREMENT,
+                lidar_scan[alignment_start:-alignment_tail] >
+                  1000 * min(depth_params.max_x, depth_params.max_y)),
+            lidar_scan[alignment_start:-alignment_tail],
+            depth_scan)
     # Up to depth_params.lidar_trusted_zone, we trust the lidar measurements,
     # so we take a minimum between lidar- and depth-based distance to obstacle.
     # Beyond that distance, we no longer trust lidar, because it could, for

@@ -35,7 +35,7 @@ def tangent_circle(dist, radius):
     return math.radians(100)
 
 
-def follow_wall_angle(laser_data, radius, right_wall=False):
+def follow_wall_angle(laser_data, radius, right_wall=False, internal_reflection_threshold=0.3, max_wall_distance=4):
     """
         Find the angle to the closest point in laser scan (either on the left or right side).
         Then calculate an angle to a free space as tangent to circle of given radius.
@@ -44,11 +44,11 @@ def follow_wall_angle(laser_data, radius, right_wall=False):
     data = np.array(laser_data)
     size = len(laser_data)
     deg_resolution = 270 / (size - 1)  # SICK uses extra the first and the last, i.e. 271 rays for 1 degree resolution
-    mask = (data <= 300)  # ignore internal reflections
-    data[mask] = 20000
+    internal_reflection_threshold *= 1000 # m -> mm
+    mask = (data <= internal_reflection_threshold)  # ignore internal reflections
+    data[mask] = 0
 
-    mask = (data >= 4000)  # ignore obstacles beyond 4m
-    data[mask] = 20000
+    max_wall_distance *= 1000 # m -> mm
 
     # To make the code simpler, let's pretend we follow the right wall and flip
     # the result in the end if we are actually following the left wall.
@@ -65,6 +65,8 @@ def follow_wall_angle(laser_data, radius, right_wall=False):
         wall_start_idx = -1
         # We only accept walls to the right of the robot.
         for (i, distance) in enumerate(distances[:size//2]):
+            if distance > max_wall_distance or distance == 0:
+                continue
             if distance <= r:
                 wall_start_idx = i
                 break
@@ -85,6 +87,8 @@ def follow_wall_angle(laser_data, radius, right_wall=False):
         found_countinuation = False
         for i in range(last_wall_idx + 1, size):
             dist = distances[i]
+            if dist > max_wall_distance or distance == 0:
+                continue
             rel_idx = i - last_wall_idx
             sin_angle = math.sin(rel_idx * math.radians(deg_resolution))
             cos_angle = math.cos(rel_idx * math.radians(deg_resolution))
@@ -121,6 +125,7 @@ class FollowWall(Node):
         super().__init__(config, bus)
         bus.register('desired_speed')
         self.right_wall = config.get('right_wall', False)
+        self.params = config.get('params', {})
         self.max_speed = DESIRED_SPEED
 
     def send_speed_cmd(self, speed, angular_speed):
@@ -137,7 +142,7 @@ class FollowWall(Node):
                 size = len(self.scan)
                 dist = min_dist(self.scan[size//3:2*size//3])
                 tangent_angle = follow_wall_angle(self.scan, right_wall=self.right_wall,
-                                                  radius=WALL_DISTANCE)
+                                                  radius=WALL_DISTANCE, **self.params)
                 if dist < 2.0:
                     desired_speed = (self.max_speed / 2) * (dist - 0.4) / 1.6
                 else:
