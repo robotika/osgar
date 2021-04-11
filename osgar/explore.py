@@ -87,7 +87,7 @@ def follow_wall_angle(laser_data, radius, right_wall=False, internal_reflection_
         found_countinuation = False
         for i in range(last_wall_idx + 1, size):
             dist = distances[i]
-            if dist > max_wall_distance or distance == 0:
+            if dist > max_wall_distance or dist == 0:
                 continue
             rel_idx = i - last_wall_idx
             sin_angle = math.sin(rel_idx * math.radians(deg_resolution))
