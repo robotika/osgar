@@ -20,8 +20,11 @@
             "limit_pitch": 90,
             "return_limit_roll": 90,
             "return_limit_pitch": 90,
-            "trace_z_weight": 1.0
-          }
+            "trace_z_weight": 1.0,
+            "follow_wall": {
+              "internal_reflection_threshold": 0
+            }
+         }
       },
       "detector": {
           "driver": "subt.artf_node:ArtifactDetectorDNN",
