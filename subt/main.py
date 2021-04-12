@@ -105,6 +105,7 @@ class SubTChallenge:
         self.max_speed = config['max_speed']
         self.max_angular_speed = math.radians(60)
         self.walldist = config['walldist']
+        self.follow_wall_params = config.get('follow_wall', {})
         self.timeout = timedelta(seconds=config['timeout'])
         self.symmetric = config['symmetric']  # is robot symmetric?
         self.dangerous_dist = config.get('dangerous_dist', 0.3)
@@ -298,7 +299,7 @@ class SubTChallenge:
                         if self.use_center:
                             desired_direction = 0
                         else:
-                            desired_direction = follow_wall_angle(self.scan, radius=radius, right_wall=right_wall)
+                            desired_direction = follow_wall_angle(self.scan, radius=radius, right_wall=right_wall, **self.follow_wall_params)
                         self.go_safely(desired_direction)
                 if dist_limit is not None:
                     if dist_limit < abs(self.traveled_dist - start_dist):  # robot can return backward -> abs()
