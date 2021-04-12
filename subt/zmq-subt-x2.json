@@ -13,7 +13,7 @@
             "virtual_bumper_radius": 10.0,
             "virtual_world": true,
             "follow_wall": {
-              "max_wall_distance": 7.8,
+              "max_wall_distance": 7.6,
               "internal_reflection_threshold": 0
             }
          }
