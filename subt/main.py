@@ -253,30 +253,33 @@ class SubTChallenge:
                 print(self.time, "turn - TIMEOUT!")
                 break
         if with_stop:
-            self.send_speed_cmd(0.0, 0.0)
-            start_time = self.time
-            while self.time - start_time < timedelta(seconds=2):
-                self.update()
-                if not self.is_moving:
-                    break
-            print(self.time, 'stop at', self.time - start_time)
+            self.stop(2)
 
-    def stop(self):
+    def stop(self, timeout_sec=20):
         self.send_speed_cmd(0.0, 0.0)
         start_time = self.time
-        while self.time - start_time < timedelta(seconds=20):
+        while self.time - start_time < timedelta(seconds=timeout_sec):
             self.update()
             if not self.is_moving:
                 break
         print(self.time, 'stop at', self.time - start_time, self.is_moving)
 
-    def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None, flipped=False,
-            pitch_limit=None, roll_limit=None, detect_loop=True):
-        # make sure that we will start with clean data
-        if flipped:
-            self.scan = None
-            self.flipped = True
+    def flip(self, with_stop=True):
+        # make sure that we will use clean data
+        self.scan = None
 
+        self.flipped = not self.flipped
+
+        if with_stop:
+            self.stop(2)
+
+        # Making sure we have scan data. Parts of the code assume that.
+        while self.scan is None:
+            self.update()
+
+
+    def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None,
+            pitch_limit=None, roll_limit=None, detect_loop=True):
         reason = None  # termination reason is not defined yet
         start_dist = self.traveled_dist
         start_time = self.sim_time_sec
@@ -299,8 +302,16 @@ class SubTChallenge:
                         if self.use_center:
                             desired_direction = 0
                         else:
-                            desired_direction = follow_wall_angle(self.scan, radius=radius, right_wall=right_wall, **self.follow_wall_params)
-                        self.go_safely(desired_direction)
+                            desired_direction = normalizeAnglePIPI(
+                                    follow_wall_angle(self.scan, radius=radius, right_wall=right_wall, **self.follow_wall_params))
+                            flip_threshold = math.radians(115)  # including some margin around corners
+                            if self.symmetric and (
+                                    (right_wall and desired_direction > flip_threshold) or
+                                    (not right_wall and desired_direction < -flip_threshold)):
+                                print('Flipping:', math.degrees(desired_direction))
+                                self.flip()
+                            else:
+                                self.go_safely(desired_direction)
                 if dist_limit is not None:
                     if dist_limit < abs(self.traveled_dist - start_dist):  # robot can return backward -> abs()
                         print(self.time, 'Distance limit reached! At', self.traveled_dist, self.traveled_dist - start_dist)
@@ -325,17 +336,23 @@ class SubTChallenge:
                 loop = detect_loop and self.loop_detector.loop()
                 if loop:
                     print(self.time, self.sim_time_sec, 'Loop detected')
-                    self.turn(math.radians(160 if self.use_right_wall else -160), timeout=timedelta(seconds=40), with_stop=True)
+                    turn_timeout = timedelta(seconds=40)
+                    if self.symmetric:
+                        self.flip()
+                        if self.speed_policy == 'conservative':
+                            self.turn(math.radians(-20 if self.use_right_wall else 20), timeout=turn_timeout, with_stop=True)
+                    else:
+                        self.turn(math.radians(160 if self.use_right_wall else -160), timeout=turn_timeout, with_stop=True)
                     reason = REASON_LOOP
                     break
 
-                if self.front_bumper and not flipped:
+                if self.front_bumper and not self.flipped:
                     print(self.time, "FRONT BUMPER - collision")
                     self.go_straight(-0.3, timeout=timedelta(seconds=10))
                     reason = REASON_FRONT_BUMPER
                     break
 
-                if self.rear_bumper and flipped:
+                if self.rear_bumper and self.flipped:
                     print(self.time, "REAR BUMPER - collision")
                     self.go_straight(-0.3, timeout=timedelta(seconds=10))
                     reason = REASON_REAR_BUMPER
@@ -387,7 +404,6 @@ class SubTChallenge:
                 self.stop()
                 self.collision_detector_enabled = True
         self.scan = None
-        self.flipped = False
         return self.traveled_dist - start_dist, reason
 
     def return_home(self, timeout, home_threshold=None):
@@ -455,11 +471,16 @@ class SubTChallenge:
             if self.update() in ['scan', 'scan360']:
                 target_x, target_y = trace.where_to(self.xyz, max_target_distance, self.trace_z_weight)[:2]
                 x, y = self.xyz[:2]
-                desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
-                safety = self.go_safely(desired_direction)
-                if safety_limit is not None and safety < safety_limit:
-                    print('Danger! Safety limit for follow trace reached!', safety, safety_limit)
-                    break
+                yaw = (self.yaw + math.pi) if self.flipped else self.yaw
+                desired_direction = normalizeAnglePIPI(math.atan2(target_y - y, target_x - x) - yaw)
+                if self.symmetric and abs(desired_direction) > math.radians(95):  # including hysteresis
+                    print('Flipping:', math.degrees(desired_direction))
+                    self.flip()
+                else:
+                    safety = self.go_safely(desired_direction)
+                    if safety_limit is not None and safety < safety_limit:
+                        print('Danger! Safety limit for follow trace reached!', safety, safety_limit)
+                        break
         print('End of follow trace(sec)', self.sim_time_sec - start_time)
 
     def register(self, callback):
@@ -501,7 +522,7 @@ class SubTChallenge:
         tmp_yaw, self.pitch, self.roll = ypr
         self.yaw = tmp_yaw + self.yaw_offset
         self.trace.update_trace(self.xyz)
-        self.loop_detector.add(self.xyz, rot)
+        self.loop_detector.add(self.xyz, rot, (self.flipped,))
 
     def on_acc(self, timestamp, data):
         acc = [x / 1000.0 for x in data]
@@ -669,7 +690,7 @@ class SubTChallenge:
         trace.reverse()
         self.follow_trace(trace, timeout=timedelta(seconds=120), max_target_distance=2.5, safety_limit=0.2)
 
-    def robust_follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None, flipped=False,
+    def robust_follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None,
             pitch_limit=None, roll_limit=None):
         """
         Handle multiple re-tries with increasing distance from the wall if necessary
@@ -686,7 +707,7 @@ class SubTChallenge:
             timeout = timedelta(seconds=overall_timeout.total_seconds() - (self.sim_time_sec - start_time))
             print('Current timeout', timeout)
 
-            dist, reason = self.follow_wall(radius=walldist, right_wall=right_wall, timeout=timeout, flipped=flipped,
+            dist, reason = self.follow_wall(radius=walldist, right_wall=right_wall, timeout=timeout,
                                     pitch_limit=self.limit_pitch, roll_limit=self.limit_roll)
             total_dist += dist
             if reason is None or reason in [REASON_LORA,]:
@@ -704,11 +725,14 @@ class SubTChallenge:
             # re-try with bigger distance
             print(self.time, "Re-try because of", reason)
             for repeat in range(2):
+                # retreat a bit
+                self.flip()
                 self.follow_wall(radius=walldist, right_wall=not right_wall, timeout=timedelta(seconds=30), dist_limit=2.0,
-                    flipped=not flipped, pitch_limit=self.return_limit_pitch, roll_limit=self.return_limit_roll)
+                    pitch_limit=self.return_limit_pitch, roll_limit=self.return_limit_roll)
+                self.flip()
 
                 dist, reason = self.follow_wall(radius=walldist, right_wall=right_wall, timeout=timedelta(seconds=40), dist_limit=4.0,
-                                        pitch_limit=self.limit_pitch, roll_limit=self.limit_roll, flipped=flipped)
+                                        pitch_limit=self.limit_pitch, roll_limit=self.limit_roll)
                 total_dist += dist
                 if reason is None:
                     break
@@ -757,8 +781,12 @@ class SubTChallenge:
                     # re-try with bigger distance
                     print(self.time, "Re-try because of", reason)
                     for repeat in range(2):
+                        if allow_virtual_flip:
+                            self.flip()
                         self.follow_wall(radius=walldist, right_wall=not self.use_right_wall, timeout=timedelta(seconds=30), dist_limit=2.0,
-                            flipped=allow_virtual_flip, pitch_limit=self.return_limit_pitch, roll_limit=self.return_limit_roll)
+                            pitch_limit=self.return_limit_pitch, roll_limit=self.return_limit_roll)
+                        if allow_virtual_flip:
+                            self.flip()
 
                         dist, reason = self.follow_wall(radius=walldist, right_wall=self.use_right_wall, timeout=timedelta(seconds=40), dist_limit=4.0,
                                                 pitch_limit=self.limit_pitch, roll_limit=self.limit_roll)
@@ -774,9 +802,6 @@ class SubTChallenge:
 
                 if self.use_return_trace and self.local_planner is not None:
                     self.stdout(self.time, "Going HOME %.3f" % dist, reason)
-                    if allow_virtual_flip:
-                        self.flipped = True  # return home backwards
-                        self.scan = None
                     self.return_home(2 * self.timeout, home_threshold=1.0)
                     self.send_speed_cmd(0, 0)
                 else:
@@ -784,8 +809,10 @@ class SubTChallenge:
                     if not allow_virtual_flip:
                         self.turn(math.radians(90), timeout=timedelta(seconds=20))
                         self.turn(math.radians(90), timeout=timedelta(seconds=20))
+                    else:
+                        self.flip()
                     self.robust_follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=3*self.timeout, dist_limit=3*total_dist,
-                            flipped=allow_virtual_flip, pitch_limit=self.return_limit_pitch, roll_limit=self.return_limit_roll)
+                            pitch_limit=self.return_limit_pitch, roll_limit=self.return_limit_roll)
                 if self.artifacts:
                     self.bus.publish('artf_xyz', [[artifact_data, [round(x*1000), round(y*1000), round(z*1000)], self.robot_name, None]
                                               for artifact_data, (x, y, z) in self.artifacts])
@@ -822,7 +849,7 @@ class SubTChallenge:
             timeout = timedelta(seconds=self.timeout.total_seconds() - (self.sim_time_sec - start_time))
             print('Current timeout', timeout)
 
-            dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,  # was radius=0.9
+            dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,
                                 timeout=timeout, pitch_limit=self.limit_pitch, roll_limit=None)
             self.collision_detector_enabled = False
             if reason == REASON_VIRTUAL_BUMPER:
@@ -835,7 +862,7 @@ class SubTChallenge:
                 # try something crazy if you do not have other ideas ...
                 before_center = self.use_center
                 self.use_center = True
-                dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,  # was radius=0.9
+                dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,
                                     timeout=timedelta(seconds=60), pitch_limit=self.limit_pitch, roll_limit=None)
                 self.use_center = before_center
                 if reason is None or reason != REASON_PITCH_LIMIT:

@@ -3,6 +3,7 @@
 """
 
 import math
+import operator
 
 from osgar.lib.quaternion import angle_between
 
@@ -11,27 +12,29 @@ class LoopDetector:
                        pose_distance_threshold=0.5,
                        granularity=0.3,
                        max_loop_length=100.0,
-                       min_loop_length=10.0):
+                       min_loop_length=10.0,
+                       extra_state_similarity_fn=operator.eq):
         self.orientation_similarity_threshold = orientation_similarity_threshold
         self.pose_distance_threshold = pose_distance_threshold
         self.granularity = granularity
         self.max_loop_length = max_loop_length
         self.min_loop_length = min_loop_length
+        self.extra_state_similar = extra_state_similarity_fn
         self.trajectory = []
         self.detected_loop = []
 
 
-    def add(self, xyz, orientation):
+    def add(self, xyz, orientation, extra_state=None):
         if not self.trajectory:
-            self.trajectory.append([xyz, orientation, 0])
+            self.trajectory.append([xyz, orientation, extra_state, 0])
             return
 
         prev_xyz = self.trajectory[-1][0]
         d = math.sqrt(sum((a - b)**2 for (a, b) in zip(xyz, prev_xyz)))
         if d < self.granularity:
             return
-        self.trajectory[-1][2] = d
-        self.trajectory.append([xyz, orientation, 0])
+        self.trajectory[-1][-1] = d
+        self.trajectory.append([xyz, orientation, extra_state, 0])
 
         self.detected_loop = self.__detect_loop()
 
@@ -46,9 +49,9 @@ class LoopDetector:
         loop_candidate_length = 0.0
         is_loop = False
 
-        curr_xyz, curr_orientation, _ = self.trajectory[-1]
+        curr_xyz, curr_orientation, curr_extra_state, _ = self.trajectory[-1]
 
-        for past_xyz, past_orientation, d in reversed(self.trajectory):
+        for past_xyz, past_orientation, past_extra_state, d in reversed(self.trajectory):
             loop_candidate.append((past_xyz, past_orientation))
 
             loop_candidate_length += d
@@ -64,6 +67,9 @@ class LoopDetector:
 
             angle = angle_between(curr_orientation, past_orientation)
             if angle > self.orientation_similarity_threshold:
+                continue
+
+            if not self.extra_state_similar(past_extra_state, curr_extra_state):
                 continue
 
             is_loop = True
