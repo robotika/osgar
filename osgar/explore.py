@@ -48,8 +48,6 @@ def follow_wall_angle(laser_data, radius, right_wall=False, internal_reflection_
     mask = (data <= internal_reflection_threshold)  # ignore internal reflections
     data[mask] = 0
 
-    max_wall_distance *= 1000 # m -> mm
-
     # To make the code simpler, let's pretend we follow the right wall and flip
     # the result in the end if we are actually following the left wall.
     if not right_wall:
