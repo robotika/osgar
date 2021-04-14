@@ -830,7 +830,7 @@ class SubTChallenge:
         """
         trace = Trace()
         trace.update_trace(tuple(self.xyz))
-        trace.add_line_to((-4.5, 0, self.height_above_ground))  # in front of the tunnel/entrance
+        trace.add_line_to((-2.0, 0, self.height_above_ground))  # in front of the tunnel/entrance (Finals)
         if self.use_right_wall:
             entrance_offset = -0.5
         elif self.use_center:
