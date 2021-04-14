@@ -195,8 +195,10 @@ class SubTChallenge:
         return True
 
     def go_straight(self, how_far, timeout=None):
-        print(self.time, "go_straight %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position)
+        print(self.time, "go_straight %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position, self.flipped)
         start_pose = self.last_position
+        if self.flipped:
+            how_far = -how_far  # flip desired direction to current robot front
         if how_far >= 0:
             self.send_speed_cmd(self.max_speed, 0.0)
         else:
