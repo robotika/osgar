@@ -251,7 +251,7 @@ class Octomap(Node):
         x = self.pose3d[0][0] - self.start_xyz[0]
         y = self.pose3d[0][1] - self.start_xyz[1]
         z = self.pose3d[0][2] - self.start_xyz[2]
-        start = int(SLICE_OCTOMAP_SIZE//2 + 2*x), int(SLICE_OCTOMAP_SIZE//2 - 2*y), int((z - self.min_z)/self.resolution)
+        start = int(SLICE_OCTOMAP_SIZE//2 + x/self.resolution), int(SLICE_OCTOMAP_SIZE//2 - y/self.resolution), int((z - self.min_z)/self.resolution)
         num_z_levels = int(round((self.max_z - self.min_z)/self.resolution)) + 1
         img3d = np.zeros((SLICE_OCTOMAP_SIZE, SLICE_OCTOMAP_SIZE, num_z_levels), dtype=np.uint8)
         for level in range(num_z_levels):
@@ -267,26 +267,27 @@ class Octomap(Node):
         img2[:, :, 1] = img3d[:, :, level]
         img2[:, :, 2] = img3d[:, :, level]
         __, path = frontiers(img3d, start)  # this image is modified in place anyway
-        f = np.where(img3d == STATE_FRONTIER)
-        for x, y, z in zip(f[1], f[0], f[2]):
-            if z == start[2]:
-                cv2.circle(img2, (x, y), radius=0, color=(255, 0, 255), thickness=-1)
-        if path is not None:
-            for x, y, z in path:
-                cv2.circle(img2, (x, y), radius=0, color=(255, 0, 0), thickness=-1)
+        if self.verbose:
+            f = (img3d == STATE_FRONTIER).nonzero()
+            for x, y, z in zip(f[1], f[0], f[2]):
+                if z == start[2]:
+                    cv2.circle(img2, (x, y), radius=0, color=(255, 0, 255), thickness=-1)
+            if path is not None:
+                for x, y, z in path:
+                    cv2.circle(img2, (x, y), radius=0, color=(255, 0, 0), thickness=-1)
 
-        cv2.circle(img2, start[:2], radius=0, color=(39, 127, 255), thickness=-1)
-        cv2.imwrite('octo_cut.png', img2)  # used for replay debugging
+            cv2.circle(img2, start[:2], radius=0, color=(39, 127, 255), thickness=-1)
+            cv2.imwrite('octo_cut.png', img2)  # used for replay debugging
 
-        if self.video_outfile is not None:
-            if self.video_writer is None:
-                fps = 1
-                height, width = img2.shape[:2]
-                self.video_writer = cv2.VideoWriter(self.video_outfile,
-                                         cv2.VideoWriter_fourcc(*"mp4v"),
-                                         fps,
-                                         (width, height))
-            self.video_writer.write(img2)
+            if self.video_outfile is not None:
+                if self.video_writer is None:
+                    fps = 1
+                    height, width = img2.shape[:2]
+                    self.video_writer = cv2.VideoWriter(self.video_outfile,
+                                             cv2.VideoWriter_fourcc(*"mp4v"),
+                                             fps,
+                                             (width, height))
+                self.video_writer.write(img2)
 
         if path is not None:
             self.waypoints = [[(x - SLICE_OCTOMAP_SIZE//2)/2 + self.start_xyz[0],
@@ -327,10 +328,8 @@ if __name__ == "__main__":
             if stream != octomap_stream_id:
                 assert stream == pose3d_stream_id, stream
                 pose3d = data
-                x = pose3d[0][0]
-                y = pose3d[0][1]
-                z = pose3d[0][2]
-                start = int(SLICE_OCTOMAP_SIZE//2 + 2 * x), int(SLICE_OCTOMAP_SIZE//2 - 2 * y), int(z / resolution)
+                x, y, z = pose3d[0]
+                start = int(SLICE_OCTOMAP_SIZE//2 + x/resolution), int(SLICE_OCTOMAP_SIZE//2 - y/resolution), int(z / resolution)
                 continue
 
             assert len(data) % 2 == 0, len(data)  # TODO fix this in cloudsim2osgar
