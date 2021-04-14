@@ -13,11 +13,13 @@ from osgar.lib.pplanner import find_path
 # http://www.arminhornung.de/Research/pub/hornung13auro.pdf
 # 00: unknown; 01: occupied; 10: free; 11: inner node with child next in the stream
 
-UNKNOWN = 128   # color=(0, 0xFF, 0)
-FREE = 255      # color=(0xFF, 0xFF, 0xFF)
-OCCUPIED = 1    # color=(0x00, 0x00, 0xFF)  ... just to be != 0, which is original unknown/black/undefined
-FRONTIER = 196  # color=(0xFF, 0x00, 0xFF)
-PATH     = 64   # color=(0xFF, 0x00, 0x00)
+STATE_UNKNOWN = 128   # color=(0, 0xFF, 0)
+STATE_FREE = 255      # color=(0xFF, 0xFF, 0xFF)
+STATE_OCCUPIED = 1    # color=(0x00, 0x00, 0xFF)  ... just to be != 0, which is original unknown/black/undefined
+STATE_FRONTIER = 196  # color=(0xFF, 0x00, 0xFF)
+STATE_PATH     = 64   # color=(0xFF, 0x00, 0x00)
+
+SLICE_OCTOMAP_SIZE = 1024  # size of slice/image in XY octomap coordinates (for given Z)
 
 
 def seq2xyz(seq_arr):
@@ -50,7 +52,7 @@ def xyz2img(img, xyz, color, level=2):
     Draw given list of voxels into existing image
     :param img: I/O image
     :param xyz: list of voxels (xyz and "size")
-    :param color: to be used for drawing - now only "palette color"
+    :param color: value 0..255 to be assigned to voxels at given level
     :param level: Z-level for the cut
     :return: updated image
     """
@@ -62,9 +64,9 @@ def xyz2img(img, xyz, color, level=2):
             if d > 100:
                 # do not try to fill extra large (unknown) squares, for now
                 continue
-            px = 512 + x
-            py = 512 - y
-            img[max(0, py-d+1):min(1024, py+1), max(0, px):min(1024, px+d)] = color
+            px = SLICE_OCTOMAP_SIZE//2 + x
+            py = SLICE_OCTOMAP_SIZE//2 - y
+            img[max(0, py-d+1):min(SLICE_OCTOMAP_SIZE, py+1), max(0, px):min(SLICE_OCTOMAP_SIZE, px+d)] = color
     return img
 
 
@@ -99,17 +101,17 @@ def data2maplevel(data, level):
     """
     Convert Octomap data to image/level
     """
-    img = np.zeros((1024, 1024), dtype=np.uint8)
+    img = np.zeros((SLICE_OCTOMAP_SIZE, SLICE_OCTOMAP_SIZE), dtype=np.uint8)
 
     occupied, free, unknown = data2stack(data)
     xyz = seq2xyz(free)
-    xyz2img(img, xyz, color=FREE, level=level)
+    xyz2img(img, xyz, color=STATE_FREE, level=level)
 
     xyz = seq2xyz(occupied)
-    xyz2img(img, xyz, color=OCCUPIED, level=level)
+    xyz2img(img, xyz, color=STATE_OCCUPIED, level=level)
 
     xyz = seq2xyz(unknown)
-    xyz2img(img, xyz, color=UNKNOWN, level=level)
+    xyz2img(img, xyz, color=STATE_UNKNOWN, level=level)
     return img
 
 
@@ -122,8 +124,8 @@ def frontiers(img, start, draw=False):
     :return: extended image with drawn start and path, path
     """
     size = img.shape
-    green = img[:, :, :] == UNKNOWN
-    white = img[:, :, :] == FREE
+    green = img[:, :, :] == STATE_UNKNOWN
+    white = img[:, :, :] == STATE_FREE
 
     mask_right = green[:, 2:, :] & white[:, 1:-1, :]
     mask_left = green[:, :-2, :] & white[:, 1:-1, :]
@@ -150,19 +152,19 @@ def frontiers(img, start, draw=False):
 
     score = np.zeros(len(xy[0]))
     for i in range(len(xy[0])):
-        x, y = xy[0][i]-512, 512-xy[1][i]
+        x, y = xy[0][i]-SLICE_OCTOMAP_SIZE//2, SLICE_OCTOMAP_SIZE//2-xy[1][i]
         score[i] = math.hypot(x, y) * 0.03
         for j in range(len(xy[0])):
-            x2, y2 = xy[0][j]-512, 512-xy[1][j]
+            x2, y2 = xy[0][j]-SLICE_OCTOMAP_SIZE//2, SLICE_OCTOMAP_SIZE//2-xy[1][j]
             dist = math.hypot(x - x2, y - y2)
             if dist < 10:  # ~ 5 meters
                 score[i] += 1.0
 
     if draw:
         import matplotlib.pyplot as plt
-        line = plt.plot(xy[1]-512, 512-xy[0], 'bo')
+        line = plt.plot(xy[1]-SLICE_OCTOMAP_SIZE//2, SLICE_OCTOMAP_SIZE//2-xy[0], 'bo')
         m = score > 3*max(score)/4
-        plt.plot(xy[1][m] - 512, 512 - xy[0][m], 'ro')
+        plt.plot(xy[1][m] - SLICE_OCTOMAP_SIZE//2, SLICE_OCTOMAP_SIZE//2 - xy[0][m], 'ro')
 
         plt.axes().set_aspect('equal', 'datalim')
         plt.show()
@@ -195,11 +197,11 @@ def frontiers(img, start, draw=False):
     print('LEN', len(goals))
     path = find_path(drivable, start, goals, verbose=False)
 
-    img[mask] = FRONTIER
+    img[mask] = STATE_FRONTIER
 
     if path is not None:
         for x, y, z in path:
-            img[y][x] = PATH
+            img[y][x] = STATE_PATH
     else:
         print('Path not found!')
 
@@ -249,9 +251,9 @@ class Octomap(Node):
         x = self.pose3d[0][0] - self.start_xyz[0]
         y = self.pose3d[0][1] - self.start_xyz[1]
         z = self.pose3d[0][2] - self.start_xyz[2]
-        start = int(512 + 2*x), int(512 - 2*y), int((z - self.min_z)/self.resolution)
+        start = int(SLICE_OCTOMAP_SIZE//2 + 2*x), int(SLICE_OCTOMAP_SIZE//2 - 2*y), int((z - self.min_z)/self.resolution)
         num_z_levels = int(round((self.max_z - self.min_z)/self.resolution)) + 1
-        img3d = np.zeros((1024, 1024, num_z_levels), dtype=np.uint8)
+        img3d = np.zeros((SLICE_OCTOMAP_SIZE, SLICE_OCTOMAP_SIZE, num_z_levels), dtype=np.uint8)
         for level in range(num_z_levels):
             img3d[:, :, level] = data2maplevel(data, level=level + int(round(self.min_z/self.resolution)))
 
@@ -259,13 +261,13 @@ class Octomap(Node):
             for i in range(num_z_levels):
                 cv2.imwrite('octo_%03d.png' % i, img3d[:, :, i])
 
-        img2 = np.zeros((1024, 1024, 3), dtype=np.uint8)
+        img2 = np.zeros((SLICE_OCTOMAP_SIZE, SLICE_OCTOMAP_SIZE, 3), dtype=np.uint8)
         level = max(0, min(num_z_levels - 1, start[2]))
         img2[:, :, 0] = img3d[:, :, level]
         img2[:, :, 1] = img3d[:, :, level]
         img2[:, :, 2] = img3d[:, :, level]
         __, path = frontiers(img3d, start)  # this image is modified in place anyway
-        f = np.where(img3d == FRONTIER)
+        f = np.where(img3d == STATE_FRONTIER)
         for x, y, z in zip(f[1], f[0], f[2]):
             if z == start[2]:
                 cv2.circle(img2, (x, y), radius=0, color=(255, 0, 255), thickness=-1)
@@ -287,8 +289,8 @@ class Octomap(Node):
             self.video_writer.write(img2)
 
         if path is not None:
-            self.waypoints = [[(x - 512)/2 + self.start_xyz[0],
-                               (512 - y)/2 + self.start_xyz[1],
+            self.waypoints = [[(x - SLICE_OCTOMAP_SIZE//2)/2 + self.start_xyz[0],
+                               (SLICE_OCTOMAP_SIZE//2 - y)/2 + self.start_xyz[1],
                                z * self.resolution + self.min_z]
                               for x, y, z in path]
 
@@ -328,7 +330,7 @@ if __name__ == "__main__":
                 x = pose3d[0][0]
                 y = pose3d[0][1]
                 z = pose3d[0][2]
-                start = int(512 + 2 * x), int(512 - 2 * y), int(z / resolution)
+                start = int(SLICE_OCTOMAP_SIZE//2 + 2 * x), int(SLICE_OCTOMAP_SIZE//2 - 2 * y), int(z / resolution)
                 continue
 
             assert len(data) % 2 == 0, len(data)  # TODO fix this in cloudsim2osgar
