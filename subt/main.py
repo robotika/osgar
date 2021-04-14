@@ -439,11 +439,12 @@ class SubTChallenge:
                     target_x, target_y, target_z = self.trace.where_to(self.xyz, target_distance, self.trace_z_weight)
 #                print(self.time, self.xyz, (target_x, target_y), math.degrees(self.yaw))
                 x, y = self.xyz[:2]
-                desired_direction = math.atan2(target_y - y, target_x - x) - self.yaw
-                if self.flipped:
-                    desired_direction += math.pi  # symmetry
-                    for angle in self.joint_angle_rad:
-                        desired_direction -= angle
+                yaw = (self.yaw + math.pi) if self.flipped else self.yaw
+                desired_direction = normalizeAnglePIPI(math.atan2(target_y - y, target_x - x) - yaw)
+                if self.symmetric and abs(desired_direction) > math.radians(95):  # including hysteresis
+                    print('Flipping:', math.degrees(desired_direction))
+                    self.flip()
+                    continue
 
                 d = distance3D(self.xyz, [target_x, target_y, target_z])
                 time_to_target = d/self.max_speed
