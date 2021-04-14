@@ -78,7 +78,7 @@
           "init": {
             "depth_params": {
               "vertical_pixel_offset": 16,
-              "lidar_trusted_zone": 0.25
+              "lidar_trusted_zone": 0.5
             },
             "filter_fog": true
           }
@@ -90,7 +90,7 @@
           "init": {
             "depth_params": {
               "vertical_pixel_offset": 16,
-              "lidar_trusted_zone": 0.25
+              "lidar_trusted_zone": 0.5
             },
             "filter_fog": true
           }
