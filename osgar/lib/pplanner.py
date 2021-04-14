@@ -17,7 +17,7 @@ def find_path(img, start, finish, verbose=False):
     """
     if len(img.shape) == 2:
         # old 2D images - add extra dimension
-        img = np.expand_dims(img.copy(), axis=2)
+        img = np.expand_dims(img, axis=2)
         start = (start[0], start[1], 0)
         finish = [(x, y, 0) for x, y in finish]
     max_x, max_y, max_z = img.shape
