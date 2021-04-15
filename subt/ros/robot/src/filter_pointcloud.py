@@ -53,8 +53,8 @@ class FilterPointCloud:
         data = np.frombuffer(msg.data, dtype=np.float32).reshape((480, 640, 6))
         xyz = data[:, :, :3]
         # convert +inf to real number outside sensor range
-        mask = np.isposinf(xyz[:, :, 0])
-        xyz[:, :, :] = np.where(mask, background, xyz)
+        mask = np.isposinf(xyz)
+        xyz[:, :, :] = np.where(mask, self.background, xyz)
 
         # replace close reading (propellers) by -inf (blind zone)
         mask = (xyz[:, :, 0] < 0.32)
