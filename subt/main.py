@@ -303,7 +303,7 @@ class SubTChallenge:
                 if (channel == 'scan' and not self.flipped) or (channel == 'scan_back' and self.flipped) or channel == 'scan360':
                     if self.pause_start_time is None:
                         if self.use_center:
-                            desired_direction = 0
+                            self.go_safely(0)
                         else:
                             desired_direction = normalizeAnglePIPI(
                                     follow_wall_angle(self.scan, radius=radius, right_wall=right_wall, **self.follow_wall_params))
