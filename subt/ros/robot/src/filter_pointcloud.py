@@ -16,57 +16,56 @@ import numpy as np
 
 
 class FilterPointCloud:
-    def __init__(self):
+    def __init__(self,
+                 # Focal length.
+                 fx=554.25469,
+                 # Image dimensions.
+                 image_size=(640, 480),
+                 # Principal point, position of optical axis
+                 principal_point=(640 / 2. + 0.5, 480 / 2 + 0.5),
+                 # Distance outside RGBD camera range (meters)
+                 out_of_range=11.0,
+                 ):
         self.points_subscriber = rospy.Subscriber("/points", PointCloud2, self.points_callback)
         self.points_publisher = rospy.Publisher("/points_cleaned", PointCloud2, queue_size=1)
 
-        # create flat "infinity" background
-        size = 640 * 480
-        self.inf_x = np.zeros(size, dtype=np.float32)
-        self.inf_y = np.zeros(size, dtype=np.float32)
-        self.inf_z = np.zeros(size, dtype=np.float32)
-        fx = 554.25469
-        MAX_VALUE = 11.0
-        for x in range(640):
-            for y in range(480):
-                pos = y * 640 + x
-                self.inf_x[pos] = MAX_VALUE
-                self.inf_y[pos] = MAX_VALUE * (320.5 - x)/fx
-                self.inf_z[pos] = MAX_VALUE * (240.5 - y)/fx
+        self.fx = fx
+        self.camw, self.camh = image_size
+        self.rx, self.ry = principal_point
+
+        # Pixel coordinates relative to the center of the image, with positive
+        # directions to the left and up.
+        pxs = self.rx - np.repeat(
+                np.arange(self.camw).reshape((1, self.camw)), self.camh, axis=0)
+        pys = self.ry - np.repeat(
+                np.arange(self.camh).reshape((self.camh, 1)), self.camw, axis=1)
+        pzs = np.ones((self.camh, self.camw), dtype=np.float) * out_of_range
+        # For each pixel in the image, a vector representing its corresponding
+        # direction in the scene with a unit forward axis.
+        self.background = (np.dstack([pzs, pxs / fx, pys / fx]).T.reshape((3, -1))).reshape((3, self.camw, self.camh)).T
 
     def points_callback(self, msg):
         assert msg.height == 480, msg.height
         assert msg.width == 640, msg.width
         assert msg.point_step == 24, msg.point_step
         assert msg.row_step == 640 * 24, msg.row_step
-        arr = np.frombuffer(msg.data, dtype=np.float32)
-        x = arr[::6].copy()
-        y = arr[1::6].copy()
-        z = arr[2::6].copy()
 
-        # limit infinite readings to 11 meters (out of range)
-        mask = x == float('inf')
-        x[mask] = self.inf_x[mask]
-        y[mask] = self.inf_y[mask]
-        z[mask] = self.inf_z[mask]
+        data = np.frombuffer(msg.data, dtype=np.float32).reshape((480, 640, 6))
+        xyz = data[:, :, :3]
+        # convert +inf to real number outside sensor range
+        mask = np.isposinf(xyz[:, :, 0])
+        xyz[:, :, :] = np.where(mask, background, xyz)
 
-        mask = x < 0.31  # propellers
-        x[mask] = float('-inf')
-        y[mask] = float('-inf')
-        z[mask] = float('-inf')
+        # replace close reading (propellers) by -inf (blind zone)
+        mask = (xyz[:, :, 0] < 0.32)
+        xyz[:, :, :] = np.where(mask, float('-inf'), xyz)
+        new_data = data.tobytes()
 
         fields = [PointField('x', 0, PointField.FLOAT32, 1),
                   PointField('y', 4, PointField.FLOAT32, 1),
                   PointField('z', 8, PointField.FLOAT32, 1)]
 
         cloud_struct = struct.Struct('<fff')
-        buff = ctypes.create_string_buffer(cloud_struct.size * len(x))
-
-        # TODO faster conversion
-        bytes_arr = np.vstack([x, y, z]).flatten('f').tobytes()
-        for i in range(len(bytes_arr)):
-            buff[i] = bytes_arr[i]
-
         new_msg = PointCloud2(header=msg.header,
                               height=msg.height,
                               width=msg.width,
@@ -75,8 +74,7 @@ class FilterPointCloud:
                               fields=fields,
                               point_step=cloud_struct.size,
                               row_step=cloud_struct.size * msg.width,
-                              data=buff.raw)
-
+                              data=new_data)
         self.points_publisher.publish(new_msg)
 
 
