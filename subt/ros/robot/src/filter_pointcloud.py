@@ -51,7 +51,7 @@ class FilterPointCloud:
         assert msg.row_step == 640 * 24, msg.row_step
 
         data = np.frombuffer(msg.data, dtype=np.float32).reshape((480, 640, 6))
-        xyz = data[:, :, :3]
+        xyz = data[:, :, :3].copy()
         # convert +inf to real number outside sensor range
         mask = np.isposinf(xyz)
         xyz[:, :, :] = np.where(mask, self.background, xyz)
