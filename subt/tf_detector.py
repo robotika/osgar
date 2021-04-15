@@ -13,7 +13,7 @@ PATH_TO_CV_GRAPH = "subt/tf_models/cv_graph.pbtxt"
 NAMES_AND_SCORES = {'backpack': 0.36,
                     'survivor': 0.25,
                     'phone': 0.1,
-                    'rope': 0.1,
+                    'rope': 0.25,
                     'helmet': 0.4,
                     'fire_extinguisher': 0.1,
                     'drill': 0.1,
