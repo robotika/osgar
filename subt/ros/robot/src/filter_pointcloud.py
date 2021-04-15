@@ -58,6 +58,7 @@ class FilterPointCloud:
 
         # replace close reading (propellers) by -inf (blind zone)
         mask = (xyz[:, :, 0] < 0.32)
+        mask = np.repeat(mask[:, :, np.newaxis], 3, axis=2)
         xyz[:, :, :] = np.where(mask, float('-inf'), xyz)
         new_data = data.tobytes()
 
