@@ -194,7 +194,6 @@ def frontiers(img, start, draw=False):
 
     # the path planner currently expects goals as tuple (x, y) and operation "in"
     goals = set(map(tuple, goals))
-    print('LEN', len(goals))
     path = find_path(drivable, start, goals, verbose=False)
 
     img[mask] = STATE_FRONTIER
