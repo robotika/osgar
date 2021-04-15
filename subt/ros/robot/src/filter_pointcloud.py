@@ -17,9 +17,7 @@ import numpy as np
 
 class FilterPointCloud:
     def __init__(self):
-#        self.points_subscriber = rospy.Subscriber("/input_points", PointCloud2, self.points_callback)
-        self.points_subscriber = rospy.Subscriber("/A100LXM/rgbd_camera/depth/points", PointCloud2, self.points_callback)
-#        self.points_publisher = rospy.Publisher("/output_points", PointCloud2, queue_size = 1)
+        self.points_subscriber = rospy.Subscriber("/points", PointCloud2, self.points_callback)
         self.points_publisher = rospy.Publisher("/points_cleaned", PointCloud2, queue_size=1)
 
         # create flat "infinity" background

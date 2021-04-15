@@ -146,7 +146,7 @@
 
   <!-- Run a passthrough filter to remove drone propellers -->
   <node name="filter_pointcloud" pkg="robot" type="filter_pointcloud.py">
-    <remap from="/A100LXM/rgbd_camera/depth/points" to="/$(arg robot_name)/rgbd_camera/depth/points"/>
+    <remap from="/points" to="/$(arg robot_name)/rgbd_camera/depth/points"/>
     <remap from="/points_cleaned" to="/$(arg robot_name)/rgbd_camera/depth/points_cleaned"/>
   </node>
 
