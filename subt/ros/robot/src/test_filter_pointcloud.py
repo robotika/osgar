@@ -8,7 +8,7 @@ import sys
 sys.modules['rospy'] = MagicMock()
 sys.modules['sensor_msgs'] = MagicMock()
 sys.modules['sensor_msgs.msg'] = MagicMock()
-import filter_pointcloud
+from subt.ros.robot.src import filter_pointcloud
 
 
 class Msg:
