@@ -12,7 +12,8 @@ import filter_pointcloud
 class FilterPointCloudTest(unittest.TestCase):
 
     def test_usage(self):
-        pass
+        fpc = filter_pointcloud.FilterPointCloud()
+#        print(fpc.background)
 
 
 if __name__ == "__main__":

@@ -39,10 +39,10 @@ class FilterPointCloud:
                 np.arange(self.camw).reshape((1, self.camw)), self.camh, axis=0)
         pys = self.ry - np.repeat(
                 np.arange(self.camh).reshape((self.camh, 1)), self.camw, axis=1)
-        pzs = np.ones((self.camh, self.camw), dtype=np.float) * out_of_range
+        pzs = np.ones((self.camh, self.camw), dtype=np.float)
         # For each pixel in the image, a vector representing its corresponding
         # direction in the scene with a unit forward axis.
-        self.background = (np.dstack([pzs, pxs / fx, pys / fx]).T.reshape((3, -1))).reshape((3, self.camw, self.camh)).T
+        self.background = (np.dstack([pzs, pxs / fx, pys / fx]).T.reshape((3, -1))).reshape((3, self.camw, self.camh)).T * out_of_range
 
     def points_callback(self, msg):
         assert msg.height == 480, msg.height
