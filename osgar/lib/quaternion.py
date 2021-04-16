@@ -56,7 +56,7 @@ def euler_to_quaternion(yaw, pitch, roll):
 def euler_zyx(quaternion):
     x0, y0, z0, w0 = normalize(quaternion)
     ax =  math.atan2(2*(w0*x0+y0*z0), 1-2*(x0*x0+y0*y0))
-    ay =  math.asin(2*(w0*y0-z0*x0))
+    ay =  math.asin(max(-1, min(1, 2*(w0*y0-z0*x0))))  # cliping the range because of posible small overflows
     az =  math.atan2(2*(w0*z0+x0*y0), 1-2*(y0*y0+z0*z0))
     return [az, ay, ax]
 

@@ -148,14 +148,20 @@ def depth2danger(depth, params):
     return danger
 
 
-def depth2dist(depth, params, pitch=None, roll=None, debug_col=None):
+def depth2dist(depth, params, pitch=None, roll=None, yaw=None, debug_col=None):
     # return line in mm corresponding to scan
     # optional pitch and roll angles are in radians
     # warning: there is a bug (?) in either Osgar or in SubT and the angles
     # are as if the robot was upside down.
+    yaw_rot = np.asmatrix(np.eye(3))
     pitch_rot = np.asmatrix(np.eye(3))
     roll_rot = np.asmatrix(np.eye(3))
     # http://planning.cs.uiuc.edu/node102.html
+    if yaw is not None:
+        yaw_rot = np.matrix(
+                [[np.cos(yaw), -np.sin(yaw), 0.0],
+                 [np.sin(yaw), np.cos(yaw), 0.0],
+                 [0.0, 0.0, 1.0]])
     if pitch is not None:
         pitch_rot = np.matrix(
                 [[np.cos(pitch), 0.0, np.sin(pitch)],
@@ -166,7 +172,7 @@ def depth2dist(depth, params, pitch=None, roll=None, debug_col=None):
                 [[1.0, 0.0, 0.0],
                  [0.0, np.cos(roll), -np.sin(roll)],
                  [0.0, np.sin(roll), np.cos(roll)]])
-    rot = pitch_rot * roll_rot
+    rot = yaw_rot * pitch_rot * roll_rot
 
     # 3D coordinates of points detected by the depth camera, converted to
     # robot's coordinate system.

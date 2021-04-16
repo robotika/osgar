@@ -183,7 +183,7 @@ class DepthToScan(Node):
                 __robot_xyz, robot_rotation = robot_pose
                 __camera_xyz, camera_rotation = camera_pose
                 full_rotation = multiply_quaternions(robot_rotation, camera_rotation)
-                __yaw, pitch, roll = euler_zyx(full_rotation)
+                yaw, pitch, roll = euler_zyx(full_rotation)
                 depth = decompress_depth(depth_compressed)
 
             if depth is None:
@@ -196,7 +196,7 @@ class DepthToScan(Node):
             else:
                 scan = self.scan
 
-            depth_scan = depth2dist(depth, self.depth_params, pitch, roll)
+            depth_scan = depth2dist(depth, self.depth_params, pitch, roll, yaw)
             new_scan = adjust_scan(scan, depth_scan, self.depth_params)
             self.publish('scan', new_scan.tolist())
 

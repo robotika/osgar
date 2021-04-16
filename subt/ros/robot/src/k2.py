@@ -86,6 +86,8 @@ class K2Controller:
                 min(MAX_JOINT_ANGLE,
                     2 * math.atan2(self.desired.angular.z * L,
                                    self.desired.linear.x)))
+        if self.desired.linear.x < 0:
+            desired_joint_angle *= -1
         #print('current', [math.degrees(alpha) for alpha in euler_zyx(joint_rot)], 'desired', math.degrees(desired_joint_angle), 'because of', math.degrees(self.desired.angular.z))
 
         P = 5.0  # P control.
