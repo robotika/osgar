@@ -60,7 +60,7 @@ class FilterPointCloud:
         mask = (xyz[:, :, 0] < 0.32)
         mask = np.repeat(mask[:, :, np.newaxis], 3, axis=2)
         xyz[:, :, :] = np.where(mask, float('-inf'), xyz)
-        new_data = data.tobytes()
+        new_data = xyz.tobytes()
 
         fields = [PointField('x', 0, PointField.FLOAT32, 1),
                   PointField('y', 4, PointField.FLOAT32, 1),
@@ -77,6 +77,7 @@ class FilterPointCloud:
                               row_step=cloud_struct.size * msg.width,
                               data=new_data)
         self.points_publisher.publish(new_msg)
+        self.debug_data = new_data
 
 
 if __name__ == "__main__":
