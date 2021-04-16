@@ -48,8 +48,6 @@ def follow_wall_angle(laser_data, radius, right_wall=False, internal_reflection_
     mask = (data <= internal_reflection_threshold)  # ignore internal reflections
     data[mask] = 0
 
-    max_wall_distance *= 1000 # m -> mm
-
     # To make the code simpler, let's pretend we follow the right wall and flip
     # the result in the end if we are actually following the left wall.
     if not right_wall:
@@ -90,6 +88,11 @@ def follow_wall_angle(laser_data, radius, right_wall=False, internal_reflection_
             if dist > max_wall_distance or dist == 0:
                 continue
             rel_idx = i - last_wall_idx
+            if rel_idx * deg_resolution >= 180:
+                # We are connecting two points with a line behind the robot.
+                # Such a wall does not matter for navigation and should not
+                # block the robot.
+                break
             sin_angle = math.sin(rel_idx * math.radians(deg_resolution))
             cos_angle = math.cos(rel_idx * math.radians(deg_resolution))
             # How far is the currently observed point from the previous wall point?

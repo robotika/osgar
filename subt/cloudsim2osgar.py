@@ -305,13 +305,12 @@ class main:
             robot_pose = full_robot_translation, full_robot_rotation
         # Position of the camera relative to the robot.
         try:
-            camera_xyz, camera_rot = self.tf.lookupTransform(
-                    self.robot_name, msg.header.frame_id, rospy.Time(0))
             # RTABMAP produces rotation in a visual coordinate frame (Z axis
             # forward), but we need to match the world frame (X axis forward)
             # of robot_pose.
-            VISUAL_TO_WORLD = [0.5, -0.5, 0.5, 0.5]
-            camera_pose = camera_xyz, multiply_quaternions(VISUAL_TO_WORLD, camera_rot)
+            camera_frame_id = msg.header.frame_id.replace("_optical", "")
+            camera_pose = self.tf.lookupTransform(
+                    self.robot_name, camera_frame_id, rospy.Time(0))
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             return None
         rgb = msg.rgb_compressed.data

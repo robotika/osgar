@@ -4,17 +4,16 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["emergency_stop", "scan", "artf", "sim_time_sec", "acc", "robot_name"],
+          "in": ["emergency_stop", "scan", "scan_back", "artf", "sim_time_sec", "acc", "robot_name"],
           "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout"],
           "init": {
             "max_speed": 0.5,
-            "symmetric": false,
+            "symmetric": true,
             "virtual_bumper_sec": 60,
             "virtual_bumper_radius": 10.0,
             "virtual_world": true,
             "follow_wall": {
-              "max_wall_distance": 7.6,
-              "internal_reflection_threshold": 0
+              "max_wall_distance": 7.6
             }
          }
       },
@@ -79,7 +78,19 @@
           "init": {
             "depth_params": {
               "vertical_pixel_offset": 16,
-              "lidar_trusted_zone": 0.25
+              "lidar_trusted_zone": 0.5
+            },
+            "filter_fog": true
+          }
+      },
+      "depth2scan_rear": {
+          "driver": "subt.depth2scan:DepthToScan",
+          "in": ["rgbd", "scan"],
+          "out": ["scan"],
+          "init": {
+            "depth_params": {
+              "vertical_pixel_offset": 16,
+              "lidar_trusted_zone": 0.5
             },
             "filter_fog": true
           }
@@ -147,12 +158,15 @@
               ["fromrospy.scan_front", "detector.scan"],
               ["fromrospy.scan_rear", "detector_rear.scan"],
               ["fromrospy.scan_front", "depth2scan.scan"],
+              ["fromrospy.scan_rear", "depth2scan_rear.scan"],
 
               ["fromrospy.rgbd_front", "depth2scan.rgbd"],
               ["fromrospy.rgbd_front", "detector.rgbd"],
+              ["fromrospy.rgbd_rear", "depth2scan_rear.rgbd"],
               ["fromrospy.rgbd_rear", "detector_rear.rgbd"],
 
               ["depth2scan.scan", "app.scan"],
+              ["depth2scan_rear.scan", "app.scan_back"],
 
               ["fromrospy.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
