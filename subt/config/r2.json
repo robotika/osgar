@@ -8,6 +8,7 @@
           "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout"],
           "init": {
             "max_speed": 0.5,
+            "rotation_p": 0.8,
             "symmetric": false,
             "virtual_bumper_sec": 60,
             "virtual_bumper_radius": 10.0,
