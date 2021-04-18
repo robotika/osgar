@@ -98,7 +98,10 @@
               "min_z": -0.2,
               "max_z": 0.4,
               "max_slope": -3.14,
-              "vertical_diff_limit": 1.4835, "vd_comment": "radians(85)"
+              "vertical_diff_limit": 1.4835, "vd_comment": "radians(85)",
+              "stride": 2,
+              "noise_filter_window": [12, 6],
+              "noise_filter_threshold": 30
             },
             "filter_fog": true
           }

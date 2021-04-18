@@ -78,7 +78,10 @@
           "init": {
             "depth_params": {
               "vertical_pixel_offset": 16,
-              "lidar_trusted_zone": 0.5
+              "lidar_trusted_zone": 0.5,
+              "stride": 2,
+              "noise_filter_window": [12, 6],
+              "noise_filter_threshold": 30
             },
             "filter_fog": true
           }
@@ -90,7 +93,10 @@
           "init": {
             "depth_params": {
               "vertical_pixel_offset": 16,
-              "lidar_trusted_zone": 0.5
+              "lidar_trusted_zone": 0.5,
+              "stride": 2,
+              "noise_filter_window": [12, 6],
+              "noise_filter_threshold": 30
             },
             "filter_fog": true
           }

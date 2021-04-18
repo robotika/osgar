@@ -86,7 +86,10 @@
               "vertical_diff_limit": 0.698, "vd_comment": "radians(40)",
               "max_slope": -0.4537856, "ms_comment": "radians(-26)",
               "slope_length_scale_factor": 0.4,
-              "slope_length_power_factor": -0.05
+              "slope_length_power_factor": -0.05,
+              "stride": 2,
+              "noise_filter_window": [12, 6],
+              "noise_filter_threshold": 30
             },
             "filter_fog": true
           }
