@@ -44,7 +44,7 @@ class FilterPointCloud:
         # direction in the scene with a unit forward axis.
         self.background = (np.dstack([pzs, pxs / fx, pys / fx]).T.reshape((3, -1))).reshape((3, self.camw, self.camh)).T * out_of_range
 
-    def points_callback(self, msg):
+    def filter_points(self, msg):
         assert msg.height == 480, msg.height
         assert msg.width == 640, msg.width
         assert msg.point_step == 24, msg.point_step
@@ -61,7 +61,10 @@ class FilterPointCloud:
         mask = np.repeat(mask[:, :, np.newaxis], 3, axis=2)
         xyz[:, :, :] = np.where(mask, float('-inf'), xyz)
         new_data = xyz.tobytes()
+        return new_data
 
+    def points_callback(self, msg):
+        new_data = self.filter_points(msg)
         fields = [PointField('x', 0, PointField.FLOAT32, 1),
                   PointField('y', 4, PointField.FLOAT32, 1),
                   PointField('z', 8, PointField.FLOAT32, 1)]
@@ -77,7 +80,6 @@ class FilterPointCloud:
                               row_step=cloud_struct.size * msg.width,
                               data=new_data)
         self.points_publisher.publish(new_msg)
-        self.debug_data = new_data
 
 
 if __name__ == "__main__":
