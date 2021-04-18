@@ -40,6 +40,8 @@ class CvDetector:
             cv_graph = os.path.join(os.path.dirname(__file__), '../../../cv_graph.pbtxt')
 
         self.cvNet = cv2.dnn.readNetFromTensorflow(graph_path, cv_graph)
+        self.cvNet.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
+        self.cvNet.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL)
 
     def subt_detector(self, img):
         ret  = []
