@@ -192,7 +192,6 @@ class main:
         # main thread receives data from osgar and sends it to ROS
         while True:
             channel, data = self.bus.listen()
-            rospy.logdebug("receiving: {} {}".format(channel, data))
             # switch on channel to feed different ROS publishers
             if channel in publishers:
                 if channel == 'cmd_vel':
@@ -202,6 +201,7 @@ class main:
                     vel_msg.angular.x, vel_msg.angular.y, vel_msg.angular.z = angular
                     publishers[channel].publish(vel_msg)
                 else:
+                    rospy.logdebug("receiving: {} {}".format(channel, data))
                     publishers[channel].publish(*data)  # just guessing for Empty, where ([],) is wrong
             else:
                 rospy.loginfo("ignoring: {} {}".format(channel, data))
