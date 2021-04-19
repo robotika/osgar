@@ -19,6 +19,7 @@ import numpy as np
 from sensor_msgs.msg import Imu, LaserScan, PointCloud2
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty, Bool, Int32, String
+from geometry_msgs.msg import Twist
 from sensor_msgs.msg import BatteryState, FluidPressure
 from octomap_msgs.msg import Octomap
 from subt_msgs.srv import PoseFromArtifact
@@ -103,6 +104,7 @@ class main:
             if robot_is_marsupial == 'true':
                 rospy.loginfo("X4 is marsupial")
                 publishers['detach'] = rospy.Publisher('/' + robot_name + '/detach', Empty, queue_size=1)
+            publishers['cmd_vel'] = rospy.Publisher('/' + robot_name + '/cmd_vel', Twist, queue_size=1)
         elif robot_config == "TEAMBASE":
             rospy.loginfo("teambase")
         elif robot_config.startswith("ROBOTIKA_FREYJA_SENSOR_CONFIG"):
@@ -193,7 +195,14 @@ class main:
             rospy.logdebug("receiving: {} {}".format(channel, data))
             # switch on channel to feed different ROS publishers
             if channel in publishers:
-                publishers[channel].publish(*data)  # just guessing for Empty, where ([],) is wrong
+                if channel == 'cmd_vel':
+                    linear, angular = data
+                    vel_msg = Twist()
+                    vel_msg.linear.x, vel_msg.linear.y, vel_msg.linear.z = linear
+                    vel_msg.angular.x, vel_msg.angular.y, vel_msg.angular.z = angular
+                    publishers[channel].publish(vel_msg)
+                else:
+                    publishers[channel].publish(*data)  # just guessing for Empty, where ([],) is wrong
             else:
                 rospy.loginfo("ignoring: {} {}".format(channel, data))
 
