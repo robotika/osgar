@@ -96,6 +96,7 @@ class main:
         ]
 
         publishers = {}
+        publishers['cmd_vel'] = (rospy.Publisher('/' + robot_name + '/cmd_vel', Twist, queue_size=1), twist)
 
         self.tf = tf.TransformListener()
 
@@ -116,7 +117,6 @@ class main:
             if robot_is_marsupial == 'true':
                 rospy.loginfo("X4 is marsupial")
                 publishers['detach'] = (rospy.Publisher('/' + robot_name + '/detach', Empty, queue_size=1), empty)
-            publishers['cmd_vel'] = (rospy.Publisher('/' + robot_name + '/cmd_vel', Twist, queue_size=1), twist)
         elif robot_config == "TEAMBASE":
             rospy.loginfo("teambase")
         elif robot_config.startswith("ROBOTIKA_FREYJA_SENSOR_CONFIG"):
