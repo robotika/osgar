@@ -37,8 +37,6 @@ class Push:
             with contextlib.closing(socket):
                 while True:
                     dt, channel, data = self.bus.listen()
-                    print("*"*50)
-                    print("sending:", data)
                     raw = msgpack.packb(data, use_bin_type=True)
                     socket.send_multipart([bytes(channel, 'ascii'), raw])
         except zmq.ZMQError as e:
