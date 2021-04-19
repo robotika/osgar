@@ -106,6 +106,9 @@
       "torospy": {
           "driver": "subt.push:Push"
       },
+      "twister": {
+          "driver": "subt.twistwrap:TwistWrap"
+      },
       "logimage": {
           "driver": "subt.image_extractor:ImageExtractor",
           "in": ["rgbd"],
@@ -146,7 +149,8 @@
         "driver": "subt.octomap:Octomap"
       }
     },
-    "links": [["app.desired_speed", "rosmsg.desired_speed"],
+    "links": [["app.desired_speed", "twister.desired_speed"],
+              ["twister.cmd_vel", "torospy.cmd_vel"],
               ["app.stdout", "rosmsg.stdout"],
               ["fromrospy.robot_name", "app.robot_name"],
 
