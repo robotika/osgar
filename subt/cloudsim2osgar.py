@@ -19,6 +19,7 @@ import numpy as np
 from sensor_msgs.msg import Imu, LaserScan, PointCloud2
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty, Bool, Int32, String
+from geometry_msgs.msg import Twist
 from sensor_msgs.msg import BatteryState, FluidPressure
 from octomap_msgs.msg import Octomap
 from subt_msgs.srv import PoseFromArtifact
@@ -68,6 +69,18 @@ class Bus:
         sys.exit()
 
 
+def empty(data):
+    return Empty()
+
+
+def twist(data):
+    linear, angular = data
+    vel_msg = Twist()
+    vel_msg.linear.x, vel_msg.linear.y, vel_msg.linear.z = linear
+    vel_msg.angular.x, vel_msg.angular.y, vel_msg.angular.z = angular
+    return vel_msg
+
+
 class main:
     def __init__(self, robot_name, robot_config, robot_is_marsupial):
         rospy.init_node('cloudsim2osgar', log_level=rospy.DEBUG)
@@ -83,6 +96,7 @@ class main:
         ]
 
         publishers = {}
+        publishers['cmd_vel'] = (rospy.Publisher('/' + robot_name + '/cmd_vel', Twist, queue_size=1), twist)
 
         self.tf = tf.TransformListener()
 
@@ -102,13 +116,13 @@ class main:
                 topics.append(('/mapping/octomap_binary', Octomap, self.octomap, ('octomap',)))
             if robot_is_marsupial == 'true':
                 rospy.loginfo("X4 is marsupial")
-                publishers['detach'] = rospy.Publisher('/' + robot_name + '/detach', Empty, queue_size=1)
+                publishers['detach'] = (rospy.Publisher('/' + robot_name + '/detach', Empty, queue_size=1), empty)
         elif robot_config == "TEAMBASE":
             rospy.loginfo("teambase")
         elif robot_config.startswith("ROBOTIKA_FREYJA_SENSOR_CONFIG"):
             if robot_config.endswith("_2"):
                 rospy.loginfo("freya 2 (with comms beacons)")
-                publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
+                publishers['deploy'] = (rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1), empty)
             else:
                 rospy.loginfo("freya 1 (basic)")
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
@@ -121,7 +135,7 @@ class main:
         elif robot_config.startswith("ROBOTIKA_KLOUBAK_SENSOR_CONFIG"):
             if robot_config.endswith("_2"):
                 rospy.loginfo("k2 2 (with comms beacons)")
-                publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
+                publishers['deploy'] = (rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1), empty)
             else:
                 rospy.loginfo("k2 1 (basic)")
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
@@ -132,7 +146,7 @@ class main:
         elif robot_config.startswith("EXPLORER_R2_SENSOR_CONFIG"):
             if robot_config.endswith("_2"):
                 rospy.loginfo("explorer R2 #2 (with comms beacons)")
-                publishers['deploy'] = rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1)
+                publishers['deploy'] = (rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1), empty)
             else:
                 rospy.loginfo("explorer R2 #1 (basic)")
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
@@ -190,10 +204,14 @@ class main:
         # main thread receives data from osgar and sends it to ROS
         while True:
             channel, data = self.bus.listen()
-            rospy.logdebug("receiving: {} {}".format(channel, data))
             # switch on channel to feed different ROS publishers
             if channel in publishers:
-                publishers[channel].publish(*data)  # just guessing for Empty, where ([],) is wrong
+                publisher, handle = publishers[channel]
+                publisher.publish(handle(data))
+
+                if channel != 'cmd_vel':
+                    # for debugging breadcrumbs deployment and marsupial detachment
+                    rospy.logdebug("receiving: {} {}".format(channel, data))
             else:
                 rospy.loginfo("ignoring: {} {}".format(channel, data))
 

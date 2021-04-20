@@ -152,7 +152,7 @@
       }
     },
     "links": [["app.desired_speed", "drone.desired_speed"],
-              ["drone.desired_speed_3d", "rosmsg.desired_speed_3d"],
+              ["drone.desired_speed_3d", "torospy.cmd_vel"],
               ["app.stdout", "rosmsg.stdout"],
               ["fromrospy.robot_name", "app.robot_name"],
 

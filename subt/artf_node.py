@@ -18,7 +18,7 @@ from osgar.node import Node
 from osgar.bus import BusShutdownException
 from osgar.lib.depth import decompress as decompress_depth
 from osgar.lib.quaternion import rotate_vector
-from subt.artifacts import (RESCUE_RANDY, BACKPACK, PHONE, HELMET, ROPE, EXTINGUISHER, DRILL, VENT)
+from subt.artifacts import (RESCUE_RANDY, BACKPACK, PHONE, HELMET, ROPE, EXTINGUISHER, DRILL, VENT, CUBE)
 
 
 NAME2IGN = {
@@ -29,7 +29,8 @@ NAME2IGN = {
     'rope': ROPE,
     'fire_extinguisher': EXTINGUISHER,
     'drill': DRILL,
-    'vent': VENT
+    'vent': VENT,
+    'cube' : CUBE
 }
 
 
@@ -104,7 +105,7 @@ class ArtifactDetectorDNN(Node):
         self.max_depth = config.get('max_depth', 10.0)
 
     def create_detector(self):
-        model = os.path.join(os.path.dirname(__file__), '../../../mdnet4.64.64.13.4.relu.pth')
+        model = os.path.join(os.path.dirname(__file__), '../../../mdnet5.128.128.13.4.elu.pth')
         confidence_thresholds = {
             'survivor': 0.8,
             'backpack': 0.8,
@@ -113,7 +114,8 @@ class ArtifactDetectorDNN(Node):
             'rope': 0.6,
             'fire_extinguisher': 0.5,
             'drill': 0.5,
-            'vent': 0.5
+            'vent': 0.5,
+            'cube' : 0.5
         }
         max_gap = 16
         min_group_size = 2
