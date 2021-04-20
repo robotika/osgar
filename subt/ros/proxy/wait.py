@@ -79,6 +79,8 @@ def detect_config(robot_name):
         return "ROBOTIKA_X2_SENSOR_CONFIG_1"
     elif "ssci_x4_sensor_config_2" in robot_description:
         return "SSCI_X4_SENSOR_CONFIG_2"
+    elif "ctu_cras_norlab_x500_sensor_config_1" in robot_description:
+        return "CTU_CRAS_NORLAB_X500_SENSOR_CONFIG_1"
     elif "TeamBase" in robot_description:
         return "TEAMBASE"
     elif "robotika_freyja_sensor_config" in robot_description:
