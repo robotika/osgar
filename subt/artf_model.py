@@ -5,7 +5,7 @@ import torch
 
 ARTIFACT_CATEGORIES = dict((name, artf_id) for artf_id, name in enumerate([
     'nothing', 'backpack', 'phone', 'survivor', 'vent', 'robot', 'helmet',
-    'rope', 'breadcrumb', 'drill', 'fire_extinguisher'
+    'rope', 'breadcrumb', 'drill', 'fire_extinguisher', 'cube'
     #'toolbox', 'electrical_box', 'radio', 'valve'
 ]))
 
@@ -167,7 +167,7 @@ def load_dataset(labels_config, workers=1,  *args, **kwargs):
     import os
 
     with open(labels_config, 'r') as labels_file:
-        labels = json.loads(labels_file.read())
+        labels = list(json.loads(labels_file.read()).items())
     random.shuffle(labels)
     img_root = os.path.dirname(labels_config)
 
@@ -177,7 +177,7 @@ def load_dataset(labels_config, workers=1,  *args, **kwargs):
 
     import multiprocessing
     sharded_labels = [[]] * workers
-    for i, label in enumerate(labels.values()):
+    for i, label in enumerate(l for (f, l) in labels):
         sharded_labels[(i % workers)].append(label)
     result_queue = multiprocessing.Queue()
     loaders = [multiprocessing.Process(
@@ -195,7 +195,7 @@ def load_dataset(labels_config, workers=1,  *args, **kwargs):
         print('Waiting for loader:', i)
         loader.join()
         print('Loader', i, 'done.')
-    return torch.utils.data.ChainDataset(partial_datasets)
+    return torch.utils.data.ConcatDataset(partial_datasets)
 
 
 class ChannelFirst(torch.nn.Module):
@@ -245,6 +245,7 @@ class MaybeSoftMax(torch.nn.Module):
 def activation_fn(fn):
     return {
         'relu': torch.nn.ReLU,
+        'elu' : torch.nn.ELU,
         'gelu': torch.nn.GELU,
         'swish': Swish,
         'hswish': HSwish
@@ -442,19 +443,20 @@ if __name__ == '__main__':
                         type=json.loads,
                         default={
                             "type": "mdnet0",
-                            "embedding-size-0": 64,
-                            "embedding-size-1": 64,
-                            "activation": "relu",
+                            "embedding-size-0": 128,
+                            "embedding-size-1": 128,
+                            "activation": "elu",
                             "dropout-probability": 0.4
                         })
     parser.add_argument('--batch-size',
                         type=int,
-                        default=1024,
+                        default=8192,
                         help='Training batch size.')
     parser.add_argument('--num-loading-workers',
                         type=int,
                         default=4,
-                        help='Training batch size.')
+                        help='Number of threads loading and generating ' +
+                        'training samples.')
     parser.add_argument('--epochs',
                         type=int,
                         default=230,
@@ -480,7 +482,7 @@ if __name__ == '__main__':
                         'training samples.')
     parser.add_argument('--lr',
                         type=float,
-                        default=10.0,
+                        default=0.0001,
                         help='Learning rate.')
     parser.add_argument('--gamma',
                         type=float,
@@ -491,20 +493,37 @@ if __name__ == '__main__':
                         help='Path to where to save the trained model.')
     parser.add_argument('--evaluation-frequency',
                         type=int,
-                        default=10,
+                        default=4,
                         metavar='N',
                         help='Evaluation of the model done every N epochs.')
+    parser.add_argument('--device', help='Which device to run on. If the ' +
+            'flag is not set, training runs on "cuda", if available, or on ' +
+            '"cpu" otherwise.')
     args = parser.parse_args()
 
-    use_cuda = torch.cuda.is_available()
+    if args.device:
+        device = torch.device(args.device)
+        use_cuda = args.device.startswith('cuda')
+    else:
+        use_cuda = torch.cuda.is_available()
+        device = torch.device("cuda" if use_cuda else "cpu")
     kwargs = {
         'num_workers': args.num_loading_workers,
         'pin_memory': False
     } if use_cuda else {}
-    device = torch.device("cuda" if use_cuda else "cpu")
     print('Device:', device)
     torch.manual_seed(41)
     random.seed(41)
+
+    # No downscaling during training, because dataset loader already takes care
+    # of that.
+    args.model_config['downscale'] = 1
+    args.model_config['receptive-field'] = args.receptive_field
+    args.model_config['categories'] = ARTIFACT_CATEGORIES
+    model = create_model(args.model_config)
+    print('Created model.')
+
+    model = model.float().to(device=device)
 
     image_transforms = torchvision.transforms.Compose([
         torchvision.transforms.RandomAffine(
@@ -529,8 +548,9 @@ if __name__ == '__main__':
         nothing_stride=args.nothing_stride)
     training_loader = torch.utils.data.DataLoader(training_set,
                                                   batch_size=args.batch_size,
+                                                  drop_last=True,
                                                   **kwargs)
-    print('Loaded traning set.')
+    print('Loaded traning set:', len(training_set))
 
     test_set = load_dataset(labels_config=args.labels,
                             workers=args.num_loading_workers,
@@ -540,25 +560,12 @@ if __name__ == '__main__':
                             num_transforms=args.num_testing_transforms,
                             a_few_negatives=args.a_few_negatives,
                             nothing_stride=args.nothing_stride)
-    test_set = training_set
     test_loader = torch.utils.data.DataLoader(test_set,
                                               batch_size=args.batch_size,
                                               **kwargs)
-    print('Loaded test set.')
+    print('Loaded test set:', len(test_set))
 
-    # No downscaling during training, because dataset loader already takes care
-    # of that.
-    args.model_config['downscale'] = 1
-    args.model_config['receptive-field'] = args.receptive_field
-    args.model_config['categories'] = ARTIFACT_CATEGORIES
-    model = create_model(args.model_config)
-    print('Created model.')
-
-    model = model.float()
-    if use_cuda:
-        model = model.cuda()
-
-    optimizer = torch.optim.Adadelta(model.parameters(), lr=args.lr)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
                                                 step_size=1,
                                                 gamma=args.gamma)
