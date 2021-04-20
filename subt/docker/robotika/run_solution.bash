@@ -33,6 +33,13 @@ case $ROBOT_CONFIG in
     SPEED=1.5
     WALLDIST=1.2
     ;;
+  "CTU_CRAS_NORLAB_X500_SENSOR_CONFIG_1"):
+    echo "Robot is X500 drone"
+    LAUNCH_FILE="robot x500.launch"
+    CONFIG_FILES=("zmq-subt-x4.json" "config/x500.json")
+    SPEED=1.5
+    WALLDIST=1.2
+    ;;
   "TEAMBASE"):
     echo "Robot is TEAMBASE"
     LAUNCH_FILE="proxy teambase.launch"
