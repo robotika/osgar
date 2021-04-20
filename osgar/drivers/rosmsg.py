@@ -2,7 +2,6 @@
   ROS (Robot Operating System) Message Parser
 """
 
-from datetime import timedelta
 from threading import Thread
 import struct
 import math
@@ -207,8 +206,6 @@ class ROSMsgParser(Thread):
         self.timestamp_sec = None
         self.timestamp_nsec = None
 
-        self.last_cmd_timestamp = None
-
         # initial message contains structure
         self.header = None
         self.count = 0
@@ -297,13 +294,9 @@ class ROSMsgParser(Thread):
             if prev != self.timestamp_sec:
                 self.bus.publish('sim_time_sec', self.timestamp_sec)
 
-            now = timedelta(seconds=self.timestamp_sec,
-                            milliseconds=self.timestamp_nsec//1000000)
-            if self.timestamp_sec > 0 and (
-                    self.last_cmd_timestamp is None or
-                    now - self.last_cmd_timestamp >= timedelta(milliseconds=48)):  # ~20 Hz
+            ms = self.timestamp_nsec//1000000
+            if self.timestamp_sec > 0 and ms % 50 == 0:  # 20Hz
                 self.publish_desired_speed()
-                self.last_cmd_timestamp = now
 
         elif b'\0' in packet[:MAX_TOPIC_NAME_LENGTH]:
             ros_name = packet[:packet.index(b'\0')].decode('ascii')
