@@ -43,8 +43,8 @@
     <remap from="rgb/camera_info" to="$(arg robot_name)/down_rgbd/optical/camera_info"/>
     <remap from="depth/image" to="/$(arg robot_name)/down_rgbd/optical/depth/image_raw"/>
     <!-- Output -->
-    <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/rear/compressed"/>
-    <remap from="rgbd_image" to="/rtabmap/rgbd/rear"/>
+    <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/down/compressed"/>
+    <remap from="rgbd_image" to="/rtabmap/rgbd/down"/>
   </node>
 
   <!-- RGBD odometry -->
