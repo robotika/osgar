@@ -17,10 +17,12 @@ class PointsToScan(Node):
         self.debug_arr = []
 
     def on_points(self, data):
-        assert data.shape == (16, 1800, 3), data.shape
+        # support Velodyne VLC-16 and X500 lidar
+        assert data.shape in [(16, 1800, 3), (64, 1024, 3)], data.shape
+        num_lidars, num_samples, __ = data.shape
         self.debug_arr = data
-        index = (np.arange(360) * (1800/360)).astype(int)
-        xyz = data[8][index]  # mid index for 16 lidars
+        index = (np.arange(360) * (num_samples/360)).astype(int)
+        xyz = data[num_lidars//2][index]  # mid index for all lidars
         X, Y, Z = xyz[:, 0], xyz[:, 1], xyz[:, 2]
         dist_i = (np.hypot(X, Y) * 1000).astype(int)
         mask = dist_i < 400

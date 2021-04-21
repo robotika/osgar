@@ -366,11 +366,11 @@ class main:
             self.bus.publish('rgbd_rear', rgbd)
 
     def convert_points(self, msg):
-        # accept only Velodyne VLC-16 (for the ver0)
-        assert msg.height == 16, msg.height
-        assert msg.width == 1800, msg.width
+        # accept only Velodyne VLC-16 + CTU X500 sensor
+        assert msg.height in [16, 64], msg.height
+        assert msg.width in [1800, 1024], msg.width
         assert msg.point_step == 32, msg.point_step
-        assert msg.row_step == 57600, msg.row_step
+        assert msg.row_step in [57600, 32768], msg.row_step
         arr = np.frombuffer(msg.data, dtype=np.float32)
         points3d = arr.reshape((msg.height, msg.width, 8))[:, :, 0:3]  # keep only (x, y, z)
         return points3d
