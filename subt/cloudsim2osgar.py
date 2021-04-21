@@ -120,13 +120,11 @@ class main:
 
         elif robot_config == "CTU_CRAS_NORLAB_X500_SENSOR_CONFIG_1":
             rospy.loginfo("X500 drone")
-#            topics.append(('/' + robot_name + '/top_scan', LaserScan, self.top_scan, ('top_scan',)))
-#            topics.append(('/' + robot_name + '/bottom_scan', LaserScan, self.bottom_scan, ('bottom_scan',)))
             topics.append(('/' + robot_name + '/points', PointCloud2, self.points, ('points',)))
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/air_pressure', FluidPressure, self.air_pressure, ('air_pressure',)))
-#            topics.append(('/' + robot_name + '/front_scan', LaserScan, self.scan360, ('scan360',)))
-            topics.append(('/rtabmap/rgbd/compressed', RGBDImage, self.rgbd_front, ('rgbd_front',)))
+            topics.append(('/rtabmap/rgbd/up/compressed', RGBDImage, self.rgbd_up, ('rgbd_up',)))
+            topics.append(('/rtabmap/rgbd/down/compressed', RGBDImage, self.rgbd_down, ('rgbd_down',)))
             if robot_name.endswith('XM'):
                 topics.append(('/mapping/octomap_binary', Octomap, self.octomap, ('octomap',)))
             if robot_is_marsupial == 'true':
@@ -364,6 +362,20 @@ class main:
         rgbd = self.convert_rgbd(msg)
         if rgbd is not None:
             self.bus.publish('rgbd_rear', rgbd)
+
+    def rgbd_up(self, msg):
+        self.rgbd_up_count += 1
+        rospy.loginfo_throttle(10, "rgbd_up callback: {}".format(self.rgbd_up_count))
+        rgbd = self.convert_rgbd(msg)
+        if rgbd is not None:
+            self.bus.publish('rgbd_up', rgbd)
+
+    def rgbd_down(self, msg):
+        self.rgbd_down_count += 1
+        rospy.loginfo_throttle(10, "rgbd_down callback: {}".format(self.rgbd_down_count))
+        rgbd = self.convert_rgbd(msg)
+        if rgbd is not None:
+            self.bus.publish('rgbd_down', rgbd)
 
     def convert_points(self, msg):
         # accept only Velodyne VLC-16 + CTU X500 sensor
