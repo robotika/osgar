@@ -2,6 +2,25 @@
   "version": 2,
   "robot": {
     "modules": {
-    }
+      "fromrospy": {
+          "driver": "subt.pull:Pull",
+          "init": {
+              "outputs": ["acc", "top_scan", "bottom_scan", "pose3d", "battery_state", "score", "gas_detected",
+                          "rgbd_front:null", "air_pressure", "scan360", "octomap:gz", "robot_name", "points:gz"]
+          }
+      },
+      "points2scan": {
+          "driver": "subt.points2scan:PointsToScan",
+          "in": ["points"],
+          "out": ["scan360"],
+          "init": {
+          }
+      }
+    },
+    "links": [
+              ["fromrospy.points", "points2scan.points"],
+              ["points2scan.scan360", "depth2scan.scan"],
+              ["depth2scan.scan", "app.scan360"]
+    ]
   }
 }
