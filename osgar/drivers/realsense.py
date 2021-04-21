@@ -59,6 +59,7 @@ class RealSense(Node):
             self.default_depth_resolution = config.get("depth_resolution", [640, 360])
             self.default_rgb_resolution = config.get("rgb_resolution", [640, 360])
             self.depth_fps = config.get("depth_fps", 30)
+            self.align = config.get("align")
 
             if self.depth_rgb or self.depth_infra:
                 import cv2
@@ -106,7 +107,11 @@ class RealSense(Node):
     def depth_callback(self, frameset):
         try:
             assert frameset.is_frameset()
-            depth_frame = frameset.as_frameset().get_depth_frame()
+            if self.align and self.depth_rgb:
+                frameset_as = self.align.process(frameset.as_frameset())
+            else:
+                frameset_as = frameset.as_frameset()
+            depth_frame = frameset_as.get_depth_frame()
             n = depth_frame.get_frame_number()
             if n % self.depth_subsample != 0:
                 return
@@ -114,13 +119,13 @@ class RealSense(Node):
             depth_image = np.asanyarray(depth_frame.as_depth_frame().get_data())
 
             if self.depth_rgb:
-                color_frame = frameset.as_frameset().get_color_frame()
+                color_frame = frameset_as.get_color_frame()
                 assert color_frame.is_video_frame()
                 color_image = np.asanyarray(color_frame.as_video_frame().get_data())
                 __, data = cv2.imencode('*.jpeg', color_image)
 
             if self.depth_infra:
-                infra_frame = frameset.as_frameset().get_infrared_frame()
+                infra_frame = frameset_as.get_infrared_frame()
                 assert infra_frame.is_video_frame()
                 infra_image = np.asanyarray(infra_frame.as_video_frame().get_data())
                 __, infra_data = cv2.imencode('*.jpeg', infra_image)
@@ -144,6 +149,8 @@ class RealSense(Node):
             info_msg = "Enabling streams: depth"
             if self.depth_rgb:
                 info_msg += ", depth_rgb"
+                if self.align:
+                    info_msg += " (align allowed)"
             if self.depth_infra:
                 info_msg += ", depth_infra"
             g_logger.info(info_msg)
@@ -157,6 +164,9 @@ class RealSense(Node):
             if self.depth_rgb:
                 w, h = self.default_rgb_resolution
                 depth_cfg.enable_stream(rs.stream.color, w, h, rs.format.bgr8, self.depth_fps)
+                if self.align:
+                    align_to = rs.stream.color
+                    self.align = rs.align(align_to)
             if self.depth_infra:
                 w, h = self.default_depth_resolution
                 depth_cfg.enable_stream(rs.stream.infrared, w, h, rs.format.y8, self.depth_fps)
