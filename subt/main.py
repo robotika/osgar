@@ -104,12 +104,15 @@ class SubTChallenge:
         self.time = None
         self.max_speed = config['max_speed']
         self.max_angular_speed = math.radians(60)
+        self.rotation_p = config.get('rotation_p', 0.8)
+        self.turbo_speed = config.get('turbo_speed')
         self.walldist = config['walldist']
         self.follow_wall_params = config.get('follow_wall', {})
         self.timeout = timedelta(seconds=config['timeout'])
         self.symmetric = config['symmetric']  # is robot symmetric?
         self.dangerous_dist = config.get('dangerous_dist', 0.3)
         self.min_safe_dist = config.get('min_safe_dist', 0.75)
+        self.turbo_safe_dist = config.get('turbo_safe_dist')
         self.safety_turning_coeff = config.get('safety_turning_coeff', 0.8)
         self.limit_pitch = math.radians(config.get('limit_pitch', DEFAULT_LIMIT_PITCH))
         self.limit_roll = math.radians(config.get('limit_roll', DEFAULT_LIMIT_ROLL))
@@ -217,12 +220,7 @@ class SubTChallenge:
         else:
             safety, safe_direction = self.local_planner.recommend(desired_direction)
         #print(self.time,"safety:%f    desired:%f  safe_direction:%f"%(safety, desired_direction, safe_direction))
-        if self.speed_policy == 'conservative':
-            desired_angular_speed = 1.2 * safe_direction
-        elif self.speed_policy == 'always_forward':
-            desired_angular_speed = 0.9 * safe_direction
-        else:
-            assert(False)  # Unsupported speed_policy.
+        desired_angular_speed = self.rotation_p * safe_direction
         size = len(self.scan)
         dist = min_dist(self.scan[size//3:2*size//3])
         if dist < self.min_safe_dist:  # 2.0:
@@ -232,11 +230,13 @@ class SubTChallenge:
                 desired_speed = self.max_speed * (dist - self.dangerous_dist) / (self.min_safe_dist - self.dangerous_dist)
             else:
                 assert(False)  # Unsupported speed policy.
+        elif self.turbo_safe_dist is not None and self.turbo_speed is not None and dist > self.turbo_safe_dist:
+            desired_speed = self.turbo_speed
         else:
-            desired_speed = self.max_speed  # was 2.0
+            desired_speed = self.max_speed
         desired_speed = desired_speed * (1.0 - self.safety_turning_coeff * min(self.max_angular_speed, abs(desired_angular_speed)) / self.max_angular_speed)
         if self.flipped:
-            self.send_speed_cmd(-desired_speed, desired_angular_speed)  # ??? angular too??!
+            self.send_speed_cmd(-desired_speed, desired_angular_speed)
         else:
             self.send_speed_cmd(desired_speed, desired_angular_speed)
         return safety

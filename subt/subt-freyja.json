@@ -10,6 +10,9 @@
           "return_limit_roll": 50,
           "obstacle_influence": 1.0,
           "speed_policy": "conservative",
+          "turbo_safe_dist": 2.8,
+          "turbo_speed": 2.2,
+          "rotation_p": 1.2,
           "follow_wall": {
             "internal_reflection_threshold": 0
           }
