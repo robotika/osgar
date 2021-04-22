@@ -16,12 +16,27 @@
           "out": ["scan360"],
           "init": {
           }
+      },
+      "rgbd2dist_up": {
+          "driver": "subt.rgbd2dist:RGBD2Dist",
+          "in": ["rgbd"],
+          "out": ["dist"]
+      },
+      "rgbd2dist_down": {
+          "driver": "subt.rgbd2dist:RGBD2Dist",
+          "in": ["rgbd"],
+          "out": ["dist"]
       }
     },
     "links": [
               ["fromrospy.points", "points2scan.points"],
               ["points2scan.scan360", "depth2scan.scan"],
-              ["depth2scan.scan", "app.scan360"]
+              ["depth2scan.scan", "app.scan360"],
+
+              ["fromrospy.rgbd_up", "rgbd2dist_up.rgbd"],
+              ["rgbd2dist_up.dist",  "drone.top_scan"],
+              ["fromrospy.rgbd_down", "rgbd2dist_down.rgbd"],
+              ["rgbd2dist_down.dist",  "drone.bottom_scan"]
     ]
   }
 }
