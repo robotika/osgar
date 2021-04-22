@@ -16,10 +16,13 @@ class RGBD2Dist(Node):
     def on_rgbd(self, data):
         robot_pose, camera_pose, rgb_compressed, depth_compressed = data
 
-        arr = decompress_depth(depth_compressed) * 1000
-        arr = np.clip(arr, 1, 0xFFFF)
-        arr = np.ndarray.astype(arr, dtype=np.dtype('H'))
-        self.publish('dist', [int(arr[0][0])])  # TODO center or median
+        arr = decompress_depth(depth_compressed)
+        height, width = arr.shape
+        dist = float(arr[height//2][width//2])
+        if dist == float('inf'):
+            # out of range, but maybe mistake in RGBD simulation model
+            dist = 0.1
+        self.publish('dist', [dist])
 
     def update(self):
         channel = super().update()
