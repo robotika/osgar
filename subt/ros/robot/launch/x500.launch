@@ -8,7 +8,6 @@
     <param name="subscribe_scan" type="bool" value="true"/>
     <param name="frame_id" type="string" value="$(arg robot_name)"/>
     <param name="odom_frame_id" type="string" value="odom"/>
-    <param name="guess_frame_id" type="string" value="odom"/>
     <param name="publish_tf" type="bool" value="false"/>
     <param name="publish_null_when_lost" type="bool" value="false"/>
 
@@ -17,11 +16,6 @@
     <param name="Odom/ResetCountdown" type="string" value="2"/>
     <param name="Icp/MaxTranslation" type="string" value="3.0"/>
     <param name="Icp/MaxCorrespondenceDistance" type="string" value="0.5"/>
-    <param name="Icp/PointToPlaneRadius" value="0.0"/>
-    <!-- This robot cannot move left or up, at least unless something strange is happening. -->
-    <param name="Odom/Holonomic" value="false"/>
-    <!-- Internal Kalman filtering smoothes the estimate, which in turn prevents "our" Kalman from being confused by big input odometry jumps. -->
-    <param name="Odom/FilteringStrategy" value="1"/>
     <!-- Inputs -->
     <remap from="scan_cloud" to="/$(arg robot_name)/points"/>
   </node>
