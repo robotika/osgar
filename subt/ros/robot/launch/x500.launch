@@ -56,7 +56,7 @@
     <param name="publish_null_when_lost" type="bool" value="false"/>
     <param name="subscribe_rgbd" type="bool" value="true"/>
     <!-- Inputs -->
-    <remap from="rgbd_image" to="compressed"/>
+    <remap from="rgbd_image" to="down/compressed"/>
   </node>
 
   <node name="altimeter" pkg="robot" type="altitude_from_atmospheric_pressure.py" args="odom">
