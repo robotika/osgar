@@ -8,7 +8,7 @@ from osgar.bus import BusShutdownException
 from osgar.lib.depth import decompress as decompress_depth
 
 
-class RGB2Dist(Node):
+class RGBD2Dist(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("dist")
