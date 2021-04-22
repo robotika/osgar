@@ -19,7 +19,7 @@ class RGBD2Dist(Node):
         arr = decompress_depth(depth_compressed) * 1000
         arr = np.clip(arr, 1, 0xFFFF)
         arr = np.ndarray.astype(arr, dtype=np.dtype('H'))
-        self.publish('dist', [arr[0][0]])  # TODO center or median
+        self.publish('dist', [int(arr[0][0])])  # TODO center or median
 
     def update(self):
         channel = super().update()
