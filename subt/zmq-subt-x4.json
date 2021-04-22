@@ -13,6 +13,9 @@
             "virtual_bumper_radius": 10.0,
             "virtual_world": true,
             "speed_policy": "conservative",
+            "rotation_p": 1.6,
+            "turbo_safe_dist": 3.2,
+            "turbo_speed": 2.3,
             "obstacle_influence": 1.4,
             "max_obstacle_distance": 3.0,
             "height_above_ground": 2.0,
@@ -98,7 +101,10 @@
               "min_z": -0.2,
               "max_z": 0.4,
               "max_slope": -3.14,
-              "vertical_diff_limit": 1.4835, "vd_comment": "radians(85)"
+              "vertical_diff_limit": 1.4835, "vd_comment": "radians(85)",
+              "stride": 2,
+              "noise_filter_window": [12, 6],
+              "noise_filter_threshold": 30
             },
             "filter_fog": true
           }

@@ -13,12 +13,16 @@ class DepthParams:
             fx=462.1,
             # Placement of the camera relative to the center of the robot.
             camera_xyz=(0.23, 0, (0.19 + 0.06256005)),
-            # Orientation of the camera relative to the robot. In radians.
-            camera_ypr=(0, 0, 0),
             # Image dimensions.
             image_size=(640, 360),
             # Principal point, position of optical axis
             principal_point=(640 / 2. +  0.5, 360 / 2 + 0.5),
+            # An integer downscaling factor. All oter parameters, such as
+            # image dimensions, focal length etc. match the image before
+            # downscaling.
+            # This value can be either a single integer, or a pair of integers
+            # for a different horizontal and vertical stride.
+            stride = 1,
             min_x = 0.,
             min_y = 0.,
             max_x = 16.,
@@ -45,26 +49,40 @@ class DepthParams:
             # Distance to which we fully trust the lidar.
             lidar_trusted_zone=0,
             **kwargs):
-
-        self.fx = fx
+        try:
+            self.horizontal_stride, self.vertical_stride = stride
+        except:
+            self.horizontal_stride = self.vertical_stride = stride
+        self.fx = fx / self.horizontal_stride
+        self.fy = fx / self.vertical_stride
         self.camera_xyz = np.asarray(camera_xyz)
-        self.camera_rot = _rotation_matrix(*camera_ypr)
         self.camw, self.camh = image_size
+        self.camw //= self.horizontal_stride
+        self.camh //= self.vertical_stride
         self.cam_low = self.camh // 2 + 1
         self.rx, self.ry = principal_point
+        self.rx /= self.horizontal_stride
+        self.ry /= self.vertical_stride
         self.min_x = min_x
         self.min_y = min_y
         self.max_x = max_x
         self.max_y = max_y
         self.min_z = min_z
         self.max_z = max_z
-        self.vertical_pixel_offset = vertical_pixel_offset
+        self.vertical_pixel_offset = max(
+                1, vertical_pixel_offset // self.vertical_stride)
         self.vertical_diff_limit = vertical_diff_limit
         self.max_slope = max_slope
         self.slope_length_scale_factor = slope_length_scale_factor
         self.slope_length_power_factor = slope_length_power_factor
-        self.noise_filter_window = noise_filter_window
-        self.noise_filter_threshold = noise_filter_threshold
+        self.noise_filter_window = [
+                max(1, v // s) for (v, s) in
+                zip(noise_filter_window,
+                    [self.horizontal_stride, self.vertical_stride])]
+        self.noise_filter_threshold = max(
+                1,
+                noise_filter_threshold //
+                    (self.horizontal_stride * self.vertical_stride))
         self.lidar_fov = lidar_fov
         self.lidar_trusted_zone = lidar_trusted_zone
 
@@ -77,33 +95,20 @@ class DepthParams:
         pzs = np.ones((self.camh, self.camw), dtype=np.float)
         # For each pixel in the image, a vector representing its corresponding
         # direction in the scene with a unit forward axis.
-        self.ps = (self.camera_rot @ np.dstack([pzs, pxs / fx, pys / fx]).T.reshape((3, -1))).reshape((3, self.camw, self.camh)).T
+        self.ps = np.dstack([pzs, pxs / self.fx, pys / self.fy]).T.reshape((3, -1)).reshape((3, self.camw, self.camh)).T
 
 
 # Indices of directions in a matrix with 3D points.
 X, Y, Z = 0, 1, 2
 
 
-def _rotation_matrix(yaw, pitch, roll):
-    # private so it will not be used by other modules -> TODO move to math or quaternion?
-    cos_roll = np.cos(roll)
-    sin_roll = np.sin(roll)
-    roll_m = np.array([[1., 0., 0.], [0., cos_roll, -sin_roll],
-                       [0., sin_roll, cos_roll]])
-    cos_pitch = np.cos(pitch)
-    sin_pitch = np.sin(pitch)
-    pitch_m = np.array([[cos_pitch, 0, sin_pitch], [0, 1, 0],
-                        [-sin_pitch, 0, cos_pitch]])
-    cos_yaw = np.cos(yaw)
-    sin_yaw = np.sin(yaw)
-    yaw_m = np.array([[cos_yaw, -sin_yaw, 0], [sin_yaw, cos_yaw, 0],
-                      [0, 0, 1]])
-
-    return roll_m @ pitch_m @ yaw_m
-
-
 def depth2danger(depth, params):
     # COPY & PASTE - refactoring needed!
+
+    # Make the input depth image smaller, if requested.
+    orig_shape = depth.shape
+    if params.horizontal_stride != 1 or params.vertical_stride != 1:
+        depth = depth[::params.vertical_stride, ::params.horizontal_stride]
 
     # 3D coordinates of points detected by the depth camera, converted to
     # robot's coordinate system.
@@ -145,14 +150,18 @@ def depth2danger(depth, params):
             -1,
             np.ones(params.noise_filter_window)) > params.noise_filter_threshold
 
+    if danger.shape != orig_shape:
+        danger = cv2.resize(
+                danger.astype(np.uint8),
+                (orig_shape[1], orig_shape[0]),
+                interpolation=cv2.INTER_NEAREST).astype(np.bool)
+
     return danger
 
 
 def depth2dist(depth, params, pitch=None, roll=None, yaw=None, debug_col=None):
     # return line in mm corresponding to scan
     # optional pitch and roll angles are in radians
-    # warning: there is a bug (?) in either Osgar or in SubT and the angles
-    # are as if the robot was upside down.
     yaw_rot = np.asmatrix(np.eye(3))
     pitch_rot = np.asmatrix(np.eye(3))
     roll_rot = np.asmatrix(np.eye(3))
@@ -173,6 +182,11 @@ def depth2dist(depth, params, pitch=None, roll=None, yaw=None, debug_col=None):
                  [0.0, np.cos(roll), -np.sin(roll)],
                  [0.0, np.sin(roll), np.cos(roll)]])
     rot = yaw_rot * pitch_rot * roll_rot
+
+    # Make the input depth image smaller, if requested.
+    orig_width = depth.shape[1]
+    if params.horizontal_stride != 1 or params.vertical_stride != 1:
+        depth = depth[::params.vertical_stride, ::params.horizontal_stride]
 
     # 3D coordinates of points detected by the depth camera, converted to
     # robot's coordinate system.
@@ -255,7 +269,13 @@ def depth2dist(depth, params, pitch=None, roll=None, yaw=None, debug_col=None):
     mask = scan == FAR_AWAY
     scan[mask] = 0
 
+    if scan.shape[0] != orig_width:
+        scan = cv2.resize(scan[np.newaxis,:],
+                          (orig_width, 1),
+                          interpolation=cv2.INTER_NEAREST)[0,:]
+
     scan = np.array(scan*1000, dtype=np.int32)
+
     return scan
 
 

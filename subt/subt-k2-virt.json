@@ -8,6 +8,7 @@
           "limit_roll": 40,
           "return_limit_pitch": 50,
           "return_limit_roll": 50,
+          "rotation_p": 0.8,
           "obstacle_influence": 0.8
         }
       },
