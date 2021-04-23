@@ -187,7 +187,6 @@
 
               ["fromrospy.rgbd_down", "detector.rgbd"],
 
-              ["fromrospy.rgbd_front", "depth2scan.rgbd"],
               ["depth2scan.scan", "app.scan360"],
 
               ["fromrospy.pose3d", "app.pose3d"],
