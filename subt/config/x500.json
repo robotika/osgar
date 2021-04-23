@@ -149,8 +149,8 @@
           "driver": "subt.pull:Pull",
           "init": {
               "outputs": ["acc", "top_scan", "bottom_scan", "pose3d", "battery_state", "score", "gas_detected",
-                          "rgbd_front:null", "air_pressure", "scan360", "octomap:gz", "robot_name", "points:gz",
-                          "rgbd_up:gz", "rgbd_down:gz"]
+                          "air_pressure", "scan360", "octomap:gz", "robot_name", "points:null",
+                          "rgbd_up:null", "rgbd_down:null"]
           }
       },
       "points2scan": {
@@ -185,7 +185,7 @@
               ["fromrospy.scan360", "detector.scan"],
               ["fromrospy.scan360", "depth2scan.scan"],
 
-              ["fromrospy.rgbd_front", "detector.rgbd"],
+              ["fromrospy.rgbd_down", "detector.rgbd"],
 
               ["fromrospy.rgbd_front", "depth2scan.rgbd"],
               ["depth2scan.scan", "app.scan360"],
@@ -231,7 +231,7 @@
               ["fromrospy.pose3d", "octomap.pose3d"],
               ["octomap.waypoints", "app.waypoints"],
 
-              ["fromrospy.rgbd_front", "logimage.rgbd"],
+              ["fromrospy.rgbd_down", "logimage.rgbd"],
 
 
               ["fromrospy.points", "points2scan.points"],
