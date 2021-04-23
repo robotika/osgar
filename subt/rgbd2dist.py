@@ -12,17 +12,27 @@ class RGBD2Dist(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("dist")
+        self.verbose = False
 
     def on_rgbd(self, data):
         robot_pose, camera_pose, rgb_compressed, depth_compressed = data
 
         arr = decompress_depth(depth_compressed)
         height, width = arr.shape
-        dist = float(arr[height//2][width//2])
+        dist = arr[height//2][width//2]
         if dist == float('inf'):
             # out of range, but maybe mistake in RGBD simulation model
+            # unfortunately it is the same value for down and up camera
+            dist = arr.min()  # up pointing camera will see some walls
+            if dist == float('inf'):
+                # everything is "black" -> down pointing camera
+                dist = 0.1
+        if dist == float('-inf'):
+            # blind
             dist = 0.1
-        self.publish('dist', [dist])
+        if self.verbose:
+            print(dist)
+        self.publish('dist', [float(dist)])
 
     def update(self):
         channel = super().update()
