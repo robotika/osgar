@@ -115,7 +115,10 @@
       "logimage": {
           "driver": "subt.image_extractor:ImageExtractor",
           "in": ["rgbd"],
-          "out": ["image", "depth"]
+          "out": ["image", "depth"],
+          "init": {
+            "image_sampling": 6
+          }
       },
       "radio": {
           "driver": "subt.radio:Radio",
