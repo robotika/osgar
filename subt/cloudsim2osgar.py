@@ -16,7 +16,7 @@ import tf
 import zmq
 import numpy as np
 
-from sensor_msgs.msg import Imu, LaserScan, PointCloud2
+from sensor_msgs.msg import Imu, CompressedImage, LaserScan, PointCloud2
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty, Bool, Int32, String
 from geometry_msgs.msg import Twist
@@ -125,6 +125,7 @@ class main:
             topics.append(('/' + robot_name + '/air_pressure', FluidPressure, self.air_pressure, ('air_pressure',)))
             topics.append(('/rtabmap/rgbd/up/compressed', RGBDImage, self.rgbd_up, ('rgbd_up',)))
             topics.append(('/rtabmap/rgbd/down/compressed', RGBDImage, self.rgbd_down, ('rgbd_down',)))
+            topics.append(('/' + robot_name + '/front/image_raw/compressed', CompressedImage, self.image_front, ('image_front',)))
             if robot_name.endswith('XM'):
                 topics.append(('/mapping/octomap_binary', Octomap, self.octomap, ('octomap',)))
             if robot_is_marsupial == 'true':
@@ -290,6 +291,11 @@ class main:
         self.air_pressure_count += 1
         rospy.loginfo_throttle(10, "air_pressure callback: {}".format(self.air_pressure_count))
         self.bus.publish('air_pressure', msg.fluid_pressure)
+
+    def image_front(self, msg):
+        self.image_front_count += 1
+        rospy.loginfo_throttle(10, "image_front callback: {}".format(self.image_front_count))
+        self.bus.publish('image_front', msg.data)
 
     def scan_front(self, msg):
         self.scan_front_count += 1
