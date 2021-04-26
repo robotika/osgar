@@ -146,8 +146,8 @@
       "octomap": {
         "driver": "subt.octomap:Octomap",
           "init": {
-            "min_z": 2.0,
-            "max_z": 2.0
+            "min_z": 0.0,
+            "max_z": 4.0
           }
       }
     },
