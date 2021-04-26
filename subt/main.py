@@ -889,6 +889,18 @@ class SubTChallenge:
 
         self.stdout(self.time, "Explore phase finished %.3f" % dist, reason)
 
+    def play_virtual_part_map_and_explore_frontiers(self):
+        start_time = self.sim_time_sec
+        while self.sim_time_sec - start_time < self.timeout.total_seconds():
+            channel = self.update()
+            if channel == 'waypoints':
+                tmp_trace = Trace()
+                tmp_trace.trace = self.waypoints
+                self.waypoints = None
+                tmp_trace.reverse()
+                self.follow_trace(tmp_trace, timeout=timedelta(seconds=10), max_target_distance=2)
+                self.send_speed_cmd(0, 0)
+
     def play_virtual_part_return(self, timeout):
         self.return_home(timeout)
         self.send_speed_cmd(0, 0)
@@ -931,6 +943,10 @@ class SubTChallenge:
                 self.use_right_wall = (action == 'right')
                 self.use_center = (action == 'center')
                 self.play_virtual_part_explore()
+
+            elif action == 'explore':
+                self.timeout = timedelta(seconds=duration)
+                self.play_virtual_part_map_and_explore_frontiers()
 
             elif action == 'home':
                 self.play_virtual_part_return(timedelta(seconds=duration))
