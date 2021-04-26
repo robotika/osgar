@@ -312,6 +312,7 @@ if __name__ == "__main__":
     parser.add_argument('logfile', help='path to logfile with octomap data')
     parser.add_argument('--out', help='output path to PNG image', default='out.png')
     parser.add_argument('--draw', action='store_true', help='draw pyplot frontiers')
+    parser.add_argument('--open3d', action='store_true', help='use Open3D for visualization')
     args = parser.parse_args()
 
     octomap_stream_id = lookup_stream_id(args.logfile, 'fromrospy.octomap')
@@ -350,6 +351,19 @@ if __name__ == "__main__":
                     paused = not paused
                 if ord('0') <= key <= ord('9'):
                     level = key - ord('0')
+                if args.open3d and key == ord('d'):
+                    import open3d as o3d
+                    all = []
+                    for lev in range(-3, 10):
+                        img = data2maplevel(data, level=lev)
+                        xy = np.where(img == STATE_OCCUPIED)
+                        xyz = np.array([xy[0], xy[1], np.full(len(xy[0]), lev)]).T
+                        all.extend(xyz.tolist())
+                    pcd = o3d.geometry.PointCloud()
+                    xyz = np.array(all)
+                    pcd.points = o3d.utility.Vector3dVector(xyz)
+                    voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=0.5)
+                    o3d.visualization.draw_geometries([voxel_grid])
                 if not paused:
                     break
             if key == KEY_Q:
