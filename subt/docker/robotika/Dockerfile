@@ -7,10 +7,18 @@ RUN curl -O# http://osgar.robotika.cz/subt/virtual/model/ssd_inception_v2_210405
 
 # example how to install an ubuntu package
 # RUN sudo apt-get update && sudo apt install -y ros-melodic-teleop-twist-keyboard
+ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
-  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libnvidia-compute-460=460.32.03-0ubuntu1 \
+  && apt-get install -y --no-install-recommends \
+	ocl-icd-libopencl1 \
+	clinfo \
   && apt-get clean
+
+RUN mkdir -p /etc/OpenCL/vendors && \
+    echo "libnvidia-opencl.so.1" > /etc/OpenCL/vendors/nvidia.icd
+
+ENV NVIDIA_DRIVER_CAPABILITIES ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}compute
 
 ENTRYPOINT ["./src/osgar/subt/docker/robotika/entrypoint.bash"]
 
