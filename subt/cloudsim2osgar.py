@@ -187,7 +187,7 @@ class main:
                             (origin_orientation.x, origin_orientation.y, origin_orientation.z,
                                 origin_orientation.w))
             except rospy.ServiceException:
-                rospy.logerror("Failed to get origin. Trying again.")
+                rospy.logerr("Failed to get origin. Trying again.")
                 time.sleep(origin_retry_delay)
                 origin_retry_delay = min(
                         MAX_ORIGIN_RETRY_DELAY,
