@@ -907,7 +907,7 @@ class SubTChallenge:
                 tmp_trace.trace = self.waypoints
                 self.waypoints = None
                 tmp_trace.reverse()
-                self.follow_trace(tmp_trace, timeout=timedelta(seconds=10), max_target_distance=2, is_trace3d=True)
+                self.follow_trace(tmp_trace, timeout=timedelta(seconds=10), max_target_distance=0.5, is_trace3d=True)
                 self.send_speed_cmd(0, 0)
 
     def play_virtual_part_return(self, timeout):
