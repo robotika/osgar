@@ -466,9 +466,12 @@ class SubTChallenge:
         print('return_home: dist', distance3D(self.xyz, home_position), 'time(sec)', self.sim_time_sec - start_time)
         self.bus.publish('desired_z_speed', None)
 
-    def follow_trace(self, trace, timeout, max_target_distance=5.0, safety_limit=None, is_trace3d=False):
+    def follow_trace(self, trace, timeout, max_target_distance=5.0, end_threshold=None, safety_limit=None, is_trace3d=False):
         print('Follow trace')
-        END_THRESHOLD = 2.0
+        if end_threshold is None:
+            END_THRESHOLD = 2.0
+        else:
+            END_THRESHOLD = end_threshold
         start_time = self.sim_time_sec
         print('MD', self.xyz, distance3D(self.xyz, trace.trace[0]), trace.trace)
         while distance3D(self.xyz, trace.trace[0]) > END_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
@@ -907,7 +910,8 @@ class SubTChallenge:
                 tmp_trace.trace = self.waypoints
                 self.waypoints = None
                 tmp_trace.reverse()
-                self.follow_trace(tmp_trace, timeout=timedelta(seconds=10), max_target_distance=0.5, is_trace3d=True)
+                self.follow_trace(tmp_trace, timeout=timedelta(seconds=10),
+                                  max_target_distance=1.0, end_threshold=0.5, is_trace3d=True)
                 self.send_speed_cmd(0, 0)
 
     def play_virtual_part_return(self, timeout):
