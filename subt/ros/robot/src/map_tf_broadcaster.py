@@ -64,7 +64,7 @@ if __name__ == '__main__':
         rospy.logerr('Invalid number of parameters\nusage: '
                      './map_tf_broadcaster.py '
                      'robot_name')
-        sys.exit(0)
+        sys.exit(-1)
 
     origin = get_origin(myargv[1])
     rospy.loginfo(origin)
