@@ -8,7 +8,6 @@ import time
 import sys
 
 import rospy
-#import tf
 import tf2_ros
 import geometry_msgs.msg
 
@@ -19,7 +18,7 @@ from subt_msgs.srv import PoseFromArtifact
 
 def get_origin(robot_name):
     rospy.loginfo('get_origin for ' + robot_name)
-    origin = None
+    origin_pose = None
     origin_retry_delay = 0.2
     ORIGIN_RETRY_EXPONENTIAL_BACKOFF = 1.3
     MAX_ORIGIN_RETRY_DELAY = 2.0
@@ -28,27 +27,21 @@ def get_origin(robot_name):
     origin_service = rospy.ServiceProxy(ORIGIN_SERVICE_NAME, PoseFromArtifact)
     origin_request = String()
     origin_request.data = robot_name
-    while origin is None:
+    while origin_pose is None:
         try:
             origin_response = origin_service(origin_request)
             if origin_response.success:
                 origin_pose = origin_response.pose.pose
-                origin_position = origin_response.pose.pose.position
-                origin_orientation = origin_response.pose.pose.orientation
-                origin = (
-                    (origin_position.x, origin_position.y, origin_position.z),
-                    (origin_orientation.x, origin_orientation.y, origin_orientation.z,
-                     origin_orientation.w))
         except rospy.ServiceException:
             rospy.logerr("Failed to get origin. Trying again.")
             time.sleep(origin_retry_delay)
             origin_retry_delay = min(
                 MAX_ORIGIN_RETRY_DELAY,
                 ORIGIN_RETRY_EXPONENTIAL_BACKOFF * origin_retry_delay)
-    return origin
+    return origin_pose
 
 
-def publish_odom_to_map_tf(origin):
+def publish_odom_to_map_tf(origin_pose):
     broadcaster = tf2_ros.StaticTransformBroadcaster()
     static_transformStamped = geometry_msgs.msg.TransformStamped()
 
@@ -56,14 +49,8 @@ def publish_odom_to_map_tf(origin):
     static_transformStamped.header.frame_id = 'map'
     static_transformStamped.child_frame_id = 'odom'
 
-    static_transformStamped.transform.translation.x = origin[0][0]
-    static_transformStamped.transform.translation.y = origin[0][1]
-    static_transformStamped.transform.translation.z = origin[0][2]
-
-    static_transformStamped.transform.rotation.x = origin[1][0]
-    static_transformStamped.transform.rotation.y = origin[1][1]
-    static_transformStamped.transform.rotation.z = origin[1][2]
-    static_transformStamped.transform.rotation.w = origin[1][3]
+    static_transformStamped.transform.translation = origin_pose.position
+    static_transformStamped.transform.rotation = origin_pose.orientation
 
     broadcaster.sendTransform(static_transformStamped)
 
@@ -80,6 +67,6 @@ if __name__ == '__main__':
         sys.exit(0)
 
     origin = get_origin(myargv[1])
-    print(origin)
+    rospy.loginfo(origin)
     publish_odom_to_map_tf(origin)
     rospy.spin()
