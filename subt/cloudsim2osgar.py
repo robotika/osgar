@@ -143,16 +143,6 @@ class main:
             topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
             topics.append(('/rtabmap/rgbd/front/compressed', RGBDImage, self.rgbd_front, ('rgbd_front',)))
             topics.append(('/rtabmap/rgbd/rear/compressed', RGBDImage, self.rgbd_rear, ('rgbd_rear',)))
-        elif robot_config.startswith("EXPLORER_R2_SENSOR_CONFIG"):
-            if robot_config.endswith("_2"):
-                rospy.loginfo("explorer R2 #2 (with comms beacons)")
-                publishers['deploy'] = (rospy.Publisher('/' + robot_name + '/breadcrumb/deploy', Empty, queue_size=1), empty)
-            else:
-                rospy.loginfo("explorer R2 #1 (basic)")
-            topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
-            topics.append(('/' + robot_name + '/points', PointCloud2, self.points, ('points',)))
-            topics.append(('/rtabmap/rgbd/front/compressed', RGBDImage, self.rgbd_front, ('rgbd_front',)))
-            topics.append(('/rtabmap/rgbd/rear/compressed', RGBDImage, self.rgbd_rear, ('rgbd_rear',)))
         else:
             rospy.logerr("unknown configuration")
             return

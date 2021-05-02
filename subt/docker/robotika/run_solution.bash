@@ -45,13 +45,6 @@ case $ROBOT_CONFIG in
     WALLDIST=1.0
     SPEED=1.5
     ;;
-  "EXPLORER_R2_SENSOR_CONFIG"*):
-    echo "Robot is Explorer R2"
-    LAUNCH_FILE="robot r2.launch"
-    CONFIG_FILES=("config/r2.json")
-    WALLDIST=1.5
-    SPEED=1.5
-    ;;
   "ROBOTIKA_KLOUBAK_SENSOR_CONFIG"*):
     echo "Robot is K2"
     LAUNCH_FILE="robot k2-virt.launch"
