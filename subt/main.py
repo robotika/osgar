@@ -466,15 +466,18 @@ class SubTChallenge:
         print('return_home: dist', distance3D(self.xyz, home_position), 'time(sec)', self.sim_time_sec - start_time)
         self.bus.publish('desired_z_speed', None)
 
-    def follow_trace(self, trace, timeout, max_target_distance=5.0, safety_limit=None):
+    def follow_trace(self, trace, timeout, max_target_distance=5.0, end_threshold=None, safety_limit=None, is_trace3d=False):
         print('Follow trace')
-        END_THRESHOLD = 2.0
+        if end_threshold is None:
+            END_THRESHOLD = 2.0
+        else:
+            END_THRESHOLD = end_threshold
         start_time = self.sim_time_sec
         print('MD', self.xyz, distance3D(self.xyz, trace.trace[0]), trace.trace)
         while distance3D(self.xyz, trace.trace[0]) > END_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
             if self.update() in ['scan', 'scan360']:
-                target_x, target_y = trace.where_to(self.xyz, max_target_distance, self.trace_z_weight)[:2]
-                x, y = self.xyz[:2]
+                target_x, target_y, target_z = trace.where_to(self.xyz, max_target_distance, self.trace_z_weight)
+                x, y, z = self.xyz
                 yaw = (self.yaw + math.pi) if self.flipped else self.yaw
                 desired_direction = normalizeAnglePIPI(math.atan2(target_y - y, target_x - x) - yaw)
                 if self.symmetric and abs(desired_direction) > math.radians(95):  # including hysteresis
@@ -485,7 +488,16 @@ class SubTChallenge:
                     if safety_limit is not None and safety < safety_limit:
                         print('Danger! Safety limit for follow trace reached!', safety, safety_limit)
                         break
+
+                if is_trace3d:
+                    d = distance3D(self.xyz, [target_x, target_y, target_z])
+                    time_to_target = d/self.max_speed
+                    desired_z_speed = (target_z - self.xyz[2]) / time_to_target
+                    self.bus.publish('desired_z_speed', desired_z_speed)
+
         print('End of follow trace(sec)', self.sim_time_sec - start_time)
+        if is_trace3d:
+            self.bus.publish('desired_z_speed', None)
 
     def register(self, callback):
         self.monitors.append(callback)
@@ -889,6 +901,19 @@ class SubTChallenge:
 
         self.stdout(self.time, "Explore phase finished %.3f" % dist, reason)
 
+    def play_virtual_part_map_and_explore_frontiers(self):
+        start_time = self.sim_time_sec
+        while self.sim_time_sec - start_time < self.timeout.total_seconds():
+            channel = self.update()
+            if channel == 'waypoints':
+                tmp_trace = Trace()
+                tmp_trace.trace = self.waypoints
+                self.waypoints = None
+                tmp_trace.reverse()
+                self.follow_trace(tmp_trace, timeout=timedelta(seconds=10),
+                                  max_target_distance=1.0, end_threshold=0.5, is_trace3d=True)
+                self.send_speed_cmd(0, 0)
+
     def play_virtual_part_return(self, timeout):
         self.return_home(timeout)
         self.send_speed_cmd(0, 0)
@@ -900,7 +925,7 @@ class SubTChallenge:
         self.stdout('Final xyz (DARPA coord system):', self.xyz)
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver105!")
+        self.stdout("SubT Challenge Ver106!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
@@ -931,6 +956,10 @@ class SubTChallenge:
                 self.use_right_wall = (action == 'right')
                 self.use_center = (action == 'center')
                 self.play_virtual_part_explore()
+
+            elif action == 'explore':
+                self.timeout = timedelta(seconds=duration)
+                self.play_virtual_part_map_and_explore_frontiers()
 
             elif action == 'home':
                 self.play_virtual_part_return(timedelta(seconds=duration))
