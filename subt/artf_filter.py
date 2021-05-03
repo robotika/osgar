@@ -38,7 +38,7 @@ class ArtifactFilter(Node):
             if self.maybe_remember_artifact(artifact_data, (ax, ay, az)):
                 self.publish_single_artf_xyz(artifact_data, (ax, ay, az))
 
-    def on_robot_name(self, timestamp, data):
+    def on_robot_name(self, data):
         self.robot_name = data.decode('ascii')
 
     def on_localized_artf(self, data):
