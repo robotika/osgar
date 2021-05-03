@@ -193,6 +193,7 @@
               ["rosmsg.sim_time_sec", "torospy.sim_time_sec"],
               ["rosmsg.sim_time_sec", "octomap.sim_time_sec"],
 
+              ["fromrospy.pose3d", "gas_detector.pose3d"],
               ["fromrospy.gas_detected", "gas_detector.gas_detected"],
               ["gas_detector.localized_artf", "filter.localized_artf"],
 
