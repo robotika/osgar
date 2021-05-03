@@ -49,7 +49,6 @@
           "in": ["robot_name", "localized_artf"],
           "out": ["artf_xyz"],
           "init": {
-            "confirmation_level": 3
           }
       },
       "reporter": {
