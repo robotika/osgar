@@ -311,19 +311,28 @@ if __name__ == "__main__":
 
     octomap_stream_id = lookup_stream_id(args.logfile, 'fromrospy.octomap')
     pose3d_stream_id = lookup_stream_id(args.logfile, 'fromrospy.pose3d')
+    waypoints_stream_id = lookup_stream_id(args.logfile, 'octomap.waypoints')
     pose3d = None
     x, y, z = 0, 0, 0
     resolution = 0.5
+    waypoints = None
     with LogReader(args.logfile,
-               only_stream_id=[octomap_stream_id, pose3d_stream_id]) as logreader:
+               only_stream_id=[octomap_stream_id, pose3d_stream_id, waypoints_stream_id]) as logreader:
         level = 2
         for time, stream, data in logreader:
             data = deserialize(data)
-            if stream != octomap_stream_id:
-                assert stream == pose3d_stream_id, stream
+            if stream == pose3d_stream_id:
                 pose3d = data
                 x, y, z = pose3d[0]
                 start = int(SLICE_OCTOMAP_SIZE//2 + x/resolution), int(SLICE_OCTOMAP_SIZE//2 - y/resolution), int(z / resolution)
+                continue
+
+            if stream == waypoints_stream_id:
+                waypoints = data
+                continue
+
+            if waypoints is None:
+                # speed up display/processing - maybe optional?
                 continue
 
             assert len(data) % 2 == 0, len(data)  # TODO fix this in cloudsim2osgar
@@ -348,7 +357,7 @@ if __name__ == "__main__":
                 if args.open3d and key == ord('d'):
                     import open3d as o3d
                     all = []
-                    for lev in range(-3, 10):
+                    for lev in range(-10, 20):
                         img = data2maplevel(data, level=lev)
                         xy = np.where(img == STATE_OCCUPIED)
                         xyz = np.array([xy[0], xy[1], np.full(len(xy[0]), lev)]).T
@@ -357,10 +366,22 @@ if __name__ == "__main__":
                     xyz = np.array(all)
                     pcd.points = o3d.utility.Vector3dVector(xyz)
                     voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=0.5)
-                    o3d.visualization.draw_geometries([voxel_grid])
+                    colors = [[1, 0, 0] for i in range(len(xyz))]
+
+                    print(waypoints)
+                    res = 1  #0.5
+                    points = [[SLICE_OCTOMAP_SIZE/2 + x/res, SLICE_OCTOMAP_SIZE + y/res, z/res] for x, y, z in waypoints]
+                    lines = [[i, i+1] for i in range(len(points) - 1)]
+                    colors = [[1, 0, 0] for i in range(len(lines))]
+                    line_set = o3d.geometry.LineSet()
+                    line_set.points = o3d.utility.Vector3dVector(points)
+                    line_set.lines = o3d.utility.Vector2iVector(lines)
+                    line_set.colors = o3d.utility.Vector3dVector(colors)
+                    o3d.visualization.draw_geometries([voxel_grid, line_set])
                 if not paused:
                     break
             if key == KEY_Q:
                 break
+            waypoints = None  # force wait for next waypoints message
 
 # vim: expandtab sw=4 ts=4
