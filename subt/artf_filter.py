@@ -13,6 +13,7 @@ class ArtifactFilter(Node):
         bus.register("artf_xyz")
         self.robot_name = None  # for "signature" who discovered the artifact
         self.artifacts = []
+        self.verbose = False
 
     def publish_single_artf_xyz(self, artifact_data, pos):
         ax, ay, az = pos
@@ -34,7 +35,8 @@ class ArtifactFilter(Node):
             # Urban (-20 < ax < 0 and -10 < ay < 10)
             # Cave  (-50 < ax < 0 and -25 < ay < 25)
             # filter out elements on staging area
-            self.stdout(self.time, 'Robot at:', (ax, ay, az))
+            if self.verbose:
+                print(self.time, 'Robot at staging area:', (ax, ay, az))
         else:
             if self.maybe_remember_artifact(artifact_data, (ax, ay, az)):
                 self.publish_single_artf_xyz(artifact_data, (ax, ay, az))

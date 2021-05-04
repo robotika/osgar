@@ -26,5 +26,12 @@ class ArtifactFilterTest(unittest.TestCase):
         # 2nd report should be ignored
         self.assertEqual(filter.maybe_remember_artifact(artf_data, artf_xyz), False)
 
+    def test_usage(self):
+        bus = MagicMock()
+        filter = ArtifactFilter(bus=bus, config={})
+        filter.on_robot_name(b'A100L')
+        filter.on_localized_artf(['TYPE_DRILL', [-10.0, 0.0, 0.0]])
+        bus.publish.assert_not_called()  # inside staging area
+
 
 # vim: expandtab sw=4 ts=4
