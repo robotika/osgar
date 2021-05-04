@@ -12,6 +12,7 @@ class ArtifactFilter(Node):
         super().__init__(config, bus)
         bus.register("artf_xyz")
         self.robot_name = None  # for "signature" who discovered the artifact
+        self.artifacts = []
 
     def publish_single_artf_xyz(self, artifact_data, pos):
         ax, ay, az = pos

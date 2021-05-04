@@ -139,7 +139,6 @@ class SubTChallenge:
         self.joint_angle_rad = []  # optinal angles, needed for articulated robots flip
         self.stat = defaultdict(int)
         self.voltage = []
-        self.artifacts = []
         self.trace = Trace()
         self.waypoints = None  # external waypoints for navigation
         self.loop_detector = LoopDetector()
