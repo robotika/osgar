@@ -16,7 +16,6 @@ class ArtifactGasDetector(Node):
         self.xyz = None
 
     def on_gas_detected(self, data):
-        # [type, [rel_x, rel_y, rel_z]]
         if data:
             self.publish('localized_artf', [GAS, self.xyz])
 

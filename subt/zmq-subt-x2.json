@@ -33,11 +33,11 @@
       },
       "gas_detector": {
           "driver": "subt.artf_gas:ArtifactGasDetector",
-          "in": ["gas_detected"],
-          "out": ["artf"],
+          "in": ["pose3d", "gas_detected"],
+          "out": ["localized_artf"],
           "init": {}
       },
-      "filter": {
+      "artifact_filter": {
           "driver": "subt.artf_filter:ArtifactFilter",
           "in": ["robot_name", "localized_artf"],
           "out": ["artf_xyz"],
@@ -166,7 +166,7 @@
               ["twister.cmd_vel", "torospy.cmd_vel"],
               ["app.stdout", "rosmsg.stdout"],
               ["fromrospy.robot_name", "app.robot_name"],
-              ["fromrospy.robot_name", "filter.robot_name"],
+              ["fromrospy.robot_name", "artifact_filter.robot_name"],
 
               ["receiver.raw", "rosmsg.raw"],
               ["rosmsg.cmd", "transmitter.raw"],
@@ -194,7 +194,7 @@
 
               ["fromrospy.pose3d", "gas_detector.pose3d"],
               ["fromrospy.gas_detected", "gas_detector.gas_detected"],
-              ["gas_detector.localized_artf", "filter.localized_artf"],
+              ["gas_detector.localized_artf", "artifact_filter.localized_artf"],
 
               ["fromrospy.pose3d", "radio.pose3d"],
               ["reporter.artf_all", "radio.artf"],
@@ -215,11 +215,11 @@
               ["breadcrumbs.location", "radio.breadcrumb"],
               ["radio.breadcrumb", "breadcrumbs.external"],
 
-              ["detector.localized_artf", "filter.localized_artf"],
+              ["detector.localized_artf", "artifact_filter.localized_artf"],
               ["detector.stdout", "rosmsg.stdout"],
-              ["detector_rear.localized_artf", "filter.localized_artf"],
+              ["detector_rear.localized_artf", "artifact_filter.localized_artf"],
               ["detector_rear.stdout", "rosmsg.stdout"],
-              ["filter.artf_xyz", "reporter.artf_xyz"],
+              ["artifact_filter.artf_xyz", "reporter.artf_xyz"],
               ["rosmsg.base_station", "reporter.base_station"],
               ["reporter.artf_cmd", "transmitter.raw"],
 
