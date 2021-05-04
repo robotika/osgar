@@ -2,6 +2,8 @@ import unittest
 from unittest.mock import MagicMock
 
 from subt.artf_filter import ArtifactFilter
+from subt.artifacts import GAS
+
 
 
 class ArtifactFilterTest(unittest.TestCase):
@@ -10,8 +12,8 @@ class ArtifactFilterTest(unittest.TestCase):
         bus = MagicMock()
         filter = ArtifactFilter(bus=bus, config={})
         filter.on_robot_name(b'A100L')
-        filter.on_localized_artf(['GAS', [100.0, 0.0, 0.0]])
-        bus.publish.assert_called_with('artf_xyz', [['GAS', [100000, 0, 0], 'A100L', None]])
+        filter.on_localized_artf([GAS, [100.0, 0.0, 0.0]])
+        bus.publish.assert_called_with('artf_xyz', [[GAS, [100000, 0, 0], 'A100L', None]])
 
     def test_maybe_remember_artifact(self):
         bus = MagicMock()
