@@ -129,7 +129,7 @@ class SubTChallenge:
         self.trace_z_weight = config.get('trace_z_weight', 0.2)  # Z is important for drones ~ 3.0
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
-        self.xyz = None  # 3D position for mapping artifacts - unknown depends on source (pose2d or pose3d)
+        self.xyz = None  # unknown initial 3D position
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.orientation = None  # quaternion updated by on_pose3d()
         self.yaw_offset = None  # not defined, use first IMU reading
@@ -186,15 +186,6 @@ class SubTChallenge:
         self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
         # Corresponds to gc.disable() in __main__. See a comment there for more details.
         gc.collect()
-
-    def maybe_remember_artifact(self, artifact_data, artifact_xyz):
-        for stored_data, (x, y, z) in self.artifacts:
-            if distance3D((x, y, z), artifact_xyz) < 4.0:
-                # in case of uncertain type, rather report both
-                if stored_data == artifact_data:
-                    return False
-        self.artifacts.append((artifact_data, artifact_xyz))
-        return True
 
     def go_straight(self, how_far, timeout=None):
         print(self.time, "go_straight %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position, self.flipped)
@@ -863,8 +854,6 @@ class SubTChallenge:
             self.go_straight(-0.3, timeout=timedelta(seconds=10))
             self.return_home(timedelta(seconds=10))
 
-        self.stdout("Artifacts:", self.artifacts)
-
         self.stdout(self.time, "Explore phase finished %.3f" % dist, reason)
 
     def play_virtual_part_map_and_explore_frontiers(self):
@@ -896,7 +885,7 @@ class SubTChallenge:
 
         # wait for critical data
         while any_is_none(self.scan, self.xyz):
-            # self.xyz is initialized by pose2d or pose3d depending on robot type
+            # self.xyz is initialized by pose3d
             self.update()
 
         steps = parse_robot_name(self.robot_name)
@@ -907,7 +896,6 @@ class SubTChallenge:
             if action == 'wait':
                 self.stdout(f'Wait for {duration} seconds')
                 self.wait(timedelta(seconds=duration), use_sim_time=True)
-                self.stdout('Artifacts collected during wait:', self.artifacts)
 
             elif action.startswith('enter'):
                 self.use_right_wall = (action == 'enter-right')
