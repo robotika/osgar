@@ -99,7 +99,7 @@ class EmergencyStopMonitor:
 class SubTChallenge:
     def __init__(self, config, bus):
         self.bus = bus
-        bus.register("desired_speed", "pose2d", "artf_xyz", "stdout", "desired_z_speed", "flipped")
+        bus.register("desired_speed", "pose2d", "stdout", "desired_z_speed", "flipped")
         self.traveled_dist = 0.0
         self.time = None
         self.max_speed = config['max_speed']
@@ -129,7 +129,7 @@ class SubTChallenge:
         self.trace_z_weight = config.get('trace_z_weight', 0.2)  # Z is important for drones ~ 3.0
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
-        self.xyz = None  # 3D position for mapping artifacts - unknown depends on source (pose2d or pose3d)
+        self.xyz = None  # unknown initial 3D position
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.orientation = None  # quaternion updated by on_pose3d()
         self.yaw_offset = None  # not defined, use first IMU reading
@@ -139,7 +139,6 @@ class SubTChallenge:
         self.joint_angle_rad = []  # optinal angles, needed for articulated robots flip
         self.stat = defaultdict(int)
         self.voltage = []
-        self.artifacts = []
         self.trace = Trace()
         self.waypoints = None  # external waypoints for navigation
         self.loop_detector = LoopDetector()
@@ -187,15 +186,6 @@ class SubTChallenge:
         self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
         # Corresponds to gc.disable() in __main__. See a comment there for more details.
         gc.collect()
-
-    def maybe_remember_artifact(self, artifact_data, artifact_xyz):
-        for stored_data, (x, y, z) in self.artifacts:
-            if distance3D((x, y, z), artifact_xyz) < 4.0:
-                # in case of uncertain type, rather report both
-                if stored_data == artifact_data:
-                    return False
-        self.artifacts.append((artifact_data, artifact_xyz))
-        return True
 
     def go_straight(self, how_far, timeout=None):
         print(self.time, "go_straight %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position, self.flipped)
@@ -560,37 +550,6 @@ class SubTChallenge:
                 self.collision_detector_enabled = False
                 raise Collision()
 
-    def publish_single_artf_xyz(self, artifact_data, pos):
-        ax, ay, az = pos
-        self.bus.publish('artf_xyz', [
-            [artifact_data, [round(ax * 1000), round(ay * 1000), round(az * 1000)], self.robot_name, None]])
-
-    def handle_artf(self, artifact_data, world_xyz):
-        ax, ay, az = world_xyz
-        if -20 < ax < 0 and -10 < ay < 10:  # AND of currently available staging areas
-            # Urban (-20 < ax < 0 and -10 < ay < 10)
-            # Cave  (-50 < ax < 0 and -25 < ay < 25)
-            # filter out elements on staging area
-            self.stdout(self.time, 'Robot at:', (ax, ay, az))
-        else:
-            if self.maybe_remember_artifact(artifact_data, (ax, ay, az)):
-                self.publish_single_artf_xyz(artifact_data, (ax, ay, az))
-
-    def on_artf(self, timestamp, data):
-        if self.orientation is None or self.xyz is None:
-            # there can be observed artifact (false) on the start before the coordinate system is defined
-            return
-        artifact_data, vector = data
-        dx, dy, dz = quaternion.rotate_vector(vector, self.orientation)
-        x, y, z = self.xyz
-        ax = x + dx/1000.0
-        ay = y + dy/1000.0
-        az = z + dz/1000.0
-        self.handle_artf(artifact_data, (ax, ay, az))
-
-    def on_localized_artf(self, timestamp, data):
-        self.handle_artf(*data)
-
     def on_joint_angle(self, timestamp, data):
         # angles for articulated robot in 1/100th of degree
         self.joint_angle_rad = [math.radians(a/100) for a in data]
@@ -829,9 +788,7 @@ class SubTChallenge:
                         self.flip()
                     self.robust_follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=3*self.timeout, dist_limit=3*total_dist,
                             pitch_limit=self.return_limit_pitch, roll_limit=self.return_limit_roll)
-                if self.artifacts:
-                    self.bus.publish('artf_xyz', [[artifact_data, [round(x*1000), round(y*1000), round(z*1000)], self.robot_name, None]
-                                              for artifact_data, (x, y, z) in self.artifacts])
+
         except EmergencyStopException:
             print(self.time, "EMERGENCY STOP - terminating")
         self.send_speed_cmd(0, 0)
@@ -897,8 +854,6 @@ class SubTChallenge:
             self.go_straight(-0.3, timeout=timedelta(seconds=10))
             self.return_home(timedelta(seconds=10))
 
-        self.stdout("Artifacts:", self.artifacts)
-
         self.stdout(self.time, "Explore phase finished %.3f" % dist, reason)
 
     def play_virtual_part_map_and_explore_frontiers(self):
@@ -917,9 +872,6 @@ class SubTChallenge:
     def play_virtual_part_return(self, timeout):
         self.return_home(timeout)
         self.send_speed_cmd(0, 0)
-        if self.artifacts:
-            self.bus.publish('artf_xyz', [[artifact_data, [round(x * 1000), round(y * 1000), round(z * 1000)], self.robot_name, None]
-                                          for artifact_data, (x, y, z) in self.artifacts])
         self.wait(timedelta(seconds=10), use_sim_time=True)
         self.stdout('Final xyz:', self.xyz)
         self.stdout('Final xyz (DARPA coord system):', self.xyz)
@@ -933,7 +885,7 @@ class SubTChallenge:
 
         # wait for critical data
         while any_is_none(self.scan, self.xyz):
-            # self.xyz is initialized by pose2d or pose3d depending on robot type
+            # self.xyz is initialized by pose3d
             self.update()
 
         steps = parse_robot_name(self.robot_name)
@@ -944,7 +896,6 @@ class SubTChallenge:
             if action == 'wait':
                 self.stdout(f'Wait for {duration} seconds')
                 self.wait(timedelta(seconds=duration), use_sim_time=True)
-                self.stdout('Artifacts collected during wait:', self.artifacts)
 
             elif action.startswith('enter'):
                 self.use_right_wall = (action == 'enter-right')
