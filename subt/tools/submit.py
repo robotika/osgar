@@ -27,6 +27,9 @@ WORLDS = dict(
     tc8 = "Tunnel Circuit World 8",
 
     uq  = "Urban Qualification",
+    us1 = "Urban Simple 1",
+    us2 = "Urban Simple 2",
+    us3 = "Urban Simple 3",
     up1 = "Urban Practice 1",
     up2 = "Urban Practice 2",
     up3 = "Urban Practice 3",
