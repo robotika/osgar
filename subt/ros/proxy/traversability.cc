@@ -546,10 +546,6 @@ void Traversability::HandleDepth(
       // c) The robot is not pitched/rolled in a way that seeing
       //    ground in this direction is impossible;
       // then we should be worried.
-      if (!ground_visible)
-      {
-        ROS_INFO("%d: %f,%f,%f %f", (int) obscured_view, pt_down_near.x() - robot_xyz.x(), pt_down_near.y() - robot_xyz.y(), pt_down_near.z() - robot_xyz.z(), expected_ground - robot_xyz.z());
-      }
       if (!ground_visible && !obscured_view)
       {
         points.push_back(pt_down_near);
@@ -676,7 +672,7 @@ void Traversability::OnTimer(const ros::TimerEvent& event)
     nearby_pts.resize(config_.max_num_nearby_points);
   }
 
-  ROS_INFO("Pointcloud: %zu / %zu", nearby_pts.size(), local_pts.size());
+  ROS_DEBUG("Pointcloud: %zu / %zu", nearby_pts.size(), local_pts.size());
 
   if (points_publisher_.getNumSubscribers())
   {
