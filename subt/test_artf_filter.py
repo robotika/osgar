@@ -26,7 +26,7 @@ class ArtifactFilterTest(unittest.TestCase):
         # 2nd report should be ignored
         self.assertEqual(filter.maybe_remember_artifact(artf_data, artf_xyz), False)
 
-    def test_usage(self):
+    def test_staging_area(self):
         bus = MagicMock()
         filter = ArtifactFilter(bus=bus, config={})
         filter.on_robot_name(b'A100L')
