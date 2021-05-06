@@ -616,7 +616,7 @@ class SubTChallenge:
                 else:
                     self.scan = data[index45deg:-index45deg]
                 if self.local_planner is not None:
-                    self.local_planner.update(data)
+                    self.local_planner.update(self.scan)
             elif channel == 'sim_time_sec':
                 self.sim_time_sec = data
             elif channel == 'voltage':
