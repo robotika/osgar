@@ -25,7 +25,7 @@ def entrance_reached(sim):
 class SubTChallengeTest(unittest.TestCase):
 
     def test_go_to_entrance(self):
-        config = {'virtual_world': True, 'max_speed': 1.0, 'walldist': 0.8, 'timeout': 600, 'symmetric': False, 'right_wall': 'auto'}
+        config = {'virtual_world': True, 'max_speed': 1.0, 'gap_size': 0.8, 'wall_dist': 0.8, 'timeout': 600, 'symmetric': False, 'right_wall': 'auto'}
         bus = Bus(simulation.SimLogger())
         app = SubTChallenge(config, bus.handle('app'))
         sim = simulation.Simulation(bus.handle('sim'), end_condition=entrance_reached)
