@@ -103,6 +103,8 @@ class Traversability
       // Maximum number of scan-based frames per input lidar stored in the local
       // map.
       int max_scan_observations;
+      // Ignoring lidar mesurements below this distance.
+      float min_lidar_range;
       // Ignoring lidar mesurements past this distance.
       float max_lidar_range;
       // Storing every n-th interesting point from lidar.
@@ -179,7 +181,8 @@ bool Traversability::Init()
   ros_handle_.param("max_neighbor_distance", config_.max_neighbor_distance, 0.3f);
   ros_handle_.param("max_relative_z", config_.max_relative_z, 40.f);
   ros_handle_.param("max_scan_observations", config_.max_scan_observations, 20 * 6);
-  ros_handle_.param("max_lidar_range", config_.max_lidar_range, 0.45f);
+  ros_handle_.param("min_lidar_range", config_.min_lidar_range, 0.f);
+  ros_handle_.param("max_lidar_range", config_.max_lidar_range, 10.0f);
   ros_handle_.param("lidar_subsampling", config_.lidar_subsampling, 4);
   float publish_rate_tmp;
   ros_handle_.param("publish_rate", publish_rate_tmp, 0.048f);
@@ -590,13 +593,13 @@ void Traversability::OnScan(const sensor_msgs::LaserScan::ConstPtr& msg)
         msg->ranges[i],
         msg->ranges[i + 1],
         msg->ranges[i + 2]});
-    if (range <= 0 || range >= config_.max_lidar_range)  // Skip invalid/missing/ignored measurements.
+    if (range <= config_.min_lidar_range || range >= config_.max_lidar_range)  // Skip invalid/missing/ignored measurements.
     {
       continue;
     }
 
     beam.setX(range);
-    rot.getRotation().setRPY(0, 0, angle);
+    rot.getBasis().setRPY(0, 0, angle);
     tf::Vector3 pt = *sensor_pose * rot * beam;
 
     const float slope = std::atan2(

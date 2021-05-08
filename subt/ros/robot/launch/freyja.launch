@@ -273,7 +273,7 @@
   <node pkg="topic_tools" type="relay" name="lidar_merge_front" args="$(arg robot_name)/scan_front $(arg robot_name)/scan_all"/>
   <node pkg="topic_tools" type="relay" name="lidar_merge_rear" args="$(arg robot_name)/scan_rear $(arg robot_name)/scan_all"/>
 
-  <node pkg="proxy" type="traversability" name="local_map" ns="$(arg robot_name)" output="screen">
+  <node pkg="proxy" type="traversability" name="local_map" ns="$(arg robot_name)">
     <param name="robot_frame_id" value="$(arg robot_name)/ground"/>
     <remap from="local_map/input/camera_info" to="/$(arg robot_name)/rgbd_all/optical/camera_info"/>
     <remap from="local_map/input/depth/compressed" to="/rtabmap/rgbd/all/compressed"/>
