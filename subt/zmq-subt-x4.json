@@ -192,6 +192,7 @@
               ["radio.radio", "rosmsg.broadcast"],
               ["rosmsg.radio", "radio.radio"],
               ["rosmsg.sim_time_sec", "radio.sim_time_sec"],
+              ["radio.breadcrumb", "artifact_filter.breadcrumb"],
 
               ["radio.robot_xyz", "mtm.robot_xyz"],
               ["radio.trace_info", "mtm.trace_info"],

@@ -26,12 +26,24 @@ class ArtifactFilterTest(unittest.TestCase):
         # 2nd report should be ignored
         self.assertEqual(filter.maybe_remember_artifact(artf_data, artf_xyz), False)
 
-    def test_usage(self):
+    def test_staging_area(self):
         bus = MagicMock()
         filter = ArtifactFilter(bus=bus, config={})
         filter.on_robot_name(b'A100L')
         filter.on_localized_artf(['TYPE_DRILL', [-10.0, 0.0, 0.0]])
         bus.publish.assert_not_called()  # inside staging area
+
+    def test_false_drill(self):
+        # the breadcrumbs are sometimes wrongly classified as drill
+        bus = MagicMock()
+        filter = ArtifactFilter(bus=bus, config={})
+        filter.on_robot_name(b'A100L')
+        filter.on_breadcrumb([100.0, 20.0, -30.0])
+        filter.on_localized_artf(['TYPE_DRILL', [100.0, 20.0, -30.0]])
+        bus.publish.assert_not_called()  # inside staging area
+
+        filter.on_localized_artf(['TYPE_DRILL', [105.0, 20.0, -30.0]])
+        bus.publish.assert_called_with('artf_xyz', [['TYPE_DRILL', [105000, 20000, -30000], 'A100L', None]])
 
 
 # vim: expandtab sw=4 ts=4

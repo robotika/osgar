@@ -5,6 +5,7 @@
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 from subt.trace import distance3D
+from subt.artifacts import DRILL
 
 
 class ArtifactFilter(Node):
@@ -13,6 +14,7 @@ class ArtifactFilter(Node):
         bus.register("artf_xyz")
         self.robot_name = None  # for "signature" who discovered the artifact
         self.artifacts = []
+        self.breadcrumbs = []
         self.verbose = False
 
     def publish_single_artf_xyz(self, artifact_data, pos):
@@ -21,6 +23,14 @@ class ArtifactFilter(Node):
             [artifact_data, [round(ax * 1000), round(ay * 1000), round(az * 1000)], self.robot_name, None]])
 
     def maybe_remember_artifact(self, artifact_data, artifact_xyz):
+        # the breadcrumbs are sometimes wrongly classified as DRILL
+        if artifact_data == DRILL:
+            for x, y, z in self.breadcrumbs:
+                if distance3D((x, y, z), artifact_xyz) < 4.0:
+                    if self.verbose:
+                        print('False detection - dist:', distance3D((x, y, z), artifact_xyz))
+                    return False
+
         for stored_data, (x, y, z) in self.artifacts:
             if distance3D((x, y, z), artifact_xyz) < 4.0:
                 # in case of uncertain type, rather report both
@@ -46,6 +56,11 @@ class ArtifactFilter(Node):
 
     def on_localized_artf(self, data):
         self.handle_artf(*data)
+
+    def on_breadcrumb(self, data):
+        self.breadcrumbs.append(data)
+        if self.verbose:
+            print('Breadcrumb:', data)
 
     def update(self):
         channel = super().update()

@@ -179,6 +179,7 @@
               ["breadcrumbs.deploy", "torospy.deploy"],
               ["breadcrumbs.location", "radio.breadcrumb"],
               ["radio.breadcrumb", "breadcrumbs.external"],
+              ["radio.breadcrumb", "artifact_filter.breadcrumb"],
 
               ["detector.localized_artf", "artifact_filter.localized_artf"],
               ["detector.stdout", "rosmsg.stdout"],
