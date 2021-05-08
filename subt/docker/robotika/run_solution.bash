@@ -50,7 +50,7 @@ case $ROBOT_CONFIG in
     LAUNCH_FILE="robot k2-virt.launch"
     CONFIG_FILES=("zmq-subt-x2.json" "subt-k2-virt.json")
     WALLDIST=1.0
-    SPEED=1.5
+    SPEED=1.0
     ;;
   "ROBOTIKA_X2_SENSOR_CONFIG_1"):
     echo "Robot is default X2 wheeled robot"

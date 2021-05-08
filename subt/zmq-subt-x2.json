@@ -4,7 +4,7 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["emergency_stop", "scan", "scan_back", "sim_time_sec", "acc", "robot_name"],
+          "in": ["emergency_stop", "scan360", "sim_time_sec", "acc", "robot_name"],
           "out": ["desired_speed", "pose2d", "pose3d", "stdout"],
           "init": {
             "max_speed": 0.5,
@@ -78,41 +78,11 @@
             "downsample": 2
           }
       },
-      "depth2scan": {
-          "driver": "subt.depth2scan:DepthToScan",
-          "in": ["rgbd", "scan"],
-          "out": ["scan"],
-          "init": {
-            "depth_params": {
-              "vertical_pixel_offset": 16,
-              "lidar_trusted_zone": 0.5,
-              "stride": 2,
-              "noise_filter_window": [12, 6],
-              "noise_filter_threshold": 30
-            },
-            "filter_fog": true
-          }
-      },
-      "depth2scan_rear": {
-          "driver": "subt.depth2scan:DepthToScan",
-          "in": ["rgbd", "scan"],
-          "out": ["scan"],
-          "init": {
-            "depth_params": {
-              "vertical_pixel_offset": 16,
-              "lidar_trusted_zone": 0.5,
-              "stride": 2,
-              "noise_filter_window": [12, 6],
-              "noise_filter_threshold": 30
-            },
-            "filter_fog": true
-          }
-      },
       "fromrospy": {
           "driver": "subt.pull:Pull",
           "init": {
             "outputs": ["acc", "battery_state", "score", "pose3d", "gas_detected",
-                        "scan_front", "scan_rear", "rgbd_front:null", "rgbd_rear:null",
+                        "scan_front", "scan_rear", "scan360", "rgbd_front:null", "rgbd_rear:null",
                         "robot_name", "octomap:gz"]
           }
       },
@@ -175,16 +145,11 @@
 
               ["fromrospy.scan_front", "detector.scan"],
               ["fromrospy.scan_rear", "detector_rear.scan"],
-              ["fromrospy.scan_front", "depth2scan.scan"],
-              ["fromrospy.scan_rear", "depth2scan_rear.scan"],
 
-              ["fromrospy.rgbd_front", "depth2scan.rgbd"],
               ["fromrospy.rgbd_front", "detector.rgbd"],
-              ["fromrospy.rgbd_rear", "depth2scan_rear.rgbd"],
               ["fromrospy.rgbd_rear", "detector_rear.rgbd"],
 
-              ["depth2scan.scan", "app.scan"],
-              ["depth2scan_rear.scan", "app.scan_back"],
+              ["fromrospy.scan360", "app.scan360"],
 
               ["fromrospy.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],

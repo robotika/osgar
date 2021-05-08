@@ -260,4 +260,25 @@
     <remap from="odometry/filtered" to="/$(arg robot_name)/odom_fused"/>
   </node>
 
+  <!-- Combining RGBD messages from both cameras into a single stream -->
+  <node pkg="topic_tools" type="relay" name="rgbd_merge_front" args="/rtabmap/rgbd/front/compressed /rtabmap/rgbd/all/compressed"/>
+  <node pkg="topic_tools" type="relay" name="rgbd_merge_rear" args="/rtabmap/rgbd/rear/compressed /rtabmap/rgbd/all/compressed"/>
+  <!-- Merge camera infos into a single stream -->
+  <node pkg="topic_tools" type="relay" name="camera_info_merge_front" args="$(arg robot_name)/rgbd_front/optical/camera_info $(arg robot_name)/rgbd_all/optical/camera_info"/>
+  <node pkg="topic_tools" type="relay" name="camera_info_merge_rear" args="$(arg robot_name)/rgbd_rear/optical/camera_info $(arg robot_name)/rgbd_all/optical/camera_info"/>
+  <!-- Merge both lidars into a single stream. -->
+  <node pkg="topic_tools" type="relay" name="lidar_merge_front" args="$(arg robot_name)/scan_front $(arg robot_name)/scan_all"/>
+  <node pkg="topic_tools" type="relay" name="lidar_merge_rear" args="$(arg robot_name)/scan_rear $(arg robot_name)/scan_all"/>
+
+  <node pkg="proxy" type="traversability" name="local_map" ns="$(arg robot_name)">
+    <param name="robot_frame_id" value="$(arg robot_name)"/>
+    <param name="min_lidar_range" value="0.24"/>
+    <!-- Very short range to avoid the robot detecting its other half as an obstacle and
+         putting it into map. -->
+    <param name="max_lidar_range" value="0.5"/>
+    <param name="synthetic_obstacle_distance" value="0.7"/>
+    <remap from="local_map/input/camera_info" to="/$(arg robot_name)/rgbd_all/optical/camera_info"/>
+    <remap from="local_map/input/depth/compressed" to="/rtabmap/rgbd/all/compressed"/>
+    <remap from="local_map/input/scan" to="/$(arg robot_name)/scan_all"/>
+  </node>
 </launch>

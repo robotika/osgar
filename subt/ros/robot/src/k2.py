@@ -90,7 +90,7 @@ class K2Controller:
             desired_joint_angle *= -1
         #print('current', [math.degrees(alpha) for alpha in euler_zyx(joint_rot)], 'desired', math.degrees(desired_joint_angle), 'because of', math.degrees(self.desired.angular.z))
 
-        P = 5.0  # P control.
+        P = 3.0  # P control.
         rot = desired_joint_angle - current_joint_angle
 
         # To work together, the halfs of the robot need to rotate in opposite

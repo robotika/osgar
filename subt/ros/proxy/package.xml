@@ -23,4 +23,7 @@
   <depend>nav_msgs</depend>
   <depend>std_srvs</depend>
 
+  <depend>cv_bridge</depend>
+  <depend>tf</depend>
+
 </package>
