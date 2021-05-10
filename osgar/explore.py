@@ -145,7 +145,6 @@ def follow_wall_angle(laser_data, gap_size, wall_dist, right_wall=False, interna
                         gap_end_dist = None
                         break
 
-
             if gap_end_idx is None or gap < gap_end_dist:
                 gap_end_idx = i
                 gap_end_dist = gap
