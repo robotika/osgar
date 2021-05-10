@@ -106,7 +106,8 @@ class SubTChallenge:
         self.max_angular_speed = math.radians(60)
         self.rotation_p = config.get('rotation_p', 0.8)
         self.turbo_speed = config.get('turbo_speed')
-        self.walldist = config['walldist']
+        self.gap_size = config['gap_size']
+        self.wall_dist = config['wall_dist']
         self.follow_wall_params = config.get('follow_wall', {})
         self.timeout = timedelta(seconds=config['timeout'])
         self.symmetric = config['symmetric']  # is robot symmetric?
@@ -271,7 +272,7 @@ class SubTChallenge:
             self.update()
 
 
-    def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None,
+    def follow_wall(self, gap_size, wall_dist, right_wall=False, timeout=timedelta(hours=3), dist_limit=None,
             pitch_limit=None, roll_limit=None, detect_loop=True):
         reason = None  # termination reason is not defined yet
         start_dist = self.traveled_dist
@@ -296,7 +297,7 @@ class SubTChallenge:
                             self.go_safely(0)
                         else:
                             desired_direction = normalizeAnglePIPI(
-                                    follow_wall_angle(self.scan, radius=radius, right_wall=right_wall, **self.follow_wall_params))
+                                    follow_wall_angle(self.scan, gap_size=gap_size, wall_dist=wall_dist, right_wall=right_wall, **self.follow_wall_params))
                             flip_threshold = math.radians(115)  # including some margin around corners
                             if self.symmetric and (
                                     (right_wall and desired_direction > flip_threshold) or
@@ -665,13 +666,13 @@ class SubTChallenge:
         trace.reverse()
         self.follow_trace(trace, timeout=timedelta(seconds=120), max_target_distance=2.5, safety_limit=0.2)
 
-    def robust_follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None,
+    def robust_follow_wall(self, gap_size, wall_dist, right_wall=False, timeout=timedelta(hours=3), dist_limit=None,
             pitch_limit=None, roll_limit=None):
         """
         Handle multiple re-tries with increasing distance from the wall if necessary
         """
         allow_virtual_flip = self.symmetric
-        walldist = self.walldist
+        wall_dist = self.wall_dist
         total_dist = 0.0
         start_time = self.sim_time_sec
         overall_timeout = timeout
@@ -682,13 +683,13 @@ class SubTChallenge:
             timeout = timedelta(seconds=overall_timeout.total_seconds() - (self.sim_time_sec - start_time))
             print('Current timeout', timeout)
 
-            dist, reason = self.follow_wall(radius=walldist, right_wall=right_wall, timeout=timeout,
+            dist, reason = self.follow_wall(gap_size=gap_size, wall_dist=wall_dist, right_wall=right_wall, timeout=timeout,
                                     pitch_limit=self.limit_pitch, roll_limit=self.limit_roll)
             total_dist += dist
             if reason is None or reason in [REASON_LORA,]:
                 break
 
-            walldist += 0.2
+            wall_dist += 0.2
             if not allow_virtual_flip:
                 # Eduro not supported yet
                 if reason in [REASON_VIRTUAL_BUMPER,]:
@@ -702,19 +703,19 @@ class SubTChallenge:
             for repeat in range(2):
                 # retreat a bit
                 self.flip()
-                self.follow_wall(radius=walldist, right_wall=not right_wall, timeout=timedelta(seconds=30), dist_limit=2.0,
+                self.follow_wall(gap_size=gap_size, wall_dist=wall_dist, right_wall=not right_wall, timeout=timedelta(seconds=30), dist_limit=2.0,
                     pitch_limit=self.return_limit_pitch, roll_limit=self.return_limit_roll)
                 self.flip()
 
-                dist, reason = self.follow_wall(radius=walldist, right_wall=right_wall, timeout=timedelta(seconds=40), dist_limit=4.0,
+                dist, reason = self.follow_wall(gap_size=gap_size, wall_dist=wall_dist, right_wall=right_wall, timeout=timedelta(seconds=40), dist_limit=4.0,
                                         pitch_limit=self.limit_pitch, roll_limit=self.limit_roll)
                 total_dist += dist
                 if reason is None:
                     break
                 if reason in [REASON_LORA, REASON_DIST_REACHED]:
                     break
-                walldist += 0.2
-            walldist = self.walldist
+                wall_dist += 0.2
+            wall_dist = self.wall_dist
             if reason in [REASON_LORA,]:
                 break
 
@@ -728,7 +729,7 @@ class SubTChallenge:
                     self.system_nav_trace(self.init_path)
 
 #                self.go_straight(2.5)  # go to the tunnel entrance - commented our for testing
-                walldist = self.walldist
+                wall_dist = self.wall_dist
                 total_dist = 0.0
                 start_time = self.sim_time_sec
                 while self.sim_time_sec - start_time < self.timeout.total_seconds():
@@ -738,13 +739,13 @@ class SubTChallenge:
                     timeout = timedelta(seconds=self.timeout.total_seconds() - (self.sim_time_sec - start_time))
                     print('Current timeout', timeout)
 
-                    dist, reason = self.follow_wall(radius=walldist, right_wall=self.use_right_wall, timeout=timeout,
+                    dist, reason = self.follow_wall(gap_size=self.gap_size, wall_dist=wall_dist, right_wall=self.use_right_wall, timeout=timeout,
                                             pitch_limit=self.limit_pitch, roll_limit=self.limit_roll)
                     total_dist += dist
                     if reason is None or reason in [REASON_LORA,]:
                         break
 
-                    walldist += 0.2
+                    wall_dist += 0.2
                     if not allow_virtual_flip:
                         # Eduro not supported yet
                         if reason in [REASON_VIRTUAL_BUMPER,]:
@@ -758,20 +759,20 @@ class SubTChallenge:
                     for repeat in range(2):
                         if allow_virtual_flip:
                             self.flip()
-                        self.follow_wall(radius=walldist, right_wall=not self.use_right_wall, timeout=timedelta(seconds=30), dist_limit=2.0,
+                        self.follow_wall(gap_size=self.gap_size, wall_dist=wall_dist, right_wall=not self.use_right_wall, timeout=timedelta(seconds=30), dist_limit=2.0,
                             pitch_limit=self.return_limit_pitch, roll_limit=self.return_limit_roll)
                         if allow_virtual_flip:
                             self.flip()
 
-                        dist, reason = self.follow_wall(radius=walldist, right_wall=self.use_right_wall, timeout=timedelta(seconds=40), dist_limit=4.0,
+                        dist, reason = self.follow_wall(gap_size=self.gap_size, wall_dist=wall_dist, right_wall=self.use_right_wall, timeout=timedelta(seconds=40), dist_limit=4.0,
                                                 pitch_limit=self.limit_pitch, roll_limit=self.limit_roll)
                         total_dist += dist
                         if reason is None:
                             break
                         if reason in [REASON_LORA, REASON_DIST_REACHED]:
                             break
-                        walldist += 0.2
-                    walldist = self.walldist
+                        wall_dist += 0.2
+                    wall_dist = self.wall_dist
                     if reason in [REASON_LORA,]:
                         break
 
@@ -786,7 +787,7 @@ class SubTChallenge:
                         self.turn(math.radians(90), timeout=timedelta(seconds=20))
                     else:
                         self.flip()
-                    self.robust_follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=3*self.timeout, dist_limit=3*total_dist,
+                    self.robust_follow_wall(gap_size=self.gap_size, wall_dist=self.wall_dist, right_wall=not self.use_right_wall, timeout=3*self.timeout, dist_limit=3*total_dist,
                             pitch_limit=self.return_limit_pitch, roll_limit=self.return_limit_roll)
 
         except EmergencyStopException:
@@ -822,7 +823,7 @@ class SubTChallenge:
             timeout = timedelta(seconds=self.timeout.total_seconds() - (self.sim_time_sec - start_time))
             print('Current timeout', timeout)
 
-            dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,
+            dist, reason = self.follow_wall(gap_size=self.gap_size, wall_dist=self.wall_dist, right_wall=self.use_right_wall,
                                 timeout=timeout, pitch_limit=self.limit_pitch, roll_limit=None)
             self.collision_detector_enabled = False
             if reason == REASON_VIRTUAL_BUMPER:
@@ -835,15 +836,15 @@ class SubTChallenge:
                 # try something crazy if you do not have other ideas ...
                 before_center = self.use_center
                 self.use_center = True
-                dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,
+                dist, reason = self.follow_wall(gap_size=self.gap_size, wall_dist=self.wall_dist, right_wall=self.use_right_wall,
                                     timeout=timedelta(seconds=60), pitch_limit=self.limit_pitch, roll_limit=None)
                 self.use_center = before_center
                 if reason is None or reason != REASON_PITCH_LIMIT:
                     continue
             elif reason == REASON_LOOP:
-                # Smaller walldist to reduce the chance that we miss the opening again that we missed before,
+                # Smaller wall_dist to reduce the chance that we miss the opening again that we missed before,
                 # which made us end up in a loop.
-                dist, reason = self.follow_wall(radius=self.walldist*0.75, right_wall=not self.use_right_wall,
+                dist, reason = self.follow_wall(gap_size=self.gap_size, wall_dist=self.wall_dist*0.75, right_wall=not self.use_right_wall,
                                     timeout=timedelta(seconds=5), pitch_limit=self.limit_pitch, roll_limit=None, detect_loop=False)
                 if reason is None:
                     continue
@@ -877,7 +878,7 @@ class SubTChallenge:
         self.stdout('Final xyz (DARPA coord system):', self.xyz)
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver106!")
+        self.stdout("SubT Challenge Ver107!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
@@ -953,7 +954,8 @@ def main():
     parser_run = subparsers.add_parser('run', help='run on real HW')
     parser_run.add_argument('config', nargs='+', help='configuration file')
     parser_run.add_argument('--note', help='add description')
-    parser_run.add_argument('--walldist', help='distance for wall following (default: %(default)sm)', default=1.0, type=float)
+    parser_run.add_argument('--gap-size', help='minimum gap the robot goeas into (default: %(default)sm)', default=1.0, type=float)
+    parser_run.add_argument('--wall-dist', help='distance for wall following (default: %(default)sm)', default=1.0, type=float)
     parser_run.add_argument('--side', help='which side to follow', choices=['left', 'right', 'auto'], required=True)
     parser_run.add_argument('--speed', help='maximum speed (default: from config)', type=float)
     parser_run.add_argument('--timeout', help='seconds of exploring before going home (default: %(default)s)',
@@ -989,7 +991,8 @@ def main():
         cfg = config_load(*args.config, application=SubTChallenge)
 
         # apply overrides from command line
-        cfg['robot']['modules']['app']['init']['walldist'] = args.walldist
+        cfg['robot']['modules']['app']['init']['gap_size'] = args.gap_size
+        cfg['robot']['modules']['app']['init']['wall_dist'] = args.wall_dist
         if args.side == 'auto':
             cfg['robot']['modules']['app']['init']['right_wall'] = 'auto'
         else:
