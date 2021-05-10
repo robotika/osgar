@@ -32,8 +32,8 @@ case $ROBOT_CONFIG in
     LAUNCH_FILE="robot x4.launch"
     CONFIG_FILES=("zmq-subt-x4.json")
     SPEED=1.5
-    GAPSIZE=1.2
-    WALLDIST=1.2
+    GAPSIZE=0.9
+    WALLDIST=1.6
     ;;
   "TEAMBASE"):
     echo "Robot is TEAMBASE"
