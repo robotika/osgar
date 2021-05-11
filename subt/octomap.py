@@ -153,11 +153,14 @@ def frontiers(img, start, draw=False):
     score = np.zeros(len(xy[0]))
     for i in range(len(xy[0])):
         x, y = xy[0][i]-SLICE_OCTOMAP_SIZE//2, SLICE_OCTOMAP_SIZE//2-xy[1][i]
-        score[i] = math.hypot(x, y) * 0.03
+        if x > 0:
+            score[i] = math.hypot(x, y) * 0.03
+        else:
+            score[i] = 0  # too cruel cut for X positive semi-space, but let's move INSIDE!
         for j in range(len(xy[0])):
             x2, y2 = xy[0][j]-SLICE_OCTOMAP_SIZE//2, SLICE_OCTOMAP_SIZE//2-xy[1][j]
             dist = math.hypot(x - x2, y - y2)
-            if dist < 10:  # ~ 5 meters
+            if dist < 10 and score[i] > 0:  # ~ 5 meters, only inside
                 score[i] += 1.0
 
     if draw:
