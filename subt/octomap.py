@@ -153,10 +153,13 @@ def frontiers(img, start, draw=False):
     score = np.zeros(len(xy[0]))
     for i in range(len(xy[0])):
         x, y = xy[0][i]-SLICE_OCTOMAP_SIZE//2, SLICE_OCTOMAP_SIZE//2-xy[1][i]
-        if x > 0:
+        if y > 0:  # this XY swapping is not good :(
             score[i] = math.hypot(x, y) * 0.03
         else:
             score[i] = 0  # too cruel cut for X positive semi-space, but let's move INSIDE!
+
+    for i in range(len(xy[0])):
+        x, y = xy[0][i]-SLICE_OCTOMAP_SIZE//2, SLICE_OCTOMAP_SIZE//2-xy[1][i]
         for j in range(len(xy[0])):
             x2, y2 = xy[0][j]-SLICE_OCTOMAP_SIZE//2, SLICE_OCTOMAP_SIZE//2-xy[1][j]
             dist = math.hypot(x - x2, y - y2)
