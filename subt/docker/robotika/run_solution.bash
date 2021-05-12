@@ -22,6 +22,7 @@ ROBOT_IS_MARSUPIAL=$(rosparam get /robot_is_marsupial)
 echo "Robot is marsupial '$ROBOT_IS_MARSUPIAL'"
 
 # Defaults
+GAPSIZE=0.8
 WALLDIST=0.8
 SPEED=1.0
 
@@ -31,7 +32,8 @@ case $ROBOT_CONFIG in
     LAUNCH_FILE="robot x4.launch"
     CONFIG_FILES=("zmq-subt-x4.json")
     SPEED=1.5
-    WALLDIST=1.2
+    GAPSIZE=0.9
+    WALLDIST=1.6
     ;;
   "TEAMBASE"):
     echo "Robot is TEAMBASE"
@@ -42,22 +44,17 @@ case $ROBOT_CONFIG in
     echo "Robot is Freyja"
     LAUNCH_FILE="robot freyja.launch"
     CONFIG_FILES=("zmq-subt-x2.json" "subt-freyja.json")
-    WALLDIST=1.0
-    SPEED=1.5
-    ;;
-  "EXPLORER_R2_SENSOR_CONFIG"*):
-    echo "Robot is Explorer R2"
-    LAUNCH_FILE="robot r2.launch"
-    CONFIG_FILES=("config/r2.json")
-    WALLDIST=1.5
+    GAPSIZE=0.9
+    WALLDIST=1.6
     SPEED=1.5
     ;;
   "ROBOTIKA_KLOUBAK_SENSOR_CONFIG"*):
     echo "Robot is K2"
     LAUNCH_FILE="robot k2-virt.launch"
     CONFIG_FILES=("zmq-subt-x2.json" "subt-k2-virt.json")
-    WALLDIST=1.0
-    SPEED=1.5
+    GAPSIZE=0.9
+    WALLDIST=1.2
+    SPEED=1.0
     ;;
   "ROBOTIKA_X2_SENSOR_CONFIG_1"):
     echo "Robot is default X2 wheeled robot"
@@ -98,7 +95,7 @@ if [ $ROBOT_CONFIG == "TEAMBASE" ]
 then
     $PYTHON -m subt.teambase ${CONFIG_FILE_PATHS[@]} --robot-name $ROBOT_NAME --log $LOG_FILE --note "run teambase" &
 else
-    $PYTHON -m subt run ${CONFIG_FILE_PATHS[@]} --log $LOG_FILE --side auto --walldist $WALLDIST --speed $SPEED --note "run_solution.bash" &
+    $PYTHON -m subt run ${CONFIG_FILE_PATHS[@]} --log $LOG_FILE --side auto --gap-size $GAPSIZE --wall-dist $WALLDIST --speed $SPEED --note "run_solution.bash" &
 fi
 
 # https://linuxconfig.org/how-to-propagate-a-signal-to-child-processes-from-a-bash-script

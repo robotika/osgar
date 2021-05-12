@@ -89,10 +89,6 @@ def detect_config(robot_name):
         if has_breadcrumbs(robot_name):
             return "ROBOTIKA_KLOUBAK_SENSOR_CONFIG_2"
         return "ROBOTIKA_KLOUBAK_SENSOR_CONFIG_1"
-    elif "explorer_r2_sensor_config" in robot_description:
-        if has_breadcrumbs(robot_name):
-            return "EXPLORER_R2_SENSOR_CONFIG_2"
-        return "EXPLORER_R2_SENSOR_CONFIG_1"
     else:
         rospy.logerr("unknown configuration")
         return
