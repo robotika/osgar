@@ -4,7 +4,7 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["emergency_stop", "scan360", "sim_time_sec", "acc", "robot_name"],
+          "in": ["emergency_stop", "scan360", "sim_time_sec", "acc", "robot_name", "joint_angle"],
           "out": ["desired_speed", "pose2d", "pose3d", "stdout"],
           "init": {
             "max_speed": 0.5,
@@ -12,6 +12,7 @@
             "virtual_bumper_sec": 60,
             "virtual_bumper_radius": 10.0,
             "virtual_world": true,
+	    "direction_adherence": 45,
             "follow_wall": {
               "max_wall_distance": 7.6
             }
@@ -81,7 +82,7 @@
       "fromrospy": {
           "driver": "subt.pull:Pull",
           "init": {
-            "outputs": ["acc", "battery_state", "score", "pose3d", "gas_detected",
+            "outputs": ["acc", "battery_state", "score", "pose3d", "gas_detected", "joint_angle",
                         "scan_front", "scan_rear", "scan360", "rgbd_front:null", "rgbd_rear:null",
                         "robot_name", "octomap:gz"]
           }
@@ -150,6 +151,8 @@
               ["fromrospy.rgbd_rear", "detector_rear.rgbd"],
 
               ["fromrospy.scan360", "app.scan360"],
+
+              ["fromrospy.joint_angle", "app.joint_angle"],
 
               ["fromrospy.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],

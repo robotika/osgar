@@ -9,7 +9,6 @@
           "return_limit_pitch": 50,
           "return_limit_roll": 50,
           "obstacle_influence": 1.0,
-	  "direction_adherence": 45,
           "speed_policy": "conservative",
           "turbo_safe_dist": 2.8,
           "turbo_speed": 2.2,
