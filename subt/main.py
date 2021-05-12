@@ -210,6 +210,8 @@ class SubTChallenge:
             safety, safe_direction = 1.0, desired_direction
         else:
             safety, safe_direction = self.local_planner.recommend(desired_direction)
+        if self.flipped and self.joint_angle_rad:
+            safe_direction = normalizeAnglePIPI(safe_direction + sum(self.joint_angle_rad))
         #print(self.time,"safety:%f    desired:%f  safe_direction:%f"%(safety, desired_direction, safe_direction))
         desired_angular_speed = self.rotation_p * safe_direction
         size = len(self.scan)
@@ -433,6 +435,8 @@ class SubTChallenge:
                 x, y = self.xyz[:2]
                 yaw = (self.yaw + math.pi) if self.flipped else self.yaw
                 desired_direction = normalizeAnglePIPI(math.atan2(target_y - y, target_x - x) - yaw)
+                if self.flipped and self.joint_angle_rad:
+                    desired_direction = normalizeAnglePIPI(desired_direction + sum(self.joint_angle_rad))
                 if self.symmetric and abs(desired_direction) > math.radians(95):  # including hysteresis
                     print('Flipping:', math.degrees(desired_direction))
                     self.flip()
@@ -471,6 +475,8 @@ class SubTChallenge:
                 x, y, z = self.xyz
                 yaw = (self.yaw + math.pi) if self.flipped else self.yaw
                 desired_direction = normalizeAnglePIPI(math.atan2(target_y - y, target_x - x) - yaw)
+                if self.flipped and self.joint_angle_rad:
+                    desired_direction = normalizeAnglePIPI(desired_direction + sum(self.joint_angle_rad))
                 if self.symmetric and abs(desired_direction) > math.radians(95):  # including hysteresis
                     print('Flipping:', math.degrees(desired_direction))
                     self.flip()
