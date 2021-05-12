@@ -52,8 +52,8 @@ case $ROBOT_CONFIG in
     echo "Robot is K2"
     LAUNCH_FILE="robot k2-virt.launch"
     CONFIG_FILES=("zmq-subt-x2.json" "subt-k2-virt.json")
-    GAPSIZE=1.0
-    WALLDIST=1.0
+    GAPSIZE=0.9
+    WALLDIST=1.2
     SPEED=1.0
     ;;
   "ROBOTIKA_X2_SENSOR_CONFIG_1"):
