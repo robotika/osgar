@@ -55,7 +55,7 @@ def check_results(result_mdnet, result_cv):
                 ret_points.extend(points)
                 result.remove(r)
         if ret_points:
-            ret.append((name_cv, ret_points))
+            ret.append((name_cv, ret_points, r_cv))
     return ret
 
 
