@@ -85,7 +85,8 @@ def log_eval(log_file):
                     score_torch, points = proces_torch_result(res_t)
                     __, score_cv, bbox = res_cv
 
-                    detection_log.write("%s;%f;%f;%s;%s;%s\r\n" %(artf_name, score_torch, score_cv, str(points), str(bbox), im_file_name))
+                    detection_log.write("%s;%s;%f;%f;%s;%s;%s\r\n" %(str(timestamp), artf_name, score_torch, score_cv,
+                                                                     str(points), str(bbox), im_file_name))
                     detection_log.flush()
                     cv2.imwrite(im_path, img)
 
