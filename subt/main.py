@@ -897,7 +897,7 @@ class SubTChallenge:
                         self.follow_trace(tmp_trace, timeout=timedelta(seconds=10),
                                           max_target_distance=1.0, end_threshold=0.5, is_trace3d=True)
                 except NewWaypointsException:
-                    print("NewWaypointsException")
+                    pass
                 self.send_speed_cmd(0, 0)
             else:
                 self.update()
