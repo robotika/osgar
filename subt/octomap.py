@@ -365,28 +365,24 @@ if __name__ == "__main__":
                     level = key - ord('0')
                 if key == ord('d'):
                     import open3d as o3d
+                    res = 0.5
                     all = []
-                    for lev in range(-10, 20):
+                    for lev in range(-3, 10):
                         img = data2maplevel(data, level=lev)
                         xy = np.where(img == STATE_OCCUPIED)
-                        xyz = np.array([xy[0], xy[1], np.full(len(xy[0]), lev)]).T
+                        xyz = np.array([xy[1] - SLICE_OCTOMAP_SIZE/2, SLICE_OCTOMAP_SIZE/2 - xy[0], np.full(len(xy[0]), lev)]).T * res
                         all.extend(xyz.tolist())
                     pcd = o3d.geometry.PointCloud()
                     xyz = np.array(all)
                     pcd.points = o3d.utility.Vector3dVector(xyz)
-                    voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=0.5)
-                    colors = [[1, 0, 0] for i in range(len(xyz))]
-
-                    print(waypoints)
-                    res = 1  #0.5
-                    points = [[SLICE_OCTOMAP_SIZE/2 + x/res, SLICE_OCTOMAP_SIZE + y/res, z/res] for x, y, z in waypoints]
-                    lines = [[i, i+1] for i in range(len(points) - 1)]
+                    voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=0.1)
+                    lines = [[i, i+1] for i in range(len(waypoints) - 1)]
                     colors = [[1, 0, 0] for i in range(len(lines))]
                     line_set = o3d.geometry.LineSet()
-                    line_set.points = o3d.utility.Vector3dVector(points)
+                    line_set.points = o3d.utility.Vector3dVector(waypoints)
                     line_set.lines = o3d.utility.Vector2iVector(lines)
                     line_set.colors = o3d.utility.Vector3dVector(colors)
-                    o3d.visualization.draw_geometries([voxel_grid, line_set])
+                    o3d.visualization.draw_geometries([line_set, voxel_grid])
                 if not paused:
                     break
             if key == KEY_Q:
