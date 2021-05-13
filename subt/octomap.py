@@ -216,11 +216,12 @@ def frontiers(img, start, draw=False):
 class Octomap(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('waypoints')
+        bus.register('waypoints', 'dropped')
         self.prev_data = None
         self.time_limit_sec = None  # initialized with the first sim_time_sec
         self.debug_arr = []
         self.waypoints = None  # experimental trigger of navigation
+        self.waypoints_sent_time = None  # unknown
         self.sim_time_sec = None
         self.pose3d = None
         self.video_writer = None
@@ -237,13 +238,16 @@ class Octomap(Node):
     def on_pose3d(self, data):
         if self.waypoints is not None:
             print('Waypoints', data[0], self.waypoints[0], self.waypoints[-1])
-            self.publish('waypoints', self.waypoints)
+            self.waypoints_sent_time = self.publish('waypoints', self.waypoints)
             self.waypoints = None
 
     def on_octomap(self, data):
         if self.sim_time_sec is None or self.pose3d is None or self.sim_time_sec < self.time_limit_sec:
             return
-        self.time_limit_sec += 5  # simulated seconds
+        self.time_limit_sec += 1  # simulated seconds
+        if self.waypoints_sent_time is not None and self.waypoints_sent_time > self.time:
+            self.publish('dropped', self.time_limit_sec)  # log skipped sim_time
+            return
 
         # bit unlucky conversion from existing Python2 data
         assert len(data) % 2 == 0, len(data)
