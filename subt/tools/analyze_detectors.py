@@ -77,7 +77,8 @@ def log_eval(log_file):
                 result = check_results(result_torch, result_cv)
                 #print(result)
 
-                im_file_name = os.path.join(data_dir, prefix + "_im_%05d.jpg" % ii)
+                im_file_name = prefix + "_im_%06d.jpg" % ii
+                im_path = os.path.join(data_dir, im_file_name)
                 for res in result:
                     print(res)
                     artf_name, res_t, res_cv = res
@@ -86,7 +87,7 @@ def log_eval(log_file):
 
                     detection_log.write("%s;%f;%f;%s;%s;%s\r\n" %(artf_name, score_torch, score_cv, str(points), str(bbox), im_file_name))
                     detection_log.flush()
-                    cv2.imwrite(im_file_name, img)
+                    cv2.imwrite(im_path, img)
 
                 ii += 1
 
@@ -105,7 +106,7 @@ def eval_logs(path):
     if os.path.isdir(path):
         logs_list = sorted(os.listdir(path))
         for ii, log in enumerate(logs_list):
-            if not log.endswith("log"):
+            if not log.endswith(".log"):
                 continue
             if "rosout" in log or "server_console" in log:
                 continue
@@ -129,4 +130,3 @@ if __name__ == "__main__":
         plot_data(path)
     else:
         eval_logs(path)
-
