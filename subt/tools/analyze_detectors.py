@@ -107,7 +107,11 @@ def log_eval(log_file):
 
     for stream_name in g_streams:
         prefix = stream_name.split(".")[0]
-        only_stream = lookup_stream_id(log_file, stream_name)
+        try:
+            only_stream = lookup_stream_id(log_file, stream_name)
+        except Exception as e:
+            print(e)
+            continue  # continue with another stream name
         with LogReader(log_file, only_stream_id=only_stream) as log:
             ii = 0
             for timestamp, stream_id, data_raw in log:
