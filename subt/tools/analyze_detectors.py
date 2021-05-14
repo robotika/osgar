@@ -30,6 +30,46 @@ def proces_torch_result(result):
     return score_torch, points
 
 
+def manual_sorting(data):
+    ii = 0
+    while True:
+        if ii < 0:
+            ii = 0
+        if ii >= len(data):
+            ii = len(data) - 1
+        artf_name, score_t, score_cv, points, bbox, im_path, detection_type = data[ii]
+        print(bbox)
+        x, y, xw, yh = bbox
+        im_path = im_path[:-1]  # remove line end
+        img = cv2.imread(str(im_path), 1)
+        assert img is not None
+        cv2.rectangle(img, (x, y), (xw, yh), (0, 0, 255))
+        cv2.putText(img, artf_name, (x, y), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 255))
+        for xc, yc in points:
+            cv2.circle(img, (xc, yc), radius=4, color=(255, 255, 0), thickness=1)
+        cv2.putText(img, str(detection_type), (10, 50), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 0, 0))
+        im_to_show = cv2.resize(img, (1280, 720))
+        cv2.imshow("win", im_to_show)
+
+        k = cv2.waitKey(0) & 0xFF
+        if k == ord("n"):  # next img
+            ii += 1
+        elif k == ord("b"):  # back one img
+            ii -= 1
+        elif k == ord("t"):
+            data[ii][6] = "true"  # true detection
+        elif k == ord("f"):
+            data[ii][6] = "false"  # false detection
+        elif k == ord("d"):
+            data[ii][3] = "None"  # do not use
+        elif k == ord("q"):  # close and save
+            break
+
+    cv2.destroyAllWindows()
+
+    return [[artf_name, score_t, score_cv, detection_type] for artf_name, score_t, score_cv, __, __, __, detection_type in data]
+
+
 def create_detector():
     model = os.path.join(os.path.dirname(__file__), '../../../mdnet5.128.128.13.4.elu.pth')
     confidence_thresholds = {
@@ -100,7 +140,26 @@ def plot_data(path):
 
 
 def filter_detections(path):
-    pass
+    # collect data with detection
+    data_to_filter = []
+    dir_list = sorted(os.listdir(path))
+    for dir in dir_list:
+        if not dir.endswith(".log.d"):
+            continue
+        for line in open(os.path.join(path, dir, "detection.log")):
+            __, artf_name, score_t, score_cv, points, bbox, im_name = line.split(";")
+            score_t = float(score_t)
+            score_cv = float(score_cv)
+            points = eval(points)
+            bbox = eval(bbox)
+            im_path = os.path.join(path, dir, im_name)
+            data_to_filter.append([artf_name, score_t, score_cv, points, bbox, im_path, "true"])
+
+    data = manual_sorting(data_to_filter)
+
+    with open(os.path.join(path, "detection_overview.csv"), "w") as overview_log:
+        for artf_name, score_t, score_cv, detection_type in data:
+            overview_log.write("%s,%f,%f,%s\r\n" %(artf_name, score_t, score_cv, detection_type))
 
 
 def eval_logs(path):
