@@ -10,11 +10,13 @@ class ArtifactGasDetectorTest(unittest.TestCase):
     def test_report(self):
         bus = bus=MagicMock()
         detector = ArtifactGasDetector(bus=bus, config={})
+        detector.on_pose3d([[1, 2, 3], [0, 0, 0, 1]])
         detector.on_gas_detected(False)
         bus.publish.assert_not_called()
 
+        detector.on_pose3d([[1, 0, 1], [0, 0, 0, 1]])
         detector.on_gas_detected(True)
         bus.publish.assert_called()
-        bus.publish.assert_has_calls([call('artf', [GAS, [0, 0, 0]])])
+        bus.publish.assert_has_calls([call('localized_artf', [GAS, [1.0, 0, 1.0]])])
 
 # vim: expandtab sw=4 ts=4

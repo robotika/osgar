@@ -4,14 +4,15 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["emergency_stop", "scan", "scan_back", "artf", "sim_time_sec", "acc", "robot_name"],
-          "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout"],
+          "in": ["emergency_stop", "scan360", "sim_time_sec", "acc", "robot_name", "joint_angle"],
+          "out": ["desired_speed", "pose2d", "pose3d", "stdout"],
           "init": {
             "max_speed": 0.5,
             "symmetric": true,
             "virtual_bumper_sec": 60,
             "virtual_bumper_radius": 10.0,
             "virtual_world": true,
+	    "direction_adherence": 45,
             "follow_wall": {
               "max_wall_distance": 7.6
             }
@@ -33,9 +34,16 @@
       },
       "gas_detector": {
           "driver": "subt.artf_gas:ArtifactGasDetector",
-          "in": ["gas_detected"],
-          "out": ["artf"],
+          "in": ["pose3d", "gas_detected"],
+          "out": ["localized_artf"],
           "init": {}
+      },
+      "artifact_filter": {
+          "driver": "subt.artf_filter:ArtifactFilter",
+          "in": ["robot_name", "localized_artf"],
+          "out": ["artf_xyz"],
+          "init": {
+          }
       },
       "reporter": {
           "driver": "subt.artf_reporter:ArtifactReporter",
@@ -71,41 +79,11 @@
             "downsample": 2
           }
       },
-      "depth2scan": {
-          "driver": "subt.depth2scan:DepthToScan",
-          "in": ["rgbd", "scan"],
-          "out": ["scan"],
-          "init": {
-            "depth_params": {
-              "vertical_pixel_offset": 16,
-              "lidar_trusted_zone": 0.5,
-              "stride": 2,
-              "noise_filter_window": [12, 6],
-              "noise_filter_threshold": 30
-            },
-            "filter_fog": true
-          }
-      },
-      "depth2scan_rear": {
-          "driver": "subt.depth2scan:DepthToScan",
-          "in": ["rgbd", "scan"],
-          "out": ["scan"],
-          "init": {
-            "depth_params": {
-              "vertical_pixel_offset": 16,
-              "lidar_trusted_zone": 0.5,
-              "stride": 2,
-              "noise_filter_window": [12, 6],
-              "noise_filter_threshold": 30
-            },
-            "filter_fog": true
-          }
-      },
       "fromrospy": {
           "driver": "subt.pull:Pull",
           "init": {
-            "outputs": ["acc", "battery_state", "score", "pose3d", "gas_detected",
-                        "scan_front", "scan_rear", "rgbd_front:null", "rgbd_rear:null",
+            "outputs": ["acc", "battery_state", "score", "pose3d", "gas_detected", "joint_angle",
+                        "scan_front", "scan_rear", "scan360", "rgbd_front:null", "rgbd_rear:null",
                         "robot_name", "octomap:gz"]
           }
       },
@@ -159,6 +137,7 @@
               ["twister.cmd_vel", "torospy.cmd_vel"],
               ["app.stdout", "rosmsg.stdout"],
               ["fromrospy.robot_name", "app.robot_name"],
+              ["fromrospy.robot_name", "artifact_filter.robot_name"],
 
               ["receiver.raw", "rosmsg.raw"],
               ["rosmsg.cmd", "transmitter.raw"],
@@ -167,16 +146,13 @@
 
               ["fromrospy.scan_front", "detector.scan"],
               ["fromrospy.scan_rear", "detector_rear.scan"],
-              ["fromrospy.scan_front", "depth2scan.scan"],
-              ["fromrospy.scan_rear", "depth2scan_rear.scan"],
 
-              ["fromrospy.rgbd_front", "depth2scan.rgbd"],
               ["fromrospy.rgbd_front", "detector.rgbd"],
-              ["fromrospy.rgbd_rear", "depth2scan_rear.rgbd"],
               ["fromrospy.rgbd_rear", "detector_rear.rgbd"],
 
-              ["depth2scan.scan", "app.scan"],
-              ["depth2scan_rear.scan", "app.scan_back"],
+              ["fromrospy.scan360", "app.scan360"],
+
+              ["fromrospy.joint_angle", "app.joint_angle"],
 
               ["fromrospy.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
@@ -184,8 +160,9 @@
               ["rosmsg.sim_time_sec", "torospy.sim_time_sec"],
               ["rosmsg.sim_time_sec", "octomap.sim_time_sec"],
 
+              ["fromrospy.pose3d", "gas_detector.pose3d"],
               ["fromrospy.gas_detected", "gas_detector.gas_detected"],
-              ["gas_detector.artf", "app.artf"],
+              ["gas_detector.localized_artf", "artifact_filter.localized_artf"],
 
               ["fromrospy.pose3d", "radio.pose3d"],
               ["reporter.artf_all", "radio.artf"],
@@ -205,12 +182,13 @@
               ["breadcrumbs.deploy", "torospy.deploy"],
               ["breadcrumbs.location", "radio.breadcrumb"],
               ["radio.breadcrumb", "breadcrumbs.external"],
+              ["radio.breadcrumb", "artifact_filter.breadcrumb"],
 
-              ["detector.localized_artf", "app.localized_artf"],
+              ["detector.localized_artf", "artifact_filter.localized_artf"],
               ["detector.stdout", "rosmsg.stdout"],
-              ["detector_rear.localized_artf", "app.localized_artf"],
+              ["detector_rear.localized_artf", "artifact_filter.localized_artf"],
               ["detector_rear.stdout", "rosmsg.stdout"],
-              ["app.artf_xyz", "reporter.artf_xyz"],
+              ["artifact_filter.artf_xyz", "reporter.artf_xyz"],
               ["rosmsg.base_station", "reporter.base_station"],
               ["reporter.artf_cmd", "transmitter.raw"],
 

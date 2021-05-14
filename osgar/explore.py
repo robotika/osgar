@@ -35,15 +35,16 @@ def tangent_circle(dist, radius):
     return math.radians(100)
 
 
-def follow_wall_angle(laser_data, radius, right_wall=False, internal_reflection_threshold=0.3, max_wall_distance=4):
+def follow_wall_angle(laser_data, gap_size, wall_dist, right_wall=False, internal_reflection_threshold=0.3, max_wall_distance=4):
     """
         Find the angle to the closest point in laser scan (either on the left or right side).
-        Then calculate an angle to a free space as tangent to circle of given radius.
+        Then calculate an angle to a free space as tangent to circle of given wall_dist.
         This angle is returned and can be used for steering command.
     """
     data = np.array(laser_data)
     size = len(laser_data)
     deg_resolution = 270 / (size - 1)  # SICK uses extra the first and the last, i.e. 271 rays for 1 degree resolution
+    rad_resolution = math.radians(deg_resolution)
     internal_reflection_threshold *= 1000 # m -> mm
     mask = (data <= internal_reflection_threshold)  # ignore internal reflections
     data[mask] = 0
@@ -55,7 +56,7 @@ def follow_wall_angle(laser_data, radius, right_wall=False, internal_reflection_
 
     distances = data / 1000.0
 
-    r = radius * 1  # TODO: Or some other first guess?
+    r = wall_dist * 1.2  # TODO: Or some other first guess?
     INCREMENT = 0.3  # In meters. TODO: Some other value, maybe?
     found_wall = False
     for attempt in range(50):
@@ -80,6 +81,8 @@ def follow_wall_angle(laser_data, radius, right_wall=False, internal_reflection_
         return math.radians(-20 if right_wall else 20)
 
     last_wall_idx = wall_start_idx
+    gap_end_idx = None
+    gap_end_dist = None
     while True:
         last_wall_distance = distances[last_wall_idx]
         found_countinuation = False
@@ -93,15 +96,58 @@ def follow_wall_angle(laser_data, radius, right_wall=False, internal_reflection_
                 # Such a wall does not matter for navigation and should not
                 # block the robot.
                 break
-            sin_angle = math.sin(rel_idx * math.radians(deg_resolution))
-            cos_angle = math.cos(rel_idx * math.radians(deg_resolution))
+            sin_rel_angle = math.sin(rel_idx * rad_resolution)
+            cos_rel_angle = math.cos(rel_idx * rad_resolution)
             # How far is the currently observed point from the previous wall point?
-            gap = math.hypot(cos_angle * dist - last_wall_distance,
-                             sin_angle * dist - 0)
-            if gap <= radius:
+            gap = math.hypot(cos_rel_angle * dist - last_wall_distance,
+                             sin_rel_angle * dist - 0)
+            if gap <= gap_size:
                 last_wall_idx = i
                 found_countinuation = True
+                gap_end_idx = None
+                gap_end_dist = None
                 break
+
+            # If the gap continues already behind the robot and the continuation
+            # goes roughly the in the current direction of the robot, it is likely
+            # still the wall we are following.
+            #
+            # There is a risk here that we miss door in the wall we are following.
+            # This should, however, not happen, because doors have their non-zero
+            # width doorframes that we should detect as a wall perpendicular to
+            # robot's direction.
+            if i * deg_resolution <= 90:
+                next_one = None
+                for j in range(i + 1, size):
+                    if distances[j] > max_wall_distance or distances[j] == 0:
+                        continue
+                    ridx = j - i
+                    if ridx * deg_resolution >= 180:
+                        break
+                    sra = math.sin(ridx * rad_resolution)
+                    cra = math.cos(ridx * rad_resolution)
+                    g = math.hypot(cra * distances[j] - dist,
+                                   sra * distances[j]  - 0)
+                    if g <= gap_size:
+                        next_one = j
+                        break
+                if next_one is not None:
+                    angle = math.radians(-135 + i * deg_resolution)
+                    next_dist = distances[i+1]
+                    next_angle = math.radians(-135 + next_one * deg_resolution)
+                    wall_direction = math.atan2(
+                            next_dist * math.sin(next_angle) - dist * math.sin(angle),
+                            next_dist * math.cos(next_angle) - dist * math.cos(angle))
+                    if abs(wall_direction) < math.radians(25):
+                        last_wall_idx = i
+                        found_countinuation = True
+                        gap_end_idx = None
+                        gap_end_dist = None
+                        break
+
+            if gap_end_idx is None or gap < gap_end_dist:
+                gap_end_idx = i
+                gap_end_dist = gap
         if not found_countinuation:
             break
 
@@ -109,14 +155,30 @@ def follow_wall_angle(laser_data, radius, right_wall=False, internal_reflection_
     # direction is just towards the last wall point we see. Only otherwise we
     # can keep a safe distance from the wall we follow.
     last_wall_distance = distances[last_wall_idx]
-    if last_wall_idx + 1 < size and distances[last_wall_idx + 1] < last_wall_distance:
-        tangent_angle = 0.
+    # We can ignore gap ends that are already past the robot.
+    if gap_end_idx is not None and -135 + gap_end_idx * deg_resolution < 90 and (gap_end_idx - last_wall_idx) * deg_resolution < 180:
+        rel_idx = gap_end_idx - last_wall_idx
+        if gap_end_dist <= 2 * wall_dist:
+            # If the gap is too narrow, we aim into the middle of it.
+            extra_angle = rel_idx * rad_resolution / 2
+        else:
+            # Otherwise we aim far from the wall in the direction of the gap end.
+            sin_angle = math.sin(rel_idx * rad_resolution)
+            cos_angle = math.cos(rel_idx * rad_resolution)
+            gap_start_x = last_wall_distance
+            gap_start_y = 0
+            gap_end_x = cos_angle * gap_end_dist
+            gap_end_y = sin_angle * gap_end_dist
+            r = wall_dist / gap_end_dist
+            target_x = gap_start_x + r * (gap_end_x - gap_start_x)
+            target_y = gap_start_y + r * (gap_end_y - gap_start_y)
+            extra_angle = math.atan2(target_y, target_x)
     else:
-        tangent_angle = tangent_circle(last_wall_distance, radius)
+        extra_angle = tangent_circle(last_wall_distance, wall_dist)
 
 
     laser_angle = math.radians(-135 + last_wall_idx * deg_resolution)
-    total_angle = laser_angle + tangent_angle
+    total_angle = laser_angle + extra_angle
     if not right_wall:
         total_angle = -total_angle
 

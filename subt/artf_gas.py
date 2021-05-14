@@ -12,12 +12,15 @@ from subt.artifacts import GAS
 class ArtifactGasDetector(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register("artf")
+        bus.register("localized_artf")
+        self.xyz = None
 
     def on_gas_detected(self, data):
-        # [type, [rel_x, rel_y, rel_z]]
         if data:
-            self.publish('artf', [GAS, [0, 0, 0]])
+            self.publish('localized_artf', [GAS, self.xyz])
+
+    def on_pose3d(self, data):
+        self.xyz = data[0]  # ignore orientation
 
     def update(self):
         channel = super().update()

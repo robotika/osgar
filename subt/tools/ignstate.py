@@ -11,6 +11,7 @@ from collections import namedtuple
 from datetime import timedelta
 
 from subt.ign_pb2 import Pose_V, StringMsg
+from google.protobuf.message import DecodeError
 
 COLORS = [
     (255, 255, 255),
@@ -107,6 +108,8 @@ def iter_poses(filename, seconds=3700, hz=250):
             yield timestamp, robots, breadcrumbs
             next_timestamp += diff_timestamp
     except sqlite3.DatabaseError as e:
+        print(f"{type(e).__name__}: {e}")
+    except DecodeError as e:
         print(f"{type(e).__name__}: {e}")
 
 

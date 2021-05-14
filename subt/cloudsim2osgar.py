@@ -27,7 +27,7 @@ from rtabmap_ros.msg import RGBDImage
 
 sys.path.append("/osgar-ws/src/osgar/osgar/lib")
 import serialize as osgar_serialize
-from quaternion import multiply as multiply_quaternions, rotate_vector
+from quaternion import multiply as multiply_quaternions, rotate_vector, euler_zyx
 
 def py3round(f):
     if abs(round(f) - f) == 0.5:
@@ -86,6 +86,7 @@ class main:
         rospy.init_node('cloudsim2osgar', log_level=rospy.DEBUG)
         self.bus = Bus()
         self.robot_name = robot_name
+        self.robot_config = robot_config
         self.prev_gas_detected = None  # report on change including the first reading
 
         # common topics
@@ -128,6 +129,7 @@ class main:
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/scan_front', LaserScan, self.scan_front, ('scan_front',)))
             topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
+            topics.append(('/' + robot_name + '/local_map/output/scan', LaserScan, self.scan360, ('scan360',)))
             topics.append(('/rtabmap/rgbd/front/compressed', RGBDImage, self.rgbd_front, ('rgbd_front',)))
             topics.append(('/rtabmap/rgbd/rear/compressed', RGBDImage, self.rgbd_rear, ('rgbd_rear',)))
             if robot_name.endswith('XM'):
@@ -141,6 +143,7 @@ class main:
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/scan_front', LaserScan, self.scan_front, ('scan_front',)))
             topics.append(('/' + robot_name + '/scan_rear', LaserScan, self.scan_rear, ('scan_rear',)))
+            topics.append(('/' + robot_name + '/local_map/output/scan', LaserScan, self.scan360, ('scan360',)))
             topics.append(('/rtabmap/rgbd/front/compressed', RGBDImage, self.rgbd_front, ('rgbd_front',)))
             topics.append(('/rtabmap/rgbd/rear/compressed', RGBDImage, self.rgbd_rear, ('rgbd_rear',)))
         else:
@@ -152,7 +155,7 @@ class main:
         else:
             topics.append(('/' + robot_name + '/imu/data', Imu, self.imu, ('acc',)))
 
-        outputs = functools.reduce(operator.add, (t[-1] for t in topics)) + ('robot_name',)
+        outputs = functools.reduce(operator.add, (t[-1] for t in topics)) + ('robot_name', 'joint_angle')
         self.bus.register(outputs)
 
         # origin
@@ -249,6 +252,14 @@ class main:
             rotate_vector(raw_xyz, origin_rotation))]
 
         self.bus.publish('pose3d', [full_translation, full_orientation])
+
+        if self.robot_config.startswith("ROBOTIKA_KLOUBAK_SENSOR_CONFIG"):
+            try:
+                body_rotation = euler_zyx(
+                        self.tf.lookupTransform(self.robot_name + '/chassis_back', self.robot_name + '/chassis_front', rospy.Time(0))[1])[0]
+                self.bus.publish('joint_angle', [int(100 * math.degrees(body_rotation))])  # Hundreth of a degree.
+            except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
+                rospy.logerr('joint error: {}'.format(e))
 
     def battery_state(self, msg):
         self.battery_state_count += 1

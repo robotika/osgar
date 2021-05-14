@@ -7,6 +7,10 @@ from geometry_msgs.msg import Twist
 import rospy
 import tf
 
+sys.path.append("/osgar-ws/src/osgar/osgar/lib")
+from quaternion import euler_zyx
+from mathex import normalizeAnglePIPI
+
 class K2Controller:
     """
       4WD controller for robot Kloubak K2
@@ -84,13 +88,12 @@ class K2Controller:
         desired_joint_angle = max(
                 -MAX_JOINT_ANGLE,
                 min(MAX_JOINT_ANGLE,
-                    2 * math.atan2(self.desired.angular.z * L,
-                                   self.desired.linear.x)))
-        if self.desired.linear.x < 0:
-            desired_joint_angle *= -1
-        #print('current', [math.degrees(alpha) for alpha in euler_zyx(joint_rot)], 'desired', math.degrees(desired_joint_angle), 'because of', math.degrees(self.desired.angular.z))
+                    normalizeAnglePIPI(
+                        2 * math.atan2(self.desired.angular.z * L,
+                                       self.desired.linear.x))))
+        #print('current', [math.degrees(alpha) for alpha in euler_zyx(joint_rot)], 'desired', math.degrees(desired_joint_angle), 'because of', math.degrees(self.desired.angular.z), 'and', self.desired.linear.x)
 
-        P = 5.0  # P control.
+        P = 3.0  # P control.
         rot = desired_joint_angle - current_joint_angle
 
         # To work together, the halfs of the robot need to rotate in opposite
