@@ -2,6 +2,7 @@
 import os
 import numpy as np
 import cv2
+from matplotlib import pyplot as plt
 
 try:
     import torch
@@ -16,6 +17,7 @@ from subt.tf_detector import CvDetector
 from subt.artf_node import check_results
 
 g_streams = ["logimage.image", "logimage_rear.image"]
+g_artf_names = ["survivor","backpack", "phone", "helmet", "rope", "fire_extinguisher", "drill", "vent", "cube"]
 
 
 def take_third(item):
@@ -135,8 +137,35 @@ def log_eval(log_file):
     detection_log.close()
 
 
-def plot_data(path):
-    pass
+def plot_data(data):
+    for artf_name in g_artf_names:
+        true_score_t = []
+        true_score_cv = []
+        false_score_t = []
+        false_score_cv = []
+        for artf, score_t, score_cv, detection_type in data:
+            if detection_type == "true" and artf_name == artf:
+                true_score_t.append(score_t)
+                true_score_cv.append(score_cv)
+            if detection_type == "false" and artf_name == artf:
+                false_score_t.append(score_t)
+                false_score_cv.append(score_cv)
+
+        fig = plt.figure(figsize=(7, 6))
+        fig.subplots_adjust(left=0.1, right=0.8, bottom=0.1)
+
+        ax1 = fig.add_subplot(111)
+        ax1.plot(true_score_t, true_score_cv, "go", label="True")
+        ax1.plot(false_score_t, false_score_cv, "ro", label="False")
+        ax1.grid()
+        ax1.set_title(artf_name)
+        ax1.set_xlabel("mdnet (-)")
+        ax1.set_ylabel("cv detector (-)")
+        ax1.legend(bbox_to_anchor=(1.05, 0.7))
+
+        graph_name = artf_name + "_graph"
+        plt.savefig(graph_name, dpi=500)
+        plt.show()
 
 
 def filter_detections(path):
@@ -157,9 +186,12 @@ def filter_detections(path):
 
     data = manual_sorting(data_to_filter)
 
+    # save data for future analysis
     with open(os.path.join(path, "detection_overview.csv"), "w") as overview_log:
         for artf_name, score_t, score_cv, detection_type in data:
             overview_log.write("%s,%f,%f,%s\r\n" %(artf_name, score_t, score_cv, detection_type))
+
+    plot_data(data)
 
 
 def eval_logs(path):
@@ -180,13 +212,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('logfiles', help='Path to directory wit logfiles')
     parser.add_argument('--filter', help='Filter false detection', action='store_true')
-    parser.add_argument('--plot', help='Plot score', action='store_true')
+#    parser.add_argument('--plot', help='Plot score', action='store_true')
     args = parser.parse_args()
 
     path = args.logfiles
     if args.filter:
         filter_detections(path)
-    elif args.plot:
-        plot_data(path)
+#    elif args.plot:
+#        plot_data(path)
     else:
         eval_logs(path)
