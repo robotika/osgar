@@ -19,6 +19,21 @@ from subt.artf_node import check_results
 g_streams = ["logimage.image", "logimage_rear.image"]
 g_artf_names = ["survivor","backpack", "phone", "helmet", "rope", "fire_extinguisher", "drill", "vent", "cube"]
 
+NAMES_AND_SCORES = {'backpack': 0.1,
+                    'survivor': 0.1,
+                    'phone': 0.1,
+                    'rope': 0.1,
+                    'helmet': 0.1,
+                    'fire_extinguisher': 0.1,
+                    'drill': 0.1,
+                    'vent': 0.1,
+                    'cube': 0.1,
+                    'robot': 1.0,
+                    'breadcrumb': 1.0,
+                    'nothing': 1.0
+                    }
+MIN_SCORES = np.array(list(NAMES_AND_SCORES.values()))
+
 
 def take_third(item):
     return item[2]
@@ -102,7 +117,7 @@ def log_eval(log_file):
     detection_log = open(os.path.join(data_dir, "detection.log"), "w")
 
     detector = create_detector()
-    CvDetector().min_score = [0.1,]*12  # there are also robot, breadcrumb and nothing objects
+    CvDetector().min_score = MIN_SCORES
     cv_detector = CvDetector().subt_detector
 
     for stream_name in g_streams:
