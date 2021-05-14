@@ -50,8 +50,8 @@ class ArtifactDetectorDNNTest(unittest.TestCase):
         result_cv = [['backpack', 0.99990773, [50, 150, 200, 250]],
                      ['rope', 0.99650773, [350, 90, 500, 250]]
                      ]
-        expected_result = [('backpack', [(60, 180, 0.9785775), (72, 180, 0.9795098)]),
-                           ('rope', [(400, 100, 0.9785775), (401, 100, 0.9795098)])
+        expected_result = [('backpack', [(60, 180, 0.9785775), (72, 180, 0.9795098)], ['backpack', 0.99990773, [50, 150, 200, 250]]),
+                           ('rope', [(400, 100, 0.9785775), (401, 100, 0.9795098)], ['rope', 0.99650773, [350, 90, 500, 250]])
                           ]
         checked_result = check_results(result, result_cv)
         self.assertEqual(checked_result, expected_result)
@@ -60,7 +60,8 @@ class ArtifactDetectorDNNTest(unittest.TestCase):
         result = [('backpack', [(100, 200, 0.9785775), (101, 200, 0.9795098)])]
         result_cv = [['backpack', 0.99990773, [50, 150, 200, 250]], ['backpack', 0.99990773, [60, 150, 210, 250]]]
         checked_result = check_results(result, result_cv)
-        self.assertEqual(checked_result, result)
+        expected_result = [('backpack', [(100, 200, 0.9785775), (101, 200, 0.9795098)], ['backpack', 0.99990773, [50, 150, 200, 250]])]
+        self.assertEqual(checked_result, expected_result)
 
     def test_merge_two_results(self):
         result = [('backpack', [(100, 200, 0.9785775), (101, 200, 0.9795098)]),
@@ -68,7 +69,8 @@ class ArtifactDetectorDNNTest(unittest.TestCase):
                   ]
         result_cv = [['backpack', 0.99990773, [50, 150, 200, 250]]]
         expected_result = [('backpack', [(100, 200, 0.9785775), (101, 200, 0.9795098),
-                                         (102, 200, 0.9785775), (103, 200, 0.9795098)])
+                                         (102, 200, 0.9785775), (103, 200, 0.9795098)],
+                            ['backpack', 0.99990773, [50, 150, 200, 250]])
                            ]
         checked_result = check_results(result, result_cv)
         self.assertEqual(checked_result, expected_result)
