@@ -32,22 +32,18 @@ NAMES_AND_SCORES = {'backpack': 0.1,
                     'breadcrumb': 1.0,
                     'nothing': 1.0
                     }
-MIN_SCORES = np.array(list(NAMES_AND_SCORES.values()))
-
-
-def take_third(item):
-    return item[2]
+MIN_SCORES = np.fromiter(NAMES_AND_SCORES.values(), float)
 
 
 def proces_torch_result(result):
-    result.sort(key=take_third, reverse=True)
+    result.sort(key=lambda item: item[2], reverse=True)
     score_torch = result[1][2]
     points = [[x, y] for x, y, c in result][:2]
 
     return score_torch, points
 
 
-def manual_sorting(data):
+def manual_separation(data):
     ii = 0
     while True:
         if ii < 0:
@@ -57,7 +53,7 @@ def manual_sorting(data):
         artf_name, score_t, score_cv, points, bbox, im_path, detection_type = data[ii]
         print(bbox)
         x, y, xw, yh = bbox
-        im_path = im_path[:-1]  # remove line end
+        im_path = im_path.rstrip("\r\n")
         img = cv2.imread(str(im_path), 1)
         assert img is not None
         cv2.rectangle(img, (x, y), (xw, yh), (0, 0, 255))
@@ -187,7 +183,7 @@ def plot_data(data):
         plt.show()
 
 
-def filter_detections(path):
+def separate_detections(path):
     # collect data with detection
     data_to_filter = []
     dir_list = sorted(os.listdir(path))
@@ -203,7 +199,7 @@ def filter_detections(path):
             im_path = os.path.join(path, dir, im_name)
             data_to_filter.append([artf_name, score_t, score_cv, points, bbox, im_path, "true"])
 
-    data = manual_sorting(data_to_filter)
+    data = manual_separation(data_to_filter)
 
     # save data for future analysis
     with open(os.path.join(path, "detection_overview.csv"), "w") as overview_log:
@@ -230,13 +226,13 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('logfiles', help='Path to directory wit logfiles')
-    parser.add_argument('--filter', help='Filter false detection', action='store_true')
+    parser.add_argument('--separate', help='Filter false detection', action='store_true')
 #    parser.add_argument('--plot', help='Plot score', action='store_true')
     args = parser.parse_args()
 
     path = args.logfiles
-    if args.filter:
-        filter_detections(path)
+    if args.separate:
+        separate_detections(path)
 #    elif args.plot:
 #        plot_data(path)
     else:
