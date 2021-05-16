@@ -1,5 +1,6 @@
 """evaluate detectors"""
 import os
+import csv
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
@@ -202,9 +203,10 @@ def separate_detections(path):
     data = manual_separation(data_to_filter)
 
     # save data for future analysis
-    with open(os.path.join(path, "detection_overview.csv"), "w") as overview_log:
-        for artf_name, score_t, score_cv, detection_type in data:
-            overview_log.write("%s,%f,%f,%s\r\n" %(artf_name, score_t, score_cv, detection_type))
+    with open(os.path.join(path, "detection_overview.csv"), "w", newline='') as csv_file:
+        csv_writer = csv.writer(csv_file, delimiter=";")
+        for item in data:
+            csv_writer.writerow(item)
 
     plot_data(data)
 
@@ -228,8 +230,11 @@ if __name__ == "__main__":
     parser.add_argument('logfiles', help='Path to directory wit logfiles')
     parser.add_argument('--separate', help='Filter false detection', action='store_true')
 #    parser.add_argument('--plot', help='Plot score', action='store_true')
+    parser.add_argument('--streams', help='List of image streams')
     args = parser.parse_args()
 
+    if args.streams:
+        g_streams = args.streams.split()
     path = args.logfiles
     if args.separate:
         separate_detections(path)
