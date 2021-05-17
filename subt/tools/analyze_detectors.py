@@ -15,7 +15,7 @@ except ImportError:
 from osgar.logger import LogReader, lookup_stream_id
 from osgar.lib.serialize import deserialize
 from subt.tf_detector import CvDetector
-from subt.artf_node import check_results
+from subt.artf_node import check_results, create_detector
 
 g_streams = ["logimage.image", "logimage_rear.image"]
 g_artf_names = ["survivor","backpack", "phone", "helmet", "rope", "fire_extinguisher", "drill", "vent", "cube"]
@@ -84,8 +84,10 @@ def manual_separation(data):
     return [[artf_name, score_t, score_cv, detection_type] for artf_name, score_t, score_cv, __, __, __, detection_type in data]
 
 
-def create_detector():
-    model = os.path.join(os.path.dirname(__file__), '../../../mdnet5.128.128.13.4.elu.pth')
+def log_eval(log_file):
+    data_dir = log_file + ".d"
+    os.makedirs(data_dir,exist_ok=True)
+    detection_log = open(os.path.join(data_dir, "detection.log"), "w")
     confidence_thresholds = {
         'survivor': 0.5,
         'backpack': 0.5,
@@ -95,25 +97,10 @@ def create_detector():
         'fire_extinguisher': 0.5,
         'drill': 0.5,
         'vent': 0.5,
-        'cube' : 0.5
+        'cube': 0.5
     }
-    max_gap = 16
-    min_group_size = 2
 
-    use_cuda = torch.cuda.is_available()
-    device = torch.device("cuda" if use_cuda else "cpu")
-    print('Using:', device)
-    model, categories = subt.artf_model.load_model(model, device)
-    return Detector(model, confidence_thresholds, categories, device,
-                    max_gap, min_group_size)
-
-
-def log_eval(log_file):
-    data_dir = log_file + ".d"
-    os.makedirs(data_dir,exist_ok=True)
-    detection_log = open(os.path.join(data_dir, "detection.log"), "w")
-
-    detector = create_detector()
+    detector = create_detector(confidence_thresholds)
     CvDetector().min_score = MIN_SCORES
     cv_detector = CvDetector().subt_detector
 
