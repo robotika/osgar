@@ -18,16 +18,20 @@ import numpy as np
 
 from sensor_msgs.msg import Imu, CompressedImage, LaserScan, PointCloud2
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Empty, Bool, Int32, String
+from std_msgs.msg import Empty, Bool, Int32, String, Float64
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import BatteryState, FluidPressure
 from octomap_msgs.msg import Octomap
-from subt_msgs.srv import PoseFromArtifact
+from subt_msgs.srv import PoseFromArtifact, SetRate
 from rtabmap_ros.msg import RGBDImage
 
 sys.path.append("/osgar-ws/src/osgar/osgar/lib")
 import serialize as osgar_serialize
 from quaternion import multiply as multiply_quaternions, rotate_vector, euler_zyx
+
+
+X500_DESIRED_HZ = 10.0  # original is 30Hz or even 60Hz
+
 
 def py3round(f):
     if abs(round(f) - f) == 0.5:
@@ -81,6 +85,21 @@ def twist(data):
     return vel_msg
 
 
+def set_rate(service_name, desired_hz):
+    # https://github.com/osrf/subt/blob/master/subt_msgs/srv/SetRate.srv
+    # float64 rate
+    rospy.wait_for_service(service_name)
+    rate_service = rospy.ServiceProxy(service_name, SetRate)
+    rate_request = Float64()
+    rate_request.data = desired_hz
+    try:
+        rate_response = rate_service(rate_request)
+        if rate_response.success:
+            rospy.loginfo("Set " + service_name + "to %f" % desired_hz)
+    except rospy.ServiceException:
+        rospy.logerr("Failed to set_rate: " + service_name)
+
+
 class main:
     def __init__(self, robot_name, robot_config, robot_is_marsupial):
         rospy.init_node('cloudsim2osgar', log_level=rospy.DEBUG)
@@ -132,6 +151,9 @@ class main:
             if robot_is_marsupial == 'true':
                 rospy.loginfo("X500 is marsupial")
                 publishers['detach'] = (rospy.Publisher('/' + robot_name + '/detach', Empty, queue_size=1), empty)
+
+            for sub_name in ['down_rgbd', 'up_rgbd', 'camera_front', 'front_laser']:
+                set_rate('/' + robot_name + '/' + sub_name + '/set_rate', X500_DESIRED_HZ)
 
         elif robot_config == "TEAMBASE":
             rospy.loginfo("teambase")
