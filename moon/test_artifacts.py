@@ -44,7 +44,7 @@ class ArtifactTest(unittest.TestCase):
         return True
 
 
-    def test_artifacts(self):
+    def Xtest_artifacts(self):
 
         bus = MagicMock()
         config = {"estimate_distance": True, "artefacts": ["rover","cubesat","homebase", "basemarker"]}
