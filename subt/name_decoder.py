@@ -32,6 +32,7 @@ def parse_robot_name(robot_name):
         'L': 'left',
         'R': 'right',
         'C': 'center',
+        'E': 'explore',  # map & explore frontiers
         'W': 'wait',
         'H': 'home'
     }

@@ -24,21 +24,8 @@ def entrance_reached(sim):
 
 class SubTChallengeTest(unittest.TestCase):
 
-    def test_maybe_remember_artifact(self):
-        config = {'max_speed': 0.5, 'walldist': 0.9, 'timeout': 600, 'symmetric': True,
-                  'right_wall': True}
-        bus = MagicMock()
-        game = SubTChallenge(config, bus)
-
-        artf_data = ['TYPE_BACKPACK', -1614, 1886]
-        artf_xyz = (0, 0, 0)
-        self.assertTrue(game.maybe_remember_artifact(artf_data, artf_xyz))
-
-        # 2nd report should be ignored
-        self.assertEqual(game.maybe_remember_artifact(artf_data, artf_xyz), False)
-
     def test_go_to_entrance(self):
-        config = {'virtual_world': True, 'max_speed': 1.0, 'walldist': 0.8, 'timeout': 600, 'symmetric': False, 'right_wall': 'auto'}
+        config = {'virtual_world': True, 'max_speed': 1.0, 'gap_size': 0.8, 'wall_dist': 0.8, 'timeout': 600, 'symmetric': False, 'right_wall': 'auto'}
         bus = Bus(simulation.SimLogger())
         app = SubTChallenge(config, bus.handle('app'))
         sim = simulation.Simulation(bus.handle('sim'), end_condition=entrance_reached)
@@ -58,25 +45,6 @@ class SubTChallengeTest(unittest.TestCase):
         app.request_stop()
         app.join()
         self.assertTrue(entrance_reached(sim))
-
-    def test_on_artf_xyz(self):
-        config = {'virtual_world': True, 'max_speed': 1.0, 'walldist': 0.8, 'timeout': 600, 'symmetric': False, 'right_wall': 'auto'}
-        bus = MagicMock()
-        app = SubTChallenge(config, bus)
-        data = ['TYPE_BACKPACK', [5000, -2359, 2222]]
-        app.xyz = 100.0, 2.0, 3.0
-        app.orientation = quaternion.identity()
-        bus.publish.reset_mock()
-        app.on_artf(None, data)
-        bus.publish.assert_called()
-        self.assertEqual(bus.method_calls[-1],
-                         call.publish('artf_xyz', [['TYPE_BACKPACK', [105000, -359, 5222], None, None]]))
-        app.orientation = quaternion.euler_to_quaternion(math.pi/2, 0, 0)
-        bus.publish.reset_mock()
-        app.on_artf(None, data)
-        bus.publish.assert_called()
-        self.assertEqual(bus.method_calls[-1],
-                         call.publish('artf_xyz', [['TYPE_BACKPACK', [102359, 7000, 5222], None, None]]))
 
 
 if __name__ == "__main__":

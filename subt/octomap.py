@@ -215,7 +215,6 @@ class Octomap(Node):
         self.time_limit_sec = None  # initialized with the first sim_time_sec
         self.debug_arr = []
         self.waypoints = None  # experimental trigger of navigation
-        self.start_xyz = None
         self.sim_time_sec = None
         self.pose3d = None
         self.video_writer = None
@@ -230,9 +229,6 @@ class Octomap(Node):
             self.time_limit_sec = data
 
     def on_pose3d(self, data):
-        if self.start_xyz is None:
-            # the octomap starts with robot position at (0, 0, 0) - correction offset is needed
-            self.start_xyz = data[0]
         if self.waypoints is not None:
             print('Waypoints', data[0], self.waypoints[0], self.waypoints[-1])
             self.publish('waypoints', self.waypoints)
@@ -247,9 +243,7 @@ class Octomap(Node):
         assert len(data) % 2 == 0, len(data)
         data = bytes([(d + 256) % 256 for d in data])
 
-        x = self.pose3d[0][0] - self.start_xyz[0]
-        y = self.pose3d[0][1] - self.start_xyz[1]
-        z = self.pose3d[0][2] - self.start_xyz[2]
+        x, y, z = self.pose3d[0]
         start = int(SLICE_OCTOMAP_SIZE//2 + x/self.resolution), int(SLICE_OCTOMAP_SIZE//2 - y/self.resolution), int((z - self.min_z)/self.resolution)
         num_z_levels = int(round((self.max_z - self.min_z)/self.resolution)) + 1
         img3d = np.zeros((SLICE_OCTOMAP_SIZE, SLICE_OCTOMAP_SIZE, num_z_levels), dtype=np.uint8)
@@ -289,8 +283,8 @@ class Octomap(Node):
                 self.video_writer.write(img2)
 
         if path is not None:
-            self.waypoints = [[(x - SLICE_OCTOMAP_SIZE//2)/2 + self.start_xyz[0],
-                               (SLICE_OCTOMAP_SIZE//2 - y)/2 + self.start_xyz[1],
+            self.waypoints = [[(x - SLICE_OCTOMAP_SIZE//2)/2,
+                               (SLICE_OCTOMAP_SIZE//2 - y)/2,
                                z * self.resolution + self.min_z]
                               for x, y, z in path]
 
@@ -312,6 +306,7 @@ if __name__ == "__main__":
     parser.add_argument('logfile', help='path to logfile with octomap data')
     parser.add_argument('--out', help='output path to PNG image', default='out.png')
     parser.add_argument('--draw', action='store_true', help='draw pyplot frontiers')
+    parser.add_argument('--open3d', action='store_true', help='use Open3D for visualization')
     args = parser.parse_args()
 
     octomap_stream_id = lookup_stream_id(args.logfile, 'fromrospy.octomap')
@@ -350,6 +345,19 @@ if __name__ == "__main__":
                     paused = not paused
                 if ord('0') <= key <= ord('9'):
                     level = key - ord('0')
+                if args.open3d and key == ord('d'):
+                    import open3d as o3d
+                    all = []
+                    for lev in range(-3, 10):
+                        img = data2maplevel(data, level=lev)
+                        xy = np.where(img == STATE_OCCUPIED)
+                        xyz = np.array([xy[0], xy[1], np.full(len(xy[0]), lev)]).T
+                        all.extend(xyz.tolist())
+                    pcd = o3d.geometry.PointCloud()
+                    xyz = np.array(all)
+                    pcd.points = o3d.utility.Vector3dVector(xyz)
+                    voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=0.5)
+                    o3d.visualization.draw_geometries([voxel_grid])
                 if not paused:
                     break
             if key == KEY_Q:

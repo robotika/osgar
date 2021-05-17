@@ -99,14 +99,15 @@ class EmergencyStopMonitor:
 class SubTChallenge:
     def __init__(self, config, bus):
         self.bus = bus
-        bus.register("desired_speed", "pose2d", "artf_xyz", "stdout", "desired_z_speed", "flipped")
+        bus.register("desired_speed", "pose2d", "stdout", "desired_z_speed", "flipped")
         self.traveled_dist = 0.0
         self.time = None
         self.max_speed = config['max_speed']
         self.max_angular_speed = math.radians(60)
         self.rotation_p = config.get('rotation_p', 0.8)
         self.turbo_speed = config.get('turbo_speed')
-        self.walldist = config['walldist']
+        self.gap_size = config['gap_size']
+        self.wall_dist = config['wall_dist']
         self.follow_wall_params = config.get('follow_wall', {})
         self.timeout = timedelta(seconds=config['timeout'])
         self.symmetric = config['symmetric']  # is robot symmetric?
@@ -129,7 +130,7 @@ class SubTChallenge:
         self.trace_z_weight = config.get('trace_z_weight', 0.2)  # Z is important for drones ~ 3.0
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
-        self.xyz = None  # 3D position for mapping artifacts - unknown depends on source (pose2d or pose3d)
+        self.xyz = None  # unknown initial 3D position
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.orientation = None  # quaternion updated by on_pose3d()
         self.yaw_offset = None  # not defined, use first IMU reading
@@ -139,7 +140,6 @@ class SubTChallenge:
         self.joint_angle_rad = []  # optinal angles, needed for articulated robots flip
         self.stat = defaultdict(int)
         self.voltage = []
-        self.artifacts = []
         self.trace = Trace()
         self.waypoints = None  # external waypoints for navigation
         self.loop_detector = LoopDetector()
@@ -188,15 +188,6 @@ class SubTChallenge:
         # Corresponds to gc.disable() in __main__. See a comment there for more details.
         gc.collect()
 
-    def maybe_remember_artifact(self, artifact_data, artifact_xyz):
-        for stored_data, (x, y, z) in self.artifacts:
-            if distance3D((x, y, z), artifact_xyz) < 4.0:
-                # in case of uncertain type, rather report both
-                if stored_data == artifact_data:
-                    return False
-        self.artifacts.append((artifact_data, artifact_xyz))
-        return True
-
     def go_straight(self, how_far, timeout=None):
         print(self.time, "go_straight %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position, self.flipped)
         start_pose = self.last_position
@@ -219,6 +210,8 @@ class SubTChallenge:
             safety, safe_direction = 1.0, desired_direction
         else:
             safety, safe_direction = self.local_planner.recommend(desired_direction)
+        if self.flipped and self.joint_angle_rad:
+            safe_direction = normalizeAnglePIPI(safe_direction + sum(self.joint_angle_rad))
         #print(self.time,"safety:%f    desired:%f  safe_direction:%f"%(safety, desired_direction, safe_direction))
         desired_angular_speed = self.rotation_p * safe_direction
         size = len(self.scan)
@@ -281,7 +274,7 @@ class SubTChallenge:
             self.update()
 
 
-    def follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None,
+    def follow_wall(self, gap_size, wall_dist, right_wall=False, timeout=timedelta(hours=3), dist_limit=None,
             pitch_limit=None, roll_limit=None, detect_loop=True):
         reason = None  # termination reason is not defined yet
         start_dist = self.traveled_dist
@@ -306,7 +299,7 @@ class SubTChallenge:
                             self.go_safely(0)
                         else:
                             desired_direction = normalizeAnglePIPI(
-                                    follow_wall_angle(self.scan, radius=radius, right_wall=right_wall, **self.follow_wall_params))
+                                    follow_wall_angle(self.scan, gap_size=gap_size, wall_dist=wall_dist, right_wall=right_wall, **self.follow_wall_params))
                             flip_threshold = math.radians(115)  # including some margin around corners
                             if self.symmetric and (
                                     (right_wall and desired_direction > flip_threshold) or
@@ -442,6 +435,8 @@ class SubTChallenge:
                 x, y = self.xyz[:2]
                 yaw = (self.yaw + math.pi) if self.flipped else self.yaw
                 desired_direction = normalizeAnglePIPI(math.atan2(target_y - y, target_x - x) - yaw)
+                if self.flipped and self.joint_angle_rad:
+                    desired_direction = normalizeAnglePIPI(desired_direction + sum(self.joint_angle_rad))
                 if self.symmetric and abs(desired_direction) > math.radians(95):  # including hysteresis
                     print('Flipping:', math.degrees(desired_direction))
                     self.flip()
@@ -466,17 +461,22 @@ class SubTChallenge:
         print('return_home: dist', distance3D(self.xyz, home_position), 'time(sec)', self.sim_time_sec - start_time)
         self.bus.publish('desired_z_speed', None)
 
-    def follow_trace(self, trace, timeout, max_target_distance=5.0, safety_limit=None):
+    def follow_trace(self, trace, timeout, max_target_distance=5.0, end_threshold=None, safety_limit=None, is_trace3d=False):
         print('Follow trace')
-        END_THRESHOLD = 2.0
+        if end_threshold is None:
+            END_THRESHOLD = 2.0
+        else:
+            END_THRESHOLD = end_threshold
         start_time = self.sim_time_sec
         print('MD', self.xyz, distance3D(self.xyz, trace.trace[0]), trace.trace)
         while distance3D(self.xyz, trace.trace[0]) > END_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
             if self.update() in ['scan', 'scan360']:
-                target_x, target_y = trace.where_to(self.xyz, max_target_distance, self.trace_z_weight)[:2]
-                x, y = self.xyz[:2]
+                target_x, target_y, target_z = trace.where_to(self.xyz, max_target_distance, self.trace_z_weight)
+                x, y, z = self.xyz
                 yaw = (self.yaw + math.pi) if self.flipped else self.yaw
                 desired_direction = normalizeAnglePIPI(math.atan2(target_y - y, target_x - x) - yaw)
+                if self.flipped and self.joint_angle_rad:
+                    desired_direction = normalizeAnglePIPI(desired_direction + sum(self.joint_angle_rad))
                 if self.symmetric and abs(desired_direction) > math.radians(95):  # including hysteresis
                     print('Flipping:', math.degrees(desired_direction))
                     self.flip()
@@ -485,7 +485,16 @@ class SubTChallenge:
                     if safety_limit is not None and safety < safety_limit:
                         print('Danger! Safety limit for follow trace reached!', safety, safety_limit)
                         break
+
+                if is_trace3d:
+                    d = distance3D(self.xyz, [target_x, target_y, target_z])
+                    time_to_target = d/self.max_speed
+                    desired_z_speed = (target_z - self.xyz[2]) / time_to_target
+                    self.bus.publish('desired_z_speed', desired_z_speed)
+
         print('End of follow trace(sec)', self.sim_time_sec - start_time)
+        if is_trace3d:
+            self.bus.publish('desired_z_speed', None)
 
     def register(self, callback):
         self.monitors.append(callback)
@@ -547,37 +556,6 @@ class SubTChallenge:
             if self.collision_detector_enabled:
                 self.collision_detector_enabled = False
                 raise Collision()
-
-    def publish_single_artf_xyz(self, artifact_data, pos):
-        ax, ay, az = pos
-        self.bus.publish('artf_xyz', [
-            [artifact_data, [round(ax * 1000), round(ay * 1000), round(az * 1000)], self.robot_name, None]])
-
-    def handle_artf(self, artifact_data, world_xyz):
-        ax, ay, az = world_xyz
-        if -20 < ax < 0 and -10 < ay < 10:  # AND of currently available staging areas
-            # Urban (-20 < ax < 0 and -10 < ay < 10)
-            # Cave  (-50 < ax < 0 and -25 < ay < 25)
-            # filter out elements on staging area
-            self.stdout(self.time, 'Robot at:', (ax, ay, az))
-        else:
-            if self.maybe_remember_artifact(artifact_data, (ax, ay, az)):
-                self.publish_single_artf_xyz(artifact_data, (ax, ay, az))
-
-    def on_artf(self, timestamp, data):
-        if self.orientation is None or self.xyz is None:
-            # there can be observed artifact (false) on the start before the coordinate system is defined
-            return
-        artifact_data, vector = data
-        dx, dy, dz = quaternion.rotate_vector(vector, self.orientation)
-        x, y, z = self.xyz
-        ax = x + dx/1000.0
-        ay = y + dy/1000.0
-        az = z + dz/1000.0
-        self.handle_artf(artifact_data, (ax, ay, az))
-
-    def on_localized_artf(self, timestamp, data):
-        self.handle_artf(*data)
 
     def on_joint_angle(self, timestamp, data):
         # angles for articulated robot in 1/100th of degree
@@ -645,7 +623,7 @@ class SubTChallenge:
                 else:
                     self.scan = data[index45deg:-index45deg]
                 if self.local_planner is not None:
-                    self.local_planner.update(data)
+                    self.local_planner.update(self.scan)
             elif channel == 'sim_time_sec':
                 self.sim_time_sec = data
             elif channel == 'voltage':
@@ -694,13 +672,13 @@ class SubTChallenge:
         trace.reverse()
         self.follow_trace(trace, timeout=timedelta(seconds=120), max_target_distance=2.5, safety_limit=0.2)
 
-    def robust_follow_wall(self, radius, right_wall=False, timeout=timedelta(hours=3), dist_limit=None,
+    def robust_follow_wall(self, gap_size, wall_dist, right_wall=False, timeout=timedelta(hours=3), dist_limit=None,
             pitch_limit=None, roll_limit=None):
         """
         Handle multiple re-tries with increasing distance from the wall if necessary
         """
         allow_virtual_flip = self.symmetric
-        walldist = self.walldist
+        wall_dist = self.wall_dist
         total_dist = 0.0
         start_time = self.sim_time_sec
         overall_timeout = timeout
@@ -711,13 +689,13 @@ class SubTChallenge:
             timeout = timedelta(seconds=overall_timeout.total_seconds() - (self.sim_time_sec - start_time))
             print('Current timeout', timeout)
 
-            dist, reason = self.follow_wall(radius=walldist, right_wall=right_wall, timeout=timeout,
+            dist, reason = self.follow_wall(gap_size=gap_size, wall_dist=wall_dist, right_wall=right_wall, timeout=timeout,
                                     pitch_limit=self.limit_pitch, roll_limit=self.limit_roll)
             total_dist += dist
             if reason is None or reason in [REASON_LORA,]:
                 break
 
-            walldist += 0.2
+            wall_dist += 0.2
             if not allow_virtual_flip:
                 # Eduro not supported yet
                 if reason in [REASON_VIRTUAL_BUMPER,]:
@@ -731,19 +709,19 @@ class SubTChallenge:
             for repeat in range(2):
                 # retreat a bit
                 self.flip()
-                self.follow_wall(radius=walldist, right_wall=not right_wall, timeout=timedelta(seconds=30), dist_limit=2.0,
+                self.follow_wall(gap_size=gap_size, wall_dist=wall_dist, right_wall=not right_wall, timeout=timedelta(seconds=30), dist_limit=2.0,
                     pitch_limit=self.return_limit_pitch, roll_limit=self.return_limit_roll)
                 self.flip()
 
-                dist, reason = self.follow_wall(radius=walldist, right_wall=right_wall, timeout=timedelta(seconds=40), dist_limit=4.0,
+                dist, reason = self.follow_wall(gap_size=gap_size, wall_dist=wall_dist, right_wall=right_wall, timeout=timedelta(seconds=40), dist_limit=4.0,
                                         pitch_limit=self.limit_pitch, roll_limit=self.limit_roll)
                 total_dist += dist
                 if reason is None:
                     break
                 if reason in [REASON_LORA, REASON_DIST_REACHED]:
                     break
-                walldist += 0.2
-            walldist = self.walldist
+                wall_dist += 0.2
+            wall_dist = self.wall_dist
             if reason in [REASON_LORA,]:
                 break
 
@@ -757,7 +735,7 @@ class SubTChallenge:
                     self.system_nav_trace(self.init_path)
 
 #                self.go_straight(2.5)  # go to the tunnel entrance - commented our for testing
-                walldist = self.walldist
+                wall_dist = self.wall_dist
                 total_dist = 0.0
                 start_time = self.sim_time_sec
                 while self.sim_time_sec - start_time < self.timeout.total_seconds():
@@ -767,13 +745,13 @@ class SubTChallenge:
                     timeout = timedelta(seconds=self.timeout.total_seconds() - (self.sim_time_sec - start_time))
                     print('Current timeout', timeout)
 
-                    dist, reason = self.follow_wall(radius=walldist, right_wall=self.use_right_wall, timeout=timeout,
+                    dist, reason = self.follow_wall(gap_size=self.gap_size, wall_dist=wall_dist, right_wall=self.use_right_wall, timeout=timeout,
                                             pitch_limit=self.limit_pitch, roll_limit=self.limit_roll)
                     total_dist += dist
                     if reason is None or reason in [REASON_LORA,]:
                         break
 
-                    walldist += 0.2
+                    wall_dist += 0.2
                     if not allow_virtual_flip:
                         # Eduro not supported yet
                         if reason in [REASON_VIRTUAL_BUMPER,]:
@@ -787,20 +765,20 @@ class SubTChallenge:
                     for repeat in range(2):
                         if allow_virtual_flip:
                             self.flip()
-                        self.follow_wall(radius=walldist, right_wall=not self.use_right_wall, timeout=timedelta(seconds=30), dist_limit=2.0,
+                        self.follow_wall(gap_size=self.gap_size, wall_dist=wall_dist, right_wall=not self.use_right_wall, timeout=timedelta(seconds=30), dist_limit=2.0,
                             pitch_limit=self.return_limit_pitch, roll_limit=self.return_limit_roll)
                         if allow_virtual_flip:
                             self.flip()
 
-                        dist, reason = self.follow_wall(radius=walldist, right_wall=self.use_right_wall, timeout=timedelta(seconds=40), dist_limit=4.0,
+                        dist, reason = self.follow_wall(gap_size=self.gap_size, wall_dist=wall_dist, right_wall=self.use_right_wall, timeout=timedelta(seconds=40), dist_limit=4.0,
                                                 pitch_limit=self.limit_pitch, roll_limit=self.limit_roll)
                         total_dist += dist
                         if reason is None:
                             break
                         if reason in [REASON_LORA, REASON_DIST_REACHED]:
                             break
-                        walldist += 0.2
-                    walldist = self.walldist
+                        wall_dist += 0.2
+                    wall_dist = self.wall_dist
                     if reason in [REASON_LORA,]:
                         break
 
@@ -815,11 +793,9 @@ class SubTChallenge:
                         self.turn(math.radians(90), timeout=timedelta(seconds=20))
                     else:
                         self.flip()
-                    self.robust_follow_wall(radius=self.walldist, right_wall=not self.use_right_wall, timeout=3*self.timeout, dist_limit=3*total_dist,
+                    self.robust_follow_wall(gap_size=self.gap_size, wall_dist=self.wall_dist, right_wall=not self.use_right_wall, timeout=3*self.timeout, dist_limit=3*total_dist,
                             pitch_limit=self.return_limit_pitch, roll_limit=self.return_limit_roll)
-                if self.artifacts:
-                    self.bus.publish('artf_xyz', [[artifact_data, [round(x*1000), round(y*1000), round(z*1000)], self.robot_name, None]
-                                              for artifact_data, (x, y, z) in self.artifacts])
+
         except EmergencyStopException:
             print(self.time, "EMERGENCY STOP - terminating")
         self.send_speed_cmd(0, 0)
@@ -853,7 +829,7 @@ class SubTChallenge:
             timeout = timedelta(seconds=self.timeout.total_seconds() - (self.sim_time_sec - start_time))
             print('Current timeout', timeout)
 
-            dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,
+            dist, reason = self.follow_wall(gap_size=self.gap_size, wall_dist=self.wall_dist, right_wall=self.use_right_wall,
                                 timeout=timeout, pitch_limit=self.limit_pitch, roll_limit=None)
             self.collision_detector_enabled = False
             if reason == REASON_VIRTUAL_BUMPER:
@@ -866,15 +842,15 @@ class SubTChallenge:
                 # try something crazy if you do not have other ideas ...
                 before_center = self.use_center
                 self.use_center = True
-                dist, reason = self.follow_wall(radius=self.walldist, right_wall=self.use_right_wall,
+                dist, reason = self.follow_wall(gap_size=self.gap_size, wall_dist=self.wall_dist, right_wall=self.use_right_wall,
                                     timeout=timedelta(seconds=60), pitch_limit=self.limit_pitch, roll_limit=None)
                 self.use_center = before_center
                 if reason is None or reason != REASON_PITCH_LIMIT:
                     continue
             elif reason == REASON_LOOP:
-                # Smaller walldist to reduce the chance that we miss the opening again that we missed before,
+                # Smaller wall_dist to reduce the chance that we miss the opening again that we missed before,
                 # which made us end up in a loop.
-                dist, reason = self.follow_wall(radius=self.walldist*0.75, right_wall=not self.use_right_wall,
+                dist, reason = self.follow_wall(gap_size=self.gap_size, wall_dist=self.wall_dist*0.75, right_wall=not self.use_right_wall,
                                     timeout=timedelta(seconds=5), pitch_limit=self.limit_pitch, roll_limit=None, detect_loop=False)
                 if reason is None:
                     continue
@@ -885,22 +861,30 @@ class SubTChallenge:
             self.go_straight(-0.3, timeout=timedelta(seconds=10))
             self.return_home(timedelta(seconds=10))
 
-        self.stdout("Artifacts:", self.artifacts)
-
         self.stdout(self.time, "Explore phase finished %.3f" % dist, reason)
+
+    def play_virtual_part_map_and_explore_frontiers(self):
+        start_time = self.sim_time_sec
+        while self.sim_time_sec - start_time < self.timeout.total_seconds():
+            channel = self.update()
+            if channel == 'waypoints':
+                tmp_trace = Trace()
+                tmp_trace.trace = self.waypoints
+                self.waypoints = None
+                tmp_trace.reverse()
+                self.follow_trace(tmp_trace, timeout=timedelta(seconds=10),
+                                  max_target_distance=1.0, end_threshold=0.5, is_trace3d=True)
+                self.send_speed_cmd(0, 0)
 
     def play_virtual_part_return(self, timeout):
         self.return_home(timeout)
         self.send_speed_cmd(0, 0)
-        if self.artifacts:
-            self.bus.publish('artf_xyz', [[artifact_data, [round(x * 1000), round(y * 1000), round(z * 1000)], self.robot_name, None]
-                                          for artifact_data, (x, y, z) in self.artifacts])
         self.wait(timedelta(seconds=10), use_sim_time=True)
         self.stdout('Final xyz:', self.xyz)
         self.stdout('Final xyz (DARPA coord system):', self.xyz)
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver105!")
+        self.stdout("SubT Challenge Ver107!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
@@ -908,7 +892,7 @@ class SubTChallenge:
 
         # wait for critical data
         while any_is_none(self.scan, self.xyz):
-            # self.xyz is initialized by pose2d or pose3d depending on robot type
+            # self.xyz is initialized by pose3d
             self.update()
 
         steps = parse_robot_name(self.robot_name)
@@ -919,7 +903,6 @@ class SubTChallenge:
             if action == 'wait':
                 self.stdout(f'Wait for {duration} seconds')
                 self.wait(timedelta(seconds=duration), use_sim_time=True)
-                self.stdout('Artifacts collected during wait:', self.artifacts)
 
             elif action.startswith('enter'):
                 self.use_right_wall = (action == 'enter-right')
@@ -931,6 +914,10 @@ class SubTChallenge:
                 self.use_right_wall = (action == 'right')
                 self.use_center = (action == 'center')
                 self.play_virtual_part_explore()
+
+            elif action == 'explore':
+                self.timeout = timedelta(seconds=duration)
+                self.play_virtual_part_map_and_explore_frontiers()
 
             elif action == 'home':
                 self.play_virtual_part_return(timedelta(seconds=duration))
@@ -973,7 +960,8 @@ def main():
     parser_run = subparsers.add_parser('run', help='run on real HW')
     parser_run.add_argument('config', nargs='+', help='configuration file')
     parser_run.add_argument('--note', help='add description')
-    parser_run.add_argument('--walldist', help='distance for wall following (default: %(default)sm)', default=1.0, type=float)
+    parser_run.add_argument('--gap-size', help='minimum gap the robot goeas into (default: %(default)sm)', default=1.0, type=float)
+    parser_run.add_argument('--wall-dist', help='distance for wall following (default: %(default)sm)', default=1.0, type=float)
     parser_run.add_argument('--side', help='which side to follow', choices=['left', 'right', 'auto'], required=True)
     parser_run.add_argument('--speed', help='maximum speed (default: from config)', type=float)
     parser_run.add_argument('--timeout', help='seconds of exploring before going home (default: %(default)s)',
@@ -1009,7 +997,8 @@ def main():
         cfg = config_load(*args.config, application=SubTChallenge)
 
         # apply overrides from command line
-        cfg['robot']['modules']['app']['init']['walldist'] = args.walldist
+        cfg['robot']['modules']['app']['init']['gap_size'] = args.gap_size
+        cfg['robot']['modules']['app']['init']['wall_dist'] = args.wall_dist
         if args.side == 'auto':
             cfg['robot']['modules']['app']['init']['right_wall'] = 'auto'
         else:

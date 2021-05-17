@@ -120,6 +120,8 @@
 
   <!-- Adding a missing transform to make wheel odometry meaningful. -->
   <node pkg="tf" type="static_transform_publisher" name="wheel_odom_transform" args="0 0 0 0 0 0 /odom /$(arg robot_name)/odom 100" />
+  <!-- Adding a ground plane of the robot, because, unfortunately, we have defined Freyja's origin to be above ground. -->
+  <node pkg="tf" type="static_transform_publisher" name="ground_plane_transform" args="0 0 -0.1175 0 0 0 /$(arg robot_name) /$(arg robot_name)/ground 100" />
 
   <!-- Fusion of wheel odometry, ICP odometries, RGBD odometries and altitude with IMU data.
        https://github.com/introlab/rtabmap_ros/blob/master/launch/tests/sensor_fusion.launch
@@ -244,7 +246,7 @@
     <remap from="odometry/filtered" to="/$(arg robot_name)/odom_fused"/>
   </node>
 
-  <!-- Merging both RGBD cameras into a single stream. -->
+  <!-- Merging both pointclouds from RGBD cameras into a single stream. -->
   <node pkg="topic_tools" type="relay" name="points_merge_front" args="$(arg robot_name)/rgbd_front/points $(arg robot_name)/rgbd_all/points"/>
   <node pkg="topic_tools" type="relay" name="points_merge_rear" args="$(arg robot_name)/rgbd_rear/points $(arg robot_name)/rgbd_all/points"/>
 
@@ -261,4 +263,20 @@
     <param name="sensor_model/miss" value="0.05"/>
   </node>
 
+  <!-- Combining RGBD messages from both cameras into a single stream -->
+  <node pkg="topic_tools" type="relay" name="rgbd_merge_front" args="/rtabmap/rgbd/front/compressed /rtabmap/rgbd/all/compressed"/>
+  <node pkg="topic_tools" type="relay" name="rgbd_merge_rear" args="/rtabmap/rgbd/rear/compressed /rtabmap/rgbd/all/compressed"/>
+  <!-- Merge camera infos into a single stream -->
+  <node pkg="topic_tools" type="relay" name="camera_info_merge_front" args="$(arg robot_name)/rgbd_front/optical/camera_info $(arg robot_name)/rgbd_all/optical/camera_info"/>
+  <node pkg="topic_tools" type="relay" name="camera_info_merge_rear" args="$(arg robot_name)/rgbd_rear/optical/camera_info $(arg robot_name)/rgbd_all/optical/camera_info"/>
+  <!-- Merge both lidars into a single stream. -->
+  <node pkg="topic_tools" type="relay" name="lidar_merge_front" args="$(arg robot_name)/scan_front $(arg robot_name)/scan_all"/>
+  <node pkg="topic_tools" type="relay" name="lidar_merge_rear" args="$(arg robot_name)/scan_rear $(arg robot_name)/scan_all"/>
+
+  <node pkg="proxy" type="traversability" name="local_map" ns="$(arg robot_name)">
+    <param name="robot_frame_id" value="$(arg robot_name)/ground"/>
+    <remap from="local_map/input/camera_info" to="/$(arg robot_name)/rgbd_all/optical/camera_info"/>
+    <remap from="local_map/input/depth/compressed" to="/rtabmap/rgbd/all/compressed"/>
+    <remap from="local_map/input/scan" to="/$(arg robot_name)/scan_all"/>
+  </node>
 </launch>
