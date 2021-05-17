@@ -18,7 +18,7 @@ import numpy as np
 
 from sensor_msgs.msg import Imu, CompressedImage, LaserScan, PointCloud2
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Empty, Bool, Int32, String, Float64
+from std_msgs.msg import Empty, Bool, Int32, String
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import BatteryState, FluidPressure
 from octomap_msgs.msg import Octomap
@@ -90,12 +90,9 @@ def set_rate(service_name, desired_hz):
     # float64 rate
     rospy.wait_for_service(service_name)
     rate_service = rospy.ServiceProxy(service_name, SetRate)
-    rate_request = Float64()
-    rate_request.data = desired_hz
     try:
-        rate_response = rate_service(rate_request)
-        if rate_response.success:
-            rospy.loginfo("Set " + service_name + "to %f" % desired_hz)
+        rate_service(desired_hz)
+        rospy.loginfo("Set " + service_name + "to %f" % desired_hz)
     except rospy.ServiceException:
         rospy.logerr("Failed to set_rate: " + service_name)
 
