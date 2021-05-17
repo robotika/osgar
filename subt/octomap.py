@@ -152,12 +152,18 @@ def frontiers(img, start, draw=False):
 
     score = np.zeros(len(xy[0]))
     for i in range(len(xy[0])):
-        x, y = xy[0][i]-SLICE_OCTOMAP_SIZE//2, SLICE_OCTOMAP_SIZE//2-xy[1][i]
-        score[i] = math.hypot(x, y) * 0.03
+        x, y = xy[1][i]-SLICE_OCTOMAP_SIZE//2, SLICE_OCTOMAP_SIZE//2-xy[0][i]
+        if x > 0:
+            score[i] = math.hypot(x, y) * 0.03
+        else:
+            score[i] = 0  # too cruel cut for X positive semi-space, but let's move INSIDE!
+
+    for i in range(len(xy[0])):
+        x, y = xy[1][i]-SLICE_OCTOMAP_SIZE//2, SLICE_OCTOMAP_SIZE//2-xy[0][i]
         for j in range(len(xy[0])):
-            x2, y2 = xy[0][j]-SLICE_OCTOMAP_SIZE//2, SLICE_OCTOMAP_SIZE//2-xy[1][j]
+            x2, y2 = xy[1][j]-SLICE_OCTOMAP_SIZE//2, SLICE_OCTOMAP_SIZE//2-xy[0][j]
             dist = math.hypot(x - x2, y - y2)
-            if dist < 10:  # ~ 5 meters
+            if dist < 10 and score[i] > 0:  # ~ 5 meters, only inside
                 score[i] += 1.0
 
     if draw:
@@ -210,11 +216,12 @@ def frontiers(img, start, draw=False):
 class Octomap(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('waypoints')
+        bus.register('waypoints', 'dropped')
         self.prev_data = None
         self.time_limit_sec = None  # initialized with the first sim_time_sec
         self.debug_arr = []
         self.waypoints = None  # experimental trigger of navigation
+        self.waypoints_sent_time = None  # unknown
         self.sim_time_sec = None
         self.pose3d = None
         self.video_writer = None
@@ -231,13 +238,16 @@ class Octomap(Node):
     def on_pose3d(self, data):
         if self.waypoints is not None:
             print('Waypoints', data[0], self.waypoints[0], self.waypoints[-1])
-            self.publish('waypoints', self.waypoints)
+            self.waypoints_sent_time = self.publish('waypoints', self.waypoints)
             self.waypoints = None
 
     def on_octomap(self, data):
         if self.sim_time_sec is None or self.pose3d is None or self.sim_time_sec < self.time_limit_sec:
             return
-        self.time_limit_sec += 5  # simulated seconds
+        self.time_limit_sec += 1  # simulated seconds
+        if self.waypoints_sent_time is not None and self.waypoints_sent_time > self.time:
+            self.publish('dropped', self.time_limit_sec)  # log skipped sim_time
+            return
 
         # bit unlucky conversion from existing Python2 data
         assert len(data) % 2 == 0, len(data)
@@ -306,24 +316,32 @@ if __name__ == "__main__":
     parser.add_argument('logfile', help='path to logfile with octomap data')
     parser.add_argument('--out', help='output path to PNG image', default='out.png')
     parser.add_argument('--draw', action='store_true', help='draw pyplot frontiers')
-    parser.add_argument('--open3d', action='store_true', help='use Open3D for visualization')
     args = parser.parse_args()
 
     octomap_stream_id = lookup_stream_id(args.logfile, 'fromrospy.octomap')
     pose3d_stream_id = lookup_stream_id(args.logfile, 'fromrospy.pose3d')
+    waypoints_stream_id = lookup_stream_id(args.logfile, 'octomap.waypoints')
     pose3d = None
     x, y, z = 0, 0, 0
     resolution = 0.5
+    waypoints = None
     with LogReader(args.logfile,
-               only_stream_id=[octomap_stream_id, pose3d_stream_id]) as logreader:
+               only_stream_id=[octomap_stream_id, pose3d_stream_id, waypoints_stream_id]) as logreader:
         level = 2
         for time, stream, data in logreader:
             data = deserialize(data)
-            if stream != octomap_stream_id:
-                assert stream == pose3d_stream_id, stream
+            if stream == pose3d_stream_id:
                 pose3d = data
                 x, y, z = pose3d[0]
                 start = int(SLICE_OCTOMAP_SIZE//2 + x/resolution), int(SLICE_OCTOMAP_SIZE//2 - y/resolution), int(z / resolution)
+                continue
+
+            if stream == waypoints_stream_id:
+                waypoints = data
+                continue
+
+            if waypoints is None:
+                # speed up display/processing - maybe optional?
                 continue
 
             assert len(data) % 2 == 0, len(data)  # TODO fix this in cloudsim2osgar
@@ -345,22 +363,30 @@ if __name__ == "__main__":
                     paused = not paused
                 if ord('0') <= key <= ord('9'):
                     level = key - ord('0')
-                if args.open3d and key == ord('d'):
+                if key == ord('d'):
                     import open3d as o3d
+                    res = 0.5
                     all = []
                     for lev in range(-3, 10):
                         img = data2maplevel(data, level=lev)
                         xy = np.where(img == STATE_OCCUPIED)
-                        xyz = np.array([xy[0], xy[1], np.full(len(xy[0]), lev)]).T
+                        xyz = np.array([xy[1] - SLICE_OCTOMAP_SIZE/2, SLICE_OCTOMAP_SIZE/2 - xy[0], np.full(len(xy[0]), lev)]).T * res
                         all.extend(xyz.tolist())
                     pcd = o3d.geometry.PointCloud()
                     xyz = np.array(all)
                     pcd.points = o3d.utility.Vector3dVector(xyz)
-                    voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=0.5)
-                    o3d.visualization.draw_geometries([voxel_grid])
+                    voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=0.1)
+                    lines = [[i, i+1] for i in range(len(waypoints) - 1)]
+                    colors = [[1, 0, 0] for i in range(len(lines))]
+                    line_set = o3d.geometry.LineSet()
+                    line_set.points = o3d.utility.Vector3dVector(waypoints)
+                    line_set.lines = o3d.utility.Vector2iVector(lines)
+                    line_set.colors = o3d.utility.Vector3dVector(colors)
+                    o3d.visualization.draw_geometries([line_set, voxel_grid])
                 if not paused:
                     break
             if key == KEY_Q:
                 break
+            waypoints = None  # force wait for next waypoints message
 
 # vim: expandtab sw=4 ts=4
