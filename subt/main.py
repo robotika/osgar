@@ -74,6 +74,10 @@ class EmergencyStopException(Exception):
     pass
 
 
+class NewWaypointsException(Exception):
+    pass
+
+
 class EmergencyStopMonitor:
     def __init__(self, robot):
         self.robot = robot
@@ -86,6 +90,23 @@ class EmergencyStopMonitor:
         if robot.lora_cmd == LORA_STOP_CMD:
             print(robot.time, 'LoRa cmd - Stop')
             raise EmergencyStopException()
+
+    # context manager functions
+    def __enter__(self):
+        self.callback = self.robot.register(self.update)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.robot.unregister(self.callback)
+
+
+class NewWaypointsMonitor:
+    def __init__(self, robot):
+        self.robot = robot
+
+    def update(self, robot):
+        if robot.waypoints is not None:
+            raise NewWaypointsException()
 
     # context manager functions
     def __enter__(self):
@@ -866,15 +887,20 @@ class SubTChallenge:
     def play_virtual_part_map_and_explore_frontiers(self):
         start_time = self.sim_time_sec
         while self.sim_time_sec - start_time < self.timeout.total_seconds():
-            channel = self.update()
-            if channel == 'waypoints':
+            if self.waypoints is not None:
                 tmp_trace = Trace()
                 tmp_trace.trace = self.waypoints
                 self.waypoints = None
                 tmp_trace.reverse()
-                self.follow_trace(tmp_trace, timeout=timedelta(seconds=10),
-                                  max_target_distance=1.0, end_threshold=0.5, is_trace3d=True)
+                try:
+                    with NewWaypointsMonitor(self) as wm:
+                        self.follow_trace(tmp_trace, timeout=timedelta(seconds=10),
+                                          max_target_distance=1.0, end_threshold=0.5, is_trace3d=True)
+                except NewWaypointsException:
+                    pass
                 self.send_speed_cmd(0, 0)
+            else:
+                self.update()
 
     def play_virtual_part_return(self, timeout):
         self.return_home(timeout)
