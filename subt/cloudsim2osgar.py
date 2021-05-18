@@ -16,7 +16,7 @@ import tf
 import zmq
 import numpy as np
 
-from sensor_msgs.msg import Imu, CompressedImage, LaserScan, PointCloud2
+from sensor_msgs.msg import Imu, CompressedImage, Image, LaserScan, PointCloud2
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty, Bool, Int32, String
 from geometry_msgs.msg import Twist
@@ -148,6 +148,9 @@ class main:
             if robot_is_marsupial == 'true':
                 rospy.loginfo("X500 is marsupial")
                 publishers['detach'] = (rospy.Publisher('/' + robot_name + '/detach', Empty, queue_size=1), empty)
+
+            topics.append(('/' + robot_name + '/up_rgbd/optical/depth/image_raw', Image, self.depth_up, ('depth_up',)))
+            topics.append(('/' + robot_name + '/down_rgbd/optical/depth/image_raw', Image, self.depth_down, ('depth_down',)))
 
             for sub_name in ['down_rgbd', 'up_rgbd', 'camera_front', 'front_laser']:
                 set_rate('/' + robot_name + '/' + sub_name + '/set_rate', X500_DESIRED_HZ)
@@ -430,6 +433,16 @@ class main:
         if detected != self.prev_gas_detected:
             self.bus.publish('gas_detected', detected)
             self.prev_gas_detected = detected
+
+    def depth_up(self, msg):
+        self.depth_up_count += 1
+        rospy.loginfo_throttle(10, "depth_up callback: {}".format(self.depth_up_count))
+        self.bus.publish('depth_up', self.convert_depth(msg))
+
+    def depth_down(self, msg):
+        self.depth_down_count += 1
+        rospy.loginfo_throttle(10, "depth_down callback: {}".format(self.depth_down_count))
+        self.bus.publish('depth_down', self.convert_depth(msg))
 
 
 if __name__ == '__main__':
