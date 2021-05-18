@@ -127,6 +127,14 @@
             "image_sampling": 6
           }
       },
+      "logimage_up": {
+          "driver": "subt.image_extractor:ImageExtractor",
+          "in": ["rgbd"],
+          "out": ["image", "depth"],
+          "init": {
+            "image_sampling": 6
+          }
+      },
       "radio": {
           "driver": "subt.radio:Radio",
           "in": ["radio", "pose3d", "artf", "sim_time_sec"],
@@ -244,7 +252,7 @@
               ["octomap.waypoints", "app.waypoints"],
 
               ["fromrospy.rgbd_down", "logimage.rgbd"],
-
+              ["fromrospy.rgbd_up", "logimage_up.rgbd"],
 
               ["fromrospy.points", "points2scan.points"],
               ["points2scan.scan360", "depth2scan.scan"],
