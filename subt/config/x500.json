@@ -92,30 +92,6 @@
             "downsample": 2
           }
       },
-      "depth2scan": {
-          "driver": "subt.depth2scan:DepthToScan",
-          "in": ["rgbd", "scan"],
-          "out": ["scan"],
-          "init": {
-            "depth_params": {
-              "fx": 554.25469,
-              "camera_xyz": [0.1, 0.0, -0.08],
-              "image_size": [640, 480],
-              "principal_point": [320.5, 240.5],
-              "vertical_pixel_offset": 16,
-              "lidar_fov": 6.283185307179586,
-              "lidar_trusted_zone": 2.0,
-              "min_z": -0.2,
-              "max_z": 0.4,
-              "max_slope": -3.14,
-              "vertical_diff_limit": 1.4835, "vd_comment": "radians(85)",
-              "stride": 2,
-              "noise_filter_window": [12, 6],
-              "noise_filter_threshold": 30
-            },
-            "filter_fog": true
-          }
-      },
       "torospy": {
           "driver": "subt.push:Push"
       },
@@ -161,8 +137,6 @@
             "max_z": 2.0
           }
       },
-
-
       "fromrospy": {
           "driver": "subt.pull:Pull",
           "init": {
@@ -201,12 +175,7 @@
 
               ["fromrospy.acc", "app.acc"],
 
-              ["fromrospy.scan360", "detector.scan"],
-              ["fromrospy.scan360", "depth2scan.scan"],
-
               ["fromrospy.rgbd_down", "detector.rgbd"],
-
-              ["depth2scan.scan", "app.scan360"],
 
               ["fromrospy.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
@@ -255,8 +224,7 @@
               ["fromrospy.rgbd_up", "logimage_up.rgbd"],
 
               ["fromrospy.points", "points2scan.points"],
-              ["points2scan.scan360", "depth2scan.scan"],
-              ["depth2scan.scan", "app.scan360"],
+              ["points2scan.scan360", "app.scan360"],
 
               ["fromrospy.rgbd_up", "rgbd2dist_up.rgbd"],
               ["rgbd2dist_up.dist",  "drone.top_scan"],
