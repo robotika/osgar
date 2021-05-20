@@ -1,4 +1,4 @@
-FROM robotika/subt-base:2021-03-20
+FROM robotika/subt-base:2021-05-14
 
 # ADD always downloads the file to calculate checksum, RUN checksum only the cmdline
 RUN curl -O# http://osgar.robotika.cz/subt/virtual/model/mdnet5.128.128.13.4.elu.pth 2>&1

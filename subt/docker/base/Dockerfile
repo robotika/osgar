@@ -35,6 +35,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 RUN /bin/sh -c 'echo "deb [trusted=yes] http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list' \
  && apt-get update \
  && apt-get install -y \
+    libgoogle-glog0v5 \
     python-catkin-tools \
     python-laser-geometry \
     python-rosdep \
@@ -93,12 +94,14 @@ RUN ./env/bin/pip install --no-cache-dir --upgrade pip wheel setuptools
 RUN ./env/bin/pip install --no-cache-dir \
   "msgpack==1.0.0" \
   "numpy==1.19.4" \
-  "opencv-python==4.4.0.46" \
   "protobuf==3.13.0" \
   "pyzmq==19.0.2"
 
 RUN ./env/bin/pip install --no-cache-dir \
   "torch==1.8.0+cu111" -f https://download.pytorch.org/whl/torch_stable.html
+
+RUN ./env/bin/pip install --no-cache-dir \
+  http://osgar.robotika.cz/subt/pip/opencv/opencv_contrib_python-4.5.2.52-cp36-cp36m-linux_x86_64.whl
 
 ENV NVIDIA_VISIBLE_DEVICES ${NVIDIA_VISIBLE_DEVICES:-all}
 ENV NVIDIA_DRIVER_CAPABILITIES ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics,compat32,utility
