@@ -52,6 +52,12 @@ RUN /bin/sh -c 'echo "deb [trusted=yes] http://packages.ros.org/ros/ubuntu $(lsb
     ros-melodic-spacenav-node \
     ros-melodic-tf2-sensor-msgs \
     ros-melodic-twist-mux \
+    ros-melodic-control-toolbox \
+    ros-melodic-controller-manager \
+    ros-melodic-diff-drive-controller \
+    ros-melodic-multimaster-launch \
+    ros-melodic-joint-state-controller \
+    ros-melodic-joint-trajectory-controller \
  && rosdep init \
  && apt-get clean
 
@@ -71,14 +77,15 @@ RUN apt-get update \
 SHELL ["/bin/bash", "-c"]
 
 # build osrf/subt repository
+# ... TODO one day:
+#  && rosdep update \
+#  && rosdep install --from-paths src --ignore-src -r \
 FROM stage1 as build
 WORKDIR /tmp
 RUN mkdir subt-ws \
   && cd subt-ws \
   && git clone --depth=1 https://github.com/osrf/subt.git src \
   && source /opt/ros/melodic/setup.bash \
-  && rosdep update \
-  && rosdep install --from-paths src --ignore-src -r \
   && catkin_make install -DCMAKE_INSTALL_PREFIX=/opt/subt -DCMAKE_BUILD_TYPE=Release
 
 FROM stage1
