@@ -77,6 +77,7 @@ RUN mkdir subt-ws \
   && cd subt-ws \
   && git clone --depth=1 https://github.com/osrf/subt.git src \
   && source /opt/ros/melodic/setup.bash \
+  && rosdep install --from-paths src --ignore-src -r \
   && catkin_make install -DCMAKE_INSTALL_PREFIX=/opt/subt -DCMAKE_BUILD_TYPE=Release
 
 FROM stage1
