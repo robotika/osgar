@@ -145,6 +145,7 @@ class ArtifactDetectorDNN(Node):
 
     def run(self):
         try:
+            self.stdout(cv2.dnn.getAvailableTargets(cv2.dnn.DNN_BACKEND_CUDA))
             dropped = 0
             while True:
                 now = self.publish("dropped", dropped)
