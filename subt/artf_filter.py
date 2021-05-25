@@ -12,8 +12,10 @@ class ArtifactFilter(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("artf_xyz")
+        self.num_confirm = config.get('num_confirm', 0)
         self.robot_name = None  # for "signature" who discovered the artifact
         self.artifacts = []
+        self.confirmations = []
         self.breadcrumbs = []
         self.verbose = False
 
@@ -31,12 +33,19 @@ class ArtifactFilter(Node):
                         print('False detection - dist:', distance3D((x, y, z), artifact_xyz))
                     return False
 
-        for stored_data, (x, y, z) in self.artifacts:
+        for i, (stored_data, (x, y, z)) in enumerate(self.artifacts):
             if distance3D((x, y, z), artifact_xyz) < 4.0:
                 # in case of uncertain type, rather report both
                 if stored_data == artifact_data:
-                    return False
+                    self.confirmations[i] += 1
+                    # return true only when confirmation threshold was reached
+                    if self.verbose:
+                        print('Confirmed:', artifact_data, self.confirmations[i])
+                    return self.confirmations[i] == self.num_confirm
         self.artifacts.append((artifact_data, artifact_xyz))
+        self.confirmations.append(0)
+        if self.num_confirm > 0:
+            return False
         return True
 
     def handle_artf(self, artifact_data, world_xyz):
@@ -55,6 +64,8 @@ class ArtifactFilter(Node):
         self.robot_name = data.decode('ascii')
 
     def on_localized_artf(self, data):
+        if self.verbose:
+            print(self.time, data)
         self.handle_artf(*data)
 
     def on_breadcrumb(self, data):

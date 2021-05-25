@@ -45,5 +45,11 @@ class ArtifactFilterTest(unittest.TestCase):
         filter.on_localized_artf(['TYPE_DRILL', [105.0, 20.0, -30.0]])
         bus.publish.assert_called_with('artf_xyz', [['TYPE_DRILL', [105000, 20000, -30000], 'A100L', None]])
 
+    def test_artf_confirmation(self):
+        bus = MagicMock()
+        filter = ArtifactFilter(bus=bus, config={'num_confirm': 1})
+        self.assertFalse(filter.maybe_remember_artifact('TYPE_BACKPACK', [10, 20, 3]))
+        self.assertTrue(filter.maybe_remember_artifact('TYPE_BACKPACK', [10.1, 20, 3]))  # confirmed
+        self.assertFalse(filter.maybe_remember_artifact('TYPE_BACKPACK', [10.1, 20.1, 3]))  # already reported
 
 # vim: expandtab sw=4 ts=4
