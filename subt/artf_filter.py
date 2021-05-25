@@ -12,7 +12,7 @@ class ArtifactFilter(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("artf_xyz")
-        self.num_confirm = config.get('num_confirm', 0)
+        self.num_confirm = config.get('num_confirm', 1)
         self.robot_name = None  # for "signature" who discovered the artifact
         self.artifacts = []
         self.confirmations = []
