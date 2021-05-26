@@ -2,37 +2,12 @@
 <launch>
   <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)" output="screen"/>
 
-  <!-- ICP Odometry based on planar lidar -->
-  <node pkg="rtabmap_ros" type="icp_odometry" name="icp_odometry">
-    <param name="database_path" type="string" value=""/>
-    <param name="subscribe_scan" type="bool" value="true"/>
-    <param name="frame_id" type="string" value="$(arg robot_name)"/>
-    <param name="odom_frame_id" type="string" value="odom"/>
-    <param name="publish_tf" type="bool" value="false"/>
-    <param name="publish_null_when_lost" type="bool" value="false"/>
-
-    <param name="Reg/Strategy" type="string" value="1"/>
-    <param name="OdomF2M/BundleAdjustment" type="string" value="0"/>
-    <param name="Icp/MaxTranslation" type="string" value="0.3"/>
-    <param name="Icp/MaxCorrespondenceDistance" type="string" value="0.15"/>
-    <!-- Inputs -->
-    <remap from="scan" to="/$(arg robot_name)/front_scan"/>
-    <!-- Outputs -->
-    <remap from="odom" to="/rtabmap/scan/odom" />
-    <remap from="odom_info" to="/rtabmap/scan/odom_info"/>
-    <remap from="odom_last_frame" to="/rtabmap/scan/odom_last_frame"/>
-    <remap from="odom_local_map" to="/rtabmap/scan/odom_local_map"/>
-    <remap from="odom_local_scan_map" to="/rtabmap/scan/odom_local_scan_map"/>
-    <remap from="odom_filtered_input_scan" to="/rtabmap/scan/odom_filtered_input_scan"/>
-    <remap from="scan_cloud" to="/rtabmap/scan/scan_cloud"/>
-  </node>
-
   <!-- Combining front RGBD depth and image data into a single message. -->
   <node pkg="nodelet" type="nodelet" name="rgbd_sync_front" args="standalone rtabmap_ros/rgbd_sync">
     <!-- Inputs -->
-    <remap from="rgb/image" to="/$(arg robot_name)/front/optical/image_raw"/>
-    <remap from="rgb/camera_info" to="$(arg robot_name)/front/optical/camera_info"/>
-    <remap from="depth/image" to="/$(arg robot_name)/front/optical/depth"/>
+    <remap from="rgb/image" to="/$(arg robot_name)/rgbd_front/optical/image_raw"/>
+    <remap from="rgb/camera_info" to="$(arg robot_name)/rgbd_front/optical/camera_info"/>
+    <remap from="depth/image" to="/$(arg robot_name)/rgbd_front/optical/depth"/>
     <!-- Output -->
     <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/compressed"/>
     <remap from="rgbd_image" to="/rtabmap/rgbd"/>
@@ -77,8 +52,6 @@
 
     <param name="transform_time_offset" value="0.0"/>
 
-    <!-- ICP odometry from 2d lidar -->
-    <param name="odom0" value="/rtabmap/scan/odom"/>
     <!-- RGBD odometry from depth camera -->
     <param name="odom1" value="/rtabmap/rgbd/odom"/>
     <!-- Altitude estimated from air pressure -->
@@ -88,13 +61,11 @@
     <!-- IMU -->
     <param name="imu0" value="$(arg robot_name)/imu/pruned"/>
 
-    <param name="odom0_differential" value="false"/>
     <param name="odom1_differential" value="false"/>
     <param name="pose0_differential" value="false"/>
     <param name="pose1_differential" value="false"/>
     <param name="imu0_differential" value="false"/>
 
-    <param name="odom0_relative" value="false"/>
     <param name="odom1_relative" value="false"/>
     <param name="pose0_relative" value="true"/>
     <param name="pose1_relative" value="true"/>
@@ -104,11 +75,6 @@
 
     <!-- The order of the values is x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az. -->
     <!-- We barely trust the ICP odometry on 2d scan with X and Y coordinates. Totally not anything more 3d. -->
-    <rosparam param="odom0_config">[false, false, false,
-                                    false, false, false,
-                                    true, true, false,
-                                    false, false, false,
-                                    false, false, false]</rosparam>
     <rosparam param="odom1_config">[false, false, false,
                                     false, false, false,
                                     true, true, true,
@@ -146,15 +112,15 @@
 
   <!-- Run a passthrough filter to remove drone propellers -->
   <node name="filter_pointcloud" pkg="robot" type="filter_pointcloud.py">
-    <remap from="/points" to="/$(arg robot_name)/rgbd_camera/depth/points"/>
-    <remap from="/points_cleaned" to="/$(arg robot_name)/rgbd_camera/depth/points_cleaned"/>
+    <remap from="/points" to="/$(arg robot_name)/rgbd_front/points"/>
+    <remap from="/points_cleaned" to="/$(arg robot_name)/rgbd_front/points_cleaned"/>
   </node>
 
   <node name="map_tf_broadcaster" pkg="robot" type="map_tf_broadcaster.py" args="$(arg robot_name)">
   </node>
 
   <node if="$(eval arg('robot_name').endswith('XM'))" ns="mapping" pkg="octomap_server" type="octomap_server_node" name="octomap">
-    <remap from="cloud_in" to="/$(arg robot_name)/rgbd_camera/depth/points_cleaned"/>
+    <remap from="cloud_in" to="/$(arg robot_name)/rgbd_front/points_cleaned"/>
     <param name="frame_id" value="map"/>
     <!-- resolution in meters per voxel -->
     <param name="resolution" value="0.5" />
