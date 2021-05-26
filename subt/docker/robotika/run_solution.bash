@@ -35,6 +35,14 @@ case $ROBOT_CONFIG in
     GAPSIZE=0.9
     WALLDIST=1.6
     ;;
+  "CORO_PAM_SENSOR_CONFIG_1"):
+    echo "Robot is CoRo Pam drone"
+    LAUNCH_FILE="robot coro_pam.launch"
+    CONFIG_FILES=("config/coro_pam.json")
+    SPEED=1.5
+    GAPSIZE=0.9
+    WALLDIST=1.6
+    ;;
   "TEAMBASE"):
     echo "Robot is TEAMBASE"
     LAUNCH_FILE="proxy teambase.launch"
