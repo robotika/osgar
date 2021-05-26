@@ -1,4 +1,5 @@
 """evaluate detectors"""
+import datetime
 import os
 import csv
 import numpy as np
@@ -52,7 +53,6 @@ def manual_separation(data):
         if ii >= len(data):
             ii = len(data) - 1
         artf_name, score_t, score_cv, points, bbox, im_path, detection_type = data[ii]
-        print(bbox)
         x, y, xw, yh = bbox
         im_path = im_path.rstrip("\r\n")
         img = cv2.imread(str(im_path), 1)
@@ -68,6 +68,7 @@ def manual_separation(data):
         k = cv2.waitKey(0) & 0xFF
         if k == ord("n"):  # next img
             ii += 1
+            data[ii][6] = "true"  # set detection_type to true as default when the image is shown
         elif k == ord("b"):  # back one img
             ii -= 1
         elif k == ord("t"):
@@ -75,7 +76,7 @@ def manual_separation(data):
         elif k == ord("f"):
             data[ii][6] = "false"  # false detection
         elif k == ord("d"):
-            data[ii][3] = "None"  # do not use
+            data[ii][6] = "None"  # do not use
         elif k == ord("q"):  # close and save
             break
 
@@ -85,8 +86,13 @@ def manual_separation(data):
 
 
 def log_eval(log_file):
+    print(log_file)
     data_dir = log_file + ".d"
-    os.makedirs(data_dir,exist_ok=True)
+    try:
+        os.makedirs(data_dir,exist_ok=False)  # do not overwrite existing data
+    except FileExistsError:
+        print("Directory already exist")
+        return None
     detection_log = open(os.path.join(data_dir, "detection.log"), "w")
     confidence_thresholds = {
         'survivor': 0.5,
@@ -140,7 +146,7 @@ def log_eval(log_file):
     detection_log.close()
 
 
-def plot_data(data):
+def plot_data(data, path):
     for artf_name in g_artf_names:
         true_score_t = []
         true_score_cv = []
@@ -154,21 +160,22 @@ def plot_data(data):
                 false_score_t.append(score_t)
                 false_score_cv.append(score_cv)
 
-        fig = plt.figure(figsize=(7, 6))
-        fig.subplots_adjust(left=0.1, right=0.8, bottom=0.1)
+        if true_score_t or false_score_t:
+            fig = plt.figure(figsize=(7, 6))
+            fig.subplots_adjust(left=0.1, right=0.8, bottom=0.1)
 
-        ax1 = fig.add_subplot(111)
-        ax1.plot(true_score_t, true_score_cv, "go", label="True")
-        ax1.plot(false_score_t, false_score_cv, "ro", label="False")
-        ax1.grid()
-        ax1.set_title(artf_name)
-        ax1.set_xlabel("mdnet (-)")
-        ax1.set_ylabel("cv detector (-)")
-        ax1.legend(bbox_to_anchor=(1.05, 0.7))
+            ax1 = fig.add_subplot(111)
+            ax1.plot(true_score_t, true_score_cv, "go", label="True")
+            ax1.plot(false_score_t, false_score_cv, "ro", label="False")
+            ax1.grid()
+            ax1.set_title(artf_name)
+            ax1.set_xlabel("mdnet (-)")
+            ax1.set_ylabel("cv detector (-)")
+            ax1.legend(bbox_to_anchor=(1.05, 0.7))
 
-        graph_name = artf_name + "_graph"
-        plt.savefig(graph_name, dpi=500)
-        plt.show()
+            graph_name = datetime.datetime.now().strftime(artf_name + "_%y%m%d_%H%M%S")
+            plt.savefig(os.path.join(path, graph_name), dpi=500)
+            plt.show()
 
 
 def separate_detections(path):
@@ -185,17 +192,18 @@ def separate_detections(path):
             points = eval(points)
             bbox = eval(bbox)
             im_path = os.path.join(path, dir, im_name)
-            data_to_filter.append([artf_name, score_t, score_cv, points, bbox, im_path, "true"])
+            data_to_filter.append([artf_name, score_t, score_cv, points, bbox, im_path, "none"])
 
     data = manual_separation(data_to_filter)
 
     # save data for future analysis
-    with open(os.path.join(path, "detection_overview.csv"), "w", newline='') as csv_file:
+    csv_name = datetime.datetime.now().strftime("detection_overview_%y%m%d_%H%M%S.csv")
+    with open(os.path.join(path, csv_name), "w", newline='') as csv_file:
         csv_writer = csv.writer(csv_file, delimiter=";")
         for item in data:
             csv_writer.writerow(item)
 
-    plot_data(data)
+    plot_data(data, path)
 
 
 def eval_logs(path):
