@@ -124,7 +124,9 @@ class main:
             topics.append(('/' + robot_name + '/bottom_scan', LaserScan, self.bottom_scan, ('bottom_scan',)))
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/air_pressure', FluidPressure, self.air_pressure, ('air_pressure',)))
-            topics.append(('/rtabmap/rgbd/compressed', RGBDImage, self.rgbd_front, ('rgbd_front',)))
+            topics.append(('/rtabmap/rgbd/front/compressed', RGBDImage, self.rgbd_front, ('rgbd_front',)))
+            topics.append(('/rtabmap/rgbd/left/compressed', RGBDImage, self.rgbd_left, ('rgbd_left',)))
+            topics.append(('/rtabmap/rgbd/right/compressed', RGBDImage, self.rgbd_right, ('rgbd_right',)))
             if robot_name.endswith('XM'):
                 topics.append(('/mapping/octomap_binary', Octomap, self.octomap, ('octomap',)))
             if robot_is_marsupial == 'true':
@@ -361,6 +363,20 @@ class main:
         rgbd = self.convert_rgbd(msg)
         if rgbd is not None:
             self.bus.publish('rgbd_rear', rgbd)
+
+    def rgbd_left(self, msg):
+        self.rgbd_left_count += 1
+        rospy.loginfo_throttle(10, "rgbd_left callback: {}".format(self.rgbd_left_count))
+        rgbd = self.convert_rgbd(msg)
+        if rgbd is not None:
+            self.bus.publish('rgbd_left', rgbd)
+
+    def rgbd_right(self, msg):
+        self.rgbd_right_count += 1
+        rospy.loginfo_throttle(10, "rgbd_right callback: {}".format(self.rgbd_right_count))
+        rgbd = self.convert_rgbd(msg)
+        if rgbd is not None:
+            self.bus.publish('rgbd_right', rgbd)
 
     def convert_points(self, msg):
         # accept only Velodyne VLC-16 (for the ver0)

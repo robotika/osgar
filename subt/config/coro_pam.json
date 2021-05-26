@@ -120,7 +120,8 @@
           "driver": "subt.pull:Pull",
 	      "init": {
               "outputs": ["acc", "top_scan", "bottom_scan", "pose3d", "battery_state", "score", "gas_detected",
-                          "rgbd_front:null", "air_pressure", "scan360", "octomap:gz", "robot_name"]
+                          "rgbd_front:null", "rgbd_left:null", "rgbd_right:null",
+                          "air_pressure", "scan360", "octomap:gz", "robot_name"]
           }
       },
       "torospy": {
@@ -131,7 +132,26 @@
           "in": ["rgbd"],
           "out": ["image", "depth"],
           "init": {
-            "image_sampling": 2
+            "image_sampling": 2,
+            "depth_sampling": 2
+          }
+      },
+      "logimage_left": {
+          "driver": "subt.image_extractor:ImageExtractor",
+          "in": ["rgbd"],
+          "out": ["image", "depth"],
+          "init": {
+            "image_sampling": 2,
+            "depth_sampling": 2
+          }
+      },
+      "logimage_right": {
+          "driver": "subt.image_extractor:ImageExtractor",
+          "in": ["rgbd"],
+          "out": ["image", "depth"],
+          "init": {
+            "image_sampling": 2,
+            "depth_sampling": 2
           }
       },
       "radio": {
@@ -223,7 +243,9 @@
               ["fromrospy.pose3d", "octomap.pose3d"],
               ["octomap.waypoints", "app.waypoints"],
 
-              ["fromrospy.rgbd_front", "logimage.rgbd"]
+              ["fromrospy.rgbd_front", "logimage.rgbd"],
+              ["fromrospy.rgbd_left", "logimage_left.rgbd"],
+              ["fromrospy.rgbd_right", "logimage_right.rgbd"]
     ]
   }
 }
