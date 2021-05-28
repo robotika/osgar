@@ -116,6 +116,13 @@
             "filter_fog": true
           }
       },
+      "three2scan": {
+          "driver": "subt.three2scan:ThreeRGBDToScan",
+          "in": ["rgbd"],
+          "out": ["scan"],
+          "init": {
+          }
+      },
       "fromrospy": {
           "driver": "subt.pull:Pull",
 	      "init": {
@@ -193,12 +200,11 @@
               ["fromrospy.acc", "app.acc"],
 
               ["fromrospy.scan360", "detector.scan"],
-              ["fromrospy.scan360", "depth2scan.scan"],
 
               ["fromrospy.rgbd_front", "detector.rgbd"],
 
-              ["fromrospy.rgbd_front", "depth2scan.rgbd"],
-              ["depth2scan.scan", "app.scan360"],
+              ["fromrospy.rgbd_front", "three2scan.rgbd"],
+              ["three2scan.scan", "app.scan"],
 
               ["fromrospy.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
