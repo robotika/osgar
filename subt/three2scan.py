@@ -35,7 +35,9 @@ class ThreeRGBDToScan(Node):
         else:
             self.right = arr.T[320].tolist()
 
-        self.publish('scan', self.left + self.center + self.right)
+        scan = self.left + self.center + self.right
+        scan.reverse()  # from right to left, anti-clockwise
+        self.publish('scan', scan)
 
     def update(self):
         channel = super().update()
