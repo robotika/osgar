@@ -68,7 +68,6 @@ def manual_separation(data):
         k = cv2.waitKey(0) & 0xFF
         if k == ord("n"):  # next img
             ii += 1
-            data[ii][6] = "true"  # set detection_type to true as default when the image is shown
         elif k == ord("b"):  # back one img
             ii -= 1
         elif k == ord("t"):
@@ -192,7 +191,7 @@ def separate_detections(path):
             points = eval(points)
             bbox = eval(bbox)
             im_path = os.path.join(path, dir, im_name)
-            data_to_filter.append([artf_name, score_t, score_cv, points, bbox, im_path, "none"])
+            data_to_filter.append([artf_name, score_t, score_cv, points, bbox, im_path, "true"])  # set detection_type to true as default
 
     data = manual_separation(data_to_filter)
 
