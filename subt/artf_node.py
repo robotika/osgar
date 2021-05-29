@@ -140,7 +140,7 @@ class ArtifactDetectorDNN(Node):
             'helmet': 0.5,
             'rope': 0.5,
             'fire_extinguisher': 0.5,
-            'drill': 0.5,
+            'drill': 0.75,
             'vent': 0.5,
             'cube': 0.5
         }
