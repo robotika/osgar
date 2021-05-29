@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from subt.artf_node import result2report, check_results
+from subt.artf_node import result2report, check_results, check_borders, get_border_lines
 
 
 DRONE_FX = 554.25469
@@ -10,7 +10,8 @@ DRONE_FX = 554.25469
 class ArtifactDetectorDNNTest(unittest.TestCase):
 
     def test_result2report(self):
-        result = [('backpack', [(60, 180, 0.9785775), (72, 180, 0.9795098), (60, 184, 0.97716093), (72, 184, 0.9782014)])]
+        result = [('backpack', [(60, 180, 0.9785775), (72, 180, 0.9795098), (60, 184, 0.97716093), (72, 184, 0.9782014)]),
+                  ['backpack', 0.99990773, [50, 150, 200, 250]]]
         row = [5000]*640
         depth = np.array([row]*360, dtype=np.uint16)
         robot_pose = [0, 0, 0], [0, 0, 0, 1]
@@ -82,5 +83,18 @@ class ArtifactDetectorDNNTest(unittest.TestCase):
         robot_pose, camera_pose, max_depth = None, None, 10.0
         self.assertIsNone(result2report(result, depth=None, fx=100, robot_pose=robot_pose,
                                        camera_pose=camera_pose, max_depth=max_depth))
+
+    def test_above_border(self):
+        borders_points = {'backpack': [[0.5, 0.6],[0.96, 0.55],[0.99, 0.2]]}
+        borders = get_border_lines(borders_points)
+        result = [('backpack', [(100, 200, 0.99), (101, 200, 0.995)], ['backpack', 0.21, [50, 150, 200, 250]])]
+        self.assertEqual(check_borders(result, borders), result)
+
+    def test_below_border(self):
+        borders_points = {'backpack': [[0.5, 0.6],[0.96, 0.55],[0.99, 0.2]]}
+        borders = get_border_lines(borders_points)
+        result = [('backpack', [(100, 200, 0.5), (101, 200, 0.9)], ['backpack', 0.59, [50, 150, 200, 250]])]
+        self.assertEqual(check_borders(result, borders), [])
+
 
 # vim: expandtab sw=4 ts=4
