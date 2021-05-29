@@ -148,8 +148,8 @@ class ArtifactDetectorDNN(Node):
         # There are tree border points for each artifact, point coordinates: x - mdnet, y - cv_detector
         confidence_borders = {
             'survivor': [[0.6, 1],[0.9, 0.65],[0.95, 0.2]],
-            'backpack': [[0.5, 0.6],[0.96, 0.55],[0.99, 0.2]],
-            'phone': [[0.5, 0.4],[0.87, 0.65],[1, 0.2]],
+            'backpack': [[0.5, 0.55],[0.97, 0.4],[0.99, 0.2]],
+            'phone': [[0.5, 0.4],[0.82, 0.37],[1, 0.2]],
             'helmet': [[0.5, 0.6],[0.9, 0.4],[1, 0.1]],
             'rope': [[0.6, 0.5],[0.95, 0.35],[1, 0.2]],
             'fire_extinguisher': [[0.5, 0.75],[0.95, 0.7],[1, 0.65]],
