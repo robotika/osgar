@@ -145,7 +145,7 @@ def log_eval(log_file):
     detection_log.close()
 
 
-def plot_data(data, path):
+def plot_data(data, path, borders = None):
     for artf_name in g_artf_names:
         true_score_t = []
         true_score_cv = []
@@ -166,6 +166,8 @@ def plot_data(data, path):
             ax1 = fig.add_subplot(111)
             ax1.plot(true_score_t, true_score_cv, "go", label="True")
             ax1.plot(false_score_t, false_score_cv, "ro", label="False")
+            if borders:
+                ax1.plot(borders[::2], borders[1::2], "b-o", label="Borders")
             ax1.grid()
             ax1.set_title(artf_name)
             ax1.set_xlabel("mdnet (-)")
@@ -175,6 +177,19 @@ def plot_data(data, path):
             graph_name = datetime.datetime.now().strftime(artf_name + "_%y%m%d_%H%M%S")
             plt.savefig(os.path.join(path, graph_name), dpi=500)
             plt.show()
+
+
+def plot_data_from_log(csv_file, artf_name, borders):
+    data = []
+    with open(csv_file) as data_csv:
+        reader = csv.reader(data_csv, delimiter=';')
+        for name, score_t, score_cv, detection_type in reader:
+            if name == artf_name and detection_type in ["true", "false"]:
+                data.append([name, float(score_t), float(score_cv), detection_type])
+    data_dir, __ = os.path.split(csv_file)
+    if borders:
+        borders = [float(num) for num in borders.split()]
+    plot_data(data, data_dir, borders = borders)
 
 
 def separate_detections(path):
@@ -222,9 +237,10 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('logfiles', help='Path to directory wit logfiles')
-    parser.add_argument('--separate', help='Filter false detection', action='store_true')
-#    parser.add_argument('--plot', help='Plot score', action='store_true')
+    parser.add_argument('--separate', help='Filter false detectio', action='store_true')
+    parser.add_argument('--plot', help='Take artf name and plot data from file')
     parser.add_argument('--streams', help='List of image streams')
+    parser.add_argument('--borders', help='borders points, e.g.: "0.6 1 0.9 0.65 0.95 0.2"')
     args = parser.parse_args()
 
     if args.streams:
@@ -232,7 +248,7 @@ if __name__ == "__main__":
     path = args.logfiles
     if args.separate:
         separate_detections(path)
-#    elif args.plot:
-#        plot_data(path)
+    elif args.plot:
+        plot_data_from_log(path, args.plot, args.borders)
     else:
         eval_logs(path)
