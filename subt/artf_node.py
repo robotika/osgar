@@ -55,7 +55,7 @@ def check_results(result_mdnet, result_cv):
                 ret_points.extend(points)
                 result.remove(r)
         if ret_points:
-            ret.append((name_cv, ret_points))
+            ret.append((name_cv, ret_points, r_cv))
     return ret
 
 
@@ -91,21 +91,23 @@ def result2report(result, depth, fx, robot_pose, camera_pose, max_depth):
     return [NAME2IGN[result[0][0]], world_xyz]
 
 
+def create_detector(confidence_thresholds):
+    model = os.path.join(os.path.dirname(__file__), '../../../mdnet5.128.128.13.4.elu.pth')
+    max_gap = 16
+    min_group_size = 2
+
+    use_cuda = torch.cuda.is_available()
+    device = torch.device("cuda" if use_cuda else "cpu")
+    print('Using:', device)
+    model, categories = subt.artf_model.load_model(model, device)
+    return Detector(model, confidence_thresholds, categories, device,
+                    max_gap, min_group_size)
+
 class ArtifactDetectorDNN(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("localized_artf", "dropped", "debug_rgbd", "stdout",
                      "debug_result", "debug_cv_result")
-        self.time = None
-        self.width = None  # not sure if we will need it
-        self.depth = None  # more precise artifact position from depth image
-        self.cv_detector = CvDetector().subt_detector
-        self.detector = self.create_detector()
-        self.fx = config.get('fx', 554.25469)  # use drone X4 for testing (TODO update all configs!)
-        self.max_depth = config.get('max_depth', 10.0)
-
-    def create_detector(self):
-        model = os.path.join(os.path.dirname(__file__), '../../../mdnet5.128.128.13.4.elu.pth')
         confidence_thresholds = {
             'survivor': 0.8,
             'backpack': 0.8,
@@ -115,17 +117,15 @@ class ArtifactDetectorDNN(Node):
             'fire_extinguisher': 0.5,
             'drill': 0.5,
             'vent': 0.5,
-            'cube' : 0.5
+            'cube': 0.5
         }
-        max_gap = 16
-        min_group_size = 2
-
-        use_cuda = torch.cuda.is_available()
-        device = torch.device("cuda" if use_cuda else "cpu")
-        print('Using:', device)
-        model, categories = subt.artf_model.load_model(model, device)
-        return Detector(model, confidence_thresholds, categories, device,
-                        max_gap, min_group_size)
+        self.time = None
+        self.width = None  # not sure if we will need it
+        self.depth = None  # more precise artifact position from depth image
+        self.cv_detector = CvDetector().subt_detector
+        self.detector = create_detector(confidence_thresholds)
+        self.fx = config.get('fx', 554.25469)  # use drone X4 for testing (TODO update all configs!)
+        self.max_depth = config.get('max_depth', 10.0)
 
     def wait_for_rgbd(self):
         channel = ""
