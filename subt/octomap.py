@@ -153,7 +153,7 @@ def frontiers(img, start, draw=False):
     score = np.zeros(len(xy[0]))
     for i in range(len(xy[0])):
         x, y = xy[1][i]-SLICE_OCTOMAP_SIZE//2, SLICE_OCTOMAP_SIZE//2-xy[0][i]
-        if x > 0:
+        if x > 4:  # TODO - resolution and detect gate as one way only (0 is not sufficient due to impecise position
             score[i] = math.hypot(x, y) * 0.03
         else:
             score[i] = 0  # too cruel cut for X positive semi-space, but let's move INSIDE!
