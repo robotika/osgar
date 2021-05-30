@@ -5,7 +5,7 @@
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 from subt.trace import distance3D
-from subt.artifacts import DRILL
+from subt.artifacts import DRILL, GAS
 
 
 class ArtifactFilter(Node):
@@ -41,10 +41,13 @@ class ArtifactFilter(Node):
                     # return true only when confirmation threshold was reached
                     if self.verbose:
                         print('Confirmed:', artifact_data, self.confirmations[i])
+                    if artifact_data == GAS:
+                        return False  # ignore confirmation - virtual detector is perfect
                     return self.confirmations[i] == self.num_confirm
         self.artifacts.append((artifact_data, artifact_xyz))
         self.confirmations.append(0)
-        if self.num_confirm > 0:
+        if self.num_confirm > 0 and artifact_data != GAS:
+            # new GAS should be reported independently on confirmation level
             return False
         return True
 

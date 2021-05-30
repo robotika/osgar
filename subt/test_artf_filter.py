@@ -52,4 +52,11 @@ class ArtifactFilterTest(unittest.TestCase):
         self.assertTrue(filter.maybe_remember_artifact('TYPE_BACKPACK', [10.1, 20, 3]))  # confirmed
         self.assertFalse(filter.maybe_remember_artifact('TYPE_BACKPACK', [10.1, 20.1, 3]))  # already reported
 
+    def test_gas_without_confirmation(self):
+        bus = MagicMock()
+        filter = ArtifactFilter(bus=bus, config={'num_confirm': 3})
+        filter.on_robot_name(b'A100L')
+        filter.on_localized_artf([GAS, [100.0, 0.0, 0.0]])
+        bus.publish.assert_called_with('artf_xyz', [[GAS, [100000, 0, 0], 'A100L', None]])
+
 # vim: expandtab sw=4 ts=4
