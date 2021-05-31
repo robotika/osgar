@@ -186,21 +186,23 @@ def frontiers(img, start, draw=False):
     z = np.zeros((1, size[1], size[2]), dtype=np.bool)
     drivable = np.vstack([z, tmp, z])
 
-    limit_score = 3*max(score)/4
-    # select goal positions above the limit_score
-    # note, that the "safe path" does not touch external boundary so it would never find path
-    # to frontier. As a workaround add also all 8-neighbors of frontiers.
-    goals = []
-    xy = np.array(xy)[:, score > limit_score]
-    for dx in [-1, 0, 1]:
-        for dy in [-1, 0, 1]:
-            for dz in [0]:  #[-1, 0, 1]:
-                goals.append(xy + np.repeat(np.asarray([[dy], [dx], [dz]]), xy.shape[1], axis=1))
-    goals = np.hstack(goals).T[:, [1, 0, 2]]
+    for limit_score in [3*max(score)/4, max(score)/4, 0]:
+        # select goal positions above the limit_score
+        # note, that the "safe path" does not touch external boundary so it would never find path
+        # to frontier. As a workaround add also all 8-neighbors of frontiers.
+        goals = []
+        xy2 = np.array(xy)[:, score > limit_score]
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                for dz in [0]:  #[-1, 0, 1]:
+                    goals.append(xy2 + np.repeat(np.asarray([[dy], [dx], [dz]]), xy2.shape[1], axis=1))
+        goals = np.hstack(goals).T[:, [1, 0, 2]]
 
-    # the path planner currently expects goals as tuple (x, y) and operation "in"
-    goals = set(map(tuple, goals))
-    path = find_path(drivable, start, goals, verbose=False)
+        # the path planner currently expects goals as tuple (x, y) and operation "in"
+        goals = set(map(tuple, goals))
+        path = find_path(drivable, start, goals, verbose=False)
+        if path is not None:
+            break
 
     img[mask] = STATE_FRONTIER
 
