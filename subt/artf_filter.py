@@ -24,7 +24,13 @@ class ArtifactFilter(Node):
         self.bus.publish('artf_xyz', [
             [artifact_data, [round(ax * 1000), round(ay * 1000), round(az * 1000)], self.robot_name, None]])
 
-    def maybe_remember_artifact(self, artifact_data, artifact_xyz):
+    def register_new_artifact(self, artifact_data, artifact_xyz):
+        """
+        Register newly detected artifact and update internal structures
+        :param artifact_data: type of artifact
+        :param artifact_xyz: artifact 3D position
+        :return: True if artifact should be new published
+        """
         # the breadcrumbs are sometimes wrongly classified as DRILL
         if artifact_data == DRILL:
             for x, y, z in self.breadcrumbs:
@@ -60,7 +66,7 @@ class ArtifactFilter(Node):
             if self.verbose:
                 print(self.time, 'Robot at staging area:', (ax, ay, az))
         else:
-            if self.maybe_remember_artifact(artifact_data, (ax, ay, az)):
+            if self.register_new_artifact(artifact_data, (ax, ay, az)):
                 self.publish_single_artf_xyz(artifact_data, (ax, ay, az))
 
     def on_robot_name(self, data):

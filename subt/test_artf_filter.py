@@ -21,10 +21,10 @@ class ArtifactFilterTest(unittest.TestCase):
 
         artf_data = ['TYPE_BACKPACK', -1614, 1886]
         artf_xyz = (0, 0, 0)
-        self.assertTrue(filter.maybe_remember_artifact(artf_data, artf_xyz))
+        self.assertTrue(filter.register_new_artifact(artf_data, artf_xyz))
 
         # 2nd report should be ignored
-        self.assertEqual(filter.maybe_remember_artifact(artf_data, artf_xyz), False)
+        self.assertEqual(filter.register_new_artifact(artf_data, artf_xyz), False)
 
     def test_staging_area(self):
         bus = MagicMock()
@@ -48,9 +48,9 @@ class ArtifactFilterTest(unittest.TestCase):
     def test_artf_confirmation(self):
         bus = MagicMock()
         filter = ArtifactFilter(bus=bus, config={})
-        self.assertFalse(filter.maybe_remember_artifact('TYPE_BACKPACK', [10, 20, 3]))
-        self.assertTrue(filter.maybe_remember_artifact('TYPE_BACKPACK', [10.1, 20, 3]))  # confirmed
-        self.assertFalse(filter.maybe_remember_artifact('TYPE_BACKPACK', [10.1, 20.1, 3]))  # already reported
+        self.assertFalse(filter.register_new_artifact('TYPE_BACKPACK', [10, 20, 3]))
+        self.assertTrue(filter.register_new_artifact('TYPE_BACKPACK', [10.1, 20, 3]))  # confirmed
+        self.assertFalse(filter.register_new_artifact('TYPE_BACKPACK', [10.1, 20.1, 3]))  # already reported
 
     def test_gas_without_confirmation(self):
         bus = MagicMock()
