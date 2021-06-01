@@ -12,10 +12,10 @@ class ArtifactFilter(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("artf_xyz")
-        self.num_confirm = config.get('num_confirm', 1)
+        self.min_observations = config.get('min_observations', 2)
         self.robot_name = None  # for "signature" who discovered the artifact
         self.artifacts = []
-        self.confirmations = []
+        self.num_observations = []
         self.breadcrumbs = []
         self.verbose = False
 
@@ -37,16 +37,16 @@ class ArtifactFilter(Node):
             if distance3D((x, y, z), artifact_xyz) < 4.0:
                 # in case of uncertain type, rather report both
                 if stored_data == artifact_data:
-                    self.confirmations[i] += 1
+                    self.num_observations[i] += 1
                     # return true only when confirmation threshold was reached
                     if self.verbose:
-                        print('Confirmed:', artifact_data, self.confirmations[i])
+                        print('Confirmed:', artifact_data, self.num_observations[i])
                     if artifact_data == GAS:
                         return False  # ignore confirmation - virtual detector is perfect
-                    return self.confirmations[i] == self.num_confirm
+                    return self.num_observations[i] == self.min_observations  # report only once
         self.artifacts.append((artifact_data, artifact_xyz))
-        self.confirmations.append(0)
-        if self.num_confirm > 0 and artifact_data != GAS:
+        self.num_observations.append(1)
+        if self.min_observations > 1 and artifact_data != GAS:
             # new GAS should be reported independently on confirmation level
             return False
         return True
