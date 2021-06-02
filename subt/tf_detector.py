@@ -10,15 +10,15 @@ MODEL_DIR = "subt/tf_models"
 PATH_TO_PB_GRAPH = "subt/tf_models/frozen_inference_graph.pb"
 PATH_TO_CV_GRAPH = "subt/tf_models/cv_graph.pbtxt"
 
-NAMES_AND_SCORES = {'backpack': 0.36,
-                    'survivor': 0.25,
-                    'phone': 0.1,
-                    'rope': 0.25,
-                    'helmet': 0.4,
-                    'fire_extinguisher': 0.1,
+NAMES_AND_SCORES = {'backpack': 0.1,
+                    'survivor': 0.1,
+                    'phone': 0.2,
+                    'rope': 0.2,
+                    'helmet': 0.1,
+                    'fire_extinguisher': 0.65,
                     'drill': 0.1,
                     'vent': 0.1,
-                    'cube': 0.1,
+                    'cube': 0.4,
                     'robot': 1.0,
                     'breadcrumb': 1.0,
                     'nothing': 1.0
