@@ -130,6 +130,11 @@
     <remap from="odometry/filtered" to="/$(arg robot_name)/odom_fused"/>
   </node>
 
+  </node>
+    <node pkg="gmapping" type="slam_gmapping" name="gmapping_node">
+  </node>
+  <node name="map_to_scan" pkg="robot" type="map_to_scan.py"  output="screen"/>
+
   <node pkg="nodelet" type="nodelet" name="pcl_manager" args="manager" output="screen" />
 
   <!-- Run a passthrough filter to remove drone propellers -->

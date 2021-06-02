@@ -127,6 +127,7 @@ class main:
             topics.append(('/rtabmap/rgbd/front/compressed', RGBDImage, self.rgbd_front, ('rgbd_front',)))
             topics.append(('/rtabmap/rgbd/left/compressed', RGBDImage, self.rgbd_left, ('rgbd_left',)))
             topics.append(('/rtabmap/rgbd/right/compressed', RGBDImage, self.rgbd_right, ('rgbd_right',)))
+            topics.append(('/map_scan', LaserScan, self.scan360, ('scan360',)))
             if robot_name.endswith('XM'):
                 topics.append(('/mapping/octomap_binary', Octomap, self.octomap, ('octomap',)))
             if robot_is_marsupial == 'true':
