@@ -137,8 +137,7 @@
     <remap from="scan" to="/scan"/>
   </node>
 
-  </node>
-    <node pkg="gmapping" type="slam_gmapping" name="gmapping_node">
+  <node pkg="gmapping" type="slam_gmapping" name="gmapping_node">
   </node>
 
   <node name="map_to_scan" pkg="robot" type="map_to_scan.py"  output="screen"/>
