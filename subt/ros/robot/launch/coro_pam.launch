@@ -130,9 +130,17 @@
     <remap from="odometry/filtered" to="/$(arg robot_name)/odom_fused"/>
   </node>
 
+  <node name="laserscan_kinect" pkg="laserscan_kinect" type="laserscan_kinect" >
+    <remap from="image" to="/$(arg robot_name)/rgbd_front/depth/image_raw"/>
+    <remap from="camera_info" to="$(arg robot_name)/rgbd_front/camera_info"/>
+    <rosparam command="load" file="$(find robot)/params_k2/depth_scan_params.yaml" />
+    <remap from="scan" to="/scan"/>
+  </node>
+
   </node>
     <node pkg="gmapping" type="slam_gmapping" name="gmapping_node">
   </node>
+
   <node name="map_to_scan" pkg="robot" type="map_to_scan.py"  output="screen"/>
 
   <node pkg="nodelet" type="nodelet" name="pcl_manager" args="manager" output="screen" />
