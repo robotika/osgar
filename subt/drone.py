@@ -6,7 +6,7 @@ import math
 
 from osgar.node import Node
 
-HEIGHT = 2.0
+HEIGHT = 3.0  # TODO config or message?
 EMERGENCY_HEIGHT = 0.5
 MAX_ANGULAR = 0.7
 MAX_VERTICAL = 1
