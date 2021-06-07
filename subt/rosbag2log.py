@@ -206,13 +206,14 @@ def process_tar(filepath, all, verbose):
                 elif member.name.endswith('rosout.log'):
                     rosout_name = letter + '-rosout.log'
                     print(member.name, "->", rosout_name)
-                    with open(os.path.join(os.path.dirname(filepath), rosout_name), 'wb') as f:
+                    with open(os.path.join(os.path.dirname(filepath), os.path.basename(rosout_name)), 'wb') as f:
                         f.write(tar.extractfile(member).read())
                 elif (member.name in ['server_console.log'] or member.name.endswith('.yml') or
                       member.name.startswith('subt_urban_') or member.name.startswith('subt_cave_') or
-                      (member.name.startswith('state.tlog') and all)):
+                      'subt_finals_' in member.name or member.name.endswith('-pos.data') or
+                      ('state.tlog' in member.name and all)):
                     print(member.name)
-                    with open(os.path.join(os.path.dirname(filepath), member.name.replace(':', '_')), 'wb') as f:
+                    with open(os.path.join(os.path.dirname(filepath), os.path.basename(member.name).replace(':', '_')), 'wb') as f:
                         f.write(tar.extractfile(member).read())
 
 
