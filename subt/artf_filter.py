@@ -5,15 +5,17 @@
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 from subt.trace import distance3D
-from subt.artifacts import DRILL
+from subt.artifacts import DRILL, GAS
 
 
 class ArtifactFilter(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("artf_xyz")
+        self.min_observations = config.get('min_observations', 2)
         self.robot_name = None  # for "signature" who discovered the artifact
         self.artifacts = []
+        self.num_observations = []
         self.breadcrumbs = []
         self.verbose = False
 
@@ -22,7 +24,13 @@ class ArtifactFilter(Node):
         self.bus.publish('artf_xyz', [
             [artifact_data, [round(ax * 1000), round(ay * 1000), round(az * 1000)], self.robot_name, None]])
 
-    def maybe_remember_artifact(self, artifact_data, artifact_xyz):
+    def register_new_artifact(self, artifact_data, artifact_xyz):
+        """
+        Register newly detected artifact and update internal structures
+        :param artifact_data: type of artifact
+        :param artifact_xyz: artifact 3D position
+        :return: True if artifact should be new published
+        """
         # the breadcrumbs are sometimes wrongly classified as DRILL
         if artifact_data == DRILL:
             for x, y, z in self.breadcrumbs:
@@ -31,12 +39,22 @@ class ArtifactFilter(Node):
                         print('False detection - dist:', distance3D((x, y, z), artifact_xyz))
                     return False
 
-        for stored_data, (x, y, z) in self.artifacts:
+        for i, (stored_data, (x, y, z)) in enumerate(self.artifacts):
             if distance3D((x, y, z), artifact_xyz) < 4.0:
                 # in case of uncertain type, rather report both
                 if stored_data == artifact_data:
-                    return False
+                    self.num_observations[i] += 1
+                    # return true only when confirmation threshold was reached
+                    if self.verbose:
+                        print('Confirmed:', artifact_data, self.num_observations[i])
+                    if artifact_data == GAS:
+                        return False  # ignore confirmation - virtual detector is perfect
+                    return self.num_observations[i] == self.min_observations  # report only once
         self.artifacts.append((artifact_data, artifact_xyz))
+        self.num_observations.append(1)
+        if self.min_observations > 1 and artifact_data != GAS:
+            # new GAS should be reported independently on confirmation level
+            return False
         return True
 
     def handle_artf(self, artifact_data, world_xyz):
@@ -48,13 +66,15 @@ class ArtifactFilter(Node):
             if self.verbose:
                 print(self.time, 'Robot at staging area:', (ax, ay, az))
         else:
-            if self.maybe_remember_artifact(artifact_data, (ax, ay, az)):
+            if self.register_new_artifact(artifact_data, (ax, ay, az)):
                 self.publish_single_artf_xyz(artifact_data, (ax, ay, az))
 
     def on_robot_name(self, data):
         self.robot_name = data.decode('ascii')
 
     def on_localized_artf(self, data):
+        if self.verbose:
+            print(self.time, data)
         self.handle_artf(*data)
 
     def on_breadcrumb(self, data):
