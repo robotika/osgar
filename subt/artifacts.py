@@ -5,7 +5,6 @@ from datetime import timedelta
 import os
 import tempfile
 from io import StringIO
-import json
 
 import cv2
 import numpy as np
