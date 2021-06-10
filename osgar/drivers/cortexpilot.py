@@ -125,11 +125,10 @@ class Cortexpilot(Node):
         #   and checksum at the end
         high, mid, low = data[:3]
         assert high == 0, high  # fixed packet size 2*256+89 bytes
-        assert mid == 2, mid
-        assert low == 89, low
+        assert mid*256 + low == 121, (mid, low)
         addr, cmd = data[3:5]
         assert addr == 1, addr
-        assert cmd == 0xD, cmd
+        assert cmd == 0xE, cmd
         offset = 5  # payload offset
 
         # 4 byte Flags (unsigned long)  0
@@ -232,6 +231,10 @@ class Cortexpilot(Node):
             self.send_pose()
         self.last_encoders = encoders
 
+        if cmd == 0xE:
+            # lidar is not supported
+            return
+
         # 4 byte LidarTimestamp (ulong) 114  - Value of SystemTick when lidar scan was received
         lidar_timestamp = struct.unpack_from('<I', data, offset + 114)[0]
         lidar_diff = lidar_timestamp - self.lidar_timestamp
@@ -263,7 +266,7 @@ class Cortexpilot(Node):
                     self._buf += data
                     packet = self.get_packet()
                     if packet is not None:
-                        if len(packet) < 256:  # TODO cmd value
+                        if len(packet) < 100:  # TODO cmd value
                             print(packet)
                         else:
                             prev = self.flags
