@@ -97,8 +97,8 @@ class Cortexpilot(Node):
 
         packet = struct.pack('<ffI', speed_frac, speed_dir, flags)
         assert len(packet) < 256, len(packet)  # just to use LSB only
-        ret = bytes([0, 0, len(packet) + 2 + 1, 0x1, 0x0D]) + packet
-        # addr=0x1, cmd=0xD, length is given by payload, addr, cmd and checksum
+        ret = bytes([0, 0, len(packet) + 2 + 1, 0x1, 0x0E]) + packet
+        # addr=0x1, cmd=0xE, length is given by payload, addr, cmd and checksum
         checksum = sum(ret) & 0xFF
         return ret + bytes([(256-checksum) & 0xFF])
 
