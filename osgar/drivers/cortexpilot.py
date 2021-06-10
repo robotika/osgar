@@ -143,6 +143,7 @@ class Cortexpilot(Node):
         self.flags, system_voltage, power_voltage = struct.unpack_from('<Iff', data, offset)
         self.lidar_valid = (self.flags & 0x10) == 0x10
         self.emergency_stop = (self.flags & 0x01) == 0x01
+        self.bus.publish('emergency_stop', self.emergency_stop)
 
         self.voltage = [system_voltage, power_voltage]
         self.bus.publish('voltage', [int(v*100) for v in self.voltage])
