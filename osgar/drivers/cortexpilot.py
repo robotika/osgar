@@ -35,7 +35,7 @@ class Cortexpilot(Node):
         # commands
         self.desired_speed = 0.0  # m/s
         self.desired_angular_speed = 0.0
-        self.cmd_flags = 0x40 #0x41  # 0 = remote steering, PWM OFF, laser ON, TODO
+        self.cmd_flags = 0x140 # Skiddy, turn 0x40 #0x41  # 0 = remote steering, PWM OFF, laser ON, TODO
         self.speeds = self.plain_speeds()
 
         # status
@@ -81,9 +81,9 @@ class Cortexpilot(Node):
 
         if speed_frac < 0:
             speed_dir = -speed_dir  # Robik V5.1.1 handles backup backwards
-        if not self.lidar_valid:
-            speed_frac = 0.0
-            speed_dir = 0.0
+#        if not self.lidar_valid:
+#            speed_frac = 0.0
+#            speed_dir = 0.0
 
         #print(self.time, "{:.4f}, {:.4f} \t {:.4f} {:.4f}".format(speed_frac, speed_dir, self.desired_speed, self.desired_angular_speed))
 
