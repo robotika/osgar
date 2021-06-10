@@ -432,137 +432,6 @@ class ArtifactDetector(Node):
             self.best_depth = None
 
 
-def get_annotation_item(filename, result):
-    # result has form [['phone', 0.24000608921051025, [563, 71, 617, 107]]]
-    ret = {
-      "filename": '../md/' + filename,
-      "size": -1,
-      "regions": [],
-      "file_attributes": {}
-    }
-
-    for region in result:
-        artf, frac, bbox = region
-        x, y, x2, y2 = bbox
-        w, h = x2 - x, y2 - y
-        ret['regions'].append(
-    {
-        "shape_attributes": {
-            "name": "rect",
-            "x": x,
-            "y": y,
-            "width": w,
-            "height": h
-        },
-        "region_attributes": {
-            "artifact": artf
-        }
-    })
-    return ret
-
-
-def debug2dir(filename, out_dir, detector_name):
-    from osgar.logger import LogReader, lookup_stream_names
-    from osgar.lib.serialize import deserialize
-
-    names = lookup_stream_names(filename)
-    assert detector_name + '.debug_rgbd' in names, names
-    assert detector_name + '.localized_artf' in names, names
-    assert detector_name + '.debug_cv_result' in names, names
-    assert 'rosmsg.sim_time_sec' in names, names
-    rgbd_id = names.index(detector_name + '.debug_rgbd') + 1
-    artf_id = names.index(detector_name + '.localized_artf') + 1
-    result_id = names.index(detector_name + '.debug_cv_result') + 1
-    sim_sec_id = names.index('rosmsg.sim_time_sec') + 1
-    sim_time_sec = None
-    image = None
-    artf = None
-    last_result = None
-    out_json = {
-        "_via_settings": {
-            "ui": {
-                "annotation_editor_height": 25,
-                "annotation_editor_fontsize": 0.8,
-                "leftsidebar_width": 18,
-                "image_grid": {
-                    "img_height": 80,
-                    "rshape_fill": "none",
-                    "rshape_fill_opacity": 0.3,
-                    "rshape_stroke": "yellow",
-                    "rshape_stroke_width": 2,
-                    "show_region_shape": True,
-                    "show_image_policy": "all"
-                },
-                "image": {
-                    "region_label": "artifact",
-                    "region_color": "artifact",
-                    "region_label_font": "10px Sans",
-                    "on_image_annotation_editor_placement": "NEAR_REGION"
-                }
-            },
-            "core": {
-                "buffer_size": 18,
-                "filepath": {},
-                "default_filepath": ""
-            },
-            "project": {
-                "name": "subt2020"
-            }
-        },
-
-        "_via_img_metadata": {
-        },
-            "_via_attributes": {
-    "region": {
-      "artifact": {
-        "type": "dropdown",
-        "description": "",
-        "options": {
-          "backpack": "",
-          "phone": "",
-          "survivor": "",
-          "robot": "",
-          "nothing": "",
-          "vent": "",
-          "fire_extinguisher": "",
-          "rope": "",
-          "helmet": "",
-          "breadcrumb": "",
-          "drill": "",
-          "cube": ""
-        },
-        "default_options": {
-          "helmet": True
-        }
-      }
-    },
-    "file": {}
-  }
-    }
-    for dt, channel, data in LogReader(filename, only_stream_id=[rgbd_id, artf_id, result_id, sim_sec_id]):
-        data = deserialize(data)
-        if channel == sim_sec_id:
-            sim_time_sec = data
-        elif channel == artf_id:
-            artf = data
-        elif channel == result_id:
-            last_result = data
-        elif channel == rgbd_id:
-            # 'debug_rgbd' is the last published topic for given detection
-            robot_pose, camera_pose, rgb_compressed, depth_compressed = data
-            image = rgb_compressed
-            assert artf is not None
-            time_sec = sim_time_sec if sim_time_sec is not None else int(dt.total_seconds())
-            name = os.path.basename(filename)[:-4] + '-' + artf[0] + '-' + str(time_sec) + '.jpg'
-            print(name, last_result)
-            with open(os.path.join(out_dir, name), 'wb') as f:
-                f.write(image)
-            out_json["_via_img_metadata"][name + '-1'] = get_annotation_item(name, last_result)
-
-    with open(os.path.join(out_dir, 'annotation.json'), 'w') as f:
-        json.dump(out_json, f, indent=2)
-
-
 if __name__ == '__main__':
     from unittest.mock import MagicMock
     from queue import Queue
@@ -573,15 +442,10 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Run artifact detection and classification for given JPEG image')
     parser.add_argument('filename', help='JPEG filename')
-    parser.add_argument('--debug2dir', help='dump clasified debug images into directory')
     parser.add_argument('--detector-name', help='detector module name (detector, detector_rear)', default='detector')
     parser.add_argument('--depth', help='filename of depth image for tested together with JPEG image')
     parser.add_argument('-v', '--verbose', help='verbose mode', action='store_true')
     args = parser.parse_args()
-
-    if args.debug2dir is not None:
-        debug2dir(args.filename, args.debug2dir, args.detector_name)
-        sys.exit()
 
     with open(args.filename.replace('.npz', '.jpg'), 'rb') as f:
         jpeg_data = f.read()
