@@ -216,7 +216,7 @@ class Cortexpilot(Node):
 #            dist = ENC_SCALE * sum(step)/len(step)
 #            angle = ENC_SCALE * (step[0] - step[1])/WHEEL_DISTANCE
             # Skiddy has left 
-            dist = ENC_SCALE * step[0]-step[1]/2.0  # right forward, left negative
+            dist = ENC_SCALE * (step[0] - step[1])/2.0  # right forward, left negative
             angle = ENC_SCALE * (step[0] + step[1])/WHEEL_DISTANCE
             x, y, heading = self.pose
             # advance robot by given distance and angle
