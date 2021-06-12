@@ -5,7 +5,7 @@
       "T200": {
           "driver": "realsense",
           "init": {
-            "ser_number": "2322110715",
+            "serial_number": "929122111204",
             "device": "T200",
             "pose_subsample": 20
           }
@@ -13,12 +13,12 @@
       "D435": {
           "driver": "realsense",
           "init": {
-            "ser_number": "846112072840",
+            "serial_number": "939622072545",
             "device": "D400",
             "depth_subsample": 3,
             "depth_rgb": true,
             "depth_resolution": [640, 360],
-            "rgb_resolution": [640, 4],
+            "rgb_resolution": [640, 360],
             "depth_fps": 30
           }
       }
