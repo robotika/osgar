@@ -213,8 +213,11 @@ class Cortexpilot(Node):
             step = [sint32_diff(x, prev) for x, prev in zip(encoders, self.last_encoders)]
             self.publish('encoders', step)
 
-            dist = ENC_SCALE * sum(step)/len(step)
-            angle = ENC_SCALE * (step[0] - step[1])/WHEEL_DISTANCE
+#            dist = ENC_SCALE * sum(step)/len(step)
+#            angle = ENC_SCALE * (step[0] - step[1])/WHEEL_DISTANCE
+            # Skiddy has left 
+            dist = ENC_SCALE * step[0]-step[1]/2.0  # right forward, left negative
+            angle = ENC_SCALE * (step[0] + step[1])/WHEEL_DISTANCE
             x, y, heading = self.pose
             # advance robot by given distance and angle
             if abs(angle) < 0.0000001:  # EPS
