@@ -15,8 +15,8 @@ from osgar.lib import quaternion
 # CPR = 9958 (ticks per revolution)
 # wheel diameter D = 395 mm
 # 1 Rev = 1241 mm
-ENC_SCALE = 1.241/9958
-WHEEL_DISTANCE = 0.88  # meters TODO confirm
+ENC_SCALE = 0.01  # Skiddy, Robik=1.241/9958
+WHEEL_DISTANCE = 0.267  # Skiddy, Robik=0.88  # meters TODO confirm
 RAMP_STEP = 0.1  # fractional number for speed in -1.0 .. 1.0
 
 
