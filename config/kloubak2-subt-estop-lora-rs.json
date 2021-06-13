@@ -41,7 +41,7 @@
                   "downdrops_front", "downdrops_rear",
                   "joint_angle"],
           "init": {
-            "drive_mode": "FRONT",
+            "drive_mode": "ALL",
             "wheel_distance": 0.496,
             "center_axle_distance": 0.348,
             "ad_center": 531,
@@ -245,7 +245,8 @@
               ["rosmsg.scan", "scan_mixer.rs_scan"],
               ["lidar.scan", "scan_mixer.scan"],
               ["wifi.wifiscan", "detector.wifiscan"],
-              ["gas_detector.co2", "detector.co2"]
+              ["gas_detector.co2", "detector.co2"],
+	      ["T200.pose3d", "app.pose3d"]
       ]
   }
 }
