@@ -204,8 +204,8 @@ class DepthToScan(Node):
         if channel == 'depth16':
             depth = self.depth16
             pitch, roll, yaw = 0, 0, 0
-            depth_scan = depth2dist(depth, self.depth_params, pitch, roll, yaw)
-            self.publish('scan', depth_scan.tolist())
+#            depth_scan = depth2dist(depth, self.depth_params, pitch, roll, yaw)
+            self.publish('scan', depth[320].tolist())
 
         return channel
 
