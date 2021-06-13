@@ -174,7 +174,7 @@ class DepthToScan(Node):
 
     def update(self):
         channel = super().update()
-        assert channel in ["scan", "rgbd"], channel
+        assert channel in ["scan", "rgbd", "depth16"], channel
 
         if channel == 'scan':
             depth = None
