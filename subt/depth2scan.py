@@ -203,7 +203,9 @@ class DepthToScan(Node):
 
         if channel == 'depth16':
             depth = self.depth16
-            self.publish('scan', depth[depth.shape[0]//2].tolist())
+            scan = depth[depth.shape[0]//2].tolist()
+            scan.reverse()
+            self.publish('scan', scan)
 
         return channel
 
