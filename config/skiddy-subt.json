@@ -56,8 +56,8 @@
             "depth_params": {
               "fx": 554.25469,
               "camera_xyz": [0.1, 0.0, -0.08],
-              "image_size": [640, 480],
-              "principal_point": [320.5, 240.5],
+              "image_size": [640, 360],
+              "principal_point": [320.5, 180.5],
               "vertical_pixel_offset": 16,
               "lidar_fov": 6.283185307179586,
               "lidar_trusted_zone": 2.0,
