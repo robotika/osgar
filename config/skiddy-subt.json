@@ -23,16 +23,23 @@
           "init": {"port": "/dev/ttyACM0", "speed": 115200}
       },
       "depth": {
-          "driver": "realsense",
-          "init": {
-            "device": "D400",
-            "serial_number": "938422071072",
-            "depth_subsample": 3,
-            "depth_rgb": true,
-            "depth_resolution": [640, 360],
-            "rgb_resolution": [640, 360],
-            "depth_fps": 30
-          },
+        "driver": "realsense",
+        "init": {
+          "device": "D400",
+          "serial_number": "938422071072",
+          "depth_subsample": 3,
+          "depth_rgb": true,
+          "depth_resolution": [
+            640,
+            360
+          ],
+          "rgb_resolution": [
+            640,
+            360
+          ],
+          "depth_fps": 30
+        }
+      },
       "tracking": {
           "driver": "realsense",
           "init": {
