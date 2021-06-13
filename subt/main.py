@@ -151,7 +151,7 @@ class SubTChallenge:
         self.trace_z_weight = config.get('trace_z_weight', 0.2)  # Z is important for drones ~ 3.0
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
-        self.xyz = None  # unknown initial 3D position
+        self.xyz = 0, 0, 0 #None  # unknown initial 3D position
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.orientation = None  # quaternion updated by on_pose3d()
         self.yaw_offset = None  # not defined, use first IMU reading
@@ -977,8 +977,8 @@ class SubTChallenge:
 def main():
     import argparse
     from osgar.lib.config import config_load
-    #from osgar.record import record
-    from osgar.zmqrouter import record
+    from osgar.record import record
+    #from osgar.zmqrouter import record
 
     parser = argparse.ArgumentParser(description='SubT Challenge')
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
