@@ -79,6 +79,7 @@
               ["serial.raw", "cortexpilot.raw"], 
               ["cortexpilot.raw", "serial.raw"],
               ["depth2scan.scan", "app.scan"],
+              ["tracking.pose3d", "app.pose3d"],
               ["depth.depth", "depth2scan.depth16"]]
   }
 }
