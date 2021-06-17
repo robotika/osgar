@@ -18,7 +18,7 @@
             "turbo_speed": 2.3,
             "obstacle_influence": 1.4,
             "max_obstacle_distance": 3.0,
-            "height_above_ground": 2.0,
+            "height_above_ground": 1.5,
             "limit_roll": 90,
             "limit_pitch": 90,
             "return_limit_roll": 90,
