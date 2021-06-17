@@ -122,7 +122,7 @@ def read_artifacts(filename):
 
 
 def _read_world(cursor):
-    cursor.execute(f"SELECT id FROM topics WHERE name == '/logs/sdf'")
+    cursor.execute(f"SELECT id FROM topics WHERE name == '/gazebo/sdf'")
     result = cursor.fetchone()
     sdf_id = result[0]
     cursor.execute(r"SELECT message, topic_id FROM messages")

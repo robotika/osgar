@@ -34,6 +34,18 @@ NAME2IGN = {
 }
 
 
+def check_borders(result, borders):
+    for ii, (name, points, r_cv) in enumerate(result.copy()):
+        points.sort(key=lambda item: item[2], reverse=True)
+        x = points[1][2]  # mdnet score
+        y = r_cv[1]  # cv_detector score
+        a1, b1, a2, b2 = borders[name]  # coefficients of lines equations - borders
+        if y < min(a1 * x + b1, a2 * x + b2):  # the value is below the borders
+            result.pop(ii)
+
+        return result
+
+
 def check_results(result_mdnet, result_cv):
     result = result_mdnet.copy()
     ret = []
@@ -55,7 +67,7 @@ def check_results(result_mdnet, result_cv):
                 ret_points.extend(points)
                 result.remove(r)
         if ret_points:
-            ret.append((name_cv, ret_points))
+            ret.append((name_cv, ret_points, r_cv))
     return ret
 
 
@@ -91,41 +103,68 @@ def result2report(result, depth, fx, robot_pose, camera_pose, max_depth):
     return [NAME2IGN[result[0][0]], world_xyz]
 
 
+def get_border_lines(border_points):
+    ret = {}
+    for name, points in border_points.items():
+        A, B, C = points
+        a1 = (B[1] - A[1]) / (B[0] - A[0])  # slope of the first line
+        a2 = (C[1] - B[1]) / (C[0] - B[0])  # slope of the second line
+        b1 = B[1] - a1 * B[0]  # the first intercept
+        b2 = B[1] - a2 * B[0]  # the second intercept
+        ret[name] = [a1, b1, a2, b2]
+
+    return ret
+
+
+def create_detector(confidence_thresholds):
+    model = os.path.join(os.path.dirname(__file__), '../../../mdnet5.128.128.13.4.elu.pth')
+    max_gap = 16
+    min_group_size = 2
+
+    use_cuda = torch.cuda.is_available()
+    device = torch.device("cuda" if use_cuda else "cpu")
+    print('Using:', device)
+    model, categories = subt.artf_model.load_model(model, device)
+    return Detector(model, confidence_thresholds, categories, device,
+                    max_gap, min_group_size)
+
 class ArtifactDetectorDNN(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("localized_artf", "dropped", "debug_rgbd", "stdout",
                      "debug_result", "debug_cv_result")
+        confidence_thresholds = {  # used for mdnet
+            'survivor': 0.5,
+            'backpack': 0.5,
+            'phone': 0.5,
+            'helmet': 0.5,
+            'rope': 0.5,
+            'fire_extinguisher': 0.5,
+            'drill': 0.75,
+            'vent': 0.5,
+            'cube': 0.5
+        }
+        # Confidence borders points
+        # There are tree border points for each artifact, point coordinates: x - mdnet, y - cv_detector
+        confidence_borders = {
+            'survivor': [[0.6, 1],[0.9, 0.65],[0.95, 0.2]],
+            'backpack': [[0.5, 0.55],[0.97, 0.4],[0.99, 0.2]],
+            'phone': [[0.5, 0.4],[0.82, 0.37],[1, 0.2]],
+            'helmet': [[0.5, 0.6],[0.9, 0.4],[1, 0.1]],
+            'rope': [[0.6, 0.5],[0.95, 0.35],[1, 0.2]],
+            'fire_extinguisher': [[0.5, 0.75],[0.95, 0.7],[1, 0.65]],
+            'drill': [[0.75, 1],[0.9, 0.8],[0.91, 0.1]],
+            'vent': [[0.5, 0.98],[0.9, 0.9],[1, 0.1]],
+            'cube': [[0.5, 0.4],[0.9, 0.4],[1, 0.4]]
+        }
+        self.border_lines = get_border_lines(confidence_borders)
         self.time = None
         self.width = None  # not sure if we will need it
         self.depth = None  # more precise artifact position from depth image
         self.cv_detector = CvDetector().subt_detector
-        self.detector = self.create_detector()
+        self.detector = create_detector(confidence_thresholds)
         self.fx = config.get('fx', 554.25469)  # use drone X4 for testing (TODO update all configs!)
         self.max_depth = config.get('max_depth', 10.0)
-
-    def create_detector(self):
-        model = os.path.join(os.path.dirname(__file__), '../../../mdnet5.128.128.13.4.elu.pth')
-        confidence_thresholds = {
-            'survivor': 0.8,
-            'backpack': 0.8,
-            'phone': 0.5,
-            'helmet': 0.5,
-            'rope': 0.6,
-            'fire_extinguisher': 0.5,
-            'drill': 0.5,
-            'vent': 0.5,
-            'cube' : 0.5
-        }
-        max_gap = 16
-        min_group_size = 2
-
-        use_cuda = torch.cuda.is_available()
-        device = torch.device("cuda" if use_cuda else "cpu")
-        print('Using:', device)
-        model, categories = subt.artf_model.load_model(model, device)
-        return Detector(model, confidence_thresholds, categories, device,
-                        max_gap, min_group_size)
 
     def wait_for_rgbd(self):
         channel = ""
@@ -175,11 +214,13 @@ class ArtifactDetectorDNN(Node):
             self.publish('debug_cv_result', result_cv)
             checked_result = check_results(result, result_cv)
             if checked_result:
-                report = result2report(checked_result, depth, self.fx,
-                        robot_pose, camera_pose, self.max_depth)
-                if report is not None:
-                    self.publish('localized_artf', report)
-                    self.publish('debug_rgbd', rgbd)
+                checked_result = check_borders(checked_result, self.border_lines)
+                if checked_result:
+                    report = result2report(checked_result, depth, self.fx,
+                            robot_pose, camera_pose, self.max_depth)
+                    if report is not None:
+                        self.publish('localized_artf', report)
+                        self.publish('debug_rgbd', rgbd)
 
 
 if __name__ == "__main__":
