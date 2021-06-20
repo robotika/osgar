@@ -73,7 +73,8 @@ class Maxi2021(Node):
         """
         Send new command on timer tick
         """
-        self.publish('raw', bytes.fromhex('00'*8))
+        cmd = ord('1') if self.desired_speed > 0 else ord('0')
+        self.publish('raw', bytes([cmd] + [0] * 7))
 
     def on_raw(self, data):
         assert len(data) == 32, data
