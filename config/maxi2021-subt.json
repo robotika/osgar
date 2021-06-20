@@ -17,7 +17,7 @@
           "init": {}
       }
     },
-    "links": [["app.desired_speed", "maria.desired_speed"],
+    "links": [["app.desired_speed", "maxi2021.desired_speed"],
               ["maxi2021.emergency_stop", "app.emergency_stop"],
               ["maxi2021.pose2d", "app.pose2d"]]
   }
