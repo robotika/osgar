@@ -36,15 +36,15 @@ typedef union {
 """
 typedef union {
   struct __attribute__((__packed__)) {
-    uint32_t  Time;
-    uint8_t   Status;
-    int32_t   Position;
-    int16_t   Velocity;
-    uint16_t  Voltage;
-    uint16_t  Current;
-    int16_t   Roll, Pitch, Yaw;
+    uint32_t  Time;  // ms since start 
+    uint8_t   Status;  // bit status, power, batteries
+    int32_t   Position;  // in mm
+    int16_t   Velocity;  // in mm/s
+    uint16_t  Voltage;  // fractional 8bit whole and 8bit fraction
+    uint16_t  Current;  // fractional 8bit whole and 8bit fraction
+    int16_t   Roll, Pitch, Yaw;  // 1/100th deg
 
-    uint16_t  SonarSide;
+    uint16_t  SonarSide;  // rotating sonar - dist in mm
     uint16_t  SonarFrontLeft;
     uint16_t  SonarFrontRight;
   };
