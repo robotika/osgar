@@ -15,10 +15,25 @@
           "in": ["desired_speed", "raw"],
           "out": ["emergency_stop", "pose2d", "raw", "encoders"],
           "init": {}
+      },
+      "timer": {
+          "driver": "timer",
+          "in": [],
+          "out": ["tick"],
+          "init": {"sleep": 0.1}
+      },
+      "spi": {
+          "driver": "osgar.drivers.spi:Spi",
+          "in": ["desired_speed", "raw"],
+          "out": ["emergency_stop", "pose2d", "raw", "encoders"],
+          "init": {}
       }
     },
     "links": [["app.desired_speed", "maxi2021.desired_speed"],
               ["maxi2021.emergency_stop", "app.emergency_stop"],
+              ["timer.tick", "maxi2021.tick"],
+              ["maxi2021.raw", "spi.raw"],
+              ["spi.raw", "maxi2021.raw"],
               ["maxi2021.pose2d", "app.pose2d"]]
   }
 }

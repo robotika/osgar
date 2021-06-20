@@ -1,7 +1,5 @@
 """
-  Driver for a R-Team robot Maxi 2021
-
-  The main computer is RasPI and communication is via SPI.
+  RasPI SPI communication
 """
 
 # https://www.raspberrypi.org/documentation/hardware/raspberrypi/spi/README.md
@@ -9,10 +7,15 @@
 
 
 import math
-import struct
+
+#import spidev
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
+
+
+SPI_CHANNEL = 0
+SPI_CLOCK_SPEED = 16000000
 
 
 # output command structure
@@ -48,42 +51,20 @@ typedef union {
 """
 
 
-class Maxi2021(Node):
+class Spi(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('pose2d', 'emergency_stop', 'encoders', 'raw')
-
-        # commands
-        self.desired_speed = 0.0  # m/s
-        self.desired_angular_speed = 0.0
-
-        # status
-        self.emergency_stop = None  # uknown state
-        self.pose2d = (0.0, 0.0, 0.0)  # x, y in meters, heading in radians (not corrected to 2PI)
-        self.buttons = None
+        bus.register('raw')
 
         self.verbose = False  # should be in Node
 
-    def send_pose2d(self):
-        x, y, heading = self.pose2d
-        self.publish('pose2d', [round(x*1000), round(y*1000),
-                                round(math.degrees(heading)*100)])
-
-    def on_tick(self, data):
-        """
-        Send new command on timer tick
-        """
-        self.publish('raw', bytes.fromhex('00'*8))
+        # Enable SPI
+#        self.spi = spidev.SpiDev()
+#        sellf.spi.max_speed_hz = SPI_CLOCK_SPEED
 
     def on_raw(self, data):
-        assert len(data) == 32, data
-        time, status, position = struct.unpack_from("<IBi", data)
-        self.pose2d = (position/1000.0, 0, 0)
-        self.send_pose2d()
-
-    def on_desired_speed(self, data):
-        self.desired_speed = data[0]/1000.0
-        self.desired_angular_speed = math.radians(data[1]/100.0)
+        # TODO send data via SPI
+        self.publish('raw', bytes([0] * 32))
 
     def update(self):
         channel = super().update()  # define self.time
