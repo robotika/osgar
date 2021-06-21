@@ -16,6 +16,9 @@ from osgar.bus import BusShutdownException
 
 
 # output command structure
+# commands power on='1', off='0'
+# brake = 'B'
+# go = 'G'
 """
 typedef union {
   struct __attribute__((__packed__)) {
@@ -61,6 +64,7 @@ class Maxi2021(Node):
         self.emergency_stop = None  # uknown state
         self.pose2d = (0.0, 0.0, 0.0)  # x, y in meters, heading in radians (not corrected to 2PI)
         self.buttons = None
+        self.powered_on = False
 
         self.verbose = False  # should be in Node
 
@@ -73,8 +77,19 @@ class Maxi2021(Node):
         """
         Send new command on timer tick
         """
-        cmd = ord('1') if self.desired_speed > 0 else ord('0')
-        self.publish('raw', bytes([cmd] + [0] * 7))
+        if not self.powered_on:
+            self.powered_on = True
+            cmd = ord('1')
+            self.publish('raw', bytes([cmd] + [0] * 7))
+        else:
+            if self.desired_speed > 0:
+                speed = int(self.desired_speed * 1000)
+                ride = int(math.degrees(self.desired_angular_speed) * 100)
+                buf = [ord('G'), speed % 256, speed // 256, ride % 256, ride // 256, 0x00, 0x00, 0x00]
+                self.publish('raw', bytes(buf))
+            else:
+                cmd = ord('B')
+                self.publish('raw', bytes([cmd] + [0] * 7))
 
     def on_raw(self, data):
         assert len(data) == 32, data
