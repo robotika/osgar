@@ -5,10 +5,12 @@
 # https://www.raspberrypi.org/documentation/hardware/raspberrypi/spi/README.md
 # https://pypi.org/project/spidev/
 
+# https://www.raspberrypi.org/documentation/usage/gpio/python/README.md
 
 import math
 
-#import spidev
+import spidev
+from gpiozero import LED, Button
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
@@ -16,6 +18,9 @@ from osgar.bus import BusShutdownException
 
 SPI_CHANNEL = 0
 SPI_CLOCK_SPEED = 16000000
+
+DATA_REQUEST = 9
+DATA_READY = 8
 
 
 # output command structure
@@ -59,11 +64,20 @@ class Spi(Node):
         self.verbose = False  # should be in Node
 
         # Enable SPI
-#        self.spi = spidev.SpiDev()
-#        sellf.spi.max_speed_hz = SPI_CLOCK_SPEED
+        self.spi = spidev.SpiDev()
+        self.spi.max_speed_hz = SPI_CLOCK_SPEED
+        self.fd = self.spi.open('/dev/spidev0')
+
+        self.pin_request = LED(DATA_REQUEST)
+        self.pin_ready = Button(DATA_READY)
+#    wiringPiSetup();
+#    digitalWrite(DATA_REQUEST, 1);
+#    pinMode(DATA_REQUEST, OUTPUT);
+#    pinMode(DATA_READY, INPUT);
 
     def on_raw(self, data):
         # TODO send data via SPI
+
         self.publish('raw', bytes([0] * 32))
 
     def update(self):
