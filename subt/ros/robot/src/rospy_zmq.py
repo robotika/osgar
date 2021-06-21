@@ -18,7 +18,7 @@ from geometry_msgs.msg import Twist
 ROBOT_NAME = 'X0F200L'
 FILTER_ODOM_NTH = 10 #n - every nth message shall be sent to osgar
 FILTER_CAMERA_NTH = 4 #n - every nth message shall be sent to osgar
-FILTER_DEPTH_NTH = 10000000 #n - every nth message shall be sent to osgar
+FILTER_DEPTH_NTH = 4 #n - every nth message shall be sent to osgar
 g_odom_counter = 0
 g_depth_counter = 0
 g_camera_counter = 0
