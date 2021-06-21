@@ -19,8 +19,8 @@ from osgar.bus import BusShutdownException
 SPI_CHANNEL = 0
 SPI_CLOCK_SPEED = 16000000
 
-DATA_REQUEST = 9
-DATA_READY = 8
+DATA_REQUEST = 3
+DATA_READY = 2
 
 
 # output command structure
