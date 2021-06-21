@@ -79,6 +79,8 @@ class Maxi2021(Node):
     def on_raw(self, data):
         assert len(data) == 32, data
         time, status, position = struct.unpack_from("<IBi", data)
+        if self.verbose:
+            print(self.time, time, status, position)
         self.pose2d = (position/1000.0, 0, 0)
         self.send_pose2d()
 
