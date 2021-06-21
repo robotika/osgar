@@ -10,7 +10,7 @@
 import math
 
 import spidev
-from gpiozero import LED, Button
+import RPi.GPIO as GPIO
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
@@ -64,21 +64,43 @@ class Spi(Node):
         self.verbose = False  # should be in Node
 
         # Enable SPI
-        self.spi = spidev.SpiDev()
-        self.spi.max_speed_hz = SPI_CLOCK_SPEED
-        self.fd = self.spi.open('/dev/spidev0')
+        self.spi = self.init()
 
-        self.pin_request = LED(DATA_REQUEST)
-        self.pin_ready = Button(DATA_READY)
-#    wiringPiSetup();
-#    digitalWrite(DATA_REQUEST, 1);
-#    pinMode(DATA_REQUEST, OUTPUT);
-#    pinMode(DATA_READY, INPUT);
+    def init(self):
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BCM)  # Cislovani pinu - BCM nebo BOARD
+        GPIO.setup(DATA_REQUEST, GPIO.OUT)  # Nastaveni pinu jako vystupu
+        GPIO.setup(DATA_READY, GPIO.IN)  # Nastaveni pinu jako vstupu
+
+        spi = spidev.SpiDev()
+        spi.open(0, 0)  # corresponds to '/dev/spidev0.0'
+        spi.max_speed_hz = 16000000
+        return spi
+
+    def send_command(self, command, speed, ride):
+        buffer = [command]
+        buffer = buffer + [speed % 256, speed // 256]
+        buffer = buffer + [ride % 256, ride // 256]
+        buffer = buffer + [0x00, 0x00, 0x00]
+        self.spi.writebytes(buffer)
+
+    def read_data(self):
+        GPIO.output(DATA_REQUEST, GPIO.LOW)
+        while GPIO.input(DATA_READY) == 1:
+            print('.')
+
+        buffer = self.spi.readbytes(32)
+
+        GPIO.output(DATA_REQUEST, GPIO.HIGH)
+        while GPIO.input(DATA_READY) == 0:
+            print('o')
+
+        return buffer
 
     def on_raw(self, data):
-        # TODO send data via SPI
-
-        self.publish('raw', bytes([0] * 32))
+        self.spi.writebytes(data)
+        buf = self.read_data()
+        self.publish('raw', bytes(buf))
 
     def update(self):
         channel = super().update()  # define self.time
