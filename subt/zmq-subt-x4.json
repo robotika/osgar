@@ -15,7 +15,7 @@
             "speed_policy": "conservative",
             "rotation_p": 1.6,
             "turbo_safe_dist": 3.2,
-            "turbo_speed": 2.3,
+            "turbo_speed": 1.0,
             "obstacle_influence": 1.4,
             "max_obstacle_distance": 3.0,
             "height_above_ground": 1.5,
@@ -26,7 +26,7 @@
             "trace_z_weight": 1.0,
             "follow_wall": {
               "internal_reflection_threshold": 0,
-              "max_wall_distance": 3.0
+              "max_wall_distance": 2.0
             }
          }
       },

@@ -33,7 +33,7 @@ case $ROBOT_CONFIG in
     CONFIG_FILES=("zmq-subt-x4.json")
     SPEED=1.5
     GAPSIZE=0.9
-    WALLDIST=1.0
+    WALLDIST=0.5
     ;;
   "TEAMBASE"):
     echo "Robot is TEAMBASE"
