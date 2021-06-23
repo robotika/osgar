@@ -7,7 +7,8 @@
           "in": ["emergency_stop", "pose2d"],
           "out": ["desired_speed"],
           "init": {
-            "max_speed": 0.5
+            "max_speed": 0.5,
+            "symmetric": false
           }
       },
       "cortexpilot": {
