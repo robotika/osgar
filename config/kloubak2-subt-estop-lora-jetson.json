@@ -172,7 +172,7 @@
           "init": {
             "mode": "PULL",
             "timeout":0.5,
-            "endpoint": "tcp://k2jetson_front.local:5555"
+            "endpoint": "tcp://192.168.2.23:5555"
           }
       },
       "receiver_rear": {
@@ -182,7 +182,7 @@
           "init": {
             "mode": "PULL",
             "timeout":0.5,
-            "endpoint": "tcp://k2jetson_rear.local:5555"
+            "endpoint": "tcp://192.168.2.24:5555"
           }
       },
       "rosmsg": {
