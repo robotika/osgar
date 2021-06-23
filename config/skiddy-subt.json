@@ -40,6 +40,24 @@
           "depth_fps": 30
         }
       },
+      "depth_rear": {
+        "driver": "realsense",
+        "init": {
+          "device": "D400",
+          "serial_number": "848312070179",
+          "depth_subsample": 3,
+          "depth_rgb": true,
+          "depth_resolution": [
+            640,
+            360
+          ],
+          "rgb_resolution": [
+            640,
+            360
+          ],
+          "depth_fps": 30
+        }
+      },
       "tracking": {
           "driver": "realsense",
           "init": {
