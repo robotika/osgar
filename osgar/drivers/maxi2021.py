@@ -54,7 +54,7 @@ typedef union {
 class Maxi2021(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('pose2d', 'emergency_stop', 'encoders', 'raw')
+        bus.register('pose2d', 'emergency_stop', 'encoders', 'raw', 'sonar')
 
         # commands
         self.desired_speed = 0.0  # m/s
@@ -94,10 +94,12 @@ class Maxi2021(Node):
     def on_raw(self, data):
         assert len(data) == 32, data
         time, status, position = struct.unpack_from("<IBi", data)
+        sonar = struct.unpack_from("<HHH", data, 21)
         if self.verbose:
-            print(self.time, time, status, position)
+            print(self.time, time, status, position, sonar)
         self.pose2d = (position/1000.0, 0, 0)
         self.send_pose2d()
+        self.publish('sonar', list(sonar))
 
     def on_desired_speed(self, data):
         self.desired_speed = data[0]/1000.0
