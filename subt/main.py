@@ -306,14 +306,6 @@ class SubTChallenge:
         while self.sim_time_sec - start_time < (timeout + last_pause_time + current_pause_time).total_seconds():
             try:
                 channel = self.update()
-                if channel == 'waypoints':
-                    tmp_trace = Trace()
-                    tmp_trace.trace = self.waypoints
-                    self.waypoints = None
-                    tmp_trace.reverse()
-                    self.follow_trace(tmp_trace, timeout=timedelta(seconds=10), max_target_distance=2)  # hmm, external parameter?
-                    continue
-
                 if (channel == 'scan' and not self.flipped) or (channel == 'scan_back' and self.flipped) or channel == 'scan360':
                     if self.pause_start_time is None:
                         if self.use_center:
