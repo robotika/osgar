@@ -34,7 +34,7 @@ g_relevant_streams = {
 
 def main(logfile, streams):
     warning_event = False
-    __, base_logname = os.path.split(logfile)
+    base_logname = os.path.basename(logfile)
     print("\n" + base_logname)
     print("-"*60)
     relevant_streams_id = [lookup_stream_id(logfile, name) for name in streams.keys()]
