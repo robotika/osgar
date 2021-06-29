@@ -9,6 +9,7 @@ import sys
 import threading
 
 import zmq
+import numpy as np
 
 import rospy
 from std_msgs.msg import *
@@ -17,7 +18,7 @@ from nav_msgs.msg import Odometry
 from rosgraph_msgs.msg import Clock
 from geometry_msgs.msg import Twist
 
-from sensor_msgs.msg import LaserScan
+from sensor_msgs.msg import LaserScan, CompressedImage
 from nav_msgs.msg import Odometry
 
 
@@ -237,12 +238,12 @@ class main:
         topics = [
 #            ('/odom', Odometry, self.odom, ('battery_state',)),
             ('/map_scan', LaserScan, self.scan, 'scan'),
-#            ('/depth_image', Image, self.depth, 'depth'),
+            ('/depth_image', Image, self.depth, 'depth'),
 #            ('/image', CompressedImage, self.image, 'image'),
         ]
 
         outputs = [t[-1] for t in topics]
-        self.bus.register(**outputs)
+        self.bus.register(outputs)
 
         for name, type, handler, _ in topics:
             rospy.loginfo("waiting for {}".format(name))
@@ -250,11 +251,35 @@ class main:
             setattr(self, handler.__name__+"_count", 0)
             rospy.Subscriber(name, type, handler)
 
+        # main thread receives data from osgar and sends it to ROS
+        while True:
+            channel, data = self.bus.listen()
+            rospy.loginfo("ignoring: {} {}".format(channel, data))
+
     def scan(self, msg):
         self.scan_count += 1
-        rospy.loginfo_throttle(10, "scan_front callback: {}".format(self.scan_front_count))
+        rospy.loginfo_throttle(10, "scan callback: {}".format(self.scan_count))
         scan = [int(x * 1000) if msg.range_min < x < msg.range_max else 0 for x in msg.ranges]
         self.bus.publish('scan', scan)
+
+    def convert_depth(self, msg):
+        assert msg.encoding == '32FC1', msg.encoding  # unsupported encoding
+        # depth is array of floats, OSGAR uses uint16 in millimeters
+        # cut min & max (-inf and inf are used for clipping)
+        arr = np.frombuffer(msg.data, dtype=np.dtype('f')) * 1000
+        arr = np.clip(arr, 1, 0xFFFF)
+        arr = np.ndarray.astype(arr, dtype=np.dtype('H'))
+        return np.array(arr).reshape((msg.height, msg.width))
+
+    def depth(self, msg):
+        self.depth_count += 1
+        rospy.loginfo_throttle(10, "depth callback: {}".format(self.depth_count))
+        self.bus.publish('depth', self.convert_depth(msg))
+
+    def image(self, msg):
+        self.image_count += 1
+        rospy.loginfo_throttle(10, "image callback: {}".format(self.image_count))
+        self.bus.publish('image', msg.data)
 
 
 if __name__ == '__main__':
