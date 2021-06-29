@@ -1,8 +1,7 @@
 """
     Quick check of robot logfiles.
 """
-import os.path
-import sys
+import os
 
 import numpy as np
 from osgar.logger import LogReader, lookup_stream_id
@@ -10,14 +9,14 @@ from osgar.logger import LogReader, lookup_stream_id
 
 # Relevant streams, expected min frequency and expected max gap between msg.
 g_relevant_streams = {
-    "k2":{
-        "kloubak.encoders": [19, 0.2],
-        "kloubak.can": [79, 0.2],
-        "kloubak.joint_angle": [19, 0.2],
+    "kloubak":{
+        "kloubak.encoders": [19, 0.5],
+        "kloubak.can": [79, 0.5],
+        "kloubak.joint_angle": [19, 0.5],
         "lidar.scan": [4, 2],
         "lidar_back.scan": [4, 2],
-        "camera.raw": [4, 1],
-        "camera_back.raw": [4, 1],
+        "camera.raw": [4, 2],
+        "camera_back.raw": [4, 2],
         "imu.orientation": [14, 0.5],
         "imu.rotation": [14, 0.5],
         "wifi.wifiscan": [0.7, 2],
@@ -35,7 +34,7 @@ g_relevant_streams = {
 
 def main(logfile, streams):
     warning_event = False
-    path, base_logname = os.path.split(logfile)
+    __, base_logname = os.path.split(logfile)
     print("\n" + base_logname)
     print("-"*60)
     relevant_streams_id = [lookup_stream_id(logfile, name) for name in streams.keys()]
@@ -78,9 +77,25 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('logfile', help='filename of stored file or directory')
-    parser.add_argument('--robot', help='robot name', default="k2")
-
+    parser.add_argument('--robot', help='robot name', default="kloubak")
+    parser.add_argument('--log-prefix', help='prefix of a logname, e.g. kloubak2-subt-estop-lora-jetson')
     args = parser.parse_args()
 
     relevant_streams = g_relevant_streams[args.robot]
-    main(args.logfile, relevant_streams)
+    logfile = args.logfile
+    if os.path.isdir(logfile):
+        if args.log_prefix:
+            prefix = args.log_prefix
+        else:
+            print("WARNING: logname prefix is not defined. Used robot name.")
+            prefix = args.robot
+
+        logname_list = os.listdir(logfile)
+        for logname in logname_list:
+            if prefix not in logname:
+                continue
+            logname_path = os.path.join(logfile, logname)
+            main(logname_path, relevant_streams)
+
+    else:
+        main(logfile, relevant_streams)
