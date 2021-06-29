@@ -5,6 +5,8 @@
 import time
 import struct
 from io import BytesIO
+import sys
+import threading
 
 import zmq
 
@@ -15,6 +17,13 @@ from nav_msgs.msg import Odometry
 from rosgraph_msgs.msg import Clock
 from geometry_msgs.msg import Twist
 
+from sensor_msgs.msg import LaserScan
+from nav_msgs.msg import Odometry
+
+
+sys.path.append("/home/jetson/ros_ws/src/osgar/osgar/lib")
+import serialize as osgar_serialize
+
 ROBOT_NAME = 'X0F200L'
 FILTER_ODOM_NTH = 10 #n - every nth message shall be sent to osgar
 FILTER_CAMERA_NTH = 4 #n - every nth message shall be sent to osgar
@@ -22,6 +31,42 @@ FILTER_DEPTH_NTH = 4 #n - every nth message shall be sent to osgar
 g_odom_counter = 0
 g_depth_counter = 0
 g_camera_counter = 0
+
+
+class Bus:
+    def __init__(self):
+        self.lock = threading.Lock()
+        context = zmq.Context.instance()
+        self.push = context.socket(zmq.PUSH)
+        self.push.setsockopt(zmq.LINGER, 100)  # milliseconds
+        self.push.bind('tcp://*:5565')
+        self.pull = context.socket(zmq.PULL)
+        self.pull.LINGER = 100
+        self.pull.RCVTIMEO = 100
+        self.pull.bind('tcp://*:5566')
+
+    def register(self, *outputs):
+        pass
+
+    def publish(self, channel, data):
+        raw = osgar_serialize.serialize(data)
+        with self.lock:
+            self.push.send_multipart([channel, raw])
+
+    def listen(self):
+        while not rospy.is_shutdown():
+            try:
+                channel, bytes_data = self.pull.recv_multipart()
+                data = osgar_serialize.deserialize(bytes_data)
+                return channel.decode('ascii'), data
+            except zmq.ZMQError as e:
+                if e.errno != zmq.EAGAIN:
+                    rospy.logerr("zmq error")
+                    sys.exit("zmq error")
+        rospy.loginfo("done")
+        sys.exit()
+
+
 
 def wait_for_master():
     # it looks like master is not quite ready for several minutes and the only indication is the list of published
@@ -184,8 +229,40 @@ def odom2zmq():
         r.sleep()
 
 
+class main:
+    def __init__(self):
+        rospy.init_node('ros2osgar', log_level=rospy.DEBUG)
+        self.bus = Bus()
+
+        topics = [
+#            ('/odom', Odometry, self.odom, ('battery_state',)),
+            ('/map_scan', LaserScan, self.scan, 'scan'),
+#            ('/depth_image', Image, self.depth, 'depth'),
+#            ('/image', CompressedImage, self.image, 'image'),
+        ]
+
+        outputs = [t[-1] for t in topics]
+        self.bus.register(**outputs)
+
+        for name, type, handler, _ in topics:
+            rospy.loginfo("waiting for {}".format(name))
+            rospy.wait_for_message(name, type)
+            setattr(self, handler.__name__+"_count", 0)
+            rospy.Subscriber(name, type, handler)
+
+    def scan(self, msg):
+        self.scan_count += 1
+        rospy.loginfo_throttle(10, "scan_front callback: {}".format(self.scan_front_count))
+        scan = [int(x * 1000) if msg.range_min < x < msg.range_max else 0 for x in msg.ranges]
+        self.bus.publish('scan', scan)
+
+
 if __name__ == '__main__':
     #wait_for_master()
-    odom2zmq()
+    #odom2zmq()
+    try:
+        main()
+    except rospy.exceptions.ROSInterruptException:
+        rospy.loginfo("shutdown")
 
 # vim: expandtab sw=4 ts=4
