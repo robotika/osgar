@@ -78,7 +78,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('logfile', help='filename of stored file or directory')
     parser.add_argument('--robot', help='robot name', default="kloubak")
-    parser.add_argument('--keyword', help='prefix of a logname, e.g. kloubak2-subt-estop-lora-jetson')
+    parser.add_argument('--keyword', help='keyword in a logname, e.g. kloubak2-subt-estop-lora-jetson')
     args = parser.parse_args()
 
     relevant_streams = g_relevant_streams[args.robot]
@@ -87,7 +87,7 @@ if __name__ == "__main__":
         if args.keyword:
             keyword = args.keyword
         else:
-            print("WARNING: logname prefix is not defined. Used robot name.")
+            print("WARNING: logname keyword is not defined. Used robot name.")
             keyword = args.robot
 
         logname_list = os.listdir(logfile)
