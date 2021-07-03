@@ -309,8 +309,11 @@ class Octomap(Node):
             assert False, channel  # unknown channel
 
 
-def draw_iteration(data, paused=False):
+def draw_iteration(data, waypoints=None, paused=False):
     global level, scaled
+
+    if waypoints is None:
+        waypoints = []
 
     while True:
         img = data2maplevel(data, level=level)
@@ -403,12 +406,12 @@ if __name__ == "__main__":
             data = bytes([(d + 256) % 256 for d in data])
 
             last_octo_data = data
-            key = draw_iteration(data)
+            key = draw_iteration(data, waypoints)
             if key == ord('q'):
                 break
             waypoints = None  # force wait for next waypoints message
 
         if last_octo_data is not None:
-            draw_iteration(last_octo_data, paused=True)
+            draw_iteration(last_octo_data, waypoints, paused=True)
 
 # vim: expandtab sw=4 ts=4
