@@ -3,13 +3,14 @@
 """
 
 import psutil
+# https://psutil.readthedocs.io/en/latest/#system-related-functions
 from threading import Thread
 
 class SystemMonitor:
     def __init__(self, config, bus):
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.bus = bus
-        bus.register('cpu', 'ram', 'net_raw', 'temp_raw')
+        bus.register('cpu', 'ram', 'temp')
         self.sleep = config.get('sleep', 1)
 
     def start(self):
@@ -20,14 +21,20 @@ class SystemMonitor:
 
     def run_input(self):
         while self.bus.is_alive():
-            cpu = psutil.cpu_freq(percpu=True)
+            # current system-wide CPU utilization as a percentage
+            cpu = psutil.cpu_percent(percpu=True)
+            if cpu:
+                self.bus.publish('cpu', cpu)
+            # system memory usage in percentage
             used_memory = psutil.virtual_memory().percent
-            net_raw = psutil.net_io_counters(pernic=True)
+            if used_memory:
+                self.bus.publish('ram', used_memory)
+            # Probably it is not working on MS Windows. TODO test it.
             temp_raw = psutil.sensors_temperatures()
-            self.bus.publish('cpu', cpu)
-            self.bus.publish('ram', used_memory)
-            self.bus.publish('net_raw', net_raw)
-            self.bus.publish('temp_raw', temp_raw)
+            if temp_raw:
+                assert "acpitz" in temp_raw, temp_raw
+                temp = temp_raw["acpitz"][0].current  # Expects only one CPU.
+                self.bus.publish('temp', temp)
 
             self.bus.sleep(self.sleep)
 
