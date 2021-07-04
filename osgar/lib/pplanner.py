@@ -5,7 +5,7 @@ Simple Path Planner
 import numpy as np
 
 
-def find_path(img, start, finish, verbose=False):
+def find_path_old(img, start, finish, verbose=False):
     """
     Find path in 2D image using Dijstra algorithm and 4-neighbor connecitivity
     https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
@@ -69,5 +69,80 @@ def find_path(img, start, finish, verbose=False):
             queue.append(((x, y, z - 1), (x, y, z)))
 
     return None
+
+
+def find_path(img, start, finish, yaw_deg=0, verbose=False):
+    """
+    Follow wall in multi-resolution image
+    :param img: inary image
+    :param start: pair (x, y, z)
+    :param finish: list of pairs (x, y, z)
+    :param yaw_deg: yaw in degrees (0, 90, 180, 270)
+    :param verbose: true for debugging
+    :return: path (list of coordinates) or None if path not found
+    """
+    max_x, max_y, max_z = img.shape
+
+    if not (0 <= start[0] < max_x and 0 <= start[1] < max_y and 0 <= start[2] < max_z):
+        return None
+
+    # find nearest wall in 4 directions
+    x, y, z = start
+    if not img[y][x][z]:
+        return None  # in the wall, no path found
+    for i in range(10):
+        if x + i >= max_x or not img[y][x + i][z]:
+            node = (x + i - 1, y, z)
+            yaw_deg = 270
+            break
+        if x - i < 0 or not img[y][x - i][z]:
+            node = (x - i + 1, y, z)
+            yaw_deg = 90
+            break
+        if y + i >= max_y or not img[y + i][x][z]:
+            node = (x, y + i - 1, z)
+            yaw_deg = 180
+            break
+        if y - i < 0 or not img[y - i][x][z]:
+            node = (x, y - i + 1, z)
+            yaw_deg = 0
+            break
+    else:
+        return None  # no nearby wall
+
+#    if verbose:
+    print(node, yaw_deg, i)
+
+    path = []
+    for i in range(10):
+        path.append(node)
+        if node in finish:
+            break
+        x, y, z = node
+        assert img[y][x][z]
+        if yaw_deg == 0 and y > 0 and img[y - 1][x][z]:
+            node = (x, y - 1, z)
+            yaw_deg = 90
+        elif yaw_deg in [0, 270] and x + 1 < max_x and img[y][x + 1][z]:
+            node = (x + 1, y, z)
+            yaw_deg = 0
+        elif yaw_deg in [0, 270, 180] and y + 1 < max_y and img[y + 1][x][z]:
+            node = (x, y + 1, z)
+            yaw_deg = 270
+        elif x > 0 and img[y][x - 1][z]:
+            node = (x - 1, y, z)
+            yaw_deg = 180
+        elif y > 0 and img[y - 1][x][z]:
+            node = (x, y - 1, z)
+            yaw_deg = 90
+        elif x + 1 < max_x and img[y][x + 1][z]:
+            node = (x + 1, y, z)
+            yaw_deg = 0
+        elif y + 1 < max_y and img[y + 1][x][z]:
+            node = (x, y + 1, z)
+            yaw_deg = 270
+    print('MD', path)
+    return path
+
 
 # vim: expandtab sw=4 ts=4
