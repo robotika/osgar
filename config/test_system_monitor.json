@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "camera": {
+          "driver": "systemmonitor",
+          "in": [],
+          "out": ["cpu", "ram", "net_raw", "temp_raw"],
+          "init": {}
+      }
+    },
+    "links": []
+  }
+}
