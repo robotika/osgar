@@ -26,7 +26,10 @@ def validation_callback(msg):
     height, width = arr.shape
     dist = arr[height // 2:, :].min()
     rospy.loginfo("X500 validator - dist = " + str(dist))
-    valid_rgbd_pub.publish(msg)
+    if dist == float('-inf'):
+        rospy.loginfo("X500 validator - drop it")
+    else:
+        valid_rgbd_pub.publish(msg)
 
 
 if __name__ == '__main__':
