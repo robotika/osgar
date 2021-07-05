@@ -33,9 +33,9 @@
 
   <node name="validator" pkg="robot" type="validate_x500_depth.py" output="screen">
     <!-- Inputs -->
-    <remap from="rgbd_image_in" to="/rtabmap/rgbd/up/compressed_dirty"/>
+    <remap from="/rgbd_image_in" to="/rtabmap/rgbd/up/compressed_dirty"/>
     <!-- Output -->
-    <remap from="rgbd_image_out" to="/rtabmap/rgbd/up/compressed"/>
+    <remap from="/rgbd_image_out" to="/rtabmap/rgbd/up/compressed"/>
   </node>
 
   <node pkg="nodelet" type="nodelet" name="rgbd_sync_down" args="standalone rtabmap_ros/rgbd_sync">

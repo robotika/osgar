@@ -18,8 +18,8 @@ if __name__ == '__main__':
     try:
         rospy.init_node('validate_x500_depth', log_level=rospy.DEBUG)
         rospy.loginfo("X500 validator started!")
-        valid_rgbd_pub = rospy.Publisher('/rgbd_image_in', RGBDImage, queue_size=10)
-        rospy.Subscriber('/rgbd_image_out',RGBDImage, validation_callback)
+        valid_rgbd_pub = rospy.Publisher('/rgbd_image_out', RGBDImage, queue_size=10)
+        rospy.Subscriber('/rgbd_image_in',RGBDImage, validation_callback)
         rospy.loginfo("X500 validator ready to spin!")
         rospy.spin()
     except rospy.ROSInterruptException:
