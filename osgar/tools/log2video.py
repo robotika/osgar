@@ -36,7 +36,11 @@ def create_video(logfile, stream, outfile, add_time=False,
         writer = None
         for timestamp, stream_id, data in log:
             buf = deserialize(data)
-            img = cv2.imdecode(np.fromstring(buf, dtype=np.uint8), 1)
+            if isinstance(buf, np.ndarray):
+                img_tmp = np.array(np.minimum(255 * 40, buf) / 40, dtype=np.uint8)
+                img = cv2.applyColorMap(img_tmp, cv2.COLORMAP_JET)
+            else:
+                img = cv2.imdecode(np.fromstring(buf, dtype=np.uint8), 1)
             if flip:
                 img = cv2.flip(img, 0)
             if dual_cam_id is not None:
