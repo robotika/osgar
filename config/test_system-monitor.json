@@ -5,7 +5,7 @@
       "app": {
           "driver": "systemmonitor",
           "in": [],
-          "out": ["cpu", "ram", "net_raw", "temp_raw"],
+          "out": ["cpu", "ram", "temp"],
           "init": {}
       }
     },
