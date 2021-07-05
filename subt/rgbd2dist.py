@@ -23,7 +23,8 @@ class RGBD2Dist(Node):
         if dist == float('inf'):
             # out of range, but maybe mistake in RGBD simulation model
             # unfortunately it is the same value for down and up camera
-            dist = arr.min()  # up pointing camera will see some walls
+            dist = arr[height//2:, :].min()  # up pointing camera will see some walls
+                                             # but there is also Velodyne cooler!
             if dist == float('inf'):
                 # everything is "black" -> down pointing camera
                 dist = 0.1
