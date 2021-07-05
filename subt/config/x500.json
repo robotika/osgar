@@ -100,7 +100,8 @@
           "in": ["rgbd"],
           "out": ["image", "depth"],
           "init": {
-            "image_sampling": 6
+            "image_sampling": 6,
+            "depth_sampling": 6
           }
       },
       "logimage_up": {
@@ -108,7 +109,8 @@
           "in": ["rgbd"],
           "out": ["image", "depth"],
           "init": {
-            "image_sampling": 6
+            "image_sampling": 6,
+            "depth_sampling": 6
           }
       },
       "radio": {
