@@ -144,7 +144,7 @@
           "init": {
               "outputs": ["acc", "top_scan", "bottom_scan", "pose3d", "battery_state", "score", "gas_detected",
                           "air_pressure", "scan360", "octomap:gz", "robot_name", "points:null", "image_front",
-                          "rgbd_up:null", "rgbd_down:null", "depth_up:gz", "depth_down:gz"]
+                          "rgbd_up:gz", "rgbd_down:gz", "depth_up:gz", "depth_down:gz"]
           }
       },
       "points2scan": {
