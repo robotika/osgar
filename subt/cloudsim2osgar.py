@@ -30,7 +30,7 @@ import serialize as osgar_serialize
 from quaternion import multiply as multiply_quaternions, rotate_vector, euler_zyx
 
 
-X500_DESIRED_HZ = 10.0  # original is 30Hz or even 60Hz
+X500_DESIRED_HZ = 20.0  # original is 30Hz or even 60Hz
 
 
 def py3round(f):
