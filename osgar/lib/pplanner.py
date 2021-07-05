@@ -74,7 +74,7 @@ def find_path_old(img, start, finish, verbose=False):
 def find_path(img, start, finish, yaw_deg=0, verbose=False):
     """
     Follow wall in multi-resolution image
-    :param img: inary image
+    :param img: binary image
     :param start: pair (x, y, z)
     :param finish: list of pairs (x, y, z)
     :param yaw_deg: yaw in degrees (0, 90, 180, 270)
@@ -88,6 +88,7 @@ def find_path(img, start, finish, yaw_deg=0, verbose=False):
 
     # find nearest wall in 4 directions
     x, y, z = start
+    z = 4  # hack - force height 2m (absolute level)
     if not img[y][x][z]:
         return None  # in the wall, no path found
     for i in range(10):
