@@ -93,6 +93,7 @@ def find_path(img, start, finish, yaw_deg=None, verbose=False):
     x, y, z = start
     z = 4  # hack - force height 2m (absolute level)
     if not img[y][x][z]:
+        print('REASON: Start in wall')
         return None  # in the wall, no path found
     for i in range(10):
         if (yaw_deg == 270 or yaw_deg is None) and (x + i >= max_x or not img[y][x + i][z]):
@@ -112,6 +113,7 @@ def find_path(img, start, finish, yaw_deg=None, verbose=False):
             yaw_deg = 0
             break
     else:
+        print('REASON: no nearby wall')
         return None  # no nearby wall
 
 #    if verbose:

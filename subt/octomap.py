@@ -187,7 +187,7 @@ def frontiers(img, start, draw=False, start_yaw=None):
     z = np.zeros((1, size[1], size[2]), dtype=np.bool)
     drivable = np.vstack([z, tmp, z])
 
-    for limit_score in [3*max(score)/4, max(score)/4, 0]:
+    for limit_score in [3*max(score)/4]:  # hack for follow wall, max(score)/4, 0]:
         # select goal positions above the limit_score
         # note, that the "safe path" does not touch external boundary so it would never find path
         # to frontier. As a workaround add also all 8-neighbors of frontiers.
