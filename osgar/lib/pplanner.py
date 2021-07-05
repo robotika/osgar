@@ -71,7 +71,7 @@ def find_path_old(img, start, finish, verbose=False):
     return None
 
 
-def find_path(img, start, finish, yaw_deg=0, verbose=False):
+def find_path(img, start, finish, yaw_deg=None, verbose=False):
     """
     Follow wall in multi-resolution image
     :param img: binary image
@@ -86,25 +86,28 @@ def find_path(img, start, finish, yaw_deg=0, verbose=False):
     if not (0 <= start[0] < max_x and 0 <= start[1] < max_y and 0 <= start[2] < max_z):
         return None
 
+    if yaw_deg is not None:
+        assert yaw_deg in [0, 90, 180, 270], yaw_deg
+
     # find nearest wall in 4 directions
     x, y, z = start
     z = 4  # hack - force height 2m (absolute level)
     if not img[y][x][z]:
         return None  # in the wall, no path found
     for i in range(10):
-        if x + i >= max_x or not img[y][x + i][z]:
+        if (yaw_deg == 270 or yaw_deg is None) and (x + i >= max_x or not img[y][x + i][z]):
             node = (x + i - 1, y, z)
             yaw_deg = 270
             break
-        if x - i < 0 or not img[y][x - i][z]:
+        if (yaw_deg == 90 or yaw_deg is None) and (x - i < 0 or not img[y][x - i][z]):
             node = (x - i + 1, y, z)
             yaw_deg = 90
             break
-        if y + i >= max_y or not img[y + i][x][z]:
+        if (yaw_deg == 180 or yaw_deg is None) and (y + i >= max_y or not img[y + i][x][z]):
             node = (x, y + i - 1, z)
             yaw_deg = 180
             break
-        if y - i < 0 or not img[y - i][x][z]:
+        if (yaw_deg == 0 or yaw_deg is None) and (y - i < 0 or not img[y - i][x][z]):
             node = (x, y - i + 1, z)
             yaw_deg = 0
             break

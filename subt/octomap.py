@@ -9,6 +9,7 @@ import cv2
 
 from osgar.node import Node
 from osgar.lib.pplanner import find_path
+from osgar.lib import quaternion
 
 # http://www.arminhornung.de/Research/pub/hornung13auro.pdf
 # 00: unknown; 01: occupied; 10: free; 11: inner node with child next in the stream
@@ -115,7 +116,7 @@ def data2maplevel(data, level):
     return img
 
 
-def frontiers(img, start, draw=False):
+def frontiers(img, start, draw=False, start_yaw=None):
     """
     Find path to the best frontier (free-unknown transition)
     :param img: color image with free=white, unknown=green
@@ -200,7 +201,7 @@ def frontiers(img, start, draw=False):
 
         # the path planner currently expects goals as tuple (x, y) and operation "in"
         goals = set(map(tuple, goals))
-        path = find_path(drivable, start, goals, verbose=False)
+        path = find_path(drivable, start, goals, yaw_deg=start_yaw, verbose=False)
         if path is not None:
             break
 
@@ -257,6 +258,9 @@ class Octomap(Node):
 
         x, y, z = self.pose3d[0]
         start = int(SLICE_OCTOMAP_SIZE//2 + x/self.resolution), int(SLICE_OCTOMAP_SIZE//2 - y/self.resolution), int((z - self.min_z)/self.resolution)
+        yaw = quaternion.heading(self.pose3d[1])
+        start_yaw = (int((math.degrees(yaw) + 45 + 360)/90) * 90) % 360  # switch to only 4 directions 0, 90, 180, 270
+        assert start_yaw in [0, 90, 180, 270], start_yaw
         num_z_levels = int(round((self.max_z - self.min_z)/self.resolution)) + 1
         img3d = np.zeros((SLICE_OCTOMAP_SIZE, SLICE_OCTOMAP_SIZE, num_z_levels), dtype=np.uint8)
         for level in range(num_z_levels):
@@ -271,7 +275,7 @@ class Octomap(Node):
         img2[:, :, 0] = img3d[:, :, level]
         img2[:, :, 1] = img3d[:, :, level]
         img2[:, :, 2] = img3d[:, :, level]
-        __, path = frontiers(img3d, start)  # this image is modified in place anyway
+        __, path = frontiers(img3d, start, start_yaw=start_yaw)  # this image is modified in place anyway
         if self.verbose:
             f = (img3d == STATE_FRONTIER).nonzero()
             for x, y, z in zip(f[1], f[0], f[2]):
