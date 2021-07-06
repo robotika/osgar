@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "systemmonitor",
+          "in": [],
+          "out": ["cpu", "ram", "temp"],
+          "init": {}
+      }
+    },
+    "links": []
+  }
+}
