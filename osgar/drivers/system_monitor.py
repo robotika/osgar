@@ -14,6 +14,7 @@ class SystemMonitor:
         bus.register('cpu', 'ram', 'temp')
         self.sleep = config.get('sleep', 1)
         self.platform = sys.platform
+        self.first_meas = True
 
     def start(self):
         self.input_thread.start()
@@ -25,7 +26,10 @@ class SystemMonitor:
         while self.bus.is_alive():
             # current system-wide CPU utilization as a percentage
             cpu = psutil.cpu_percent(percpu=True)
-            self.bus.publish('cpu', cpu)
+            if not self.first_meas:
+                self.bus.publish('cpu', cpu)
+            else:
+                self.first_meas = False
             # system memory usage in percentage
             used_memory = psutil.virtual_memory().percent
             self.bus.publish('ram', used_memory)
