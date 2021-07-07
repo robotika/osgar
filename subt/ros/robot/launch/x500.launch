@@ -53,11 +53,31 @@
     <param name="database_path" type="string" value=""/>
     <param name="frame_id" type="string" value="$(arg robot_name)"/>
     <param name="odom_frame_id" type="string" value="odom"/>
+    <param name="guess_frame_id" type="string" value="odom"/>
     <param name="publish_tf" type="bool" value="false"/>
     <param name="publish_null_when_lost" type="bool" value="false"/>
     <param name="subscribe_rgbd" type="bool" value="true"/>
+    <param name="rgbd_cameras" value="2"/>
+    <!-- Finding correspondences with the guess cannot be done with multiple cameras -->
+    <param name="Vis/CorGuessWinSize" value="0"/>
+    <!-- Default estimation type does not work with multiple cameras. -->
+    <param name="Vis/EstimationType" value="0"/>
+    <!-- Number of feature points to detect. Defaults to 1000 -->
+    <param name="Vis/MaxFeatures" value="2000"/>
+    <!-- Bundle adjustment does not work with multiple cameras. -->
+    <param name="OdomF2M/BundleAdjustment" value="0"/>
+    <!-- This robot cannot move left or up, at least unless something strange is happening. -->
+    <param name="Odom/Holonomic" value="true"/>
+    <!-- Internal Kalman filtering smoothes the estimate, which in turn prevents "our" Kalman from being confused by big input odometry jumps. -->
+    <param name="Odom/FilteringStrategy" value="1"/>
+    <param name="Odom/ResetCountdown" type="string" value="4"/>
+    <param name="OdomF2M/MaxSize" value="8000"/>
+    <param name="OdomF2M/ValidDepthRatio" value="1.0"/>
     <!-- Inputs -->
-    <remap from="rgbd_image" to="down/compressed"/>
+    <remap from="rgbd_image0" to="down/compressed"/>
+    <remap from="rgbd_image1" to="up/compressed"/>
+    <!-- Undocumented supported input, helps maintaining the right direction. -->
+    <remap from="imu" to="/$(arg robot_name)/imu/data"/>
   </node>
 
   <node name="altimeter" pkg="robot" type="altitude_from_atmospheric_pressure.py" args="odom">
