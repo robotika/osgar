@@ -8,3 +8,4 @@ pyrealsense2==2.41.0.2666; python_version < '3.8'
 numpy==1.19.2
 protobuf==3.13.0
 Shapely==1.7.1
+psutil==5.8.0
