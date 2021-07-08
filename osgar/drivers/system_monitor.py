@@ -10,7 +10,7 @@ from threading import Thread
 
 
 def get_timestamp(msg):
-    return float(msg.split()[0][1:-1])
+    return float(msg.split(b"]")[0][1:])
 
 class SystemMonitor:
     def __init__(self, config, bus):
