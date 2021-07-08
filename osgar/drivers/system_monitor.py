@@ -64,9 +64,14 @@ class SystemMonitor:
 
             if self.platform == "linux":
                 temp_raw = psutil.sensors_temperatures()
-                assert "acpitz" in temp_raw, temp_raw
-                temp = temp_raw["acpitz"][0].current  # Expects only one CPU.
-                self.bus.publish('temp', temp)
+                if "acpitz" in temp_raw:
+                    temp = temp_raw["acpitz"][0].current  # Expects only one CPU.
+                elif "k10temp" in temp_raw:
+                    temp = temp_raw["k10temp"][0].current  # Expects only one CPU.
+                else:
+                    temp = None  # Unsupported case.
+                if temp is not None:
+                    self.bus.publish('temp', temp)
                 proc_dmesg = subprocess.Popen(["dmesg"], stdout=subprocess.PIPE)
                 dmesg_all = proc_dmesg.stdout.read().split(b"\n")
                 dmesg = self.process_dmesg(dmesg_all)
