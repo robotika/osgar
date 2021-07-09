@@ -1,5 +1,7 @@
 import unittest
 from unittest.mock import MagicMock
+import sys
+sys.modules['psutil'] = MagicMock()
 from osgar.drivers.system_monitor import get_timestamp, SystemMonitor
 
 
