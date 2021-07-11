@@ -13,7 +13,7 @@ from subt.trace import distance3D
 MAX_SIMULATION_DURATION = 3700  # 1hour with a small buffer
 
 SIM_TIME_STREAM = 'rosmsg.sim_time_sec'
-ORIGIN_STREAM = 'rosmsg.origin'
+ROBOT_NAME_STREAM = 'fromrospy.robot_name'
 
 
 def evaluate_poses(poses, gt_poses, time_step_sec=1):
@@ -82,10 +82,9 @@ def read_pose3d(filename, pose3d_name, seconds=MAX_SIMULATION_DURATION):
 
 
 def autodetect_name(logfile):
-    stream_id = lookup_stream_id(logfile, ORIGIN_STREAM)
+    stream_id = lookup_stream_id(logfile, ROBOT_NAME_STREAM)
     for dt, channel, data in LogReader(logfile, only_stream_id=stream_id):
-        arr = deserialize(data)
-        robot_name = arr[0].decode('ascii')
+        robot_name = deserialize(data).decode('ascii')
         return robot_name
     _, _, data = next(LogReader(logfile))
 
