@@ -47,7 +47,7 @@ function on_exit {
 
 trap on_exit EXIT
 
-DOCKER_OPTS="--volume ${LOG_DIR}:/tmp/ign/logs --name sim"
+DOCKER_OPTS="--volume ${LOG_DIR}:/tmp/ign/logs/gazebo --name sim"
 export DOCKER_OPTS
 
 termtitle "sim $ROBOT $WORLD"
