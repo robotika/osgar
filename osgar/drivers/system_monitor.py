@@ -10,7 +10,11 @@ from threading import Thread
 
 
 def get_timestamp_from_dmesg(msg):
-    return float(msg.split(b"]")[0][1:])
+    try:
+        return float(msg.split(b"]")[0][1:])
+    except Exception as e:
+        print(e)
+        return None
 
 
 class SystemMonitor:
@@ -24,16 +28,26 @@ class SystemMonitor:
         self.platform = sys.platform
         self.first_meas = True
 
+    def find_last_dmesg_time(self, dmesg_all):
+        ii = -2
+        while True:
+            dmesg_time = get_timestamp_from_dmesg(dmesg_all[ii])
+            if dmesg_time is not None:
+                return dmesg_time
+            ii -= 1
+
     def process_dmesg(self, dmesg_all):
         ret = ""
+        ii = -2  # the last line in the dmesg output is empty
         if self.last_dmesg_time is None:
-            self.last_dmesg_time = get_timestamp_from_dmesg(dmesg_all[-2])  # the last line is empty
+            dmesg_time = self.find_last_dmesg_time(dmesg_all)
+            self.last_dmesg_time = dmesg_time
             return None
-        new_last_time = get_timestamp_from_dmesg(dmesg_all[-2])
+
+        new_last_time = self.find_last_dmesg_time(dmesg_all)
         if self.last_dmesg_time == new_last_time:
             return None
 
-        ii = -2
         while True:
             msg = dmesg_all[ii].decode("utf-8")
             ret = msg + "\n" + ret
