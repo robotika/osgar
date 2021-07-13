@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 import sys
 sys.modules['psutil'] = MagicMock()
-from osgar.drivers.system_monitor import get_timestamp, SystemMonitor
+from osgar.drivers.system_monitor import get_timestamp_from_dmesg, SystemMonitor
 
 
 class TestSystemMonitor(unittest.TestCase):
@@ -10,8 +10,8 @@ class TestSystemMonitor(unittest.TestCase):
     def test_get_timestamp(self):
         msg = b"[330199.830015] wlp5s0: associated"
         msg2 = b"[   14.850440] IPv6: ADDRCONF(NETDEV_CHANGE): wlp5s0: link becomes ready"
-        timestamp = get_timestamp(msg)
-        timestamp2 = get_timestamp(msg2)
+        timestamp = get_timestamp_from_dmesg(msg)
+        timestamp2 = get_timestamp_from_dmesg(msg2)
         self.assertEqual(timestamp, 330199.830015)
         self.assertEqual(timestamp2, 14.850440)
 
