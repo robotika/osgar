@@ -4,7 +4,7 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["emergency_stop", "pose3d", "scan", "artf", "sim_time_sec", "acc", "robot_name"],
+          "in": ["emergency_stop", "pose3d", "scan360", "artf", "sim_time_sec", "acc", "robot_name"],
           "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout"],
           "init": {
             "max_speed": 0.5,
@@ -13,23 +13,42 @@
             "virtual_bumper_radius": 10.0,
             "virtual_world": true,
             "speed_policy": "conservative",
-            "rotation_p": 1.6,
+            "rotation_p": 3.0,
             "turbo_safe_dist": 3.2,
             "turbo_speed": 2.3,
             "obstacle_influence": 1.4,
             "max_obstacle_distance": 3.0,
-            "height_above_ground": 2.0,
+            "height_above_ground": 1.0,
             "limit_roll": 90,
             "limit_pitch": 90,
             "return_limit_roll": 90,
             "return_limit_pitch": 90,
             "trace_z_weight": 1.0,
             "follow_wall": {
-              "internal_reflection_threshold": 0
+              "internal_reflection_threshold": 0,
+              "max_wall_distance": 5.0
             }
          }
       },
       "detector": {
+          "driver": "subt.artf_node:ArtifactDetectorDNN",
+          "in": ["rgbd", "scan"],
+          "out": ["localized_artf", "dropped", "debug_artf", "stdout"],
+          "init": {
+            "virtual_world": true,
+            "fx": 554.25469
+          }
+      },
+      "detector_left": {
+          "driver": "subt.artf_node:ArtifactDetectorDNN",
+          "in": ["rgbd", "scan"],
+          "out": ["localized_artf", "dropped", "debug_artf", "stdout"],
+          "init": {
+            "virtual_world": true,
+            "fx": 554.25469
+          }
+      },
+      "detector_right": {
           "driver": "subt.artf_node:ArtifactDetectorDNN",
           "in": ["rgbd", "scan"],
           "out": ["localized_artf", "dropped", "debug_artf", "stdout"],
@@ -90,37 +109,6 @@
           "out": ["sim_time_sec", "cmd"],
           "init": {
             "downsample": 2
-          }
-      },
-      "depth2scan": {
-          "driver": "subt.depth2scan:DepthToScan",
-          "in": ["rgbd", "scan"],
-          "out": ["scan"],
-          "init": {
-            "depth_params": {
-              "fx": 554.25469,
-              "camera_xyz": [0.1, 0.0, -0.08],
-              "image_size": [640, 480],
-              "principal_point": [320.5, 240.5],
-              "vertical_pixel_offset": 16,
-              "lidar_fov": 6.283185307179586,
-              "lidar_trusted_zone": 2.0,
-              "min_z": -0.2,
-              "max_z": 0.4,
-              "max_slope": -3.14,
-              "vertical_diff_limit": 1.4835, "vd_comment": "radians(85)",
-              "stride": 2,
-              "noise_filter_window": [12, 6],
-              "noise_filter_threshold": 30
-            },
-            "filter_fog": true
-          }
-      },
-      "three2scan": {
-          "driver": "subt.three2scan:ThreeRGBDToScan",
-          "in": ["rgbd"],
-          "out": ["scan"],
-          "init": {
           }
       },
       "fromrospy": {
@@ -199,14 +187,12 @@
 
               ["fromrospy.acc", "app.acc"],
 
-              ["fromrospy.scan360", "detector.scan"],
+              ["fromrospy.scan360", "app.scan360"],
 
               ["fromrospy.rgbd_front", "detector.rgbd"],
+              ["fromrospy.rgbd_left", "detector_left.rgbd"],
+              ["fromrospy.rgbd_right", "detector_right.rgbd"],
 
-              ["fromrospy.rgbd_front", "three2scan.rgbd"],
-              ["fromrospy.rgbd_left", "three2scan.rgbd"],
-              ["fromrospy.rgbd_right", "three2scan.rgbd"],
-              ["three2scan.scan", "app.scan"],
 
               ["fromrospy.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
@@ -236,7 +222,11 @@
               ["marsupial.detach", "torospy.detach"],
 
               ["detector.localized_artf", "artifact_filter.localized_artf"],
+              ["detector_left.localized_artf", "artifact_filter.localized_artf"],
+              ["detector_right.localized_artf", "artifact_filter.localized_artf"],
               ["detector.stdout", "rosmsg.stdout"],
+              ["detector_left.stdout", "rosmsg.stdout"],
+              ["detector_right.stdout", "rosmsg.stdout"],
               ["artifact_filter.artf_xyz", "reporter.artf_xyz"],
               ["rosmsg.base_station", "reporter.base_station"],
               ["reporter.artf_cmd", "transmitter.raw"],

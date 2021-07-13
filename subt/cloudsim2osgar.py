@@ -125,9 +125,9 @@ class main:
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/air_pressure', FluidPressure, self.air_pressure, ('air_pressure',)))
             topics.append(('/rtabmap/rgbd/front/compressed', RGBDImage, self.rgbd_front, ('rgbd_front',)))
-            topics.append(('/rtabmap/rgbd/left/compressed', RGBDImage, self.rgbd_left, ('rgbd_left',)))
-            topics.append(('/rtabmap/rgbd/right/compressed', RGBDImage, self.rgbd_right, ('rgbd_right',)))
-            topics.append(('/map_scan', LaserScan, self.scan360, ('scan360',)))
+            topics.append(('/rtabmap/rgbd/left/compressed_rotated', RGBDImage, self.rgbd_left, ('rgbd_left',)))
+            topics.append(('/rtabmap/rgbd/right/compressed_rotated', RGBDImage, self.rgbd_right, ('rgbd_right',)))
+            topics.append(('/' + robot_name + '/local_map/output/scan', LaserScan, self.scan360, ('scan360',)))
             if robot_name.endswith('XM'):
                 topics.append(('/mapping/octomap_binary', Octomap, self.octomap, ('octomap',)))
             if robot_is_marsupial == 'true':
