@@ -9,28 +9,27 @@ import psutil
 from threading import Thread
 
 
-def get_timestamp(msg):
+def get_timestamp_from_dmesg(msg):
     return float(msg.split(b"]")[0][1:])
+
 
 class SystemMonitor:
     def __init__(self, config, bus):
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.bus = bus
-        bus.register('cpu', 'ram', 'temp')
+        bus.register('cpu', 'ram', 'temp', 'dmesg')
         self.sleep = config.get('sleep', 1)
         self.log_dmesg = config.get('dmesg', False)
         self.last_dmesg_time = None
-        if self.log_dmesg:
-            bus.register('dmesg')
         self.platform = sys.platform
         self.first_meas = True
 
     def process_dmesg(self, dmesg_all):
         ret = ""
         if self.last_dmesg_time is None:
-            self.last_dmesg_time = get_timestamp(dmesg_all[-2])  # the last line is empty
+            self.last_dmesg_time = get_timestamp_from_dmesg(dmesg_all[-2])  # the last line is empty
             return None
-        new_last_time = get_timestamp(dmesg_all[-2])
+        new_last_time = get_timestamp_from_dmesg(dmesg_all[-2])
         if self.last_dmesg_time == new_last_time:
             return None
 
@@ -39,7 +38,7 @@ class SystemMonitor:
             msg = dmesg_all[ii].decode("utf-8")
             ret = msg + "\n" + ret
             ii -= 1
-            timestamp = get_timestamp(dmesg_all[ii])
+            timestamp = get_timestamp_from_dmesg(dmesg_all[ii])
             if self.last_dmesg_time == timestamp:
                 self.last_dmesg_time = new_last_time
                 return ret
@@ -72,11 +71,12 @@ class SystemMonitor:
                     temp = None  # Unsupported case.
                 if temp is not None:
                     self.bus.publish('temp', temp)
-                proc_dmesg = subprocess.Popen(["dmesg"], stdout=subprocess.PIPE)
-                dmesg_all = proc_dmesg.stdout.read().split(b"\n")
-                dmesg = self.process_dmesg(dmesg_all)
-                if dmesg is not None:
-                    self.bus.publish('dmesg', dmesg)
+                if self.log_dmesg:  #TODO move to separate module
+                    proc_dmesg = subprocess.Popen(["dmesg"], stdout=subprocess.PIPE)
+                    dmesg_all = proc_dmesg.stdout.read().split(b"\n")
+                    dmesg = self.process_dmesg(dmesg_all)
+                    if dmesg is not None:
+                        self.bus.publish('dmesg', dmesg)
 
             self.bus.sleep(self.sleep)
 
