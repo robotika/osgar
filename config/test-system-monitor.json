@@ -6,7 +6,9 @@
           "driver": "systemmonitor",
           "in": [],
           "out": ["cpu", "ram", "temp"],
-          "init": {}
+          "init": {
+            "dmesg": true
+          }
       }
     },
     "links": []
