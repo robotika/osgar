@@ -417,7 +417,11 @@ void Flyability::OnRange(const sensor_msgs::LaserScan::ConstPtr& msg)
     ++estimate.observations;
   }
 
-  const tf::Vector3 pt = *sensor_pose * tf::Vector3(estimate.mean, 0, 0);
+  tf::Transform rot;
+  rot.setIdentity();  // Initializes offsets to zero.
+  rot.getBasis().setRPY(0, 0, msg->angle_min);
+  tf::Vector3 beam(estimate.mean, 0, 0);
+  const tf::Vector3 pt = *sensor_pose * rot * beam;
   InsertObservation({std::move(pt)},
                     msg->header.frame_id,
                     config_.max_range_observations);
