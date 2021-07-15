@@ -475,6 +475,12 @@ void Traversability::HandleDepth(
     bool obscured_view = false;
     bool ground_visible = false;
 
+    // If ground detection is disabled, pretend we are happily seeing it.
+    if (config_.visible_ground_min == 0 &&
+	config_.visible_ground_max == 0) {
+	    ground_visible = true;
+    }
+
     float expected_ground = robot_xyz.z();
     cv::Mat full_size_uv(3, 1, CV_32F);
     // As if there was an obstacle visible at the bottom line of the image,
@@ -542,7 +548,8 @@ void Traversability::HandleDepth(
     // We react to missing ground only when the robot is looking sufficiently
     // horizontally or downwards. Otherwise, the robot may be climbing up a
     // ridge and does not even have a chance to see the ground.
-    if (pt_down_near.z() - robot_xyz.z() <= 0) {
+    if (config_.synthetic_obstacle_distance > 0 &&
+        pt_down_near.z() - robot_xyz.z() <= 0) {
       // If
       // a) We haven't seen any ground in this direction;
       // b) The view is not obstructed by an obstacle;

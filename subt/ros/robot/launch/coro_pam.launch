@@ -1,0 +1,246 @@
+<?xml version="1.0"?>
+<launch>
+  <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)" output="screen"/>
+
+  <node name="depth_filter_left" pkg="robot" type="filter_depth.py" args="0.3 10">
+    <remap from="input" to="$(arg robot_name)/rgbd_left/optical/depth/image_raw"/>
+    <remap from="output" to="$(arg robot_name)/rgbd_left/optical/depth/filtered_image_raw"/>
+  </node>
+
+  <node name="depth_filter_right" pkg="robot" type="filter_depth.py" args="0.3 10">
+    <remap from="input" to="$(arg robot_name)/rgbd_right/optical/depth/image_raw"/>
+    <remap from="output" to="$(arg robot_name)/rgbd_right/optical/depth/filtered_image_raw"/>
+  </node>
+
+  <!-- Correct for camera placement -->
+  <node name="rotated_img_left" pkg="robot" type="rotate_image_right.py">
+    <remap from="input/image" to="$(arg robot_name)/rgbd_left/optical/image_raw"/>
+    <remap from="output/image" to="$(arg robot_name)/rgbd_left/optical/image_raw_rotated"/>
+    <remap from="input/camera_info" to="$(arg robot_name)/rgbd_left/optical/camera_info"/>
+    <remap from="output/camera_info" to="$(arg robot_name)/rgbd_left/optical/camera_info_rotated"/>
+  </node>
+  <node name="rotated_depth_left" pkg="robot" type="rotate_image_right.py">
+    <remap from="input/image" to="$(arg robot_name)/rgbd_left/optical/depth/filtered_image_raw"/>
+    <remap from="output/image" to="$(arg robot_name)/rgbd_left/optical/depth/filtered_image_raw_rotated"/>
+  </node>
+
+  <node name="rotated_img_right" pkg="robot" type="rotate_image_right.py" output="screen">
+    <remap from="input/image" to="$(arg robot_name)/rgbd_right/optical/image_raw"/>
+    <remap from="output/image" to="$(arg robot_name)/rgbd_right/optical/image_raw_rotated"/>
+    <remap from="input/camera_info" to="$(arg robot_name)/rgbd_right/optical/camera_info"/>
+    <remap from="output/camera_info" to="$(arg robot_name)/rgbd_right/optical/camera_info_rotated"/>
+  </node>
+
+  <node name="rotated_depth_right" pkg="robot" type="rotate_image_right.py">
+    <remap from="input/image" to="$(arg robot_name)/rgbd_right/optical/depth/filtered_image_raw"/>
+    <remap from="output/image" to="$(arg robot_name)/rgbd_right/optical/depth/filtered_image_raw_rotated"/>
+  </node>
+
+  <!-- Combining front RGBD depth and image data into a single message. -->
+  <node pkg="nodelet" type="nodelet" name="rgbd_sync_front" args="standalone rtabmap_ros/rgbd_sync">
+    <!-- Inputs -->
+    <remap from="rgb/image" to="/$(arg robot_name)/rgbd_front/optical/image_raw"/>
+    <remap from="rgb/camera_info" to="$(arg robot_name)/rgbd_front/optical/camera_info"/>
+    <remap from="depth/image" to="/$(arg robot_name)/rgbd_front/optical/depth/image_raw"/>
+    <!-- Output -->
+    <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/front/compressed"/>
+    <remap from="rgbd_image" to="/rtabmap/rgbd/front"/>
+  </node>
+
+  <!-- Combining left RGBD depth and image data into a single message. -->
+  <node pkg="nodelet" type="nodelet" name="rgbd_sync_left" args="standalone rtabmap_ros/rgbd_sync">
+    <!-- Inputs -->
+    <remap from="rgb/image" to="/$(arg robot_name)/rgbd_left/optical/image_raw"/>
+    <remap from="rgb/camera_info" to="$(arg robot_name)/rgbd_left/optical/camera_info"/>
+    <remap from="depth/image" to="/$(arg robot_name)/rgbd_left/optical/depth/filtered_image_raw"/>
+    <!-- Output -->
+    <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/left/compressed"/>
+    <remap from="rgbd_image" to="/rtabmap/rgbd/left"/>
+  </node>
+
+  <!-- Combining left RGBD depth and image data into a single message. -->
+  <node pkg="nodelet" type="nodelet" name="rgbd_sync_left_rotated" args="standalone rtabmap_ros/rgbd_sync">
+    <!-- Inputs -->
+    <remap from="rgb/image" to="/$(arg robot_name)/rgbd_left/optical/image_raw_rotated"/>
+    <remap from="rgb/camera_info" to="$(arg robot_name)/rgbd_left/optical/camera_info_rotated"/>
+    <remap from="depth/image" to="/$(arg robot_name)/rgbd_left/optical/depth/filtered_image_raw_rotated"/>
+    <!-- Output -->
+    <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/left/compressed_rotated"/>
+    <remap from="rgbd_image" to="/rtabmap/rgbd/left_rotated"/>
+  </node>
+
+  <!-- Combining right RGBD depth and image data into a single message. -->
+  <node pkg="nodelet" type="nodelet" name="rgbd_sync_right" args="standalone rtabmap_ros/rgbd_sync">
+    <!-- Inputs -->
+    <remap from="rgb/image" to="/$(arg robot_name)/rgbd_right/optical/image_raw"/>
+    <remap from="rgb/camera_info" to="$(arg robot_name)/rgbd_right/optical/camera_info"/>
+    <remap from="depth/image" to="/$(arg robot_name)/rgbd_right/optical/depth/filtered_image_raw"/>
+    <!-- Output -->
+    <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/right/compressed"/>
+    <remap from="rgbd_image" to="/rtabmap/rgbd/right"/>
+  </node>
+
+  <!-- Combining right RGBD depth and image data into a single message. -->
+  <node pkg="nodelet" type="nodelet" name="rgbd_sync_right_rotated" args="standalone rtabmap_ros/rgbd_sync">
+    <!-- Inputs -->
+    <remap from="rgb/image" to="/$(arg robot_name)/rgbd_right/optical/image_raw_rotated"/>
+    <remap from="rgb/camera_info" to="$(arg robot_name)/rgbd_right/optical/camera_info_rotated"/>
+    <remap from="depth/image" to="/$(arg robot_name)/rgbd_right/optical/depth/filtered_image_raw_rotated"/>
+    <!-- Output -->
+    <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/right/compressed_rotated"/>
+    <remap from="rgbd_image" to="/rtabmap/rgbd/right_rotated"/>
+  </node>
+
+  <!-- RGBD odometry -->
+  <node ns="rtabmap/rgbd" pkg="rtabmap_ros" type="rgbd_odometry" name="rgbd_odometry">
+    <param name="database_path" type="string" value=""/>
+    <param name="frame_id" type="string" value="$(arg robot_name)"/>
+    <param name="odom_frame_id" type="string" value="odom"/>
+    <param name="guess_frame_id" type="string" value="odom"/>
+    <param name="publish_tf" type="bool" value="false"/>
+    <param name="publish_null_when_lost" type="bool" value="false"/>
+    <param name="subscribe_rgbd" type="bool" value="true"/>
+    <!-- Finding correspondences with the guess cannot be done with multiple cameras -->
+    <param name="Vis/CorGuessWinSize" value="0"/>
+    <!-- Default estimation type does not work with multiple cameras. -->
+    <param name="Vis/EstimationType" value="0"/>
+    <!-- Number of feature points to detect. Defaults to 1000 -->
+    <param name="Vis/MaxFeatures" value="2000"/>
+    <!-- Bundle adjustment does not work with multiple cameras. -->
+    <param name="OdomF2M/BundleAdjustment" value="0"/>
+    <!-- Internal Kalman filtering smoothes the estimate, which in turn prevents "our" Kalman from being confused by big input odometry jumps. -->
+    <param name="Odom/FilteringStrategy" value="1"/>
+    <param name="Odom/ResetCountdown" type="string" value="4"/>
+    <!-- Inputs -->
+    <param name="rgbd_cameras" value="3"/>
+    <remap from="rgbd_image0" to="front/compressed"/>
+    <remap from="rgbd_image1" to="left/compressed"/>
+    <remap from="rgbd_image2" to="right/compressed"/>
+    <!-- Undocumented supported input, helps maintaining the right direction. -->
+    <remap from="imu" to="/$(arg robot_name)/imu/data"/>
+  </node>
+
+  <node name="altimeter" pkg="robot" type="altitude_from_atmospheric_pressure.py" args="odom">
+    <remap from="atmospheric_pressure" to="$(arg robot_name)/air_pressure"/>
+    <remap from="pose" to="$(arg robot_name)/altitude"/>
+  </node>
+
+  <node name="pose_from_artifact_origin" pkg="proxy" type="pose_from_artifact_origin" args="$(arg robot_name) odom">
+    <remap from="pose_from_origin" to="$(arg robot_name)/pose_from_origin"/>
+  </node>
+
+  <node name="imu_pruner" type="drop" pkg="topic_tools" args="$(arg robot_name)/imu/data 4 5 $(arg robot_name)/imu/pruned" />
+
+  <!-- Fusion of ICP odometry, RGBD odometry and altitude with IMU data.
+       https://github.com/introlab/rtabmap_ros/blob/master/launch/tests/sensor_fusion.launch
+       https://answers.ros.org/question/248109/integrating-an-imu-with-rtabmap/
+       http://docs.ros.org/melodic/api/robot_localization/html/state_estimation_nodes.html
+  -->
+  <node pkg="robot_localization" type="ukf_localization_node" name="fused_odometry">
+    <param name="frequency" value="50"/>
+    <param name="sensor_timeout" value="0.1"/>
+    <param name="two_d_mode" value="false"/>
+
+    <param name="odom_frame" value="odom"/>
+    <param name="base_link_frame" value="$(arg robot_name)"/>
+    <param name="world_frame" value="odom"/>
+
+    <param name="transform_time_offset" value="0.0"/>
+
+    <!-- RGBD odometry from depth camera -->
+    <param name="odom0" value="/rtabmap/rgbd/odom"/>
+    <!-- Altitude estimated from air pressure -->
+    <param name="pose0" value="$(arg robot_name)/altitude"/>
+    <!-- Information about location in the staging area. -->
+    <param name="pose1" value="$(arg robot_name)/pose_from_origin"/>
+    <!-- IMU -->
+    <param name="imu0" value="$(arg robot_name)/imu/pruned"/>
+
+    <param name="odom0_differential" value="false"/>
+    <param name="pose0_differential" value="false"/>
+    <param name="pose1_differential" value="false"/>
+    <param name="imu0_differential" value="false"/>
+
+    <param name="odom0_relative" value="false"/>
+    <param name="pose0_relative" value="true"/>
+    <param name="pose1_relative" value="true"/>
+    <param name="imu0_relative" value="false"/>
+
+    <param name="imu0_remove_gravitational_acceleration" value="true"/>
+
+    <!-- The order of the values is x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az. -->
+    <rosparam param="odom0_config">[false, false, false,
+                                    false, false, false,
+                                    true, true, true,
+                                    true, true, true,
+                                    false, false, false]</rosparam>
+    <rosparam param="pose0_config">[false, false, true,
+                                    false, false, false,
+                                    false, false, false,
+                                    false, false, false,
+                                    false, false, false]</rosparam>
+    <rosparam param="pose1_config">[true, true, true,
+                                    true, true, true,
+                                    false, false, false,
+                                    false, false, false,
+                                    false, false, false]</rosparam>
+    <rosparam param="imu0_config">[false, false, false,
+                                   true,  true,  true,
+                                   false, false, false,
+                                   false,  false,  false,
+                                   false,  false,  false] </rosparam>
+
+    <!-- Trying to not have data stuck in a TCP buffer. -->
+    <rosparam param="odom0_nodelay">true</rosparam>
+    <rosparam param="pose0_nodelay">true</rosparam>
+    <rosparam param="pose1_nodelay">true</rosparam>
+    <rosparam param="imu0_nodelay">true</rosparam>
+
+    <!-- When some data arrive late, we are willing to go back in time and correct the estimate. -->
+    <param name="smooth_lagged_data" value="true"/>
+    <param name="history_length" value="1.0"/>
+
+    <!-- -->
+    <param name="print_diagnostics" value="true"/>
+    <remap from="/diagnostics" to="$(arg robot_name)/odom_diagnostics"/>
+    <!-- -->
+
+    <remap from="odometry/filtered" to="/$(arg robot_name)/odom_fused"/>
+  </node>
+
+  <node if="$(eval arg('robot_name').endswith('XM'))" ns="mapping" pkg="octomap_server" type="octomap_server_node" name="octomap">
+    <remap from="cloud_in" to="/$(arg robot_name)/rgbd_front/points_cleaned"/>
+    <param name="frame_id" value="map"/>
+    <!-- resolution in meters per voxel -->
+    <param name="resolution" value="0.5" />
+    <!-- In case we want to filter out ceilings.
+    <param name="pointcloud_max_z" value="1.5"/>
+    -->
+    <!-- We trust the simulated sensor a lot more than what default parameters expect. -->
+    <param name="sensor_model/hit" value="0.95"/>
+    <param name="sensor_model/miss" value="0.05"/>
+    <!-- RGBD camera has range only 10 meters -->
+    <param name="sensor_model/max_range" value="10"/>
+  </node>
+
+  <!-- Combining RGBD messages into a single stream -->
+  <node pkg="topic_tools" type="relay" name="rgbd_merge_front" args="/rtabmap/rgbd/front/compressed /rtabmap/rgbd/all/compressed"/>
+  <node pkg="topic_tools" type="relay" name="rgbd_merge_left" args="/rtabmap/rgbd/left/compressed_rotated /rtabmap/rgbd/all/compressed"/>
+  <node pkg="topic_tools" type="relay" name="rgbd_merge_right" args="/rtabmap/rgbd/right/compressed_rotated /rtabmap/rgbd/all/compressed"/>
+  <!-- Merge camera infos into a single stream -->
+  <node pkg="topic_tools" type="relay" name="camera_info_merge_front" args="$(arg robot_name)/rgbd_front/optical/camera_info $(arg robot_name)/rgbd_all/optical/camera_info"/>
+  <node pkg="topic_tools" type="relay" name="camera_info_merge_left" args="$(arg robot_name)/rgbd_left/optical/camera_info_rotated $(arg robot_name)/rgbd_all/optical/camera_info"/>
+  <node pkg="topic_tools" type="relay" name="camera_info_merge_right" args="$(arg robot_name)/rgbd_right/optical/camera_info_rotated $(arg robot_name)/rgbd_all/optical/camera_info"/>
+  <node pkg="proxy" type="traversability" name="local_map" ns="$(arg robot_name)" output="screen">
+    <param name="robot_frame_id" value="$(arg robot_name)"/>
+    <param name="robot_height" value="2.2" />
+    <param name="max_slope" value="45"/>
+    <param name="max_bump_height" value="0.30"/>
+    <param name="synthetic_obstacle_distance" value="0"/>
+    <param name="visible_ground_min" value="0"/>
+    <param name="visible_ground_max" value="0"/>
+    <param name="max_dip_down" value="100"/>
+    <remap from="local_map/input/camera_info" to="/$(arg robot_name)/rgbd_all/optical/camera_info"/>
+    <remap from="local_map/input/depth/compressed" to="/rtabmap/rgbd/all/compressed"/>
+  </node>
+</launch>
