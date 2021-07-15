@@ -5,7 +5,7 @@
       "app": {
           "driver": "application",
           "in": ["emergency_stop", "pose3d", "scan360", "artf", "sim_time_sec", "acc", "robot_name"],
-          "out": ["desired_speed", "pose2d", "artf_xyz", "pose3d", "stdout"],
+          "out": ["desired_speed", "desired_z_speed", "pose2d", "artf_xyz", "pose3d", "stdout"],
           "init": {
             "max_speed": 0.5,
             "symmetric": false,
@@ -16,7 +16,7 @@
             "rotation_p": 3.0,
             "turbo_safe_dist": 3.2,
             "turbo_speed": 2.3,
-            "obstacle_influence": 1.4,
+            "obstacle_influence": 1.0,
             "max_obstacle_distance": 3.0,
             "height_above_ground": 1.0,
             "limit_roll": 90,
@@ -113,7 +113,7 @@
       },
       "fromrospy": {
           "driver": "subt.pull:Pull",
-	      "init": {
+          "init": {
               "outputs": ["acc", "top_scan", "bottom_scan", "pose3d", "battery_state", "score", "gas_detected",
                           "rgbd_front:null", "rgbd_left:null", "rgbd_right:null",
                           "air_pressure", "scan360", "octomap:gz", "robot_name"]
@@ -177,6 +177,7 @@
       }
     },
     "links": [["app.desired_speed", "drone.desired_speed"],
+              ["app.desired_z_speed", "drone.desired_z_speed"],
               ["drone.desired_speed_3d", "torospy.cmd_vel"],
               ["app.stdout", "rosmsg.stdout"],
               ["fromrospy.robot_name", "app.robot_name"],
