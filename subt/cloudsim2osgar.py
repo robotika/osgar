@@ -343,10 +343,10 @@ class main:
             # forward), but we need to match the world frame (X axis forward)
             # of robot_pose.
             WORLD_TO_OPTICAL = tf.transformations.quaternion_from_matrix(
-                    [[ 0,  0, 1, 0],
-                     [-1,  0, 0, 0],
-                     [ 0, -1, 0, 0],
-                     [ 0,  0, 0, 1]])
+                    [[ 0, -1,  0, 0],
+                     [ 0,  0, -1, 0],
+                     [ 1,  0,  0, 0],
+                     [ 0,  0,  0, 1]])
             camera_xyz, camera_quat = self.tf.lookupTransform(
                     self.robot_name, msg.header.frame_id, msg.header.stamp)
             camera_pose = (camera_xyz,
