@@ -228,19 +228,17 @@
   <node pkg="topic_tools" type="relay" name="rgbd_merge_left" args="/rtabmap/rgbd/left/compressed_rotated /rtabmap/rgbd/all/compressed"/>
   <node pkg="topic_tools" type="relay" name="rgbd_merge_right" args="/rtabmap/rgbd/right/compressed_rotated /rtabmap/rgbd/all/compressed"/>
   <!-- Merge camera infos into a single stream -->
-  <node pkg="topic_tools" type="relay" name="camera_info_merge_front" args="$(arg robot_name)/rgbd_front/optical/camera_info $(arg robot_name)/rgbd_all/optical/camera_info"/>
-  <node pkg="topic_tools" type="relay" name="camera_info_merge_left" args="$(arg robot_name)/rgbd_left/optical/camera_info_rotated $(arg robot_name)/rgbd_all/optical/camera_info"/>
-  <node pkg="topic_tools" type="relay" name="camera_info_merge_right" args="$(arg robot_name)/rgbd_right/optical/camera_info_rotated $(arg robot_name)/rgbd_all/optical/camera_info"/>
-  <node pkg="proxy" type="traversability" name="local_map" ns="$(arg robot_name)" output="screen">
+  <node pkg="topic_tools" type="relay" name="camera_info_merge_front" args="/$(arg robot_name)/rgbd_front/optical/camera_info /$(arg robot_name)/rgbd_all/optical/camera_info"/>
+  <node pkg="topic_tools" type="relay" name="camera_info_merge_left" args="/$(arg robot_name)/rgbd_left/optical/camera_info_rotated /$(arg robot_name)/rgbd_all/optical/camera_info"/>
+  <node pkg="topic_tools" type="relay" name="camera_info_merge_right" args="/$(arg robot_name)/rgbd_right/optical/camera_info_rotated /$(arg robot_name)/rgbd_all/optical/camera_info"/>
+  <!-- Merge lidar scans into a single stream -->
+  <node pkg="topic_tools" type="relay" name="lidar_merge_top" args="/$(arg robot_name)/top_scan $(arg robot_name)/all_scans"/>
+  <node pkg="topic_tools" type="relay" name="lidar_merge_bottom" args="/$(arg robot_name)/bottom_scan /$(arg robot_name)/all_scans"/>
+  <node pkg="proxy" type="flyability" name="local_map" ns="$(arg robot_name)" output="screen">
     <param name="robot_frame_id" value="$(arg robot_name)"/>
-    <param name="robot_height" value="2.2" />
-    <param name="max_slope" value="45"/>
-    <param name="max_bump_height" value="0.30"/>
-    <param name="synthetic_obstacle_distance" value="0"/>
-    <param name="visible_ground_min" value="0"/>
-    <param name="visible_ground_max" value="0"/>
-    <param name="max_dip_down" value="100"/>
+    <param name="robot_height" value="0.5" />
     <remap from="local_map/input/camera_info" to="/$(arg robot_name)/rgbd_all/optical/camera_info"/>
     <remap from="local_map/input/depth/compressed" to="/rtabmap/rgbd/all/compressed"/>
+    <remap from="local_map/input/range" to="/$(arg robot_name)/all_scans"/>
   </node>
 </launch>

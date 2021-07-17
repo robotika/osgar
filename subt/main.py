@@ -831,7 +831,9 @@ class SubTChallenge:
         trace.add_line_to((0.5, entrance_offset, self.height_above_ground))  # 0.5m inside, towards the desired wall.
         trace.reverse()
         is_trace3d = self.height_above_ground > 0.0  # well, maybe there should be more obvious definition of ground/aerial vehicle
-        self.follow_trace(trace, timeout=timedelta(seconds=30), max_target_distance=2.5, safety_limit=0.2, is_trace3d=is_trace3d)
+        safety_limit = None if is_trace3d else 0.2  # UGV may need some collision avoidance during leaving the starting area
+                                                    # while the CoRo Pam drone generates fake artifacts near ground
+        self.follow_trace(trace, timeout=timedelta(seconds=30), max_target_distance=2.5, safety_limit=safety_limit, is_trace3d=is_trace3d)
 
     def play_virtual_part_explore(self):
         start_time = self.sim_time_sec

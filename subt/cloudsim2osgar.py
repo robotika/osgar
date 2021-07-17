@@ -324,7 +324,7 @@ class main:
     def convert_rgbd(self, msg):
         # Pose of the robot relative to starting position.
         try:
-            robot_pose = self.tf.lookupTransform('odom', self.robot_name, rospy.Time(0))
+            robot_pose = self.tf.lookupTransform('odom', self.robot_name, msg.header.stamp)
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             return None
         # Pose of the robot in the world coordinate frame, i.e. likely a non-zero initial
@@ -342,9 +342,15 @@ class main:
             # RTABMAP produces rotation in a visual coordinate frame (Z axis
             # forward), but we need to match the world frame (X axis forward)
             # of robot_pose.
-            camera_frame_id = msg.header.frame_id.replace("_optical", "")
-            camera_pose = self.tf.lookupTransform(
-                    self.robot_name, camera_frame_id, rospy.Time(0))
+            WORLD_TO_OPTICAL = tf.transformations.quaternion_from_matrix(
+                    [[ 0, -1,  0, 0],
+                     [ 0,  0, -1, 0],
+                     [ 1,  0,  0, 0],
+                     [ 0,  0,  0, 1]])
+            camera_xyz, camera_quat = self.tf.lookupTransform(
+                    self.robot_name, msg.header.frame_id, msg.header.stamp)
+            camera_pose = (camera_xyz,
+                    tf.transformations.quaternion_multiply(camera_quat, WORLD_TO_OPTICAL).tolist())
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             return None
         rgb = msg.rgb_compressed.data
