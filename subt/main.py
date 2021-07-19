@@ -157,6 +157,7 @@ class SubTChallenge:
         self.yaw_offset = None  # not defined, use first IMU reading
         self.is_moving = None  # unknown
         self.scan = None  # I should use class Node instead
+        self.slopes = None
         self.flipped = False  # by default use only front part
         self.joint_angle_rad = []  # optinal angles, needed for articulated robots flip
         self.stat = defaultdict(int)
@@ -220,13 +221,18 @@ class SubTChallenge:
             self.send_speed_cmd(-self.max_speed, 0.0)
         start_time = self.time
         while distance(start_pose, self.last_position) < abs(how_far):
+            if self.slopes:
+                slope_idx = 0 if how_far < 0 else len(self.slopes) // 2
+                slope = self.slopes[slope_idx]
+                desired_z_speed = float(self.max_speed * math.tan(slope))
+                self.bus.publish('desired_z_speed', desired_z_speed)
             self.update()
             if timeout is not None and self.time - start_time > timeout:
                 print("go_straight - TIMEOUT!")
                 break
         self.send_speed_cmd(0.0, 0.0)
 
-    def go_safely(self, desired_direction):
+    def go_safely(self, desired_direction, allow_z_control=True):
         if self.local_planner is None:
             safety, safe_direction = 1.0, desired_direction
         else:
@@ -249,6 +255,11 @@ class SubTChallenge:
         else:
             desired_speed = self.max_speed
         desired_speed = desired_speed * (1.0 - self.safety_turning_coeff * min(self.max_angular_speed, abs(desired_angular_speed)) / self.max_angular_speed)
+        if allow_z_control and self.slopes:
+            slope_idx = int(len(self.slopes) * (safe_direction - -math.pi) / (2 * math.pi))
+            slope = self.slopes[slope_idx]
+            desired_z_speed = float(desired_speed * math.tan(slope))
+            self.bus.publish('desired_z_speed', desired_z_speed)
         if self.flipped:
             self.send_speed_cmd(-desired_speed, desired_angular_speed)
         else:
@@ -257,6 +268,10 @@ class SubTChallenge:
 
     def turn(self, angle, with_stop=True, speed=0.0, timeout=None):
         print(self.time, "turn %.1f" % math.degrees(angle))
+
+        if self.slopes:
+            self.bus.publish('desired_z_speed', 0)
+
         start_pose = self.last_position
         if angle >= 0:
             self.send_speed_cmd(speed, self.max_angular_speed)
@@ -273,6 +288,10 @@ class SubTChallenge:
 
     def stop(self, timeout_sec=20):
         self.send_speed_cmd(0.0, 0.0)
+
+        if self.slopes:
+            self.bus.publish('desired_z_speed', 0)
+
         start_time = self.time
         while self.time - start_time < timedelta(seconds=timeout_sec):
             self.update()
@@ -460,7 +479,7 @@ class SubTChallenge:
                 desired_z_speed = (target_z - self.xyz[2]) / time_to_target
                 self.bus.publish('desired_z_speed', desired_z_speed)
 
-                safety = self.go_safely(desired_direction)
+                safety = self.go_safely(desired_direction, allow_z_control=False)
                 if safety < 0.2:
                     print(self.time, "Safety low!", safety, desired_direction)
                     target_distance = MIN_TARGET_DISTANCE
@@ -494,7 +513,7 @@ class SubTChallenge:
                     print('Flipping:', math.degrees(desired_direction))
                     self.flip()
                 else:
-                    safety = self.go_safely(desired_direction)
+                    safety = self.go_safely(desired_direction, allow_z_control=False)
                     if safety_limit is not None and safety < safety_limit:
                         print('Danger! Safety limit for follow trace reached!', safety, safety_limit)
                         break
@@ -585,6 +604,9 @@ class SubTChallenge:
 
     def on_waypoints(self, timestamp, data):
         self.waypoints = data
+
+    def on_slopes(self, timestamp, data):
+        self.slopes = [math.radians(a/10) for a in data]
 
     def update(self):
         packet = self.bus.listen()

@@ -309,6 +309,10 @@ class main:
         # 3rd copy, i.e. almost time for refactoring ...
         self.scan360_count += 1
         rospy.loginfo_throttle(10, "scan360 callback: {}".format(self.scan360_count))
+        if msg.intensities:
+            # We are misusing this field to store preferred flight slopes.
+            slopes = [int(math.degrees(x) * 10) for x in msg.intensities]
+            self.bus.publish('slopes', slopes)
         scan = [int(x * 1000) if msg.range_min < x < msg.range_max else 0 for x in msg.ranges]
         self.bus.publish('scan360', scan)
 

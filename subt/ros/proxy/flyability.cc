@@ -81,8 +81,13 @@ class Flyability
 
       // How often to publish outputs.
       ros::Duration publish_rate;
-      // How much of a vertical gap the robot needs.
+      // Dimensions of the robot.
       float robot_height;
+      float robot_radius;
+      // What up/down slope is the drone willing to undertake?
+      float max_slope;
+      // Preferred height above ground.
+      float above_ground;
       // Maximum number of scan-based frames per input lidar stored in the local
       // map.
       int max_scan_observations;
@@ -151,6 +156,10 @@ bool Flyability::Init()
   ros_handle_.param("depth_image_stride", config_.depth_image_stride, 2);
   ros_handle_.param("depth_subsampling", config_.depth_subsampling, 123);
   ros_handle_.param("robot_height", config_.robot_height, 0.5f);
+  ros_handle_.param("robot_radius", config_.robot_radius, 1.0f);
+  ros_handle_.param("max_slope", config_.max_slope, 30.0f);
+  config_.max_slope = M_PI * config_.max_slope / 180;  // To radians.
+  ros_handle_.param("above_ground", config_.above_ground, 3.0f);
   ros_handle_.param("max_scan_observations", config_.max_scan_observations, 20 * 6);
   ros_handle_.param("min_lidar_range", config_.min_lidar_range, 0.f);
   ros_handle_.param("max_lidar_range", config_.max_lidar_range, 10.0f);
@@ -426,6 +435,7 @@ void Flyability::OnRange(const sensor_msgs::LaserScan::ConstPtr& msg)
                     msg->header.frame_id,
                     config_.max_range_observations);
 }
+
 void Flyability::OnTimer(const ros::TimerEvent& event)
 {
   if (points_publisher_.getNumSubscribers() == 0 &&
@@ -468,6 +478,8 @@ void Flyability::OnTimer(const ros::TimerEvent& event)
   const tf::Transform horizontal_tf_inv = horizontal_tf.inverse();
   // Convert all collected pointclouds to be relative to the current robot pose.
   std::vector<tf::Vector3> local_pts;
+  float ground_distance = -std::numeric_limits<float>::infinity();
+  float ceiling_distance = std::numeric_limits<float>::infinity();
   for (const auto single_source_observations : observations_)
   {
     const auto& observations = single_source_observations.second;
@@ -476,14 +488,24 @@ void Flyability::OnTimer(const ros::TimerEvent& event)
       for (const auto& pt : observation)
       {
         const auto local_pt = horizontal_tf_inv* *to_local * pt;
-        if (local_pt.z() > -config_.robot_height / 2 &&
-            local_pt.z() < config_.robot_height / 2)
+        local_pts.push_back(local_pt);
+        if (std::hypot(local_pt.x(), local_pt.y()) <= config_.robot_radius)
         {
-          local_pts.push_back(local_pt);
+          if (local_pt.z() < 0 && local_pt.z() > ground_distance)
+          {
+            ground_distance = local_pt.z();
+          }
+          else if (local_pt.z() > 0 && local_pt.z() < ceiling_distance)
+          {
+            ceiling_distance = local_pt.z();
+          }
         }
       }
     }
   }
+
+  // TODO: Publish ground and ceiling distance.
+  //ROS_ERROR("%f %f", (double) ground_distance, (double) ceiling_distance);
 
   // Focus on points in the small neighborhood of the robot.
   std::vector<tf::Vector3> nearby_pts;
@@ -564,11 +586,16 @@ void Flyability::OnTimer(const ros::TimerEvent& event)
     local_scan.ranges.resize(
         1 + (local_scan.angle_max - local_scan.angle_min) /
               local_scan.angle_increment);
-    for (auto& range : local_scan.ranges)
-    {
-      range = std::numeric_limits<float>::infinity();
-    }
-
+    auto& slopes = local_scan.intensities;  // We use `insetnsities` to store the selected slope.
+    slopes.resize(local_scan.ranges.size());
+    struct Obstruction {
+      float low;
+      float high;
+      float distance;
+      float z;
+    };
+    std::vector<std::vector<Obstruction>> obstructions;
+    obstructions.resize(local_scan.ranges.size());
     for (const auto& pt : nearby_pts)
     {
       const float direction = std::atan2(pt.y(), pt.x());
@@ -577,16 +604,106 @@ void Flyability::OnTimer(const ros::TimerEvent& event)
                      local_scan.angle_increment)) %
           local_scan.ranges.size();
       const float distance = std::hypot(pt.x(), pt.y());
-      auto& range = local_scan.ranges[bucket];
-      range = std::min(range, distance);
+      obstructions[bucket].emplace_back(Obstruction{
+          static_cast<float>(std::atan2(pt.z() - config_.robot_height / 2, distance)),
+          static_cast<float>(std::atan2(pt.z() + config_.robot_height / 2, distance)),
+          distance,
+          static_cast<float>(pt.z())});
     }
 
-    // Override all initialization we have not overwritten yet.
-    for (auto& range : local_scan.ranges)
+    for (size_t i = 0; i < local_scan.ranges.size(); ++i)
     {
+      auto& obstructions_i = obstructions[i];
+      std::sort(obstructions_i.begin(), obstructions_i.end(),
+          [](const Obstruction& a, const Obstruction& b)
+          {
+            if (a.low < b.low)
+            {
+              return true;
+            }
+            else if (a.low == b.low && a.high < b.high)
+            {
+              return true;
+            }
+            else if (a.low == b.low && a.high == b.high && a.distance > b.distance)
+            {
+              return true;
+            }
+            else if (a.low == b.low && a.high == b.high && a.distance == b.distance)
+            {
+              return a.z < b.z;
+            }
+            return false;
+          });
+
+      if (obstructions_i.empty())
+      {
+        local_scan.ranges[i] = 0;   // No obstacle ahead.
+        slopes[i] = -config_.max_slope;
+        continue;
+      }
+
+      if (obstructions_i.front().low >= -config_.max_slope)
+      {
+        local_scan.ranges[i] = 0;  // The drone can dive under the obstacles.
+        slopes[i] = -config_.max_slope;
+        continue;
+      }
+
+      size_t below_idx = 0;
+      size_t above_idx = obstructions_i.size();
+      for (size_t j = 1; j < obstructions_i.size(); ++j)
+      {
+        const auto obstruction = obstructions_i[j];
+        const float high = obstructions_i[below_idx].high;
+        if (obstruction.low > high && obstruction.low >= -config_.max_slope)
+        {
+          above_idx = j;
+          break;
+        }
+        if (obstruction.high > high)
+        {
+          below_idx = j;
+        }
+      }
+      if (obstructions_i[below_idx].high <= config_.max_slope)
+      {
+        local_scan.ranges[i] = 0;  // There is a way through in this direction.
+        const auto& below = obstructions_i[below_idx];
+        const float z_below = std::tan((below.low + below.high) / 2) * below.distance;
+        const float z_safe = z_below + config_.above_ground;
+        if (above_idx == obstructions_i.size())
+        {
+          slopes[i] = std::atan2(z_safe, below.distance);
+        }
+        else
+        {
+          const auto& above = obstructions_i[above_idx];
+          slopes[i] = std::min(
+              std::atan2(z_safe, below.distance),
+              (below.high + above.low) / 2);
+        }
+        slopes[i] = std::max(
+            -config_.max_slope,
+            std::min(config_.max_slope, slopes[i]));
+        continue;
+      }
+
+      // No way through. Let's report distance to obstacle as if only flying
+      // horizontally.
+      auto& range = local_scan.ranges[i];
+      range = std::numeric_limits<float>::infinity();
+      for (const auto& o : obstructions_i)
+      {
+        if (std::abs(o.z) <= config_.robot_height)
+        {
+          range = std::min(range, o.distance);
+        }
+      }
       if (std::isinf(range))
       {
-        range = 0;  // Invalid reading.
+        range = 0;  // This should not happen. How comes we found a way forward without finding it above?
+        slopes[i] = 0;
       }
     }
 
