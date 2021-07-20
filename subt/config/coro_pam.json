@@ -14,9 +14,10 @@
             "virtual_world": true,
             "speed_policy": "conservative",
             "rotation_p": 3.0,
+            "min_safe_dist": 1.2,
             "turbo_safe_dist": 2.5,
             "turbo_speed": 3.0,
-            "obstacle_influence": 1.0,
+            "obstacle_influence": 0.8,
             "max_obstacle_distance": 3.0,
             "height_above_ground": 1.0,
             "limit_roll": 90,
@@ -26,7 +27,7 @@
             "trace_z_weight": 1.0,
             "follow_wall": {
               "internal_reflection_threshold": 0,
-              "max_wall_distance": 5.0
+              "max_wall_distance": 8.0
             }
          }
       },
