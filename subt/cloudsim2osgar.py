@@ -120,8 +120,8 @@ class main:
                 publishers['detach'] = (rospy.Publisher('/' + robot_name + '/detach', Empty, queue_size=1), empty)
         elif robot_config == "CORO_PAM_SENSOR_CONFIG_1":
             rospy.loginfo("CoRo Pam drone")
-            topics.append(('/' + robot_name + '/top_scan', LaserScan, self.top_scan, ('top_scan',)))
-            topics.append(('/' + robot_name + '/bottom_scan', LaserScan, self.bottom_scan, ('bottom_scan',)))
+            topics.append(('/' + robot_name + '/local_map/output/up', LaserScan, self.top_scan, ('top_scan',)))
+            topics.append(('/' + robot_name + '/local_map/output/down', LaserScan, self.bottom_scan, ('bottom_scan',)))
             topics.append(('/' + robot_name + '/odom_fused', Odometry, self.odom_fused, ('pose3d',)))
             topics.append(('/' + robot_name + '/air_pressure', FluidPressure, self.air_pressure, ('air_pressure',)))
             topics.append(('/rtabmap/rgbd/front/compressed', RGBDImage, self.rgbd_front, ('rgbd_front',)))
@@ -309,6 +309,10 @@ class main:
         # 3rd copy, i.e. almost time for refactoring ...
         self.scan360_count += 1
         rospy.loginfo_throttle(10, "scan360 callback: {}".format(self.scan360_count))
+        if msg.intensities:
+            # We are misusing this field to store preferred flight slopes.
+            slopes = [int(math.degrees(x) * 10) for x in msg.intensities]
+            self.bus.publish('slopes', slopes)
         scan = [int(x * 1000) if msg.range_min < x < msg.range_max else 0 for x in msg.ranges]
         self.bus.publish('scan360', scan)
 

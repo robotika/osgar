@@ -4,7 +4,7 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["emergency_stop", "pose3d", "scan360", "artf", "sim_time_sec", "acc", "robot_name"],
+          "in": ["emergency_stop", "pose3d", "scan360", "slopes", "artf", "sim_time_sec", "acc", "robot_name"],
           "out": ["desired_speed", "desired_z_speed", "pose2d", "artf_xyz", "pose3d", "stdout"],
           "init": {
             "max_speed": 0.5,
@@ -14,9 +14,10 @@
             "virtual_world": true,
             "speed_policy": "conservative",
             "rotation_p": 3.0,
-            "turbo_safe_dist": 3.2,
-            "turbo_speed": 2.3,
-            "obstacle_influence": 1.0,
+            "min_safe_dist": 1.2,
+            "turbo_safe_dist": 2.5,
+            "turbo_speed": 3.0,
+            "obstacle_influence": 0.8,
             "max_obstacle_distance": 3.0,
             "height_above_ground": 1.0,
             "limit_roll": 90,
@@ -26,7 +27,7 @@
             "trace_z_weight": 1.0,
             "follow_wall": {
               "internal_reflection_threshold": 0,
-              "max_wall_distance": 5.0
+              "max_wall_distance": 8.0
             }
          }
       },
@@ -116,7 +117,7 @@
           "init": {
               "outputs": ["acc", "top_scan", "bottom_scan", "pose3d", "battery_state", "score", "gas_detected",
                           "rgbd_front:null", "rgbd_left:null", "rgbd_right:null",
-                          "air_pressure", "scan360", "octomap:gz", "robot_name"]
+                          "air_pressure", "scan360", "slopes", "octomap:gz", "robot_name"]
           }
       },
       "torospy": {
@@ -186,6 +187,7 @@
               ["fromrospy.acc", "app.acc"],
 
               ["fromrospy.scan360", "app.scan360"],
+              ["fromrospy.slopes", "app.slopes"],
 
               ["fromrospy.rgbd_front", "detector.rgbd"],
               ["fromrospy.rgbd_left", "detector_left.rgbd"],
