@@ -82,7 +82,7 @@ class Flyability
       // How often to publish outputs.
       ros::Duration publish_rate;
       // Dimensions of the robot.
-      float robot_height;
+      float robot_height_up, robot_height_bottom;
       float robot_radius;
       // What up/down slope is the drone willing to undertake?
       float max_slope;
@@ -157,11 +157,12 @@ bool Flyability::Init()
   ros_handle_.param<std::string>("world_frame_id", config_.world_frame_id, "odom");
   ros_handle_.param("max_depth_observations", config_.max_depth_observations, 30 * 6);
   ros_handle_.param("max_depth", config_.max_depth, 10.0f);
-  ros_handle_.param("depth_image_stride", config_.depth_image_stride, 2);
+  ros_handle_.param("depth_image_stride", config_.depth_image_stride, 4);
   ros_handle_.param("depth_subsampling", config_.depth_subsampling, 123);
-  ros_handle_.param("robot_height", config_.robot_height, 0.5f);
-  ros_handle_.param("robot_radius", config_.robot_radius, 1.0f);
-  ros_handle_.param("max_slope", config_.max_slope, 30.0f);
+  ros_handle_.param("robot_height_up", config_.robot_height_up, 0.1f);
+  ros_handle_.param("robot_height_bottom", config_.robot_height_bottom, 0.4f);
+  ros_handle_.param("robot_radius", config_.robot_radius, 0.7f);
+  ros_handle_.param("max_slope", config_.max_slope, 28.0f);
   config_.max_slope = M_PI * config_.max_slope / 180;  // To radians.
   ros_handle_.param("above_ground", config_.above_ground, 3.0f);
   ros_handle_.param("max_scan_observations", config_.max_scan_observations, 20 * 6);
@@ -456,7 +457,7 @@ void Flyability::OnTimer(const ros::TimerEvent& event)
   const ros::Time latest(0);
   const auto to_local = GetTransform(config_.robot_frame_id, config_.world_frame_id, latest);
   if (!to_local) return;
-  if (to_local->getOrigin().z() < -config_.robot_height / 2)
+  if (to_local->getOrigin().z() < -(config_.robot_height_bottom + config_.robot_height_up))
   {
     is_flying_ = true;
   }
@@ -647,8 +648,10 @@ void Flyability::OnTimer(const ros::TimerEvent& event)
     slopes.resize(local_scan.ranges.size());
     struct Obstruction {
       float low;
+      float middle;
       float high;
-      float distance;
+      float safe_distance;
+      float full_distance;
       float z;
     };
     std::vector<std::vector<Obstruction>> obstructions;
@@ -661,9 +664,16 @@ void Flyability::OnTimer(const ros::TimerEvent& event)
                      local_scan.angle_increment)) %
           local_scan.ranges.size();
       const float distance = std::hypot(pt.x(), pt.y());
+      // The *front* edge of the drone needs to fly over the obstacle and not
+      // just its center. This leads to a shorter climbing distance.
+      const float d = std::max(1e-3f, distance - config_.robot_radius);
+      // The bottom edge of the drone (-robot_height_bottom) needs to climb above the
+      // obstacle (robot_height_up) and similar for top edge below an obstacle.
       obstructions[bucket].emplace_back(Obstruction{
-          static_cast<float>(std::atan2(pt.z() - config_.robot_height / 2, distance)),
-          static_cast<float>(std::atan2(pt.z() + config_.robot_height / 2, distance)),
+          static_cast<float>(std::atan2(pt.z() - config_.robot_height_up, d)),
+          static_cast<float>(std::atan2(pt.z(), d)),
+          static_cast<float>(std::atan2(pt.z() + config_.robot_height_bottom, d)),
+          d,
           distance,
           static_cast<float>(pt.z())});
     }
@@ -682,11 +692,11 @@ void Flyability::OnTimer(const ros::TimerEvent& event)
             {
               return true;
             }
-            else if (a.low == b.low && a.high == b.high && a.distance > b.distance)
+            else if (a.low == b.low && a.high == b.high && a.safe_distance > b.safe_distance)
             {
               return true;
             }
-            else if (a.low == b.low && a.high == b.high && a.distance == b.distance)
+            else if (a.low == b.low && a.high == b.high && a.safe_distance == b.safe_distance)
             {
               return a.z < b.z;
             }
@@ -727,17 +737,17 @@ void Flyability::OnTimer(const ros::TimerEvent& event)
       {
         local_scan.ranges[i] = 0;  // There is a way through in this direction.
         const auto& below = obstructions_i[below_idx];
-        const float z_below = std::tan((below.low + below.high) / 2) * below.distance;
+        const float z_below = std::tan(below.middle) * below.safe_distance;
         const float z_safe = z_below + config_.above_ground;
         if (above_idx == obstructions_i.size())
         {
-          slopes[i] = std::atan2(z_safe, below.distance);
+          slopes[i] = std::atan2(z_safe, below.safe_distance);
         }
         else
         {
           const auto& above = obstructions_i[above_idx];
           slopes[i] = std::min(
-              std::atan2(z_safe, below.distance),
+              std::atan2(z_safe, below.safe_distance),
               (below.high + above.low) / 2);
         }
         slopes[i] = std::max(
@@ -752,9 +762,10 @@ void Flyability::OnTimer(const ros::TimerEvent& event)
       range = std::numeric_limits<float>::infinity();
       for (const auto& o : obstructions_i)
       {
-        if (std::abs(o.z) <= config_.robot_height)
+        if (o.z >= -config_.robot_height_bottom &&
+            o.z <= config_.robot_height_up)
         {
-          range = std::min(range, o.distance);
+          range = std::min(range, o.full_distance);
         }
       }
       if (std::isinf(range))

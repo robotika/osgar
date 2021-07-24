@@ -244,12 +244,7 @@ class SubTChallenge:
         size = len(self.scan)
         dist = min_dist(self.scan[size//3:2*size//3])
         if dist < self.min_safe_dist:  # 2.0:
-            if self.speed_policy == 'conservative':
-                desired_speed = self.max_speed * (1.2/2.0) * (dist - 0.4) / 1.6
-            elif self.speed_policy == 'always_forward':
-                desired_speed = self.max_speed * (dist - self.dangerous_dist) / (self.min_safe_dist - self.dangerous_dist)
-            else:
-                assert(False)  # Unsupported speed policy.
+            desired_speed = self.max_speed * (dist - self.dangerous_dist) / (self.min_safe_dist - self.dangerous_dist)
         elif self.turbo_safe_dist is not None and self.turbo_speed is not None and dist > self.turbo_safe_dist:
             desired_speed = self.turbo_speed
         else:
@@ -475,7 +470,7 @@ class SubTChallenge:
                     continue
 
                 d = distance3D(self.xyz, [target_x, target_y, target_z])
-                time_to_target = d/self.max_speed
+                time_to_target = d/(self.max_speed if self.turbo_speed is None else self.turbo_speed)
                 desired_z_speed = (target_z - self.xyz[2]) / time_to_target
                 self.bus.publish('desired_z_speed', desired_z_speed)
 
@@ -520,7 +515,7 @@ class SubTChallenge:
 
                 if is_trace3d:
                     d = distance3D(self.xyz, [target_x, target_y, target_z])
-                    time_to_target = d/self.max_speed
+                    time_to_target = d/(self.max_speed if self.turbo_speed is None else self.turbo_speed)
                     desired_z_speed = (target_z - self.xyz[2]) / time_to_target
                     self.bus.publish('desired_z_speed', desired_z_speed)
 
@@ -1018,6 +1013,7 @@ def main():
     parser_replay.add_argument('logfile', help='recorded log file')
     parser_replay.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
     parser_replay.add_argument('--config', nargs='+', help='force alternative configuration file')
+    parser_replay.add_argument('--debug', help="print debug info about I/O streams", action='store_true')
     args = parser.parse_args()
 
     if args.command == 'replay':
