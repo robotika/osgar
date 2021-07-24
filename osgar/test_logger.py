@@ -590,5 +590,26 @@ class LoggerIndexedTest(unittest.TestCase):
                 with self.assertRaises(IndexError):
                     l[0]
 
+    def test_day_overflow(self):
+        block_size = 10
+        filename = 'tmpDay.log'
+        with patch('osgar.logger.datetime.datetime'):
+            osgar.logger.datetime.datetime = TimeStandsStill(datetime(2021, 7, 24))
+            with osgar.logger.LogWriter(filename=filename) as log:
+                for hour in range(26):
+                    osgar.logger.datetime.datetime = TimeStandsStill(datetime(2021, 7, 24) + timedelta(seconds=3600*hour))
+                    log.write(1, b'\x01'*block_size)
+
+        with LogReader(filename, only_stream_id=1) as log:
+            for i, (dt, stream, data) in enumerate(log):
+                self.assertEqual(stream, 1)
+                if i < 24:
+                    self.assertEqual(dt.seconds, i * 3600)
+                    self.assertEqual(dt.days, 0)
+                else:
+                    self.assertEqual(dt.seconds, (i - 24) * 3600)
+                    self.assertEqual(dt.days, 1)
+
+        os.remove(filename)
 
 # vim: expandtab sw=4 ts=4
