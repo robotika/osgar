@@ -72,8 +72,8 @@ def format_packet(stream_id, data, dt):
 
 
 def format_timedelta(dt):
-    assert dt.days == 0, dt  # multiple days not supported yet
-    time_frac = (dt.seconds * 1000000 + dt.microseconds) & TIMESTAMP_MASK
+    assert dt.days >= 0, dt  # negative delta means invalid system clock
+    time_frac = ((dt.days * 24 * 3600 + dt.seconds) * 1000000 + dt.microseconds) & TIMESTAMP_MASK
     return time_frac.to_bytes(4, 'little')
 
 
@@ -349,6 +349,7 @@ def lookup_stream_id(filename, stream_name):
         pass
     names = lookup_stream_names(filename)
     return names.index(stream_name) + 1
+
 
 def calculate_stat(filename):
     names = ['sys'] + lookup_stream_names(filename)
