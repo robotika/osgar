@@ -9,12 +9,12 @@
           "init": {
             "max_speed": 0.5,
             "symmetric": true,
-            "virtual_bumper_sec": 60,
+            "virtual_bumper_sec": 75,
             "virtual_bumper_radius": 10.0,
             "virtual_world": true,
 	    "direction_adherence": 45,
             "follow_wall": {
-              "max_wall_distance": 7.6
+              "max_wall_distance": 5.0
             }
          }
       },

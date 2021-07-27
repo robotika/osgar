@@ -159,6 +159,7 @@ class SubTChallenge:
         self.scan = None  # I should use class Node instead
         self.slopes = None
         self.flipped = False  # by default use only front part
+        self.flipping_pose = self.last_position  # Last position where the robot flipped.
         self.joint_angle_rad = []  # optinal angles, needed for articulated robots flip
         self.stat = defaultdict(int)
         self.voltage = []
@@ -237,6 +238,7 @@ class SubTChallenge:
             safety, safe_direction = 1.0, desired_direction
         else:
             safety, safe_direction = self.local_planner.recommend(desired_direction)
+        print(self.time, math.degrees(desired_direction), math.degrees(safe_direction)) # maabl
         if self.flipped and self.joint_angle_rad:
             safe_direction = normalizeAnglePIPI(safe_direction + sum(self.joint_angle_rad))
         #print(self.time,"safety:%f    desired:%f  safe_direction:%f"%(safety, desired_direction, safe_direction))
@@ -294,11 +296,16 @@ class SubTChallenge:
                 break
         print(self.time, 'stop at', self.time - start_time, self.is_moving)
 
+
+    def can_flip(self):
+        return self.symmetric and distance3D(self.last_position, self.flipping_pose) > 1.0
+
     def flip(self, with_stop=True):
         # make sure that we will use clean data
         self.scan = None
 
         self.flipped = not self.flipped
+        self.flipping_pose = self.last_position
         self.bus.publish('flipped', self.flipped)
 
         if with_stop:
@@ -327,8 +334,8 @@ class SubTChallenge:
                         else:
                             desired_direction = normalizeAnglePIPI(
                                     follow_wall_angle(self.scan, gap_size=gap_size, wall_dist=wall_dist, right_wall=right_wall, **self.follow_wall_params))
-                            flip_threshold = math.radians(115)  # including some margin around corners
-                            if self.symmetric and (
+                            flip_threshold = math.radians(130)  # including some margin around corners
+                            if self.can_flip() and (
                                     (right_wall and desired_direction > flip_threshold) or
                                     (not right_wall and desired_direction < -flip_threshold)):
                                 print('Flipping:', math.degrees(desired_direction))
@@ -464,7 +471,7 @@ class SubTChallenge:
                 desired_direction = normalizeAnglePIPI(math.atan2(target_y - y, target_x - x) - yaw)
                 if self.flipped and self.joint_angle_rad:
                     desired_direction = normalizeAnglePIPI(desired_direction + sum(self.joint_angle_rad))
-                if self.symmetric and abs(desired_direction) > math.radians(95):  # including hysteresis
+                if self.can_flip() and abs(desired_direction) > math.radians(95):  # including hysteresis
                     print('Flipping:', math.degrees(desired_direction))
                     self.flip()
                     continue
@@ -504,7 +511,7 @@ class SubTChallenge:
                 desired_direction = normalizeAnglePIPI(math.atan2(target_y - y, target_x - x) - yaw)
                 if self.flipped and self.joint_angle_rad:
                     desired_direction = normalizeAnglePIPI(desired_direction + sum(self.joint_angle_rad))
-                if self.symmetric and abs(desired_direction) > math.radians(95):  # including hysteresis
+                if self.can_flip() and abs(desired_direction) > math.radians(95):  # including hysteresis
                     print('Flipping:', math.degrees(desired_direction))
                     self.flip()
                 else:

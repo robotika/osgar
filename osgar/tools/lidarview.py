@@ -590,8 +590,7 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
                     history.prev()
                 if event.key == K_d:  # dump scan
                     print(scan)
-                    if g_depth is not None:
-                        np.savez_compressed('depth.npz', depth=g_depth, pose3d=pose3d, img=pygame_to_numpy_image(image), scan=scan)
+                    np.savez_compressed('depth.npz', depth=g_depth, pose3d=pose3d, img=pygame_to_numpy_image(image), scan=scan)
                 if event.key == K_p:  # print position
                     print(pose)
                     x, y, heading = pose

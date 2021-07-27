@@ -9,7 +9,7 @@
           "init": {
             "max_speed": 0.5,
             "symmetric": false,
-            "virtual_bumper_sec": 60,
+            "virtual_bumper_sec": 75,
             "virtual_bumper_radius": 10.0,
             "virtual_world": true,
             "speed_policy": "conservative",

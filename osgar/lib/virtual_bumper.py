@@ -45,11 +45,12 @@ class VirtualBumper:
             else:
                 self.last_pose = pose
                 self.last_pose_time = timestamp
+                self.not_moving = None
         else:
             self.last_pose = pose
             self.last_pose_time = timestamp
         if self.verbose:
-            print(self.last_pose, self.last_pose_time, self.not_moving, self.stuck_time)
+            print(self.last_pose, self.last_pose_time, pose, timestamp, self.not_moving, self.should_be_moving)
         # if it should not be moving reset all counters
         if not self.should_be_moving:
             self.reset_counters()
