@@ -9,7 +9,7 @@ from osgar.node import Node
 HEIGHT = 1.6  # TODO config or message?
 EMERGENCY_HEIGHT = 0.5
 MAX_ANGULAR = 1.0
-MAX_VERTICAL = 1.0
+MAX_VERTICAL = 2.5
 PID_P = 1.5  # 2.0  # 0.5
 
 
@@ -72,7 +72,8 @@ class Drone(Node):
                 H = diff
                 desiredVel = PID_P * diff
             else:
-                if min(self.lastScanDown, self.lastScanUp) < EMERGENCY_HEIGHT:
+                if ((self.lastScanDown < EMERGENCY_HEIGHT and self.desired_z_speed <= 0) or
+                        (self.lastScanUp < EMERGENCY_HEIGHT and self.desired_z_speed >= 0)):
                     print(self.time, 'Emergency limit', self.lastScanDown, self.lastScanUp)
                     # temporary switch to keep safe height from bottom/top
                     down = self.lastScanDown - EMERGENCY_HEIGHT
