@@ -212,6 +212,14 @@
 	      "in": ["scan", "rs_scan", "slope_scan"],
 	      "out": ["scan"],
 	      "init":{}
+      },
+      "system": {
+	      "driver": "systemmonitor",
+	      "in": [],
+	      "out": ["cpu", "ram", "temp"],
+	      "init": {
+	          "dmesg": true
+	      }
       }
 	      
     },
