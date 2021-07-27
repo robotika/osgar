@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+
+      "receiver": {
+          "driver": "zeromq",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+            "mode": "PULL",
+            "timeout":0.5,
+            "endpoint": "tcp://192.168.2.23:5555"
+          }
+      },
+      "rosmsg": {
+          "driver": "rosmsg",
+          "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
+          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin"],
+          "init": {
+            "downsample": 1
+          }
+      }
+    },
+    "links": [
+      ["receiver.raw", "rosmsg.slot_raw"]
+      ]
+  }
+}
+

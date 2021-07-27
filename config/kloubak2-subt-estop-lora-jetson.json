@@ -41,7 +41,7 @@
                   "downdrops_front", "downdrops_rear",
                   "joint_angle"],
           "init": {
-            "drive_mode": "FRONT",
+            "drive_mode": "ALL",
             "wheel_distance": 0.496,
             "center_axle_distance": 0.348,
             "ad_center": 531,
@@ -172,7 +172,7 @@
           "init": {
             "mode": "PULL",
             "timeout":0.5,
-            "endpoint": "tcp://k2jetson_front.local:5555"
+            "endpoint": "tcp://192.168.2.23:5555"
           }
       },
       "receiver_rear": {
@@ -182,7 +182,7 @@
           "init": {
             "mode": "PULL",
             "timeout":0.5,
-            "endpoint": "tcp://k2jetson_rear.local:5555"
+            "endpoint": "tcp://192.168.2.24:5555"
           }
       },
       "rosmsg": {
@@ -225,8 +225,8 @@
               ["lidar.raw", "lidar_tcp.raw"],
               ["lidar_back_tcp.raw", "lidar_back.raw"],
               ["lidar_back.raw", "lidar_back_tcp.raw"],
-              ["scan_mixer.scan", "app.scan"],
-              ["scan_mixer_rear.scan", "app.scan_back"],
+              ["lidar.scan", "app.scan"],
+              ["lidar_back.scan", "app.scan_back"],
               ["kloubak.emergency_stop", "app.emergency_stop"],
               ["imu_serial.raw", "imu.raw"],
               ["imu.rotation", "app.rot"],
