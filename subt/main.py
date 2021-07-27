@@ -238,7 +238,6 @@ class SubTChallenge:
             safety, safe_direction = 1.0, desired_direction
         else:
             safety, safe_direction = self.local_planner.recommend(desired_direction)
-        print(self.time, math.degrees(desired_direction), math.degrees(safe_direction)) # maabl
         if self.flipped and self.joint_angle_rad:
             safe_direction = normalizeAnglePIPI(safe_direction + sum(self.joint_angle_rad))
         #print(self.time,"safety:%f    desired:%f  safe_direction:%f"%(safety, desired_direction, safe_direction))
