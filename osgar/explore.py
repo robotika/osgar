@@ -35,7 +35,7 @@ def tangent_circle(dist, radius):
     return math.radians(100)
 
 
-def follow_wall_angle(laser_data, gap_size, wall_dist, right_wall=False, internal_reflection_threshold=0.3, max_wall_distance=4):
+def follow_wall_angle(laser_data, gap_size, wall_dist, right_wall=False, internal_reflection_threshold=0.3, max_wall_distance=4, default_wall_angle_deg=20):
     """
         Find the angle to the closest point in laser scan (either on the left or right side).
         Then calculate an angle to a free space as tangent to circle of given wall_dist.
@@ -78,7 +78,7 @@ def follow_wall_angle(laser_data, gap_size, wall_dist, right_wall=False, interna
     if not found_wall:
         # No wall found. Let's slowly circle.
         # TODO: ideally, this would be stateful and we would spiral.
-        return math.radians(-20 if right_wall else 20)
+        return math.radians(-default_wall_angle_deg if right_wall else default_wall_angle_deg)
 
     last_wall_idx = wall_start_idx
     gap_end_idx = None
