@@ -9,7 +9,7 @@
           "init": {
             "max_speed": 0.5,
             "symmetric": false,
-            "virtual_bumper_sec": 60,
+            "virtual_bumper_sec": 75,
             "virtual_bumper_radius": 10.0,
             "virtual_world": true,
             "speed_policy": "conservative",
@@ -28,7 +28,8 @@
             "trace_z_weight": 1.0,
             "follow_wall": {
               "internal_reflection_threshold": 0,
-              "max_wall_distance": 8.0
+              "max_wall_distance": 8.0,
+              "default_wall_angle_deg": 5
             }
          }
       },

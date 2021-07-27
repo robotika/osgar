@@ -53,7 +53,7 @@ case $ROBOT_CONFIG in
     LAUNCH_FILE="robot freyja.launch"
     CONFIG_FILES=("zmq-subt-x2.json" "subt-freyja.json")
     GAPSIZE=0.9
-    WALLDIST=1.6
+    WALLDIST=1.3
     SPEED=1.5
     ;;
   "ROBOTIKA_KLOUBAK_SENSOR_CONFIG"*):
