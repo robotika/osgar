@@ -205,7 +205,6 @@ class SubTChallenge:
             self.pause_start_time = timedelta()  # paused from the very beginning
 
     def is_home(self):
-        return False
         HOME_RADIUS = 20.0
         home_position = self.trace.start_position()
         return home_position is None or distance3D(self.last_position, home_position) < HOME_RADIUS
