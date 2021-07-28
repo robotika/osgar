@@ -328,9 +328,10 @@ class main:
     def convert_rgbd(self, msg):
         # Pose of the robot relative to starting position.
         try:
+            self.tf.waitForTransform('odom', self.robot_name, msg.header.stamp, rospy.Duration(0.3))
             robot_pose = self.tf.lookupTransform('odom', self.robot_name, msg.header.stamp)
-        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
-            rospy.logerr('convert_rgbd error: {}'.format(e))
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException, tf.Exception) as e:
+            rospy.logerr('tf odom error: {}'.format(e))
             return None
         # Pose of the robot in the world coordinate frame, i.e. likely a non-zero initial
         # position.
@@ -352,12 +353,13 @@ class main:
                      [ 0,  0, -1, 0],
                      [ 1,  0,  0, 0],
                      [ 0,  0,  0, 1]])
+            self.tf.waitForTransform(self.robot_name, msg.header.frame_id, msg.header.stamp, rospy.Duration(0.3))
             camera_xyz, camera_quat = self.tf.lookupTransform(
                     self.robot_name, msg.header.frame_id, msg.header.stamp)
             camera_pose = (camera_xyz,
                     tf.transformations.quaternion_multiply(camera_quat, WORLD_TO_OPTICAL).tolist())
-        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
-            rospy.logerr('convert_rgbd error2: {}'.format(e))
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException, tf.Exception) as e:
+            rospy.logerr('tf camera error: {}'.format(e))
             return None
         rgb = msg.rgb_compressed.data
         d = msg.depth_compressed.data
