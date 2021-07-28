@@ -204,6 +204,11 @@ class SubTChallenge:
         if config.get('start_paused', False):
             self.pause_start_time = timedelta()  # paused from the very beginning
 
+    def is_home(self):
+        HOME_RADIUS = 20.0
+        home_position = self.trace.start_position()
+        return home_position is None or distance3D(self.last_position, home_position) < HOME_RADIUS
+
     def send_speed_cmd(self, speed, angular_speed):
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_desired_speed(speed, angular_speed)
@@ -246,7 +251,7 @@ class SubTChallenge:
         dist = min_dist(self.scan[size//3:2*size//3])
         if dist < self.min_safe_dist:  # 2.0:
             desired_speed = self.max_speed * (dist - self.dangerous_dist) / (self.min_safe_dist - self.dangerous_dist)
-        elif self.turbo_safe_dist is not None and self.turbo_speed is not None and dist > self.turbo_safe_dist:
+        elif self.turbo_safe_dist is not None and self.turbo_speed is not None and dist > self.turbo_safe_dist and not self.is_home():
             desired_speed = self.turbo_speed
         else:
             desired_speed = self.max_speed
@@ -476,7 +481,7 @@ class SubTChallenge:
                     continue
 
                 d = distance3D(self.xyz, [target_x, target_y, target_z])
-                time_to_target = d/(self.max_speed if self.turbo_speed is None else self.turbo_speed)
+                time_to_target = d/(self.max_speed if self.turbo_speed is None or self.is_home() else self.turbo_speed)
                 desired_z_speed = (target_z - self.xyz[2]) / time_to_target
                 self.bus.publish('desired_z_speed', desired_z_speed)
 
@@ -521,7 +526,7 @@ class SubTChallenge:
 
                 if is_trace3d:
                     d = distance3D(self.xyz, [target_x, target_y, target_z])
-                    time_to_target = d/(self.max_speed if self.turbo_speed is None else self.turbo_speed)
+                    time_to_target = d/(self.max_speed if self.turbo_speed is None or self.is_home() else self.turbo_speed)
                     desired_z_speed = (target_z - self.xyz[2]) / time_to_target
                     self.bus.publish('desired_z_speed', desired_z_speed)
 
@@ -928,7 +933,7 @@ class SubTChallenge:
         self.stdout('Final xyz (DARPA coord system):', self.xyz)
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver113!")
+        self.stdout("SubT Challenge Ver114!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
