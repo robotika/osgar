@@ -14,7 +14,7 @@
             "virtual_world": true,
             "speed_policy": "conservative",
             "rotation_p": 3.0,
-            "min_safe_dist": 1.4,
+            "min_safe_dist": 2.5,
             "dangerous_dist": 0.8,
             "turbo_safe_dist": 2.5,
             "turbo_speed": 3.0,
