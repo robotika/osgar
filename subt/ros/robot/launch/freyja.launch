@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 <launch>
-  <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)"/>
+  <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)" output="screen"/>
+
+  <node name="origin" pkg="robot" type="origin_tf.py" args="$(arg robot_name)"/>
 
   <!-- Combining front RGBD depth and image data into a single message. -->
   <node pkg="nodelet" type="nodelet" name="rgbd_sync_front" args="standalone rtabmap_ros/rgbd_sync">
@@ -165,7 +167,7 @@
     <param name="odom0_relative" value="false"/>
     <param name="odom1_relative" value="false"/>
     <param name="odom2_relative" value="false"/>
-    <param name="odom3_relative" value="false"/>
+    <param name="odom3_relative" value="true"/>
     <param name="pose0_relative" value="true"/>
     <param name="pose1_relative" value="true"/>
     <param name="imu0_relative" value="false"/>
