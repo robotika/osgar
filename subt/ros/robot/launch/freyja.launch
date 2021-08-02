@@ -167,7 +167,7 @@
     <param name="odom0_relative" value="false"/>
     <param name="odom1_relative" value="false"/>
     <param name="odom2_relative" value="false"/>
-    <param name="odom3_relative" value="true"/>
+    <param name="odom3_relative" value="false"/>
     <param name="pose0_relative" value="true"/>
     <param name="pose1_relative" value="true"/>
     <param name="imu0_relative" value="false"/>
