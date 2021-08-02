@@ -6,28 +6,26 @@ import math
 import socket
 import sys
 import threading
-import time
 import operator
 import functools
 
 import rospy
-import rostopic
 import tf
 import zmq
 import numpy as np
 
 from sensor_msgs.msg import Imu, LaserScan, PointCloud2
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Empty, Bool, Int32, String
-from geometry_msgs.msg import Twist
+from std_msgs.msg import Empty, Bool, Int32
+from geometry_msgs.msg import Pose, PoseArray, Twist
 from sensor_msgs.msg import BatteryState, FluidPressure
 from octomap_msgs.msg import Octomap
-from subt_msgs.srv import PoseFromArtifact
 from rtabmap_ros.msg import RGBDImage
+from visualization_msgs.msg import Marker, MarkerArray
 
 sys.path.append("/osgar-ws/src/osgar/osgar/lib")
 import serialize as osgar_serialize
-from quaternion import multiply as multiply_quaternions, rotate_vector, euler_zyx
+from quaternion import euler_zyx
 
 def py3round(f):
     if abs(round(f) - f) == 0.5:
@@ -81,6 +79,109 @@ def twist(data):
     return vel_msg
 
 
+class MappingInformationProvider:
+    ''' Provides data to DARPA's Mapping Server.
+
+    https://github.com/osrf/subt/wiki/api#mapping-server
+    '''
+    def __init__(self):
+        self.lock = threading.Lock()
+
+        self.recent_trajectory = []
+        self.trajectory_publisher = rospy.Publisher('/poses', PoseArray, queue_size=10)
+
+        self.artifacts = []
+        self.artf_publisher = rospy.Publisher('/markers', MarkerArray, queue_size=10)
+        # Mapping server accepst at most one message every ten seconds.
+        ARTIFACT_REPORT_INTERVAL = 0.11
+        self.artf_timer = rospy.Timer(rospy.Duration(ARTIFACT_REPORT_INTERVAL), self.publish_artifacts)
+
+    def add_pose_to_trajectory(self, pose, timestamp):
+        self.recent_trajectory.append((timestamp, pose))
+        # Mapping server accepts at most one message per second. We give
+        # ourselves some margin to stay on the safe side.
+        MIN_TRAJECTORY_SEGMENT_DURATION = rospy.Duration(1.2)
+        if self.recent_trajectory[-1][0] - self.recent_trajectory[0][0] >= MIN_TRAJECTORY_SEGMENT_DURATION:
+            segment = PoseArray()
+            segment.header.frame_id = 'global'
+            segment.header.stamp = self.recent_trajectory[-1][0]
+
+            for _, (p, o) in self.recent_trajectory:
+                info = Pose()
+                position = info.position
+                orientation = info.orientation
+                position.x, position.y, position.z = p
+                orientation.x, orientation.y, orientation.z, orientation.w = o
+                segment.poses.append(info)
+
+            self.trajectory_publisher.publish(segment)
+            self.recent_trajectory = []
+
+    def add_artifact(self, artf_type, artf_xyz):
+        with self.lock:
+            self.artifacts.append((artf_type, artf_xyz))
+
+    def publish_artifacts(self, event):
+        VISUALIZATION = {
+                # TYPE: (label, rgb, shape, size)
+                'TYPE_BACKPACK': ("Backpack", (1.0, 0.0, 0.0), Marker.SPHERE, (0.4, 0.4, 0.5)),
+                'TYPE_CUBE':  ("Cube", (0.0, 1.0, 1.0), Marker.CUBE, (0.3, 0.3, 0.3)),
+                'TYPE_DRILL': ("Drill", (1.0, 0.5, 1.0), Marker.CYLINDER, (0.2, 0.2, 0.3)),
+                'TYPE_EXTINGUISHER': ("Extinguisher", (1.0, 0.0, 0.0), Marker.CYLINDER, (0.3, 0.3, 0.5)),
+                'TYPE_GAS': ("Gas", (1.0, 1.0, 1.0), Marker.SPHERE, (1.0, 1.0, 1.0)),
+                'TYPE_HELMET': ("Helmet", (0.7, 0.7, 0.7), Marker.SPHERE, (0.3, 0.3, 0.3)),
+                'TYPE_PHONE': ("Phone", (0.0, 1.0, 0.5), Marker.CUBE, (0.15, 0.15, 0.1)),
+                'TYPE_RESCUE_RANDY': ("Survivor", (0.8, 1.0, 0.7), Marker.CYLINDER, (0.8, 0.8, 1.4)),
+                'TYPE_ROPE': ("Rope", (0.0, 0.0, 1.0), Marker.CYLINDER, (0.5, 0.5, 0.2)),
+                'TYPE_VENT': ("Vent", (1.0, 1.0, 1.0), Marker.CUBE, (0.8, 0.8, 0.8)),
+                }
+
+        msg = MarkerArray()
+        now = rospy.Time.now()
+        with self.lock:
+            for artf_idx, (artf_type, artf_xyz) in enumerate(self.artifacts):
+                artf_name, rgb, shape, size = VISUALIZATION[artf_type]
+
+                marker = Marker()
+                marker.header.frame_id = 'global'
+                marker.header.stamp = now
+                marker.ns = 'artifact:object'
+                marker.id = artf_idx
+                marker.action = Marker.MODIFY
+                marker.pose.position.x, marker.pose.position.y, marker.pose.position.z = [v / 1000.0 for v in artf_xyz]
+                marker.pose.orientation.x, marker.pose.orientation.y, marker.pose.orientation.z, marker.pose.orientation.w = 0, 0, 0, 1
+                marker.lifetime = rospy.Duration(0)  # FOREVER
+                marker.frame_locked = False
+                marker.type = shape
+                marker.scale.x, marker.scale.y, marker.scale.z = size
+                marker.color.r, marker.color.g, marker.color.b = rgb
+                marker.color.a = 0.3
+
+                msg.markers.append(marker)
+
+                label = Marker()
+                label.header.frame_id = 'global'
+                label.header.stamp = now
+                label.ns = 'artifact:name'
+                label.id = artf_idx
+                label.action = Marker.MODIFY
+                label.text = artf_name
+                label.pose.position.x, label.pose.position.y, label.pose.position.z = [v / 1000.0 for v in artf_xyz]
+                label.pose.position.z += 1.2  # Showing the label above the object.
+                label.pose.orientation.x, label.pose.orientation.y, label.pose.orientation.z, label.pose.orientation.w = 0, 0, 0, 1
+                label.lifetime = rospy.Duration(0)  # FOREVER
+                label.frame_locked = False
+                label.type = Marker.TEXT_VIEW_FACING
+                label.scale.x, label.scale.y, label.scale.z = 1, 1, 1
+                label.color.r, label.color.g, label.color.b = rgb
+                label.color.a = 1.0
+
+                msg.markers.append(label)
+
+
+        self.artf_publisher.publish(msg)
+
+
 class main:
     def __init__(self, robot_name, robot_config, robot_is_marsupial):
         rospy.init_node('cloudsim2osgar', log_level=rospy.DEBUG)
@@ -88,6 +189,8 @@ class main:
         self.robot_name = robot_name
         self.robot_config = robot_config
         self.prev_gas_detected = None  # report on change including the first reading
+
+        self.mapping_info_provider = MappingInformationProvider()
 
         # common topics
         topics = [
@@ -173,34 +276,6 @@ class main:
         outputs = functools.reduce(operator.add, (t[-1] for t in topics)) + ('robot_name', 'joint_angle')
         self.bus.register(outputs)
 
-        # origin
-        self.origin = None
-        origin_retry_delay = 0.2
-        ORIGIN_RETRY_EXPONENTIAL_BACKOFF = 1.3
-        MAX_ORIGIN_RETRY_DELAY = 2.0
-        ORIGIN_SERVICE_NAME = "/subt/pose_from_artifact_origin"
-        rospy.wait_for_service(ORIGIN_SERVICE_NAME)
-        origin_service = rospy.ServiceProxy(ORIGIN_SERVICE_NAME, PoseFromArtifact)
-        origin_request = String()
-        origin_request.data = robot_name
-        while self.origin is None:
-            try:
-                origin_response = origin_service(origin_request)
-                if origin_response.success:
-                    origin_pose = origin_response.pose.pose
-                    origin_position = origin_response.pose.pose.position
-                    origin_orientation = origin_response.pose.pose.orientation
-                    self.origin = (
-                            (origin_position.x, origin_position.y, origin_position.z),
-                            (origin_orientation.x, origin_orientation.y, origin_orientation.z,
-                                origin_orientation.w))
-            except rospy.ServiceException:
-                rospy.logerr("Failed to get origin. Trying again.")
-                time.sleep(origin_retry_delay)
-                origin_retry_delay = min(
-                        MAX_ORIGIN_RETRY_DELAY,
-                        ORIGIN_RETRY_EXPONENTIAL_BACKOFF * origin_retry_delay)
-
         for name, type, handler, _ in topics:
             rospy.loginfo("waiting for {}".format(name))
             rospy.wait_for_message(name, type)
@@ -220,6 +295,9 @@ class main:
                 if channel != 'cmd_vel':
                     # for debugging breadcrumbs deployment and marsupial detachment
                     rospy.logdebug("receiving: {} {}".format(channel, data))
+            elif channel == 'artf_xyz':
+                for artf_type, artf_xyz, _, _ in data:
+                    self.mapping_info_provider.add_artifact(artf_type, artf_xyz)
             else:
                 rospy.loginfo("ignoring: {} {}".format(channel, data))
 
@@ -253,20 +331,19 @@ class main:
         self.odom_fused_count += 1
         rospy.loginfo_throttle(10, "odom_fused callback: {}".format(self.odom_fused_count))
 
-        raw_position = msg.pose.pose.position
-        raw_orientation = msg.pose.pose.orientation
+        # We want pose of the robot in the world coordinate system with (0, 0, 0)
+        # at the entrance gate. The incoming message is in the "odom" frame, i.e.
+        # relative to the starting point of the robot. We need to transform the
+        # coordinates one way or the other, so let's just directly request the
+        # transform we need.
+        try:
+            self.tf.waitForTransform('global', self.robot_name, msg.header.stamp, rospy.Duration(0.05))
+            robot_pose = self.tf.lookupTransform('global', self.robot_name, msg.header.stamp)
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException, tf.Exception) as e:
+            rospy.logerr('tf global error: {}'.format(e))
+            return None
 
-        raw_xyz = [raw_position.x, raw_position.y, raw_position.z]
-        raw_quat = [raw_orientation.x, raw_orientation.y, raw_orientation.z, raw_orientation.w]
-
-        origin_translation, origin_rotation = self.origin
-
-        full_orientation = multiply_quaternions(origin_rotation, raw_quat)
-        full_translation = [sum(v) for v in zip(
-            origin_translation,
-            rotate_vector(raw_xyz, origin_rotation))]
-
-        self.bus.publish('pose3d', [full_translation, full_orientation])
+        self.bus.publish('pose3d', robot_pose)
 
         if self.robot_config.startswith("ROBOTIKA_KLOUBAK_SENSOR_CONFIG"):
             try:
@@ -275,6 +352,8 @@ class main:
                 self.bus.publish('joint_angle', [int(100 * math.degrees(body_rotation))])  # Hundreth of a degree.
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
                 rospy.logerr('joint error: {}'.format(e))
+
+        self.mapping_info_provider.add_pose_to_trajectory(robot_pose, msg.header.stamp)
 
     def battery_state(self, msg):
         self.battery_state_count += 1
@@ -328,21 +407,11 @@ class main:
     def convert_rgbd(self, msg):
         # Pose of the robot relative to starting position.
         try:
-            self.tf.waitForTransform('odom', self.robot_name, msg.header.stamp, rospy.Duration(0.3))
-            robot_pose = self.tf.lookupTransform('odom', self.robot_name, msg.header.stamp)
+            self.tf.waitForTransform('global', self.robot_name, msg.header.stamp, rospy.Duration(0.3))
+            robot_pose = self.tf.lookupTransform('global', self.robot_name, msg.header.stamp)
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException, tf.Exception) as e:
-            rospy.logerr('tf odom error: {}'.format(e))
+            rospy.logerr('tf global error: {}'.format(e))
             return None
-        # Pose of the robot in the world coordinate frame, i.e. likely a non-zero initial
-        # position.
-        if self.origin is not None:
-            origin_translation, origin_rotation = self.origin
-            raw_robot_translation, raw_robot_rotation = robot_pose
-            full_robot_rotation = multiply_quaternions(origin_rotation, raw_robot_rotation)
-            full_robot_translation = [sum(v) for v in zip(
-                origin_translation,
-                rotate_vector(raw_robot_translation, origin_rotation))]
-            robot_pose = full_robot_translation, full_robot_rotation
         # Position of the camera relative to the robot.
         try:
             # RTABMAP produces rotation in a visual coordinate frame (Z axis

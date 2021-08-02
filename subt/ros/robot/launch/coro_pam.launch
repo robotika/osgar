@@ -2,6 +2,8 @@
 <launch>
   <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)" output="screen"/>
 
+  <node name="origin" pkg="robot" type="origin_tf.py" args="$(arg robot_name)"/>
+
   <node name="depth_filter_left" pkg="robot" type="filter_depth.py" args="0.3 10">
     <remap from="input" to="$(arg robot_name)/rgbd_left/optical/depth/image_raw"/>
     <remap from="output" to="$(arg robot_name)/rgbd_left/optical/depth/filtered_image_raw"/>
@@ -24,7 +26,7 @@
     <remap from="output/image" to="$(arg robot_name)/rgbd_left/optical/depth/filtered_image_raw_rotated"/>
   </node>
 
-  <node name="rotated_img_right" pkg="robot" type="rotate_image_right.py" output="screen">
+  <node name="rotated_img_right" pkg="robot" type="rotate_image_right.py">
     <remap from="input/image" to="$(arg robot_name)/rgbd_right/optical/image_raw"/>
     <remap from="output/image" to="$(arg robot_name)/rgbd_right/optical/image_raw_rotated"/>
     <remap from="input/camera_info" to="$(arg robot_name)/rgbd_right/optical/camera_info"/>
@@ -200,10 +202,10 @@
     <param name="smooth_lagged_data" value="true"/>
     <param name="history_length" value="1.0"/>
 
-    <!-- -->
+    <!--
     <param name="print_diagnostics" value="true"/>
     <remap from="/diagnostics" to="$(arg robot_name)/odom_diagnostics"/>
-    <!-- -->
+    -->
 
     <remap from="odometry/filtered" to="/$(arg robot_name)/odom_fused"/>
   </node>
@@ -234,7 +236,7 @@
   <!-- Merge lidar scans into a single stream -->
   <node pkg="topic_tools" type="relay" name="lidar_merge_top" args="/$(arg robot_name)/top_scan $(arg robot_name)/all_scans"/>
   <node pkg="topic_tools" type="relay" name="lidar_merge_bottom" args="/$(arg robot_name)/bottom_scan /$(arg robot_name)/all_scans"/>
-  <node pkg="proxy" type="flyability" name="local_map" ns="$(arg robot_name)" output="screen">
+  <node pkg="proxy" type="flyability" name="local_map" ns="$(arg robot_name)">
     <param name="robot_frame_id" value="$(arg robot_name)"/>
     <param name="robot_height" value="0.5" />
     <remap from="local_map/input/camera_info" to="/$(arg robot_name)/rgbd_all/optical/camera_info"/>

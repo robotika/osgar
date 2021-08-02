@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
 <launch>
+  <node name="origin" pkg="robot" type="origin_tf.py" args="$(arg robot_name)"/>
+
   <!-- K2 movement controller -->
   <node name="k2" pkg="robot" type="k2.py" args="$(arg robot_name)">
     <remap from="cmd_vel/input" to="$(arg robot_name)/cmd_vel"/>
