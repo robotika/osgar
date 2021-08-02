@@ -7,11 +7,13 @@ import numpy as np
 
 from osgar.node import Node
 from osgar.lib.depth import decompress as decompress_depth
+from osgar.lib import quaternion
+
 from subt.trace import distance3D
 
 
 DEFAULT_MIN_DIST_STEP = 0.1  # meters
-DEFAULT_MIN_ANGLE_STEP = math.degrees(10)
+DEFAULT_MIN_ANGLE_STEP = math.radians(10)
 
 
 class ImageExtractor(Node):
@@ -30,7 +32,8 @@ class ImageExtractor(Node):
 
         if self.image_sampling > 0 and self.index % self.image_sampling == 0:
             if (self.last_anchor_pose is None or
-                distance3D(self.last_anchor_pose[0], robot_pose[0]) >= self.image_min_dist_step):
+                distance3D(self.last_anchor_pose[0], robot_pose[0]) >= self.image_min_dist_step or
+                quaternion.angle_between(self.last_anchor_pose[1], robot_pose[1]) >= self.image_min_angle_step):
                 self.publish('image', rgb_compressed)
                 self.last_anchor_pose = robot_pose
 
