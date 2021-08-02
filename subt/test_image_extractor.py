@@ -6,7 +6,7 @@ from subt.image_extractor import ImageExtractor
 
 class ImageExtractorTest(unittest.TestCase):
 
-    def test_min_dist(self):
+    def test_usage(self):
         bus = MagicMock()
         logimage = ImageExtractor(bus=bus, config={})
 
@@ -19,6 +19,22 @@ class ImageExtractorTest(unittest.TestCase):
         logimage.on_rgbd(data)
 
         bus.publish.assert_called_with('image', b'dummy image')
+
+    def test_min_dist(self):
+        bus = MagicMock()
+        logimage = ImageExtractor(bus=bus, config={})
+
+        robot_pose = [[0, 0, 0], [0, 0, 0, 1]]
+        camera_pose = None
+        rgb_compressed = b'dummy image'
+        depth_compressed = None
+
+        bus.reset_mock()
+        for i in range(10):
+            data = robot_pose, camera_pose, rgb_compressed, depth_compressed
+            logimage.on_rgbd(data)
+
+        self.assertEqual(len(bus.method_calls), 1)
 
 
 # vim: expandtab sw=4 ts=4
