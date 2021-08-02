@@ -230,6 +230,7 @@
               ["detector_left.stdout", "rosmsg.stdout"],
               ["detector_right.stdout", "rosmsg.stdout"],
               ["artifact_filter.artf_xyz", "reporter.artf_xyz"],
+              ["artifact_filter.artf_xyz", "torospy.artf_xyz"],
               ["rosmsg.base_station", "reporter.base_station"],
               ["reporter.artf_cmd", "transmitter.raw"],
 
