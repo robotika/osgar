@@ -21,27 +21,29 @@ class ImageExtractor(Node):
         super().__init__(config, bus)
         bus.register("image", "depth:gz")
         self.image_sampling = config.get('image_sampling', 1)  # no drop
-        self.image_min_dist_step = config.get('min_dist', DEFAULT_MIN_DIST_STEP)
-        self.image_min_angle_step = config.get('min_angle', DEFAULT_MIN_ANGLE_STEP)
         self.depth_sampling = config.get('depth_sampling', -1)  # do not log depth
+        self.min_dist_step = config.get('min_dist', DEFAULT_MIN_DIST_STEP)
+        self.min_angle_step = config.get('min_angle', DEFAULT_MIN_ANGLE_STEP)
         self.index = 0
         self.last_anchor_pose = None  # unknown
 
     def on_rgbd(self, data):
         robot_pose, camera_pose, rgb_compressed, depth_compressed = data
 
-        if self.image_sampling > 0 and self.index % self.image_sampling == 0:
-            if (self.last_anchor_pose is None or
-                distance3D(self.last_anchor_pose[0], robot_pose[0]) >= self.image_min_dist_step or
-                quaternion.angle_between(self.last_anchor_pose[1], robot_pose[1]) >= self.image_min_angle_step):
-                self.publish('image', rgb_compressed)
-                self.last_anchor_pose = robot_pose
+        sufficient_step = (self.last_anchor_pose is None or
+            distance3D(self.last_anchor_pose[0], robot_pose[0]) >= self.min_dist_step or
+            quaternion.angle_between(self.last_anchor_pose[1], robot_pose[1]) >= self.min_angle_step)
+        if self.image_sampling > 0 and self.index % self.image_sampling == 0 and sufficient_step:
+            self.publish('image', rgb_compressed)
+            self.last_anchor_pose = robot_pose
 
-        if self.depth_sampling > 0 and self.index % self.depth_sampling == 0:
+        if self.depth_sampling > 0 and self.index % self.depth_sampling == 0 and sufficient_step:
             arr = decompress_depth(depth_compressed) * 1000
             arr = np.clip(arr, 1, 0xFFFF)
             arr = np.ndarray.astype(arr, dtype=np.dtype('H'))
             self.publish('depth', arr)
+            self.last_anchor_pose = robot_pose  # note, that for proper operation the sampling should be the same or
+                                                # multiply of the other
         self.index += 1
 
     def update(self):
