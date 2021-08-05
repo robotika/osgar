@@ -132,7 +132,7 @@
           "in": ["rgbd"],
           "out": ["image", "depth"],
           "init": {
-            "image_sampling": 2
+            "image_sampling": 4
           }
       },
       "logimage_left": {
@@ -140,7 +140,7 @@
           "in": ["rgbd"],
           "out": ["image", "depth"],
           "init": {
-            "image_sampling": 2
+            "image_sampling": 4
           }
       },
       "logimage_right": {
@@ -148,7 +148,7 @@
           "in": ["rgbd"],
           "out": ["image", "depth"],
           "init": {
-            "image_sampling": 2
+            "image_sampling": 4
           }
       },
       "radio": {
