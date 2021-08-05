@@ -152,7 +152,7 @@ class SubTChallenge:
         self.height_above_ground = config.get('height_above_ground', 0.0)
         self.trace_z_weight = config.get('trace_z_weight', 0.2)  # Z is important for drones ~ 3.0
         self.neighborhood_size = config.get('neighborhood_size', 12.0)
-        self.approach_angle = math.radians(config.get('neighborhood_size', 45))
+        self.approach_angle = math.radians(config.get('approach_angle', 45))
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
         self.xyz = None  # unknown initial 3D position
