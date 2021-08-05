@@ -45,6 +45,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('folder', help='folder with *-pos.data files')
     args = parser.parse_args()
-    robots = read_all(args.folder
-                      )
+    robots = read_all(args.folder)
     draw(robots)
