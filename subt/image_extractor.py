@@ -25,25 +25,30 @@ class ImageExtractor(Node):
         self.min_dist_step = config.get('min_dist', DEFAULT_MIN_DIST_STEP)
         self.min_angle_step = config.get('min_angle', DEFAULT_MIN_ANGLE_STEP)
         self.index = 0
-        self.last_anchor_pose = None  # unknown
+        self.last_image_anchor_pose = None  # unknown
+        self.last_depth_anchor_pose = None  # unknown
+
+    def sufficient_step(self, anchor_pose, robot_pose):
+        return (anchor_pose is None or
+            distance3D(anchor_pose[0], robot_pose[0]) >= self.min_dist_step or
+            quaternion.angle_between(anchor_pose[1], robot_pose[1]) >= self.min_angle_step)
 
     def on_rgbd(self, data):
         robot_pose, camera_pose, rgb_compressed, depth_compressed = data
 
-        sufficient_step = (self.last_anchor_pose is None or
-            distance3D(self.last_anchor_pose[0], robot_pose[0]) >= self.min_dist_step or
-            quaternion.angle_between(self.last_anchor_pose[1], robot_pose[1]) >= self.min_angle_step)
-        if self.image_sampling > 0 and self.index % self.image_sampling == 0 and sufficient_step:
+        if (self.image_sampling > 0 and self.index % self.image_sampling == 0 and
+                self.sufficient_step(self.last_image_anchor_pose, robot_pose)):
             self.publish('image', rgb_compressed)
-            self.last_anchor_pose = robot_pose
+            self.last_image_anchor_pose = robot_pose
 
-        if self.depth_sampling > 0 and self.index % self.depth_sampling == 0 and sufficient_step:
+        if (self.depth_sampling > 0 and self.index % self.depth_sampling == 0 and
+                self.sufficient_step(self.last_depth_anchor_pose, robot_pose)):
             arr = decompress_depth(depth_compressed) * 1000
             arr = np.clip(arr, 1, 0xFFFF)
             arr = np.ndarray.astype(arr, dtype=np.dtype('H'))
             self.publish('depth', arr)
-            self.last_anchor_pose = robot_pose  # note, that for proper operation the sampling should be the same or
-                                                # multiply of the other
+            self.last_depth_anchor_pose = robot_pose
+
         self.index += 1
 
     def update(self):
