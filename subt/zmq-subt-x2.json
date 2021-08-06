@@ -131,6 +131,13 @@
       },
       "octomap": {
         "driver": "subt.octomap:Octomap"
+      },
+      "black_box": {
+        "driver": "subt.crash_report:CrashReport",
+          "init": {
+            "size": 100,
+            "threshold": 30.0
+          }
       }
     },
     "links": [["app.desired_speed", "twister.desired_speed"],
@@ -149,6 +156,10 @@
 
               ["fromrospy.rgbd_front", "detector.rgbd"],
               ["fromrospy.rgbd_rear", "detector_rear.rgbd"],
+
+              ["fromrospy.acc", "black_box.acc"],
+              ["fromrospy.rgbd_front", "black_box.rgbd"],
+              ["fromrospy.rgbd_rear", "black_box.rgbd"],
 
               ["fromrospy.scan360", "app.scan360"],
 
