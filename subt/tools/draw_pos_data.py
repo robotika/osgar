@@ -4,6 +4,7 @@
 
 from pathlib import Path
 
+import cv2
 from matplotlib import pyplot as plt
 
 
@@ -30,7 +31,7 @@ def read_all(folder):
     return ret
 
 
-def draw(robots):
+def draw(robots, create_video_path=None):
     fig, ax = plt.subplots()
     size = 0
     for name, arr in robots.items():
@@ -38,19 +39,8 @@ def draw(robots):
         y = [xyz[1] for t, xyz in arr]
         plt.plot(x, y, '-', label=name)
         size = max(size, len(x))
-#    plt.axes().set_aspect('equal', 'datalim')
-#    plt.legend()
-
-    axcolor = 'lightgoldenrodyellow'
-    # Make a horizontal slider to control the frequency.
-    axfreq = plt.axes([0.25, 0.1, 0.65, 0.03], facecolor=axcolor)
-    slider = plt.Slider(
-        ax=axfreq,
-        label='time [s]',
-        valmin=0.0,
-        valmax=size,
-        valinit=0.0,
-    )
+    ax.set_aspect(1.0)
+    plt.legend()
 
     # The function to be called anytime a slider's value changes
     def update(val):
@@ -63,6 +53,39 @@ def draw(robots):
             ax.scatter([x[index]], [y[index]], s=50)
         fig.canvas.draw_idle()
 
+    if create_video_path is not None:
+        assert create_video_path.endswith(".mp4"), create_video_path
+
+        tmp_image = "tmp_img.png"
+        writer = None
+        fps = 10
+        for i in range(size):
+            update(i)
+            plt.savefig(tmp_image)
+            img = cv2.imread(tmp_image, 1)
+            if writer is None:
+                height, width = img.shape[:2]
+                writer = cv2.VideoWriter(create_video_path,
+                                         cv2.VideoWriter_fourcc(*"mp4v"),
+                                         fps,
+                                         (width, height))
+            writer.write(img)
+        if writer is not None:
+            writer.release()
+        return  # i.e. no interactive session
+
+    axcolor = 'lightgoldenrodyellow'
+    # Make a horizontal slider to control the frequency.
+    axfreq = plt.axes([0.25, 0.1, 0.65, 0.03], facecolor=axcolor)
+    slider = plt.Slider(
+        ax=axfreq,
+        label='time [s]',
+        valmin=0.0,
+        valmax=size,
+        valinit=0.0,
+    )
+
+
     slider.on_changed(update)
 
     plt.show()
@@ -72,6 +95,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('folder', help='folder with *-pos.data files')
+    parser.add_argument('--create-video', help='output path (*.mp4) for generated video')
     args = parser.parse_args()
     robots = read_all(args.folder)
-    draw(robots)
+    draw(robots, create_video_path=args.create_video)
