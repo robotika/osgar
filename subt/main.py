@@ -127,6 +127,8 @@ class SubTChallenge:
         self.max_angular_speed = math.radians(60)
         self.rotation_p = config.get('rotation_p', 0.8)
         self.turbo_speed = config.get('turbo_speed')
+        self.cautious_speed = config.get('cautious_speed')
+        self.min_speed = config.get('min_speed', 0.05)
         self.gap_size = config['gap_size']
         self.wall_dist = config['wall_dist']
         self.follow_wall_params = config.get('follow_wall', {})
@@ -149,6 +151,8 @@ class SubTChallenge:
         assert(self.speed_policy in ['always_forward', 'conservative'])
         self.height_above_ground = config.get('height_above_ground', 0.0)
         self.trace_z_weight = config.get('trace_z_weight', 0.2)  # Z is important for drones ~ 3.0
+        self.neighborhood_size = config.get('neighborhood_size', 12.0)
+        self.approach_angle = math.radians(config.get('approach_angle', 45))
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
         self.xyz = None  # unknown initial 3D position
@@ -163,6 +167,7 @@ class SubTChallenge:
         self.joint_angle_rad = []  # optinal angles, needed for articulated robots flip
         self.stat = defaultdict(int)
         self.voltage = []
+        self.whereabouts = {}  # Whereabouts of other robots.
         self.trace = Trace()
         self.waypoints = None  # external waypoints for navigation
         self.loop_detector = LoopDetector()
@@ -209,6 +214,35 @@ class SubTChallenge:
         home_position = self.trace.start_position()
         return home_position is None or distance3D(self.last_position, home_position) < HOME_RADIUS
 
+    def is_approaching_another_robot(self):
+        if self.neighborhood_size is None or self.approach_angle is None:
+            return False
+
+        for other_xyz in self.whereabouts.values():
+            d = distance3D(self.xyz, other_xyz)
+            angle = normalizeAnglePIPI(math.atan2(other_xyz[1] - self.xyz[1], other_xyz[0] - self.xyz[0]) - self.yaw)
+            if d <= self.neighborhood_size and abs(angle) < self.approach_angle:
+                return True
+
+        return False
+
+    def speed_limit(self):
+        size = len(self.scan)
+        dist = min_dist(self.scan[size//2-size//10:size//2+size//10])
+        if dist < self.min_safe_dist:
+            safe_speed = self.max_speed * (dist - self.dangerous_dist) / (self.min_safe_dist - self.dangerous_dist)
+            desired_speed = safe_speed if self.cautious_speed is None or not self.is_approaching_another_robot() else min(safe_speed, self.cautious_speed)
+            if 0 <= desired_speed < self.min_speed:
+                desired_speed = self.min_speed
+            elif -self.min_speed < desired_speed < 0:
+                desired_speed = -self.min_speed
+            return desired_speed
+        elif self.cautious_speed is not None and self.is_approaching_another_robot():
+            return self.cautious_speed
+        elif self.turbo_safe_dist is not None and self.turbo_speed is not None and dist > self.turbo_safe_dist and not self.is_home():
+            return self.turbo_speed
+        return self.max_speed
+
     def send_speed_cmd(self, speed, angular_speed):
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_desired_speed(speed, angular_speed)
@@ -247,15 +281,7 @@ class SubTChallenge:
             safe_direction = normalizeAnglePIPI(safe_direction + sum(self.joint_angle_rad))
         #print(self.time,"safety:%f    desired:%f  safe_direction:%f"%(safety, desired_direction, safe_direction))
         desired_angular_speed = self.rotation_p * safe_direction
-        size = len(self.scan)
-        dist = min_dist(self.scan[size//3:2*size//3])
-        if dist < self.min_safe_dist:  # 2.0:
-            desired_speed = self.max_speed * (dist - self.dangerous_dist) / (self.min_safe_dist - self.dangerous_dist)
-        elif self.turbo_safe_dist is not None and self.turbo_speed is not None and dist > self.turbo_safe_dist and not self.is_home():
-            desired_speed = self.turbo_speed
-        else:
-            desired_speed = self.max_speed
-        desired_speed = desired_speed * (1.0 - self.safety_turning_coeff * min(self.max_angular_speed, abs(desired_angular_speed)) / self.max_angular_speed)
+        desired_speed = self.speed_limit() * (1.0 - self.safety_turning_coeff * min(self.max_angular_speed, abs(desired_angular_speed)) / self.max_angular_speed)
         if allow_z_control and self.slopes:
             slope_idx = int(len(self.slopes) * (safe_direction - -math.pi) / (2 * math.pi))
             slope = self.slopes[slope_idx]
@@ -481,7 +507,7 @@ class SubTChallenge:
                     continue
 
                 d = distance3D(self.xyz, [target_x, target_y, target_z])
-                time_to_target = d/(self.max_speed if self.turbo_speed is None or self.is_home() else self.turbo_speed)
+                time_to_target = d / max(0.01, abs(self.speed_limit()))
                 desired_z_speed = (target_z - self.xyz[2]) / time_to_target
                 self.bus.publish('desired_z_speed', desired_z_speed)
 
@@ -526,7 +552,7 @@ class SubTChallenge:
 
                 if is_trace3d:
                     d = distance3D(self.xyz, [target_x, target_y, target_z])
-                    time_to_target = d/(self.max_speed if self.turbo_speed is None or self.is_home() else self.turbo_speed)
+                    time_to_target = d / max(0.01, abs(self.speed_limit()))
                     desired_z_speed = (target_z - self.xyz[2]) / time_to_target
                     self.bus.publish('desired_z_speed', desired_z_speed)
 
@@ -613,6 +639,11 @@ class SubTChallenge:
 
     def on_slopes(self, timestamp, data):
         self.slopes = [math.radians(a/10) for a in data]
+
+    def on_whereabouts(self, timestamp, data):
+        robot_name, (_, robot_pose) = data
+        if robot_name != self.robot_name:
+            self.whereabouts[robot_name] = robot_pose
 
     def update(self):
         packet = self.bus.listen()
@@ -933,7 +964,7 @@ class SubTChallenge:
         self.stdout('Final xyz (DARPA coord system):', self.xyz)
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver116!")
+        self.stdout("SubT Challenge Ver117!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
