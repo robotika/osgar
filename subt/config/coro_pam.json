@@ -41,7 +41,7 @@
           "out": ["localized_artf", "dropped", "debug_artf", "stdout"],
           "init": {
             "virtual_world": true,
-            "fx": 554.25469
+            "fx": 343.159
           }
       },
       "detector_left": {
@@ -50,7 +50,7 @@
           "out": ["localized_artf", "dropped", "debug_artf", "stdout"],
           "init": {
             "virtual_world": true,
-            "fx": 554.25469
+            "fx": 343.159
           }
       },
       "detector_right": {
@@ -59,7 +59,7 @@
           "out": ["localized_artf", "dropped", "debug_artf", "stdout"],
           "init": {
             "virtual_world": true,
-            "fx": 554.25469
+            "fx": 343.159
           }
       },
       "gas_detector": {
