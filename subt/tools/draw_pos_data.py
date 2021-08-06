@@ -3,8 +3,10 @@
 """
 
 from pathlib import Path
+import io
 
 import cv2
+import numpy as np
 from matplotlib import pyplot as plt
 
 
@@ -56,13 +58,15 @@ def draw(robots, create_video_path=None):
     if create_video_path is not None:
         assert create_video_path.endswith(".mp4"), create_video_path
 
-        tmp_image = "tmp_img.png"
         writer = None
         fps = 10
         for i in range(size):
             update(i)
-            plt.savefig(tmp_image)
-            img = cv2.imread(tmp_image, 1)
+            image_stream = io.BytesIO()
+            plt.savefig(image_stream, format='png')
+            image_stream.seek(0)
+            file_bytes = np.asarray(bytearray(image_stream.read()), dtype=np.uint8)
+            img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
             if writer is None:
                 height, width = img.shape[:2]
                 writer = cv2.VideoWriter(create_video_path,
