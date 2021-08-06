@@ -12,7 +12,7 @@ class CrashReport(Node):
         super().__init__(config, bus)
         bus.register("crash_rgbd")
         size = config.get('size', 100)  # keep N last records
-        self.acc_limit = config.get('acc_limit', 100.0)  # i.e. 10g
+        self.threshold = config.get('threshold', 100.0)  # i.e. 10g
         self.buf = collections.deque(maxlen=size)
 
     def on_rgbd(self, data):
@@ -21,7 +21,7 @@ class CrashReport(Node):
     def on_acc(self, data):
         vec = [x/1000.0 for x in data]
         value = abs(distance3D(vec, [0, 0, 0]) - 9.81)
-        if value >= self.acc_limit:
+        if value >= self.threshold:
             for rec in self.buf:
                 self.publish('crash_rgbd', rec)
             self.buf.clear()
