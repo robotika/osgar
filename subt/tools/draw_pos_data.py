@@ -32,14 +32,11 @@ def read_all(folder):
 
 def draw(robots):
     fig, ax = plt.subplots()
-    pose = {}
     size = 0
     for name, arr in robots.items():
         x = [xyz[0] for t, xyz in arr]
         y = [xyz[1] for t, xyz in arr]
         plt.plot(x, y, '-', label=name)
-        index = len(x) - 1
-        pose[name] = plt.scatter([x[index]], [y[index]], s=50)
         size = max(size, len(x))
 #    plt.axes().set_aspect('equal', 'datalim')
 #    plt.legend()
@@ -58,22 +55,13 @@ def draw(robots):
     # The function to be called anytime a slider's value changes
     def update(val):
         ax.clear()
-#        line.set_ydata(f(t, amp_slider.val, freq_slider.val))
         for name, arr in robots.items():
             x = [xyz[0] for t, xyz in arr]
             y = [xyz[1] for t, xyz in arr]
-            ax.plot(x, y, '-', label=name)
             index = min(int(val), len(x) - 1)
-           # pose[name].set_offset([[x[index]], [y[index]]])
-#            pose[name] = plt.scatter([x[index]], [y[index]], s=50)
+            ax.plot(x[:index+1], y[:index+1], '-', label=name)
             ax.scatter([x[index]], [y[index]], s=50)
-            pose[name].set_xdata = [x[index]]
-            pose[name].set_ydata = [y[index]]
         fig.canvas.draw_idle()
-#        fig.canvas.draw()
-#        fig.canvas.flush_events()
-
-#    update(1000)
 
     slider.on_changed(update)
 
