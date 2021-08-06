@@ -162,7 +162,8 @@ def follow_wall_angle(laser_data, gap_size, wall_dist, right_wall=False, interna
             # If the gap is too narrow, we aim into the middle of it.
             extra_angle = rel_idx * rad_resolution / 2
         else:
-            # Otherwise we aim far from the wall in the direction of the gap end.
+            # Otherwise we aim far from the wall in the direction of the gap
+            # end, unless that moves us too far away from the followed wall.
             sin_angle = math.sin(rel_idx * rad_resolution)
             cos_angle = math.cos(rel_idx * rad_resolution)
             gap_start_x = last_wall_distance
@@ -174,7 +175,8 @@ def follow_wall_angle(laser_data, gap_size, wall_dist, right_wall=False, interna
             r = wall_dist / gap_size
             target_x = gap_start_x + r * (gap_end_x - gap_start_x)
             target_y = gap_start_y + r * (gap_end_y - gap_start_y)
-            extra_angle = math.atan2(target_y, target_x)
+            extra_angle = min(math.atan2(target_y, target_x),
+                              tangent_circle(last_wall_distance, wall_dist))
     else:
         extra_angle = tangent_circle(last_wall_distance, wall_dist)
 

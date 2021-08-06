@@ -228,7 +228,7 @@ class SubTChallenge:
 
     def speed_limit(self):
         size = len(self.scan)
-        dist = min_dist(self.scan[size//2-size//8:size//2+size//8])
+        dist = min_dist(self.scan[size//2-size//10:size//2+size//10])
         if dist < self.min_safe_dist:
             safe_speed = self.max_speed * (dist - self.dangerous_dist) / (self.min_safe_dist - self.dangerous_dist)
             desired_speed = safe_speed if self.cautious_speed is None or not self.is_approaching_another_robot() else min(safe_speed, self.cautious_speed)
