@@ -53,6 +53,7 @@ def draw(robots, create_video_path=None):
             index = min(int(val), len(x) - 1)
             ax.plot(x[:index+1], y[:index+1], '-', label=name)
             ax.scatter([x[index]], [y[index]], s=50)
+            ax.annotate(name[0], (x[index], y[index]))
         fig.canvas.draw_idle()
 
     if create_video_path is not None:
