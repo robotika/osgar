@@ -176,6 +176,13 @@
             "min_z": 0.0,
             "max_z": 4.0
           }
+      },
+      "black_box": {
+        "driver": "subt.crash_report:CrashReport",
+          "init": {
+            "size": 100,
+            "threshold": 30.0
+          }
       }
     },
     "links": [["app.desired_speed", "drone.desired_speed"],
@@ -197,6 +204,10 @@
               ["fromrospy.rgbd_left", "detector_left.rgbd"],
               ["fromrospy.rgbd_right", "detector_right.rgbd"],
 
+              ["fromrospy.acc", "black_box.acc"],
+              ["fromrospy.rgbd_front", "black_box.rgbd"],
+              ["fromrospy.rgbd_left", "black_box.rgbd"],
+              ["fromrospy.rgbd_right", "black_box.rgbd"],
 
               ["fromrospy.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
