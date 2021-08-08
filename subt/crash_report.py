@@ -40,10 +40,11 @@ if __name__ == "__main__":
     import argparse
     import numpy as np
     from osgar.lib.serialize import deserialize
-    from osgar.logger import LogReader, lookup_stream_id
+    from osgar.logger import LogReader, LogWriter, lookup_stream_id, lookup_stream_names
 
     parser = argparse.ArgumentParser("Analyze crash_rgbd data")
     parser.add_argument('logfile', help='path to logfile')
+    parser.add_argument('--verbose', '-v', help="verbose mode", action='store_true')
     args = parser.parse_args()
 
     crash_stream_id = lookup_stream_id(args.logfile, 'black_box.crash_rgbd')
@@ -56,12 +57,28 @@ if __name__ == "__main__":
         index = np.argmin(dist)
         return index
 
+    stream_names = lookup_stream_names(args.logfile)
+
+    def get_camera_name_id(camera_pose):
+        y = camera_pose[0][1]
+        if y == 0:
+            camera_direction = 'front'
+            # TODO rear
+        elif y < 0:
+            camera_direction = 'right'
+        else:  # y > 0
+            camera_direction = 'left'
+        return stream_names.index(f'fromrospy.rgbd_{camera_direction}') + 1
+
     poses = []
     crash_time = None
     with LogReader(args.logfile,
-               only_stream_id=[pose3d_stream_id, crash_stream_id]) as logreader:
-        for time, stream, data in logreader:
-            data = deserialize(data)
+               only_stream_id=[pose3d_stream_id, crash_stream_id]) as logreader, LogWriter(
+            filename='crash.log', start_time=logreader.start_time) as f:
+        for name in stream_names:
+            f.register(name)
+        for time, stream, raw_bytes in logreader:
+            data = deserialize(raw_bytes)
             if stream == pose3d_stream_id:
                 poses.append(data)
                 crash_time = None
@@ -69,7 +86,10 @@ if __name__ == "__main__":
                 robot_pose, camera_pose, rgb_compressed, depth_compressed = data
                 if crash_time is None:
                     crash_time = time
-                    print(f'------------- {crash_time} -------------')
-                print(nearest_pose(poses, robot_pose), camera_pose[0])
+                    if args.verbose:
+                        print(f'------------- {crash_time} -------------')
+                if args.verbose:
+                    print(nearest_pose(poses, robot_pose), camera_pose[0])
+                f.write(get_camera_name_id(camera_pose), raw_bytes, dt=time)
 
 # vim: expandtab sw=4 ts=4
