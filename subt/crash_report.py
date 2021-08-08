@@ -60,10 +60,9 @@ if __name__ == "__main__":
     stream_names = lookup_stream_names(args.logfile)
 
     def get_camera_name_id(camera_pose):
-        y = camera_pose[0][1]
+        x, y = camera_pose[0][:2]
         if y == 0:
-            camera_direction = 'front'
-            # TODO rear
+            camera_direction = 'front' if x > 0 else 'rear'
         elif y < 0:
             camera_direction = 'right'
         else:  # y > 0
