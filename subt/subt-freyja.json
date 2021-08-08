@@ -25,9 +25,14 @@
             "fx": 349.2
           }
       },
-      "detector_rear": {
+      "detector_lr": {
           "init": {
-            "fx": 349.2
+            "fx": 149.01
+          }
+      },
+      "detector_fr": {
+          "init": {
+            "fx": 149.01
           }
       }
     }
