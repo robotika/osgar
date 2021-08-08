@@ -44,8 +44,15 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser("Analyze crash_rgbd data")
     parser.add_argument('logfile', help='path to logfile')
+    parser.add_argument('--out', help='custom output (default [logfile]-crash.log)')
     parser.add_argument('--verbose', '-v', help="verbose mode", action='store_true')
     args = parser.parse_args()
+
+    outfile = args.out
+    if outfile is None:
+        assert args.logfile.endswith('.log')
+        outfile = args.logfile[:-4] + '-crash.log'
+    print('Crash outfile:', outfile)
 
     crash_stream_id = lookup_stream_id(args.logfile, 'black_box.crash_rgbd')
     pose3d_stream_id = lookup_stream_id(args.logfile, 'fromrospy.pose3d')
@@ -73,7 +80,7 @@ if __name__ == "__main__":
     crash_time = None
     with LogReader(args.logfile,
                only_stream_id=[pose3d_stream_id, crash_stream_id]) as logreader, LogWriter(
-            filename='crash.log', start_time=logreader.start_time) as f:
+            filename=outfile, start_time=logreader.start_time) as f:
         for name in stream_names:
             f.register(name)
         for time, stream, raw_bytes in logreader:
