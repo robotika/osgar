@@ -1,6 +1,6 @@
-world = "fp1"
+world = "fp2"
 timeout = 2000
-image = "ver101cuda"
+image = "ver118tri"
 
 [robots]
 A900L = "freyja"

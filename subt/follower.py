@@ -10,17 +10,34 @@ from osgar.node import Node
 class RadioFollower(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('waypoints')
+        bus.register('waypoints', 'query_trace')
         self.robot_name_prefix = None
+        self.robot_names = []
+        self.leader_trace = []
+
+    def get_leader_robot_name(self):
+        if self.robot_name_prefix is None:
+            return None
+        for name in self.robot_names:
+            if name.startswith(self.robot_name_prefix):
+                return name
+        return None
 
     def on_robot_name(self, data):
         name = data.decode('ascii')
         if 'X' in name and 'XM' not in name:  # not mapping
             self.robot_name_prefix = name.split('X')[1]
 
-    def on_robot_xyz(self, data):
-        name, position = data
+    def on_sim_time_sec(self, data):
+        leader_name = self.get_leader_robot_name()
+        if leader_name is not None:
+            # query the whole trace from the very beginning
+            self.publish('query_trace', (leader_name, 0, data))
 
+    def on_robot_xyz(self, data):
+        name, position_with_time = data
+        if name not in self.robot_names:
+            self.robot_names.append(name)
 
     def update(self):
         channel = super().update()  # define self.time
