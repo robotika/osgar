@@ -5,6 +5,7 @@ Follow trace of already running robot (with shortcuts)
 """
 
 from osgar.node import Node
+from subt.trace import distance3D
 
 
 class RadioFollower(Node):
@@ -14,6 +15,9 @@ class RadioFollower(Node):
         self.robot_name_prefix = None
         self.robot_names = []
         self.leader_trace = []
+        self.min_update_step = 5.0  # meters
+        self.last_sent_xyz = None
+        self.verbose = False
 
     def get_leader_robot_name(self):
         if self.robot_name_prefix is None:
@@ -40,10 +44,19 @@ class RadioFollower(Node):
             self.robot_names.append(name)
 
     def on_pose3d(self, data):
-        pass
+        if (len(self.leader_trace) > 0 and
+                (self.last_sent_xyz is None or distance3D(self.last_sent_xyz, data[0]) > self.min_update_step)):
+            waypoints = [xyz for t, xyz in self.leader_trace]
+#            self.publish('waypoints', waypoints)
+            self.last_sent_xyz = data[0]
+            if self.verbose:
+                print(self.last_sent_xyz)
 
     def on_trace(self, data):
-        pass
+        leader_name = self.get_leader_robot_name()
+        assert len(data.keys()) == 1, data.keys()
+        assert leader_name in data, (leader_name, data.keys())
+        self.leader_trace = data[leader_name]  # TODO smarter merge
 
     def update(self):
         channel = super().update()  # define self.time
