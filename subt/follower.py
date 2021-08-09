@@ -32,7 +32,7 @@ class RadioFollower(Node):
         leader_name = self.get_leader_robot_name()
         if leader_name is not None:
             # query the whole trace from the very beginning
-            self.publish('query_trace', (leader_name, 0, data))
+            self.publish('query_trace', [leader_name, 0, data])
 
     def on_robot_xyz(self, data):
         name, position_with_time = data
