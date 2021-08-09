@@ -39,6 +39,12 @@ class RadioFollower(Node):
         if name not in self.robot_names:
             self.robot_names.append(name)
 
+    def on_pose3d(self, data):
+        pass
+
+    def on_trace(self, data):
+        pass
+
     def update(self):
         channel = super().update()  # define self.time
         handler = getattr(self, "on_" + channel, None)
