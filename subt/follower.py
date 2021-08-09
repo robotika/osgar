@@ -47,10 +47,10 @@ class RadioFollower(Node):
         if (len(self.leader_trace) > 0 and
                 (self.last_sent_xyz is None or distance3D(self.last_sent_xyz, data[0]) > self.min_update_step)):
             waypoints = [xyz for t, xyz in self.leader_trace]
-#            self.publish('waypoints', waypoints)
+            self.publish('waypoints', waypoints)
             self.last_sent_xyz = data[0]
             if self.verbose:
-                print(self.last_sent_xyz)
+                print(self.last_sent_xyz, waypoints)
 
     def on_trace(self, data):
         leader_name = self.get_leader_robot_name()
