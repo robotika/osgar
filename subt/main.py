@@ -120,7 +120,7 @@ class NewWaypointsMonitor:
 class SubTChallenge:
     def __init__(self, config, bus):
         self.bus = bus
-        bus.register("desired_speed", "pose2d", "stdout", "desired_z_speed", "flipped")
+        bus.register("desired_speed", "pose2d", "stdout", "desired_z_speed", "flipped", "follow_status")
         self.traveled_dist = 0.0
         self.time = None
         self.max_speed = config['max_speed']
@@ -940,8 +940,10 @@ class SubTChallenge:
 
     def play_virtual_part_map_and_explore_frontiers(self):
         start_time = self.sim_time_sec
+        self.bus.publish('follow_status', 'begin')
         while self.sim_time_sec - start_time < self.timeout.total_seconds():
             if self.waypoints is not None:
+                self.bus.publish('follow_status', 'following')
                 tmp_trace = Trace()
                 tmp_trace.trace = self.waypoints
                 self.waypoints = None
@@ -950,11 +952,13 @@ class SubTChallenge:
                     with NewWaypointsMonitor(self) as wm:
                         self.follow_trace(tmp_trace, timeout=timedelta(seconds=10),
                                           max_target_distance=1.0, end_threshold=0.5, is_trace3d=True)
+                        self.bus.publish('follow_status', 'completed')
                 except NewWaypointsException:
-                    pass
+                    self.bus.publish('follow_status', 'aborted')
                 self.send_speed_cmd(0, 0)
             else:
                 self.update()
+        self.bus.publish('follow_status', 'end')
 
     def play_virtual_part_return(self, timeout):
         self.return_home(timeout)
