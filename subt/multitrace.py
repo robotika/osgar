@@ -36,7 +36,7 @@ def get_intervals(seq):
 class MultiTraceManager(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('robot_trace', 'trace_info')
+        bus.register('robot_trace', 'trace_info', 'response')
         self.traces = {}
 
     def publish_trace_info(self):
@@ -83,7 +83,11 @@ class MultiTraceManager(Node):
             else:
                 # cut first part for now
                 for name in update:
-                    self.publish('robot_trace', {name : update[name][:CUT_NUM]})
+                    self.publish('robot_trace', {name: update[name][:CUT_NUM]})
+
+    def on_query(self, data):
+        name, from_sec, to_sec = data
+        self.publish('response', {name: self.traces.get(name, [])})
 
     def update(self):
         channel = super().update()  # define self.time

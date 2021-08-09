@@ -73,4 +73,11 @@ class MultiTraceManagerTest(unittest.TestCase):
         # AssertionError: 20362 not less than 1000
         self.assertLess(len(str(bus.method_calls[-1][1])), 1000)
 
+    def test_query_response(self):
+        bus = MagicMock()
+        mtm = MultiTraceManager(bus=bus, config={})
+        mtm.on_query(['A500L', 0, 100])
+        bus.publish.assert_called_with('response', {'A500L': []})
+
+
 # vim: expandtab sw=4 ts=4
