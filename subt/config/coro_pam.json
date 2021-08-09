@@ -183,6 +183,11 @@
             "size": 100,
             "threshold": 30.0
           }
+      },
+      "follower": {
+        "driver": "subt.follower:RadioFollower",
+          "init": {
+          }
       }
     },
     "links": [["app.desired_speed", "drone.desired_speed"],
@@ -232,6 +237,14 @@
               ["radio.robot_xyz", "app.whereabouts"],
               ["mtm.trace_info", "radio.trace_info"],
               ["mtm.robot_trace", "radio.robot_trace"],
+
+              ["fromrospy.robot_name", "follower.robot_name"],
+              ["rosmsg.sim_time_sec", "follower.sim_time_sec"],
+              ["radio.robot_xyz", "follower.robot_xyz"],
+              ["fromrospy.pose3d", "follower.pose3d"],
+              ["follower.query_trace", "mtm.query"],
+              ["mtm.response", "follower.trace"],
+              ["follower.waypoints", "app.waypoints"],
 
               ["rosmsg.sim_time_sec", "marsupial.sim_time_sec"],
               ["fromrospy.robot_name", "marsupial.robot_name"],
