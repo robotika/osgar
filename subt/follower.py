@@ -58,6 +58,14 @@ class RadioFollower(Node):
         assert leader_name in data, (leader_name, data.keys())
         self.leader_trace = data[leader_name]  # TODO smarter merge
 
+    def on_follow_status(self, data):
+        # begin, end, following, completed, aborted
+        if self.verbose:
+            print(f'follow status: {data}')
+        if data == 'completed':
+            # reset last "anchor pose"
+            self.last_sent_xyz = None
+
     def update(self):
         channel = super().update()  # define self.time
         handler = getattr(self, "on_" + channel, None)

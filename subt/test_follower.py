@@ -48,4 +48,27 @@ class RadioFollowerTest(unittest.TestCase):
         follower.on_robot_xyz(['B900R', [53, [-3.799999938402841, 1.999999616027235, 0.11749921263375614]]])
         self.assertEqual(follower.robot_names, ['B900R', 'A900L'])
 
+    def test_follow_status(self):
+        bus = MagicMock()
+        follower = RadioFollower(bus=bus, config={})
+        follower.robot_name_prefix = 'A'
+        follower.leader_trace = [[52, [-3.499999464866466, 3.9999992320291566, 0.11749785807827295]]]
+
+        bus.reset_mock()
+        pose3d = [[1, 2, 3], [0, 0, 0, 1]]
+        follower.on_pose3d(pose3d)
+        bus.publish.assert_called()
+
+        follower.on_follow_status('begin')
+
+        bus.reset_mock()
+        follower.on_pose3d(pose3d)
+        bus.publish.assert_not_called()
+
+        follower.on_follow_status('completed')
+
+        bus.reset_mock()
+        follower.on_pose3d(pose3d)
+        bus.publish.assert_called()
+
 # vim: expandtab sw=4 ts=4
