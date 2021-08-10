@@ -533,6 +533,7 @@ class SubTChallenge:
             END_THRESHOLD = end_threshold
         start_time = self.sim_time_sec
         print('MD', self.xyz, distance3D(self.xyz, trace.trace[0]), trace.trace)
+        termination_reason = None
         while distance3D(self.xyz, trace.trace[0]) > END_THRESHOLD and self.sim_time_sec - start_time < timeout.total_seconds():
             if self.update() in ['scan', 'scan360']:
                 target_x, target_y, target_z = trace.where_to(self.xyz, max_target_distance, self.trace_z_weight)
@@ -548,6 +549,7 @@ class SubTChallenge:
                     safety = self.go_safely(desired_direction, allow_z_control=False)
                     if safety_limit is not None and safety < safety_limit:
                         print('Danger! Safety limit for follow trace reached!', safety, safety_limit)
+                        termination_reason = 'safety'
                         break
 
                 if is_trace3d:
@@ -559,6 +561,7 @@ class SubTChallenge:
         print('End of follow trace(sec)', self.sim_time_sec - start_time)
         if is_trace3d:
             self.bus.publish('desired_z_speed', None)
+        return termination_reason
 
     def register(self, callback):
         self.monitors.append(callback)
@@ -940,8 +943,10 @@ class SubTChallenge:
 
     def play_virtual_part_map_and_explore_frontiers(self, details=None):
         start_time = self.sim_time_sec
+        timeout = self.timeout  # unlucky sharing among big blocks
         self.bus.publish('follow_status', 'begin')
-        while self.sim_time_sec - start_time < self.timeout.total_seconds():
+        termination_reason = None
+        while self.sim_time_sec - start_time < timeout.total_seconds():
             if self.waypoints is not None:
                 self.bus.publish('follow_status', 'following')
                 tmp_trace = Trace()
@@ -950,8 +955,12 @@ class SubTChallenge:
                 tmp_trace.reverse()
                 try:
                     with NewWaypointsMonitor(self) as wm:
-                        self.follow_trace(tmp_trace, timeout=timedelta(seconds=10),
-                                          max_target_distance=1.0, end_threshold=0.5, is_trace3d=True)
+                        termination_reason = self.follow_trace(tmp_trace, timeout=timedelta(seconds=10),
+                                          max_target_distance=1.0, end_threshold=0.5, is_trace3d=True,
+                                          safety_limit=0.1)
+                        if termination_reason == 'safety':
+                            self.bus.publish('follow_status', 'aborted-safety')
+                            break  # terminate exploration for now
                         self.bus.publish('follow_status', 'completed')
                 except NewWaypointsException:
                     self.bus.publish('follow_status', 'aborted')
@@ -959,6 +968,12 @@ class SubTChallenge:
             else:
                 self.update()
         self.bus.publish('follow_status', 'end')
+        if termination_reason == 'safety':
+            if details in ['explore-left', 'explore-right']:
+                self.timeout = timeout - timedelta(seconds=(self.sim_time_sec - start_time))
+                self.use_right_wall = (details == 'explore-right')
+                self.use_center = False
+                self.play_virtual_part_explore()
 
     def play_virtual_part_return(self, timeout):
         self.return_home(timeout)
