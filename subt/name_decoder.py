@@ -13,7 +13,7 @@ There is also eXtended or eXtra part of optional parameters separated by 'X' cha
 Currently only 'M' is used for enable mapping, i.e. name ends with 'XM'.
 """
 
-def split_multi(s, delimiters):
+def split_multi_simple(s, delimiters):
     # split string s via multiple character delimiters
     ret = []
     word = ''
@@ -27,12 +27,27 @@ def split_multi(s, delimiters):
     return ret
 
 
+def split_multi(s, delimiters):
+    # small letters are prohibited so they can be used as alternative single letter
+    multichar = [(k, chr(ord('a') + i)) for i, k in enumerate(delimiters) if len(k) > 1]
+    for k, v in multichar:
+        s = s.replace(k, v)
+    ret = []
+    for word in split_multi_simple(s, delimiters):
+        for k, v in multichar:
+            word = word.replace(v, k)  # inverse
+        ret.append(word)
+    return ret
+
+
 def parse_robot_name(robot_name):
     options = {
         'L': 'left',
         'R': 'right',
         'C': 'center',
         'E': 'explore',  # map & explore frontiers
+        'EL': 'explore-left',  # follow trace with left wall as fallback
+        'ER': 'explore-right',  # -"-              right      -"-
         'W': 'wait',
         'H': 'home'
     }
@@ -43,9 +58,15 @@ def parse_robot_name(robot_name):
     sum_t = 0
     entered = False
     for part in parts:
-        action = options[part[-1]]
+        if len(part) > 1 and part[-2:] in options:
+            action = options[part[-2:]]
+        else:
+            action = options[part[-1]]
         if len(part) > 1:
-            t = int(part[:-1])
+            if len(part) > 2 and not part[-2].isdigit():
+                t = int(part[:-2])
+            else:
+                t = int(part[:-1])
         else:
             assert action == 'home', action  # missing time
             t = 2 * sum_t
