@@ -938,7 +938,7 @@ class SubTChallenge:
 
         self.stdout(self.time, "Explore phase finished %.3f" % dist, reason)
 
-    def play_virtual_part_map_and_explore_frontiers(self):
+    def play_virtual_part_map_and_explore_frontiers(self, details=None):
         start_time = self.sim_time_sec
         self.bus.publish('follow_status', 'begin')
         while self.sim_time_sec - start_time < self.timeout.total_seconds():
@@ -999,9 +999,9 @@ class SubTChallenge:
                 self.use_center = (action == 'center')
                 self.play_virtual_part_explore()
 
-            elif action == 'explore':
+            elif action.startswith('explore'):
                 self.timeout = timedelta(seconds=duration)
-                self.play_virtual_part_map_and_explore_frontiers()
+                self.play_virtual_part_map_and_explore_frontiers(details=action)
 
             elif action == 'home':
                 self.play_virtual_part_return(timedelta(seconds=duration))
