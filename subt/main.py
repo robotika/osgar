@@ -1054,13 +1054,13 @@ def main():
     parser_run.add_argument('--init-path', help='inital path to be followed from (0, 0). 2D coordinates are separated by ;')
     parser_run.add_argument('--start-paused', dest='start_paused', action='store_true',
                             help='start robota Paused and wait for LoRa Contine command')
+    parser_run.add_argument('--use-record', help="use old osgar.record instant of zmqrouter", action='store_true')
 
     parser_replay = subparsers.add_parser('replay', help='replay from logfile')
     parser_replay.add_argument('logfile', help='recorded log file')
     parser_replay.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
     parser_replay.add_argument('--config', nargs='+', help='force alternative configuration file')
     parser_replay.add_argument('--debug', help="print debug info about I/O streams", action='store_true')
-    parser_replay.add_argument('--use-record', help="use old osgar.record instant of zmqrouter", action='store_true')
     args = parser.parse_args()
 
     if args.use_record:
