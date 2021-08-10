@@ -45,12 +45,12 @@ class FilterPointCloud:
         self.background = (np.dstack([pzs, pxs / fx, pys / fx]).T.reshape((3, -1))).reshape((3, self.camw, self.camh)).T * out_of_range
 
     def filter_points(self, msg):
-        assert msg.height == 480, msg.height
-        assert msg.width == 640, msg.width
+        assert msg.height == self.camh, msg.height
+        assert msg.width == self.camw, msg.width
         assert msg.point_step == 24, msg.point_step
-        assert msg.row_step == 640 * 24, msg.row_step
+        assert msg.row_step == self.camw * 24, msg.row_step
 
-        data = np.frombuffer(msg.data, dtype=np.float32).reshape((480, 640, 6))
+        data = np.frombuffer(msg.data, dtype=np.float32).reshape((self.camh, self.camw, 6))
         xyz = data[:, :, :3].copy()
         # convert +inf to real number outside sensor range
         mask = np.isposinf(xyz)
@@ -84,6 +84,6 @@ class FilterPointCloud:
 
 if __name__ == "__main__":
     rospy.init_node("FilterPointCloud")
-    filter = FilterPointCloud()
+    filter = FilterPointCloud(image_size=(640, 360))  # TODO external param X4 vs. CoRo Pam
     rospy.spin()
 

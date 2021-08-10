@@ -4,32 +4,62 @@
     "modules": {
       "app": {
           "driver": "application",
-          "in": ["emergency_stop", "scan360", "sim_time_sec", "acc", "robot_name", "joint_angle"],
-          "out": ["desired_speed", "pose2d", "pose3d", "stdout"],
+          "in": ["emergency_stop", "pose3d", "scan360", "slopes", "artf", "sim_time_sec", "acc", "robot_name"],
+          "out": ["desired_speed", "desired_z_speed", "pose2d", "artf_xyz", "pose3d", "stdout"],
           "init": {
             "max_speed": 0.5,
-            "symmetric": true,
+            "symmetric": false,
             "virtual_bumper_sec": 75,
             "virtual_bumper_radius": 10.0,
             "virtual_world": true,
-	    "direction_adherence": 45,
+            "speed_policy": "conservative",
+            "rotation_p": 3.0,
+            "min_safe_dist": 2.6,
+            "dangerous_dist": 1.9,
+            "turbo_safe_dist": 2.5,
+            "turbo_speed": 3.0,
+            "cautious_speed": 0.5,
+            "obstacle_influence": 1.2,
+            "direction_adherence": 45,
+            "max_obstacle_distance": 3.0,
+            "height_above_ground": 1.0,
+            "limit_roll": 90,
+            "limit_pitch": 90,
+            "return_limit_roll": 90,
+            "return_limit_pitch": 90,
+            "trace_z_weight": 1.0,
             "follow_wall": {
-              "max_wall_distance": 5.0
+              "internal_reflection_threshold": 0,
+              "max_wall_distance": 8.0,
+              "default_wall_angle_deg": 5
             }
          }
       },
       "detector": {
           "driver": "subt.artf_node:ArtifactDetectorDNN",
           "in": ["rgbd", "scan"],
-          "out": ["localized_artf", "dropped", "debug_artf", "debug_rgbd", "debug_result", "debug_cv_result", "stdout"],
+          "out": ["localized_artf", "dropped", "debug_artf", "stdout"],
           "init": {
+            "virtual_world": true,
+            "fx": 343.159
           }
       },
-      "detector_rear": {
+      "detector_left": {
           "driver": "subt.artf_node:ArtifactDetectorDNN",
           "in": ["rgbd", "scan"],
-          "out": ["localized_artf", "dropped", "debug_artf", "debug_rgbd", "debug_result", "debug_cv_result", "stdout"],
+          "out": ["localized_artf", "dropped", "debug_artf", "stdout"],
           "init": {
+            "virtual_world": true,
+            "fx": 343.159
+          }
+      },
+      "detector_right": {
+          "driver": "subt.artf_node:ArtifactDetectorDNN",
+          "in": ["rgbd", "scan"],
+          "out": ["localized_artf", "dropped", "debug_artf", "stdout"],
+          "init": {
+            "virtual_world": true,
+            "fx": 343.159
           }
       },
       "gas_detector": {
@@ -71,9 +101,16 @@
             "endpoint": "tcp://localhost:5555"
           }
       },
+      "drone": {
+          "driver": "subt.drone:Drone",
+          "in": ["desired_speed"],
+          "out": ["desired_speed_3d"],
+          "init": {
+          }
+      },
       "rosmsg": {
           "driver": "rosmsg",
-          "in": ["slot_raw", "desired_speed", "tick", "stdout"],
+          "in": ["slot_raw", "desired_speed_3d", "tick", "stdout"],
           "out": ["sim_time_sec", "cmd"],
           "init": {
             "downsample": 2
@@ -82,31 +119,36 @@
       "fromrospy": {
           "driver": "subt.pull:Pull",
           "init": {
-            "outputs": ["acc", "battery_state", "score", "pose3d", "gas_detected", "joint_angle",
-                        "scan_front", "scan_rear", "scan360", "rgbd_front:null", "rgbd_rear:null",
-                        "robot_name", "octomap:gz"]
+              "outputs": ["acc", "top_scan", "bottom_scan", "pose3d", "battery_state", "score", "gas_detected",
+                          "rgbd_front:null", "rgbd_left:null", "rgbd_right:null",
+                          "air_pressure", "scan360", "slopes", "octomap:gz", "robot_name"]
           }
       },
       "torospy": {
           "driver": "subt.push:Push"
-      },
-      "twister": {
-          "driver": "subt.twistwrap:TwistWrap"
       },
       "logimage": {
           "driver": "subt.image_extractor:ImageExtractor",
           "in": ["rgbd"],
           "out": ["image", "depth"],
           "init": {
-            "image_sampling": 3
+            "image_sampling": 4
           }
       },
-      "logimage_rear": {
+      "logimage_left": {
           "driver": "subt.image_extractor:ImageExtractor",
           "in": ["rgbd"],
           "out": ["image", "depth"],
           "init": {
-            "image_sampling": 10
+            "image_sampling": 4
+          }
+      },
+      "logimage_right": {
+          "driver": "subt.image_extractor:ImageExtractor",
+          "in": ["rgbd"],
+          "out": ["image", "depth"],
+          "init": {
+            "image_sampling": 4
           }
       },
       "radio": {
@@ -115,12 +157,11 @@
           "out": ["radio", "artf_xyz"],
           "init": {}
       },
-      "breadcrumbs": {
-          "driver": "subt.breadcrumbs:Breadcrumbs",
-          "in": ["sim_time_sec"],
-          "out": ["deploy"],
+      "marsupial": {
+          "driver": "subt.marsupial:Marsupial",
+          "in": ["robot_name", "sim_time_sec"],
+          "out": ["detach"],
           "init": {
-            "radius": 30
           }
       },
       "mtm": {
@@ -130,7 +171,11 @@
           "init": {}
       },
       "octomap": {
-        "driver": "subt.octomap:Octomap"
+        "driver": "subt.octomap:Octomap",
+          "init": {
+            "min_z": 0.0,
+            "max_z": 4.0
+          }
       },
       "black_box": {
         "driver": "subt.crash_report:CrashReport",
@@ -140,8 +185,9 @@
           }
       }
     },
-    "links": [["app.desired_speed", "twister.desired_speed"],
-              ["twister.cmd_vel", "torospy.cmd_vel"],
+    "links": [["app.desired_speed", "drone.desired_speed"],
+              ["app.desired_z_speed", "drone.desired_z_speed"],
+              ["drone.desired_speed_3d", "torospy.cmd_vel"],
               ["app.stdout", "rosmsg.stdout"],
               ["fromrospy.robot_name", "app.robot_name"],
               ["fromrospy.robot_name", "artifact_filter.robot_name"],
@@ -151,24 +197,21 @@
 
               ["fromrospy.acc", "app.acc"],
 
-              ["fromrospy.scan_front", "detector.scan"],
-              ["fromrospy.scan_rear", "detector_rear.scan"],
+              ["fromrospy.scan360", "app.scan360"],
+              ["fromrospy.slopes", "app.slopes"],
 
               ["fromrospy.rgbd_front", "detector.rgbd"],
-              ["fromrospy.rgbd_rear", "detector_rear.rgbd"],
+              ["fromrospy.rgbd_left", "detector_left.rgbd"],
+              ["fromrospy.rgbd_right", "detector_right.rgbd"],
 
               ["fromrospy.acc", "black_box.acc"],
               ["fromrospy.rgbd_front", "black_box.rgbd"],
-              ["fromrospy.rgbd_rear", "black_box.rgbd"],
-
-              ["fromrospy.scan360", "app.scan360"],
-
-              ["fromrospy.joint_angle", "app.joint_angle"],
+              ["fromrospy.rgbd_left", "black_box.rgbd"],
+              ["fromrospy.rgbd_right", "black_box.rgbd"],
 
               ["fromrospy.pose3d", "app.pose3d"],
               ["rosmsg.sim_time_sec", "app.sim_time_sec"],
               ["rosmsg.sim_time_sec", "reporter.sim_time_sec"],
-              ["rosmsg.sim_time_sec", "torospy.sim_time_sec"],
               ["rosmsg.sim_time_sec", "octomap.sim_time_sec"],
 
               ["fromrospy.pose3d", "gas_detector.pose3d"],
@@ -181,35 +224,43 @@
               ["radio.radio", "rosmsg.broadcast"],
               ["rosmsg.radio", "radio.radio"],
               ["rosmsg.sim_time_sec", "radio.sim_time_sec"],
+              ["radio.breadcrumb", "artifact_filter.breadcrumb"],
 
               ["radio.robot_xyz", "mtm.robot_xyz"],
               ["radio.trace_info", "mtm.trace_info"],
               ["radio.robot_trace", "mtm.robot_trace"],
+              ["radio.robot_xyz", "app.whereabouts"],
               ["mtm.trace_info", "radio.trace_info"],
               ["mtm.robot_trace", "radio.robot_trace"],
 
-              ["rosmsg.sim_time_sec", "breadcrumbs.sim_time_sec"],
-              ["fromrospy.pose3d", "breadcrumbs.pose3d"],
-              ["breadcrumbs.deploy", "torospy.deploy"],
-              ["breadcrumbs.location", "radio.breadcrumb"],
-              ["radio.breadcrumb", "breadcrumbs.external"],
-              ["radio.breadcrumb", "artifact_filter.breadcrumb"],
+              ["rosmsg.sim_time_sec", "marsupial.sim_time_sec"],
+              ["fromrospy.robot_name", "marsupial.robot_name"],
+              ["marsupial.detach", "torospy.detach"],
 
               ["detector.localized_artf", "artifact_filter.localized_artf"],
+              ["detector_left.localized_artf", "artifact_filter.localized_artf"],
+              ["detector_right.localized_artf", "artifact_filter.localized_artf"],
               ["detector.stdout", "rosmsg.stdout"],
-              ["detector_rear.localized_artf", "artifact_filter.localized_artf"],
-              ["detector_rear.stdout", "rosmsg.stdout"],
+              ["detector_left.stdout", "rosmsg.stdout"],
+              ["detector_right.stdout", "rosmsg.stdout"],
               ["artifact_filter.artf_xyz", "reporter.artf_xyz"],
               ["artifact_filter.artf_xyz", "torospy.artf_xyz"],
               ["rosmsg.base_station", "reporter.base_station"],
               ["reporter.artf_cmd", "transmitter.raw"],
+
+              ["fromrospy.bottom_scan", "drone.bottom_scan"],
+              ["fromrospy.top_scan", "drone.top_scan"],
+              ["fromrospy.pose3d", "drone.pose3d"],
+              ["fromrospy.air_pressure", "drone.air_pressure"],
+              ["app.desired_z_speed", "drone.desired_z_speed"],
 
               ["fromrospy.octomap", "octomap.octomap"],
               ["fromrospy.pose3d", "octomap.pose3d"],
               ["octomap.waypoints", "app.waypoints"],
 
               ["fromrospy.rgbd_front", "logimage.rgbd"],
-              ["fromrospy.rgbd_rear", "logimage_rear.rgbd"]
+              ["fromrospy.rgbd_left", "logimage_left.rgbd"],
+              ["fromrospy.rgbd_right", "logimage_right.rgbd"]
     ]
   }
 }

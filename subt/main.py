@@ -127,6 +127,8 @@ class SubTChallenge:
         self.max_angular_speed = math.radians(60)
         self.rotation_p = config.get('rotation_p', 0.8)
         self.turbo_speed = config.get('turbo_speed')
+        self.cautious_speed = config.get('cautious_speed')
+        self.min_speed = config.get('min_speed', 0.05)
         self.gap_size = config['gap_size']
         self.wall_dist = config['wall_dist']
         self.follow_wall_params = config.get('follow_wall', {})
@@ -149,6 +151,8 @@ class SubTChallenge:
         assert(self.speed_policy in ['always_forward', 'conservative'])
         self.height_above_ground = config.get('height_above_ground', 0.0)
         self.trace_z_weight = config.get('trace_z_weight', 0.2)  # Z is important for drones ~ 3.0
+        self.neighborhood_size = config.get('neighborhood_size', 12.0)
+        self.approach_angle = math.radians(config.get('approach_angle', 45))
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
         self.xyz = 0, 0, 0 #None  # unknown initial 3D position
@@ -157,10 +161,13 @@ class SubTChallenge:
         self.yaw_offset = None  # not defined, use first IMU reading
         self.is_moving = None  # unknown
         self.scan = None  # I should use class Node instead
+        self.slopes = None
         self.flipped = False  # by default use only front part
+        self.flipping_pose = self.last_position  # Last position where the robot flipped.
         self.joint_angle_rad = []  # optinal angles, needed for articulated robots flip
         self.stat = defaultdict(int)
         self.voltage = []
+        self.whereabouts = {}  # Whereabouts of other robots.
         self.trace = Trace()
         self.waypoints = None  # external waypoints for navigation
         self.loop_detector = LoopDetector()
@@ -202,6 +209,40 @@ class SubTChallenge:
         if config.get('start_paused', False):
             self.pause_start_time = timedelta()  # paused from the very beginning
 
+    def is_home(self):
+        HOME_RADIUS = 20.0
+        home_position = self.trace.start_position()
+        return home_position is None or distance3D(self.last_position, home_position) < HOME_RADIUS
+
+    def is_approaching_another_robot(self):
+        if self.neighborhood_size is None or self.approach_angle is None:
+            return False
+
+        for other_xyz in self.whereabouts.values():
+            d = distance3D(self.xyz, other_xyz)
+            angle = normalizeAnglePIPI(math.atan2(other_xyz[1] - self.xyz[1], other_xyz[0] - self.xyz[0]) - self.yaw)
+            if d <= self.neighborhood_size and abs(angle) < self.approach_angle:
+                return True
+
+        return False
+
+    def speed_limit(self):
+        size = len(self.scan)
+        dist = min_dist(self.scan[size//2-size//10:size//2+size//10])
+        if dist < self.min_safe_dist:
+            safe_speed = self.max_speed * (dist - self.dangerous_dist) / (self.min_safe_dist - self.dangerous_dist)
+            desired_speed = safe_speed if self.cautious_speed is None or not self.is_approaching_another_robot() else min(safe_speed, self.cautious_speed)
+            if 0 <= desired_speed < self.min_speed:
+                desired_speed = self.min_speed
+            elif -self.min_speed < desired_speed < 0:
+                desired_speed = -self.min_speed
+            return desired_speed
+        elif self.cautious_speed is not None and self.is_approaching_another_robot():
+            return self.cautious_speed
+        elif self.turbo_safe_dist is not None and self.turbo_speed is not None and dist > self.turbo_safe_dist and not self.is_home():
+            return self.turbo_speed
+        return self.max_speed
+
     def send_speed_cmd(self, speed, angular_speed):
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_desired_speed(speed, angular_speed)
@@ -220,13 +261,18 @@ class SubTChallenge:
             self.send_speed_cmd(-self.max_speed, 0.0)
         start_time = self.time
         while distance(start_pose, self.last_position) < abs(how_far):
+            if self.slopes:
+                slope_idx = 0 if how_far < 0 else len(self.slopes) // 2
+                slope = self.slopes[slope_idx]
+                desired_z_speed = float(self.max_speed * math.tan(slope))
+                self.bus.publish('desired_z_speed', desired_z_speed)
             self.update()
             if timeout is not None and self.time - start_time > timeout:
                 print("go_straight - TIMEOUT!")
                 break
         self.send_speed_cmd(0.0, 0.0)
 
-    def go_safely(self, desired_direction):
+    def go_safely(self, desired_direction, allow_z_control=True):
         if self.local_planner is None:
             safety, safe_direction = 1.0, desired_direction
         else:
@@ -235,20 +281,12 @@ class SubTChallenge:
             safe_direction = normalizeAnglePIPI(safe_direction + sum(self.joint_angle_rad))
         #print(self.time,"safety:%f    desired:%f  safe_direction:%f"%(safety, desired_direction, safe_direction))
         desired_angular_speed = self.rotation_p * safe_direction
-        size = len(self.scan)
-        dist = min_dist(self.scan[size//3:2*size//3])
-        if dist < self.min_safe_dist:  # 2.0:
-            if self.speed_policy == 'conservative':
-                desired_speed = self.max_speed * (1.2/2.0) * (dist - 0.4) / 1.6
-            elif self.speed_policy == 'always_forward':
-                desired_speed = self.max_speed * (dist - self.dangerous_dist) / (self.min_safe_dist - self.dangerous_dist)
-            else:
-                assert(False)  # Unsupported speed policy.
-        elif self.turbo_safe_dist is not None and self.turbo_speed is not None and dist > self.turbo_safe_dist:
-            desired_speed = self.turbo_speed
-        else:
-            desired_speed = self.max_speed
-        desired_speed = desired_speed * (1.0 - self.safety_turning_coeff * min(self.max_angular_speed, abs(desired_angular_speed)) / self.max_angular_speed)
+        desired_speed = self.speed_limit() * (1.0 - self.safety_turning_coeff * min(self.max_angular_speed, abs(desired_angular_speed)) / self.max_angular_speed)
+        if allow_z_control and self.slopes:
+            slope_idx = int(len(self.slopes) * (safe_direction - -math.pi) / (2 * math.pi))
+            slope = self.slopes[slope_idx]
+            desired_z_speed = float(desired_speed * math.tan(slope))
+            self.bus.publish('desired_z_speed', desired_z_speed)
         if self.flipped:
             self.send_speed_cmd(-desired_speed, desired_angular_speed)
         else:
@@ -257,6 +295,10 @@ class SubTChallenge:
 
     def turn(self, angle, with_stop=True, speed=0.0, timeout=None):
         print(self.time, "turn %.1f" % math.degrees(angle))
+
+        if self.slopes:
+            self.bus.publish('desired_z_speed', 0)
+
         start_pose = self.last_position
         if angle >= 0:
             self.send_speed_cmd(speed, self.max_angular_speed)
@@ -273,6 +315,10 @@ class SubTChallenge:
 
     def stop(self, timeout_sec=20):
         self.send_speed_cmd(0.0, 0.0)
+
+        if self.slopes:
+            self.bus.publish('desired_z_speed', 0)
+
         start_time = self.time
         while self.time - start_time < timedelta(seconds=timeout_sec):
             self.update()
@@ -280,11 +326,16 @@ class SubTChallenge:
                 break
         print(self.time, 'stop at', self.time - start_time, self.is_moving)
 
+
+    def can_flip(self):
+        return self.symmetric and distance3D(self.last_position, self.flipping_pose) > 1.0
+
     def flip(self, with_stop=True):
         # make sure that we will use clean data
         self.scan = None
 
         self.flipped = not self.flipped
+        self.flipping_pose = self.last_position
         self.bus.publish('flipped', self.flipped)
 
         if with_stop:
@@ -313,8 +364,8 @@ class SubTChallenge:
                         else:
                             desired_direction = normalizeAnglePIPI(
                                     follow_wall_angle(self.scan, gap_size=gap_size, wall_dist=wall_dist, right_wall=right_wall, **self.follow_wall_params))
-                            flip_threshold = math.radians(115)  # including some margin around corners
-                            if self.symmetric and (
+                            flip_threshold = math.radians(130)  # including some margin around corners
+                            if self.can_flip() and (
                                     (right_wall and desired_direction > flip_threshold) or
                                     (not right_wall and desired_direction < -flip_threshold)):
                                 print('Flipping:', math.degrees(desired_direction))
@@ -450,17 +501,17 @@ class SubTChallenge:
                 desired_direction = normalizeAnglePIPI(math.atan2(target_y - y, target_x - x) - yaw)
                 if self.flipped and self.joint_angle_rad:
                     desired_direction = normalizeAnglePIPI(desired_direction + sum(self.joint_angle_rad))
-                if self.symmetric and abs(desired_direction) > math.radians(95):  # including hysteresis
+                if self.can_flip() and abs(desired_direction) > math.radians(95):  # including hysteresis
                     print('Flipping:', math.degrees(desired_direction))
                     self.flip()
                     continue
 
                 d = distance3D(self.xyz, [target_x, target_y, target_z])
-                time_to_target = d/self.max_speed
+                time_to_target = d / max(0.01, abs(self.speed_limit()))
                 desired_z_speed = (target_z - self.xyz[2]) / time_to_target
                 self.bus.publish('desired_z_speed', desired_z_speed)
 
-                safety = self.go_safely(desired_direction)
+                safety = self.go_safely(desired_direction, allow_z_control=False)
                 if safety < 0.2:
                     print(self.time, "Safety low!", safety, desired_direction)
                     target_distance = MIN_TARGET_DISTANCE
@@ -490,18 +541,18 @@ class SubTChallenge:
                 desired_direction = normalizeAnglePIPI(math.atan2(target_y - y, target_x - x) - yaw)
                 if self.flipped and self.joint_angle_rad:
                     desired_direction = normalizeAnglePIPI(desired_direction + sum(self.joint_angle_rad))
-                if self.symmetric and abs(desired_direction) > math.radians(95):  # including hysteresis
+                if self.can_flip() and abs(desired_direction) > math.radians(95):  # including hysteresis
                     print('Flipping:', math.degrees(desired_direction))
                     self.flip()
                 else:
-                    safety = self.go_safely(desired_direction)
+                    safety = self.go_safely(desired_direction, allow_z_control=False)
                     if safety_limit is not None and safety < safety_limit:
                         print('Danger! Safety limit for follow trace reached!', safety, safety_limit)
                         break
 
                 if is_trace3d:
                     d = distance3D(self.xyz, [target_x, target_y, target_z])
-                    time_to_target = d/self.max_speed
+                    time_to_target = d / max(0.01, abs(self.speed_limit()))
                     desired_z_speed = (target_z - self.xyz[2]) / time_to_target
                     self.bus.publish('desired_z_speed', desired_z_speed)
 
@@ -585,6 +636,14 @@ class SubTChallenge:
 
     def on_waypoints(self, timestamp, data):
         self.waypoints = data
+
+    def on_slopes(self, timestamp, data):
+        self.slopes = [math.radians(a/10) for a in data]
+
+    def on_whereabouts(self, timestamp, data):
+        robot_name, (_, robot_pose) = data
+        if robot_name != self.robot_name:
+            self.whereabouts[robot_name] = robot_pose
 
     def update(self):
         packet = self.bus.listen()
@@ -831,7 +890,9 @@ class SubTChallenge:
         trace.add_line_to((0.5, entrance_offset, self.height_above_ground))  # 0.5m inside, towards the desired wall.
         trace.reverse()
         is_trace3d = self.height_above_ground > 0.0  # well, maybe there should be more obvious definition of ground/aerial vehicle
-        self.follow_trace(trace, timeout=timedelta(seconds=30), max_target_distance=2.5, safety_limit=0.2, is_trace3d=is_trace3d)
+        safety_limit = None if is_trace3d else 0.2  # UGV may need some collision avoidance during leaving the starting area
+                                                    # while the CoRo Pam drone generates fake artifacts near ground
+        self.follow_trace(trace, timeout=timedelta(seconds=30), max_target_distance=2.5, safety_limit=safety_limit, is_trace3d=is_trace3d)
 
     def play_virtual_part_explore(self):
         start_time = self.sim_time_sec
@@ -903,7 +964,7 @@ class SubTChallenge:
         self.stdout('Final xyz (DARPA coord system):', self.xyz)
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver109!")
+        self.stdout("SubT Challenge Ver117!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
@@ -994,6 +1055,7 @@ def main():
     parser_replay.add_argument('logfile', help='recorded log file')
     parser_replay.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
     parser_replay.add_argument('--config', nargs='+', help='force alternative configuration file')
+    parser_replay.add_argument('--debug', help="print debug info about I/O streams", action='store_true')
     args = parser.parse_args()
 
     if args.command == 'replay':

@@ -57,6 +57,9 @@ WORLDS = dict(
 
     # FINALS
     fq="finals_qual",
+    fp1="finals_practice_01",
+    fp2="finals_practice_02",
+    fp3="finals_practice_03",
 )
 
 ROBOTS=dict(
@@ -65,6 +68,7 @@ ROBOTS=dict(
     freyja = "ROBOTIKA_FREYJA_SENSOR_CONFIG_2",
     k2 = "ROBOTIKA_KLOUBAK_SENSOR_CONFIG_3",
     x2 = "ROBOTIKA_X2_SENSOR_CONFIG_1",
+    pam = "CORO_PAM_SENSOR_CONFIG_1",
 )
 
 XAUTH = pathlib.Path("/tmp/.docker.xauth")
@@ -139,7 +143,7 @@ def _create_docker(client, name, image, command, mounts=[], environment={}):
     return client.containers.create(image, **opts)
 
 
-def _run_sim(client, circuit, logdir, world, robots):
+def _run_sim(client, circuit, logdir, world, robots, show_sim_window):
     print("Creating/attaching 'sim-net'")
     try:
         simnet = client.networks.get("simnet")
@@ -152,10 +156,11 @@ def _run_sim(client, circuit, logdir, world, robots):
         )
         simnet = client.networks.create("simnet", ipam=ipam_config)
 
+    headless = int(not show_sim_window)
     print("Starting 'sim' container...")
     command = [
         "cloudsim_sim.ign",
-        "headless:=1",
+        f"headless:={headless}",
         "seed:=1",
         f"circuit:={circuit}",
         f"worldName:={world}"
@@ -272,6 +277,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description='Submit cloudsim run')
     parser.add_argument("config", nargs="?", default=str(pathlib.Path('./run.toml')))
     parser.add_argument("-n", action="store_true", help="dry run")
+    parser.add_argument("-s", "--show-simulator-window", action="store_true", help="Display Gazebo simulator window.")
     args = parser.parse_args(argv)
 
     config_file = pathlib.Path(args.config).resolve()
@@ -320,7 +326,7 @@ def main(argv=None):
 
     signal.signal(signal.SIGINT, _sigint)
 
-    sim = _run_sim(client, circuit, logdir, world, robots)
+    sim = _run_sim(client, circuit, logdir, world, robots, args.show_simulator_window)
     to_stop = [sim]
     stdout = [sim]
     to_wait = []

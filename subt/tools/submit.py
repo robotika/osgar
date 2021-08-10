@@ -63,11 +63,13 @@ WORLDS = dict(
     fp1 = "Finals Practice 1",
     fp2 = "Finals Practice 2",
     fp3 = "Finals Practice 3",
+    fpr = "Finals Preliminary Round",
 )
 
 ROBOTS=dict(
     teambase = "TEAMBASE",
     drone = "SSCI_X4_SENSOR_CONFIG_2",
+    pam = "CORO_PAM_SENSOR_CONFIG_1",
     freyja = "ROBOTIKA_FREYJA_SENSOR_CONFIG_2",
     k2 = "ROBOTIKA_KLOUBAK_SENSOR_CONFIG_3",
 )

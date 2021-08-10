@@ -204,6 +204,7 @@ class ArtifactDetectorDNN(Node):
         if self.width is None:
             self.stdout('Image resolution', img.shape)
             self.width = img.shape[1]
+            self.stdout('Camera pose', camera_pose)
         assert self.width == img.shape[1], (self.width, img.shape[1])
 
         result = self.detector(img)
