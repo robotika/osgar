@@ -155,7 +155,7 @@ class SubTChallenge:
         self.approach_angle = math.radians(config.get('approach_angle', 45))
 
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
-        self.xyz = 0, 0, 0 #None  # unknown initial 3D position
+        self.xyz = None  # unknown initial 3D position
         self.yaw, self.pitch, self.roll = 0, 0, 0
         self.orientation = None  # quaternion updated by on_pose3d()
         self.yaw_offset = None  # not defined, use first IMU reading
@@ -803,6 +803,12 @@ class SubTChallenge:
         try:
             with EmergencyStopMonitor(self):
                 allow_virtual_flip = self.symmetric
+
+                # wait for critical data
+                while any_is_none(self.scan, self.xyz):
+                    # self.xyz is initialized by pose3d
+                    self.update()
+
                 if distance(self.xyz, (0, 0)) > 0.1 or self.init_path is not None:
                     self.system_nav_trace(self.init_path)
 
