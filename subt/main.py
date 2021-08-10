@@ -1031,8 +1031,6 @@ class SubTChallenge:
 def main():
     import argparse
     from osgar.lib.config import config_load
-    from osgar.record import record
-    #from osgar.zmqrouter import record
 
     parser = argparse.ArgumentParser(description='SubT Challenge')
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
@@ -1056,7 +1054,13 @@ def main():
     parser_replay.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
     parser_replay.add_argument('--config', nargs='+', help='force alternative configuration file')
     parser_replay.add_argument('--debug', help="print debug info about I/O streams", action='store_true')
+    parser_replay.add_argument('--use-record', help="use old osgar.record instant of zmqrouter", action='store_true')
     args = parser.parse_args()
+
+    if args.use_record:
+        from osgar.record import record
+    else:
+        from osgar.zmqrouter import record
 
     if args.command == 'replay':
         from osgar.replay import replay
