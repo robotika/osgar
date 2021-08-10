@@ -957,7 +957,7 @@ class SubTChallenge:
                     with NewWaypointsMonitor(self) as wm:
                         termination_reason = self.follow_trace(tmp_trace, timeout=timedelta(seconds=10),
                                           max_target_distance=3.0, end_threshold=2.0, is_trace3d=True,
-                                          safety_limit=0.1)
+                                          safety_limit=None)  # TODO safety based on lidar in direction
                         if termination_reason == 'safety':
                             self.bus.publish('follow_status', 'aborted-safety')
                             break  # terminate exploration for now
