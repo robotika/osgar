@@ -206,7 +206,10 @@
 
               ["fromrospy.octomap", "octomap.octomap"],
               ["fromrospy.pose3d", "octomap.pose3d"],
-              ["octomap.waypoints", "app.waypoints"]
+              ["octomap.waypoints", "app.waypoints"],
+
+              ["fromrospy.rgbd_front", "logimage.rgbd"],
+              ["fromrospy.rgbd_rear", "logimage_rear.rgbd"]
     ]
   }
 }
