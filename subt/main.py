@@ -956,7 +956,7 @@ class SubTChallenge:
                 try:
                     with NewWaypointsMonitor(self) as wm:
                         termination_reason = self.follow_trace(tmp_trace, timeout=timedelta(seconds=10),
-                                          max_target_distance=1.0, end_threshold=0.5, is_trace3d=True,
+                                          max_target_distance=3.0, end_threshold=2.0, is_trace3d=True,
                                           safety_limit=0.1)
                         if termination_reason == 'safety':
                             self.bus.publish('follow_status', 'aborted-safety')
