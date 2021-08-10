@@ -292,7 +292,7 @@ class ArtifactDetectorDNN(Node):
                             prev_robot_pose, prev_camera_pose, self.max_depth)
                     if report is not None:
                         self.publish('localized_artf', report)
-                        self.publish('debug_camera', (camera_name, (prev_robot_pose, prev_camera_pose, prev_img_data), (curr_robot_pose, curr_camera_pose, curr_img_data)))
+                        self.publish('debug_camera', [camera_name, [prev_robot_pose, prev_camera_pose, prev_img_data], [curr_robot_pose, curr_camera_pose, curr_img_data]])
                 # else: The robot got too far from the detection point.
 
                 del self.prev_camera[camera_name]
