@@ -199,8 +199,6 @@
               ["detector.stdout", "rosmsg.stdout"],
               ["detector_lr.localized_artf", "artifact_filter.localized_artf"],
               ["detector_lr.stdout", "rosmsg.stdout"],
-              ["detector_fr.localized_artf", "artifact_filter.localized_artf"],
-              ["detector_fr.stdout", "rosmsg.stdout"],
               ["artifact_filter.artf_xyz", "reporter.artf_xyz"],
               ["artifact_filter.artf_xyz", "torospy.artf_xyz"],
               ["rosmsg.base_station", "reporter.base_station"],
