@@ -252,8 +252,6 @@ class main:
             topics.append(('/rtabmap/rgbd/rear/compressed', RGBDImage, self.rgbd_rear, ('rgbd_rear',)))
             topics.append(('/' + robot_name + '/camera_left/image_raw/compressed', CompressedImage, self.camera_left, ('camera_left',)))
             topics.append(('/' + robot_name + '/camera_right/image_raw/compressed', CompressedImage, self.camera_right, ('camera_right',)))
-            topics.append(('/' + robot_name + '/camera_front/image_raw/compressed', CompressedImage, self.camera_front, ('camera_front',)))
-            topics.append(('/' + robot_name + '/camera_rear/image_raw/compressed', CompressedImage, self.camera_rear, ('camera_rear',)))
             if robot_name.endswith('XM'):
                 topics.append(('/mapping/octomap_binary', Octomap, self.octomap, ('octomap',)))
         elif robot_config.startswith("ROBOTIKA_KLOUBAK_SENSOR_CONFIG"):
@@ -497,20 +495,6 @@ class main:
         camera = self.convert_camera(msg)
         if camera is not None:
             self.bus.publish('camera_right', camera)
-
-    def camera_front(self, msg):
-        self.camera_front_count += 1
-        rospy.loginfo_throttle(10, "camera_front callback {}".format(self.camera_front_count))
-        camera = self.convert_camera(msg)
-        if camera is not None:
-            self.bus.publish('camera_front', camera)
-
-    def camera_rear(self, msg):
-        self.camera_rear_count += 1
-        rospy.loginfo_throttle(10, "camera_rear callback {}".format(self.camera_rear_count))
-        camera = self.convert_camera(msg)
-        if camera is not None:
-            self.bus.publish('camera_rear', camera)
 
     def convert_points(self, msg):
         # accept only Velodyne VLC-16 (for the ver0)
