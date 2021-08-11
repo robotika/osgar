@@ -14,6 +14,7 @@ class CrashReport(Node):
         size = config.get('size', 100)  # keep N last records
         self.threshold = config.get('threshold', 100.0)  # i.e. 10g
         self.buf = collections.deque(maxlen=size)
+        self.verbose = False
 
     def on_rgbd(self, data):
         self.buf.append(data)
@@ -22,6 +23,8 @@ class CrashReport(Node):
         vec = [x/1000.0 for x in data]
         value = abs(distance3D(vec, [0, 0, 0]) - 9.81)
         if value >= self.threshold:
+            if self.verbose:
+                print(f'acc trigger: {value} (buf size = {len(self.buf)})')
             for rec in self.buf:
                 self.publish('crash_rgbd', rec)
             self.buf.clear()
