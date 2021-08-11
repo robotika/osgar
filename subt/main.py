@@ -78,6 +78,10 @@ class NewWaypointsException(Exception):
     pass
 
 
+class NotMovingException(Exception):
+    pass
+
+
 class EmergencyStopMonitor:
     def __init__(self, robot):
         self.robot = robot
@@ -107,6 +111,40 @@ class NewWaypointsMonitor:
     def update(self, robot):
         if robot.waypoints is not None:
             raise NewWaypointsException()
+
+    # context manager functions
+    def __enter__(self):
+        self.callback = self.robot.register(self.update)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.robot.unregister(self.callback)
+
+
+class NotMovingMonitor:
+    """
+    Check that for given time robot leaves sphere of given radius
+    """
+    def __init__(self, robot, radius, sim_time_sec_period):
+        self.robot = robot
+        self.radius = radius
+        self.sim_time_sec_period = sim_time_sec_period
+        self.anchor_xyz = None
+        self.anchor_sim_time = None
+
+    def update(self, robot):
+        if robot.xyz is not None and robot.sim_time_sec is not None:
+            if self.anchor_xyz is None:
+                # the very first anchor
+                self.anchor_xyz = robot.xyz
+                self.anchor_sim_time = robot.sim_time_sec
+            else:
+                if distance3D(robot.xyz, self.anchor_xyz) > self.radius:
+                    self.anchor_xyz = robot.xyz
+                    self.anchor_sim_time = robot.sim_time_sec
+                if robot.sim_time_sec - self.anchor_sim_time > self.sim_time_sec_period:
+                    print('LastDist', distance3D(robot.xyz, self.anchor_xyz), robot.sim_time_sec - self.anchor_sim_time)
+                    raise NotMovingException()
 
     # context manager functions
     def __enter__(self):
@@ -954,7 +992,7 @@ class SubTChallenge:
                 self.waypoints = None
                 tmp_trace.reverse()
                 try:
-                    with NewWaypointsMonitor(self) as wm:
+                    with NewWaypointsMonitor(self) as wm, NotMovingMonitor(self, radius=2, sim_time_sec_period=5) as not_moving_monitor:
                         termination_reason = self.follow_trace(tmp_trace, timeout=timedelta(seconds=10),
                                           max_target_distance=3.0, end_threshold=2.0, is_trace3d=True,
                                           safety_limit=None)  # TODO safety based on lidar in direction
@@ -964,11 +1002,15 @@ class SubTChallenge:
                         self.bus.publish('follow_status', 'completed')
                 except NewWaypointsException:
                     self.bus.publish('follow_status', 'aborted')
+                except NotMovingException:
+                    self.bus.publish('follow_status', 'blocked')
+                    termination_reason = 'blocked'
+                    break
                 self.send_speed_cmd(0, 0)
             else:
                 self.update()
         self.bus.publish('follow_status', 'end')
-        if termination_reason == 'safety':
+        if termination_reason in ['safety', 'blocked']:
             if details in ['explore-left', 'explore-right']:
                 self.timeout = timeout - timedelta(seconds=(self.sim_time_sec - start_time))
                 self.use_right_wall = (details == 'explore-right')
