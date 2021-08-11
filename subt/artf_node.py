@@ -17,7 +17,7 @@ except ImportError:
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 from osgar.lib.depth import decompress as decompress_depth
-from osgar.lib.quaternion import rotate_vector
+from osgar.lib.quaternion import rotate_vector, rotation_matrix
 from subt.artifacts import (RESCUE_RANDY, BACKPACK, PHONE, HELMET, ROPE, EXTINGUISHER, DRILL, VENT, CUBE)
 
 
@@ -69,6 +69,13 @@ def check_results(result_mdnet, result_cv):
         if ret_points:
             ret.append((name_cv, ret_points, r_cv))
     return ret
+
+
+def as_matrix(translation, rotation):
+    m = np.eye(4)
+    m[:3,:3] = rotation_matrix(rotation)
+    m[:3,3] = translation
+    return m
 
 
 def transform(transformation, xyz):
@@ -132,7 +139,7 @@ class ArtifactDetectorDNN(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("localized_artf", "dropped", "debug_rgbd", "stdout",
-                     "debug_result", "debug_cv_result")
+                     "debug_result", "debug_cv_result", "debug_camera")
         confidence_thresholds = {  # used for mdnet
             'survivor': 0.5,
             'backpack': 0.5,
@@ -165,13 +172,17 @@ class ArtifactDetectorDNN(Node):
         self.detector = create_detector(confidence_thresholds)
         self.fx = config.get('fx', 554.25469)  # use drone X4 for testing (TODO update all configs!)
         self.max_depth = config.get('max_depth', 10.0)
+        self.triangulation_baseline_min = config.get('triangulation_baseline_min', 0.03)
+        self.triangulation_baseline_max = config.get('triangulation_baseline_max', 0.20)
 
-    def wait_for_rgbd(self):
+        self.prev_camera = {}
+
+    def wait_for_data(self):
         channel = ""
-        while channel != "rgbd":
+        while channel != "rgbd" and not channel.startswith("camera"):
             self.time, channel, data = self.listen()
             setattr(self, channel, data)
-        return self.time
+        return self.time, channel
 
     def stdout(self, *args, **kwargs):
         # maybe refactor to Node?
@@ -191,24 +202,24 @@ class ArtifactDetectorDNN(Node):
                 dropped = -1
                 timestamp = now
                 while timestamp <= now:
-                    timestamp = self.wait_for_rgbd()
+                    timestamp, channel = self.wait_for_data()
                     dropped += 1
-                self.detect(self.rgbd)
+                if channel == 'rgbd':
+                    self.detect_from_rgbd(self.rgbd)
+                else:
+                    self.detect_from_img(channel, getattr(self, channel))
         except BusShutdownException:
             pass
 
-    def detect(self, rgbd):
-        robot_pose, camera_pose, image_data, depth_data = rgbd
-        img = cv2.imdecode(np.fromstring(image_data, dtype=np.uint8), 1)
-        depth = decompress_depth(depth_data)
+    def detect(self, img):
         if self.width is None:
             self.stdout('Image resolution', img.shape)
             self.width = img.shape[1]
-            self.stdout('Camera pose', camera_pose)
         assert self.width == img.shape[1], (self.width, img.shape[1])
 
         result = self.detector(img)
         result_cv = self.cv_detector(img)
+        checked_result = None
         if result or result_cv:
             # publish the results independent to detection validity
             self.publish('debug_result', result)
@@ -216,12 +227,83 @@ class ArtifactDetectorDNN(Node):
             checked_result = check_results(result, result_cv)
             if checked_result:
                 checked_result = check_borders(checked_result, self.border_lines)
-                if checked_result:
-                    report = result2report(checked_result, depth, self.fx,
-                            robot_pose, camera_pose, self.max_depth)
+        return checked_result
+
+    def detect_from_rgbd(self, rgbd):
+        robot_pose, camera_pose, image_data, depth_data = rgbd
+        img = cv2.imdecode(np.fromstring(image_data, dtype=np.uint8), cv2.IMREAD_COLOR)
+        depth = decompress_depth(depth_data)
+        checked_result = self.detect(img)
+        if checked_result:
+            report = result2report(checked_result, depth, self.fx,
+                    robot_pose, camera_pose, self.max_depth)
+            if report is not None:
+                self.publish('localized_artf', report)
+                self.publish('debug_rgbd', rgbd)
+
+    def detect_from_img(self, camera_name, data):
+        curr_robot_pose, curr_camera_pose, curr_img_data = data
+        curr_img = cv2.imdecode(np.fromstring(curr_img_data, dtype=np.uint8), cv2.IMREAD_COLOR)
+        curr_img_gray = cv2.cvtColor(curr_img, cv2.COLOR_BGR2GRAY)
+        # If we saw an artifact in the previous image, we need to estimate its
+        # location.
+        prev_detection = self.prev_camera.get(camera_name)
+        if prev_detection is not None:
+            prev_robot_pose, prev_camera_pose, artf_name, prev_uvs, prev_img_data, prev_img_gray, checked_result = prev_detection
+            curr_uvs, status, err = cv2.calcOpticalFlowPyrLK(prev_img_gray, curr_img_gray, prev_uvs.astype(np.float32), None)
+            num_tracked = np.sum(status)
+            if num_tracked > 0:
+                status = status[:,0].astype(np.bool)
+                curr_uvs = curr_uvs[status]
+                prev_uvs = prev_uvs[status]
+                assert(curr_uvs.shape == prev_uvs.shape)
+
+                prev_to_global = as_matrix(*prev_robot_pose) @ as_matrix(*prev_camera_pose)
+                curr_to_local = np.linalg.inv(as_matrix(*curr_robot_pose) @ as_matrix(*curr_camera_pose))
+                TO_OPTICAL = np.array([[ 0, -1,  0, 0],
+                                       [ 0,  0, -1, 0],
+                                       [ 1,  0,  0, 0],
+                                       [ 0,  0,  0, 1]], dtype=np.float)
+                FROM_OPTICAL = TO_OPTICAL.T  # inverse
+                # projection_matrix = camera_matrix @ camera_pose
+                # https://stackoverflow.com/questions/16101747/how-can-i-get-the-camera-projection-matrix-out-of-calibratecamera-return-value
+                # https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
+                # We calculate everything in the previous coordinate frame of the camera.
+                cx = (curr_img.shape[1] - 1) / 2
+                cy = (curr_img.shape[0] - 1) / 2
+                fx = fy = self.fx
+                camera_matrix = np.array([[fx,  0, cx],
+                                          [ 0, fy, cy],
+                                          [ 0,  0,  1]])
+                prev_projection_matrix = camera_matrix @ np.eye(3, 4)
+                to_curr_camera = curr_to_local @ prev_to_global
+                curr_projection_matrix = camera_matrix @ (TO_OPTICAL @ to_curr_camera @ FROM_OPTICAL)[:3,:]
+                traveled_dist = np.linalg.norm(to_curr_camera[:3,3])
+                if traveled_dist < self.triangulation_baseline_min:
+                    # Let's keep the previous detection for triangulation from a more distant point.
+                    return
+                elif traveled_dist <= self.triangulation_baseline_max:
+                    points3d = cv2.triangulatePoints(prev_projection_matrix.astype(np.float64), curr_projection_matrix.astype(np.float64), prev_uvs.T.astype(np.float64), curr_uvs.T.astype(np.float64)).T
+                    points3d = cv2.convertPointsFromHomogeneous(points3d)
+                    points3d = points3d[:,0,:]  # Getting rid of the unnecessary extra dimension in the middle.
+                    fake_depth = np.zeros(curr_img.shape[:2])
+                    fake_depth[prev_uvs[:,1], prev_uvs[:,0]] = points3d[:,2]  # Depth is the last dimension in an optical coordinate frame.
+                    report = result2report(checked_result, fake_depth, self.fx,
+                            prev_robot_pose, prev_camera_pose, self.max_depth)
                     if report is not None:
                         self.publish('localized_artf', report)
-                        self.publish('debug_rgbd', rgbd)
+                        self.publish('debug_camera', [camera_name, [prev_robot_pose, prev_camera_pose, prev_img_data], [curr_robot_pose, curr_camera_pose, curr_img_data]])
+                # else: The robot got too far from the detection point.
+
+                del self.prev_camera[camera_name]
+
+        # Detect artifacts in the current image.
+        checked_result = self.detect(curr_img)
+        if checked_result:
+            # TODO: Consider remembering all blobs and not just the first one.
+            artf_name = checked_result[0][0]
+            uvs = np.asarray([point[:2] for point in checked_result[0][1]])
+            self.prev_camera[camera_name] = curr_robot_pose, curr_camera_pose, artf_name, uvs, curr_img_data, curr_img_gray, checked_result
 
 
 if __name__ == "__main__":

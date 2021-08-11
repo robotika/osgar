@@ -18,7 +18,7 @@ from sensor_msgs.msg import Imu, LaserScan, PointCloud2
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty, Bool, Int32
 from geometry_msgs.msg import Pose, PoseArray, Twist
-from sensor_msgs.msg import BatteryState, FluidPressure
+from sensor_msgs.msg import BatteryState, CompressedImage, FluidPressure
 from octomap_msgs.msg import Octomap
 from rtabmap_ros.msg import RGBDImage
 from visualization_msgs.msg import Marker, MarkerArray
@@ -250,6 +250,8 @@ class main:
             topics.append(('/' + robot_name + '/local_map/output/scan', LaserScan, self.scan360, ('scan360',)))
             topics.append(('/rtabmap/rgbd/front/compressed', RGBDImage, self.rgbd_front, ('rgbd_front',)))
             topics.append(('/rtabmap/rgbd/rear/compressed', RGBDImage, self.rgbd_rear, ('rgbd_rear',)))
+            topics.append(('/' + robot_name + '/camera_left/image_raw/compressed', CompressedImage, self.camera_left, ('camera_left',)))
+            topics.append(('/' + robot_name + '/camera_right/image_raw/compressed', CompressedImage, self.camera_right, ('camera_right',)))
             if robot_name.endswith('XM'):
                 topics.append(('/mapping/octomap_binary', Octomap, self.octomap, ('octomap',)))
         elif robot_config.startswith("ROBOTIKA_KLOUBAK_SENSOR_CONFIG"):
@@ -404,35 +406,46 @@ class main:
         arr = np.ndarray.astype(arr, dtype=np.dtype('H'))
         return np.array(arr).reshape((msg.height, msg.width))
 
-    def convert_rgbd(self, msg):
+    def camera_poses(self, timestamp, frame_id, is_optical_frame=True):
         # Pose of the robot relative to starting position.
         try:
-            self.tf.waitForTransform('global', self.robot_name, msg.header.stamp, rospy.Duration(0.3))
-            robot_pose = self.tf.lookupTransform('global', self.robot_name, msg.header.stamp)
+            self.tf.waitForTransform('global', self.robot_name, timestamp, rospy.Duration(0.3))
+            robot_pose = self.tf.lookupTransform('global', self.robot_name, timestamp)
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException, tf.Exception) as e:
             rospy.logerr('tf global error: {}'.format(e))
             return None
         # Position of the camera relative to the robot.
         try:
-            # RTABMAP produces rotation in a visual coordinate frame (Z axis
-            # forward), but we need to match the world frame (X axis forward)
-            # of robot_pose.
-            WORLD_TO_OPTICAL = tf.transformations.quaternion_from_matrix(
-                    [[ 0, -1,  0, 0],
-                     [ 0,  0, -1, 0],
-                     [ 1,  0,  0, 0],
-                     [ 0,  0,  0, 1]])
-            self.tf.waitForTransform(self.robot_name, msg.header.frame_id, msg.header.stamp, rospy.Duration(0.3))
+            self.tf.waitForTransform(self.robot_name, frame_id, timestamp, rospy.Duration(0.3))
             camera_xyz, camera_quat = self.tf.lookupTransform(
-                    self.robot_name, msg.header.frame_id, msg.header.stamp)
-            camera_pose = (camera_xyz,
-                    tf.transformations.quaternion_multiply(camera_quat, WORLD_TO_OPTICAL).tolist())
+                    self.robot_name, frame_id, timestamp)
+            if is_optical_frame:
+                # RTABMAP produces rotation in a visual coordinate frame (Z axis
+                # forward), but we need to match the world frame (X axis forward)
+                # of robot_pose.
+                WORLD_TO_OPTICAL = tf.transformations.quaternion_from_matrix(
+                        [[ 0, -1,  0, 0],
+                         [ 0,  0, -1, 0],
+                         [ 1,  0,  0, 0],
+                         [ 0,  0,  0, 1]])
+                camera_pose = (camera_xyz,
+                        tf.transformations.quaternion_multiply(camera_quat, WORLD_TO_OPTICAL).tolist())
+            else:
+                camera_pose = camera_xyz, camera_quat
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException, tf.Exception) as e:
             rospy.logerr('tf camera error: {}'.format(e))
             return None
+
+        return robot_pose, camera_pose
+
+
+    def convert_rgbd(self, msg):
+        cam = self.camera_poses(msg.header.stamp, msg.header.frame_id)
+        if cam is None:
+            return None
         rgb = msg.rgb_compressed.data
         d = msg.depth_compressed.data
-        return (robot_pose, camera_pose, rgb, d)
+        return cam + (rgb, d)
 
     def rgbd_front(self, msg):
         self.rgbd_front_count += 1
@@ -461,6 +474,27 @@ class main:
         rgbd = self.convert_rgbd(msg)
         if rgbd is not None:
             self.bus.publish('rgbd_right', rgbd)
+
+    def convert_camera(self, msg):
+        cam = self.camera_poses(msg.header.stamp, msg.header.frame_id, is_optical_frame=False)
+        if cam is None:
+            return None
+        img = msg.data
+        return cam + (img,)
+
+    def camera_left(self, msg):
+        self.camera_left_count += 1
+        rospy.loginfo_throttle(10, "camera_left callback {}".format(self.camera_left_count))
+        camera = self.convert_camera(msg)
+        if camera is not None:
+            self.bus.publish('camera_left', camera)
+
+    def camera_right(self, msg):
+        self.camera_right_count += 1
+        rospy.loginfo_throttle(10, "camera_right callback {}".format(self.camera_right_count))
+        camera = self.convert_camera(msg)
+        if camera is not None:
+            self.bus.publish('camera_right', camera)
 
     def convert_points(self, msg):
         # accept only Velodyne VLC-16 (for the ver0)
