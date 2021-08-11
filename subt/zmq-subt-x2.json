@@ -137,7 +137,7 @@
         "driver": "subt.crash_report:CrashReport",
           "init": {
             "size": 100,
-            "threshold": 30.0
+            "threshold": 100.0
           }
       }
     },
