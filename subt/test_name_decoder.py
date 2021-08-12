@@ -59,5 +59,12 @@ class NameDecoderTest(unittest.TestCase):
         steps = parse_robot_name('B10W1200ELXA')
         self.assertEqual(steps, [('wait', 10), ('explore-left', 1200), ('home', 0)])
 
+    def test_crash(self):
+        steps = parse_robot_name('B300W900LHXA')
+        self.assertEqual(steps, [('wait', 300), ('enter-left', None), ('left', 900), ('home', 1800)])
+
+        steps = parse_robot_name('B300W900ELHXA')
+        self.assertEqual(steps, [('wait', 300), ('explore-left', 900), ('home', 0)])
+
 # vim: expandtab sw=4 ts=4
 

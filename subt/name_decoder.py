@@ -30,10 +30,11 @@ def split_multi_simple(s, delimiters):
 def split_multi(s, delimiters):
     # small letters are prohibited so they can be used as alternative single letter
     multichar = [(k, chr(ord('a') + i)) for i, k in enumerate(delimiters) if len(k) > 1]
+    one_char_delimiters = [k for k in delimiters if len(k) == 1] + [v for k, v in multichar]
     for k, v in multichar:
         s = s.replace(k, v)
     ret = []
-    for word in split_multi_simple(s, delimiters):
+    for word in split_multi_simple(s, one_char_delimiters):
         for k, v in multichar:
             word = word.replace(v, k)  # inverse
         ret.append(word)
