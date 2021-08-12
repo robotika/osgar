@@ -77,6 +77,8 @@ def parse_robot_name(robot_name):
                 ret.append(('enter-' + action, None))
                 entered = True
             sum_t += t
+        if action.startswith('explore'):
+            sum_t += t  # explore may need also time to return home
         ret.append((action, t))
         if action == 'home':
             entered = False
