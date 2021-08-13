@@ -69,6 +69,7 @@ class Traversability
     ros::Subscriber compressed_depth_handler_;
     ros::Subscriber camera_info_handler_;
     ros::Subscriber scan_handler_;
+    ros::Subscriber points_handler_;
     tf::TransformListener transform_listener_;
 
     std::unordered_map<std::string, sensor_msgs::CameraInfo::ConstPtr> camera_infos_;
@@ -109,6 +110,9 @@ class Traversability
       float max_lidar_range;
       // Storing every n-th interesting point from lidar.
       int lidar_subsampling;
+
+      // Maximum number of observations from a point cloud source.
+      int max_points_observations;
 
       // Using at most this many nearby points when publishing output maps.
       int max_num_nearby_points;
@@ -165,6 +169,7 @@ class Traversability
     void OnDepth(const sensor_msgs::Image::ConstPtr& msg);
     void OnCompressedDepth(const rtabmap_ros::RGBDImage::ConstPtr& msg);
     void OnScan(const sensor_msgs::LaserScan::ConstPtr& msg);
+    void OnPoints(const sensor_msgs::PointCloud2::ConstPtr& msg);
     void OnTimer(const ros::TimerEvent& event);
 };
 
@@ -184,6 +189,7 @@ bool Traversability::Init()
   ros_handle_.param("min_lidar_range", config_.min_lidar_range, 0.f);
   ros_handle_.param("max_lidar_range", config_.max_lidar_range, 10.0f);
   ros_handle_.param("lidar_subsampling", config_.lidar_subsampling, 4);
+  ros_handle_.param("max_points_observations", config_.max_points_observations, 30 * 6);
   float publish_rate_tmp;
   ros_handle_.param("publish_rate", publish_rate_tmp, 0.048f);
   config_.publish_rate = ros::Duration(publish_rate_tmp);
@@ -197,13 +203,14 @@ bool Traversability::Init()
   ros_handle_.param("max_dip_up", config_.max_dip_up, 0.35f);
   ros_handle_.param("synthetic_obstacle_distance", config_.synthetic_obstacle_distance, 0.5f);
   ros_handle_.param("visible_ground_min", config_.visible_ground_min, 0.6f);
-  ros_handle_.param("visible_ground_max", config_.visible_ground_max, 2.5f);
+  ros_handle_.param("visible_ground_max", config_.visible_ground_max, 3.4f);
   ros_handle_.param("robot_height", config_.robot_height, 0.5f);
 
   camera_info_handler_ = ros_handle_.subscribe("input/camera_info", 10, &Traversability::OnCameraInfo, this);
   depth_handler_ = ros_handle_.subscribe("input/depth", 10, &Traversability::OnDepth, this);
   compressed_depth_handler_ = ros_handle_.subscribe("input/depth/compressed", 10, &Traversability::OnCompressedDepth, this);
   scan_handler_ = ros_handle_.subscribe("input/scan", 10, &Traversability::OnScan, this);
+  points_handler_ = ros_handle_.subscribe("input/points", 10, &Traversability::OnPoints, this);
 
   publish_timer_ = ros_handle_.createTimer(config_.publish_rate, &Traversability::OnTimer, this);
   points_publisher_ = ros_handle_.advertise<sensor_msgs::PointCloud2>("output/map", 10);
@@ -627,6 +634,26 @@ void Traversability::OnScan(const sensor_msgs::LaserScan::ConstPtr& msg)
                     config_.max_scan_observations);
 }
 
+void Traversability::OnPoints(const sensor_msgs::PointCloud2::ConstPtr& msg)
+{
+  std::optional<tf::StampedTransform> camera_pose =
+    GetTransform(config_.world_frame_id, msg->header.frame_id, msg->header.stamp);
+  if (!camera_pose) return;
+
+  assert(msg->point_step == 3 * sizeof(float));
+  assert(msg->is_bigendian == false);
+  const float* data = reinterpret_cast<const float*>(msg->data.data());
+  Observation points;
+  for (size_t i = 0; i < msg->width; ++i)
+  {
+    const tf::Vector3 pt(data[i * 3], data[i * 3 + 1], data[i * 3 + 2]);
+    points.push_back(*camera_pose * pt);
+  }
+
+  InsertObservation(std::move(points),
+                    msg->header.frame_id,
+                    config_.max_points_observations);
+}
 
 void Traversability::OnTimer(const ros::TimerEvent& event)
 {

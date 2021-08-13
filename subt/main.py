@@ -218,9 +218,10 @@ class SubTChallenge:
         if self.neighborhood_size is None or self.approach_angle is None:
             return False
 
+        yaw = normalizeAnglePIPI(self.yaw + math.pi) if self.flipped else self.yaw
         for other_xyz in self.whereabouts.values():
             d = distance3D(self.xyz, other_xyz)
-            angle = normalizeAnglePIPI(math.atan2(other_xyz[1] - self.xyz[1], other_xyz[0] - self.xyz[0]) - self.yaw)
+            angle = normalizeAnglePIPI(math.atan2(other_xyz[1] - self.xyz[1], other_xyz[0] - self.xyz[0]) - yaw)
             if d <= self.neighborhood_size and abs(angle) < self.approach_angle:
                 return True
 
