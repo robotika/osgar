@@ -85,7 +85,7 @@ def follow_wall_angle(laser_data, gap_size, wall_dist, right_wall=False, interna
     gap_end_dist = None
     while True:
         last_wall_distance = distances[last_wall_idx]
-        found_countinuation = False
+        continuation = None
         for i in range(last_wall_idx + 1, size):
             dist = distances[i]
             if dist > max_wall_distance or dist == 0:
@@ -102,21 +102,18 @@ def follow_wall_angle(laser_data, gap_size, wall_dist, right_wall=False, interna
             gap = math.hypot(cos_rel_angle * dist - last_wall_distance,
                              sin_rel_angle * dist - 0)
             if gap <= gap_size:
-                last_wall_idx = i
-                found_countinuation = True
+                continuation = i
                 gap_end_idx = None
                 gap_end_dist = None
-                break
-
-            # If the gap continues already behind the robot and the continuation
-            # goes roughly the in the current direction of the robot, it is likely
-            # still the wall we are following.
-            #
-            # There is a risk here that we miss door in the wall we are following.
-            # This should, however, not happen, because doors have their non-zero
-            # width doorframes that we should detect as a wall perpendicular to
-            # robot's direction.
-            if -135 + i * deg_resolution <= -90:
+            elif -135 + i * deg_resolution <= -90:
+                # If the gap continues already behind the robot and the continuation
+                # goes roughly the in the current direction of the robot, it is likely
+                # still the wall we are following.
+                #
+                # There is a risk here that we miss door in the wall we are following.
+                # This should, however, not happen, because doors have their non-zero
+                # width doorframes that we should detect as a wall perpendicular to
+                # robot's direction.
                 next_one = None
                 for j in range(i + 1, size):
                     if distances[j] > max_wall_distance or distances[j] == 0:
@@ -139,16 +136,17 @@ def follow_wall_angle(laser_data, gap_size, wall_dist, right_wall=False, interna
                             next_dist * math.sin(next_angle) - dist * math.sin(angle),
                             next_dist * math.cos(next_angle) - dist * math.cos(angle))
                     if abs(wall_direction) < math.radians(25):
-                        last_wall_idx = i
-                        found_countinuation = True
+                        continuation = i
                         gap_end_idx = None
                         gap_end_dist = None
                         break
 
-            if gap_end_idx is None or gap < gap_end_dist:
+            if (continuation is None) and (gap_end_idx is None or gap < gap_end_dist):
                 gap_end_idx = i
                 gap_end_dist = gap
-        if not found_countinuation:
+        if continuation is not None:
+            last_wall_idx = continuation
+        else:
             break
 
     # If we do not see the end of the wall because of occlusion, our desired
