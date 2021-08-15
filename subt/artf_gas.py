@@ -14,13 +14,18 @@ class ArtifactGasDetector(Node):
         super().__init__(config, bus)
         bus.register("localized_artf")
         self.xyz = None
+        self.last_bottom_scan = 0.0  # expected to never arrive for ground robots
 
     def on_gas_detected(self, data):
-        if data:
-            self.publish('localized_artf', [GAS, self.xyz])
+        if data and self.xyz is not None:
+            x, y, z = self.xyz
+            self.publish('localized_artf', [GAS, [x, y, z - self.last_bottom_scan]])
 
     def on_pose3d(self, data):
         self.xyz = data[0]  # ignore orientation
+
+    def on_bottom_scan(self, data):
+        self.last_bottom_scan = data[0]
 
     def update(self):
         channel = super().update()
