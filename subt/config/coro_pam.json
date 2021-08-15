@@ -215,6 +215,7 @@
               ["rosmsg.sim_time_sec", "octomap.sim_time_sec"],
 
               ["fromrospy.pose3d", "gas_detector.pose3d"],
+              ["fromrospy.bottom_scan", "gas_detector.bottom_scan"],
               ["fromrospy.gas_detected", "gas_detector.gas_detected"],
               ["gas_detector.localized_artf", "artifact_filter.localized_artf"],
 
