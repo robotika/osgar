@@ -36,7 +36,7 @@ def draw_positions(arr):
 class Radio(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('radio', 'artf_xyz', 'breadcrumb', 'robot_xyz', 'trace_info', 'robot_trace')
+        bus.register('radio', 'artf_xyz', 'breadcrumb', 'robot_xyz', 'trace_info', 'robot_trace', 'teambase_sec')
         self.min_transmit_dt = 0  # i.e. every sim_time_sec -> every simulated second
         self.last_transmit = None
         self.sim_time_sec = None
@@ -62,6 +62,8 @@ class Radio(Node):
             self.publish('robot_xyz', [name, msg_data])
             if self.verbose:
                 self.debug_robot_poses.append((self.time, name, msg_data))
+        elif channel == 'sim_time_sec' and name.startswith('T'):
+            self.publish('teambase_sec', msg_data)
 
     def on_breadcrumb(self, data):
         self.send_data('breadcrumb', data)
