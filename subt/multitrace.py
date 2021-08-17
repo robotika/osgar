@@ -89,6 +89,9 @@ class MultiTraceManager(Node):
         name, from_sec, to_sec = data
         self.publish('response', {name: self.traces.get(name, [])})
 
+    def on_teambase_sec(self, data):
+        pass
+
     def update(self):
         channel = super().update()  # define self.time
         handler = getattr(self, "on_" + channel, None)

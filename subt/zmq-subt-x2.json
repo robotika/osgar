@@ -185,6 +185,7 @@
               ["radio.robot_xyz", "mtm.robot_xyz"],
               ["radio.trace_info", "mtm.trace_info"],
               ["radio.robot_trace", "mtm.robot_trace"],
+              ["radio.teambase_sec", "mtm.teambase_sec"],
               ["mtm.trace_info", "radio.trace_info"],
               ["mtm.robot_trace", "radio.robot_trace"],
 
