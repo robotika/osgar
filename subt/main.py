@@ -804,10 +804,11 @@ class SubTChallenge:
             with EmergencyStopMonitor(self):
                 allow_virtual_flip = self.symmetric
 
-                # wait for critical data
-                while any_is_none(self.scan, self.xyz):
+                #wait for critical data
+                while any_is_none(self.scan):  #, self.xyz)
                     # self.xyz is initialized by pose3d
                     self.update()
+                self.xyz = 0, 0, 0  # There is no source of 3D pose in this moment.
 
                 if distance(self.xyz, (0, 0)) > 0.1 or self.init_path is not None:
                     self.system_nav_trace(self.init_path)
