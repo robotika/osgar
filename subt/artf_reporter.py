@@ -37,20 +37,62 @@ class ArtifactReporter(Node):
         self.artf_xyz = []
         self.artf_xyz_accumulated = []  # items are [type, position, source, flag]
                                         # position = [x, y, z], flag(scored) = True/False/None
+        self.verbose = False
 
     def publish_artf(self, artf_xyz):
         count = 0
-        for artf_type, pos, src, scored in artf_xyz:
+        for artf_type, pos, src, scored in self.group_artf_for_report(artf_xyz):
             if scored is None:
-                if count == 0:
+                if count == 0 and self.verbose:
                     print(self.time, "DETECTED:")
                 count += 1
                 ix, iy, iz = pos
-                print(" ", artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
+                if self.verbose:
+                    print(" ", artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
                 s = '%s %.2f %.2f %.2f\n' % (artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
                 self.publish('artf_cmd', bytes('artf ' + s, encoding='ascii'))
-        if count > 0:
+        if count > 0 and self.verbose:
             print('report completed')
+
+    def group_artf_for_report(self, artf_xyz):
+        """
+        There are cases when two or more robots discover artefact independently and they do not
+        have the base answer yet. Never-the-less only one representative (team identical) should
+        be selected and reported.
+        """
+        # False radius
+        # None radius
+        robots = []
+        artifact_types = []
+        positions = []
+        for artf_type, pos, src, scored in artf_xyz:
+            if artf_type not in artifact_types:
+                artifact_types.append(artf_type)
+            if src not in robots:
+                robots.append(src)
+            if min([distance3D(pos, p)/1000.0 for p in positions] + [RADIUS + 1]) > RADIUS:
+                positions.append(pos)
+
+        if self.verbose:
+            print('robots:', robots)
+            print('artifacts', artifact_types)
+            print('positions', positions)
+
+        ret = []
+        for p in positions:
+            selected = None
+            for artf_type, pos, src, scored in artf_xyz:
+                if distance3D(pos, p)/1000.0 >= RADIUS:
+                    continue
+                if (selected is None or  # some result is better than no result
+                    scored is True or    # best is already correctly reported artifacts
+                    scored is False and selected[0] == artf_type or  # artifact already failed to report
+                    (scored is None and selected[3] is None and selected[2] > src)  # if not sure, sort it by robot name
+                ):
+                    selected = [artf_type, pos, src, scored]
+            assert selected is not None  # there should be at least one origin
+            ret.append(selected)
+        return ret
 
     def nearest_scored_artifact(self, artf_type, position):
         # TODO remove 1000x scaling to millimeters - source of headache

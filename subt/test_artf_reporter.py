@@ -63,19 +63,19 @@ class ArtifactReporterTest(unittest.TestCase):
         sim_time_sec = 0
         bus.listen = MagicMock(return_value=(1, 'sim_time_sec', sim_time_sec))
         reporter.update()
-        bus.publish.assert_has_calls([call('artf_cmd', b'artf TYPE_BACKPACK 0.10 0.20 -0.00\n'),
-                                      call('artf_cmd', b'artf TYPE_ROPE 0.01 0.02 0.03\n')])
+        bus.publish.assert_has_calls([call('artf_cmd', b'artf TYPE_BACKPACK 0.10 0.20 -0.00\n')])
+        # this 2nd call is postponed - call('artf_cmd', b'artf TYPE_ROPE 0.01 0.02 0.03\n')])
 
         # keep list unique
-        bus.listen = MagicMock(return_value=(1, 'artf_xyz', [['TYPE_BACKPACK', 100, 200, -3]]))
+        bus.listen = MagicMock(return_value=(1, 'artf_xyz', [['TYPE_BACKPACK', [100, 200, -3], "RobotX", None]]))
         reporter.update()
         bus.reset_mock()
         sim_time_sec = 0
         bus.listen = MagicMock(return_value=(1, 'sim_time_sec', sim_time_sec))
         reporter.update()
         # the same issue, that I do not want subset, but 1:1 correspondence - TODO more strict assert
-        bus.publish.assert_has_calls([call('artf_cmd', b'artf TYPE_BACKPACK 0.10 0.20 -0.00\n'),
-                                      call('artf_cmd', b'artf TYPE_ROPE 0.01 0.02 0.03\n')])
+        bus.publish.assert_has_calls([call('artf_cmd', b'artf TYPE_BACKPACK 0.10 0.20 -0.00\n')])
+        # this 2nd call is postponed - call('artf_cmd', b'artf TYPE_ROPE 0.01 0.02 0.03\n')])
 
     def test_on_base_station(self):
         data = {'report_id': 1, 'artifact_type': 0, 'artifact_position': [69.84, -4.86, 0.4],
@@ -120,6 +120,77 @@ class ArtifactReporterTest(unittest.TestCase):
         # backpack is confirmed and phone is tested as different artifact
         reporter.on_artf_xyz([['TYPE_PHONE', [69758 + 2000, -5143, 533], 'A150L', None]])  # 2m offset
         self.assertEqual(len(reporter.artf_xyz_accumulated), 2)
+
+    def test_group_artf_for_report(self):
+        bus = MagicMock()
+        reporter = ArtifactReporter(config={}, bus=bus)
+
+        to_report = reporter.group_artf_for_report([
+                   ['TYPE_DRILL', [343506, 22288, -14938], 'B300W900ELXA', None],
+                   ['TYPE_DRILL', [343174, 22338, -14727], 'A900L', None],
+                   ['TYPE_RESCUE_RANDY', [252978, 106894, -18309], 'A900L', None],
+                   ['TYPE_RESCUE_RANDY', [252930, 106716, -19523], 'B300W900ELXA', None]])
+
+        # pick only one sample and give A preference
+        self.assertEqual(to_report, [
+            ['TYPE_DRILL', [343174, 22338, -14727], 'A900L', None],
+            ['TYPE_RESCUE_RANDY', [252978, 106894, -18309], 'A900L', None]
+        ])
+
+        # now let's have already positive report from B-drone
+        to_report = reporter.group_artf_for_report([
+                   ['TYPE_DRILL', [343506, 22288, -14938], 'B300W900ELXA', True],
+                   ['TYPE_DRILL', [343174, 22338, -14727], 'A900L', None]])
+
+        # keep only successful report
+        self.assertEqual(to_report, [
+            ['TYPE_DRILL', [343506, 22288, -14938], 'B300W900ELXA', True]
+        ])
+
+        # now let's have negative result of different artifact type
+        to_report = reporter.group_artf_for_report([
+                   ['TYPE_DRILL', [343506, 22288, -14938], 'B300W900ELXA', None],
+                   ['TYPE_BACKPACK', [343174, 22338, -14727], 'A900L', False]])
+
+        # keep only promising report
+        self.assertEqual(to_report, [
+            ['TYPE_DRILL', [343506, 22288, -14938], 'B300W900ELXA', None]
+        ])
+
+        # the same type of artifact but already received False for nearby location
+        to_report = reporter.group_artf_for_report([
+                   ['TYPE_BACKPACK', [343506, 22288, -14938], 'B300W900ELXA', None],
+                   ['TYPE_BACKPACK', [343174, 22338, -14727], 'A900L', False]])
+
+        # keep only promising report
+        self.assertEqual(to_report, [
+            ['TYPE_BACKPACK', [343174, 22338, -14727], 'A900L', False]
+        ])
+
+        # two different reports from the same robot
+        to_report = reporter.group_artf_for_report([
+                   ['TYPE_ROPE', [343506, 22288, -14938], 'A900L', None],
+                   ['TYPE_BACKPACK', [343174, 22338, -14727], 'A900L', None]])
+
+        # keep only one of the options, verify and then try the second
+        self.assertEqual(to_report, [
+            ['TYPE_ROPE', [343506, 22288, -14938], 'A900L', None]
+        ])
+
+
+    def test_grouping_integration(self):
+        bus = MagicMock()
+        reporter = ArtifactReporter(config={}, bus=bus)
+
+        reporter.on_artf_xyz([
+                   ['TYPE_DRILL', [343506, 22288, -14938], 'B300W900ELXA', None],
+                   ['TYPE_DRILL', [343174, 22338, -14727], 'A900L', None],
+                   ['TYPE_RESCUE_RANDY', [252978, 106894, -18309], 'A900L', None],
+                   ['TYPE_RESCUE_RANDY', [252930, 106716, -19523], 'B300W900ELXA', None]])
+
+        bus.publish.assert_has_calls([
+            call('artf_cmd', b'artf TYPE_DRILL 343.17 22.34 -14.73\n'),
+            call('artf_cmd', b'artf TYPE_RESCUE_RANDY 252.98 106.89 -18.31\n')])
 
 
 # vim: expandtab sw=4 ts=4
