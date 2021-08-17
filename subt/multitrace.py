@@ -85,6 +85,9 @@ class MultiTraceManager(Node):
                 for name in update:
                     self.publish('robot_trace', {name : update[name][:CUT_NUM]})
 
+    def on_teambase_sec(self, data):
+        pass
+
     def update(self):
         channel = super().update()  # define self.time
         handler = getattr(self, "on_" + channel, None)
