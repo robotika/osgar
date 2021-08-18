@@ -285,13 +285,13 @@ class SubTChallenge:
         if allow_z_control and self.slopes:
             slope_idx = int(len(self.slopes) * (safe_direction - -math.pi) / (2 * math.pi))
             slope = self.slopes[slope_idx]
-            desired_z_speed = float(desired_speed * math.tan(slope))
+            desired_z_speed = float(abs(desired_speed) * math.tan(slope))
             self.bus.publish('desired_z_speed', desired_z_speed)
         if self.flipped:
             self.send_speed_cmd(-desired_speed, desired_angular_speed)
         else:
             self.send_speed_cmd(desired_speed, desired_angular_speed)
-        return safety
+        return safety, safe_direction
 
     def turn(self, angle, with_stop=True, speed=0.0, timeout=None):
         print(self.time, "turn %.1f" % math.degrees(angle))
@@ -506,12 +506,7 @@ class SubTChallenge:
                     self.flip()
                     continue
 
-                d = distance3D(self.xyz, [target_x, target_y, target_z])
-                time_to_target = d / max(0.01, abs(self.speed_limit()))
-                desired_z_speed = (target_z - self.xyz[2]) / time_to_target
-                self.bus.publish('desired_z_speed', desired_z_speed)
-
-                safety = self.go_safely(desired_direction, allow_z_control=False)
+                safety, safe_direction = self.go_safely(desired_direction, allow_z_control=False)
                 if safety < 0.2:
                     print(self.time, "Safety low!", safety, desired_direction)
                     target_distance = MIN_TARGET_DISTANCE
@@ -521,6 +516,23 @@ class SubTChallenge:
                     if count_down == 0:
                         target_distance = MAX_TARGET_DISTANCE
                         print(self.time, "Recovery to original", target_distance)
+
+                d = distance3D(self.xyz, [target_x, target_y, target_z])
+                time_to_target = d / max(0.01, abs(self.speed_limit()))
+                if self.slopes is not None:
+                    # Climb at least as much as needed to fly over obstacles.
+                    horizontal_distance_to_target = max(
+                            0.01, math.hypot(target_x - self.xyz[0],
+                                             target_y - self.xyz[1]))
+                    desired_slope = math.atan2(target_z - self.xyz[2],
+                                              horizontal_distance_to_target)
+                    slope_idx = int(len(self.slopes) * (safe_direction - -math.pi) / (2 * math.pi))
+                    if self.slopes[slope_idx] > desired_slope:
+                        desired_slope = self.slopes[slope_idx]
+                    desired_z_speed = math.tan(desired_slope) * horizontal_distance_to_target / time_to_target
+                else:
+                    desired_z_speed = (target_z - self.xyz[2]) / time_to_target
+                self.bus.publish('desired_z_speed', desired_z_speed)
 
         print('return_home: dist', distance3D(self.xyz, home_position), 'time(sec)', self.sim_time_sec - start_time)
         self.bus.publish('desired_z_speed', None)
@@ -542,19 +554,33 @@ class SubTChallenge:
                 if self.flipped and self.joint_angle_rad:
                     desired_direction = normalizeAnglePIPI(desired_direction + sum(self.joint_angle_rad))
                 if self.can_flip() and abs(desired_direction) > math.radians(95):  # including hysteresis
+                    if is_trace3d:
+                        self.bus.publish('desired_z_speed', 0)
                     print('Flipping:', math.degrees(desired_direction))
                     self.flip()
                 else:
-                    safety = self.go_safely(desired_direction, allow_z_control=False)
+                    safety, safe_direction = self.go_safely(desired_direction, allow_z_control=False)
                     if safety_limit is not None and safety < safety_limit:
                         print('Danger! Safety limit for follow trace reached!', safety, safety_limit)
                         break
 
-                if is_trace3d:
-                    d = distance3D(self.xyz, [target_x, target_y, target_z])
-                    time_to_target = d / max(0.01, abs(self.speed_limit()))
-                    desired_z_speed = (target_z - self.xyz[2]) / time_to_target
-                    self.bus.publish('desired_z_speed', desired_z_speed)
+                    if is_trace3d:
+                        d = distance3D(self.xyz, [target_x, target_y, target_z])
+                        time_to_target = d / max(0.01, abs(self.speed_limit()))
+                        if self.slopes is not None:
+                            # Climb at least as much as needed to fly over obstacles.
+                            horizontal_distance_to_target = max(
+                                    0.01, math.hypot(target_x - self.xyz[0],
+                                                     target_y - self.xyz[1]))
+                            desired_slope = math.atan2(target_z - self.xyz[2],
+                                                      horizontal_distance_to_target)
+                            slope_idx = int(len(self.slopes) * (safe_direction - -math.pi) / (2 * math.pi))
+                            if self.slopes[slope_idx] > desired_slope:
+                                desired_slope = self.slopes[slope_idx]
+                            desired_z_speed = math.tan(desired_slope) * horizontal_distance_to_target / time_to_target
+                        else:
+                            desired_z_speed = (target_z - self.xyz[2]) / time_to_target
+                        self.bus.publish('desired_z_speed', desired_z_speed)
 
         print('End of follow trace(sec)', self.sim_time_sec - start_time)
         if is_trace3d:
@@ -964,7 +990,7 @@ class SubTChallenge:
         self.stdout('Final xyz (DARPA coord system):', self.xyz)
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver119!")
+        self.stdout("SubT Challenge Ver121!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
