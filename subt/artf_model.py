@@ -351,13 +351,22 @@ def create_model(model_config):
     return model
 
 
-def load_model(path, device):
+def read_model_params(path, device, params_override={}):
     model_params = torch.load(path, map_location=torch.device(device))
+    model_params.update(params_override)
+    return model_params
+
+
+def load_model(path, device, eval_mode=True, params_override={}):
+    model_params = read_model_params(path, device, params_override)
     model_type = model_params.get('type', 'mdnet0')
     model = create_model(model_params)
     model = model.float().to(device)
     model.load_state_dict(model_params['model'])
-    model.eval()
+    if eval_mode:
+        model.eval()
+    else:
+        model.train()
 
     return model, model_params['categories']
 
@@ -448,6 +457,9 @@ if __name__ == '__main__':
                             "activation": "elu",
                             "dropout-probability": 0.4
                         })
+    parser.add_argument('--load-model-from', default=None,
+                        help='Start model training from an already existing ' +
+                        'model.')
     parser.add_argument('--batch-size',
                         type=int,
                         default=8192,
@@ -515,13 +527,25 @@ if __name__ == '__main__':
     torch.manual_seed(41)
     random.seed(41)
 
-    # No downscaling during training, because dataset loader already takes care
-    # of that.
-    args.model_config['downscale'] = 1
-    args.model_config['receptive-field'] = args.receptive_field
-    args.model_config['categories'] = ARTIFACT_CATEGORIES
-    model = create_model(args.model_config)
-    print('Created model.')
+    if args.load_model_from is not None:
+        # No downscaling during training, because dataset loader already takes
+        # care of that.
+        params_override = {'downscale' : 1}
+        model, supported_categories = load_model(
+                args.load_model_from, device, eval_mode=False,
+                params_override=params_override)
+        args.model_config = read_model_params(
+                args.load_model_from, device, params_override)
+        assert(supported_categories == ARTIFACT_CATEGORIES)
+        print('Loaded model.')
+    else:
+        # No downscaling during training, because dataset loader already takes
+        # care of that.
+        args.model_config['downscale'] = 1
+        args.model_config['receptive-field'] = args.receptive_field
+        args.model_config['categories'] = ARTIFACT_CATEGORIES
+        model = create_model(args.model_config)
+        print('Created model.')
 
     model = model.float().to(device=device)
 
