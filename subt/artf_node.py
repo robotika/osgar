@@ -124,7 +124,7 @@ def get_border_lines(border_points):
 
 
 def create_detector(confidence_thresholds):
-    model = os.path.join(os.path.dirname(__file__), '../../../mdnet5.128.128.13.4.elu.pth')
+    model = os.path.join(os.path.dirname(__file__), '../../../mdnet6.128.128.13.4.elu.pth')
     max_gap = 16
     min_group_size = 2
 
