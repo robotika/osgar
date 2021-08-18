@@ -174,7 +174,7 @@ class ArtifactReporterTest(unittest.TestCase):
 
         # keep only one of the options, verify and then try the second
         self.assertEqual(to_report, [
-            ['TYPE_ROPE', [343506, 22288, -14938], 'A900L', None]
+            ['TYPE_BACKPACK', [343174, 22338, -14727], 'A900L', None]
         ])
 
 
@@ -192,6 +192,28 @@ class ArtifactReporterTest(unittest.TestCase):
             call('artf_cmd', b'artf TYPE_DRILL 343.17 22.34 -14.73\n'),
             call('artf_cmd', b'artf TYPE_RESCUE_RANDY 252.98 106.89 -18.31\n')])
 
+    def test_grouping_order(self):
+        # the order does matter in order to identically report artifacts
+        bus = MagicMock()
+        reporter = ArtifactReporter(config={}, bus=bus)
+
+        artf_xyz = [['TYPE_ROPE', [343506, 22288, -14938], 'A900L', None],
+                    ['TYPE_BACKPACK', [343174, 22338, -14727], 'A900L', None]]
+
+        # two different reports from the same robot
+        to_report = reporter.group_artf_for_report(artf_xyz)
+
+        self.assertEqual(to_report, [
+            ['TYPE_BACKPACK', [343174, 22338, -14727], 'A900L', None]
+        ])
+
+        artf_xyz.reverse()
+
+        to_report = reporter.group_artf_for_report(artf_xyz)
+
+        self.assertEqual(to_report, [
+            ['TYPE_BACKPACK', [343174, 22338, -14727], 'A900L', None]
+        ])
 
 # vim: expandtab sw=4 ts=4
 

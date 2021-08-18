@@ -65,7 +65,7 @@ class ArtifactReporter(Node):
         robots = []
         artifact_types = []
         positions = []
-        for artf_type, pos, src, scored in artf_xyz:
+        for artf_type, pos, src, scored in sorted(artf_xyz):
             if artf_type not in artifact_types:
                 artifact_types.append(artf_type)
             if src not in robots:
@@ -81,7 +81,7 @@ class ArtifactReporter(Node):
         ret = []
         for p in positions:
             selected = None
-            for artf_type, pos, src, scored in artf_xyz:
+            for artf_type, pos, src, scored in sorted(artf_xyz):
                 if distance3D(pos, p)/1000.0 >= RADIUS:
                     continue
                 if (selected is None or  # some result is better than no result
