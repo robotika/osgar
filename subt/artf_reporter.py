@@ -27,6 +27,7 @@ from subt.trace import Trace, distance3D
 
 
 RADIUS = 4.0  # there are probably not two artifacts within sphere of this radius
+RADIUS_FALSE = 2.0  # reported artifact was not correct so do not repeat it within this radius
 
 
 class ArtifactReporter(Node):
@@ -60,39 +61,50 @@ class ArtifactReporter(Node):
         have the base answer yet. Never-the-less only one representative (team identical) should
         be selected and reported.
         """
-        # False radius
-        # None radius
-        robots = []
-        artifact_types = []
-        positions = []
-        for artf_type, pos, src, scored in sorted(artf_xyz):
-            if artf_type not in artifact_types:
-                artifact_types.append(artf_type)
-            if src not in robots:
-                robots.append(src)
-            if min([distance3D(pos, p)/1000.0 for p in positions] + [RADIUS + 1]) > RADIUS:
-                positions.append(pos)
+        # first sort all known artifacts into three groups
+        scored_true, scored_false, scored_unknown = [], [], []
+        for item in artf_xyz:
+            artf_type, pos, src, scored = item
+            if scored is True:
+                scored_true.append(item)
+            elif scored is False:
+                scored_false.append(item)
+            else:
+                assert scored is None, scored
+                scored_unknown.append(item)
 
-        if self.verbose:
-            print('robots:', robots)
-            print('artifacts', artifact_types)
-            print('positions', positions)
+        # remove all unknown by already successfully scored artifacts
+        tmp = []
+        for item in scored_unknown:
+            artf_type, pos, _, _ = item
+            for artf_type2, pos2, _, _ in scored_true:
+                # TODO do we want to filter out also other artifacts of different type (i.e. probably wrongly recognized?)
+                if artf_type == artf_type2 and distance3D(pos, pos2)/1000.0 < RADIUS:
+                    # already successfully reported
+                    break
+            else:
+                tmp.append(item)
+        scored_unknown = tmp
 
-        ret = []
-        for p in positions:
-            selected = None
-            for artf_type, pos, src, scored in sorted(artf_xyz):
-                if distance3D(pos, p)/1000.0 >= RADIUS:
-                    continue
-                if (selected is None or  # some result is better than no result
-                    scored is True or    # best is already correctly reported artifacts
-                    scored is False and selected[0] == artf_type or  # artifact already failed to report
-                    (scored is None and selected[3] is None and selected[2] > src)  # if not sure, sort it by robot name
-                ):
-                    selected = [artf_type, pos, src, scored]
-            assert selected is not None  # there should be at least one origin
-            ret.append(selected)
-        return ret
+        # now remove all already reported close to false reports
+        tmp = []
+        for item in scored_unknown:
+            artf_type, pos, _, _ = item
+            for artf_type2, pos2, _, _ in scored_false:
+                if artf_type == artf_type2 and distance3D(pos, pos2)/1000.0 < RADIUS_FALSE:
+                    # close to wrongly reported artifact with the same type
+                    break
+            else:
+                tmp.append(item)
+        scored_unknown = tmp
+
+        # finally pick only one representative (any, just ordered)
+        # ... and handle other reports once this is confirmed
+        # TODO confirmation from base can be lost several times ... is it OK?
+        if len(scored_unknown) > 0:
+            return [min(scored_unknown)]
+        else:
+            return []
 
     def nearest_scored_artifact(self, artf_type, position):
         # TODO remove 1000x scaling to millimeters - source of headache
