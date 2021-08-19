@@ -152,6 +152,8 @@ class ArtifactReporter(Node):
             # TODO? check type - we decided to ignore it for Cave Circuit
             if was_unknown:
                 self.publish('artf_all', self.artf_xyz_accumulated)  # broadcast new update
+                # trigger sending next artifact if there is any
+                self.publish_artf(self.artf_xyz_accumulated)
 
     def update(self):
         channel = super().update()  # define self.time
