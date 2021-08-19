@@ -27,6 +27,7 @@ from subt.trace import Trace, distance3D
 
 
 RADIUS = 4.0  # there are probably not two artifacts within sphere of this radius
+RADIUS_FALSE = 2.0  # reported artifact was not correct so do not repeat it within this radius
 
 
 class ArtifactReporter(Node):
@@ -37,20 +38,71 @@ class ArtifactReporter(Node):
         self.artf_xyz = []
         self.artf_xyz_accumulated = []  # items are [type, position, source, flag]
                                         # position = [x, y, z], flag(scored) = True/False/None
+        self.verbose = False
 
     def publish_artf(self, artf_xyz):
         count = 0
-        for artf_type, pos, src, scored in artf_xyz:
-            if scored is None:
-                if count == 0:
-                    print(self.time, "DETECTED:")
-                count += 1
-                ix, iy, iz = pos
+        for artf_type, pos, src, scored in self.select_artf_for_report(artf_xyz):
+            if count == 0 and self.verbose:
+                print(self.time, "DETECTED:")
+            count += 1
+            ix, iy, iz = pos
+            if self.verbose:
                 print(" ", artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
-                s = '%s %.2f %.2f %.2f\n' % (artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
-                self.publish('artf_cmd', bytes('artf ' + s, encoding='ascii'))
-        if count > 0:
+            s = '%s %.2f %.2f %.2f\n' % (artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
+            self.publish('artf_cmd', bytes('artf ' + s, encoding='ascii'))
+        if count > 0 and self.verbose:
             print('report completed')
+
+    def select_artf_for_report(self, artf_xyz):
+        """
+        There are cases when two or more robots discover artefact independently and they do not
+        have the base answer yet. Never-the-less only one representative (team identical) should
+        be selected and reported.
+        """
+        # first sort all known artifacts into three groups
+        scored_true, scored_false, scored_unknown = [], [], []
+        for item in artf_xyz:
+            artf_type, pos, src, scored = item
+            if scored is True:
+                scored_true.append(item)
+            elif scored is False:
+                scored_false.append(item)
+            else:
+                assert scored is None, scored
+                scored_unknown.append(item)
+
+        # remove all unknown too close to already successfully scored artifacts
+        tmp = []
+        for item in scored_unknown:
+            _, pos, _, _ = item
+            for _, pos2, _, _ in scored_true:
+                # we want to filter out also other artifacts of different type (i.e. probably wrongly recognized?)
+                if distance3D(pos, pos2)/1000.0 < RADIUS:
+                    break
+            else:
+                tmp.append(item)
+        scored_unknown = tmp
+
+        # now remove all already reported close to false reports
+        tmp = []
+        for item in scored_unknown:
+            artf_type, pos, _, _ = item
+            for artf_type2, pos2, _, _ in scored_false:
+                if artf_type == artf_type2 and distance3D(pos, pos2)/1000.0 < RADIUS_FALSE:
+                    # close to wrongly reported artifact with the same type
+                    break
+            else:
+                tmp.append(item)
+        scored_unknown = tmp
+
+        # finally pick only one representative (any, just ordered)
+        # ... and handle other reports once this is confirmed
+        # TODO confirmation from base can be lost several times ... is it OK?
+        if len(scored_unknown) > 0:
+            return [min(scored_unknown)]
+        else:
+            return []
 
     def nearest_scored_artifact(self, artf_type, position):
         # TODO remove 1000x scaling to millimeters - source of headache
@@ -98,6 +150,8 @@ class ArtifactReporter(Node):
             # TODO? check type - we decided to ignore it for Cave Circuit
             if was_unknown:
                 self.publish('artf_all', self.artf_xyz_accumulated)  # broadcast new update
+                # trigger sending next artifact if there is any
+                self.publish_artf(self.artf_xyz_accumulated)
 
     def update(self):
         channel = super().update()  # define self.time
