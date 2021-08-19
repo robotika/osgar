@@ -7,10 +7,13 @@ import math
 from osgar.node import Node
 
 HEIGHT = 1.6  # TODO config or message?
-EMERGENCY_HEIGHT = 0.5
+# (0, 0, 0) point of the CoRo PAM drone is at its top, which leads to
+# asymmetric thresholds.
+EMERGENCY_SPACE_BELOW = 0.7
+EMERGENCY_SPACE_ABOVE = 0.4
 MAX_ANGULAR = 1.0
 MAX_VERTICAL = 2.5
-PID_P = 1.5  # 2.0  # 0.5
+PID_P = 2.0
 
 
 def altitude_from_pressure(p):
@@ -72,12 +75,12 @@ class Drone(Node):
                 H = diff
                 desiredVel = PID_P * diff
             else:
-                if ((self.lastScanDown < EMERGENCY_HEIGHT and self.desired_z_speed <= 0) or
-                        (self.lastScanUp < EMERGENCY_HEIGHT and self.desired_z_speed >= 0)):
+                if ((self.lastScanDown < EMERGENCY_SPACE_BELOW and self.desired_z_speed <= 0) or
+                        (self.lastScanUp < EMERGENCY_SPACE_ABOVE and self.desired_z_speed >= 0)):
                     print(self.time, 'Emergency limit', self.lastScanDown, self.lastScanUp)
                     # temporary switch to keep safe height from bottom/top
-                    down = self.lastScanDown - EMERGENCY_HEIGHT
-                    up = self.lastScanUp - EMERGENCY_HEIGHT
+                    down = self.lastScanDown - EMERGENCY_SPACE_BELOW
+                    up = self.lastScanUp - EMERGENCY_SPACE_ABOVE
                     if up < 0 and down < 0:
                         diff = (up - down) / 2
                     elif up < 0:
