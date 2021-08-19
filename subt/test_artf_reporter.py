@@ -121,11 +121,11 @@ class ArtifactReporterTest(unittest.TestCase):
         reporter.on_artf_xyz([['TYPE_PHONE', [69758 + 2000, -5143, 533], 'A150L', None]])  # 2m offset
         self.assertEqual(len(reporter.artf_xyz_accumulated), 2)
 
-    def test_group_artf_for_report(self):
+    def test_select_artf_for_report(self):
         bus = MagicMock()
         reporter = ArtifactReporter(config={}, bus=bus)
 
-        to_report = reporter.group_artf_for_report([
+        to_report = reporter.select_artf_for_report([
                    ['TYPE_DRILL', [343506, 22288, -14938], 'B300W900ELXA', None],
                    ['TYPE_DRILL', [343174, 22338, -14727], 'A900L', None],
                    ['TYPE_RESCUE_RANDY', [252978, 106894, -18309], 'A900L', None],
@@ -137,7 +137,7 @@ class ArtifactReporterTest(unittest.TestCase):
         ])
 
         # now let's have already positive report from B-drone
-        to_report = reporter.group_artf_for_report([
+        to_report = reporter.select_artf_for_report([
                    ['TYPE_DRILL', [343506, 22288, -14938], 'B300W900ELXA', True],
                    ['TYPE_DRILL', [343174, 22338, -14727], 'A900L', None]])
 
@@ -145,7 +145,7 @@ class ArtifactReporterTest(unittest.TestCase):
         self.assertEqual(to_report, [])
 
         # now let's have negative result of different artifact type
-        to_report = reporter.group_artf_for_report([
+        to_report = reporter.select_artf_for_report([
                    ['TYPE_DRILL', [343506, 22288, -14938], 'B300W900ELXA', None],
                    ['TYPE_BACKPACK', [343174, 22338, -14727], 'A900L', False]])
 
@@ -155,7 +155,7 @@ class ArtifactReporterTest(unittest.TestCase):
         ])
 
         # the same type of artifact but already received False for nearby location
-        to_report = reporter.group_artf_for_report([
+        to_report = reporter.select_artf_for_report([
                    ['TYPE_BACKPACK', [343506, 22288, -14938], 'B300W900ELXA', None],
                    ['TYPE_BACKPACK', [343174, 22338, -14727], 'A900L', False]])
 
@@ -163,7 +163,7 @@ class ArtifactReporterTest(unittest.TestCase):
         self.assertEqual(to_report, [])
 
         # two different reports from the same robot
-        to_report = reporter.group_artf_for_report([
+        to_report = reporter.select_artf_for_report([
                    ['TYPE_ROPE', [343506, 22288, -14938], 'A900L', None],
                    ['TYPE_BACKPACK', [343174, 22338, -14727], 'A900L', None]])
 
@@ -172,8 +172,15 @@ class ArtifactReporterTest(unittest.TestCase):
             ['TYPE_BACKPACK', [343174, 22338, -14727], 'A900L', None]
         ])
 
+        # True artefact masks ALL other reports
+        to_report = reporter.select_artf_for_report([
+                   ['TYPE_ROPE', [343506, 22288, -14938], 'A900L', True],
+                   ['TYPE_BACKPACK', [343174, 22338, -14727], 'A900L', None]])
 
-    def test_grouping_integration(self):
+        self.assertEqual(to_report, [])
+
+
+    def test_artf_select_integration(self):
         bus = MagicMock()
         reporter = ArtifactReporter(config={}, bus=bus)
 
@@ -195,7 +202,7 @@ class ArtifactReporterTest(unittest.TestCase):
                     ['TYPE_BACKPACK', [343174, 22338, -14727], 'A900L', None]]
 
         # two different reports from the same robot
-        to_report = reporter.group_artf_for_report(artf_xyz)
+        to_report = reporter.select_artf_for_report(artf_xyz)
 
         self.assertEqual(to_report, [
             ['TYPE_BACKPACK', [343174, 22338, -14727], 'A900L', None]
@@ -203,7 +210,7 @@ class ArtifactReporterTest(unittest.TestCase):
 
         artf_xyz.reverse()
 
-        to_report = reporter.group_artf_for_report(artf_xyz)
+        to_report = reporter.select_artf_for_report(artf_xyz)
 
         self.assertEqual(to_report, [
             ['TYPE_BACKPACK', [343174, 22338, -14727], 'A900L', None]

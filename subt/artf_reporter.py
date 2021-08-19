@@ -42,20 +42,19 @@ class ArtifactReporter(Node):
 
     def publish_artf(self, artf_xyz):
         count = 0
-        for artf_type, pos, src, scored in self.group_artf_for_report(artf_xyz):
-            if scored is None:
-                if count == 0 and self.verbose:
-                    print(self.time, "DETECTED:")
-                count += 1
-                ix, iy, iz = pos
-                if self.verbose:
-                    print(" ", artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
-                s = '%s %.2f %.2f %.2f\n' % (artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
-                self.publish('artf_cmd', bytes('artf ' + s, encoding='ascii'))
+        for artf_type, pos, src, scored in self.select_artf_for_report(artf_xyz):
+            if count == 0 and self.verbose:
+                print(self.time, "DETECTED:")
+            count += 1
+            ix, iy, iz = pos
+            if self.verbose:
+                print(" ", artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
+            s = '%s %.2f %.2f %.2f\n' % (artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
+            self.publish('artf_cmd', bytes('artf ' + s, encoding='ascii'))
         if count > 0 and self.verbose:
             print('report completed')
 
-    def group_artf_for_report(self, artf_xyz):
+    def select_artf_for_report(self, artf_xyz):
         """
         There are cases when two or more robots discover artefact independently and they do not
         have the base answer yet. Never-the-less only one representative (team identical) should
@@ -73,14 +72,13 @@ class ArtifactReporter(Node):
                 assert scored is None, scored
                 scored_unknown.append(item)
 
-        # remove all unknown by already successfully scored artifacts
+        # remove all unknown too close to already successfully scored artifacts
         tmp = []
         for item in scored_unknown:
-            artf_type, pos, _, _ = item
-            for artf_type2, pos2, _, _ in scored_true:
-                # TODO do we want to filter out also other artifacts of different type (i.e. probably wrongly recognized?)
-                if artf_type == artf_type2 and distance3D(pos, pos2)/1000.0 < RADIUS:
-                    # already successfully reported
+            _, pos, _, _ = item
+            for _, pos2, _, _ in scored_true:
+                # we want to filter out also other artifacts of different type (i.e. probably wrongly recognized?)
+                if distance3D(pos, pos2)/1000.0 < RADIUS:
                     break
             else:
                 tmp.append(item)
