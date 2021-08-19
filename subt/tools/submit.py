@@ -64,6 +64,10 @@ WORLDS = dict(
     fp2 = "Finals Practice 2",
     fp3 = "Finals Practice 3",
     fpr = "Finals Preliminary Round",
+
+    fpr1 = "Finals Preliminary Round World 1",
+    fpr2 = "Finals Preliminary Round World 2",
+    fpr3 = "Finals Preliminary Round World 3",
 )
 
 ROBOTS=dict(
