@@ -140,7 +140,7 @@ def main():
     img = ign.draw(ground_truth, artifacts, breadcrumbs)
     cv2.imwrite(args.ign+'.png', img)
     if args.draw:
-        from . import startfile
+        from subt.tools import startfile
         startfile.main(args.ign+'.png')
 
     print('Ground truth count:', len(ground_truth))
