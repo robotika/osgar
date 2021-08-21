@@ -79,5 +79,15 @@ class MultiTraceManagerTest(unittest.TestCase):
         mtm.on_query(['A500L', 0, 100])
         bus.publish.assert_called_with('response', {'A500L': []})
 
+    def test_time_to_signal(self):
+        bus = MagicMock()
+        mtm = MultiTraceManager(bus=bus, config={})
+
+        mtm.on_sim_time_sec(42)
+        bus.publish.assert_called_with('time_to_signal', 0)
+
+        mtm.on_teambase_sec(42)
+        mtm.on_sim_time_sec(43)
+        bus.publish.assert_called_with('time_to_signal', 1)
 
 # vim: expandtab sw=4 ts=4

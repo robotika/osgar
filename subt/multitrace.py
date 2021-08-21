@@ -36,8 +36,10 @@ def get_intervals(seq):
 class MultiTraceManager(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('robot_trace', 'trace_info', 'response')
+        bus.register('robot_trace', 'trace_info', 'response', 'time_to_signal')
         self.traces = {}
+        self.robot_name = None  # my name (unknown on start)
+        self.signal_times = []  # times received from Teambase
 
     def publish_trace_info(self):
         info = {}
@@ -89,8 +91,19 @@ class MultiTraceManager(Node):
         name, from_sec, to_sec = data
         self.publish('response', {name: self.traces.get(name, [])})
 
+    def on_robot_name(self, data):
+        self.robot_name = data.decode('ascii')
+
     def on_teambase_sec(self, data):
-        pass
+        self.signal_times.append(data)
+
+    def on_sim_time_sec(self, data):
+        if len(self.signal_times) > 0:
+            # TODO more complex algo
+            tts = data - self.signal_times[-1]
+        else:
+            tts = 0  # starting area, but did not receive message from Teambase yet
+        self.publish('time_to_signal', tts)
 
     def update(self):
         channel = super().update()  # define self.time
