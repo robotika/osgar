@@ -232,6 +232,8 @@
               ["radio.robot_trace", "mtm.robot_trace"],
               ["radio.robot_xyz", "app.whereabouts"],
               ["radio.teambase_sec", "mtm.teambase_sec"],
+              ["fromrospy.robot_name", "mtm.robot_name"],
+              ["rosmsg.sim_time_sec", "mtm.sim_time_sec"],
               ["mtm.trace_info", "radio.trace_info"],
               ["mtm.robot_trace", "radio.robot_trace"],
 
