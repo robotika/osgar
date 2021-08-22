@@ -18,7 +18,7 @@ from osgar.lib.serialize import deserialize
 from subt.tf_detector import CvDetector
 from subt.artf_node import check_results, create_detector
 
-g_streams = ["logimage.image", "logimage_rear.image"]
+g_streams = ["logimage.image", "logimage_rear.image", "logimage_right.image", "logimage_left.image"]
 g_artf_names = ["survivor","backpack", "phone", "helmet", "rope", "fire_extinguisher", "drill", "vent", "cube"]
 
 NAMES_AND_SCORES = {'backpack': 0.1,
@@ -142,8 +142,8 @@ def log_eval(log_file):
                 im_file_name = prefix + "_im_%06d.jpg" % ii
                 im_path = os.path.join(data_dir, im_file_name)
                 for res in result:
-                    print(res)
                     artf_name, res_t, res_cv = res
+                    print(im_file_name, artf_name)
                     score_torch, points = proces_torch_result(res_t)
                     __, score_cv, bbox = res_cv
 
