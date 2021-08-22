@@ -54,14 +54,6 @@ def any_is_none(*args):
     return False
 
 
-def min_dist(laser_data):
-    if len(laser_data) > 0:
-        # remove ultra near reflections and unlimited values == 0
-        laser_data = [x if x > 10 else 10000 for x in laser_data]
-        return min(laser_data)/1000.0
-    return 0
-
-
 def distance(pose1, pose2):
     return math.hypot(pose1[0] - pose2[0], pose1[1] - pose2[1])
 
@@ -227,8 +219,18 @@ class SubTChallenge:
         return False
 
     def speed_limit(self):
-        size = len(self.scan)
-        dist = min_dist(self.scan[size//2-size//10:size//2+size//10])
+        directions = np.radians(np.linspace(-135, 135, num=len(self.scan)))
+        scan = np.asarray(self.scan) / 1000.0
+        pts_x = scan * np.cos(directions)
+        pts_y = scan * np.sin(directions)
+        of_interest = np.logical_and.reduce(np.stack([
+                scan > 0.01,
+                pts_x > 0,
+                np.abs(pts_y) <= self.gap_size / 2]))
+        pts_x = pts_x[of_interest]
+        pts_y = pts_y[of_interest]
+        dists = np.hypot(pts_x, pts_y)
+        dist = np.inf if dists.size == 0 else float(np.min(dists))
         if dist < self.min_safe_dist:
             safe_speed = self.max_speed * (dist - self.dangerous_dist) / (self.min_safe_dist - self.dangerous_dist)
             desired_speed = safe_speed if self.cautious_speed is None or not self.is_approaching_another_robot() else min(safe_speed, self.cautious_speed)
@@ -473,7 +475,7 @@ class SubTChallenge:
             HOME_THRESHOLD = home_threshold
         SHORTCUT_RADIUS = 2.3
         MAX_TARGET_DISTANCE = 5.0
-        MIN_TARGET_DISTANCE = 1.0
+        MIN_TARGET_DISTANCE = 3.0
         assert(MAX_TARGET_DISTANCE > SHORTCUT_RADIUS) # Because otherwise we could end up with a target point more distant from home than the robot.
         print('Wait and get ready for return')
         self.send_speed_cmd(0, 0)
@@ -495,7 +497,6 @@ class SubTChallenge:
                     target_x, target_y, target_z = original_trace.where_to(self.xyz, target_distance, self.trace_z_weight)
                 else:
                     target_x, target_y, target_z = self.trace.where_to(self.xyz, target_distance, self.trace_z_weight)
-#                print(self.time, self.xyz, (target_x, target_y), math.degrees(self.yaw))
                 x, y = self.xyz[:2]
                 yaw = (self.yaw + math.pi) if self.flipped else self.yaw
                 desired_direction = normalizeAnglePIPI(math.atan2(target_y - y, target_x - x) - yaw)
@@ -507,6 +508,7 @@ class SubTChallenge:
                     continue
 
                 safety, safe_direction = self.go_safely(desired_direction, allow_z_control=False)
+#                print(self.time, self.xyz, (target_x, target_y, target_z), math.degrees(self.yaw), distance3D(self.xyz, (target_x, target_y, target_z)), target_distance, math.degrees(desired_direction), math.degrees(safe_direction))
                 if safety < 0.2:
                     print(self.time, "Safety low!", safety, desired_direction)
                     target_distance = MIN_TARGET_DISTANCE
