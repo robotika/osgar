@@ -13,6 +13,7 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <std_msgs/Empty.h>
 #include <tf/transform_listener.h>
 
 #include <opencv2/imgproc.hpp>
@@ -69,6 +70,7 @@ class Traversability
     ros::Subscriber compressed_depth_handler_;
     ros::Subscriber camera_info_handler_;
     ros::Subscriber scan_handler_;
+    ros::Subscriber breadcrumb_handler_;
     tf::TransformListener transform_listener_;
 
     std::unordered_map<std::string, sensor_msgs::CameraInfo::ConstPtr> camera_infos_;
@@ -142,11 +144,18 @@ class Traversability
       // Obstacles more than this above ground are ignored, because they are not
       // relevant. the robot can go under them,
       float robot_height;
+
+      // We mask out obstacles around dropped breadcrumbs to avoid getting stuck
+      // on them.
+      float breadcrumb_radius;
+      float breadcrumb_height;
     } config_;
 
     // Maps are keyed by frame_ids of individual sensors.
     std::map<std::string, int> observation_seq_id_;
     std::map<std::string, std::vector<Observation>> observations_;
+
+    std::vector<tf::Vector3> breadcrumbs_;
 
     ros::Timer publish_timer_;
     ros::Publisher points_publisher_;
@@ -160,11 +169,13 @@ class Traversability
     void HandleDepth(
         const cv::Mat& img, const std::string& camera_frame_id,
         const ros::Time& stamp);
+    bool NearBreadcrumb(const tf::Vector3& pt) const;
 
     void OnCameraInfo(const sensor_msgs::CameraInfo::ConstPtr& msg);
     void OnDepth(const sensor_msgs::Image::ConstPtr& msg);
     void OnCompressedDepth(const rtabmap_ros::RGBDImage::ConstPtr& msg);
     void OnScan(const sensor_msgs::LaserScan::ConstPtr& msg);
+    void OnBreadcrumb(const std_msgs::Empty::ConstPtr& msg);
     void OnTimer(const ros::TimerEvent& event);
 };
 
@@ -199,11 +210,14 @@ bool Traversability::Init()
   ros_handle_.param("visible_ground_min", config_.visible_ground_min, 0.6f);
   ros_handle_.param("visible_ground_max", config_.visible_ground_max, 2.5f);
   ros_handle_.param("robot_height", config_.robot_height, 0.5f);
+  ros_handle_.param("breadcrumb_radius", config_.breadcrumb_radius, 0.6f);
+  ros_handle_.param("breadcrumb_height", config_.breadcrumb_height, 0.5f);
 
   camera_info_handler_ = ros_handle_.subscribe("input/camera_info", 10, &Traversability::OnCameraInfo, this);
   depth_handler_ = ros_handle_.subscribe("input/depth", 10, &Traversability::OnDepth, this);
   compressed_depth_handler_ = ros_handle_.subscribe("input/depth/compressed", 10, &Traversability::OnCompressedDepth, this);
   scan_handler_ = ros_handle_.subscribe("input/scan", 10, &Traversability::OnScan, this);
+  breadcrumb_handler_ = ros_handle_.subscribe("input/breadcrumb", 10, &Traversability::OnBreadcrumb, this);
 
   publish_timer_ = ros_handle_.createTimer(config_.publish_rate, &Traversability::OnTimer, this);
   points_publisher_ = ros_handle_.advertise<sensor_msgs::PointCloud2>("output/map", 10);
@@ -567,6 +581,20 @@ void Traversability::HandleDepth(
                     config_.max_depth_observations);
 }
 
+bool Traversability::NearBreadcrumb(const tf::Vector3& pt) const
+{
+  for (const auto &b : breadcrumbs_)
+  {
+    if (std::hypot(pt.x() - b.x(), pt.y() - b.y()) <
+          config_.breadcrumb_radius &&
+        std::abs(pt.z() - b.z()) < config_.breadcrumb_height / 2)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 float median(std::vector<float> values)
 {
   const size_t middle = values.size() / 2;
@@ -627,6 +655,16 @@ void Traversability::OnScan(const sensor_msgs::LaserScan::ConstPtr& msg)
                     config_.max_scan_observations);
 }
 
+void Traversability::OnBreadcrumb(const std_msgs::Empty::ConstPtr& msg __attribute__((unused)))
+{
+  std::optional<tf::StampedTransform> robot_pose =
+    GetTransform(config_.world_frame_id, config_.robot_frame_id, ros::Time(0));
+  if (!robot_pose) return;
+  // Ideally, we would compensate for the fact that a breadcrumb is dropped at
+  // the rear end of the robot and not in the center.
+  const auto& robot_xyz = robot_pose->getOrigin();
+  breadcrumbs_.push_back(robot_xyz);
+}
 
 void Traversability::OnTimer(const ros::TimerEvent& event)
 {
@@ -650,7 +688,8 @@ void Traversability::OnTimer(const ros::TimerEvent& event)
       for (const auto& pt : observation)
       {
         const auto local_pt = *to_local * pt;
-        if (local_pt.z() < config_.max_relative_z)
+        if (local_pt.z() < config_.max_relative_z &&
+	    !NearBreadcrumb(pt))
         {
           local_pts.push_back(local_pt);
         }
