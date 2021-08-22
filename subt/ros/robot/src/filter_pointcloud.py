@@ -16,22 +16,20 @@ import numpy as np
 
 
 class FilterPointCloud:
-    def __init__(self,
-                 # Focal length.
-                 fx=554.25469,
-                 # Image dimensions.
-                 image_size=(640, 480),
-                 # Principal point, position of optical axis
-                 principal_point=(640 / 2. + 0.5, 480 / 2 + 0.5),
-                 # Distance outside RGBD camera range (meters)
-                 out_of_range=11.0,
-                 ):
+    def __init__(self):
         self.points_subscriber = rospy.Subscriber("/points", PointCloud2, self.points_callback)
         self.points_publisher = rospy.Publisher("/points_cleaned", PointCloud2, queue_size=1)
 
-        self.fx = fx
-        self.camw, self.camh = image_size
-        self.rx, self.ry = principal_point
+        # Focal length.
+        fx = rospy.get_param('~fx', 554.25469)
+        # Image dimensions.
+        self.camw = rospy.get_param('~image_width', 640)
+        self.camh = rospy.get_param('~image_height', 360)
+        # Principal point, position of optical axis
+        self.rx = rospy.get_param('~principal_point_x', self.camw/2+0.5)
+        self.ry = rospy.get_param('~principal_point_y', self.camh/2+0.5)
+        # Distance reach of the RGBD camera range (meters)
+        out_of_range = rospy.get_param('~max_range', 10) + 1.0
 
         # Pixel coordinates relative to the center of the image, with positive
         # directions to the left and up.
@@ -45,10 +43,10 @@ class FilterPointCloud:
         self.background = (np.dstack([pzs, pxs / fx, pys / fx]).T.reshape((3, -1))).reshape((3, self.camw, self.camh)).T * out_of_range
 
     def filter_points(self, msg):
-        assert msg.height == self.camh, msg.height
-        assert msg.width == self.camw, msg.width
+        assert msg.height == self.camh, (msg.height, self.camh)
+        assert msg.width == self.camw, (msg.width, self.camw)
         assert msg.point_step == 24, msg.point_step
-        assert msg.row_step == self.camw * 24, msg.row_step
+        assert msg.row_step == self.camw * 24, (msg.row_step, self.camw * 24)
 
         data = np.frombuffer(msg.data, dtype=np.float32).reshape((self.camh, self.camw, 6))
         xyz = data[:, :, :3].copy()
@@ -84,6 +82,6 @@ class FilterPointCloud:
 
 if __name__ == "__main__":
     rospy.init_node("FilterPointCloud")
-    filter = FilterPointCloud(image_size=(640, 360))  # TODO external param X4 vs. CoRo Pam
+    pc_filter = FilterPointCloud()
     rospy.spin()
 
