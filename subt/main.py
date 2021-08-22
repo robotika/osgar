@@ -54,14 +54,6 @@ def any_is_none(*args):
     return False
 
 
-def min_dist(laser_data):
-    if len(laser_data) > 0:
-        # remove ultra near reflections and unlimited values == 0
-        laser_data = [x if x > 10 else 10000 for x in laser_data]
-        return min(laser_data)/1000.0
-    return 0
-
-
 def distance(pose1, pose2):
     return math.hypot(pose1[0] - pose2[0], pose1[1] - pose2[1])
 
@@ -265,8 +257,18 @@ class SubTChallenge:
         return False
 
     def speed_limit(self):
-        size = len(self.scan)
-        dist = min_dist(self.scan[size//2-size//10:size//2+size//10])
+        directions = np.radians(np.linspace(-135, 135, num=len(self.scan)))
+        scan = np.asarray(self.scan) / 1000.0
+        pts_x = scan * np.cos(directions)
+        pts_y = scan * np.sin(directions)
+        of_interest = np.logical_and.reduce(np.stack([
+                scan > 0.01,
+                pts_x > 0,
+                np.abs(pts_y) <= self.gap_size / 2]))
+        pts_x = pts_x[of_interest]
+        pts_y = pts_y[of_interest]
+        dists = np.hypot(pts_x, pts_y)
+        dist = np.inf if dists.size == 0 else float(np.min(dists))
         if dist < self.min_safe_dist:
             safe_speed = self.max_speed * (dist - self.dangerous_dist) / (self.min_safe_dist - self.dangerous_dist)
             desired_speed = safe_speed if self.cautious_speed is None or not self.is_approaching_another_robot() else min(safe_speed, self.cautious_speed)
@@ -323,13 +325,13 @@ class SubTChallenge:
         if allow_z_control and self.slopes:
             slope_idx = int(len(self.slopes) * (safe_direction - -math.pi) / (2 * math.pi))
             slope = self.slopes[slope_idx]
-            desired_z_speed = float(desired_speed * math.tan(slope))
+            desired_z_speed = float(abs(desired_speed) * math.tan(slope))
             self.bus.publish('desired_z_speed', desired_z_speed)
         if self.flipped:
             self.send_speed_cmd(-desired_speed, desired_angular_speed)
         else:
             self.send_speed_cmd(desired_speed, desired_angular_speed)
-        return safety
+        return safety, safe_direction
 
     def turn(self, angle, with_stop=True, speed=0.0, timeout=None):
         print(self.time, "turn %.1f" % math.degrees(angle))
@@ -511,7 +513,7 @@ class SubTChallenge:
             HOME_THRESHOLD = home_threshold
         SHORTCUT_RADIUS = 2.3
         MAX_TARGET_DISTANCE = 5.0
-        MIN_TARGET_DISTANCE = 1.0
+        MIN_TARGET_DISTANCE = 3.0
         assert(MAX_TARGET_DISTANCE > SHORTCUT_RADIUS) # Because otherwise we could end up with a target point more distant from home than the robot.
         print('Wait and get ready for return')
         self.send_speed_cmd(0, 0)
@@ -533,7 +535,6 @@ class SubTChallenge:
                     target_x, target_y, target_z = original_trace.where_to(self.xyz, target_distance, self.trace_z_weight)
                 else:
                     target_x, target_y, target_z = self.trace.where_to(self.xyz, target_distance, self.trace_z_weight)
-#                print(self.time, self.xyz, (target_x, target_y), math.degrees(self.yaw))
                 x, y = self.xyz[:2]
                 yaw = (self.yaw + math.pi) if self.flipped else self.yaw
                 desired_direction = normalizeAnglePIPI(math.atan2(target_y - y, target_x - x) - yaw)
@@ -544,12 +545,8 @@ class SubTChallenge:
                     self.flip()
                     continue
 
-                d = distance3D(self.xyz, [target_x, target_y, target_z])
-                time_to_target = d / max(0.01, abs(self.speed_limit()))
-                desired_z_speed = (target_z - self.xyz[2]) / time_to_target
-                self.bus.publish('desired_z_speed', desired_z_speed)
-
-                safety = self.go_safely(desired_direction, allow_z_control=False)
+                safety, safe_direction = self.go_safely(desired_direction, allow_z_control=False)
+#                print(self.time, self.xyz, (target_x, target_y, target_z), math.degrees(self.yaw), distance3D(self.xyz, (target_x, target_y, target_z)), target_distance, math.degrees(desired_direction), math.degrees(safe_direction))
                 if safety < 0.2:
                     print(self.time, "Safety low!", safety, desired_direction)
                     target_distance = MIN_TARGET_DISTANCE
@@ -559,6 +556,23 @@ class SubTChallenge:
                     if count_down == 0:
                         target_distance = MAX_TARGET_DISTANCE
                         print(self.time, "Recovery to original", target_distance)
+
+                d = distance3D(self.xyz, [target_x, target_y, target_z])
+                time_to_target = d / max(0.01, abs(self.speed_limit()))
+                if self.slopes is not None:
+                    # Climb at least as much as needed to fly over obstacles.
+                    horizontal_distance_to_target = max(
+                            0.01, math.hypot(target_x - self.xyz[0],
+                                             target_y - self.xyz[1]))
+                    desired_slope = math.atan2(target_z - self.xyz[2],
+                                              horizontal_distance_to_target)
+                    slope_idx = int(len(self.slopes) * (safe_direction - -math.pi) / (2 * math.pi))
+                    if self.slopes[slope_idx] > desired_slope:
+                        desired_slope = self.slopes[slope_idx]
+                    desired_z_speed = math.tan(desired_slope) * horizontal_distance_to_target / time_to_target
+                else:
+                    desired_z_speed = (target_z - self.xyz[2]) / time_to_target
+                self.bus.publish('desired_z_speed', desired_z_speed)
 
         print('return_home: dist', distance3D(self.xyz, home_position), 'time(sec)', self.sim_time_sec - start_time)
         self.bus.publish('desired_z_speed', None)
@@ -581,20 +595,34 @@ class SubTChallenge:
                 if self.flipped and self.joint_angle_rad:
                     desired_direction = normalizeAnglePIPI(desired_direction + sum(self.joint_angle_rad))
                 if self.can_flip() and abs(desired_direction) > math.radians(95):  # including hysteresis
+                    if is_trace3d:
+                        self.bus.publish('desired_z_speed', 0)
                     print('Flipping:', math.degrees(desired_direction))
                     self.flip()
                 else:
-                    safety = self.go_safely(desired_direction, allow_z_control=False)
+                    safety, safe_direction = self.go_safely(desired_direction, allow_z_control=False)
                     if safety_limit is not None and safety < safety_limit:
                         print('Danger! Safety limit for follow trace reached!', safety, safety_limit)
                         termination_reason = 'safety'
                         break
 
-                if is_trace3d:
-                    d = distance3D(self.xyz, [target_x, target_y, target_z])
-                    time_to_target = d / max(0.01, abs(self.speed_limit()))
-                    desired_z_speed = (target_z - self.xyz[2]) / time_to_target
-                    self.bus.publish('desired_z_speed', desired_z_speed)
+                    if is_trace3d:
+                        d = distance3D(self.xyz, [target_x, target_y, target_z])
+                        time_to_target = d / max(0.01, abs(self.speed_limit()))
+                        if self.slopes is not None:
+                            # Climb at least as much as needed to fly over obstacles.
+                            horizontal_distance_to_target = max(
+                                    0.01, math.hypot(target_x - self.xyz[0],
+                                                     target_y - self.xyz[1]))
+                            desired_slope = math.atan2(target_z - self.xyz[2],
+                                                      horizontal_distance_to_target)
+                            slope_idx = int(len(self.slopes) * (safe_direction - -math.pi) / (2 * math.pi))
+                            if self.slopes[slope_idx] > desired_slope:
+                                desired_slope = self.slopes[slope_idx]
+                            desired_z_speed = math.tan(desired_slope) * horizontal_distance_to_target / time_to_target
+                        else:
+                            desired_z_speed = (target_z - self.xyz[2]) / time_to_target
+                        self.bus.publish('desired_z_speed', desired_z_speed)
 
         print('End of follow trace(sec)', self.sim_time_sec - start_time)
         if is_trace3d:
@@ -1025,7 +1053,7 @@ class SubTChallenge:
         self.stdout('Final xyz (DARPA coord system):', self.xyz)
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver119!")
+        self.stdout("SubT Challenge Ver122!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
