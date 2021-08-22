@@ -124,7 +124,7 @@ def get_border_lines(border_points):
 
 
 def create_detector(confidence_thresholds):
-    model = os.path.join(os.path.dirname(__file__), '../../../mdnet5.128.128.13.4.elu.pth')
+    model = os.path.join(os.path.dirname(__file__), '../../../mdnet6.128.128.13.4.elu.pth')
     max_gap = 16
     min_group_size = 2
 
@@ -147,22 +147,22 @@ class ArtifactDetectorDNN(Node):
             'helmet': 0.5,
             'rope': 0.5,
             'fire_extinguisher': 0.5,
-            'drill': 0.75,
+            'drill': 0.5,
             'vent': 0.5,
             'cube': 0.5
         }
         # Confidence borders points
         # There are tree border points for each artifact, point coordinates: x - mdnet, y - cv_detector
         confidence_borders = {
-            'survivor': [[0.6, 1],[0.9, 0.65],[0.95, 0.2]],
-            'backpack': [[0.5, 0.55],[0.97, 0.4],[0.99, 0.2]],
-            'phone': [[0.5, 0.4],[0.82, 0.37],[1, 0.2]],
-            'helmet': [[0.5, 0.6],[0.9, 0.4],[1, 0.1]],
-            'rope': [[0.6, 0.5],[0.95, 0.35],[1, 0.2]],
-            'fire_extinguisher': [[0.5, 0.75],[0.95, 0.7],[1, 0.65]],
-            'drill': [[0.75, 1],[0.9, 0.8],[0.91, 0.1]],
-            'vent': [[0.5, 0.98],[0.9, 0.9],[1, 0.1]],
-            'cube': [[0.5, 0.4],[0.9, 0.4],[1, 0.4]]
+            'survivor': [[0.5, 1],[0.93, 0.55],[1, 0.1]],
+            'backpack': [[0.5, 1],[0.64, 0.88],[0.99, 0.2]],
+            'phone': [[0.5, 0.45],[0.84, 0.41],[1, 0.1]],
+            'helmet': [[0.5, 0.95],[0.85, 0.6],[1, 0.2]],
+            'rope': [[0.5, 0.5],[0.9, 0.35],[1, 0.1]],
+            'fire_extinguisher': [[0.5, 0.9],[0.95, 0.85],[1, 0.8]],
+            'drill': [[0.5, 0.61],[0.8, 0.6],[1, 0.4]],
+            'vent': [[0.5, 0.9],[0.6, 0.6],[0.7, 0.1]],
+            'cube': [[0.5, 0.6],[0.8, 0.59],[1, 0.2]]
         }
         self.border_lines = get_border_lines(confidence_borders)
         self.time = None
