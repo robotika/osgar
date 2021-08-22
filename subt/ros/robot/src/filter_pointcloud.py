@@ -24,7 +24,7 @@ class FilterPointCloud:
         fx = rospy.get_param('~fx', 554.25469)
         # Image dimensions.
         self.camw = rospy.get_param('~image_width', 640)
-        self.camh = rospy.get_param('~image_height', 360)
+        self.camh = rospy.get_param('~image_height', 480)
         # Principal point, position of optical axis
         self.rx = rospy.get_param('~principal_point_x', self.camw/2+0.5)
         self.ry = rospy.get_param('~principal_point_y', self.camh/2+0.5)
