@@ -70,6 +70,10 @@ class NewWaypointsException(Exception):
     pass
 
 
+class NotMovingException(Exception):
+    pass
+
+
 class EmergencyStopMonitor:
     def __init__(self, robot):
         self.robot = robot
@@ -99,6 +103,40 @@ class NewWaypointsMonitor:
     def update(self, robot):
         if robot.waypoints is not None:
             raise NewWaypointsException()
+
+    # context manager functions
+    def __enter__(self):
+        self.callback = self.robot.register(self.update)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.robot.unregister(self.callback)
+
+
+class NotMovingMonitor:
+    """
+    Check that for given time robot leaves sphere of given radius
+    """
+    def __init__(self, robot, radius, sim_time_sec_period):
+        self.robot = robot
+        self.radius = radius
+        self.sim_time_sec_period = sim_time_sec_period
+        self.anchor_xyz = None
+        self.anchor_sim_time = None
+
+    def update(self, robot):
+        if robot.xyz is not None and robot.sim_time_sec is not None:
+            if self.anchor_xyz is None:
+                # the very first anchor
+                self.anchor_xyz = robot.xyz
+                self.anchor_sim_time = robot.sim_time_sec
+            else:
+                if distance3D(robot.xyz, self.anchor_xyz) > self.radius:
+                    self.anchor_xyz = robot.xyz
+                    self.anchor_sim_time = robot.sim_time_sec
+                if robot.sim_time_sec - self.anchor_sim_time > self.sim_time_sec_period:
+                    print('LastDist', distance3D(robot.xyz, self.anchor_xyz), robot.sim_time_sec - self.anchor_sim_time)
+                    raise NotMovingException()
 
     # context manager functions
     def __enter__(self):
