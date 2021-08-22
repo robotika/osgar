@@ -5,9 +5,16 @@ import numpy as np
 
 # https://stackoverflow.com/questions/8658043/how-to-mock-an-import
 import sys
-sys.modules['rospy'] = MagicMock()
+my_rospy = MagicMock()
+sys.modules['rospy'] = my_rospy
 sys.modules['sensor_msgs'] = MagicMock()
 sys.modules['sensor_msgs.msg'] = MagicMock()
+
+def rospy_get_param(name, default):
+    return default
+
+my_rospy.get_param = rospy_get_param
+
 from subt.ros.robot.src import filter_pointcloud
 
 
