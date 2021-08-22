@@ -10,6 +10,7 @@ from datetime import timedelta
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 from osgar.lib.serialize import serialize, deserialize
+from subt.trace import distance3D
 
 # Note:
 #  Payload size is limited to 1500 bytes - CommsClient::SendTo()
@@ -33,6 +34,18 @@ def get_intervals(seq):
     return ret
 
 
+def find_shortcut(position, trace, radius=2.0):
+    """
+    For given position [t, xyz] find in the trace (list of [t, xyz])
+    the first index when distance is shorter than given radius.
+    """
+    last_xyz = position[1]  # ignore sim_time_sec
+    for i, (t, xyz) in enumerate(trace):
+        if distance3D(last_xyz, xyz) < radius:
+            break
+    return i
+
+
 class MultiTraceManager(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
@@ -40,6 +53,9 @@ class MultiTraceManager(Node):
         self.traces = {}
         self.robot_name = None  # my name (unknown on start)
         self.signal_times = []  # times received from Teambase
+        self.time_to_signal = []
+        self.shortcut = []
+        self.verbose = False
 
     def publish_trace_info(self):
         info = {}
@@ -58,11 +74,25 @@ class MultiTraceManager(Node):
                 self.traces[name] = positions
 
     def on_robot_xyz(self, data):
+        if self.verbose:
+            print('robot_xyz', data)
         name, position = data
         if name not in self.traces:
             self.traces[name] = []
         self.traces[name].append(position)
         self.publish_trace_info()
+        if name == self.robot_name:
+            index = find_shortcut(position, self.traces[name])
+            print('index', index, len(self.traces[name]), len(self.time_to_signal))
+            self.shortcut.append(index)
+            if len(self.time_to_signal) > 0:
+                if index < len(self.time_to_signal):
+                    tts = 1 + min(self.time_to_signal[-1], self.time_to_signal[index])
+                else:
+                    tts = 1 + self.time_to_signal[-1]
+            else:
+                tts = 0
+            self.time_to_signal.append(tts)
 
     def on_trace_info(self, data):
         update = {}
@@ -92,12 +122,23 @@ class MultiTraceManager(Node):
         self.publish('response', {name: self.traces.get(name, [])})
 
     def on_robot_name(self, data):
+        if self.verbose:
+            print('Robot name:', data)
         self.robot_name = data.decode('ascii')
+        if self.robot_name in self.traces:
+            # prefill array of old position to match the size of known trace
+            size = len(self.traces[self.robot_name])
+            self.shortcut = [0] * size
+            self.time_to_signal = [0] * size
 
     def on_teambase_sec(self, data):
+        if self.verbose:
+            print('Teambase:', data)
         self.signal_times.append(data)
 
     def on_sim_time_sec(self, data):
+        if self.verbose:
+            print('Sim Time:', data)
         if len(self.signal_times) > 0:
             # TODO more complex algo
             tts = data - self.signal_times[-1]

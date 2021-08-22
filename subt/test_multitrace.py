@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import MagicMock, patch, call
 
-from subt.multitrace import MultiTraceManager, get_intervals
+from subt.multitrace import MultiTraceManager, get_intervals, find_shortcut
 
 
 class MultiTraceManagerTest(unittest.TestCase):
@@ -89,5 +89,12 @@ class MultiTraceManagerTest(unittest.TestCase):
         mtm.on_teambase_sec(42)
         mtm.on_sim_time_sec(43)
         bus.publish.assert_called_with('time_to_signal', 1)
+
+    def test_find_shortcut(self):
+        self.assertEqual(find_shortcut([136, [-5.99928939942826, 4.999515137908293, 0.20089673945690997]],
+                                       [[136, [-5.99928939942826, 4.999515137908293, 0.20089673945690997]]]),
+                         0)
+        trace = [[i, [i, 0, 0]] for i in range(10)]
+        self.assertEqual(find_shortcut([13, [5.5, 0, 0]], trace, radius=1.0), 5)
 
 # vim: expandtab sw=4 ts=4
