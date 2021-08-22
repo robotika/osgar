@@ -161,7 +161,7 @@ bool Flyability::Init()
   ros_handle_.param("depth_subsampling", config_.depth_subsampling, 123);
   ros_handle_.param("robot_height_up", config_.robot_height_up, 0.1f);
   ros_handle_.param("robot_height_bottom", config_.robot_height_bottom, 0.4f);
-  ros_handle_.param("robot_radius", config_.robot_radius, 0.7f);
+  ros_handle_.param("robot_radius", config_.robot_radius, 0.4f);
   ros_handle_.param("max_slope", config_.max_slope, 28.0f);
   config_.max_slope = M_PI * config_.max_slope / 180;  // To radians.
   ros_handle_.param("above_ground", config_.above_ground, 3.0f);
