@@ -168,7 +168,7 @@ bool Flyability::Init()
   ros_handle_.param("depth_noise_filter_k", config_.depth_noise_filter_k, 2);
   ros_handle_.param("depth_noise_filter_min_support", config_.depth_noise_filter_min_support,
       (2 * config_.depth_noise_filter_k + 1) * (2 * config_.depth_noise_filter_k + 1) / 3);
-  ros_handle_.param("depth_noise_filter_max_support_distance", config_.depth_noise_filter_max_support_distance, 0.4f);
+  ros_handle_.param("depth_noise_filter_max_support_distance", config_.depth_noise_filter_max_support_distance, 0.6f);
   ros_handle_.param("robot_height_up", config_.robot_height_up, 0.1f);
   ros_handle_.param("robot_height_bottom", config_.robot_height_bottom, 0.4f);
   ros_handle_.param("robot_radius", config_.robot_radius, 0.4f);
