@@ -1,6 +1,6 @@
-world = "fpr"
+world = "fr"
 timeout = 4000
-image = "ver115"
+image = "ver123"
 
 [robots]
 D360W2C1500LH3600W = "freyja"
