@@ -225,7 +225,7 @@ if __name__ == '__main__':
                 # Rectangle around all detected points.
                 cv2.rectangle(img, (min_x, min_y), (max_x, max_y), (0, 255, 0))
                 # Main point.
-                cv2.circle(img, group[0][:2], 5, (0, 0, 255), -1)
+                cv2.circle(img, tuple(group[0][:2]), 5, (0, 0, 255), -1)
         if args.output:
             cv2.imwrite(
                 os.path.join(args.output, os.path.basename(args.image)), img)
