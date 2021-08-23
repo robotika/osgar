@@ -238,7 +238,7 @@
   <node pkg="topic_tools" type="relay" name="lidar_merge_bottom" args="/$(arg robot_name)/bottom_scan /$(arg robot_name)/all_scans"/>
   <node pkg="proxy" type="flyability" name="local_map" ns="$(arg robot_name)">
     <param name="robot_frame_id" value="$(arg robot_name)"/>
-    <param name="robot_height" value="0.5" />
+    <param name="range_scale" value="0.82"/> <!-- https://github.com/osrf/subt/issues/1001 -->
     <remap from="local_map/input/camera_info" to="/$(arg robot_name)/rgbd_all/optical/camera_info"/>
     <remap from="local_map/input/depth/compressed" to="/rtabmap/rgbd/all/compressed"/>
     <remap from="local_map/input/range" to="/$(arg robot_name)/all_scans"/>

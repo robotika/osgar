@@ -79,6 +79,11 @@ class Flyability
       // Storing only every n-th interesting point from the pointcloud.
       int depth_subsampling;
 
+      // Depth noise filtering parameters.
+      int depth_noise_filter_k;
+      int depth_noise_filter_min_support;
+      float depth_noise_filter_max_support_distance;
+
       // How often to publish outputs.
       ros::Duration publish_rate;
       // Dimensions of the robot.
@@ -102,6 +107,7 @@ class Flyability
       float range_variance;
       float range_variance_increment_per_step;
       int max_range_observations;
+      float range_scale;  // https://github.com/osrf/subt/issues/1001
 
       // Using at most this many nearby points when publishing output maps.
       int max_num_nearby_points;
@@ -159,6 +165,10 @@ bool Flyability::Init()
   ros_handle_.param("max_depth", config_.max_depth, 10.0f);
   ros_handle_.param("depth_image_stride", config_.depth_image_stride, 4);
   ros_handle_.param("depth_subsampling", config_.depth_subsampling, 123);
+  ros_handle_.param("depth_noise_filter_k", config_.depth_noise_filter_k, 2);
+  ros_handle_.param("depth_noise_filter_min_support", config_.depth_noise_filter_min_support,
+      (2 * config_.depth_noise_filter_k + 1) * (2 * config_.depth_noise_filter_k + 1) / 3);
+  ros_handle_.param("depth_noise_filter_max_support_distance", config_.depth_noise_filter_max_support_distance, 0.4f);
   ros_handle_.param("robot_height_up", config_.robot_height_up, 0.1f);
   ros_handle_.param("robot_height_bottom", config_.robot_height_bottom, 0.4f);
   ros_handle_.param("robot_radius", config_.robot_radius, 0.4f);
@@ -172,6 +182,7 @@ bool Flyability::Init()
   ros_handle_.param("range_variance", config_.range_variance, 0.0009f);
   ros_handle_.param("range_variance_increment_per_step", config_.range_variance_increment_per_step, 0.01f);
   ros_handle_.param("max_range_observations", config_.max_range_observations, 500);
+  ros_handle_.param("range_scale", config_.range_scale, 1.0f);
   float publish_rate_tmp;
   ros_handle_.param("publish_rate", publish_rate_tmp, 0.048f);
   config_.publish_rate = ros::Duration(publish_rate_tmp);
@@ -294,15 +305,13 @@ void Flyability::HandleDepth(
     GetTransform(config_.world_frame_id, config_.robot_frame_id, stamp);
   if (!robot_pose) return;
 
-  cv::Mat fog_filtered_img;
-  cv::medianBlur(img, fog_filtered_img, 5);
   const auto& ci = camera_info->second;
   // Intrinsic camera matrix before undistortion.
   const cv::Mat camera_k(3, 3, CV_64F, const_cast<double*>(ci->K.data()));
   // Camera distortion parameters.
   const cv::Mat camera_d(1, ci->D.size(), CV_64F, const_cast<double*>(ci->D.data()));
   cv::Mat undistorted_img;
-  cv::undistort(fog_filtered_img, undistorted_img, camera_k, camera_d);
+  cv::undistort(img, undistorted_img, camera_k, camera_d);
 
   if (config_.depth_image_stride != 1)
   {
@@ -327,21 +336,40 @@ void Flyability::HandleDepth(
   float& full_size_uv_u = full_size_uv.at<float>(0, 0);
   full_size_uv.at<float>(2, 0) = 1;
   size_t cnt = 0;
-  for (int v = 0; v < undistorted_img.rows; ++v)
+  const int k = config_.depth_noise_filter_k;
+  for (int v = k; v + k < undistorted_img.rows; ++v)
   {
     float* undistorted_img_row_v = reinterpret_cast<float*>(undistorted_img.ptr(v));
     full_size_uv_v = v * config_.depth_image_stride;
-    for (int u = 0; u < undistorted_img.cols; ++u) 
+    for (int u = k; u + k < undistorted_img.cols; ++u)
     {
       full_size_uv_u = u * config_.depth_image_stride;
       const float depth = undistorted_img_row_v[u];
-      if (depth > 0 && depth < config_.max_depth && !std::isnan(depth) &&
-          cnt++ % (config_.depth_subsampling / config_.depth_image_stride / config_.depth_image_stride) == 0)
+      if (depth > 0 && depth < config_.max_depth && !std::isnan(depth))
       {
-        // For some reason, doing the calculation with tf::Transform is a lot
-        // faster than with OpenCV's Mat.
-        const tf::Vector3 pt = *sensor_pose * (depth * MatToVector3(camera_p_inv * full_size_uv));
-        points.push_back(std::move(pt));
+        int support = -1;  // Compensating for self-support.
+        for (int i = v - k; i <= v + k; ++i)
+        {
+          for (int j = u - k; j <= u +k; ++j)
+          {
+            const float depth_ij = undistorted_img.at<float>(i, j);
+            if (depth_ij < config_.max_depth &&
+                !std::isnan(depth_ij) &&
+                std::abs(depth_ij - depth) <= config_.depth_noise_filter_max_support_distance)
+            {
+              ++support;
+            }
+          }
+        }
+
+        if (support >= config_.depth_noise_filter_min_support &&
+            cnt++ % (config_.depth_subsampling / config_.depth_image_stride / config_.depth_image_stride) == 0)
+        {
+          // For some reason, doing the calculation with tf::Transform is a lot
+          // faster than with OpenCV's Mat.
+          const tf::Vector3 pt = *sensor_pose * (depth * MatToVector3(camera_p_inv * full_size_uv));
+          points.push_back(std::move(pt));
+        }
       }
     }
   }
@@ -412,6 +440,7 @@ void Flyability::OnRange(const sensor_msgs::LaserScan::ConstPtr& msg)
   {
     return;
   }
+  measurement *= config_.range_scale;
 
   std::optional<tf::StampedTransform> sensor_pose =
     GetTransform(config_.world_frame_id, msg->header.frame_id, msg->header.stamp);

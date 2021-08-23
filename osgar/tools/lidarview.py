@@ -194,6 +194,15 @@ def draw_robot(foreground, pose, joint):
 g_depth = None
 g_danger_binary_image = False
 
+def depth_map(depth):
+    MAX_RANGE = 10.0
+    depth = (255 * depth / MAX_RANGE).astype(np.uint8)
+    return pygame.image.frombuffer(
+            cv2.cvtColor(
+                cv2.applyColorMap(depth, cv2.COLORMAP_JET),
+                cv2.COLOR_BGR2RGB).tostring(),
+            depth.shape[1::-1], "RGB")
+
 def get_image(data):
     """Extract JPEG or RGBD depth image"""
     global g_depth
@@ -223,7 +232,7 @@ def get_image(data):
         image = pygame.image.load(io.BytesIO(data), 'JPG').convert()
     else:
         image = None
-    return image
+    return image, (None if g_depth is None else depth_map(g_depth))
 
 
 def pygame_to_numpy_image(pygame_img):
@@ -368,7 +377,7 @@ class Framer:
             if stream_id == self.lidar_down_id:
                 self.frame.lidar_down = deserialize(data)
             elif stream_id == self.camera_id:
-                self.image = get_image(deserialize(data))
+                self.image, _ = get_image(deserialize(data))
                 # bounding boxes associated with an image are stored after the image in the log
                 # therefore, we need to continue reading the log past the image in order to gathering its bounding box data
                 current = self.current
@@ -386,10 +395,10 @@ class Framer:
                     self.keyframe = False
                     return timestamp, self.frame, self.pose, self.pose3d, self.scan, self.scan2, self.image, self.image2, self.bbox, self.joint, keyframe, self.title, False
             elif stream_id == self.camera2_id:
-                self.image2 = get_image(deserialize(data))
+                self.image2, _ = get_image(deserialize(data))
             elif stream_id == self.rgbd_id:
                 _, _, img_data, depth_data = deserialize(data)
-                self.image = get_image((img_data, depth_data))
+                self.image, self.image2 = get_image((img_data, depth_data))
                 if self.lidar_id is None:
                     keyframe = self.keyframe
                     self.keyframe = False
