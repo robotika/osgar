@@ -41,15 +41,16 @@ def get_annotation_item(filename, result):
 def debug2dir(filename, out_dir, detector_name):
     names = lookup_stream_names(filename)
     assert detector_name + '.debug_rgbd' in names, names
+    assert detector_name + '.debug_camera' in names, names
     assert detector_name + '.localized_artf' in names, names
     assert detector_name + '.debug_cv_result' in names, names
     assert 'rosmsg.sim_time_sec' in names, names
     rgbd_id = names.index(detector_name + '.debug_rgbd') + 1
+    camera_id = names.index(detector_name + '.debug_camera') + 1
     artf_id = names.index(detector_name + '.localized_artf') + 1
     result_id = names.index(detector_name + '.debug_cv_result') + 1
     sim_sec_id = names.index('rosmsg.sim_time_sec') + 1
     sim_time_sec = None
-    image = None
     artf = None
     last_result = None
     out_json = {
@@ -113,7 +114,8 @@ def debug2dir(filename, out_dir, detector_name):
     "file": {}
   }
     }
-    for dt, channel, data in LogReader(filename, only_stream_id=[rgbd_id, artf_id, result_id, sim_sec_id]):
+    stream_ids = [rgbd_id, camera_id, artf_id, result_id, sim_sec_id]
+    for dt, channel, data in LogReader(filename, only_stream_id=stream_ids):
         data = deserialize(data)
         if channel == sim_sec_id:
             sim_time_sec = data
@@ -121,9 +123,15 @@ def debug2dir(filename, out_dir, detector_name):
             artf = data
         elif channel == result_id:
             last_result = data
-        elif channel == rgbd_id:
+        elif channel in [rgbd_id, camera_id]:
             # 'debug_rgbd' is the last published topic for given detection
-            robot_pose, camera_pose, rgb_compressed, depth_compressed = data
+            if channel == rgbd_id:
+                robot_pose, camera_pose, rgb_compressed, depth_compressed = data
+            else:  # channel == camera_id
+                # image stereo artefact localization
+                # expects localized pair of images [camera_name, [robot_pose, camera_pose, image], [robot_pose, camera_pose, image]]
+                assert len(data) == 3, data[0]
+                rgb_compressed = data[1][2]  # first image of stereo pair
             image = rgb_compressed
             assert artf is not None
             time_sec = sim_time_sec if sim_time_sec is not None else int(dt.total_seconds())
