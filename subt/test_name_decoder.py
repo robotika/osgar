@@ -70,5 +70,11 @@ class NameDecoderTest(unittest.TestCase):
         steps = parse_robot_name('B300W900EH')
         self.assertEqual(steps, [('wait', 300), ('explore', 900), ('home', 1800)])
 
+    def test_timeout_and_query(self):
+        # 19 minutes = 1140s
+        steps = parse_robot_name('A1140T9999LQ')
+        self.assertEqual(steps, [('timeout', 1140), ('enter-left', None), ('left', 9999),
+                                 ('query', 2*9999), ('home', 2*9999)])  # TODO maybe remove last 'home"??
+
 # vim: expandtab sw=4 ts=4
 

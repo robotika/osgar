@@ -50,7 +50,9 @@ def parse_robot_name(robot_name):
         'EL': 'explore-left',  # follow trace with left wall as fallback
         'ER': 'explore-right',  # -"-              right      -"-
         'W': 'wait',
-        'H': 'home'
+        'H': 'home',
+        'T': 'timeout',  # for given duration compute return to signal
+        'Q': 'query'  # query optimal path home (complement to 'T')
     }
     # remove extra parameters (encoded after 'X')
     robot_name = robot_name[0] + robot_name[1:].split('X')[0]
@@ -69,7 +71,7 @@ def parse_robot_name(robot_name):
             else:
                 t = int(part[:-1])
         else:
-            assert action == 'home', action  # missing time
+            assert action in ['home', 'query'], action  # missing time
             t = 2 * sum_t
         if action in ['left', 'right', 'center']:
             # exploration commands
