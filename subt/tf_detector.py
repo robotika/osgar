@@ -16,7 +16,7 @@ NAMES_AND_SCORES = {'backpack': 0.2,
                     'rope': 0.2,
                     'helmet': 0.2,
                     'fire_extinguisher': 0.8,
-                    'drill': 0.4,
+                    'drill': 0.2,
                     'vent': 0.1,
                     'cube': 0.2,
                     'robot': 1.0,
@@ -95,8 +95,9 @@ class CvDetector:
                 x, y, w, h = detection['bboxes'][ii]
                 score = detection['scores'][ii]
                 name = detection['classes_names'][ii]
+                m, n, __ = img.shape
                 cv2.rectangle(img, (x, y), (w, h), (255, 0, 0), thickness=2)
-                cv2.putText(img, "%s %0.3f " % (name, score), (min(x, 520), max(20, y)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1,
+                cv2.putText(img, "%s %0.3f " % (name, score), (min(x, n - 120), max(20, y)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1,
                             cv2.LINE_AA)
         return img
 
