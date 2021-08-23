@@ -800,7 +800,6 @@ class SubTChallenge:
             return channel
 
     def wait(self, dt, use_sim_time=False):  # TODO refactor to some common class
-        self.send_speed_cmd(0, 0)
         if use_sim_time:
             start_sim_time_sec = self.sim_time_sec
             while self.sim_time_sec - start_sim_time_sec < dt.total_seconds():
