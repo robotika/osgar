@@ -74,6 +74,9 @@ class NotMovingException(Exception):
     pass
 
 
+class HomeReachedException(Exception):
+    pass
+
 class EmergencyStopMonitor:
     def __init__(self, robot):
         self.robot = robot
@@ -135,8 +138,28 @@ class NotMovingMonitor:
                     self.anchor_xyz = robot.xyz
                     self.anchor_sim_time = robot.sim_time_sec
                 if robot.sim_time_sec - self.anchor_sim_time > self.sim_time_sec_period:
-                    print('LastDist', distance3D(robot.xyz, self.anchor_xyz), robot.sim_time_sec - self.anchor_sim_time)
                     raise NotMovingException()
+
+    # context manager functions
+    def __enter__(self):
+        self.callback = self.robot.register(self.update)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.robot.unregister(self.callback)
+
+
+class HomeReachedMonitor:
+    """
+    Check it the robot got close to the (0, 0, 0) point.
+    """
+    def __init__(self, robot, radius):
+        self.robot = robot
+        self.radius = radius
+
+    def update(self, robot):
+        if distance3D(robot.xyz, (0, 0, 0)) < self.radius:
+            raise HomeReachedException()
 
     # context manager functions
     def __enter__(self):
@@ -1023,14 +1046,29 @@ class SubTChallenge:
                 self.update()
 
     def play_virtual_part_return(self, timeout):
-        self.return_home(timeout)
+        deadline = timedelta(seconds=self.sim_time_sec) + timeout
+        try:
+            with NotMovingMonitor(self, radius=10.0, sim_time_sec_period=15):
+                self.return_home(timeout)
+        except NotMovingException:
+            self.use_right_wall = not self.use_right_wall
+            self.use_center = False # Better use one of the walls.
+            self.timeout = deadline - timedelta(seconds=self.sim_time_sec)
+            self.loop_detector = LoopDetector()  # The robot may need to go where it already was and that is OK.
+            try:
+                with HomeReachedMonitor(self, radius=5):
+                    self.play_virtual_part_explore()
+            except HomeReachedException:
+                timeout = deadline - timedelta(seconds=self.sim_time_sec)
+                # Try to not block the entrance.
+                self.return_home(timeout)
         self.send_speed_cmd(0, 0)
         self.wait(timedelta(seconds=10), use_sim_time=True)
         self.stdout('Final xyz:', self.xyz)
         self.stdout('Final xyz (DARPA coord system):', self.xyz)
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver122!")
+        self.stdout("SubT Challenge Ver123!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
