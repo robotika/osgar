@@ -1098,7 +1098,10 @@ class SubTChallenge:
             elif action == 'timeout':
                 pass
             elif action == 'query':
-                pass
+                self.waypoints = None
+                self.bus.publish('query_path', 'home')  # TODO dictionary of keywords?
+                self.timeout = timedelta(seconds=duration)
+                self.play_virtual_part_map_and_explore_frontiers(details='explore')  # maybe with left/right?
             else:
                 assert False, action  # unknown action
 
