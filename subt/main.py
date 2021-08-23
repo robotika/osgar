@@ -150,7 +150,8 @@ class NotMovingMonitor:
 class SubTChallenge:
     def __init__(self, config, bus):
         self.bus = bus
-        bus.register("desired_speed", "pose2d", "stdout", "desired_z_speed", "flipped", "follow_status")
+        bus.register("desired_speed", "pose2d", "stdout", "desired_z_speed", "flipped",
+                     "follow_status", "query_path")
         self.traveled_dist = 0.0
         self.time = None
         self.max_speed = config['max_speed']
@@ -203,6 +204,7 @@ class SubTChallenge:
         self.loop_detector = LoopDetector()
         self.collision_detector_enabled = False
         self.sim_time_sec = 0
+        self.time_to_signal = 0  # there is signal in start area
 
         self.lora_cmd = None
 
@@ -714,6 +716,9 @@ class SubTChallenge:
         if robot_name != self.robot_name:
             self.whereabouts[robot_name] = robot_pose
 
+    def on_time_to_signal(self, timestamp, data):
+        self.time_to_signal = data
+
     def update(self):
         packet = self.bus.listen()
         if packet is not None:
@@ -1090,6 +1095,10 @@ class SubTChallenge:
 
             elif action == 'home':
                 self.play_virtual_part_return(timedelta(seconds=duration))
+            elif action == 'timeout':
+                pass
+            elif action == 'query':
+                pass
             else:
                 assert False, action  # unknown action
 

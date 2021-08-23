@@ -250,6 +250,8 @@
               ["mtm.response", "follower.trace"],
               ["follower.waypoints", "app.waypoints"],
               ["app.follow_status", "follower.follow_status"],
+              ["mtm.time_to_signal", "app.time_to_signal"],
+              ["app.query_path", "mtm.query"],
 
               ["rosmsg.sim_time_sec", "marsupial.sim_time_sec"],
               ["fromrospy.robot_name", "marsupial.robot_name"],
