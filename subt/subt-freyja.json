@@ -22,12 +22,14 @@
       },
       "detector": {
           "init": {
-            "fx": 349.2
+            "fx": 349.2,
+            "batch_size": 2
           }
       },
       "detector_lr": {
           "init": {
-            "fx": 149.01
+            "fx": 149.01,
+            "batch_size": 2
           }
       }
     }
