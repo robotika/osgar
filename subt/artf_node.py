@@ -142,7 +142,7 @@ class ArtifactDetectorDNN(Node):
                      "debug_result", "debug_cv_result", "debug_camera")
         confidence_thresholds = {  # used for mdnet
             'survivor': 0.5,
-            'backpack': 0.5,
+            'backpack': 0.74,
             'phone': 0.5,
             'helmet': 0.5,
             'rope': 0.5,
@@ -155,12 +155,12 @@ class ArtifactDetectorDNN(Node):
         # There are tree border points for each artifact, point coordinates: x - mdnet, y - cv_detector
         confidence_borders = {
             'survivor': [[0.5, 1],[0.93, 0.55],[1, 0.1]],
-            'backpack': [[0.5, 1],[0.64, 0.88],[0.99, 0.2]],
+            'backpack': [[0.74, 1],[0.9, 0.77],[0.95, 0.2]],
             'phone': [[0.5, 0.45],[0.84, 0.41],[1, 0.1]],
             'helmet': [[0.5, 0.95],[0.85, 0.6],[1, 0.2]],
             'rope': [[0.5, 0.5],[0.9, 0.35],[1, 0.1]],
             'fire_extinguisher': [[0.5, 0.9],[0.95, 0.85],[1, 0.8]],
-            'drill': [[0.5, 0.61],[0.8, 0.6],[1, 0.4]],
+            'drill': [[0.5, 0.8],[0.87, 0.75],[1, 0.2]],
             'vent': [[0.5, 0.9],[0.6, 0.6],[0.7, 0.1]],
             'cube': [[0.5, 0.6],[0.8, 0.59],[1, 0.2]]
         }
