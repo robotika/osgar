@@ -29,6 +29,11 @@ WORLDS = dict(
     tc13 = "tunnel_circuit_13",
     tc15 = "tunnel_circuit_15",
 
+    nsa = "niosh_sr_config_a",
+    nsb = "niosh_sr_config_b",
+    nea = "niosh_ex_config_a",
+    neb = "niosh_ex_config_b",
+
     # URBAN
     uq  = "urban_qual",
     us1 = "simple_urban_01",

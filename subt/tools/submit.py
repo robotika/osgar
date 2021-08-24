@@ -26,6 +26,11 @@ WORLDS = dict(
     tc7 = "Tunnel Circuit World 7",
     tc8 = "Tunnel Circuit World 8",
 
+    nsa = "NIOSH SR Config A",
+    nsb = "NIOSH SR Config B",
+    nea = "NIOSH EX Config A",
+    neb = "NIOSH EX Config B",
+
     uq  = "Urban Qualification",
     us1 = "Urban Simple 1",
     us2 = "Urban Simple 2",
