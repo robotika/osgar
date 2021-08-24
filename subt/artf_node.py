@@ -174,7 +174,7 @@ class ArtifactDetectorDNN(Node):
         self.max_depth = config.get('max_depth', 10.0)
         self.triangulation_baseline_min = config.get('triangulation_baseline_min', 0.03)
         self.triangulation_baseline_max = config.get('triangulation_baseline_max', 0.20)
-
+        self.batch_size = config.get('batch_size', 1)  # how many images process in one step
         self.prev_camera = {}
 
     def wait_for_data(self):
@@ -204,10 +204,14 @@ class ArtifactDetectorDNN(Node):
                 while timestamp <= now:
                     timestamp, channel = self.wait_for_data()
                     dropped += 1
-                if channel == 'rgbd':
-                    self.detect_from_rgbd(self.rgbd)
-                else:
-                    self.detect_from_img(channel, getattr(self, channel))
+                for count in range(self.batch_size):
+                    if channel == 'rgbd':
+                        self.detect_from_rgbd(self.rgbd)
+                    else:
+                        self.detect_from_img(channel, getattr(self, channel))
+                    if count + 1 < self.batch_size:
+                        # process also immediately following images
+                        timestamp, channel = self.wait_for_data()
         except BusShutdownException:
             pass
 
