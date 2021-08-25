@@ -977,7 +977,7 @@ class SubTChallenge:
             entrance_offset = 0
         else:
             entrance_offset = 0.5
-        trace.add_line_to((0.5, entrance_offset, self.height_above_ground))  # 0.5m inside, towards the desired wall.
+        trace.add_line_to((3.0, entrance_offset, self.height_above_ground))  # 0.5m inside, towards the desired wall.
         trace.reverse()
         is_trace3d = self.height_above_ground > 0.0  # well, maybe there should be more obvious definition of ground/aerial vehicle
         safety_limit = None if is_trace3d else 0.2  # UGV may need some collision avoidance during leaving the starting area
