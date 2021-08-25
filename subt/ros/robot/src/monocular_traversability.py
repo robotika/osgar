@@ -190,7 +190,7 @@ class MonoTraversability:
             cloud.height = 1
             cloud.data = obstacles.astype(np.float32).tobytes()
             cloud.row_step = 12 * obstacles.shape[0]
-        rospy.logerr('num obstacles: {}'.format(len(obstacles)))
+        rospy.logdebug('num obstacles: {}'.format(len(obstacles)))
         self.publisher.publish(cloud)
 
 
