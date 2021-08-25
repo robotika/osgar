@@ -4,8 +4,8 @@
     "modules": {
       "app": {
         "init": {
-          "limit_pitch": 38,
-          "limit_roll": 38,
+          "limit_pitch": 40,
+          "limit_roll": 40,
           "return_limit_pitch": 50,
           "return_limit_roll": 50,
           "obstacle_influence": 1.4,
