@@ -11,7 +11,7 @@
           "obstacle_influence": 1.4,
           "speed_policy": "conservative",
           "min_safe_dist": 0.8,
-          "dangerous_dist": 0.5,
+          "dangerous_dist": 0.4,
           "turbo_safe_dist": 2.8,
           "turbo_speed": 2.2,
           "rotation_p": 1.6,
@@ -22,12 +22,14 @@
       },
       "detector": {
           "init": {
-            "fx": 349.2
+            "fx": 349.2,
+            "batch_size": 2
           }
       },
       "detector_lr": {
           "init": {
-            "fx": 149.01
+            "fx": 149.01,
+            "batch_size": 2
           }
       }
     }

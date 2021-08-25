@@ -292,5 +292,6 @@
     <remap from="local_map/input/camera_info" to="/$(arg robot_name)/rgbd_all/optical/camera_info"/>
     <remap from="local_map/input/depth/compressed" to="/rtabmap/rgbd/all/compressed"/>
     <remap from="local_map/input/scan" to="/$(arg robot_name)/scan_all"/>
+    <remap from="local_map/input/breadcrumb" to="/$(arg robot_name)/breadcrumb/deploy"/>
   </node>
 </launch>

@@ -18,11 +18,15 @@ class ArtifactFilter(Node):
         self.num_observations = []
         self.breadcrumbs = []
         self.verbose = False
+        self.debug_artf = []
+        self.debug_reported = []
 
     def publish_single_artf_xyz(self, artifact_data, pos):
         ax, ay, az = pos
         self.bus.publish('artf_xyz', [
             [artifact_data, [round(ax * 1000), round(ay * 1000), round(az * 1000)], self.robot_name, None]])
+        if self.verbose:
+            self.debug_reported.append((artifact_data, pos))
 
     def register_new_artifact(self, artifact_data, artifact_xyz):
         """
@@ -38,6 +42,9 @@ class ArtifactFilter(Node):
                     if self.verbose:
                         print('False detection - dist:', distance3D((x, y, z), artifact_xyz))
                     return False
+
+        if self.verbose:
+            self.debug_artf.append((artifact_data, artifact_xyz))
 
         for i, (stored_data, (x, y, z)) in enumerate(self.artifacts):
             if distance3D((x, y, z), artifact_xyz) < 4.0:
@@ -89,5 +96,19 @@ class ArtifactFilter(Node):
             handler(getattr(self, channel))
         else:
             assert False, channel  # unknown channel
+
+    def draw(self):
+        import matplotlib.pyplot as plt
+
+        x = [xyz[0] for _, xyz in self.debug_artf]
+        y = [xyz[1] for _, xyz in self.debug_artf]
+        plt.plot(x, y, 'x')
+
+        x = [xyz[0] for _, xyz in self.debug_reported]
+        y = [xyz[1] for _, xyz in self.debug_reported]
+        plt.scatter([x], [y], s=100, color='r')
+
+        plt.axes().set_aspect('equal', 'datalim')
+        plt.show()
 
 # vim: expandtab sw=4 ts=4
