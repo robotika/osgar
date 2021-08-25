@@ -43,7 +43,7 @@ def check_borders(result, borders):
         if y < min(a1 * x + b1, a2 * x + b2):  # the value is below the borders
             result.pop(ii)
 
-        return result
+    return result
 
 
 def check_results(result_mdnet, result_cv):
