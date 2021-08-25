@@ -67,7 +67,7 @@ class Traversability
   private:
     ros::NodeHandle ros_handle_;
     ros::Subscriber depth_handler_;
-    ros::Subscriber compressed_depth_handler_;
+    ros::Subscriber rgbd_handler_;
     ros::Subscriber camera_info_handler_;
     ros::Subscriber scan_handler_;
     ros::Subscriber points_handler_;
@@ -177,7 +177,7 @@ class Traversability
 
     void OnCameraInfo(const sensor_msgs::CameraInfo::ConstPtr& msg);
     void OnDepth(const sensor_msgs::Image::ConstPtr& msg);
-    void OnCompressedDepth(const rtabmap_ros::RGBDImage::ConstPtr& msg);
+    void OnRGBD(const rtabmap_ros::RGBDImage::ConstPtr& msg);
     void OnScan(const sensor_msgs::LaserScan::ConstPtr& msg);
     void OnPoints(const sensor_msgs::PointCloud2::ConstPtr& msg);
     void OnBreadcrumb(const std_msgs::Empty::ConstPtr& msg);
@@ -221,7 +221,7 @@ bool Traversability::Init()
 
   camera_info_handler_ = ros_handle_.subscribe("input/camera_info", 10, &Traversability::OnCameraInfo, this);
   depth_handler_ = ros_handle_.subscribe("input/depth", 10, &Traversability::OnDepth, this);
-  compressed_depth_handler_ = ros_handle_.subscribe("input/depth/compressed", 10, &Traversability::OnCompressedDepth, this);
+  rgbd_handler_ = ros_handle_.subscribe("input/rgbd", 10, &Traversability::OnRGBD, this);
   scan_handler_ = ros_handle_.subscribe("input/scan", 10, &Traversability::OnScan, this);
   points_handler_ = ros_handle_.subscribe("input/points", 10, &Traversability::OnPoints, this);
   breadcrumb_handler_ = ros_handle_.subscribe("input/breadcrumb", 10, &Traversability::OnBreadcrumb, this);
@@ -297,7 +297,7 @@ void Traversability::OnDepth(const sensor_msgs::Image::ConstPtr& msg)
   HandleDepth(input_img_ptr->image, msg->header.frame_id, msg->header.stamp);
 }
 
-void Traversability::OnCompressedDepth(const rtabmap_ros::RGBDImage::ConstPtr& msg)
+void Traversability::OnRGBD(const rtabmap_ros::RGBDImage::ConstPtr& msg)
 {
   cv::Mat decompressed = cv::imdecode(msg->depth_compressed.data, cv::IMREAD_UNCHANGED);
   cv::Mat depth(decompressed.rows,
