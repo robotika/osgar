@@ -110,7 +110,7 @@ void DepthFilter::OnDepth(const sensor_msgs::Image::ConstPtr& msg)
     }
   }
 
-  ROS_ERROR("filtered: %d", num_filtered);
+  ROS_DEBUG("filtered: %d", num_filtered);
   auto out = output.toImageMsg();
   out->header = msg->header;
   output_publisher_.publish(out);
