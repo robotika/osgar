@@ -17,7 +17,7 @@ class MonoTraversability:
         self.camera_info = None
 
         self.world_frame_id = rospy.get_param('world_frame_id', 'odom')
-        self.min_baseline = rospy.get_param('min_baseline', 0.08)
+        self.min_baseline = rospy.get_param('min_baseline', 0.12)
         self.max_baseline = rospy.get_param('max_baseline', 0.25)
         self.max_corners = rospy.get_param('max_corners', 800)
         self.corners_quality = rospy.get_param('corners_quality', 30)
