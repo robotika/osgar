@@ -17,7 +17,7 @@
             "min_safe_dist": 6.0,
             "dangerous_dist": 1.4,
             "turbo_safe_dist": 6.0,
-            "turbo_speed": 3.0,
+            "turbo_speed": 2.8,
             "cautious_speed": 0.5,
             "obstacle_influence": 1.2,
             "direction_adherence": 45,
