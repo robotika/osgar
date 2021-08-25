@@ -40,7 +40,7 @@ case $ROBOT_CONFIG in
     LAUNCH_FILE="robot coro_pam.launch"
     CONFIG_FILES=("config/coro_pam.json")
     SPEED=1.5
-    GAPSIZE=0.9
+    GAPSIZE=1.1
     WALLDIST=1.6
     ;;
   "TEAMBASE"):
