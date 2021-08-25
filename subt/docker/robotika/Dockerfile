@@ -2,8 +2,8 @@ FROM robotika/subt-base:2021-05-24
 
 # ADD always downloads the file to calculate checksum, RUN checksum only the cmdline
 RUN curl -O# http://osgar.robotika.cz/subt/virtual/model/mdnet6.128.128.13.4.elu.pth 2>&1
-RUN curl -O# http://osgar.robotika.cz/subt/virtual/model/ssd_inception_v2_210814/frozen_inference_graph.pb 2>&1
-RUN curl -O# http://osgar.robotika.cz/subt/virtual/model/ssd_inception_v2_210814/cv_graph.pbtxt 2>&1
+RUN curl -O# http://osgar.robotika.cz/subt/virtual/model/ssd_inception_v2_210824/frozen_inference_graph.pb 2>&1
+RUN curl -O# http://osgar.robotika.cz/subt/virtual/model/ssd_inception_v2_210824/cv_graph.pbtxt 2>&1
 
 # example how to install an ubuntu package
 # RUN sudo apt-get update && sudo apt install -y ros-melodic-teleop-twist-keyboard
