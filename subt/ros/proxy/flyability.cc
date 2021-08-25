@@ -54,7 +54,7 @@ class Flyability
   private:
     ros::NodeHandle ros_handle_;
     ros::Subscriber depth_handler_;
-    ros::Subscriber compressed_depth_handler_;
+    ros::Subscriber rgbd_handler_;
     ros::Subscriber camera_info_handler_;
     ros::Subscriber scan_handler_;
     ros::Subscriber range_handler_;
@@ -78,11 +78,6 @@ class Flyability
       int depth_image_stride;
       // Storing only every n-th interesting point from the pointcloud.
       int depth_subsampling;
-
-      // Depth noise filtering parameters.
-      int depth_noise_filter_k;
-      int depth_noise_filter_min_support;
-      float depth_noise_filter_max_support_distance;
 
       // How often to publish outputs.
       ros::Duration publish_rate;
@@ -151,7 +146,7 @@ class Flyability
 
     void OnCameraInfo(const sensor_msgs::CameraInfo::ConstPtr& msg);
     void OnDepth(const sensor_msgs::Image::ConstPtr& msg);
-    void OnCompressedDepth(const rtabmap_ros::RGBDImage::ConstPtr& msg);
+    void OnRGBD(const rtabmap_ros::RGBDImage::ConstPtr& msg);
     void OnScan(const sensor_msgs::LaserScan::ConstPtr& msg);
     void OnRange(const sensor_msgs::LaserScan::ConstPtr& msg);
     void OnTimer(const ros::TimerEvent& event);
@@ -165,10 +160,6 @@ bool Flyability::Init()
   ros_handle_.param("max_depth", config_.max_depth, 10.0f);
   ros_handle_.param("depth_image_stride", config_.depth_image_stride, 4);
   ros_handle_.param("depth_subsampling", config_.depth_subsampling, 123);
-  ros_handle_.param("depth_noise_filter_k", config_.depth_noise_filter_k, 2);
-  ros_handle_.param("depth_noise_filter_min_support", config_.depth_noise_filter_min_support,
-      (2 * config_.depth_noise_filter_k + 1) * (2 * config_.depth_noise_filter_k + 1) / 3);
-  ros_handle_.param("depth_noise_filter_max_support_distance", config_.depth_noise_filter_max_support_distance, 0.6f);
   ros_handle_.param("robot_height_up", config_.robot_height_up, 0.1f);
   ros_handle_.param("robot_height_bottom", config_.robot_height_bottom, 0.4f);
   ros_handle_.param("robot_radius", config_.robot_radius, 0.4f);
@@ -193,7 +184,7 @@ bool Flyability::Init()
 
   camera_info_handler_ = ros_handle_.subscribe("input/camera_info", 10, &Flyability::OnCameraInfo, this);
   depth_handler_ = ros_handle_.subscribe("input/depth", 10, &Flyability::OnDepth, this);
-  compressed_depth_handler_ = ros_handle_.subscribe("input/depth/compressed", 10, &Flyability::OnCompressedDepth, this);
+  rgbd_handler_ = ros_handle_.subscribe("input/rgbd", 10, &Flyability::OnRGBD, this);
   scan_handler_ = ros_handle_.subscribe("input/scan", 10, &Flyability::OnScan, this);
   range_handler_ = ros_handle_.subscribe("input/range", 10, &Flyability::OnRange, this);
 
@@ -270,7 +261,7 @@ void Flyability::OnDepth(const sensor_msgs::Image::ConstPtr& msg)
   HandleDepth(input_img_ptr->image, msg->header.frame_id, msg->header.stamp);
 }
 
-void Flyability::OnCompressedDepth(const rtabmap_ros::RGBDImage::ConstPtr& msg)
+void Flyability::OnRGBD(const rtabmap_ros::RGBDImage::ConstPtr& msg)
 {
   cv::Mat decompressed = cv::imdecode(msg->depth_compressed.data, cv::IMREAD_UNCHANGED);
   cv::Mat depth(decompressed.rows,
@@ -336,40 +327,21 @@ void Flyability::HandleDepth(
   float& full_size_uv_u = full_size_uv.at<float>(0, 0);
   full_size_uv.at<float>(2, 0) = 1;
   size_t cnt = 0;
-  const int k = config_.depth_noise_filter_k;
-  for (int v = k; v + k < undistorted_img.rows; ++v)
+  for (int v = 0; v < undistorted_img.rows; ++v)
   {
     float* undistorted_img_row_v = reinterpret_cast<float*>(undistorted_img.ptr(v));
     full_size_uv_v = v * config_.depth_image_stride;
-    for (int u = k; u + k < undistorted_img.cols; ++u)
+    for (int u = 0; u < undistorted_img.cols; ++u)
     {
       full_size_uv_u = u * config_.depth_image_stride;
       const float depth = undistorted_img_row_v[u];
-      if (depth > 0 && depth < config_.max_depth && !std::isnan(depth))
+      if (depth > 0 && depth < config_.max_depth && !std::isnan(depth) &&
+          cnt++ % (config_.depth_subsampling / config_.depth_image_stride / config_.depth_image_stride) == 0)
       {
-        int support = -1;  // Compensating for self-support.
-        for (int i = v - k; i <= v + k; ++i)
-        {
-          for (int j = u - k; j <= u +k; ++j)
-          {
-            const float depth_ij = undistorted_img.at<float>(i, j);
-            if (depth_ij < config_.max_depth &&
-                !std::isnan(depth_ij) &&
-                std::abs(depth_ij - depth) <= config_.depth_noise_filter_max_support_distance)
-            {
-              ++support;
-            }
-          }
-        }
-
-        if (support >= config_.depth_noise_filter_min_support &&
-            cnt++ % (config_.depth_subsampling / config_.depth_image_stride / config_.depth_image_stride) == 0)
-        {
-          // For some reason, doing the calculation with tf::Transform is a lot
-          // faster than with OpenCV's Mat.
-          const tf::Vector3 pt = *sensor_pose * (depth * MatToVector3(camera_p_inv * full_size_uv));
-          points.push_back(std::move(pt));
-        }
+        // For some reason, doing the calculation with tf::Transform is a lot
+        // faster than with OpenCV's Mat.
+        const tf::Vector3 pt = *sensor_pose * (depth * MatToVector3(camera_p_inv * full_size_uv));
+        points.push_back(std::move(pt));
       }
     }
   }

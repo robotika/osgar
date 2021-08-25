@@ -60,6 +60,10 @@ add_executable(flyability flyability.cc)
 add_dependencies(flyability ${catkin_EXPORTED_TARGETS})
 target_link_libraries(flyability ${catkin_LIBRARIES})
 
+add_executable(depth_filter depth_filter.cc)
+add_dependencies(depth_filter ${catkin_EXPORTED_TARGETS})
+target_link_libraries(depth_filter ${catkin_LIBRARIES})
+
 ###########
 ## Tests ##
 ###########
@@ -74,7 +78,7 @@ install(DIRECTORY launch/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
 
 # Mark executables and/or libraries for installation
-install(TARGETS pose_from_artifact_origin ros_proxy ros_proxy_teambase traversability flyability
+install(TARGETS pose_from_artifact_origin ros_proxy ros_proxy_teambase traversability flyability depth_filter
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

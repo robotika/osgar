@@ -14,6 +14,22 @@
     <remap from="output" to="$(arg robot_name)/rgbd_right/optical/depth/filtered_image_raw"/>
   </node>
 
+  <!-- Remove noise -->
+  <node name="depth_denoiser_front" pkg="proxy" type="depth_filter">
+    <remap from="depth_denoiser_front/input" to="$(arg robot_name)/rgbd_front/optical/depth/image_raw"/>
+    <remap from="depth_denoiser_front/output" to="$(arg robot_name)/rgbd_front/optical/depth/clean_image_raw"/>
+  </node>
+
+  <node name="depth_denoiser_left" pkg="proxy" type="depth_filter">
+    <remap from="depth_denoiser_left/input" to="$(arg robot_name)/rgbd_left/optical/depth/filtered_image_raw"/>
+    <remap from="depth_denoiser_left/output" to="$(arg robot_name)/rgbd_left/optical/depth/clean_image_raw"/>
+  </node>
+
+  <node name="depth_denoiser_right" pkg="proxy" type="depth_filter">
+    <remap from="depth_denoiser_right/input" to="$(arg robot_name)/rgbd_right/optical/depth/filtered_image_raw"/>
+    <remap from="depth_denoiser_right/output" to="$(arg robot_name)/rgbd_right/optical/depth/clean_image_raw"/>
+  </node>
+
   <!-- Correct for camera placement -->
   <node name="rotated_img_left" pkg="robot" type="rotate_image_right.py">
     <remap from="input/image" to="$(arg robot_name)/rgbd_left/optical/image_raw"/>
@@ -22,8 +38,8 @@
     <remap from="output/camera_info" to="$(arg robot_name)/rgbd_left/optical/camera_info_rotated"/>
   </node>
   <node name="rotated_depth_left" pkg="robot" type="rotate_image_right.py">
-    <remap from="input/image" to="$(arg robot_name)/rgbd_left/optical/depth/filtered_image_raw"/>
-    <remap from="output/image" to="$(arg robot_name)/rgbd_left/optical/depth/filtered_image_raw_rotated"/>
+    <remap from="input/image" to="$(arg robot_name)/rgbd_left/optical/depth/clean_image_raw"/>
+    <remap from="output/image" to="$(arg robot_name)/rgbd_left/optical/depth/clean_image_raw_rotated"/>
   </node>
 
   <node name="rotated_img_right" pkg="robot" type="rotate_image_right.py">
@@ -34,8 +50,8 @@
   </node>
 
   <node name="rotated_depth_right" pkg="robot" type="rotate_image_right.py">
-    <remap from="input/image" to="$(arg robot_name)/rgbd_right/optical/depth/filtered_image_raw"/>
-    <remap from="output/image" to="$(arg robot_name)/rgbd_right/optical/depth/filtered_image_raw_rotated"/>
+    <remap from="input/image" to="$(arg robot_name)/rgbd_right/optical/depth/clean_image_raw"/>
+    <remap from="output/image" to="$(arg robot_name)/rgbd_right/optical/depth/clean_image_raw_rotated"/>
   </node>
 
   <!-- Combining front RGBD depth and image data into a single message. -->
@@ -43,7 +59,7 @@
     <!-- Inputs -->
     <remap from="rgb/image" to="/$(arg robot_name)/rgbd_front/optical/image_raw"/>
     <remap from="rgb/camera_info" to="$(arg robot_name)/rgbd_front/optical/camera_info"/>
-    <remap from="depth/image" to="/$(arg robot_name)/rgbd_front/optical/depth/image_raw"/>
+    <remap from="depth/image" to="/$(arg robot_name)/rgbd_front/optical/depth/clean_image_raw"/>
     <!-- Output -->
     <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/front/compressed"/>
     <remap from="rgbd_image" to="/rtabmap/rgbd/front"/>
@@ -54,18 +70,18 @@
     <!-- Inputs -->
     <remap from="rgb/image" to="/$(arg robot_name)/rgbd_left/optical/image_raw"/>
     <remap from="rgb/camera_info" to="$(arg robot_name)/rgbd_left/optical/camera_info"/>
-    <remap from="depth/image" to="/$(arg robot_name)/rgbd_left/optical/depth/filtered_image_raw"/>
+    <remap from="depth/image" to="/$(arg robot_name)/rgbd_left/optical/depth/clean_image_raw"/>
     <!-- Output -->
     <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/left/compressed"/>
     <remap from="rgbd_image" to="/rtabmap/rgbd/left"/>
   </node>
 
-  <!-- Combining left RGBD depth and image data into a single message. -->
+  <!-- Combining rotated left RGBD depth and image data into a single message. -->
   <node pkg="nodelet" type="nodelet" name="rgbd_sync_left_rotated" args="standalone rtabmap_ros/rgbd_sync">
     <!-- Inputs -->
     <remap from="rgb/image" to="/$(arg robot_name)/rgbd_left/optical/image_raw_rotated"/>
     <remap from="rgb/camera_info" to="$(arg robot_name)/rgbd_left/optical/camera_info_rotated"/>
-    <remap from="depth/image" to="/$(arg robot_name)/rgbd_left/optical/depth/filtered_image_raw_rotated"/>
+    <remap from="depth/image" to="/$(arg robot_name)/rgbd_left/optical/depth/clean_image_raw_rotated"/>
     <!-- Output -->
     <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/left/compressed_rotated"/>
     <remap from="rgbd_image" to="/rtabmap/rgbd/left_rotated"/>
@@ -76,18 +92,18 @@
     <!-- Inputs -->
     <remap from="rgb/image" to="/$(arg robot_name)/rgbd_right/optical/image_raw"/>
     <remap from="rgb/camera_info" to="$(arg robot_name)/rgbd_right/optical/camera_info"/>
-    <remap from="depth/image" to="/$(arg robot_name)/rgbd_right/optical/depth/filtered_image_raw"/>
+    <remap from="depth/image" to="/$(arg robot_name)/rgbd_right/optical/depth/clean_image_raw"/>
     <!-- Output -->
     <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/right/compressed"/>
     <remap from="rgbd_image" to="/rtabmap/rgbd/right"/>
   </node>
 
-  <!-- Combining right RGBD depth and image data into a single message. -->
+  <!-- Combining rotated right RGBD depth and image data into a single message. -->
   <node pkg="nodelet" type="nodelet" name="rgbd_sync_right_rotated" args="standalone rtabmap_ros/rgbd_sync">
     <!-- Inputs -->
     <remap from="rgb/image" to="/$(arg robot_name)/rgbd_right/optical/image_raw_rotated"/>
     <remap from="rgb/camera_info" to="$(arg robot_name)/rgbd_right/optical/camera_info_rotated"/>
-    <remap from="depth/image" to="/$(arg robot_name)/rgbd_right/optical/depth/filtered_image_raw_rotated"/>
+    <remap from="depth/image" to="/$(arg robot_name)/rgbd_right/optical/depth/clean_image_raw_rotated"/>
     <!-- Output -->
     <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/right/compressed_rotated"/>
     <remap from="rgbd_image" to="/rtabmap/rgbd/right_rotated"/>
@@ -240,7 +256,7 @@
     <param name="robot_frame_id" value="$(arg robot_name)"/>
     <param name="range_scale" value="0.82"/> <!-- https://github.com/osrf/subt/issues/1001 -->
     <remap from="local_map/input/camera_info" to="/$(arg robot_name)/rgbd_all/optical/camera_info"/>
-    <remap from="local_map/input/depth/compressed" to="/rtabmap/rgbd/all/compressed"/>
+    <remap from="local_map/input/rgbd" to="/rtabmap/rgbd/all/compressed"/>
     <remap from="local_map/input/range" to="/$(arg robot_name)/all_scans"/>
   </node>
 </launch>
