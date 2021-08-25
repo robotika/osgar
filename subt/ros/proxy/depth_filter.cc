@@ -1,4 +1,3 @@
-#include <cassert>
 #include <limits>
 
 #include <cv_bridge/cv_bridge.h>
