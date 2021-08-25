@@ -18,22 +18,24 @@ class MonoTraversability:
 
         self.world_frame_id = rospy.get_param('world_frame_id', 'odom')
         self.min_baseline = rospy.get_param('min_baseline', 0.08)
-        self.max_baseline = rospy.get_param('max_baseline', 0.20)
-        self.max_corners = rospy.get_param('max_corners', 150)
-        self.corners_quality = rospy.get_param('corners_quality', 0.2)
-        self.min_tracking_confidence = rospy.get_param('min_tracking_confidence', 0.2)
-        self.corners_min_distance = rospy.get_param('corners_min_distance', 4)  # pixels
-        self.min_mesh_edge_length = rospy.get_param('min_mesh_edge_length', 0.04)
-        self.max_mesh_edge_length = rospy.get_param('max_mesh_edge_length', 0.2)
+        self.max_baseline = rospy.get_param('max_baseline', 0.25)
+        self.max_corners = rospy.get_param('max_corners', 800)
+        self.corners_quality = rospy.get_param('corners_quality', 30)
+        self.min_tracking_confidence = rospy.get_param('min_tracking_confidence', 0.22)
+        self.min_mesh_edge_length = rospy.get_param('min_mesh_edge_length', 0.1)
+        self.max_mesh_edge_length = rospy.get_param('max_mesh_edge_length', 0.4)
         self.min_mesh_height = rospy.get_param('min_mesh_height', 0.07)
         self.horizontality_threshold = np.cos(np.radians(rospy.get_param('max_slope', 35)))
         self.max_height_above_sensor = rospy.get_param('max_height_above_sensor', 0.7)
+        self.debug = rospy.get_param('debug', False)
 
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
         self.image_subscriber = rospy.Subscriber('input/camera', CompressedImage, self.imageCallback)
         self.camera_info_subscriber = rospy.Subscriber('input/camera_info', CameraInfo, self.cameraInfoCallback)
         self.publisher = rospy.Publisher('output/points', PointCloud2, queue_size=5)
+
+        self.feature_detector = cv2.FastFeatureDetector_create(self.corners_quality)
 
     def cameraInfoCallback(self, msg):
         self.camera_info = msg
@@ -76,13 +78,16 @@ class MonoTraversability:
                 self.publisher.publish(cloud)
                 return
             if baseline <= self.max_baseline:
-                curr_corners = cv2.goodFeaturesToTrack(curr_img, self.max_corners, self.corners_quality, self.corners_min_distance)
-                shown = cv2.cvtColor(curr_img, cv2.COLOR_GRAY2BGR)
-                for corner in curr_corners[:,0,:].astype(int):
-                    cv2.circle(shown, tuple(corner), 3, (0, 0, 0xFF))
+                kps = self.feature_detector.detect(curr_img)
+                if len(kps) > self.max_corners:
+                    kps.sort(key = lambda kp: kp.response)
+                    kps = kps[:self.max_corners]
+                curr_corners = np.asarray([kp.pt for kp in kps], dtype=np.float32)
+                if self.debug:
+                    shown = cv2.cvtColor(curr_img, cv2.COLOR_GRAY2BGR)
+                    for corner in curr_corners.astype(int):
+                        cv2.circle(shown, tuple(corner), 3, (0, 0, 0xFF))
                 if curr_corners.shape[0] > 0:
-                    assert(curr_corners.shape[1] == 1)
-                    curr_corners = curr_corners[:,0,:]  # Dropping the useless middle singleton axis.
                     prev_corners, status, err = cv2.calcOpticalFlowPyrLK(curr_img, self.prev_img, curr_corners, None)
                     status = status[:,0].astype(np.bool)
                     status = np.logical_and(status, err[:,0] < 1.0 / self.min_tracking_confidence)
@@ -93,8 +98,9 @@ class MonoTraversability:
                         curr_corners = curr_corners[status]
                         prev_corners = prev_corners[status]
 
-                        for corner in curr_corners.astype(int):
-                            cv2.circle(shown, tuple(corner), 3, (0, 0xFF, 0))
+                        if self.debug:
+                            for corner in curr_corners.astype(int):
+                                cv2.circle(shown, tuple(corner), 3, (0, 0xFF, 0))
 
                         TO_OPTICAL = np.matrix([[ 0, -1,  0, 0],
                                                [ 0,  0, -1, 0],
@@ -125,6 +131,14 @@ class MonoTraversability:
                             pt_a = ax, ay
                             pt_b = bx, by
                             pt_c = cx, cy
+                            if self.debug:
+                                A = tuple(int(v) for v in pt_a)
+                                B = tuple(int(v) for v in pt_b)
+                                C = tuple(int(v) for v in pt_c)
+                                red = 0, 0, 0xFF
+                                cv2.line(shown, A, B, red)
+                                cv2.line(shown, A, C, red)
+                                cv2.line(shown, B, C, red)
                             try:
                                 xyz_a = coordinates[pt_a]
                                 xyz_b = coordinates[pt_b]
@@ -157,12 +171,18 @@ class MonoTraversability:
                                     obstacles.append(xyz_a)
                                     obstacles.append(xyz_b)
                                     obstacles.append(xyz_c)
+                                    if self.debug:
+                                        green = (0, 0xFF, 0)
+                                        cv2.line(shown, A, B, green)
+                                        cv2.line(shown, A, C, green)
+                                        cv2.line(shown, B, C, green)
                             except KeyError:
                                 # We encountered one of subdiv's synthetic corners.
                                 pass
 
-                cv2.imshow('pts', shown)
-                cv2.waitKey(1)
+                if self.debug:
+                    cv2.imshow('pts', shown)
+                    cv2.waitKey(1)
 
         if obstacles:
             obstacles = np.unique(obstacles, axis=0)
