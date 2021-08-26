@@ -96,5 +96,14 @@ class ArtifactDetectorDNNTest(unittest.TestCase):
         result = [('backpack', [(100, 200, 0.5), (101, 200, 0.9)], ['backpack', 0.59, [50, 150, 200, 250]])]
         self.assertEqual(check_borders(result, borders), [])
 
+    def test_multiple_borders(self):
+        borders_points = {'backpack': [[0.5, 0.6],[0.96, 0.55],[0.99, 0.2]]}
+        borders = get_border_lines(borders_points)
+        result = [('backpack', [(100, 200, 0.5), (101, 200, 0.9)], ['backpack', 0.59, [50, 150, 200, 250]]),
+                  ('backpack', [(101, 200, 0.99), (101, 200, 0.995)], ['backpack', 0.21, [51, 150, 200, 250]]),
+                  ('backpack', [(102, 200, 0.5), (101, 200, 0.9)], ['backpack', 0.59, [52, 150, 200, 250]])]
+        self.assertEqual(check_borders(result, borders),
+                         [('backpack', [(101, 200, 0.99), (101, 200, 0.995)], ['backpack', 0.21, [51, 150, 200, 250]])])
+
 
 # vim: expandtab sw=4 ts=4
