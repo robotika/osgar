@@ -16,6 +16,8 @@ case $WORLD in
     CIRCUIT="tunnel" ;;
  *"final"*):
     CIRCUIT="finals" ;;
+ *"niosh"*):
+    CIRCUIT="niosh" ;;
  *):
     echo "circuit not detected";
     exit 1;;

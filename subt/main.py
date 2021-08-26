@@ -183,6 +183,7 @@ class SubTChallenge:
         self.cautious_speed = config.get('cautious_speed')
         self.min_speed = config.get('min_speed', 0.05)
         self.gap_size = config['gap_size']
+        self.robot_width = config.get('robot_width', self.gap_size)
         self.wall_dist = config['wall_dist']
         self.follow_wall_params = config.get('follow_wall', {})
         self.timeout = timedelta(seconds=config['timeout'])
@@ -288,7 +289,7 @@ class SubTChallenge:
         of_interest = np.logical_and.reduce(np.stack([
                 scan > 0.01,
                 pts_x > 0,
-                np.abs(pts_y) <= self.gap_size / 2]))
+                np.abs(pts_y) <= self.robot_width / 2]))
         pts_x = pts_x[of_interest]
         pts_y = pts_y[of_interest]
         dists = np.hypot(pts_x, pts_y)
@@ -1069,7 +1070,7 @@ class SubTChallenge:
         self.stdout('Final xyz (DARPA coord system):', self.xyz)
 
     def play_virtual_track(self):
-        self.stdout("SubT Challenge Ver128!")
+        self.stdout("SubT Challenge Ver129!")
         self.stdout("Waiting for robot_name ...")
         while self.robot_name is None:
             self.update()
