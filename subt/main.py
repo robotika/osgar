@@ -1050,7 +1050,7 @@ class SubTChallenge:
     def play_virtual_part_return(self, timeout):
         deadline = timedelta(seconds=self.sim_time_sec) + timeout
         try:
-            with NotMovingMonitor(self, radius=10.0, sim_time_sec_period=15):
+            with NotMovingMonitor(self, radius=10.0, sim_time_sec_period=20):
                 self.return_home(timeout)
         except NotMovingException:
             self.use_right_wall = not self.use_right_wall
