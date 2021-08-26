@@ -504,7 +504,7 @@ void Flyability::OnTimer(const ros::TimerEvent& event)
     {
       for (const auto& pt : observation)
       {
-        const auto local_pt = horizontal_tf_inv* *to_local * pt;
+        const auto local_pt = horizontal_tf * *to_local * pt;
         local_pts.push_back(local_pt);
         if (std::hypot(local_pt.x(), local_pt.y()) <= config_.robot_radius)
         {
