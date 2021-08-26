@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock, call
 from pathlib import Path
 
-from subt.artf_reporter import ArtifactReporter
+from subt.artf_reporter import ArtifactReporter, artf_sort_fcn
 
 
 class ArtifactReporterTest(unittest.TestCase):
@@ -231,6 +231,22 @@ class ArtifactReporterTest(unittest.TestCase):
         self.assertEqual(to_report, [
             ['TYPE_EXTINGUISHER', [343506, 22288, -14938], 'A900L', None]
         ])
+
+    def test_artf_sort_fcn(self):
+        artf_xyz = [['TYPE_DRILL', [343174, 22338, -14727], 'A900L', None],
+                    ['TYPE_EXTINGUISHER', [343506, 22288, -14938], 'A900L', None]]
+
+        # Drill has the lowest priority
+        self.assertEqual(min(artf_xyz, key=artf_sort_fcn),
+                         ['TYPE_EXTINGUISHER', [343506, 22288, -14938], 'A900L', None])
+
+        artf_xyz = [['TYPE_BACKPACK', [-10000, 22338, -14727], 'B10W900R', None],
+                    ['TYPE_BACKPACK', [343506, 22288, -14938], 'A900L', None]]
+
+        # take coordinates into account
+        self.assertEqual(min(artf_xyz, key=artf_sort_fcn),
+                         ['TYPE_BACKPACK', [-10000, 22338, -14727], 'B10W900R', None])
+
 
 # vim: expandtab sw=4 ts=4
 
