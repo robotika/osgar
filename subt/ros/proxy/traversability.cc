@@ -187,7 +187,7 @@ class Traversability
 bool Traversability::Init()
 {
   ros_handle_.param<std::string>("robot_frame_id", config_.robot_frame_id, "");
-  ros_handle_.param<std::string>("world_frame_id", config_.world_frame_id, "odom");
+  ros_handle_.param<std::string>("world_frame_id", config_.world_frame_id, "global");
   ros_handle_.param("max_depth_observations", config_.max_depth_observations, 30 * 6);
   ros_handle_.param("max_depth", config_.max_depth, 10.0f);
   ros_handle_.param("depth_image_stride", config_.depth_image_stride, 2);
@@ -756,7 +756,7 @@ void Traversability::OnTimer(const ros::TimerEvent& event)
   {
     sensor_msgs::PointCloud2 local_map;
     local_map.header.stamp = event.current_real;
-    local_map.header.frame_id = config_.robot_frame_id;
+    local_map.header.frame_id = config_.world_frame_id;
     local_map.height = 1;
     local_map.width = nearby_pts.size();
     local_map.fields.resize(3);
@@ -781,11 +781,13 @@ void Traversability::OnTimer(const ros::TimerEvent& event)
     local_map.is_bigendian = false;
     local_map.is_dense = true;
     float* local_map_data = reinterpret_cast<float*>(local_map.data.data());
+    auto to_map = to_local->inverse();
     for (const auto& pt : nearby_pts)
     {
-      local_map_data[0] = pt.x();
-      local_map_data[1] = pt.y();
-      local_map_data[2] = pt.z();
+      auto map_pt = to_map * pt;
+      local_map_data[0] = map_pt.x();
+      local_map_data[1] = map_pt.y();
+      local_map_data[2] = map_pt.z();
       local_map_data += 3;
     }
     points_publisher_.publish(local_map);

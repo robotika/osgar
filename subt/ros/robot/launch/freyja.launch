@@ -304,5 +304,6 @@
     <remap from="local_map/input/rgbd" to="/rtabmap/rgbd/all/compressed"/>
     <remap from="local_map/input/scan" to="/$(arg robot_name)/scan_all"/>
     <remap from="local_map/input/breadcrumb" to="/$(arg robot_name)/breadcrumb/deploy"/>
+    <remap from="local_map/output/map" to="/cloud"/>
   </node>
 </launch>
