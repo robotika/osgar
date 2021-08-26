@@ -40,7 +40,7 @@ def check_borders(result, borders):
         name, tmp_points, r_cv = row
         points = tmp_points.copy()
         points.sort(key=lambda item: item[2], reverse=True)
-        x = points[1][2]  # mdnet score
+        x = points[1][2]  # mdnet score of the 2nd best point
         y = r_cv[1]  # cv_detector score
         a1, b1, a2, b2 = borders[name]  # coefficients of lines equations - borders
         if y >= min(a1 * x + b1, a2 * x + b2):  # the value is above the borders
