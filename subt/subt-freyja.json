@@ -4,6 +4,7 @@
     "modules": {
       "app": {
         "init": {
+          "robot_width": 0.7,
           "limit_pitch": 40,
           "limit_roll": 40,
           "return_limit_pitch": 50,
