@@ -1,10 +1,10 @@
 world = "fr"
 timeout = 4000
-image = "ver127"
+image = "ver131"
 
 [robots]
-D360W1500LH3600W = "freyja"
-B60W2400LH3600W = "freyja"
+D390W1500LH3600W = "freyja"
+B90W2400LH3600W = "freyja"
 A0W2400RH3600W = "freyja"
 C300W1500RH3600W = "freyja"
 E600W900LH3600W = "pam"
