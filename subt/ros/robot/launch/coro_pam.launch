@@ -258,5 +258,6 @@
     <remap from="local_map/input/camera_info" to="/$(arg robot_name)/rgbd_all/optical/camera_info"/>
     <remap from="local_map/input/rgbd" to="/rtabmap/rgbd/all/compressed"/>
     <remap from="local_map/input/range" to="/$(arg robot_name)/all_scans"/>
+    <remap from="local_map/output/map" to="/cloud"/>
   </node>
 </launch>
