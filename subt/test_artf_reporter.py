@@ -247,6 +247,11 @@ class ArtifactReporterTest(unittest.TestCase):
         self.assertEqual(min(artf_xyz, key=artf_sort_fcn),
                          ['TYPE_BACKPACK', [-10000, 22338, -14727], 'B10W900R', None])
 
+        artf_xyz.reverse()
+        # the results should be still the same
+        self.assertEqual(min(artf_xyz, key=artf_sort_fcn),
+                         ['TYPE_BACKPACK', [-10000, 22338, -14727], 'B10W900R', None])
+
 
 # vim: expandtab sw=4 ts=4
 
