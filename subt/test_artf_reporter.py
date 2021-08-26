@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock, call
 from pathlib import Path
 
-from subt.artf_reporter import ArtifactReporter
+from subt.artf_reporter import ArtifactReporter, artf_sort_fcn
 
 
 class ArtifactReporterTest(unittest.TestCase):
@@ -12,7 +12,7 @@ class ArtifactReporterTest(unittest.TestCase):
         config = {}
         bus = MagicMock()
         reporter = ArtifactReporter(config, bus)
-        bus.listen = MagicMock(return_value=(1, 'artf_xyz', [['BACKPACK', [100, 200, -3], "robot-name", None]]))
+        bus.listen = MagicMock(return_value=(1, 'artf_xyz', [['TYPE_BACKPACK', [100, 200, -3], "robot-name", None]]))
         reporter.update()
         bus.publish.assert_called()
         bus.reset_mock()
@@ -27,7 +27,7 @@ class ArtifactReporterTest(unittest.TestCase):
         }
         bus = MagicMock()
         reporter = ArtifactReporter(config, bus)
-        bus.listen = MagicMock(return_value=(1, 'artf_xyz', [['BACKPACK', [100, 200, -3], "name", None]]))
+        bus.listen = MagicMock(return_value=(1, 'artf_xyz', [['TYPE_BACKPACK', [100, 200, -3], "name", None]]))
         reporter.update()
         bus.publish.assert_called()
         bus.reset_mock()
@@ -35,8 +35,8 @@ class ArtifactReporterTest(unittest.TestCase):
             bus.listen = MagicMock(return_value=(1, 'sim_time_sec', sim_time_sec))
             reporter.update()
         # well, I am not sure how to ensure only 2 calls :(
-        bus.publish.assert_has_calls([call('artf_cmd', b'artf BACKPACK 0.10 0.20 -0.00\n'),
-                                      call('artf_all', [['BACKPACK', [100, 200, -3], "name", None]]),]*2)
+        bus.publish.assert_has_calls([call('artf_cmd', b'artf TYPE_BACKPACK 0.10 0.20 -0.00\n'),
+                                      call('artf_all', [['TYPE_BACKPACK', [100, 200, -3], "name", None]]),]*2)
 
     def test_artf_empty_repeat(self):
         config = {
@@ -131,9 +131,9 @@ class ArtifactReporterTest(unittest.TestCase):
                    ['TYPE_RESCUE_RANDY', [252978, 106894, -18309], 'A900L', None],
                    ['TYPE_RESCUE_RANDY', [252930, 106716, -19523], 'B300W900ELXA', None]])
 
-        # pick only one sample (minimum)
+        # pick only one sample (minimum, but avoid drill)
         self.assertEqual(to_report, [
-            ['TYPE_DRILL', [343174, 22338, -14727], 'A900L', None]
+            ['TYPE_RESCUE_RANDY', [252930, 106716, -19523], 'B300W900ELXA', None]
         ])
 
         # now let's have already positive report from B-drone
@@ -191,7 +191,7 @@ class ArtifactReporterTest(unittest.TestCase):
                    ['TYPE_RESCUE_RANDY', [252930, 106716, -19523], 'B300W900ELXA', None]])
 
         bus.publish.assert_has_calls([
-            call('artf_cmd', b'artf TYPE_DRILL 343.17 22.34 -14.73\n')])
+            call('artf_cmd', b'artf TYPE_RESCUE_RANDY 252.93 106.72 -19.52\n')])
 
     def test_grouping_order(self):
         # the order does matter in order to identically report artifacts
@@ -215,6 +215,43 @@ class ArtifactReporterTest(unittest.TestCase):
         self.assertEqual(to_report, [
             ['TYPE_BACKPACK', [343174, 22338, -14727], 'A900L', None]
         ])
+
+    def test_artifact_types_order(self):
+        # the preferred order is (JL) backpack < extinguisher < drill, and cube < phone
+        # where to original alphabetical sorting is issue only with extinguisher
+        bus = MagicMock()
+        reporter = ArtifactReporter(config={}, bus=bus)
+
+        artf_xyz = [['TYPE_EXTINGUISHER', [343506, 22288, -14938], 'A900L', None],
+                    ['TYPE_DRILL', [343174, 22338, -14727], 'A900L', None]]
+
+        # two different reports from the same robot
+        to_report = reporter.select_artf_for_report(artf_xyz)
+
+        self.assertEqual(to_report, [
+            ['TYPE_EXTINGUISHER', [343506, 22288, -14938], 'A900L', None]
+        ])
+
+    def test_artf_sort_fcn(self):
+        artf_xyz = [['TYPE_DRILL', [343174, 22338, -14727], 'A900L', None],
+                    ['TYPE_EXTINGUISHER', [343506, 22288, -14938], 'A900L', None]]
+
+        # Drill has the lowest priority
+        self.assertEqual(min(artf_xyz, key=artf_sort_fcn),
+                         ['TYPE_EXTINGUISHER', [343506, 22288, -14938], 'A900L', None])
+
+        artf_xyz = [['TYPE_BACKPACK', [-10000, 22338, -14727], 'B10W900R', None],
+                    ['TYPE_BACKPACK', [343506, 22288, -14938], 'A900L', None]]
+
+        # take coordinates into account
+        self.assertEqual(min(artf_xyz, key=artf_sort_fcn),
+                         ['TYPE_BACKPACK', [-10000, 22338, -14727], 'B10W900R', None])
+
+        artf_xyz.reverse()
+        # the results should be still the same
+        self.assertEqual(min(artf_xyz, key=artf_sort_fcn),
+                         ['TYPE_BACKPACK', [-10000, 22338, -14727], 'B10W900R', None])
+
 
 # vim: expandtab sw=4 ts=4
 

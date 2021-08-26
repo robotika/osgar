@@ -24,10 +24,34 @@ would be teambase, but then it would be the single point of failure.
 """
 from osgar.node import Node
 from subt.trace import Trace, distance3D
-
+from subt.artifacts import (BACKPACK, PHONE, RESCUE_RANDY,  # common artifacts
+                            DRILL, EXTINGUISHER,  # tunnel
+                            VENT, GAS,  # urban
+                            HELMET, ROPE,  # cave
+                            CUBE)  # finals
 
 RADIUS = 4.0  # there are probably not two artifacts within sphere of this radius
 RADIUS_FALSE = 2.0  # reported artifact was not correct so do not repeat it within this radius
+
+
+def artf_sort_fcn(element):
+    """
+    Return element order based on mapped artifact name, coordinate and name of the robot
+    discovering the artifact.
+    """
+    artf_priorities = [
+        BACKPACK,
+        CUBE,
+        EXTINGUISHER,
+        GAS,
+        HELMET,
+        PHONE,
+        RESCUE_RANDY,
+        ROPE,
+        VENT,
+        DRILL  # sorted except drill for now
+    ]
+    return artf_priorities.index(element[0]), element[1:]
 
 
 class ArtifactReporter(Node):
@@ -100,7 +124,7 @@ class ArtifactReporter(Node):
         # ... and handle other reports once this is confirmed
         # TODO confirmation from base can be lost several times ... is it OK?
         if len(scored_unknown) > 0:
-            return [min(scored_unknown)]
+            return [min(scored_unknown, key=artf_sort_fcn)]
         else:
             return []
 
