@@ -35,6 +35,10 @@ RADIUS_FALSE = 2.0  # reported artifact was not correct so do not repeat it with
 
 
 def artf_sort_fcn(element):
+    """
+    Return element order based on mapped artifact name, coordinate and name of the robot
+    discovering the artifact.
+    """
     artf_priorities = [
         BACKPACK,
         CUBE,
