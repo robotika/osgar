@@ -24,6 +24,7 @@ would be teambase, but then it would be the single point of failure.
 """
 from osgar.node import Node
 from subt.trace import Trace, distance3D
+from subt.artifacts import DRILL
 
 
 RADIUS = 4.0  # there are probably not two artifacts within sphere of this radius
@@ -100,7 +101,12 @@ class ArtifactReporter(Node):
         # ... and handle other reports once this is confirmed
         # TODO confirmation from base can be lost several times ... is it OK?
         if len(scored_unknown) > 0:
-            return [min(scored_unknown)]
+            # prefer other artifacts to drill
+            non_drill = [item for item in scored_unknown if item[0] != DRILL]
+            if len(non_drill) > 0:
+                return [min(non_drill)]
+            else:
+                return [min(scored_unknown)]
         else:
             return []
 
