@@ -35,15 +35,17 @@ NAME2IGN = {
 
 
 def check_borders(result, borders):
-    for ii, (name, points, r_cv) in enumerate(result.copy()):
+    ret = []
+    for row in result:
+        name, tmp_points, r_cv = row
+        points = tmp_points.copy()
         points.sort(key=lambda item: item[2], reverse=True)
-        x = points[1][2]  # mdnet score
+        x = points[1][2]  # mdnet score of the 2nd best point
         y = r_cv[1]  # cv_detector score
         a1, b1, a2, b2 = borders[name]  # coefficients of lines equations - borders
-        if y < min(a1 * x + b1, a2 * x + b2):  # the value is below the borders
-            result.pop(ii)
-
-    return result
+        if y >= min(a1 * x + b1, a2 * x + b2):  # the value is above the borders
+            ret.append(row)
+    return ret
 
 
 def check_results(result_mdnet, result_cv):
