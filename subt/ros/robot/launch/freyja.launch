@@ -286,18 +286,6 @@
   <node pkg="topic_tools" type="relay" name="lidar_merge_front" args="$(arg robot_name)/scan_front $(arg robot_name)/scan_all"/>
   <node pkg="topic_tools" type="relay" name="lidar_merge_rear" args="$(arg robot_name)/scan_rear $(arg robot_name)/scan_all"/>
 
-  <node ns="monocular_traversability/right" pkg="robot" type="monocular_traversability.py" name="left_mono_traversability">
-    <remap from="input/camera" to="/$(arg robot_name)/camera_right/image_raw/compressed"/>
-    <remap from="input/camera_info" to="/$(arg robot_name)/camera_right/camera_info"/>
-    <remap from="output/points" to="/$(arg robot_name)/local_map/input/points"/>
-  </node>
-
-  <node ns="monocular_traversability/left" pkg="robot" type="monocular_traversability.py" name="left_mono_traversability">
-    <remap from="input/camera" to="/$(arg robot_name)/camera_left/image_raw/compressed"/>
-    <remap from="input/camera_info" to="/$(arg robot_name)/camera_left/camera_info"/>
-    <remap from="output/points" to="/$(arg robot_name)/local_map/input/points"/>
-  </node>
-
   <node pkg="proxy" type="traversability" name="local_map" ns="$(arg robot_name)">
     <param name="robot_frame_id" value="$(arg robot_name)/ground"/>
     <remap from="local_map/input/camera_info" to="/$(arg robot_name)/rgbd_all/optical/camera_info"/>
