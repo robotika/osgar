@@ -209,7 +209,7 @@ bool Traversability::Init()
   ros_handle_.param("min_map_scan_range", config_.min_map_scan_range, 0.001f);
   ros_handle_.param("max_slope", config_.max_slope, 35.0f); // In degrees.
   config_.max_slope = config_.max_slope * M_PI / 180;  // Converting to radians.
-  ros_handle_.param("max_bump_height", config_.max_bump_height, 0.07f);
+  ros_handle_.param("max_bump_height", config_.max_bump_height, 0.068f);
   ros_handle_.param("max_dip_down", config_.max_dip_down, 0.2f);
   ros_handle_.param("max_dip_up", config_.max_dip_up, 0.35f);
   ros_handle_.param("synthetic_obstacle_distance", config_.synthetic_obstacle_distance, 0.5f);
