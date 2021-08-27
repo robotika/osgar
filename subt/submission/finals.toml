@@ -1,6 +1,6 @@
 world = "fr"
 timeout = 4000
-image = "ver131"
+image = "ver133"
 
 [robots]
 D390W2C1500LH3600W = "freyja"
