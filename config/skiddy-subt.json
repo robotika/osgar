@@ -67,6 +67,18 @@
             "pose_subsample": 20
           }
       },
+      "lidar": {
+          "driver": "lidar",
+          "in": ["raw"],
+          "out": ["raw", "scan"],
+          "init": {"sleep": 0.1, "mask": [45, -45], "blind_zone": 100}
+      },
+      "lidar_tcp": {
+          "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"host": "192.168.1.70", "port": 2111, "timeout": 0.5}
+      },
       "lidar_back": {
           "driver": "lidar",
           "in": ["raw"],
@@ -109,6 +121,8 @@
               ["cortexpilot.emergency_stop", "app.emergency_stop"],
               ["serial.raw", "cortexpilot.raw"], 
               ["cortexpilot.raw", "serial.raw"],
+              ["lidar_tcp.raw", "lidar.raw"],
+              ["lidar.raw", "lidar_tcp.raw"],
               ["lidar_back_tcp.raw", "lidar_back.raw"],
               ["lidar_back.raw", "lidar_back_tcp.raw"],
               ["depth2scan.scan", "app.scan"],
