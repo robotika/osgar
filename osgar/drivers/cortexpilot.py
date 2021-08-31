@@ -76,8 +76,7 @@ class Cortexpilot(Node):
             self.yaw = 0.0  # hack!
 
         speed_frac, speed_dir = next(self.speeds)
-        speed_frac *= 2
-        speed_dir *= 1.2
+        speed_dir *= 1.2  # TODO verify/calibrate
 
         if speed_frac < 0:
             speed_dir = -speed_dir  # Robik V5.1.1 handles backup backwards
