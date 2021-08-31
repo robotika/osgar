@@ -125,7 +125,7 @@
               ["lidar.raw", "lidar_tcp.raw"],
               ["lidar_back_tcp.raw", "lidar_back.raw"],
               ["lidar_back.raw", "lidar_back_tcp.raw"],
-              ["depth2scan.scan", "app.scan"],
+              ["lidar.scan", "app.scan"],
               ["tracking.pose3d", "app.pose3d"],
               ["depth.depth", "depth2scan.depth16"]]
   }
