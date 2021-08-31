@@ -34,6 +34,7 @@ g_lidar_fov_deg = 270  # controlled by --deg (deg)
 
 # depth data for ROBOTIKA_X2_SENSOR_CONFIG_1 (640 x 360)
 g_depth_params = DepthParams()
+g_prefix = "saveX"
 
 CENTER_AXLE_DISTANCE = 0.348  # K2 distance specific
 
@@ -596,7 +597,7 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
                     frames_step = 90
                 if event.key == K_s:
                     save_image = image2 if use_image2 else image
-                    pygame.image.save(save_image, "saveX-{:04}.jpg".format(save_counter))
+                    pygame.image.save(save_image, g_prefix + "-{:04}.jpg".format(save_counter))
                     save_counter += 1
                 if event.key == K_b:  # swap binary danger image on/off
                     global g_danger_binary_image
@@ -652,7 +653,7 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
 def main(args_in=None, startswith=None):
     import argparse
     import os.path
-    global g_rotation_offset_rad, g_lidar_fov_deg, MAX_SCAN_LIMIT, WINDOW_SIZE
+    global g_rotation_offset_rad, g_lidar_fov_deg, MAX_SCAN_LIMIT, WINDOW_SIZE, g_prefix
 
     parser = argparse.ArgumentParser(description='View lidar scans')
     parser.add_argument('logfile', help='recorded log file')
@@ -693,6 +694,7 @@ def main(args_in=None, startswith=None):
     parser.add_argument('--jump', '-j', help='jump to given time in seconds', type=int)
 
     parser.add_argument('--create-video', help='filename of output video')
+    parser.add_argument('--im-prefix', help='prefix for saved images')
 
     args = parser.parse_args(args_in)
 
@@ -729,6 +731,8 @@ def main(args_in=None, startswith=None):
         MAX_SCAN_LIMIT = args.lidar_limit
     if args.window_size is not None:
         WINDOW_SIZE = args.window_size
+    if args.im_prefix:
+        g_prefix = args.im_prefix
 
     filename = os.path.basename(args.logfile)
     g_rotation_offset_rad = math.radians(args.rotate)
