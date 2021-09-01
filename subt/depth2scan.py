@@ -168,14 +168,13 @@ class DepthToScan(Node):
         bus.register("scan")
         self.rgbd = None  # initialize inputs
         self.scan = None
-        self.depth16 = None
         self.verbose = False
         self.depth_params = DepthParams(**config.get('depth_params', {}))
         self.filter_fog = config.get('filter_fog', False)
 
     def update(self):
         channel = super().update()
-        assert channel in ["scan", "rgbd", "depth16"], channel
+        assert channel in ["scan", "rgbd"], channel
 
         if channel == 'scan':
             depth = None
@@ -200,12 +199,6 @@ class DepthToScan(Node):
             depth_scan = depth2dist(depth, self.depth_params, pitch, roll, yaw)
             new_scan = adjust_scan(scan, depth_scan, self.depth_params)
             self.publish('scan', new_scan.tolist())
-
-        if channel == 'depth16':
-            depth = self.depth16
-            scan = depth[depth.shape[0]//2].tolist()
-            scan.reverse()
-            self.publish('scan', scan)
 
         return channel
 
