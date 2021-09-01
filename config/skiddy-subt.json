@@ -1,0 +1,132 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["emergency_stop", "pose2d"],
+          "out": ["desired_speed"],
+          "init": {
+            "max_speed": 0.5,
+            "symmetric": false
+          }
+      },
+      "cortexpilot": {
+          "driver": "osgar.drivers.cortexpilot:Cortexpilot",
+          "in": ["raw", "desired_speed"],
+          "out": ["raw", "encoders", "emergency_stop", "pose2d", "scan"],
+          "init": {}
+      },
+      "serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyACM0", "speed": 115200}
+      },
+      "depth": {
+        "driver": "realsense",
+        "init": {
+          "device": "D400",
+          "serial_number": "938422071072",
+          "depth_subsample": 3,
+          "depth_rgb": true,
+          "depth_resolution": [
+            640,
+            360
+          ],
+          "rgb_resolution": [
+            640,
+            360
+          ],
+          "depth_fps": 30
+        }
+      },
+      "depth_rear": {
+        "driver": "realsense",
+        "init": {
+          "device": "D400",
+          "serial_number": "848312070179",
+          "depth_subsample": 3,
+          "depth_rgb": true,
+          "depth_resolution": [
+            640,
+            360
+          ],
+          "rgb_resolution": [
+            640,
+            360
+          ],
+          "depth_fps": 30
+        }
+      },
+      "tracking": {
+          "driver": "realsense",
+          "init": {
+            "device": "T200",
+            "serial_number": "2322110762",
+            "pose_subsample": 20
+          }
+      },
+      "lidar": {
+          "driver": "lidar",
+          "in": ["raw"],
+          "out": ["raw", "scan"],
+          "init": {"sleep": 0.1, "mask": [45, -45], "blind_zone": 100}
+      },
+      "lidar_tcp": {
+          "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"host": "192.168.1.70", "port": 2111, "timeout": 0.5}
+      },
+      "lidar_back": {
+          "driver": "lidar",
+          "in": ["raw"],
+          "out": ["raw", "scan"],
+          "init": {"sleep": 0.1, "mask": [45, -45], "blind_zone": 100}
+      },
+      "lidar_back_tcp": {
+          "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"host": "192.168.1.71", "port": 2111, "timeout": 0.5}
+      },
+      "depth2scan": {
+          "driver": "subt.depth2scan:DepthToScan",
+          "in": ["depth16"],
+          "out": ["scan"],
+          "init": {
+            "depth_params": {
+              "fx": 554.25469,
+              "camera_xyz": [0.1, 0.0, -0.08],
+              "image_size": [640, 360],
+              "principal_point": [320.5, 180.5],
+              "vertical_pixel_offset": 16,
+              "lidar_fov": 6.283185307179586,
+              "lidar_trusted_zone": 2.0,
+              "min_z": -0.2,
+              "max_z": 0.4,
+              "max_slope": -3.14,
+              "vertical_diff_limit": 1.4835, "vd_comment": "radians(85)",
+              "stride": 2,
+              "noise_filter_window": [12, 6],
+              "noise_filter_threshold": 30
+            },
+            "filter_fog": true
+          }
+      }
+    },
+    "links": [["app.desired_speed", "cortexpilot.desired_speed"],
+              ["cortexpilot.pose2d", "app.pose2d"],
+              ["cortexpilot.emergency_stop", "app.emergency_stop"],
+              ["serial.raw", "cortexpilot.raw"], 
+              ["cortexpilot.raw", "serial.raw"],
+              ["lidar_tcp.raw", "lidar.raw"],
+              ["lidar.raw", "lidar_tcp.raw"],
+              ["lidar_back_tcp.raw", "lidar_back.raw"],
+              ["lidar_back.raw", "lidar_back_tcp.raw"],
+              ["lidar.scan", "app.scan"],
+              ["tracking.pose3d", "app.pose3d"],
+              ["depth.depth", "depth2scan.depth16"]]
+  }
+}

@@ -15,8 +15,8 @@ from osgar.lib import quaternion
 # CPR = 9958 (ticks per revolution)
 # wheel diameter D = 395 mm
 # 1 Rev = 1241 mm
-ENC_SCALE = 1.241/9958
-WHEEL_DISTANCE = 0.88  # meters TODO confirm
+ENC_SCALE = 0.01  # Skiddy, Robik=1.241/9958
+WHEEL_DISTANCE = 0.267  # Skiddy, Robik=0.88  # meters TODO confirm
 RAMP_STEP = 0.1  # fractional number for speed in -1.0 .. 1.0
 
 
@@ -35,7 +35,7 @@ class Cortexpilot(Node):
         # commands
         self.desired_speed = 0.0  # m/s
         self.desired_angular_speed = 0.0
-        self.cmd_flags = 0x40 #0x41  # 0 = remote steering, PWM OFF, laser ON, TODO
+        self.cmd_flags = 0x140 # Skiddy, turn 0x40 #0x41  # 0 = remote steering, PWM OFF, laser ON, TODO
         self.speeds = self.plain_speeds()
 
         # status
@@ -76,12 +76,11 @@ class Cortexpilot(Node):
             self.yaw = 0.0  # hack!
 
         speed_frac, speed_dir = next(self.speeds)
-        speed_frac *= 2
-        speed_dir *= 1.2
+        speed_dir *= 1.2  # TODO verify/calibrate
 
         if speed_frac < 0:
             speed_dir = -speed_dir  # Robik V5.1.1 handles backup backwards
-        if not self.lidar_valid:
+        if self.emergency_stop:  #not self.lidar_valid:
             speed_frac = 0.0
             speed_dir = 0.0
 
@@ -97,8 +96,8 @@ class Cortexpilot(Node):
 
         packet = struct.pack('<ffI', speed_frac, speed_dir, flags)
         assert len(packet) < 256, len(packet)  # just to use LSB only
-        ret = bytes([0, 0, len(packet) + 2 + 1, 0x1, 0x0D]) + packet
-        # addr=0x1, cmd=0xD, length is given by payload, addr, cmd and checksum
+        ret = bytes([0, 0, len(packet) + 2 + 1, 0x1, 0x0E]) + packet
+        # addr=0x1, cmd=0xE, length is given by payload, addr, cmd and checksum
         checksum = sum(ret) & 0xFF
         return ret + bytes([(256-checksum) & 0xFF])
 
@@ -125,11 +124,10 @@ class Cortexpilot(Node):
         #   and checksum at the end
         high, mid, low = data[:3]
         assert high == 0, high  # fixed packet size 2*256+89 bytes
-        assert mid == 2, mid
-        assert low == 89, low
+        assert mid*256 + low == 121, (mid, low)
         addr, cmd = data[3:5]
         assert addr == 1, addr
-        assert cmd == 0xD, cmd
+        assert cmd == 0xE, cmd
         offset = 5  # payload offset
 
         # 4 byte Flags (unsigned long)  0
@@ -144,6 +142,7 @@ class Cortexpilot(Node):
         self.flags, system_voltage, power_voltage = struct.unpack_from('<Iff', data, offset)
         self.lidar_valid = (self.flags & 0x10) == 0x10
         self.emergency_stop = (self.flags & 0x01) == 0x01
+        self.bus.publish('emergency_stop', self.emergency_stop)
 
         self.voltage = [system_voltage, power_voltage]
         self.bus.publish('voltage', [int(v*100) for v in self.voltage])
@@ -213,8 +212,11 @@ class Cortexpilot(Node):
             step = [sint32_diff(x, prev) for x, prev in zip(encoders, self.last_encoders)]
             self.publish('encoders', step)
 
-            dist = ENC_SCALE * sum(step)/len(step)
-            angle = ENC_SCALE * (step[0] - step[1])/WHEEL_DISTANCE
+#            dist = ENC_SCALE * sum(step)/len(step)
+#            angle = ENC_SCALE * (step[0] - step[1])/WHEEL_DISTANCE
+            # Skiddy has left 
+            dist = ENC_SCALE * (step[0] - step[1])/2.0  # right forward, left negative
+            angle = ENC_SCALE * (step[0] + step[1])/WHEEL_DISTANCE
             x, y, heading = self.pose
             # advance robot by given distance and angle
             if abs(angle) < 0.0000001:  # EPS
@@ -231,6 +233,10 @@ class Cortexpilot(Node):
             self.pose = (x, y, heading)
             self.send_pose()
         self.last_encoders = encoders
+
+        if cmd == 0xE:
+            # lidar is not supported
+            return
 
         # 4 byte LidarTimestamp (ulong) 114  - Value of SystemTick when lidar scan was received
         lidar_timestamp = struct.unpack_from('<I', data, offset + 114)[0]
@@ -263,7 +269,7 @@ class Cortexpilot(Node):
                     self._buf += data
                     packet = self.get_packet()
                     if packet is not None:
-                        if len(packet) < 256:  # TODO cmd value
+                        if len(packet) < 100:  # TODO cmd value
                             print(packet)
                         else:
                             prev = self.flags
