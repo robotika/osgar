@@ -893,6 +893,11 @@ class SubTChallenge:
         print("SubT Challenge Ver1!")
         try:
             with EmergencyStopMonitor(self):
+                # wait for critical data
+                while any_is_none(self.scan, self.xyz):
+                    # self.xyz is initialized by pose3d
+                    self.update()
+
                 allow_virtual_flip = self.symmetric
                 if distance(self.xyz, (0, 0)) > 0.1 or self.init_path is not None:
                     self.system_nav_trace(self.init_path)
