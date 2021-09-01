@@ -10,11 +10,11 @@ import numpy as np
 g_logger = logging.getLogger(__name__)
 
 try:
-    import pyrealsense2 as rs
+    from pyrealsense2 import pyrealsense2 as rs
     try:
-        prefix = rs.pyrealsense2.__version__[:4]
+        prefix = rs.__version__[:4]
         if prefix in ('2.32', '2.33'):
-            g_logger.error(f"RealSense version {rs.pyrealsense2.__version__} is broken in several ways!")
+            g_logger.error(f"RealSense version {rs.__version__} is broken in several ways!")
     except Exception as e:
         g_logger.error('pyrealsense2 version not found due to: ' + str(e))
 except:
