@@ -1153,7 +1153,7 @@ def main():
     parser_run.add_argument('--log', nargs='?', help='record log filename')
     parser_run.add_argument('--init-path', help='inital path to be followed from (0, 0). 2D coordinates are separated by ;')
     parser_run.add_argument('--start-paused', dest='start_paused', action='store_true',
-                            help='start robota Paused and wait for LoRa Contine command')
+                            help='start robot Paused and wait for LoRa Continue command')
     parser_run.add_argument('--use-old-record', help="use old osgar.record instead of zmqrouter", action='store_true')
 
     parser_replay = subparsers.add_parser('replay', help='replay from logfile')
