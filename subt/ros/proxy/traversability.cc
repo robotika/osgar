@@ -13,6 +13,7 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <std_msgs/Empty.h>
 #include <tf/transform_listener.h>
 
 #include <opencv2/imgproc.hpp>
@@ -66,9 +67,11 @@ class Traversability
   private:
     ros::NodeHandle ros_handle_;
     ros::Subscriber depth_handler_;
-    ros::Subscriber compressed_depth_handler_;
+    ros::Subscriber rgbd_handler_;
     ros::Subscriber camera_info_handler_;
     ros::Subscriber scan_handler_;
+    ros::Subscriber points_handler_;
+    ros::Subscriber breadcrumb_handler_;
     tf::TransformListener transform_listener_;
 
     std::unordered_map<std::string, sensor_msgs::CameraInfo::ConstPtr> camera_infos_;
@@ -110,6 +113,9 @@ class Traversability
       // Storing every n-th interesting point from lidar.
       int lidar_subsampling;
 
+      // Maximum number of observations from a point cloud source.
+      int max_points_observations;
+
       // Using at most this many nearby points when publishing output maps.
       int max_num_nearby_points;
       // Publishing points at most this far.
@@ -142,11 +148,18 @@ class Traversability
       // Obstacles more than this above ground are ignored, because they are not
       // relevant. the robot can go under them,
       float robot_height;
+
+      // We mask out obstacles around dropped breadcrumbs to avoid getting stuck
+      // on them.
+      float breadcrumb_radius;
+      float breadcrumb_height;
     } config_;
 
     // Maps are keyed by frame_ids of individual sensors.
     std::map<std::string, int> observation_seq_id_;
     std::map<std::string, std::vector<Observation>> observations_;
+
+    std::vector<tf::Vector3> breadcrumbs_;
 
     ros::Timer publish_timer_;
     ros::Publisher points_publisher_;
@@ -160,18 +173,21 @@ class Traversability
     void HandleDepth(
         const cv::Mat& img, const std::string& camera_frame_id,
         const ros::Time& stamp);
+    bool NearBreadcrumb(const tf::Vector3& pt) const;
 
     void OnCameraInfo(const sensor_msgs::CameraInfo::ConstPtr& msg);
     void OnDepth(const sensor_msgs::Image::ConstPtr& msg);
-    void OnCompressedDepth(const rtabmap_ros::RGBDImage::ConstPtr& msg);
+    void OnRGBD(const rtabmap_ros::RGBDImage::ConstPtr& msg);
     void OnScan(const sensor_msgs::LaserScan::ConstPtr& msg);
+    void OnPoints(const sensor_msgs::PointCloud2::ConstPtr& msg);
+    void OnBreadcrumb(const std_msgs::Empty::ConstPtr& msg);
     void OnTimer(const ros::TimerEvent& event);
 };
 
 bool Traversability::Init()
 {
   ros_handle_.param<std::string>("robot_frame_id", config_.robot_frame_id, "");
-  ros_handle_.param<std::string>("world_frame_id", config_.world_frame_id, "odom");
+  ros_handle_.param<std::string>("world_frame_id", config_.world_frame_id, "global");
   ros_handle_.param("max_depth_observations", config_.max_depth_observations, 30 * 6);
   ros_handle_.param("max_depth", config_.max_depth, 10.0f);
   ros_handle_.param("depth_image_stride", config_.depth_image_stride, 2);
@@ -184,6 +200,7 @@ bool Traversability::Init()
   ros_handle_.param("min_lidar_range", config_.min_lidar_range, 0.f);
   ros_handle_.param("max_lidar_range", config_.max_lidar_range, 10.0f);
   ros_handle_.param("lidar_subsampling", config_.lidar_subsampling, 4);
+  ros_handle_.param("max_points_observations", config_.max_points_observations, 30 * 6);
   float publish_rate_tmp;
   ros_handle_.param("publish_rate", publish_rate_tmp, 0.048f);
   config_.publish_rate = ros::Duration(publish_rate_tmp);
@@ -192,18 +209,22 @@ bool Traversability::Init()
   ros_handle_.param("min_map_scan_range", config_.min_map_scan_range, 0.001f);
   ros_handle_.param("max_slope", config_.max_slope, 35.0f); // In degrees.
   config_.max_slope = config_.max_slope * M_PI / 180;  // Converting to radians.
-  ros_handle_.param("max_bump_height", config_.max_bump_height, 0.06f);
+  ros_handle_.param("max_bump_height", config_.max_bump_height, 0.068f);
   ros_handle_.param("max_dip_down", config_.max_dip_down, 0.2f);
   ros_handle_.param("max_dip_up", config_.max_dip_up, 0.35f);
   ros_handle_.param("synthetic_obstacle_distance", config_.synthetic_obstacle_distance, 0.5f);
   ros_handle_.param("visible_ground_min", config_.visible_ground_min, 0.6f);
-  ros_handle_.param("visible_ground_max", config_.visible_ground_max, 2.5f);
+  ros_handle_.param("visible_ground_max", config_.visible_ground_max, 3.4f);
   ros_handle_.param("robot_height", config_.robot_height, 0.5f);
+  ros_handle_.param("breadcrumb_radius", config_.breadcrumb_radius, 0.6f);
+  ros_handle_.param("breadcrumb_height", config_.breadcrumb_height, 0.5f);
 
   camera_info_handler_ = ros_handle_.subscribe("input/camera_info", 10, &Traversability::OnCameraInfo, this);
   depth_handler_ = ros_handle_.subscribe("input/depth", 10, &Traversability::OnDepth, this);
-  compressed_depth_handler_ = ros_handle_.subscribe("input/depth/compressed", 10, &Traversability::OnCompressedDepth, this);
+  rgbd_handler_ = ros_handle_.subscribe("input/rgbd", 10, &Traversability::OnRGBD, this);
   scan_handler_ = ros_handle_.subscribe("input/scan", 10, &Traversability::OnScan, this);
+  points_handler_ = ros_handle_.subscribe("input/points", 10, &Traversability::OnPoints, this);
+  breadcrumb_handler_ = ros_handle_.subscribe("input/breadcrumb", 10, &Traversability::OnBreadcrumb, this);
 
   publish_timer_ = ros_handle_.createTimer(config_.publish_rate, &Traversability::OnTimer, this);
   points_publisher_ = ros_handle_.advertise<sensor_msgs::PointCloud2>("output/map", 10);
@@ -276,7 +297,7 @@ void Traversability::OnDepth(const sensor_msgs::Image::ConstPtr& msg)
   HandleDepth(input_img_ptr->image, msg->header.frame_id, msg->header.stamp);
 }
 
-void Traversability::OnCompressedDepth(const rtabmap_ros::RGBDImage::ConstPtr& msg)
+void Traversability::OnRGBD(const rtabmap_ros::RGBDImage::ConstPtr& msg)
 {
   cv::Mat decompressed = cv::imdecode(msg->depth_compressed.data, cv::IMREAD_UNCHANGED);
   cv::Mat depth(decompressed.rows,
@@ -475,6 +496,12 @@ void Traversability::HandleDepth(
     bool obscured_view = false;
     bool ground_visible = false;
 
+    // If ground detection is disabled, pretend we are happily seeing it.
+    if (config_.visible_ground_min == 0 &&
+	config_.visible_ground_max == 0) {
+	    ground_visible = true;
+    }
+
     float expected_ground = robot_xyz.z();
     cv::Mat full_size_uv(3, 1, CV_32F);
     // As if there was an obstacle visible at the bottom line of the image,
@@ -542,7 +569,8 @@ void Traversability::HandleDepth(
     // We react to missing ground only when the robot is looking sufficiently
     // horizontally or downwards. Otherwise, the robot may be climbing up a
     // ridge and does not even have a chance to see the ground.
-    if (pt_down_near.z() - robot_xyz.z() <= 0) {
+    if (config_.synthetic_obstacle_distance > 0 &&
+        pt_down_near.z() - robot_xyz.z() <= 0) {
       // If
       // a) We haven't seen any ground in this direction;
       // b) The view is not obstructed by an obstacle;
@@ -558,6 +586,20 @@ void Traversability::HandleDepth(
 
   InsertObservation(std::move(points), camera_frame_id,
                     config_.max_depth_observations);
+}
+
+bool Traversability::NearBreadcrumb(const tf::Vector3& pt) const
+{
+  for (const auto &b : breadcrumbs_)
+  {
+    if (std::hypot(pt.x() - b.x(), pt.y() - b.y()) <
+          config_.breadcrumb_radius &&
+        std::abs(pt.z() - b.z()) < config_.breadcrumb_height / 2)
+    {
+      return true;
+    }
+  }
+  return false;
 }
 
 float median(std::vector<float> values)
@@ -582,6 +624,7 @@ void Traversability::OnScan(const sensor_msgs::LaserScan::ConstPtr& msg)
   points.reserve(msg->ranges.size());
   size_t cnt = 0;
   tf::Transform rot;
+  rot.setIdentity();  // Initializes offsets to zero.
   tf::Vector3 beam;
   for (size_t i = 2; i  + 2 < msg->ranges.size(); ++i)
   {
@@ -619,6 +662,37 @@ void Traversability::OnScan(const sensor_msgs::LaserScan::ConstPtr& msg)
                     config_.max_scan_observations);
 }
 
+void Traversability::OnPoints(const sensor_msgs::PointCloud2::ConstPtr& msg)
+{
+  std::optional<tf::StampedTransform> camera_pose =
+    GetTransform(config_.world_frame_id, msg->header.frame_id, msg->header.stamp);
+  if (!camera_pose) return;
+
+  assert(msg->point_step == 3 * sizeof(float));
+  assert(msg->is_bigendian == false);
+  const float* data = reinterpret_cast<const float*>(msg->data.data());
+  Observation points;
+  for (size_t i = 0; i < msg->width; ++i)
+  {
+    const tf::Vector3 pt(data[i * 3], data[i * 3 + 1], data[i * 3 + 2]);
+    points.push_back(*camera_pose * pt);
+  }
+
+  InsertObservation(std::move(points),
+                    msg->header.frame_id,
+                    config_.max_points_observations);
+}
+
+void Traversability::OnBreadcrumb(const std_msgs::Empty::ConstPtr& msg __attribute__((unused)))
+{
+  std::optional<tf::StampedTransform> robot_pose =
+    GetTransform(config_.world_frame_id, config_.robot_frame_id, ros::Time(0));
+  if (!robot_pose) return;
+  // Ideally, we would compensate for the fact that a breadcrumb is dropped at
+  // the rear end of the robot and not in the center.
+  const auto& robot_xyz = robot_pose->getOrigin();
+  breadcrumbs_.push_back(robot_xyz);
+}
 
 void Traversability::OnTimer(const ros::TimerEvent& event)
 {
@@ -642,7 +716,8 @@ void Traversability::OnTimer(const ros::TimerEvent& event)
       for (const auto& pt : observation)
       {
         const auto local_pt = *to_local * pt;
-        if (local_pt.z() < config_.max_relative_z)
+        if (local_pt.z() < config_.max_relative_z &&
+	    !NearBreadcrumb(pt))
         {
           local_pts.push_back(local_pt);
         }
@@ -681,7 +756,7 @@ void Traversability::OnTimer(const ros::TimerEvent& event)
   {
     sensor_msgs::PointCloud2 local_map;
     local_map.header.stamp = event.current_real;
-    local_map.header.frame_id = config_.robot_frame_id;
+    local_map.header.frame_id = config_.world_frame_id;
     local_map.height = 1;
     local_map.width = nearby_pts.size();
     local_map.fields.resize(3);
@@ -706,11 +781,13 @@ void Traversability::OnTimer(const ros::TimerEvent& event)
     local_map.is_bigendian = false;
     local_map.is_dense = true;
     float* local_map_data = reinterpret_cast<float*>(local_map.data.data());
+    auto to_map = to_local->inverse();
     for (const auto& pt : nearby_pts)
     {
-      local_map_data[0] = pt.x();
-      local_map_data[1] = pt.y();
-      local_map_data[2] = pt.z();
+      auto map_pt = to_map * pt;
+      local_map_data[0] = map_pt.x();
+      local_map_data[1] = map_pt.y();
+      local_map_data[2] = map_pt.z();
       local_map_data += 3;
     }
     points_publisher_.publish(local_map);

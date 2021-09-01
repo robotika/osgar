@@ -22,8 +22,9 @@ def draw_positions(arr):
     print('Robot IDs', robot_ids)
 
     for robot_id in robot_ids:
-        x = [a[2][0]/1000.0 for a in arr if a[1] == robot_id]
-        y = [a[2][1]/1000.0 for a in arr if a[1] == robot_id]
+        # received time, robot name, [sim_time, robot xyz position]
+        x = [a[2][1][0] for a in arr if a[1] == robot_id]
+        y = [a[2][1][1] for a in arr if a[1] == robot_id]
         line = plt.plot(x, y, '-o', linewidth=2, label=f'Robot {robot_id}')
 
 #    plt.xlabel('time (s)')

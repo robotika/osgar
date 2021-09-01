@@ -17,7 +17,7 @@ except ImportError:
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 from osgar.lib.depth import decompress as decompress_depth
-from osgar.lib.quaternion import rotate_vector
+from osgar.lib.quaternion import rotate_vector, rotation_matrix
 from subt.artifacts import (RESCUE_RANDY, BACKPACK, PHONE, HELMET, ROPE, EXTINGUISHER, DRILL, VENT, CUBE)
 
 
@@ -35,15 +35,17 @@ NAME2IGN = {
 
 
 def check_borders(result, borders):
-    for ii, (name, points, r_cv) in enumerate(result.copy()):
+    ret = []
+    for row in result:
+        name, tmp_points, r_cv = row
+        points = tmp_points.copy()
         points.sort(key=lambda item: item[2], reverse=True)
-        x = points[1][2]  # mdnet score
+        x = points[1][2]  # mdnet score of the 2nd best point
         y = r_cv[1]  # cv_detector score
         a1, b1, a2, b2 = borders[name]  # coefficients of lines equations - borders
-        if y < min(a1 * x + b1, a2 * x + b2):  # the value is below the borders
-            result.pop(ii)
-
-        return result
+        if y >= min(a1 * x + b1, a2 * x + b2):  # the value is above the borders
+            ret.append(row)
+    return ret
 
 
 def check_results(result_mdnet, result_cv):
@@ -69,6 +71,13 @@ def check_results(result_mdnet, result_cv):
         if ret_points:
             ret.append((name_cv, ret_points, r_cv))
     return ret
+
+
+def as_matrix(translation, rotation):
+    m = np.eye(4)
+    m[:3,:3] = rotation_matrix(rotation)
+    m[:3,3] = translation
+    return m
 
 
 def transform(transformation, xyz):
@@ -117,7 +126,7 @@ def get_border_lines(border_points):
 
 
 def create_detector(confidence_thresholds):
-    model = os.path.join(os.path.dirname(__file__), '../../../mdnet5.128.128.13.4.elu.pth')
+    model = os.path.join(os.path.dirname(__file__), '../../../mdnet6.128.128.13.4.elu.pth')
     max_gap = 16
     min_group_size = 2
 
@@ -132,30 +141,30 @@ class ArtifactDetectorDNN(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register("localized_artf", "dropped", "debug_rgbd", "stdout",
-                     "debug_result", "debug_cv_result")
+                     "debug_result", "debug_cv_result", "debug_camera")
         confidence_thresholds = {  # used for mdnet
             'survivor': 0.5,
-            'backpack': 0.5,
+            'backpack': 0.74,
             'phone': 0.5,
             'helmet': 0.5,
             'rope': 0.5,
             'fire_extinguisher': 0.5,
-            'drill': 0.75,
+            'drill': 0.5,
             'vent': 0.5,
             'cube': 0.5
         }
         # Confidence borders points
         # There are tree border points for each artifact, point coordinates: x - mdnet, y - cv_detector
         confidence_borders = {
-            'survivor': [[0.6, 1],[0.9, 0.65],[0.95, 0.2]],
-            'backpack': [[0.5, 0.55],[0.97, 0.4],[0.99, 0.2]],
-            'phone': [[0.5, 0.4],[0.82, 0.37],[1, 0.2]],
-            'helmet': [[0.5, 0.6],[0.9, 0.4],[1, 0.1]],
-            'rope': [[0.6, 0.5],[0.95, 0.35],[1, 0.2]],
-            'fire_extinguisher': [[0.5, 0.75],[0.95, 0.7],[1, 0.65]],
-            'drill': [[0.75, 1],[0.9, 0.8],[0.91, 0.1]],
-            'vent': [[0.5, 0.98],[0.9, 0.9],[1, 0.1]],
-            'cube': [[0.5, 0.4],[0.9, 0.4],[1, 0.4]]
+            'survivor': [[0.5, 1],[0.93, 0.55],[1, 0.1]],
+            'backpack': [[0.74, 1],[0.9, 0.77],[0.95, 0.2]],
+            'phone': [[0.5, 0.45],[0.84, 0.41],[1, 0.1]],
+            'helmet': [[0.5, 0.95],[0.85, 0.6],[1, 0.2]],
+            'rope': [[0.5, 0.5],[0.9, 0.35],[1, 0.1]],
+            'fire_extinguisher': [[0.5, 0.9],[0.95, 0.85],[1, 0.8]],
+            'drill': [[0.5, 0.8],[0.87, 0.75],[1, 0.2]],
+            'vent': [[0.5, 0.9],[0.6, 0.6],[0.7, 0.1]],
+            'cube': [[0.5, 0.6],[0.8, 0.59],[1, 0.2]]
         }
         self.border_lines = get_border_lines(confidence_borders)
         self.time = None
@@ -165,13 +174,17 @@ class ArtifactDetectorDNN(Node):
         self.detector = create_detector(confidence_thresholds)
         self.fx = config.get('fx', 554.25469)  # use drone X4 for testing (TODO update all configs!)
         self.max_depth = config.get('max_depth', 10.0)
+        self.triangulation_baseline_min = config.get('triangulation_baseline_min', 0.03)
+        self.triangulation_baseline_max = config.get('triangulation_baseline_max', 0.20)
+        self.batch_size = config.get('batch_size', 1)  # how many images process in one step
+        self.prev_camera = {}
 
-    def wait_for_rgbd(self):
+    def wait_for_data(self):
         channel = ""
-        while channel != "rgbd":
+        while channel != "rgbd" and not channel.startswith("camera"):
             self.time, channel, data = self.listen()
             setattr(self, channel, data)
-        return self.time
+        return self.time, channel
 
     def stdout(self, *args, **kwargs):
         # maybe refactor to Node?
@@ -191,16 +204,20 @@ class ArtifactDetectorDNN(Node):
                 dropped = -1
                 timestamp = now
                 while timestamp <= now:
-                    timestamp = self.wait_for_rgbd()
+                    timestamp, channel = self.wait_for_data()
                     dropped += 1
-                self.detect(self.rgbd)
+                for count in range(self.batch_size):
+                    if channel == 'rgbd':
+                        self.detect_from_rgbd(self.rgbd)
+                    else:
+                        self.detect_from_img(channel, getattr(self, channel))
+                    if count + 1 < self.batch_size:
+                        # process also immediately following images
+                        timestamp, channel = self.wait_for_data()
         except BusShutdownException:
             pass
 
-    def detect(self, rgbd):
-        robot_pose, camera_pose, image_data, depth_data = rgbd
-        img = cv2.imdecode(np.fromstring(image_data, dtype=np.uint8), 1)
-        depth = decompress_depth(depth_data)
+    def detect(self, img):
         if self.width is None:
             self.stdout('Image resolution', img.shape)
             self.width = img.shape[1]
@@ -208,6 +225,7 @@ class ArtifactDetectorDNN(Node):
 
         result = self.detector(img)
         result_cv = self.cv_detector(img)
+        checked_result = None
         if result or result_cv:
             # publish the results independent to detection validity
             self.publish('debug_result', result)
@@ -215,12 +233,83 @@ class ArtifactDetectorDNN(Node):
             checked_result = check_results(result, result_cv)
             if checked_result:
                 checked_result = check_borders(checked_result, self.border_lines)
-                if checked_result:
-                    report = result2report(checked_result, depth, self.fx,
-                            robot_pose, camera_pose, self.max_depth)
+        return checked_result
+
+    def detect_from_rgbd(self, rgbd):
+        robot_pose, camera_pose, image_data, depth_data = rgbd
+        img = cv2.imdecode(np.fromstring(image_data, dtype=np.uint8), cv2.IMREAD_COLOR)
+        depth = decompress_depth(depth_data)
+        checked_result = self.detect(img)
+        if checked_result:
+            report = result2report(checked_result, depth, self.fx,
+                    robot_pose, camera_pose, self.max_depth)
+            if report is not None:
+                self.publish('localized_artf', report)
+                self.publish('debug_rgbd', rgbd)
+
+    def detect_from_img(self, camera_name, data):
+        curr_robot_pose, curr_camera_pose, curr_img_data = data
+        curr_img = cv2.imdecode(np.fromstring(curr_img_data, dtype=np.uint8), cv2.IMREAD_COLOR)
+        curr_img_gray = cv2.cvtColor(curr_img, cv2.COLOR_BGR2GRAY)
+        # If we saw an artifact in the previous image, we need to estimate its
+        # location.
+        prev_detection = self.prev_camera.get(camera_name)
+        if prev_detection is not None:
+            prev_robot_pose, prev_camera_pose, artf_name, prev_uvs, prev_img_data, prev_img_gray, checked_result = prev_detection
+            curr_uvs, status, err = cv2.calcOpticalFlowPyrLK(prev_img_gray, curr_img_gray, prev_uvs.astype(np.float32), None)
+            num_tracked = np.sum(status)
+            if num_tracked > 0:
+                status = status[:,0].astype(np.bool)
+                curr_uvs = curr_uvs[status]
+                prev_uvs = prev_uvs[status]
+                assert(curr_uvs.shape == prev_uvs.shape)
+
+                prev_to_global = as_matrix(*prev_robot_pose) @ as_matrix(*prev_camera_pose)
+                curr_to_local = np.linalg.inv(as_matrix(*curr_robot_pose) @ as_matrix(*curr_camera_pose))
+                TO_OPTICAL = np.array([[ 0, -1,  0, 0],
+                                       [ 0,  0, -1, 0],
+                                       [ 1,  0,  0, 0],
+                                       [ 0,  0,  0, 1]], dtype=np.float)
+                FROM_OPTICAL = TO_OPTICAL.T  # inverse
+                # projection_matrix = camera_matrix @ camera_pose
+                # https://stackoverflow.com/questions/16101747/how-can-i-get-the-camera-projection-matrix-out-of-calibratecamera-return-value
+                # https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
+                # We calculate everything in the previous coordinate frame of the camera.
+                cx = (curr_img.shape[1] - 1) / 2
+                cy = (curr_img.shape[0] - 1) / 2
+                fx = fy = self.fx
+                camera_matrix = np.array([[fx,  0, cx],
+                                          [ 0, fy, cy],
+                                          [ 0,  0,  1]])
+                prev_projection_matrix = camera_matrix @ np.eye(3, 4)
+                to_curr_camera = curr_to_local @ prev_to_global
+                curr_projection_matrix = camera_matrix @ (TO_OPTICAL @ to_curr_camera @ FROM_OPTICAL)[:3,:]
+                traveled_dist = np.linalg.norm(to_curr_camera[:3,3])
+                if traveled_dist < self.triangulation_baseline_min:
+                    # Let's keep the previous detection for triangulation from a more distant point.
+                    return
+                elif traveled_dist <= self.triangulation_baseline_max:
+                    points3d = cv2.triangulatePoints(prev_projection_matrix.astype(np.float64), curr_projection_matrix.astype(np.float64), prev_uvs.T.astype(np.float64), curr_uvs.T.astype(np.float64)).T
+                    points3d = cv2.convertPointsFromHomogeneous(points3d)
+                    points3d = points3d[:,0,:]  # Getting rid of the unnecessary extra dimension in the middle.
+                    fake_depth = np.zeros(curr_img.shape[:2])
+                    fake_depth[prev_uvs[:,1], prev_uvs[:,0]] = points3d[:,2]  # Depth is the last dimension in an optical coordinate frame.
+                    report = result2report(checked_result, fake_depth, self.fx,
+                            prev_robot_pose, prev_camera_pose, self.max_depth)
                     if report is not None:
                         self.publish('localized_artf', report)
-                        self.publish('debug_rgbd', rgbd)
+                        self.publish('debug_camera', [camera_name, [prev_robot_pose, prev_camera_pose, prev_img_data], [curr_robot_pose, curr_camera_pose, curr_img_data]])
+                # else: The robot got too far from the detection point.
+
+                del self.prev_camera[camera_name]
+
+        # Detect artifacts in the current image.
+        checked_result = self.detect(curr_img)
+        if checked_result:
+            # TODO: Consider remembering all blobs and not just the first one.
+            artf_name = checked_result[0][0]
+            uvs = np.asarray([point[:2] for point in checked_result[0][1]])
+            self.prev_camera[camera_name] = curr_robot_pose, curr_camera_pose, artf_name, uvs, curr_img_data, curr_img_gray, checked_result
 
 
 if __name__ == "__main__":

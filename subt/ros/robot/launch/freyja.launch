@@ -1,13 +1,26 @@
 <?xml version="1.0"?>
 <launch>
-  <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)"/>
+  <node name="$(arg robot_name)_proxy" pkg="proxy" type="ros_proxy" args="$(arg robot_name)" output="screen"/>
+
+  <node name="origin" pkg="robot" type="origin_tf.py" args="$(arg robot_name)"/>
+
+  <!-- Remove noise -->
+  <node name="depth_denoiser_front" pkg="proxy" type="depth_filter">
+    <remap from="depth_denoiser_front/input" to="$(arg robot_name)/rgbd_front/optical/depth"/>
+    <remap from="depth_denoiser_front/output" to="$(arg robot_name)/rgbd_front/optical/clean_depth"/>
+  </node>
+
+  <node name="depth_denoiser_rear" pkg="proxy" type="depth_filter">
+    <remap from="depth_denoiser_rear/input" to="$(arg robot_name)/rgbd_rear/optical/depth"/>
+    <remap from="depth_denoiser_rear/output" to="$(arg robot_name)/rgbd_rear/optical/clean_depth"/>
+  </node>
 
   <!-- Combining front RGBD depth and image data into a single message. -->
   <node pkg="nodelet" type="nodelet" name="rgbd_sync_front" args="standalone rtabmap_ros/rgbd_sync">
     <!-- Inputs -->
     <remap from="rgb/image" to="/$(arg robot_name)/rgbd_front/optical/image_raw"/>
     <remap from="rgb/camera_info" to="$(arg robot_name)/rgbd_front/optical/camera_info"/>
-    <remap from="depth/image" to="/$(arg robot_name)/rgbd_front/optical/depth"/>
+    <remap from="depth/image" to="/$(arg robot_name)/rgbd_front/optical/clean_depth"/>
     <!-- Output -->
     <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/front/compressed"/>
     <remap from="rgbd_image" to="/rtabmap/rgbd/front"/>
@@ -18,7 +31,7 @@
     <!-- Inputs -->
     <remap from="rgb/image" to="/$(arg robot_name)/rgbd_rear/optical/image_raw"/>
     <remap from="rgb/camera_info" to="/$(arg robot_name)/rgbd_rear/optical/camera_info"/>
-    <remap from="depth/image" to="/$(arg robot_name)/rgbd_rear/optical/depth"/>
+    <remap from="depth/image" to="/$(arg robot_name)/rgbd_rear/optical/clean_depth"/>
     <!-- Output -->
     <remap from="rgbd_image/compressed" to="/rtabmap/rgbd/rear/compressed"/>
     <remap from="rgbd_image" to="/rtabmap/rgbd/rear"/>
@@ -276,7 +289,9 @@
   <node pkg="proxy" type="traversability" name="local_map" ns="$(arg robot_name)">
     <param name="robot_frame_id" value="$(arg robot_name)/ground"/>
     <remap from="local_map/input/camera_info" to="/$(arg robot_name)/rgbd_all/optical/camera_info"/>
-    <remap from="local_map/input/depth/compressed" to="/rtabmap/rgbd/all/compressed"/>
+    <remap from="local_map/input/rgbd" to="/rtabmap/rgbd/all/compressed"/>
     <remap from="local_map/input/scan" to="/$(arg robot_name)/scan_all"/>
+    <remap from="local_map/input/breadcrumb" to="/$(arg robot_name)/breadcrumb/deploy"/>
+    <remap from="local_map/output/map" to="/cloud"/>
   </node>
 </launch>

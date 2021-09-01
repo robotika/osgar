@@ -26,6 +26,11 @@ WORLDS = dict(
     tc7 = "Tunnel Circuit World 7",
     tc8 = "Tunnel Circuit World 8",
 
+    nsa = "NIOSH SR Config A",
+    nsb = "NIOSH SR Config B",
+    nea = "NIOSH EX Config A",
+    neb = "NIOSH EX Config B",
+
     uq  = "Urban Qualification",
     us1 = "Urban Simple 1",
     us2 = "Urban Simple 2",
@@ -63,11 +68,19 @@ WORLDS = dict(
     fp1 = "Finals Practice 1",
     fp2 = "Finals Practice 2",
     fp3 = "Finals Practice 3",
+    fpr = "Finals Preliminary Round",
+
+    fpr1 = "Finals Preliminary Round World 1",
+    fpr2 = "Finals Preliminary Round World 2",
+    fpr3 = "Finals Preliminary Round World 3",
+
+    fr = "Final Prize Round",
 )
 
 ROBOTS=dict(
     teambase = "TEAMBASE",
     drone = "SSCI_X4_SENSOR_CONFIG_2",
+    pam = "CORO_PAM_SENSOR_CONFIG_1",
     freyja = "ROBOTIKA_FREYJA_SENSOR_CONFIG_2",
     k2 = "ROBOTIKA_KLOUBAK_SENSOR_CONFIG_3",
 )

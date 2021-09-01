@@ -12,8 +12,10 @@ case $WORLD in
     CIRCUIT="cave"; ;;
  *"tunnel"*):
     CIRCUIT="tunnel" ;;
- *"finals"*):
+ *"final"*):
     CIRCUIT="finals" ;;
+ *"niosh"*):
+    CIRCUIT="niosh" ;;
  *):
     echo "circuit not detected";
     exit 1;;
@@ -47,7 +49,7 @@ function on_exit {
 
 trap on_exit EXIT
 
-DOCKER_OPTS="--volume ${LOG_DIR}:/tmp/ign/logs --name sim"
+DOCKER_OPTS="--volume ${LOG_DIR}:/tmp/ign/logs/gazebo --name sim"
 export DOCKER_OPTS
 
 termtitle "sim $ROBOT $WORLD"

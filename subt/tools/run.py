@@ -29,6 +29,11 @@ WORLDS = dict(
     tc13 = "tunnel_circuit_13",
     tc15 = "tunnel_circuit_15",
 
+    nsa = "niosh_sr_config_a",
+    nsb = "niosh_sr_config_b",
+    nea = "niosh_ex_config_a",
+    neb = "niosh_ex_config_b",
+
     # URBAN
     uq  = "urban_qual",
     us1 = "simple_urban_01",
@@ -57,6 +62,13 @@ WORLDS = dict(
 
     # FINALS
     fq="finals_qual",
+    fp1="finals_practice_01",
+    fp2="finals_practice_02",
+    fp3="finals_practice_03",
+
+    fpr1="final_prelim_01",
+    fpr2="final_prelim_02",
+    fpr3="final_prelim_03",
 )
 
 ROBOTS=dict(
@@ -65,6 +77,7 @@ ROBOTS=dict(
     freyja = "ROBOTIKA_FREYJA_SENSOR_CONFIG_2",
     k2 = "ROBOTIKA_KLOUBAK_SENSOR_CONFIG_3",
     x2 = "ROBOTIKA_X2_SENSOR_CONFIG_1",
+    pam = "CORO_PAM_SENSOR_CONFIG_1",
 )
 
 XAUTH = pathlib.Path("/tmp/.docker.xauth")
@@ -77,14 +90,13 @@ def validate_world(world):
         sys.exit(f"'{world}' not valid world identification")
 
 
-def validate_robots(robots, timeout):
+def validate_robots(robots):
     valid = {}
     for name, kind in robots.items():
         try:
             valid[name] = ROBOTS[kind]
         except KeyError:
             sys.exit(f"'{kind}' not valid robot kind identification")
-    #valid[f"T{timeout}"] = "TEAMBASE"
     return valid
 
 
@@ -139,7 +151,7 @@ def _create_docker(client, name, image, command, mounts=[], environment={}):
     return client.containers.create(image, **opts)
 
 
-def _run_sim(client, circuit, logdir, world, robots):
+def _run_sim(client, circuit, logdir, world, robots, show_sim_window):
     print("Creating/attaching 'sim-net'")
     try:
         simnet = client.networks.get("simnet")
@@ -152,10 +164,11 @@ def _run_sim(client, circuit, logdir, world, robots):
         )
         simnet = client.networks.create("simnet", ipam=ipam_config)
 
+    headless = int(not show_sim_window)
     print("Starting 'sim' container...")
     command = [
         "cloudsim_sim.ign",
-        "headless:=1",
+        f"headless:={headless}",
         "seed:=1",
         f"circuit:={circuit}",
         f"worldName:={world}"
@@ -272,6 +285,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description='Submit cloudsim run')
     parser.add_argument("config", nargs="?", default=str(pathlib.Path('./run.toml')))
     parser.add_argument("-n", action="store_true", help="dry run")
+    parser.add_argument("-s", "--show-simulator-window", action="store_true", help="Display Gazebo simulator window.")
     args = parser.parse_args(argv)
 
     config_file = pathlib.Path(args.config).resolve()
@@ -288,7 +302,9 @@ def main(argv=None):
 
     world = validate_world(config["world"])
     circuit = validate_circuit(world)
-    robots = validate_robots(config["robots"], config["timeout"])
+    if "timeout" in config:
+        config["robots"]["T{}".format(config["timeout"])] = "teambase"
+    robots = validate_robots(config["robots"])
     image = validate_image(client, config["image"])
     now = datetime.datetime.now(datetime.timezone.utc)
     strnow = f"{now.year}-{now.month:02d}-{now.day:02d}T{now.hour:02d}.{now.minute:02d}.{now.second:02d}"
@@ -320,7 +336,7 @@ def main(argv=None):
 
     signal.signal(signal.SIGINT, _sigint)
 
-    sim = _run_sim(client, circuit, logdir, world, robots)
+    sim = _run_sim(client, circuit, logdir, world, robots, args.show_simulator_window)
     to_stop = [sim]
     stdout = [sim]
     to_wait = []
@@ -343,6 +359,8 @@ def main(argv=None):
             for r in to_wait:
                 if r.status == "exited":
                     print(f"Container {r.name} exited.")
+                    if r.name.startswith('T'): #teambase
+                        should_stop = True
             to_wait = [r for r in to_wait if r.status != "exited"]
             for s in to_stop:
                 s.reload()

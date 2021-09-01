@@ -9,27 +9,28 @@
           "init": {
             "max_speed": 0.5,
             "symmetric": true,
-            "virtual_bumper_sec": 60,
+            "virtual_bumper_sec": 75,
             "virtual_bumper_radius": 10.0,
             "virtual_world": true,
 	    "direction_adherence": 45,
             "follow_wall": {
-              "max_wall_distance": 7.6
+              "max_wall_distance": 5.0
             }
          }
       },
       "detector": {
           "driver": "subt.artf_node:ArtifactDetectorDNN",
-          "in": ["rgbd", "scan"],
+          "in": ["rgbd"],
           "out": ["localized_artf", "dropped", "debug_artf", "debug_rgbd", "debug_result", "debug_cv_result", "stdout"],
           "init": {
           }
       },
-      "detector_rear": {
+      "detector_lr": {
           "driver": "subt.artf_node:ArtifactDetectorDNN",
-          "in": ["rgbd", "scan"],
-          "out": ["localized_artf", "dropped", "debug_artf", "debug_rgbd", "debug_result", "debug_cv_result", "stdout"],
+          "in": ["camera_left", "camera_right"],
+          "out": ["localized_artf", "dropped", "debug_artf", "debug_camera", "debug_result", "debug_cv_result", "stdout"],
           "init": {
+             "max_depth" : 30.0
           }
       },
       "gas_detector": {
@@ -84,7 +85,7 @@
           "init": {
             "outputs": ["acc", "battery_state", "score", "pose3d", "gas_detected", "joint_angle",
                         "scan_front", "scan_rear", "scan360", "rgbd_front:null", "rgbd_rear:null",
-                        "robot_name", "octomap:gz"]
+                        "robot_name", "octomap:gz", "camera_left:null", "camera_right:null"]
           }
       },
       "torospy": {
@@ -131,6 +132,13 @@
       },
       "octomap": {
         "driver": "subt.octomap:Octomap"
+      },
+      "black_box": {
+        "driver": "subt.crash_report:CrashReport",
+          "init": {
+            "size": 100,
+            "threshold": 100.0
+          }
       }
     },
     "links": [["app.desired_speed", "twister.desired_speed"],
@@ -144,11 +152,14 @@
 
               ["fromrospy.acc", "app.acc"],
 
-              ["fromrospy.scan_front", "detector.scan"],
-              ["fromrospy.scan_rear", "detector_rear.scan"],
-
               ["fromrospy.rgbd_front", "detector.rgbd"],
-              ["fromrospy.rgbd_rear", "detector_rear.rgbd"],
+              ["fromrospy.rgbd_rear", "detector.rgbd"],
+              ["fromrospy.camera_left", "detector_lr.camera_left"],
+              ["fromrospy.camera_right", "detector_lr.camera_right"],
+
+              ["fromrospy.acc", "black_box.acc"],
+              ["fromrospy.rgbd_front", "black_box.rgbd"],
+              ["fromrospy.rgbd_rear", "black_box.rgbd"],
 
               ["fromrospy.scan360", "app.scan360"],
 
@@ -186,9 +197,10 @@
 
               ["detector.localized_artf", "artifact_filter.localized_artf"],
               ["detector.stdout", "rosmsg.stdout"],
-              ["detector_rear.localized_artf", "artifact_filter.localized_artf"],
-              ["detector_rear.stdout", "rosmsg.stdout"],
+              ["detector_lr.localized_artf", "artifact_filter.localized_artf"],
+              ["detector_lr.stdout", "rosmsg.stdout"],
               ["artifact_filter.artf_xyz", "reporter.artf_xyz"],
+              ["artifact_filter.artf_xyz", "torospy.artf_xyz"],
               ["rosmsg.base_station", "reporter.base_station"],
               ["reporter.artf_cmd", "transmitter.raw"],
 

@@ -18,7 +18,7 @@ from osgar.lib.serialize import deserialize
 from subt.tf_detector import CvDetector
 from subt.artf_node import check_results, create_detector
 
-g_streams = ["logimage.image", "logimage_rear.image"]
+g_streams = ["logimage.image", "logimage_rear.image", "logimage_right.image", "logimage_left.image"]
 g_artf_names = ["survivor","backpack", "phone", "helmet", "rope", "fire_extinguisher", "drill", "vent", "cube"]
 
 NAMES_AND_SCORES = {'backpack': 0.1,
@@ -47,6 +47,7 @@ def proces_torch_result(result):
 
 def manual_separation(data):
     ii = 0
+    clean_im = False
     while True:
         if ii < 0:
             ii = 0
@@ -57,12 +58,19 @@ def manual_separation(data):
         im_path = im_path.rstrip("\r\n")
         img = cv2.imread(str(im_path), 1)
         assert img is not None
-        cv2.rectangle(img, (x, y), (xw, yh), (0, 0, 255))
-        cv2.putText(img, artf_name, (x, y), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 255))
+        m, n, __ = img.shape
+        img_to_draw = img.copy()
+        cv2.rectangle(img_to_draw, (x, y), (xw, yh), (0, 0, 255))
+        cv2.putText(img_to_draw, artf_name, (min(x, n - 150), max(y, 50)), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 255))
         for xc, yc in points:
-            cv2.circle(img, (xc, yc), radius=4, color=(255, 255, 0), thickness=1)
-        cv2.putText(img, str(detection_type), (10, 50), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 0, 0))
-        im_to_show = cv2.resize(img, (1280, 720))
+            cv2.circle(img_to_draw, (xc, yc), radius=4, color=(255, 255, 0), thickness=1)
+        cv2.putText(img_to_draw, str(detection_type), (10, 50), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 0, 0))
+        if clean_im:
+            im_to_show = img
+        else:
+            im_to_show = img_to_draw
+
+        im_to_show = cv2.resize(im_to_show, (int(n*1.5), int(m*1.5)))
         cv2.imshow("win", im_to_show)
 
         k = cv2.waitKey(0) & 0xFF
@@ -76,6 +84,10 @@ def manual_separation(data):
             data[ii][6] = "false"  # false detection
         elif k == ord("d"):
             data[ii][6] = "None"  # do not use
+        elif k == ord("c"):
+            clean_im = True
+        elif k == ord("x"):
+            clean_im = False
         elif k == ord("q"):  # close and save
             break
 
@@ -130,8 +142,8 @@ def log_eval(log_file):
                 im_file_name = prefix + "_im_%06d.jpg" % ii
                 im_path = os.path.join(data_dir, im_file_name)
                 for res in result:
-                    print(res)
                     artf_name, res_t, res_cv = res
+                    print(im_file_name, artf_name)
                     score_torch, points = proces_torch_result(res_t)
                     __, score_cv, bbox = res_cv
 
@@ -182,7 +194,7 @@ def plot_data(data, path, borders = None):
 def plot_data_from_log(csv_file, artf_name, borders):
     data = []
     with open(csv_file) as data_csv:
-        reader = csv.reader(data_csv, delimiter=';')
+        reader = csv.reader(data_csv, delimiter=',')
         for name, score_t, score_cv, detection_type in reader:
             if name == artf_name and detection_type in ["true", "false"]:
                 data.append([name, float(score_t), float(score_cv), detection_type])
@@ -213,7 +225,7 @@ def separate_detections(path):
     # save data for future analysis
     csv_name = datetime.datetime.now().strftime("detection_overview_%y%m%d_%H%M%S.csv")
     with open(os.path.join(path, csv_name), "w", newline='') as csv_file:
-        csv_writer = csv.writer(csv_file, delimiter=";")
+        csv_writer = csv.writer(csv_file, delimiter=",")
         for item in data:
             csv_writer.writerow(item)
 

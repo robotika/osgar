@@ -153,7 +153,7 @@ def frontiers(img, start, draw=False):
     score = np.zeros(len(xy[0]))
     for i in range(len(xy[0])):
         x, y = xy[1][i]-SLICE_OCTOMAP_SIZE//2, SLICE_OCTOMAP_SIZE//2-xy[0][i]
-        if x > 0:
+        if x > 4:  # TODO - resolution and detect gate as one way only (0 is not sufficient due to impecise position
             score[i] = math.hypot(x, y) * 0.03
         else:
             score[i] = 0  # too cruel cut for X positive semi-space, but let's move INSIDE!
@@ -186,21 +186,23 @@ def frontiers(img, start, draw=False):
     z = np.zeros((1, size[1], size[2]), dtype=np.bool)
     drivable = np.vstack([z, tmp, z])
 
-    limit_score = 3*max(score)/4
-    # select goal positions above the limit_score
-    # note, that the "safe path" does not touch external boundary so it would never find path
-    # to frontier. As a workaround add also all 8-neighbors of frontiers.
-    goals = []
-    xy = np.array(xy)[:, score > limit_score]
-    for dx in [-1, 0, 1]:
-        for dy in [-1, 0, 1]:
-            for dz in [0]:  #[-1, 0, 1]:
-                goals.append(xy + np.repeat(np.asarray([[dy], [dx], [dz]]), xy.shape[1], axis=1))
-    goals = np.hstack(goals).T[:, [1, 0, 2]]
+    for limit_score in [3*max(score)/4, max(score)/4, 0]:
+        # select goal positions above the limit_score
+        # note, that the "safe path" does not touch external boundary so it would never find path
+        # to frontier. As a workaround add also all 8-neighbors of frontiers.
+        goals = []
+        xy2 = np.array(xy)[:, score > limit_score]
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                for dz in [0]:  #[-1, 0, 1]:
+                    goals.append(xy2 + np.repeat(np.asarray([[dy], [dx], [dz]]), xy2.shape[1], axis=1))
+        goals = np.hstack(goals).T[:, [1, 0, 2]]
 
-    # the path planner currently expects goals as tuple (x, y) and operation "in"
-    goals = set(map(tuple, goals))
-    path = find_path(drivable, start, goals, verbose=False)
+        # the path planner currently expects goals as tuple (x, y) and operation "in"
+        goals = set(map(tuple, goals))
+        path = find_path(drivable, start, goals, verbose=False)
+        if path is not None:
+            break
 
     img[mask] = STATE_FRONTIER
 
@@ -307,6 +309,60 @@ class Octomap(Node):
             assert False, channel  # unknown channel
 
 
+def draw_iteration(data, waypoints=None, paused=False):
+    global level, scaled
+
+    if waypoints is None:
+        waypoints = []
+
+    while True:
+        img = data2maplevel(data, level=level)
+        cv2.circle(img, start[:2], radius=0, color=(39, 127, 255), thickness=-1)
+        if scaled:
+            img = cv2.resize(img[256 + 128:-256 - 128, 256 + 128:-256 - 128], img.shape)
+        cv2.imshow('Octomap', img)
+        pose_str = '(%.02f, %.02f, %.02f)' % tuple(pose3d[0]) if pose3d is not None else 'None'
+        cv2.setWindowTitle('Octomap', f'Octomap {time}, {pose_str}, level={level}' + (' (paused)' if paused else ''))
+        key = cv2.waitKey(1) & 0xFF
+        KEY_Q = ord('q')
+        if key == KEY_Q:
+            break
+        if key == ord(' '):
+            paused = not paused
+        if ord('0') <= key <= ord('9'):
+            level = key - ord('0')
+        if key == ord('m'):
+            level -= 1
+        if key == ord('p'):
+            level += 1
+        if key == ord('s'):
+            scaled = not scaled
+        if key == ord('d'):
+            import open3d as o3d
+            res = 0.5
+            all = []
+            for lev in range(-3, 10):
+                img = data2maplevel(data, level=lev)
+                xy = np.where(img == STATE_OCCUPIED)
+                xyz = np.array(
+                    [xy[1] - SLICE_OCTOMAP_SIZE / 2, SLICE_OCTOMAP_SIZE / 2 - xy[0], np.full(len(xy[0]), lev)]).T * res
+                all.extend(xyz.tolist())
+            pcd = o3d.geometry.PointCloud()
+            xyz = np.array(all)
+            pcd.points = o3d.utility.Vector3dVector(xyz)
+            voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=0.1)
+            lines = [[i, i + 1] for i in range(len(waypoints) - 1)]
+            colors = [[1, 0, 0] for i in range(len(lines))]
+            line_set = o3d.geometry.LineSet()
+            line_set.points = o3d.utility.Vector3dVector(waypoints)
+            line_set.lines = o3d.utility.Vector2iVector(lines)
+            line_set.colors = o3d.utility.Vector3dVector(colors)
+            o3d.visualization.draw_geometries([line_set, voxel_grid])
+        if not paused:
+            break
+    return key
+
+
 if __name__ == "__main__":
     import argparse
     from osgar.lib.serialize import deserialize
@@ -325,9 +381,11 @@ if __name__ == "__main__":
     x, y, z = 0, 0, 0
     resolution = 0.5
     waypoints = None
+    last_octo_data = None
     with LogReader(args.logfile,
                only_stream_id=[octomap_stream_id, pose3d_stream_id, waypoints_stream_id]) as logreader:
         level = 2
+        scaled = True
         for time, stream, data in logreader:
             data = deserialize(data)
             if stream == pose3d_stream_id:
@@ -347,46 +405,13 @@ if __name__ == "__main__":
             assert len(data) % 2 == 0, len(data)  # TODO fix this in cloudsim2osgar
             data = bytes([(d + 256) % 256 for d in data])
 
-            paused = False
-            while True:
-                img = data2maplevel(data, level=level)
-                cv2.circle(img, start[:2], radius=0, color=(39, 127, 255), thickness=-1)
-                img = cv2.resize(img[256+128:-256-128, 256+128:-256-128], img.shape)
-                cv2.imshow('Octomap', img)
-                pose_str = '(%.02f, %.02f, %.02f)' % tuple(pose3d[0]) if pose3d is not None else 'None'
-                cv2.setWindowTitle('Octomap', f'Octomap {time}, {pose_str}, level={level}' + (' (paused)' if paused else ''))
-                key = cv2.waitKey(1) & 0xFF
-                KEY_Q = ord('q')
-                if key == KEY_Q:
-                    break
-                if key == ord(' '):
-                    paused = not paused
-                if ord('0') <= key <= ord('9'):
-                    level = key - ord('0')
-                if key == ord('d'):
-                    import open3d as o3d
-                    res = 0.5
-                    all = []
-                    for lev in range(-3, 10):
-                        img = data2maplevel(data, level=lev)
-                        xy = np.where(img == STATE_OCCUPIED)
-                        xyz = np.array([xy[1] - SLICE_OCTOMAP_SIZE/2, SLICE_OCTOMAP_SIZE/2 - xy[0], np.full(len(xy[0]), lev)]).T * res
-                        all.extend(xyz.tolist())
-                    pcd = o3d.geometry.PointCloud()
-                    xyz = np.array(all)
-                    pcd.points = o3d.utility.Vector3dVector(xyz)
-                    voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=0.1)
-                    lines = [[i, i+1] for i in range(len(waypoints) - 1)]
-                    colors = [[1, 0, 0] for i in range(len(lines))]
-                    line_set = o3d.geometry.LineSet()
-                    line_set.points = o3d.utility.Vector3dVector(waypoints)
-                    line_set.lines = o3d.utility.Vector2iVector(lines)
-                    line_set.colors = o3d.utility.Vector3dVector(colors)
-                    o3d.visualization.draw_geometries([line_set, voxel_grid])
-                if not paused:
-                    break
-            if key == KEY_Q:
+            last_octo_data = data
+            key = draw_iteration(data, waypoints)
+            if key == ord('q'):
                 break
             waypoints = None  # force wait for next waypoints message
+
+        if last_octo_data is not None:
+            draw_iteration(last_octo_data, waypoints, paused=True)
 
 # vim: expandtab sw=4 ts=4

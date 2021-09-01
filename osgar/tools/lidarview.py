@@ -34,6 +34,7 @@ g_lidar_fov_deg = 270  # controlled by --deg (deg)
 
 # depth data for ROBOTIKA_X2_SENSOR_CONFIG_1 (640 x 360)
 g_depth_params = DepthParams()
+g_prefix = "saveX"
 
 CENTER_AXLE_DISTANCE = 0.348  # K2 distance specific
 
@@ -194,6 +195,15 @@ def draw_robot(foreground, pose, joint):
 g_depth = None
 g_danger_binary_image = False
 
+def depth_map(depth):
+    MAX_RANGE = 10.0
+    depth = (255 * depth / MAX_RANGE).astype(np.uint8)
+    return pygame.image.frombuffer(
+            cv2.cvtColor(
+                cv2.applyColorMap(depth, cv2.COLORMAP_JET),
+                cv2.COLOR_BGR2RGB).tostring(),
+            depth.shape[1::-1], "RGB")
+
 def get_image(data):
     """Extract JPEG or RGBD depth image"""
     global g_depth
@@ -214,11 +224,16 @@ def get_image(data):
         img_data, depth_data = data
         image = pygame.image.load(io.BytesIO(img_data), 'JPG').convert()
         g_depth = decompress_depth(depth_data)
+    elif isinstance(data, list):
+        # image stereo artefact localization
+        # expects localized pair of images [camera_name, [robot_pose, camera_pose, image], [robot_pose, camera_pose, image]]
+        assert len(data) == 3, len(data)
+        image = pygame.image.load(io.BytesIO(data[1][2]), 'JPG').convert()
     elif data is not None:
         image = pygame.image.load(io.BytesIO(data), 'JPG').convert()
     else:
         image = None
-    return image
+    return image, (None if g_depth is None else depth_map(g_depth))
 
 
 def pygame_to_numpy_image(pygame_img):
@@ -363,7 +378,7 @@ class Framer:
             if stream_id == self.lidar_down_id:
                 self.frame.lidar_down = deserialize(data)
             elif stream_id == self.camera_id:
-                self.image = get_image(deserialize(data))
+                self.image, _ = get_image(deserialize(data))
                 # bounding boxes associated with an image are stored after the image in the log
                 # therefore, we need to continue reading the log past the image in order to gathering its bounding box data
                 current = self.current
@@ -381,10 +396,10 @@ class Framer:
                     self.keyframe = False
                     return timestamp, self.frame, self.pose, self.pose3d, self.scan, self.scan2, self.image, self.image2, self.bbox, self.joint, keyframe, self.title, False
             elif stream_id == self.camera2_id:
-                self.image2 = get_image(deserialize(data))
+                self.image2, _ = get_image(deserialize(data))
             elif stream_id == self.rgbd_id:
                 _, _, img_data, depth_data = deserialize(data)
-                self.image = get_image((img_data, depth_data))
+                self.image, self.image2 = get_image((img_data, depth_data))
                 if self.lidar_id is None:
                     keyframe = self.keyframe
                     self.keyframe = False
@@ -582,7 +597,7 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
                     frames_step = 90
                 if event.key == K_s:
                     save_image = image2 if use_image2 else image
-                    pygame.image.save(save_image, "saveX-{:04}.jpg".format(save_counter))
+                    pygame.image.save(save_image, g_prefix + "-{:04}.jpg".format(save_counter))
                     save_counter += 1
                 if event.key == K_b:  # swap binary danger image on/off
                     global g_danger_binary_image
@@ -590,8 +605,7 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
                     history.prev()
                 if event.key == K_d:  # dump scan
                     print(scan)
-                    if g_depth is not None:
-                        np.savez_compressed('depth.npz', depth=g_depth, pose3d=pose3d, img=pygame_to_numpy_image(image), scan=scan)
+                    np.savez_compressed('depth.npz', depth=g_depth, pose3d=pose3d, img=pygame_to_numpy_image(image), scan=scan)
                 if event.key == K_p:  # print position
                     print(pose)
                     x, y, heading = pose
@@ -639,7 +653,7 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
 def main(args_in=None, startswith=None):
     import argparse
     import os.path
-    global g_rotation_offset_rad, g_lidar_fov_deg, MAX_SCAN_LIMIT, WINDOW_SIZE
+    global g_rotation_offset_rad, g_lidar_fov_deg, MAX_SCAN_LIMIT, WINDOW_SIZE, g_prefix
 
     parser = argparse.ArgumentParser(description='View lidar scans')
     parser.add_argument('logfile', help='recorded log file')
@@ -680,6 +694,7 @@ def main(args_in=None, startswith=None):
     parser.add_argument('--jump', '-j', help='jump to given time in seconds', type=int)
 
     parser.add_argument('--create-video', help='filename of output video')
+    parser.add_argument('--im-prefix', help='prefix for saved images')
 
     args = parser.parse_args(args_in)
 
@@ -716,6 +731,8 @@ def main(args_in=None, startswith=None):
         MAX_SCAN_LIMIT = args.lidar_limit
     if args.window_size is not None:
         WINDOW_SIZE = args.window_size
+    if args.im_prefix:
+        g_prefix = args.im_prefix
 
     filename = os.path.basename(args.logfile)
     g_rotation_offset_rad = math.radians(args.rotate)

@@ -4,12 +4,15 @@
     "modules": {
       "app": {
         "init": {
-          "limit_pitch": 38,
-          "limit_roll": 38,
+          "robot_width": 0.7,
+          "limit_pitch": 40,
+          "limit_roll": 40,
           "return_limit_pitch": 50,
           "return_limit_roll": 50,
-          "obstacle_influence": 1.0,
+          "obstacle_influence": 1.4,
           "speed_policy": "conservative",
+          "min_safe_dist": 0.8,
+          "dangerous_dist": 0.5,
           "turbo_safe_dist": 2.8,
           "turbo_speed": 2.2,
           "rotation_p": 1.6,
@@ -20,12 +23,14 @@
       },
       "detector": {
           "init": {
-            "fx": 349.2
+            "fx": 349.2,
+            "batch_size": 2
           }
       },
-      "detector_rear": {
+      "detector_lr": {
           "init": {
-            "fx": 349.2
+            "fx": 149.01,
+            "batch_size": 2
           }
       }
     }
