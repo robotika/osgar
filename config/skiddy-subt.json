@@ -27,7 +27,7 @@
         "driver": "realsense",
         "init": {
           "device": "D400",
-          "serial_number": "938422071072",
+          "serial_number": "848312070179",
           "depth_subsample": 3,
           "depth_rgb": true,
           "depth_resolution": [
@@ -45,7 +45,7 @@
         "driver": "realsense",
         "init": {
           "device": "D400",
-          "serial_number": "848312070179",
+          "serial_number": "938422071072",
           "depth_subsample": 3,
           "depth_rgb": true,
           "depth_resolution": [
@@ -90,30 +90,6 @@
           "in": ["raw"],
           "out": ["raw"],
           "init": {"host": "192.168.1.71", "port": 2111, "timeout": 0.5}
-      },
-      "depth2scan": {
-          "driver": "subt.depth2scan:DepthToScan",
-          "in": ["depth16"],
-          "out": ["scan"],
-          "init": {
-            "depth_params": {
-              "fx": 554.25469,
-              "camera_xyz": [0.1, 0.0, -0.08],
-              "image_size": [640, 360],
-              "principal_point": [320.5, 180.5],
-              "vertical_pixel_offset": 16,
-              "lidar_fov": 6.283185307179586,
-              "lidar_trusted_zone": 2.0,
-              "min_z": -0.2,
-              "max_z": 0.4,
-              "max_slope": -3.14,
-              "vertical_diff_limit": 1.4835, "vd_comment": "radians(85)",
-              "stride": 2,
-              "noise_filter_window": [12, 6],
-              "noise_filter_threshold": 30
-            },
-            "filter_fog": true
-          }
       }
     },
     "links": [["app.desired_speed", "cortexpilot.desired_speed"],
@@ -126,7 +102,6 @@
               ["lidar_back_tcp.raw", "lidar_back.raw"],
               ["lidar_back.raw", "lidar_back_tcp.raw"],
               ["lidar.scan", "app.scan"],
-              ["tracking.pose3d", "app.pose3d"],
-              ["depth.depth", "depth2scan.depth16"]]
+              ["tracking.pose3d", "app.pose3d"]]
   }
 }
