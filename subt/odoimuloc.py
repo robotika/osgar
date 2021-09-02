@@ -1,7 +1,11 @@
+"""
+  This is revised localization from Virtual to be used in System K2 as backup
+"""
+
 import collections
 import logging
 import math
-import osgar.node
+from osgar.node import Node
 
 import osgar.lib.quaternion as quaternion
 
@@ -9,33 +13,21 @@ g_logger = logging.getLogger(__name__)
 
 Pose2d = collections.namedtuple("Pose2d", ("x", "y", "heading"))
 
-class Localization(osgar.node.Node):
+class Localization(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         # outputs
         bus.register('pose3d')
         # inputs: origin, orientation, odom
-        self.xyz = None # 3D position updated using odometry dist and imu orientation, defined when 'origin' received
-        self.orientation = None # not defined until first 'orientation' received
+        self.xyz = [0, 0, 0]  # 3D position updated using odometry dist and imu orientation, defined when 'origin' received
+        self.orientation = [0, 0, 0, 1]
         self.last_odom = None
-        self.origin_xyz = None
-        self.origin_orientation = None
-        self.origin_error = False
-
-    def on_origin(self, data):
-        if len(data) == 8:
-            self.xyz = data[1:4]
-            self.origin_xyz = data[1:4]
-            self.origin_orientation = data[4:]
-        else:
-            self.origin_error = True
 
     def on_orientation(self, orientation):
         self.orientation = orientation
 
     def on_odom(self, pose2d):
         x, y, heading = pose2d
-        assert self.xyz is not None
         if self.orientation is None:
             return
 
@@ -54,29 +46,11 @@ class Localization(osgar.node.Node):
         self.xyz = [a + b for a, b in zip(self.xyz, dist3d)]
         self.bus.publish('pose3d', [self.xyz, self.orientation])
 
-    def run(self):
-        try:
-            # wait for valid origin
-            while True:
-                dt, channel, data = self.bus.listen()
-                if channel == "origin":
-                    self.on_origin(data)
-                    if self.xyz is not None:
-                        break
-
-            while True:
-                dt, channel, data = self.bus.listen()
-                self.time = dt
-                if channel == "orientation":
-                    self.on_orientation(data)
-                elif channel == "odom":
-                    self.on_odom(data)
-                elif channel == "origin":
-                    pass
-                else:
-                    assert False, "unknown input channel"
-        except osgar.bus.BusShutdownException:
-            pass
-
-
-
+    def update(self):
+        channel = super().update()
+        handler = getattr(self, "on_" + channel, None)
+        if handler is not None:
+            handler(getattr(self, channel))
+        else:
+            assert False, channel  # unsupported channel
+        return channel
