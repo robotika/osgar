@@ -172,7 +172,8 @@ class LordIMU(Node):
                 self.publish('rotation', 
                         [int(round(math.degrees(x) * 100)) for x in [yaw, pitch, roll]])
             if quat is not None:
-                self.publish('orientation', list(quat))
+                q0, q1, q2, q3 = quat
+                self.publish('orientation', [q3, q0, q1, q2])
             if gps is not None:
                 # TODO check for GPS fix
                 lat, lon = gps[0]
