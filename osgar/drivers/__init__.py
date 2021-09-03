@@ -28,6 +28,7 @@ all_drivers = dict(
     maria="osgar.drivers.maria:RobotMaria",
     timer="osgar.drivers.timer:Timer",
     realsense="osgar.drivers.realsense:RealSense",
+    realsense_multicam="osgar.drivers.realsense:Multicam",
     velodyne="osgar.drivers.velodyne:Velodyne",
     systemmonitor="osgar.drivers.system_monitor:SystemMonitor"
 )
