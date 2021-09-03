@@ -35,13 +35,11 @@
                  "speed": 115200,
                  "reset": 1}
       },
-      "realsense": {
-        "driver": "realsense_multicam",
+      "depth": {
+        "driver": "realsense",
         "init": {
-          "devices": [{"type": "D400", "serial_number": "038122250496", "name": "front"},
-                      {"type": "D400", "serial_number": "035622251357", "name": "rear"},
-                      {"type": "T200", "serial_number": "952322110907", "name": "tracking"}
-          ],
+          "device": "D400",
+          "serial_number": "038122250496",
           "depth_subsample": 3,
           "depth_rgb": true,
           "depth_resolution": [
@@ -54,6 +52,32 @@
           ],
           "depth_fps": 30
         }
+      },
+      "depth_rear": {
+        "driver": "realsense",
+        "init": {
+          "device": "D400",
+          "serial_number": "035622251357",
+          "depth_subsample": 3,
+          "depth_rgb": true,
+          "depth_resolution": [
+            640,
+            360
+          ],
+          "rgb_resolution": [
+            640,
+            360
+          ],
+          "depth_fps": 30
+        }
+      },
+      "tracking": {
+          "driver": "realsense",
+          "init": {
+            "device": "T200",
+            "serial_number": "952322110907",
+            "pose_subsample": 20
+          }
       }
     },
     "links": [["timer.tick", "deedee.tick"],
