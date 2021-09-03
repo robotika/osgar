@@ -148,7 +148,8 @@
           "in": [],
           "out": ["wifiscan"],
           "init": {
-            "sleep": 1.0
+            "sleep": 1.0,
+            "interface": "wlp5s0"
           }
       },
       "gas_detector": {
