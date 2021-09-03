@@ -189,6 +189,12 @@
 	      "out": ["scan"],
 	      "init":{}
       },
+      "localization": {
+	      "driver": "subt.odoimuloc:Localization",
+	      "in": ["orientation", "odom"],
+	      "out": ["pose3d"],
+	      "init":{}
+      },
             "system": {
 	      "driver": "systemmonitor",
 	      "in": [],
@@ -204,8 +210,10 @@
               ["kloubak.can", "can.slot_can"],
               ["can.can", "kloubak.slot_can"],
               ["app.desired_speed", "kloubak.slot_desired_speed"],
-              ["kloubak.pose2d", "app.pose2d"],
-              ["lidar_tcp.raw", "lidar.raw"], 
+              ["kloubak.pose2d", "localization.odom"],
+              ["imu.orientation", "localization.orientation"],
+              ["localization.pose3d", "app.pose3d"],
+              ["lidar_tcp.raw", "lidar.raw"],
               ["lidar.raw", "lidar_tcp.raw"],
               ["lidar_back_tcp.raw", "lidar_back.raw"],
               ["lidar_back.raw", "lidar_back_tcp.raw"],
