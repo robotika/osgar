@@ -9,109 +9,50 @@ import json
 import cbor
 import gzip
 
-URL_BASE = "http://localhost:8888"  # local Robotika test/demo
-#URL_BASE = "http://10.100.1.200:8000"  # Alpha (was Army and Safety Research) Tunnel
-#URL_BASE = "http://10.100.2.200:8000"  # Beta (was Miami and Experimental) Tunnel
-
-ARTF_TYPES = ['Survivor', 'Backpack', 'Cell Phone',  # common
-              'Drill', 'Fire Extinguisher',          # tunnel extra
-              'Gas', 'Vent']                         # urban extra
-ARTF_TYPES_SHORT = [x[0] for x in ARTF_TYPES]
-
-json_headers = {
-#    "Authorization" : "Bearer subttesttoken123",  # demo
-#    "Authorization" : "Bearer NfEwAHEYsKqQkxSf",  # STIX
-    "Content-Type" : "application/json",
-}
-
-
-def get_status():
-    print('Get Status')
-    url = URL_BASE + "/api/status/"
-
-    # Correct GET /api/status/ request
-    response = requests.get(url, headers=json_headers)
-    assert response.status_code == 200, response.status_code
-    print(response.content)
-    print("-------------------")
-    return response.content
-
-
-def report_artf(artf_type, x, y, z):
-    artifact_report_data = {
-        "x": x,
-        "y": y,
-        "z": z,
-        "type": artf_type,
-    }
-    print('Report', artifact_report_data)
-    url = URL_BASE + "/api/artifact_reports/"
-
-    # Correct POST /api/artifact_reports/ request
-    response = requests.post(url, json=artifact_report_data, headers=json_headers)
-    print(response.content)
-    assert response.status_code == 201, response.status_code
-    print("-------------------")
-    return response.content
-
-
-def triple(x, y, z):
-    """
-    Generate 3 coordinates with the same Z and XY in triangle of 4m
-    """
-    dist = 4.0
-    arr = []
-    for angle_deg in [0, 120, 240]:
-        angle = math.radians(angle_deg)
-        arr.append((x + math.cos(angle)*dist, y + math.sin(angle)*dist, z))
-    return arr
-
-
-def score(artf_type, x, y, z):
-    """
-    return True for scored artifact report
-    """
-    before = json.loads(bytes.decode(get_status()))
-    time.sleep(2)
-    report_artf(artf_type, x, y, z)
-    time.sleep(2)
-    after = json.loads(bytes.decode(get_status()))
-    return before['score'] < after['score']
-
-
-def extract_map():
-    # only Point Clouds are supported
-    pass
-
+URL_BASE = "http://localhost:8000"  # local docker test
 
 
 class CommandPostRelay(object):
     def __init__(self, token):
         self.token = token
-        self.map_url = 'http://10.100.2.201:8000/map/update'
+        self.map_url = URL_BASE + '/map/update'
         self.compression = 'gzip'
 
         # HTTP sessions
         self.session = requests.Session()
-        self.session.headers['Content-Type']  = 'application/cbor'
+        self.session.headers['Content-Type'] = 'application/cbor'
         self.session.headers['Authorization'] = 'Bearer ' + self.token
-        if self.compression is 'gzip':
+        if self.compression == 'gzip':
             self.session.headers['Content-Encoding'] = 'gzip'
-        if self.compression is 'none':
+        else:
             self.session.headers['Content-Encoding'] = 'identity'
 
     def send_map_msg(self, typestr, msg, name):
-        body = cbor.dumps({u'type' : typestr, u'msg' : msg, u'name' : name})
-        if self.compression is 'gzip':
+        body = cbor.dumps({u'type': typestr, u'msg': msg, u'name': name})
+        if self.compression == 'gzip':
             body = gzip.compress(bytes(body))
             print(f'  -> Sending message of size {len(body)}')
         res = self.session.post(self.map_url, body)
         return res
 
 
-def mapping_server(token):
+def create_empty_map():
+    return {
+        'fields':
+            [
+                {'name': 'x', 'offset': 0, 'datatype': 7, 'count': 1},
+                {'name': 'y', 'offset': 4, 'datatype': 7, 'count': 1},
+                {'name': 'z', 'offset': 8, 'datatype': 7, 'count': 1},
+            ],
+        'point_step': 12,
+        'data': b''
+    }
+
+
+def mapping_server(token, cloud):
     cpr = CommandPostRelay(token=token)
-    cpr.send_map_msg('PointCloud2', msg=b'123', name='Skiddy')  # vs. Kloubak
+    res = cpr.send_map_msg(u'PointCloud2', msg=cloud, name=u'Skiddy')  # vs. Kloubak
+    print(res)
 
 
 if __name__ == '__main__':
@@ -119,9 +60,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--token', help='Bearer communication token', required=True)
-    parser.add_argument('--dry-run', help='do not connect to the server', action='store_true')
     args = parser.parse_args()
 
-    mapping_server(args.token)
+    mapping_server(args.token, create_empty_map())
 
 # vim: expandtab sw=4 ts=4
