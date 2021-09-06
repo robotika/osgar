@@ -49,10 +49,14 @@ def create_empty_map():
     }
 
 
-def mapping_server(token, cloud):
+def mapping_server(token, cloud, loop=False):
     cpr = CommandPostRelay(token=token)
-    res = cpr.send_map_msg(u'PointCloud2', msg=cloud, name=u'Skiddy')  # vs. Kloubak
-    print(res)
+    while True:
+        res = cpr.send_map_msg(u'PointCloud2', msg=cloud, name=u'Skiddy')  # vs. Kloubak
+        print(res)
+        if not loop:
+            break
+        time.sleep(1.0)
 
 
 if __name__ == '__main__':
@@ -60,8 +64,9 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--token', help='Bearer communication token', required=True)
+    parser.add_argument('--loop', help='infinite reporting loop', action='store_true')
     args = parser.parse_args()
 
-    mapping_server(args.token, create_empty_map())
+    mapping_server(args.token, create_empty_map(), loop=args.loop)
 
 # vim: expandtab sw=4 ts=4
