@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "camera": {
+          "driver": "http",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+              "url": "http://192.168.0.32/image?res=half",
+              "sleep": 0.2,
+              "timeout": 1.0
+          }
+      },
+      "detector":{
+        "driver": "subt.jetson_artf_node:ArtifactDetectorJetson",
+        "in": ["image"],
+        "out": ["localized_artf", "dropped", "debug_image", "debug_result"],
+        "init": {}
+
+      }
+    },
+    "links": [["camera.raw", "detector.image"]]
+  }
+}
