@@ -6,7 +6,8 @@ import requests
 import time
 import math
 import json
-
+import cbor
+import gzip
 
 URL_BASE = "http://localhost:8888"  # local Robotika test/demo
 #URL_BASE = "http://10.100.1.200:8000"  # Alpha (was Army and Safety Research) Tunnel
@@ -83,17 +84,44 @@ def extract_map():
     pass
 
 
-def mapping_server():
-    pass
+
+class CommandPostRelay(object):
+    def __init__(self, token):
+        self.token = token
+        self.map_url = 'http://10.100.2.201:8000/map/update'
+        self.compression = 'gzip'
+
+        # HTTP sessions
+        self.session = requests.Session()
+        self.session.headers['Content-Type']  = 'application/cbor'
+        self.session.headers['Authorization'] = 'Bearer ' + self.token
+        if self.compression is 'gzip':
+            self.session.headers['Content-Encoding'] = 'gzip'
+        if self.compression is 'none':
+            self.session.headers['Content-Encoding'] = 'identity'
+
+    def send_map_msg(self, typestr, msg, name):
+        body = cbor.dumps({u'type' : typestr, u'msg' : msg, u'name' : name})
+        if self.compression is 'gzip':
+            body = gzip.compress(bytes(body))
+            print(f'  -> Sending message of size {len(body)}')
+        res = self.session.post(self.map_url, body)
+        return res
+
+
+def mapping_server(token):
+    cpr = CommandPostRelay(token=token)
+    cpr.send_map_msg('PointCloud2', msg=b'123', name='Skiddy')  # vs. Kloubak
 
 
 if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--token', help='Bearer communication token', required=True)
     parser.add_argument('--dry-run', help='do not connect to the server', action='store_true')
     args = parser.parse_args()
 
-    mapping_server()
+    mapping_server(args.token)
 
 # vim: expandtab sw=4 ts=4
