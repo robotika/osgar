@@ -4,8 +4,6 @@
 """
 import requests
 import time
-import math
-import json
 import cbor
 import gzip
 

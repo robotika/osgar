@@ -1,5 +1,9 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
+
+# https://stackoverflow.com/questions/8658043/how-to-mock-an-import
+import sys
+sys.modules['cbor'] = MagicMock()
 
 from subt.mapping_server import create_empty_map
 
