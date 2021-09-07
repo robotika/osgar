@@ -210,9 +210,7 @@
               ["kloubak.joint_angle", "app.joint_angle"],
               ["gas_serial.raw", "gas_detector.raw"],
               ["gas_detector.raw", "gas_serial.raw"],
-              ["lidar.scan", "app.scan"],
-              ["wifi.wifiscan", "detector.wifiscan"],
-              ["gas_detector.co2", "detector.co2"]
+              ["lidar.scan", "app.scan"]
       ]
   }
 }
