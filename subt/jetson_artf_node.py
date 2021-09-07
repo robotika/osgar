@@ -10,6 +10,7 @@ from subt.tf_detector import CvDetector
 
 from osgar.node import Node
 from subt.artf_node import result2report
+from osgar.bus import BusShutdownException
 
 
 class ArtifactDetectorJetson(Node):
@@ -30,17 +31,20 @@ class ArtifactDetectorJetson(Node):
                 return self.time, data
 
     def run(self):
-        dropped = 0
-        while True:
-            now = self.publish("dropped", dropped)
-            dropped = -1
-            timestamp = now
-            while timestamp <= now:
-                timestamp, img_data = self.wait_for_data()
-                dropped += 1
-                img = cv2.imdecode(np.frombuffer(img_data, dtype=np.uint8), cv2.IMREAD_COLOR)
-                self.detect(img)
-                timestamp, channel = self.wait_for_data()
+        try:
+            dropped = 0
+            while True:
+                now = self.publish("dropped", dropped)
+                dropped = -1
+                timestamp = now
+                while timestamp <= now:
+                    timestamp, img_data = self.wait_for_data()
+                    dropped += 1
+                    img = cv2.imdecode(np.frombuffer(img_data, dtype=np.uint8), cv2.IMREAD_COLOR)
+                    self.detect(img)
+                    timestamp, channel = self.wait_for_data()
+        except BusShutdownException:
+            pass
 
     def detect(self, img):
         if self.width is None:
