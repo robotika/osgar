@@ -196,7 +196,14 @@
 	      "out": ["pose3d"],
 	      "init":{}
       },
-            "system": {
+      "from_jetson_front": {
+          "driver": "subt.pull:Pull",
+          "init": {
+            "endpoint": "tcp://192.168.0.23:5557",
+            "outputs": ["localized_artf", "debug_image"]
+          }
+       },
+      "system": {
 	      "driver": "systemmonitor",
 	      "in": [],
 	      "out": ["cpu", "ram", "temp"],
