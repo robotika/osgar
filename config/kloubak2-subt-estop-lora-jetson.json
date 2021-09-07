@@ -230,7 +230,7 @@
               ["lora.raw", "lora_serial.raw"],
               ["app.pose2d", "lora.pose2d"],
               ["lora.cmd", "app.cmd"],
-              ["app.artf_xyz", "lora.artf"],
+              ["from_jetson_front.localized_artf", "lora.artf"],
               ["kloubak.bumpers_rear", "app.bumpers_rear"],
               ["kloubak.joint_angle", "app.joint_angle"],
               ["gas_serial.raw", "gas_detector.raw"],
