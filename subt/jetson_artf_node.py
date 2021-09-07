@@ -63,6 +63,6 @@ class ArtifactDetectorJetson(Node):
                 if report is not None:
                     print(report)
                     self.publish('localized_artf', report)
-                    self.publish('debug_image', img_data)
+                    self.publish('debug_image', img)
 
         return result
