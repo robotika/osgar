@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "pull": {
+          "driver": "subt.pull:Pull",
+          "init": {
+            "outputs": ["localized_artf", "debug_image"]
+          }
+      }
+    },
+    "links": []
+  }
+}
