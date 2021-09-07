@@ -17,14 +17,6 @@
             "safety_turning_coeff": 0.6
           }
       },
-      "detector": {
-          "driver": "subt.artifacts:ArtifactDetector",
-          "in": ["image", "scan"],
-          "out": ["artf", "dropped"],
-          "init": {
-            "virtual_world": false
-          }
-      },
       "reporter": {
           "driver": "subt.artf_reporter:ArtifactReporter",
           "in": ["artf_xyz"],
@@ -196,6 +188,13 @@
 	      "out": ["pose3d"],
 	      "init":{}
       },
+      "from_jetson_front": {
+          "driver": "subt.pull:Pull",
+          "init": {
+            "endpoint": "tcp://192.168.0.23:5557",
+            "outputs": ["localized_artf", "debug_image"]
+          }
+      },
             "system": {
 	      "driver": "systemmonitor",
 	      "in": [],
@@ -226,10 +225,7 @@
               ["estop_serial.raw", "estop.raw"],
               ["estop.raw", "estop_serial.raw"],
               ["estop.emergency_stop", "app.emergency_stop"],
-              ["camera.raw", "detector.image"],
-              ["lidar.scan", "detector.scan"],
-              ["detector.artf", "app.artf"],
-              ["app.artf_xyz", "reporter.artf_xyz"],
+              ["from_jetson_front.localized_artf", "reporter.artf_xyz"],
               ["lora_serial.raw", "lora.raw"],
               ["lora.raw", "lora_serial.raw"],
               ["app.pose2d", "lora.pose2d"],
