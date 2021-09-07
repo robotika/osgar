@@ -8,7 +8,7 @@
           "out": ["desired_speed"],
           "init": {
             "max_speed": 0.5,
-            "symmetric": false
+            "symmetric": true
           }
       },
       "cortexpilot": {
