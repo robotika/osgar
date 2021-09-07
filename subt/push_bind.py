@@ -9,7 +9,7 @@ from osgar.bus import BusShutdownException
 class PushBind:
 
     def __init__(self, config, bus):
-        bus.register(*config['outputs'])
+        bus.register()
         self.endpoint = config.get('endpoint', 'tcp://*:5555')
         self.thread = Thread(target=self.run)
         self.thread.name = bus.name
