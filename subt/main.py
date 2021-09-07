@@ -246,7 +246,7 @@ class SubTChallenge:
         if 'init_path' in config:
             pts_s = [s.split(',') for s in config['init_path'].split(';')]
             self.init_path = [(float(x), float(y)) for x, y in pts_s]
-        self.robot_name = None
+        self.robot_name = config.get('robot_name', None)  # name used for System
         scan_subsample = config.get('scan_subsample', 1)
         obstacle_influence = config.get('obstacle_influence', 0.8)
         direction_adherence = math.radians(config.get('direction_adherence', 90))
@@ -1120,7 +1120,7 @@ class SubTChallenge:
 #############################################
 
     def play(self):
-        if self.is_virtual:
+        if self.is_virtual or self.robot_name is not None:
             return self.play_virtual_track()
         else:
             return self.play_system_track()
@@ -1155,6 +1155,7 @@ def main():
     parser_run.add_argument('--speed', help='maximum speed (default: from config)', type=float)
     parser_run.add_argument('--timeout', help='seconds of exploring before going home (default: %(default)s)',
                             type=int, default=10*60)
+    parser_run.add_argument('--robot-name', help='alternative input as robot name (from Virtual)')
     parser_run.add_argument('--log', nargs='?', help='record log filename')
     parser_run.add_argument('--init-path', help='inital path to be followed from (0, 0). 2D coordinates are separated by ;')
     parser_run.add_argument('--start-paused', dest='start_paused', action='store_true',
@@ -1207,6 +1208,9 @@ def main():
             cfg['robot']['modules']['app']['init']['max_speed'] = args.speed
 
         cfg['robot']['modules']['app']['init']['start_paused'] = args.start_paused
+
+        if args.robot_name is not None:
+            cfg['robot']['modules']['app']['init']['robot_name'] = args.robot_name
 
         prefix = os.path.basename(args.config[0]).split('.')[0] + '-'
         record(cfg, prefix, args.log)
