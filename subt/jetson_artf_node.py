@@ -22,7 +22,7 @@ class ArtifactDetectorJetson(Node):
         self.height = None
         self.camera_pose = config.get("camera_pose", ([0, 0, 0], [0, 0, 0, 1]))
         self.fx = config.get("fx", 149.01)
-        self.detector = CvDetector().subt_detector
+        self.detector = CvDetector(1).subt_detector
 
     def wait_for_data(self):
         while True:
@@ -40,9 +40,9 @@ class ArtifactDetectorJetson(Node):
                 while timestamp <= now:
                     timestamp, img_data = self.wait_for_data()
                     dropped += 1
-                    img = cv2.imdecode(np.frombuffer(img_data, dtype=np.uint8), cv2.IMREAD_COLOR)
-                    self.detect(img)
-                    timestamp, channel = self.wait_for_data()
+                img = cv2.imdecode(np.frombuffer(img_data, dtype=np.uint8), cv2.IMREAD_COLOR)
+                self.detect(img)
+                timestamp, channel = self.wait_for_data()
         except BusShutdownException:
             pass
 
