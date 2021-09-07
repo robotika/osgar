@@ -40,13 +40,13 @@ class ArtifactDetectorJetson(Node):
                 while timestamp <= now:
                     timestamp, img_data = self.wait_for_data()
                     dropped += 1
-                img = cv2.imdecode(np.frombuffer(img_data, dtype=np.uint8), cv2.IMREAD_COLOR)
-                self.detect(img)
+                self.detect(img_data)
                 timestamp, channel = self.wait_for_data()
         except BusShutdownException:
             pass
 
-    def detect(self, img):
+    def detect(self, img_data):
+        img = cv2.imdecode(np.frombuffer(img_data, dtype=np.uint8), cv2.IMREAD_COLOR)
         if self.width is None:
             self.height, self.width = img.shape[:2]
         assert self.width == img.shape[1], (self.width, img.shape[1])
