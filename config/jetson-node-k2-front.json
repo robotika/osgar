@@ -18,8 +18,18 @@
         "out": ["localized_artf", "dropped", "debug_image", "debug_result"],
         "init": {}
 
+      },
+      "transmitter": {
+          "driver": "subt.push_bind:PushBind",
+          "init": {
+            "endpoint": "tcp://*:5557"
+          }
       }
     },
-    "links": [["camera.raw", "detector.image"]]
+    "links": [
+      ["camera.raw", "detector.image"],
+      ["detector.localized_artf", "transmitter.localized_artf"],
+      ["detector.debug_image", "transmitter.debug_image" ]
+    ]
   }
 }
