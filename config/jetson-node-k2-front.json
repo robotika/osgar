@@ -51,7 +51,8 @@
       ["detector.localized_artf", "transmitter.localized_artf"],
       ["detector.debug_image", "transmitter.debug_image" ],
       ["T200.pose3d", "detector.pose3d"],
-      ["T200.pose3d", "transmitter.pose3d"]
+      ["T200.pose3d", "transmitter.pose3d"],
+      ["D435_slope.dept", "transmitter.depth"]
     ]
   }
 }
