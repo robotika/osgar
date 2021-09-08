@@ -54,15 +54,13 @@ class ArtifactDetectorJetson(Node):
 
         result = self.detector(img)
         if result:
-            print(result)
             self.publish('debug_result', result)
             for res in result:
                 dist = 2  # There is no source of the artf dist in this moment so just put some number
                 report = result2report(res, (dist, self.width, self.height), self.fx, ([0, 0, 0], [0, 0, 0, 1]),
                                             self.camera_pose, 10)  # TODO real camera_pose and robot_pose
                 if report is not None:
-                    print(report)
                     self.publish('localized_artf', report)
-                    self.publish('debug_image', img)
+                    self.publish('debug_image', img_data)
 
         return result
