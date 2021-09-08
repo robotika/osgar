@@ -2,6 +2,22 @@
   "version": 2,
   "robot": {
     "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["emergency_stop", "pose3d", "scan360"],
+          "out": ["desired_speed"],
+          "init": {
+            "init_path": "3.0,0",
+            "max_speed": 0.1,
+            "symmetric": false,
+            "speed_policy": "conservative",
+            "rotation_p": 0.15,
+            "dangerous_dist": 0.15,
+            "min_safe_dist": 1.0,
+            "virtual_bumper_sec": 120.0,
+            "virtual_bumper_radius": 1.0
+          }
+      },
       "timer": {
         "driver": "timer",
         "in": [],
@@ -9,11 +25,6 @@
         "init": {
           "sleep": 0.05
         }
-      },
-      "demo": {
-        "driver": "osgar.drivers.deedee:Demo",
-        "in": ["tick", "pose2d"],
-        "out": ["desired_speed"]
       },
       "deedee": {
         "driver": "osgar.drivers.deedee:Deedee",
@@ -40,9 +51,9 @@
         "init": {
           "devices": [{"type": "D400", "serial_number": "038122250496", "name": "front"},
                       {"type": "D400", "serial_number": "035622251357", "name": "rear"},
-                      {"type": "T200", "serial_number": "952322110907", "name": "tracking"}
+                      {"type": "T200", "serial_number": "952322110907", "name": "tracking", "pitch": -90, "yaw": 180}
           ],
-          "depth_subsample": 3,
+          "depth_subsample": 6,
           "depth_rgb": true,
           "depth_resolution": [
             640,
@@ -53,16 +64,47 @@
             360
           ],
           "depth_fps": 30,
-          "pose_subsample": 20
+          "pose_subsample": 5
         }
+      },
+      "serialize_depth": {
+        "driver": "subt.serialize:Serialize",
+        "out": ["front_depth:null", "rear_depth:null"],
+        "init": {
+          "channels": ["front_depth", "rear_depth"]
+        }
+      },
+      "ros": {
+        "driver": "subt.roslaunch:ROSLaunch",
+        "in": [],
+        "out": [],
+        "init": {
+          "launch_file": "subt/ros/robot/launch/deedee.launch"
+        }
+      },
+      "fromros": {
+          "driver": "subt.pull:Pull",
+          "out": "scan360",
+          "init": {
+              "outputs": ["scan360"]
+          }
+      },
+      "toros": {
+          "driver": "subt.push:Push"
       }
     },
     "links": [["timer.tick", "deedee.tick"],
-              ["demo.desired_speed", "deedee.desired_speed"],
               ["deedee.cmd", "slip.packet"],
-              ["deedee.pose2d", "demo.pose2d"],
               ["slip.packet", "deedee.info"],
               ["slip.raw", "serial.raw"],
-              ["serial.raw", "slip.raw"]]
+              ["serial.raw", "slip.raw"],
+              ["realsense.front_depth", "serialize_depth.front_depth"],
+              ["realsense.rear_depth", "serialize_depth.rear_depth"],
+              ["serialize_depth.front_depth", "toros.front_depth"],
+              ["serialize_depth.rear_depth", "toros.rear_depth"],
+              ["realsense.tracking_pose3d", "toros.tracking_pose"],
+              ["fromros.scan360", "app.scan360"],
+              ["realsense.tracking_pose3d", "app.pose3d"],
+              ["app.desired_speed", "deedee.desired_speed"]]
   }
 }

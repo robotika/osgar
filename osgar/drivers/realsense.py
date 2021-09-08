@@ -7,6 +7,8 @@ import logging
 import threading
 import numpy as np
 
+from osgar.lib.quaternion import conjugate as quaternion_inv, euler_to_quaternion, multiply as quaternion_multiply, rotate_vector
+
 g_logger = logging.getLogger(__name__)
 
 try:
@@ -51,6 +53,10 @@ class RealSense(Node):
         if self.device == 'T200':
             bus.register('pose2d', 'pose3d', 'pose_raw', 'orientation')
             self.pose_subsample = config.get("pose_subsample", 20)
+            self.tracking_sensor_pitch_quat_inv = quaternion_inv(
+                    euler_to_quaternion(0, math.radians(config.get('tracking_sensor_pitch', 0)), 0))
+            self.tracking_sensor_yaw_quat = euler_to_quaternion(
+                math.radians(config.get('tracking_sensor_yaw', 0)), 0, 0)
         elif self.device in ['D400', 'L500']:
             bus.register('depth:gz', 'color', 'infra')
             self.depth_subsample = config.get("depth_subsample", 3)
@@ -86,9 +92,12 @@ class RealSense(Node):
             print(e)
             self.finished.set()
             return
-        orientation = t265_to_osgar_orientation(pose.rotation)
+        orientation = quaternion_multiply(
+                self.tracking_sensor_pitch_quat_inv,
+                t265_to_osgar_orientation(pose.rotation))
         self.publish('orientation', orientation)
-        x, y, z = t265_to_osgar_position(pose.translation)
+        x, y, z = rotate_vector(t265_to_osgar_position(pose.translation),
+                                self.tracking_sensor_yaw_quat)
         yaw = quaternion.heading(orientation)
         self.publish('pose2d', [int(x * 1000), int(y * 1000), int(math.degrees(yaw) * 100)])
         self.publish('pose3d', [[x, y, z], orientation])
@@ -219,6 +228,8 @@ class Multicam(Node):
         self.default_rgb_resolution = config.get('rgb_resolution', [640, 360])
         self.depth_fps = config.get('depth_fps', 30)
         self.pose_subsample = config.get('pose_subsample', 20)
+        self.tracking_sensor_pitch_quat_inv = {}
+        self.tracking_sensor_yaw_quat = {}
 
         streams = []
         for device in self.devices:
@@ -232,6 +243,10 @@ class Multicam(Node):
             if device_type == 'T200':
                 for stream in ['pose2d', 'pose3d', 'pose_raw', 'orientation']:
                     streams.append(f'{name}_{stream}')
+                self.tracking_sensor_pitch_quat_inv[name] = quaternion_inv(
+                        euler_to_quaternion(0, math.radians(device.get('pitch', 0)), 0))
+                self.tracking_sensor_yaw_quat[name] = euler_to_quaternion(
+                        math.radians(device.get('yaw', 0)), 0, 0)
             elif device_type in ['D400', 'L500']:
                 for stream in ['depth:gz', 'color', 'infra']:
                     streams.append(f'{name}_{stream}')
@@ -270,9 +285,12 @@ class Multicam(Node):
             print(e)
             self.finished.set()
             return
-        orientation = t265_to_osgar_orientation(pose.rotation)
+        orientation = quaternion_multiply(
+                self.tracking_sensor_pitch_quat_inv[name],
+                t265_to_osgar_orientation(pose.rotation))
         self.publish(f'{name}_orientation', orientation)
-        x, y, z = t265_to_osgar_position(pose.translation)
+        x, y, z = rotate_vector(t265_to_osgar_position(pose.translation),
+                                self.tracking_sensor_yaw_quat[name])
         yaw = quaternion.heading(orientation)
         self.publish(f'{name}_pose2d', [int(x * 1000), int(y * 1000), int(math.degrees(yaw) * 100)])
         self.publish(f'{name}_pose3d', [[x, y, z], orientation])
