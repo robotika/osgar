@@ -16,7 +16,9 @@
         "driver": "subt.jetson_artf_node:ArtifactDetectorJetson",
         "in": ["image"],
         "out": ["localized_artf", "dropped", "debug_image", "debug_result"],
-        "init": {}
+        "init": {
+          "camera_pose": [[0.15, 0, 0.38], [0, 0, 0, 1]]
+        }
 
       },
       "transmitter": {
