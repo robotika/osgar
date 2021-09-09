@@ -23,10 +23,13 @@ class ArtifactDetectorJetson(Node):
         self.camera_pose = config.get("camera_pose", ([0, 0, 0], [0, 0, 0, 1]))
         self.fx = config.get("fx", 149.01)
         self.detector = CvDetector(1).subt_detector
+        self.last_pose3d = None
 
     def wait_for_data(self):
         while True:
             self.time, channel, data = self.listen()
+            if channel == "pose3d":
+                self.last_pose3d = data
             if channel == "image":
                 return self.time, data
 
@@ -40,8 +43,9 @@ class ArtifactDetectorJetson(Node):
                 while timestamp <= now:
                     timestamp, img_data = self.wait_for_data()
                     dropped += 1
-                self.detect(img_data)
-                timestamp, channel = self.wait_for_data()
+                if self.last_pose3d:
+                    self.detect(img_data)
+                timestamp, img_data = self.wait_for_data()
         except BusShutdownException:
             pass
 
@@ -57,7 +61,7 @@ class ArtifactDetectorJetson(Node):
             self.publish('debug_result', result)
             for res in result:
                 dist = 2  # There is no source of the artf dist in this moment so just put some number
-                report = result2report(res, (dist, self.width, self.height), self.fx, ([0, 0, 0], [0, 0, 0, 1]),
+                report = result2report(res, (dist, self.width, self.height), self.fx, self.last_pose3d,
                                             self.camera_pose, 10)  # TODO real camera_pose and robot_pose
                 if report is not None:
                     self.publish('localized_artf', report)
