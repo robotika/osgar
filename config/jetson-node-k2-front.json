@@ -20,8 +20,9 @@
 
       },
       "transmitter": {
-          "driver": "subt.push_bind:PushBind",
+          "driver": "subt.push:Push",
           "init": {
+            "bind": true,
             "endpoint": "tcp://*:5557"
           }
       },
@@ -51,8 +52,7 @@
       ["detector.localized_artf", "transmitter.localized_artf"],
       ["detector.debug_image", "transmitter.debug_image" ],
       ["T200.pose3d", "detector.pose3d"],
-      ["T200.pose3d", "transmitter.pose3d"],
-      ["D435_slope.dept", "transmitter.depth"]
+      ["T200.pose3d", "transmitter.pose3d"]
     ]
   }
 }
