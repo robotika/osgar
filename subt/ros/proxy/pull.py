@@ -65,21 +65,22 @@ if __name__ == '__main__':
     while not rospy.is_shutdown():
         try:
             channel, bytes_data = pull.recv_multipart()
+            now = rospy.get_rostime()  # Alternatively and perhaps better, we should send timestamps from Osgar. But then we would somehow need to align thee clocks.
             stream_type = stream_types[channel]
             data = deserialize(bytes_data)
             if stream_type == 'depth':
                 depth = (data/1000.0).astype(np.float32) 
                 depth_msg = cv_bridge.cv2_to_imgmsg(depth, encoding='passthrough')
                 depth_msg.header.frame_id = channel
-                depth_msg.header.stamp = rospy.get_rostime()  # Alternatively and perhaps better, we should send timestamps from Osgar. But then we would somehow need to align thee clocks.
+                depth_msg.header.stamp = now
                 camera_info = camera_infos[channel]
-                camera_info.header.stamp = rospy.get_rostime()
+                camera_info.header.stamp = now
                 camera_info_publishers[channel].publish(camera_info)
                 depth_publishers[channel].publish(depth_msg)
             elif stream_type == 'pose':
                 xyz, quat = data
                 t = TransformStamped()
-                t.header.stamp = rospy.get_rostime()  # This could be better, but the same comment as in the depth section applies.
+                t.header.stamp = now
                 t.header.frame_id = odom_frame_id
                 t.child_frame_id = channel
                 ((t.transform.translation.x,

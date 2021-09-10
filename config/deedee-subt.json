@@ -7,15 +7,19 @@
           "in": ["emergency_stop", "pose3d", "scan360"],
           "out": ["desired_speed"],
           "init": {
-            "init_path": "3.0,0",
+            "init_path": "2.5,0",
             "max_speed": 0.1,
             "symmetric": false,
             "speed_policy": "conservative",
-            "rotation_p": 0.15,
+            "rotation_p": 0.5,
+	    "max_obstacle_distance": 0.4,
             "dangerous_dist": 0.15,
             "min_safe_dist": 1.0,
             "virtual_bumper_sec": 120.0,
-            "virtual_bumper_radius": 1.0
+            "virtual_bumper_radius": 1.0,
+	    "follow_wall": {
+              "max_wall_distance": 0.8
+	    }
           }
       },
       "timer": {
@@ -53,18 +57,36 @@
                       {"type": "D400", "serial_number": "035622251357", "name": "rear"},
                       {"type": "T200", "serial_number": "952322110907", "name": "tracking", "pitch": -90, "yaw": 180}
           ],
-          "depth_subsample": 6,
+          "depth_subsample": 1,
           "depth_rgb": true,
           "depth_resolution": [
             640,
-            360
+            480
           ],
           "rgb_resolution": [
             640,
-            360
+            480
           ],
-          "depth_fps": 30,
-          "pose_subsample": 5
+          "depth_fps": 5,
+          "pose_subsample": 25
+        }
+      },
+      "small_front": {
+        "driver": "resize",
+        "in": ["depth"],
+        "out": ["depth"],
+        "init": {
+          "width": 80,
+          "height": 60
+        }
+      },
+      "small_rear": {
+        "driver": "resize",
+        "in": ["depth"],
+        "out": ["depth"],
+        "init": {
+          "width": 80,
+          "height": 60
         }
       },
       "ros": {
@@ -91,8 +113,10 @@
               ["slip.packet", "deedee.info"],
               ["slip.raw", "serial.raw"],
               ["serial.raw", "slip.raw"],
-              ["realsense.front_depth", "toros.front_depth"],
-              ["realsense.rear_depth", "toros.rear_depth"],
+              ["realsense.front_depth", "small_front.depth"],
+              ["realsense.rear_depth", "small_rear.depth"],
+              ["small_front.depth", "toros.front_depth"],
+              ["small_rear.depth", "toros.rear_depth"],
               ["realsense.tracking_pose3d", "toros.tracking_pose"],
               ["fromros.scan360", "app.scan360"],
               ["realsense.tracking_pose3d", "app.pose3d"],

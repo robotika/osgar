@@ -3,12 +3,12 @@
   <node pkg="tf" type="static_transform_publisher" name="tracked_point_tf" args="-0.135 0 0.375 0 0 0 global odom 100" />
   <!-- Announces the position of the center of the robot relative to the point tracked by tracking camera in Osgar.
        The tracked point name needs to match the name of the stream sent from Osgar to ROS. -->
-  <node pkg="tf" type="static_transform_publisher" name="robot_tf" args="-0.135 0 -0.375 0 0 0 tracking_pose robot 100" />
+  <node pkg="tf" type="static_transform_publisher" name="robot_tf" args="0.135 0 -0.375 0 0 0 tracking_pose robot 100" />
 
   <!-- Announces the position of depth camera relative to the center of the robot.
        The name of the announced frame needs to match the name of the corresponding depth stream from Osgar to ROS extended with a "/pose" suffix to distinguish from related optical frames configured below. -->
-  <node pkg="tf" type="static_transform_publisher" name="front_camera_tf" args="-0.10 0 0.36 0 0.43633231 0 robot front_depth/pose 100" />
-  <node pkg="tf" type="static_transform_publisher" name="rear_camera_tf" args="-0.17 0 0.36 -3.141592653589793 0.488692 0 robot rear_depth/pose 100" />
+  <node pkg="tf" type="static_transform_publisher" name="front_camera_tf" args="-0.10 0.05 0.36 0 0.488692 0 robot front_depth/pose 100" />
+  <node pkg="tf" type="static_transform_publisher" name="rear_camera_tf" args="-0.17 -0.05 0.36 -3.141592653589793 0.488692 0 robot rear_depth/pose 100" />
 
   <!-- Announces optical camera frames relative to "normal" camera frames.
        The name of the announced frames need to macth the name of the corresponding depth streams from Osgar to ROS. -->
@@ -23,15 +23,21 @@
           Pose stream does not have any extra parameters.
 
           Depth camera parameters can be obtained with `rs-enumerate-devices -c`-->
-      <param name="streams" value="front_depth:depth:640:360:321.560302734375:179.822738647461:320.935821533203:320.935821533203,rear_depth:depth:640:360:315.900238037109:175.116775512695:318.737152099609:318.737152099609,tracking_pose:pose"/>
+      <param name="streams" value="front_depth:depth:80:60:40.195037841796875:29.973411560058626:48.1403732299805:48.1403732299805,rear_depth:depth:80:60:39.385036468505874:29.262517929077124:47.810573577880874:47.810573577880874,tracking_pose:pose"/>
     </node>
 
     <!-- Remove noise -->
     <node name="depth_denoiser_front" pkg="proxy" type="depth_filter">
+      <param name="max_support_distance" value="0.2"/>
+      <param name="min_support_fraction" value="0.75"/>
+      <param name="max_depth" value="3.0"/>
       <remap from="depth_denoiser_front/input" to="front_depth/depth"/>
       <remap from="depth_denoiser_front/output" to="front_depth/clean_depth"/>
     </node>
     <node name="depth_denoiser_rear" pkg="proxy" type="depth_filter">
+      <param name="max_support_distance" value="0.2"/>
+      <param name="min_support_fraction" value="0.75"/>
+      <param name="max_depth" value="3.0"/>
       <remap from="depth_denoiser_rear/input" to="rear_depth/depth"/>
       <remap from="depth_denoiser_rear/output" to="rear_depth/clean_depth"/>
     </node>
@@ -44,13 +50,16 @@
   </group>
 
   <node pkg="proxy" type="traversability" name="local_map" output="screen">
-    <param name="publish_rate" value="0.15"/>
+    <param name="publish_rate" value="0.1"/>
     <param name="num_threads" value="3"/>
-    <param name="blind_columns_left" value="64"/>
-    <param name="depth_image_stride" value="8"/>
-    <param name="synthetic_obstacle_distance" value="0.40"/>
+    <param name="blind_columns_left" value="15"/>
+    <param name="depth_image_stride" value="1"/>
+    <param name="synthetic_obstacle_distance" value="0.35"/>
     <param name="visible_ground_min" value="0.10"/>
     <param name="visible_ground_max" value="0.80"/>
+    <param name="max_bump_height" value="0.1"/>
+    <param name="depth_subsampling" value="493"/>
+    <param name="max_num_nearby_points" value="4000"/>
     <param name="robot_frame_id" value="robot"/>
     <remap from="local_map/input/camera_info" to="osgar/from/all_depth/camera_info"/>
     <remap from="local_map/input/depth" to="osgar/from/all_depth/depth"/>
@@ -63,4 +72,5 @@
     <param name="output_scan_channel" value="scan360"/>
   </node>
 
+  <node name="record" pkg="rosbag" type="record" args="-a -o /tmp/deedee"/>
 </launch>
