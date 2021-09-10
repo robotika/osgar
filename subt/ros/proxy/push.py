@@ -1,16 +1,16 @@
 #!/usr/bin/python
 
 import math
-import msgpack
 import zmq
 
 import rospy
 
+from osgar.lib.serialize import serialize
 from sensor_msgs.msg import LaserScan
 
 def publish_scan(scan, push, channel):
     scan = [(0 if math.isinf(x) else int(1000*x)) for x in scan.ranges]
-    raw = msgpack.packb(scan, use_bin_type=True)
+    raw = serialize(scan)
     push.send_multipart([channel, raw])
 
 if __name__ == '__main__':

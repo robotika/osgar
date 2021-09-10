@@ -3,9 +3,9 @@ import contextlib
 from threading import Thread
 
 import zmq
-import msgpack
 
 from osgar.bus import BusShutdownException
+from osgar.lib.serialize import serialize
 
 
 class Push:
@@ -37,7 +37,7 @@ class Push:
             with contextlib.closing(socket):
                 while True:
                     dt, channel, data = self.bus.listen()
-                    raw = msgpack.packb(data, use_bin_type=True)
+                    raw = serialize(data)
                     socket.send_multipart([bytes(channel, 'ascii'), raw])
         except zmq.ZMQError as e:
             if e.errno == zmq.EAGAIN:

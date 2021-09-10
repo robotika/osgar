@@ -67,13 +67,6 @@
           "pose_subsample": 5
         }
       },
-      "serialize_depth": {
-        "driver": "subt.serialize:Serialize",
-        "out": ["front_depth:null", "rear_depth:null"],
-        "init": {
-          "channels": ["front_depth", "rear_depth"]
-        }
-      },
       "ros": {
         "driver": "subt.roslaunch:ROSLaunch",
         "in": [],
@@ -98,10 +91,8 @@
               ["slip.packet", "deedee.info"],
               ["slip.raw", "serial.raw"],
               ["serial.raw", "slip.raw"],
-              ["realsense.front_depth", "serialize_depth.front_depth"],
-              ["realsense.rear_depth", "serialize_depth.rear_depth"],
-              ["serialize_depth.front_depth", "toros.front_depth"],
-              ["serialize_depth.rear_depth", "toros.rear_depth"],
+              ["realsense.front_depth", "toros.front_depth"],
+              ["realsense.rear_depth", "toros.rear_depth"],
               ["realsense.tracking_pose3d", "toros.tracking_pose"],
               ["fromros.scan360", "app.scan360"],
               ["realsense.tracking_pose3d", "app.pose3d"],

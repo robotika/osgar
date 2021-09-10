@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 import io
-import msgpack
 import numpy as np
 import sys
 import zmq
@@ -13,6 +12,8 @@ import tf.transformations
 
 from geometry_msgs.msg import TransformStamped
 from sensor_msgs.msg import CameraInfo, Image
+
+from osgar.lib.serialize import deserialize
 
 if __name__ == '__main__':
     rospy.init_node('pull', log_level=rospy.DEBUG)
@@ -65,9 +66,9 @@ if __name__ == '__main__':
         try:
             channel, bytes_data = pull.recv_multipart()
             stream_type = stream_types[channel]
-            data = msgpack.unpackb(bytes_data)
+            data = deserialize(bytes_data)
             if stream_type == 'depth':
-                depth = (np.load(io.BytesIO(data), allow_pickle=False)/1000.).astype(np.float32) 
+                depth = (data/1000.0).astype(np.float32) 
                 depth_msg = cv_bridge.cv2_to_imgmsg(depth, encoding='passthrough')
                 depth_msg.header.frame_id = channel
                 depth_msg.header.stamp = rospy.get_rostime()  # Alternatively and perhaps better, we should send timestamps from Osgar. But then we would somehow need to align thee clocks.
