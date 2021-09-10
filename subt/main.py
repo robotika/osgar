@@ -1197,11 +1197,10 @@ def main():
         cfg['robot']['modules']['app']['init']['wall_dist'] = args.wall_dist
         if args.side == 'auto':
             cfg['robot']['modules']['app']['init']['right_wall'] = 'auto'
-            cfg['robot']['modules']['app']['init']['robot_name'] = f'{args.timeout}C'
         else:
             cfg['robot']['modules']['app']['init']['right_wall'] = args.side == 'right'
             cmd = 'R' if args.side == 'right' else 'L'
-            cfg['robot']['modules']['app']['init']['robot_name'] = f'{args.timeout}{cmd}'
+            cfg['robot']['modules']['app']['init']['robot_name'] = f'A{args.timeout}{cmd}'
         cfg['robot']['modules']['app']['init']['timeout'] = args.timeout
         if args.init_path is not None:
             cfg['robot']['modules']['app']['init']['init_path'] = args.init_path
