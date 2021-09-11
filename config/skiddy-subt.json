@@ -135,6 +135,9 @@
               ["lidar_back.raw", "lidar_back_tcp.raw"],
               ["lidar.scan", "app.scan"],
               ["lidar_back.scan", "app.scan_back"],
-              ["tracking.pose3d", "app.pose3d"]]
+              ["tracking.pose3d", "app.pose3d"],
+	      ["tracking.pose3d", "bundler.robot_pose"],
+	      ["depth.color", "bundler.img"],
+	      ["depth.depth", "bundler.depth"]]
   }
 }

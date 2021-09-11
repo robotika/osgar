@@ -29,7 +29,7 @@ class Bundler(Node):
         self.img = None
         self.depth = None
 
-        bus.register('rgbd:gzip')
+        bus.register('rgbd')
 
         # Pixel coordinates relative to the center of the image, with positive
         # directions to the right and up.
