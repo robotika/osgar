@@ -1,6 +1,7 @@
 #include <cassert>
 #include <map>
 #include <cmath>
+#include <mutex>
 #include <random>
 #include <string>
 #include <unordered_map>
