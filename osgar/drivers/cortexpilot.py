@@ -19,6 +19,9 @@ ENC_SCALE = 0.01  # Skiddy, Robik=1.241/9958
 WHEEL_DISTANCE = 0.267  # Skiddy, Robik=0.88  # meters TODO confirm
 RAMP_STEP = 0.1  # fractional number for speed in -1.0 .. 1.0
 
+SOFT_SPEED_LIMIT = 1.0  # m/s ... software speed limit, abs() value
+SOFT_ANGULAR_SPEED_LIMIT = math.radians(45)  # rad/s
+
 
 def sint32_diff(a, b):
     return ctypes.c_int32(a - b).value
@@ -76,7 +79,14 @@ class Cortexpilot(Node):
             self.yaw = 0.0  # hack!
 
         speed_frac, speed_dir = next(self.speeds)
+
+        # limit desired speeds (before application of correction scale factors)
+        # to protect robot and environment from SW bugs
+        speed_frac = max(-SOFT_SPEED_LIMIT, min(SOFT_SPEED_LIMIT, speed_frac))
+        speed_dir = max(-SOFT_ANGULAR_SPEED_LIMIT, min(SOFT_ANGULAR_SPEED_LIMIT, speed_dir))
+
         speed_dir *= 1.2  # TODO verify/calibrate
+
 
         if speed_frac < 0:
             speed_dir = -speed_dir  # Robik V5.1.1 handles backup backwards
