@@ -86,10 +86,10 @@ class Bundler(Node):
         reprojected = np.zeros((self.rgb_params['h'] // 2,
                                 self.rgb_params['w'] // 2))
         reprojected[img_v[visible], img_u[visible]] = img_xyz[visible, 2]
-        reprojected *= 1000
         # Upscale.
         reprojected = cv2.resize(reprojected, (self.rgb_params['w'], self.rgb_params['h']))
-        reprojected = reprojected.astype(np.uint16)
+        reprojected = reprojected.astype(np.float32)
+        reprojected = np.expand_dims(reprojected, axis=-1)
 
         return reprojected
 
