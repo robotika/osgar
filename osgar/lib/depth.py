@@ -289,7 +289,7 @@ def decompress(data):
 
 
 def compress(depth):
-    return cv2.imencode('.png', depth.view(np.uint8))
+    return cv2.imencode('.png', depth.view(np.uint8))[1].tobytes()
 
 
 if __name__ == '__main__':
