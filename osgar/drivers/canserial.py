@@ -90,6 +90,11 @@ class CANSerial(Thread):
 
         self.bus = bus
         self.buf = b''
+        self.time = None
+        ok_list = [0x7f2, 0x7f1, 1, 2,
+                   0x80, 0x81, 0x82, 0x83,
+                   0x91, 0x92, 0x93, 0x94]  # TODO config
+        self.firewall_ok = set(ok_list)
 
         speed = config.get('speed', '1M')  # default 1Mbit
         if speed not in CAN_SPEED:
@@ -249,6 +254,9 @@ class CANSerial(Thread):
                 if rtr == 0:
                     assert size + 2 == len(packet), (size, len(packet))
                 # TODO verify how rtr is handled on PCAN?
+                if msg_id not in self.firewall_ok:
+                    print(self.time, hex(msg_id), msg_id)
+                    # TODO publish to 'rejected'
                 self.bus.publish('can', [msg_id, packet[2:], 0])
 
     def slot_can(self, timestamp, data):
@@ -264,6 +272,7 @@ class CANSerial(Thread):
         try:
             while True:
                 dt, channel, data = self.bus.listen()
+                self.time = dt
                 if channel == 'raw':
                     self.slot_raw(dt, data)
                 elif channel == 'can':
