@@ -288,6 +288,10 @@ def decompress(data):
                         cv2.IMREAD_UNCHANGED).view(dtype=np.float32)[:,:,0]
 
 
+def compress(depth):
+    return cv2.imencode('.png', depth.view(np.uint8))
+
+
 if __name__ == '__main__':
     import argparse
     import cv2

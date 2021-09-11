@@ -3,6 +3,7 @@ import math
 import cv2
 import numpy as np
 
+from osgar.lib.depth import compress
 from osgar.lib.quaternion import euler_to_quaternion
 from osgar.node import Node
 
@@ -61,7 +62,9 @@ class Bundler(Node):
                     [self.robot_pose,
                      self.camera_pose,
                      self.img,
-                     self.reproject(self.depth).tobytes()])
+                     compress(self.reproject(self.depth))])
+            self.img = None
+            self.depth = None
         return channel
 
     def reproject(self, depth):
