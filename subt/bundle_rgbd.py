@@ -58,10 +58,10 @@ class Bundler(Node):
             and self.depth is not None):
             self.publish(
                     'rgbd',
-                    (self.robot_pose,
+                    [self.robot_pose,
                      self.camera_pose,
                      self.img,
-                     self.reproject(self.depth)))
+                     self.reproject(self.depth).tobytes()])
         return channel
 
     def reproject(self, depth):
@@ -86,7 +86,7 @@ class Bundler(Node):
         reprojected *= 1000
         # Upscale.
         reprojected = cv2.resize(reprojected, (self.rgb_params['w'], self.rgb_params['h']))
-        reprojected = reprojected.astype(int)
+        reprojected = reprojected.astype(np.uint16)
 
         return reprojected
 
