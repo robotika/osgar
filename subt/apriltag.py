@@ -25,18 +25,14 @@ class Apriltag(Node):
         self.thread.join(timeout=timeout)
 
     def run(self):
-        print("HI")
         detector = apriltag.apriltag('tag16h5', threads=1)
         try:
-            print("bus?")
             while True:
-                print("chanel??")
                 dt, channel, data = self.listen()
-                print(channel)
                 if channel == "image":
                     img = np.frombuffer(data, dtype=np.uint8)
                     gray = cv2.imdecode(img, cv2.IMREAD_GRAYSCALE)
-                    print(gray)
+                    print(gray.shape)
                     found = detector.detect(gray)
                     found = [tag for tag in found if tag['margin'] > 30 and tag['hamming'] == 0]
                     if len(found) > 0:
