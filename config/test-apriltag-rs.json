@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "D435": {
+          "driver": "realsense",
+          "init": {
+            "device": "D400",
+            "depth_subsample": 1,
+            "depth_rgb": true,
+            "depth_resolution": [640, 360],
+            "rgb_resolution": [640, 360],
+            "depth_fps": 6
+          }
+      },
+      "apriltag": {
+          "driver": "subt.apriltag:Apriltag",
+          "in": ["image"],
+          "out": [],
+          "init": {}
+      }
+    },
+    "links": [
+              ["D435.color", "apriltag.image"]
+    ]
+  }
+}
