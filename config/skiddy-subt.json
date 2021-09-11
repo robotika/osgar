@@ -122,6 +122,15 @@
               [-0.00818002, 0.0024538, 0.999964, 0.000308448070427403]
 	    ]
 	  }
+      },
+      "logimage": {
+          "driver": "subt.image_extractor:ImageExtractor",
+          "in": ["rgbd"],
+          "out": ["image", "depth"],
+          "init": {
+            "image_sampling": 1,
+            "depth_sampling": 1
+          }
       }
     },
     "links": [["app.desired_speed", "cortexpilot.desired_speed"],
@@ -138,6 +147,7 @@
               ["tracking.pose3d", "app.pose3d"],
               ["tracking.pose3d", "bundler.robot_pose"],
               ["depth.color", "bundler.img"],
-              ["depth.depth", "bundler.depth"]]
+              ["depth.depth", "bundler.depth"],
+              ["bundler.rgbd", "logimage.rgbd"]]
   }
 }
