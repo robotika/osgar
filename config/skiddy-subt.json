@@ -90,6 +90,38 @@
           "in": ["raw"],
           "out": ["raw"],
           "init": {"host": "192.168.1.71", "port": 2111, "timeout": 0.5}
+      },
+      "bundle": {
+	  "driver": "subt.bundle_rgbd:Bundler",
+	  "in": ["robot_pose", "img", "depth"],
+	  "out": ["rgbd"],
+	  "init": {
+	    "camera": {
+	      "xyz": [0.282, 0.05, 0.33],
+	      "ypr": [0.0, 0.0, 0.0]
+	    },
+	    "rgb": {
+	      "w": 640,
+	      "h": 360,
+	      "fx": 460.946929931641,
+	      "fy": 461.059417724609,
+	      "cx": 320.567504882812,
+	      "cy": 184.109222412109
+	    },
+	    "depth": {
+	      "w": 640,
+	      "h": 360,
+	      "fx": 318.623840332031,
+	      "fy": 318.623840332031,
+	      "cx": 323.114868164062,
+	      "cy": 179.110610961914
+	    },
+	    "extrinsics": [
+              [0.999967, -0.000261684, 0.00818068, 0.0149064091965556],
+              [0.000281749, 0.999997, -0.00245158, 0.000188795995200053],
+              [-0.00818002, 0.0024538, 0.999964, 0.000308448070427403]
+	    ]
+	  }
       }
     },
     "links": [["app.desired_speed", "cortexpilot.desired_speed"],
@@ -103,6 +135,9 @@
               ["lidar_back.raw", "lidar_back_tcp.raw"],
               ["lidar.scan", "app.scan"],
               ["lidar_back.scan", "app.scan_back"],
-              ["tracking.pose3d", "app.pose3d"]]
+              ["tracking.pose3d", "app.pose3d"],
+	      ["tracking.pose3d", "bundler.robot_pose"],
+	      ["depth.color", "bundler.img"],
+	      ["depth.depth", "bundler.depth"]]
   }
 }
