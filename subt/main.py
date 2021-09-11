@@ -246,7 +246,7 @@ class SubTChallenge:
         if 'init_path' in config:
             pts_s = [s.split(',') for s in config['init_path'].split(';')]
             self.init_path = [(float(x), float(y)) for x, y in pts_s]
-        self.robot_name = config.get('robot_name', None)  # name used for System
+        self.robot_name = config.get('robot_name')
         scan_subsample = config.get('scan_subsample', 1)
         obstacle_influence = config.get('obstacle_influence', 0.8)
         direction_adherence = math.radians(config.get('direction_adherence', 90))
@@ -1144,6 +1144,7 @@ def main():
     from osgar.lib.config import config_load
 
     parser = argparse.ArgumentParser(description='SubT Challenge')
+    parser.add_argument('--use-old-record', help="use old osgar.record instead of zmqrouter", action='store_true')
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
     subparsers.required = True
     parser_run = subparsers.add_parser('run', help='run on real HW')
@@ -1160,7 +1161,6 @@ def main():
     parser_run.add_argument('--init-path', help='inital path to be followed from (0, 0). 2D coordinates are separated by ;')
     parser_run.add_argument('--start-paused', dest='start_paused', action='store_true',
                             help='start robot Paused and wait for LoRa Continue command')
-    parser_run.add_argument('--use-old-record', help="use old osgar.record instead of zmqrouter", action='store_true')
 
     parser_replay = subparsers.add_parser('replay', help='replay from logfile')
     parser_replay.add_argument('logfile', help='recorded log file')
@@ -1200,6 +1200,8 @@ def main():
             cfg['robot']['modules']['app']['init']['right_wall'] = 'auto'
         else:
             cfg['robot']['modules']['app']['init']['right_wall'] = args.side == 'right'
+            cmd = 'R' if args.side == 'right' else 'L'
+            cfg['robot']['modules']['app']['init']['robot_name'] = f'A{args.timeout}{cmd}'
         cfg['robot']['modules']['app']['init']['timeout'] = args.timeout
         if args.init_path is not None:
             cfg['robot']['modules']['app']['init']['init_path'] = args.init_path

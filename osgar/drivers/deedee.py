@@ -109,9 +109,9 @@ class Deedee(Node):
     def send_speed_cmd(self, timestamp, forward, rotation):
         # Send the speed command.
         delta = self.wheel_base * rotation / 2
-        left, right = round((forward - delta) * 1000), round((forward + delta) * 1000)
-        validity = round(self.max_command_validity * 1000)
-        cmd = struct.pack('>Bhhh', ord('V'), left, right, validity)
+        left, right = int(round((forward - delta) * 1000)), int(round((forward + delta) * 1000))
+        validity = int(round(self.max_command_validity * 1000))
+        cmd = struct.pack('>Bhhh', ord('V'), right, left, validity)
         checksum = -sum(cmd) & 0xFF
         cmd += bytes([checksum])
         self.publish('cmd', cmd)

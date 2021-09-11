@@ -73,6 +73,7 @@ def record(config, log_prefix, log_filename=None, duration_sec=None):
                 app.join(duration_sec)
             else:
                 recorder.stop_requested.wait(duration_sec)
+            recorder.request_stop()
 
 
 def main(record=record):
