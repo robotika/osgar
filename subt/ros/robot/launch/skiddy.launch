@@ -55,7 +55,7 @@
     <param name="num_threads" value="2"/>
     <param name="blind_columns_left" value="0"/>
     <param name="depth_image_stride" value="1"/>
-    <param name="synthetic_obstacle_distance" value="0.55"/>
+    <param name="synthetic_obstacle_distance" value="0.64"/>
     <param name="visible_ground_min" value="0.6"/>
     <param name="visible_ground_max" value="3.4"/>
     <param name="max_bump_height" value="0.1"/>
