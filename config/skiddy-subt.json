@@ -7,8 +7,21 @@
           "in": ["emergency_stop", "pose2d"],
           "out": ["desired_speed"],
           "init": {
+            "init_path": "2.5,0",
             "max_speed": 0.5,
-            "symmetric": true
+            "symmetric": true,
+            "direction_adherence": 45,
+            "obstacle_influence": 1.4,
+            "speed_policy": "conservative",
+            "min_safe_dist": 0.8,
+            "dangerous_dist": 0.5,
+            "rotation_p": 1.6,
+            "virtual_bumper_sec": 75,
+            "virtual_bumper_radius": 10.0,
+	    "virtual_world": true,
+            "follow_wall": {
+              "max_wall_distance": 5.0
+            }
           }
       },
       "cortexpilot": {
@@ -28,17 +41,17 @@
         "init": {
           "device": "D400",
           "serial_number": "848312070179",
-          "depth_subsample": 3,
+          "depth_subsample": 1,
           "depth_rgb": true,
           "depth_resolution": [
             640,
-            360
+            480
           ],
           "rgb_resolution": [
             640,
-            360
+            480
           ],
-          "depth_fps": 30
+          "depth_fps": 6
         }
       },
       "depth_rear": {
@@ -46,17 +59,17 @@
         "init": {
           "device": "D400",
           "serial_number": "938422071072",
-          "depth_subsample": 3,
+          "depth_subsample": 1,
           "depth_rgb": true,
           "depth_resolution": [
             640,
-            360
+            480
           ],
           "rgb_resolution": [
             640,
-            360
+            480
           ],
-          "depth_fps": 30
+          "depth_fps": 6
         }
       },
       "tracking": {
@@ -92,36 +105,54 @@
           "init": {"host": "192.168.1.71", "port": 2111, "timeout": 0.5}
       },
       "bundler": {
-	  "driver": "subt.bundle_rgbd:Bundler",
-	  "in": ["robot_pose", "img", "depth"],
-	  "out": ["rgbd"],
-	  "init": {
-	    "camera": {
-	      "xyz": [0.0, -0.0175, 0.03],
-	      "ypr": [0.0, 0.0, 0.0]
-	    },
-	    "rgb": {
-	      "w": 640,
-	      "h": 360,
-	      "fx": 460.946929931641,
-	      "fy": 461.059417724609,
-	      "cx": 320.567504882812,
-	      "cy": 184.109222412109
-	    },
-	    "depth": {
-	      "w": 640,
-	      "h": 360,
-	      "fx": 318.623840332031,
-	      "fy": 318.623840332031,
-	      "cx": 323.114868164062,
-	      "cy": 179.110610961914
-	    },
-	    "extrinsics": [
+          "driver": "subt.bundle_rgbd:Bundler",
+          "in": ["robot_pose", "img", "depth"],
+          "out": ["rgbd"],
+          "init": {
+            "camera": {
+              "xyz": [0.0, -0.0175, 0.03],
+              "ypr": [0.0, 0.0, 0.0]
+            },
+            "rgb": {
+              "w": 640,
+              "h": 480,
+              "fx": 614.595886230469,
+              "fy": 614.745910644531,
+              "cx": 320.756683349609,
+              "cy": 245.478973388672
+            },
+            "depth": {
+              "w": 640,
+              "h": 480,
+              "fx": 382.348602294922,
+              "fy": 382.348602294922,
+              "cx": 323.737854003906,
+              "cy": 238.932739257812
+            },
+            "extrinsics": [
               [0.999967, -0.000261684, 0.00818068, 0.0149064091965556],
               [0.000281749, 0.999997, -0.00245158, 0.000188795995200053],
               [-0.00818002, 0.0024538, 0.999964, 0.000308448070427403]
-	    ]
-	  }
+            ]
+          }
+      },
+      "small": {
+        "driver": "resize",
+        "in": ["depth"],
+        "out": ["depth"],
+        "init": {
+          "width": 80,
+          "height": 60
+        }
+      },
+      "small_rear": {
+        "driver": "resize",
+        "in": ["depth"],
+        "out": ["depth"],
+        "init": {
+          "width": 80,
+          "height": 60
+        }
       },
       "logimage": {
           "driver": "subt.image_extractor:ImageExtractor",
@@ -131,6 +162,24 @@
             "image_sampling": 1,
             "depth_sampling": 1
           }
+      },
+      "fromros": {
+          "driver": "subt.pull:Pull",
+          "out": "scan360",
+          "init": {
+              "outputs": ["scan360"]
+          }
+      },
+      "ros": {
+        "driver": "subt.roslaunch:ROSLaunch",
+        "in": [],
+        "out": [],
+        "init": {
+          "launch_file": "subt/ros/robot/launch/deedee.launch"
+        }
+      },
+      "toros": {
+          "driver": "subt.push:Push"
       }
     },
     "links": [["app.desired_speed", "cortexpilot.desired_speed"],
@@ -148,6 +197,11 @@
               ["tracking.pose3d", "bundler.robot_pose"],
               ["depth.color", "bundler.img"],
               ["depth.depth", "bundler.depth"],
+              ["depth.depth", "small.depth"],
+              ["depth_rear.depth", "small_rear.depth"],
+              ["small.depth", "toros.front_depth"],
+              ["small_rear.depth", "toros.rear_depth"],
+              ["tracking.pose3d", "toros.tracking_pose"],
               ["bundler.rgbd", "logimage.rgbd"]]
   }
 }
