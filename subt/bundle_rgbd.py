@@ -25,7 +25,10 @@ class Bundler(Node):
                         *[math.radians(x) for x in camera_config['ypr']]))
         else:
             self.camera_pose = None
-        self.robot_pose = None
+        if config.get("ignore_robot_pose"):
+            self.robot_pose = [[0, 0, 0], [0, 0, 0, 1]]
+        else:
+            self.robot_pose = None
         self.img = None
         self.depth = None
 
