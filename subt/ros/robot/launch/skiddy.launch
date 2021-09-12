@@ -51,7 +51,7 @@
   </group>
 
   <node pkg="proxy" type="traversability" name="local_map" output="screen">
-    <param name="publish_rate" value="0.1"/>
+    <param name="publish_rate" value="0.05"/>
     <param name="num_threads" value="2"/>
     <param name="blind_columns_left" value="0"/>
     <param name="depth_image_stride" value="1"/>

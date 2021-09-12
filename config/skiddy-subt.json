@@ -41,7 +41,7 @@
         "init": {
           "device": "D400",
           "serial_number": "848312070179",
-          "depth_subsample": 1,
+          "depth_subsample": 3,
           "depth_rgb": true,
           "depth_resolution": [
             640,
@@ -51,7 +51,7 @@
             640,
             480
           ],
-          "depth_fps": 6
+          "depth_fps": 30
         }
       },
       "depth_rear": {
@@ -59,7 +59,7 @@
         "init": {
           "device": "D400",
           "serial_number": "938422071072",
-          "depth_subsample": 1,
+          "depth_subsample": 3,
           "depth_rgb": true,
           "depth_resolution": [
             640,
@@ -69,7 +69,7 @@
             640,
             480
           ],
-          "depth_fps": 6
+          "depth_fps": 30
         }
       },
       "tracking": {
