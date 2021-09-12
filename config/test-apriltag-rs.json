@@ -13,15 +13,45 @@
             "depth_fps": 6
           }
       },
+      "bundler": {
+        "driver": "subt.bundle_rgbd:Bundler",
+          "in": ["robot_pose", "img", "depth"],
+          "out": ["rgbd"],
+          "init": {
+            "ignore_robot_pose": true,
+            "camera": {
+              "xyz": [0.35, 0, 0.2],
+              "ypr": [0.0, 0.0, 0.0]
+            },
+            "rgb": {
+              "w": 640,
+              "h": 360,
+              "fx": 460.946929931641,
+              "fy": 461.059417724609,
+              "cx": 320.567504882812,
+              "cy": 184.109222412109
+            },
+            "depth": {
+              "w": 640,
+              "h": 360,
+              "fx": 318.623840332031,
+              "fy": 318.623840332031,
+              "cx": 323.114868164062,
+              "cy": 179.110610961914
+            }
+          }
+        },
       "apriltag": {
           "driver": "subt.apriltag:Apriltag",
           "in": ["image"],
           "out": [],
-          "init": {}
+          "init": {"fx": 318.623840332031}
       }
     },
     "links": [
-              ["D435.color", "apriltag.image"]
+      ["D435.color", "bundler.img"],
+      ["D435.depth", "bundler.depth"],
+      ["bundler.rgbd", "apriltag.rgbd"]
     ]
   }
 }
