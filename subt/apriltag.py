@@ -1,6 +1,3 @@
-#import sys
-#sys.path.append("/home/jakub/git/apriltag/build/")  # TODO integrate to system
-#import apriltag
 import cv2
 import numpy as np
 from threading import Thread
@@ -27,7 +24,6 @@ class Apriltag(Node):
         self.thread.join(timeout=timeout)
 
     def run(self):
-        #detector = apriltag.apriltag('tag16h5', threads=1)
         aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_APRILTAG_16h5)
         parameters = cv2.aruco.DetectorParameters_create()
         try:
