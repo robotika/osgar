@@ -166,11 +166,19 @@
         "in": [],
         "out": [],
         "init": {
-          "launch_file": "subt/ros/robot/launch/deedee.launch"
+          "launch_file": "subt/ros/robot/launch/skiddy.launch"
         }
       },
       "toros": {
           "driver": "subt.push:Push"
+      },
+      "sec_timer": {
+        "driver": "timer",
+        "in": [],
+        "out": ["tick"],
+        "init": {
+          "sleep": 1.0
+        }
       }
     },
     "links": [["app.desired_speed", "cortexpilot.desired_speed"],
@@ -192,6 +200,7 @@
               ["depth_rear.depth", "small_rear.depth"],
               ["small.depth", "toros.front_depth"],
               ["small_rear.depth", "toros.rear_depth"],
-              ["tracking.pose3d", "toros.tracking_pose"]]
+              ["tracking.pose3d", "toros.tracking_pose"],
+              ["sec_timer.tick", "app.sim_time_sec"]]
   }
 }
