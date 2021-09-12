@@ -154,15 +154,6 @@
           "height": 60
         }
       },
-      "logimage": {
-          "driver": "subt.image_extractor:ImageExtractor",
-          "in": ["rgbd"],
-          "out": ["image", "depth"],
-          "init": {
-            "image_sampling": 1,
-            "depth_sampling": 1
-          }
-      },
       "fromros": {
           "driver": "subt.pull:Pull",
           "out": "scan360",
@@ -201,7 +192,6 @@
               ["depth_rear.depth", "small_rear.depth"],
               ["small.depth", "toros.front_depth"],
               ["small_rear.depth", "toros.rear_depth"],
-              ["tracking.pose3d", "toros.tracking_pose"],
-              ["bundler.rgbd", "logimage.rgbd"]]
+              ["tracking.pose3d", "toros.tracking_pose"]]
   }
 }
