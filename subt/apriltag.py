@@ -7,6 +7,8 @@ from threading import Thread
 
 from osgar.bus import BusShutdownException
 from osgar.node import Node
+from osgar.lib.depth import decompress as decompress_depth
+from subt.artf_node import transform
 
 
 class Apriltag(Node):
@@ -16,7 +18,7 @@ class Apriltag(Node):
         bus.register("tag")
 
         self.thread = Thread(target=self.run)
-        #self.thread.name = bus.name
+        self.fx = config.get("fx")
 
     def start(self):
         self.thread.start()
@@ -29,16 +31,30 @@ class Apriltag(Node):
         try:
             while True:
                 dt, channel, data = self.listen()
-                if channel == "image":
-                    img = np.frombuffer(data, dtype=np.uint8)
+                if channel == "rgbd":
+                    robot_pose, camera_pose, image_data, depth_data = data
+                    img = np.frombuffer(image_data, dtype=np.uint8)
                     gray = cv2.imdecode(img, cv2.IMREAD_GRAYSCALE)
-                    print(gray.shape)
                     found = detector.detect(gray)
                     found = [tag for tag in found if tag['margin'] > 30 and tag['hamming'] == 0]
                     if len(found) > 0:
-                        print(found)
+                        depth = decompress_depth(depth_data)
+                        width = depth.shape[1]
+                        height = depth.shape[0]
+                        for tag in found:
+                            tag_id = tag["id"]
+                            cx, cy = tag["center"]
+                            scale = depth[int(round(cy)), int(round(cx))]  # x coordinate, it corresponds with dist
+
+                            camera_rel = [scale,  # relative X-coordinate in front
+                                          scale * (width / 2 - cx) / self.fx,  # Y-coordinate is to the left
+                                          scale * (height / 2 - cy) / self.fx]  # Z-up
+                            # Coordinate of the apriltag relative to the robot.
+                            robot_rel = transform(camera_pose, camera_rel)
+                            # Global coordinate of the apriltag.
+                            world_xyz = transform(robot_pose, robot_rel)
+                            self.publish("tag", [tag_id, world_xyz])
         except BusShutdownException:
-            print("exc")
             pass
 
     def request_stop(self):
