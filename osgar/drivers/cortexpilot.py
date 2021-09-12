@@ -50,6 +50,7 @@ class Cortexpilot(Node):
         self.lidar_valid = False
         self.lidar_timestamp = 0
         self.uptime = None
+        self.verbose = False
 
     def send_pose(self):
         x, y, heading = self.pose
@@ -161,6 +162,8 @@ class Cortexpilot(Node):
         # 4 byte SpeedM1 (float)       12 - normalized motor M1 (R) speed <-1.0 1.0>
         # 4 byte SpeedM2 (float)       16 - normalized motor M2 (L) speed <-1.0 1.0>
         motors = struct.unpack_from('<ff', data, offset + 12)
+        if self.verbose:
+            print(self.time, 'Motors', motors)
 
         # skipped parsing of:
         # 4 byte ActualDir (float)     20 - normalized direction for PID controller
