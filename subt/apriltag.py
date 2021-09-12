@@ -1,6 +1,6 @@
-import sys
-sys.path.append("/home/jakub/git/apriltag/build/")  # TODO integrate to system
-import apriltag
+#import sys
+#sys.path.append("/home/jakub/git/apriltag/build/")  # TODO integrate to system
+#import apriltag
 import cv2
 import numpy as np
 from threading import Thread
@@ -27,7 +27,9 @@ class Apriltag(Node):
         self.thread.join(timeout=timeout)
 
     def run(self):
-        detector = apriltag.apriltag('tag16h5', threads=1)
+        #detector = apriltag.apriltag('tag16h5', threads=1)
+        aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_APRILTAG_16h5)
+        parameters = cv2.aruco.DetectorParameters_create()
         try:
             while True:
                 dt, channel, data = self.listen()
@@ -35,16 +37,18 @@ class Apriltag(Node):
                     robot_pose, camera_pose, image_data, depth_data = data
                     img = np.frombuffer(image_data, dtype=np.uint8)
                     gray = cv2.imdecode(img, cv2.IMREAD_GRAYSCALE)
-                    found = detector.detect(gray)
-                    found = [tag for tag in found if tag['margin'] > 30 and tag['hamming'] == 0]
-                    if len(found) > 0:
+                    corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+
+                    if ids is not None:
                         depth = decompress_depth(depth_data)
                         width = depth.shape[1]
                         height = depth.shape[0]
-                        for tag in found:
-                            tag_id = tag["id"]
-                            cx, cy = tag["center"]
+                        for tag_id, tag_corners in zip(ids.tolist(), corners):
+                            cx = np.mean(tag_corners[0, :, 0])
+                            cy = np.mean(tag_corners[0, :, 1])
                             scale = depth[int(round(cy)), int(round(cx))]  # x coordinate, it corresponds with dist
+                            if scale < 0.5 or scale > 5:  # ignore too close and too far objects
+                                continue
 
                             camera_rel = [scale,  # relative X-coordinate in front
                                           scale * (width / 2 - cx) / self.fx,  # Y-coordinate is to the left
@@ -53,7 +57,8 @@ class Apriltag(Node):
                             robot_rel = transform(camera_pose, camera_rel)
                             # Global coordinate of the apriltag.
                             world_xyz = transform(robot_pose, robot_rel)
-                            self.publish("tag", [tag_id, world_xyz])
+                            #print([tag_id[0], world_xyz])
+                            self.publish("tag", [tag_id[0], world_xyz])
         except BusShutdownException:
             pass
 
