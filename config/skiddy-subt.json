@@ -77,7 +77,7 @@
           "init": {
             "device": "T200",
             "serial_number": "2322110762",
-            "pose_subsample": 20
+            "pose_subsample": 10
           }
       },
       "lidar": {
@@ -141,8 +141,8 @@
         "in": ["depth"],
         "out": ["depth"],
         "init": {
-          "width": 80,
-          "height": 60
+          "width": 160,
+          "height": 120
         }
       },
       "small_rear": {
@@ -150,8 +150,8 @@
         "in": ["depth"],
         "out": ["depth"],
         "init": {
-          "width": 80,
-          "height": 60
+          "width": 160,
+          "height": 120
         }
       },
       "fromros": {
