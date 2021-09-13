@@ -54,6 +54,7 @@ class Cortexpilot(Node):
         self.last_cmd = (0, 0, None)  # motors + timestamp
         self.last_processed_cmd = None  # i.e. already accepted by cortexpilot
         self.watchdog_count = 0  # how many times was watchdog triggered?
+        self.min_watchdog_dt = None
 
     def send_pose(self):
         x, y, heading = self.pose
@@ -169,12 +170,18 @@ class Cortexpilot(Node):
         # 4 byte SpeedM2 (float)       16 - normalized motor M2 (L) speed <-1.0 1.0>
         motors = struct.unpack_from('<ff', data, offset + 12)
         if self.verbose:
+            dt = None
+            if self.last_processed_cmd is not None and self.last_processed_cmd[-1] is not None:
+                dt = (self.time - self.last_processed_cmd[-1]).total_seconds()
             if (self.last_processed_cmd is not None and
                     abs(motors[0]) + abs(motors[1]) < 0.01 and
                     abs(self.last_processed_cmd[0]) + abs(self.last_processed_cmd[1]) > 0.01):
                 self.watchdog_count += 1
-
-            print(self.time, 'Motors', motors, self.watchdog_count)
+                if self.min_watchdog_dt is None:
+                    self.min_watchdog_dt = dt
+                else:
+                    self.min_watchdog_dt = min(dt, self.min_watchdog_dt)
+            print(self.time, 'Motors', motors, self.watchdog_count, f'dt={dt} min={self.min_watchdog_dt}')
 
         # skipped parsing of:
         # 4 byte ActualDir (float)     20 - normalized direction for PID controller
