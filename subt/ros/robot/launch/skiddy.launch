@@ -16,6 +16,10 @@
   <node pkg="tf" type="static_transform_publisher" name="front_camera_optical_tf" args="0 0 0 -1.5707963 0 -1.5707963 front_depth/pose front_depth 100" />
   <node pkg="tf" type="static_transform_publisher" name="rear_camera_optical_tf" args="0 0 0 -1.5707963 0 -1.5707963 rear_depth/pose rear_depth 100" />
 
+  <!-- Announces placements of lidars. -->
+  <node pkg="tf" type="static_transform_publisher" name="front_scan_tf" args="0.44 0.0 0.43 0 0 0 robot front_scan 100" />
+  <node pkg="tf" type="static_transform_publisher" name="rear_scan_tf" args="-0.44 0.0 0.43 -3.141592653589793 0 0 robot rear_scan 100" />
+
   <group ns="osgar/from">
     <!-- Data stream from Osgar to ROS -->
     <node name="pull_from_osgar" pkg="proxy" type="pull.py">
@@ -24,7 +28,7 @@
           Pose stream does not have any extra parameters.
 
           Depth camera parameters can be obtained with `rs-enumerate-devices -c`-->
-      <param name="streams" value="front_depth:depth:80:60:40.46723175048825:29.8665924072265:47.79357528686525:47.79357528686525,rear_depth:depth:80:60:39.887580871582:29.94642257690425:47.823638916015625:47.823638916015625,front_scan:scan,rear_scan:scan,tracking_pose:pose"/>
+      <param name="streams" value="front_depth:depth:160:120:80.9344635009765:59.733184814453:95.5871505737305:95.5871505737305,rear_depth:depth:160:120:79.775161743164:59.8928451538085:95.64727783203125:95.64727783203125,front_scan:scan:-135:135:0.1:10.0,rear_scan:scan:-135:135:0.1:10.0,tracking_pose:pose"/>
     </node>
 
     <!-- Remove noise -->
@@ -43,29 +47,36 @@
       <remap from="depth_denoiser_rear/output" to="rear_depth/clean_depth"/>
     </node>
 
-    <!-- Merge depth and camera_info streams. -->
+    <!-- Merge depth, camera_info and lidar streams. -->
     <node pkg="topic_tools" type="relay" name="depth_merge_front" args="front_depth/clean_depth all_depth/depth"/>
     <node pkg="topic_tools" type="relay" name="depth_merge_rear" args="rear_depth/clean_depth all_depth/depth"/>
     <node pkg="topic_tools" type="relay" name="camera_info_merge_front" args="front_depth/camera_info all_depth/camera_info"/>
     <node pkg="topic_tools" type="relay" name="camera_info_merge_rear" args="rear_depth/camera_info all_depth/camera_info"/>
+    <node pkg="topic_tools" type="relay" name="scan_merge_front" args="front_scan all_scan"/>
+    <node pkg="topic_tools" type="relay" name="scan_merge_rear" args="rear_scan all_scan"/>
   </group>
 
   <node pkg="proxy" type="traversability" name="local_map" output="screen">
     <param name="publish_rate" value="0.05"/>
-    <param name="num_threads" value="2"/>
-    <param name="blind_columns_left" value="10"/>
+    <param name="num_threads" value="3"/>
+    <param name="blind_columns_left" value="20"/>
     <param name="depth_image_stride" value="1"/>
+    <param name="horizontal_pixel_offset" value="3"/>
+    <param name="vertical_pixel_offset" value="3"/>
     <param name="synthetic_obstacle_distance" value="0.64"/>
     <param name="visible_ground_min" value="0.3"/>
     <param name="visible_ground_max" value="3.4"/>
     <param name="max_bump_height" value="0.1"/>
     <param name="max_slope" value="25"/>
-    <param name="depth_subsampling" value="493"/>
+    <param name="depth_subsampling" value="143"/>
+    <!-- Six seconds worth of history. -->
+    <param name="max_depth_observations" value="60"/> <!-- 6 * 10 Hz -->
+    <param name="max_scan_observations" value="30"/> <!-- 6 * 5 Hz -->
     <param name="max_num_nearby_points" value="16000"/>
     <param name="robot_frame_id" value="robot"/>
     <remap from="local_map/input/camera_info" to="osgar/from/all_depth/camera_info"/>
     <remap from="local_map/input/depth" to="osgar/from/all_depth/depth"/>
-    <!-- A robot with lidars could also remap "local_map/input/scan" -->
+    <remap from="local_map/input/scan" to="osgar/from/all_scan"/>
     <remap from="local_map/output/scan" to="osgar/to/scan"/>
     <remap from="local_map/output/map" to="osgar/to/points"/>
   </node>
