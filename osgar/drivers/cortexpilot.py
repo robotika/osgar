@@ -51,6 +51,9 @@ class Cortexpilot(Node):
         self.lidar_timestamp = 0
         self.uptime = None
         self.verbose = False
+        self.last_cmd = (0, 0, None)  # motors + timestamp
+        self.last_processed_cmd = None  # i.e. already accepted by cortexpilot
+        self.watchdog_count = 0  # how many times was watchdog triggered?
 
     def send_pose(self):
         x, y, heading = self.pose
@@ -94,6 +97,9 @@ class Cortexpilot(Node):
         if self.emergency_stop:  #not self.lidar_valid:
             speed_frac = 0.0
             speed_dir = 0.0
+
+        self.last_processed_cmd = self.last_cmd
+        self.last_cmd = (speed_frac, speed_dir, self.time)
 
         #print(self.time, "{:.4f}, {:.4f} \t {:.4f} {:.4f}".format(speed_frac, speed_dir, self.desired_speed, self.desired_angular_speed))
 
@@ -163,7 +169,12 @@ class Cortexpilot(Node):
         # 4 byte SpeedM2 (float)       16 - normalized motor M2 (L) speed <-1.0 1.0>
         motors = struct.unpack_from('<ff', data, offset + 12)
         if self.verbose:
-            print(self.time, 'Motors', motors)
+            if (self.last_processed_cmd is not None and
+                    abs(motors[0]) + abs(motors[1]) < 0.01 and
+                    abs(self.last_processed_cmd[0]) + abs(self.last_processed_cmd[1]) > 0.01):
+                self.watchdog_count += 1
+
+            print(self.time, 'Motors', motors, self.watchdog_count)
 
         # skipped parsing of:
         # 4 byte ActualDir (float)     20 - normalized direction for PID controller
