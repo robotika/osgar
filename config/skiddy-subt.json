@@ -156,9 +156,9 @@
       },
       "fromros": {
           "driver": "subt.pull:Pull",
-          "out": "scan360",
+          "out": ["scan360", "points"],
           "init": {
-              "outputs": ["scan360"]
+              "outputs": ["scan360", "points"]
           }
       },
       "ros": {

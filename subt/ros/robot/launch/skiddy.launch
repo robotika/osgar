@@ -67,11 +67,13 @@
     <remap from="local_map/input/depth" to="osgar/from/all_depth/depth"/>
     <!-- A robot with lidars could also remap "local_map/input/scan" -->
     <remap from="local_map/output/scan" to="osgar/to/scan"/>
+    <remap from="local_map/output/map" to="osgar/to/points"/>
   </node>
 
   <!-- Data stream from ROS to Osgar -->
   <node name="push_to_osgar" pkg="proxy" type="push.py" ns="osgar/to">
     <param name="output_scan_channel" value="scan360"/>
+    <param name="output_pointcloud_channel" value="points"/>
   </node>
 
   <node name="record" pkg="rosbag" type="record" args="-a -o /tmp/skiddy"/>
