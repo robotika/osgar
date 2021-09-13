@@ -18,7 +18,7 @@
           "in": ["robot_pose", "img", "depth"],
           "out": ["rgbd"],
           "init": {
-            "ignore_robot_pose": true,
+            "unknown_robot_pose": true,
             "camera": {
               "xyz": [0.35, 0, 0.2],
               "ypr": [0.0, 0.0, 0.0]
