@@ -290,6 +290,31 @@ class Cortexpilot(Node):
 #            scan[-zero_sides:] = [0]*zero_sides
             self.publish('scan', scan)
 
+    def slot_raw(self, timestamp, data):
+        self.time = timestamp
+        self._buf += data
+        packet = self.get_packet()
+        if packet is not None:
+            if len(packet) < 100:  # TODO cmd value
+                print(packet)
+            else:
+                prev = self.flags
+                self.parse_packet(packet)
+                if prev != self.flags:
+                    print(self.time, 'Flags:', hex(self.flags))
+            self.publish('raw', self.create_packet())
+
+    def slot_desired_speed(self, timestamp, data):
+        self.time = timestamp
+        self.desired_speed, self.desired_angular_speed = data[0] / 1000.0, math.radians(data[1] / 100.0)
+        if abs(self.desired_speed) < 0.2 and abs(self.desired_angular_speed) > 0.2:
+            if self.speeds.__name__ != "oscilate":
+                self.speeds = self.oscilate()
+        else:
+            if self.speeds.__name__ == "oscilate":
+                self.speeds = self.plain_speeds()
+        self.cmd_flags |= 0x02  # PWM ON
+
     def run(self):
         try:
             self.publish('raw', self.query_version())
@@ -297,30 +322,11 @@ class Cortexpilot(Node):
                 dt, channel, data = self.listen()
                 self.time = dt
                 if channel == 'raw':
-                    self._buf += data
-                    packet = self.get_packet()
-                    if packet is not None:
-                        if len(packet) < 100:  # TODO cmd value
-                            print(packet)
-                        else:
-                            prev = self.flags
-                            self.parse_packet(packet)
-                            if prev != self.flags:
-                                print(self.time, 'Flags:', hex(self.flags))
-                        self.publish('raw', self.create_packet())
-                if channel == 'desired_speed':
-                    self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)                    
-                    if abs(self.desired_speed) < 0.2 and abs(self.desired_angular_speed) > 0.2:
-                        if self.speeds.__name__ != "oscilate":
-                            self.speeds = self.oscilate()
-                    else:
-                        if self.speeds.__name__ == "oscilate":
-                            self.speeds = self.plain_speeds()
-                    self.cmd_flags |= 0x02  # PWM ON
-#                    if data == [0, 0]:
-#                        print("TURN OFF")
-#                        self.cmd_flags = 0x00  # turn everything OFF (hack for now)
-
+                    self.slot_raw(dt, data)
+                elif channel == 'desired_speed':
+                    self.slot_desired_speed(dt, data)
+                else:
+                    assert False, channel  # unsupported input channel
         except BusShutdownException:
             pass
 
