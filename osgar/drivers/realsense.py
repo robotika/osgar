@@ -65,6 +65,7 @@ class RealSense(Node):
             self.default_depth_resolution = config.get("depth_resolution", [640, 360])
             self.default_rgb_resolution = config.get("rgb_resolution", [640, 360])
             self.depth_fps = config.get("depth_fps", 30)
+            self.disable_emitor = config.get("disable_emitor", False)
 
             if self.depth_rgb or self.depth_infra:
                 import cv2
@@ -170,7 +171,12 @@ class RealSense(Node):
                 w, h = self.default_depth_resolution
                 depth_cfg.enable_stream(rs.stream.infrared, w, h, rs.format.y8, self.depth_fps)
             if depth_cfg.can_resolve(self.depth_pipeline):
-                self.depth_pipeline.start(depth_cfg, self.depth_callback)
+                profile = self.depth_pipeline.start(depth_cfg, self.depth_callback)
+                if self.disable_emitor:
+                    g_logger.info("Emitor disabled.")
+                    device = profile.get_device()
+                    depth_sensor = device.first_depth_sensor()  # there should be only one depth device
+                    depth_sensor.set_option(rs.option.emitter_enabled, False)
             else:
                 err_msg = "Can not resolve the configuration filters for depth device."
                 if self.serial_number:
