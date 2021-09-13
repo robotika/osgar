@@ -31,6 +31,8 @@ class Apriltag(Node):
                 dt, channel, data = self.listen()
                 if channel == "rgbd":
                     robot_pose, camera_pose, image_data, depth_data = data
+                    if robot_pose is None:  # no source of a robot pose
+                        robot_pose = [[0, 0, 0], [0, 0, 0, 1]]
                     img = np.frombuffer(image_data, dtype=np.uint8)
                     gray = cv2.imdecode(img, cv2.IMREAD_GRAYSCALE)
                     corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
