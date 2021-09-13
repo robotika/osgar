@@ -24,7 +24,7 @@
           Pose stream does not have any extra parameters.
 
           Depth camera parameters can be obtained with `rs-enumerate-devices -c`-->
-      <param name="streams" value="front_depth:depth:80:60:40.46723175048825:29.8665924072265:47.79357528686525:47.79357528686525,rear_depth:depth:80:60:39.887580871582:29.94642257690425:47.823638916015625:47.823638916015625,tracking_pose:pose"/>
+      <param name="streams" value="front_depth:depth:80:60:40.46723175048825:29.8665924072265:47.79357528686525:47.79357528686525,rear_depth:depth:80:60:39.887580871582:29.94642257690425:47.823638916015625:47.823638916015625,front_scan:scan,rear_scan:scan,tracking_pose:pose"/>
     </node>
 
     <!-- Remove noise -->

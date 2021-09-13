@@ -201,6 +201,8 @@
               ["small.depth", "toros.front_depth"],
               ["small_rear.depth", "toros.rear_depth"],
               ["tracking.pose3d", "toros.tracking_pose"],
+	      ["lidar.scan", "toros.front_scan"],
+	      ["lidar_back.scan", "toros.rear_scan"],
               ["sec_timer.tick", "app.sim_time_sec"]]
   }
 }
