@@ -8,6 +8,7 @@ from osgar.node import Node
 class ROSLaunch(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        bus.register()
 
         launch_file = config['launch_file']
         extra_args = config.get('args', [])
