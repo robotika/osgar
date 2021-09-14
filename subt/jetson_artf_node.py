@@ -53,8 +53,12 @@ class ArtifactDetectorJetson(Node):
         if result:
             self.publish('debug_result', result)
             for res in result:
+                artf_name, score, (x0, y0, x1, y1) = res
+                xc = int(round((x0+x1)/2))
+                yc = int(round((y0+y1)/2))
+                res_for_report = [(artf_name, [(xc, yc, score)])]  # convert to mdnet compatible format
                 fake_depth = np.ones(img.shape[:2]) * 1  # There is no source of the artf dist in this moment so just put some number
-                report = result2report(res, fake_depth, self.fx, self.last_pose3d, self.camera_pose, 10)
+                report = result2report(res_for_report, fake_depth, self.fx, self.last_pose3d, self.camera_pose, 10)
                 if report is not None:
                     self.publish('localized_artf', report)
                     self.publish('debug_image', img_data)
