@@ -91,22 +91,16 @@ def result2report(result, depth, fx, robot_pose, camera_pose, max_depth):
     if depth is None:
         return None  # ignore detected artifacts for missing depth data
                      # typically some glitch on start
-    if len(depth) == 3:  # result form jetson_artf_node
-        scale, width, height = depth
-        artf_name, __, (x_min, y_min, x_max, y_max) = result
-    else:
-        artf_name = result[0][0]
-        width = depth.shape[1]
-        height = depth.shape[0]
-        x_arr = [x for x, y, certainty in result[0][1]]  # ignore multiple objects
-        y_arr = [y for x, y, certainty in result[0][1]]  # ignore multiple objects
-        dist = [depth[y][x] for x, y, certainty in result[0][1]]  # ignore multiple objects
-        if any(d == 0 or d > max_depth for d in dist):
-            return None  # out of range
-        x_min, x_max = min(x_arr), max(x_arr)
-        y_min, y_max = min(y_arr), max(y_arr)
-        scale = np.median(dist)
-
+    width = depth.shape[1]
+    height = depth.shape[0]
+    x_arr = [x for x, y, certainty in result[0][1]]  # ignore multiple objects
+    y_arr = [y for x, y, certainty in result[0][1]]  # ignore multiple objects
+    dist = [depth[y][x] for x, y, certainty in result[0][1]]  # ignore multiple objects
+    if any(d == 0 or d > max_depth for d in dist):
+        return None  # out of range
+    x_min, x_max = min(x_arr), max(x_arr)
+    y_min, y_max = min(y_arr), max(y_arr)
+    scale = np.median(dist)
     # Coordinate of the artifact relative to the camera.
     camera_rel = [scale,  # relative X-coordinate in front
                   scale * (width/2 - (x_min + x_max)/2)/fx,  # Y-coordinate is to the left
@@ -115,7 +109,7 @@ def result2report(result, depth, fx, robot_pose, camera_pose, max_depth):
     robot_rel = transform(camera_pose, camera_rel)
     # Global coordinate of the artifact.
     world_xyz = transform(robot_pose, robot_rel)
-    return [NAME2IGN[artf_name], world_xyz]
+    return [NAME2IGN[result[0][0]], world_xyz]
 
 
 def get_border_lines(border_points):
