@@ -11,7 +11,7 @@ import tf2_ros
 import tf.transformations
 
 from geometry_msgs.msg import TransformStamped
-from sensor_msgs.msg import CameraInfo, Image
+from sensor_msgs.msg import CameraInfo, Image, LaserScan
 
 from osgar.lib.serialize import deserialize
 
@@ -28,6 +28,8 @@ if __name__ == '__main__':
     depth_publishers = {}
     camera_info_publishers = {}
     camera_infos = {}
+    scan_publishers = {}
+    scan_ranges = {}
     for stream_config in streams.split(','):
         stream_params = stream_config.split(':')
         stream_name, stream_type = stream_params[:2]
@@ -52,6 +54,11 @@ if __name__ == '__main__':
                              0, fy, cy, 0,
                              0, 0, 1, 0)
             camera_infos[stream_name] = camera_info
+        elif stream_type == 'scan':
+            min_angle, max_angle = [np.radians(float(deg)) for deg in stream_params[2:4]]
+            min_range, max_range = [float(x) for x in stream_params[4:6]]
+            scan_ranges[stream_name] = (min_angle, max_angle, min_range, max_range)
+            scan_publishers[stream_name] = rospy.Publisher(stream_name, LaserScan, queue_size=5)
 
     context = zmq.Context.instance()
     pull = context.socket(zmq.PULL)
@@ -91,6 +98,15 @@ if __name__ == '__main__':
                   t.transform.rotation.z,
                   t.transform.rotation.w)) = xyz, quat
                 tf_broadcaster.sendTransform(t)
+            elif stream_type == 'scan' and data:
+                scan_msg = LaserScan()
+                scan_msg.header.frame_id = channel
+                scan_msg.header.stamp = now
+                scan_msg.angle_min, scan_msg.angle_max, scan_msg.range_min, scan_msg.range_max = scan_ranges[channel]
+                scan_msg.angle_increment = 0 if len(data) == 1 else ((scan_msg.angle_max - scan_msg.angle_min) / (len(data) - 1))
+                scan_msg.ranges = np.asarray(data) / 1000.
+                scan_publishers[channel].publish(scan_msg)
+
         except zmq.ZMQError as e:
             if e.errno != zmq.EAGAIN:
                 rospy.logerr("zmq error")
