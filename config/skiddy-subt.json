@@ -31,10 +31,10 @@
           "init": {}
       },
       "serial": {
-          "driver": "serial",
+          "driver": "subt.serialloop:SerialLoop",
           "in": ["raw"],
           "out": ["raw"],
-          "init": {"port": "/dev/ttyACM0", "speed": 115200}
+          "init": {"port": "/dev/ttyACM0", "speed": 115200, "timeout": 0.02}
       },
       "depth": {
         "driver": "realsense",
@@ -136,6 +136,63 @@
             ]
           }
       },
+      "bundler_rear": {
+          "driver": "subt.bundle_rgbd:Bundler",
+          "in": ["robot_pose", "img", "depth"],
+          "out": ["rgbd"],
+          "init": {
+            "camera": {
+              "xyz": [0.564, 0.0175, 0.03],
+              "ypr": [180.0, 0.0, 0.0]
+            },
+            "rgb": {
+              "w": 640,
+              "h": 480,
+              "fx": 615.746765136719,
+              "fy": 615.988037109375,
+              "cx": 315.426666259766,
+              "cy": 239.346115112305
+            },
+            "depth": {
+              "w": 640,
+              "h": 480,
+              "fx": 319.100646972656,
+              "fy": 239.571380615234,
+              "cx": 382.589111328125,
+              "cy": 382.589111328125
+            },
+            "extrinsics": [
+              [0.999951, 0.00991749, -0.000142397, 0.0144655723124743],
+              [-0.00991762, 0.99995, -0.000935794, 0.000105238395917695],
+              [0.000133109, 0.000937161, 1, 0.000633214542176574]
+            ]
+          }
+      },
+      "detector": {
+        "driver": "subt.artf_edgetpu_detector:Detector",
+        "in": ["front", "rear"],
+        "out" : [],
+        "init": {
+          "camera": {
+            "front": {
+              "w": 640,
+              "h": 480,
+              "fx": 614.595886230469,
+              "fy": 614.745910644531,
+              "cx": 320.756683349609,
+              "cy": 245.478973388672
+            },
+            "rear": {
+              "w": 640,
+              "h": 480,
+              "fx": 615.746765136719,
+              "fy": 615.988037109375,
+              "cx": 315.426666259766,
+              "cy": 239.346115112305
+            }
+          }
+        }
+      },
       "small": {
         "driver": "resize",
         "in": ["depth"],
@@ -181,11 +238,11 @@
         }
       }
     },
-    "links": [["app.desired_speed", "cortexpilot.slot_desired_speed"],
+    "links": [["app.desired_speed", "cortexpilot.desired_speed"],
               ["cortexpilot.pose2d", "app.pose2d"],
               ["cortexpilot.emergency_stop", "app.emergency_stop"],
-              ["serial.raw", "cortexpilot.slot_raw"],
-              ["cortexpilot.raw", "serial.slot_raw"],
+              ["serial.raw", "cortexpilot.raw"],
+              ["cortexpilot.raw", "serial.raw"],
               ["lidar_tcp.raw", "lidar.raw"],
               ["lidar.raw", "lidar_tcp.raw"],
               ["lidar_back_tcp.raw", "lidar_back.raw"],
@@ -196,6 +253,11 @@
               ["tracking.pose3d", "bundler.robot_pose"],
               ["depth.color", "bundler.img"],
               ["depth.depth", "bundler.depth"],
+              ["tracking.pose3d", "bundler_rear.robot_pose"],
+              ["depth_rear.color", "bundler_rear.img"],
+              ["depth_rear.depth", "bundler_rear.depth"],
+              ["bundler.rgbd", "detector.front"],
+              ["bundler_rear.rgbd", "detector.rear"],
               ["depth.depth", "small.depth"],
               ["depth_rear.depth", "small_rear.depth"],
               ["small.depth", "toros.front_depth"],
