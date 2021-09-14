@@ -25,10 +25,12 @@ class Bundler(Node):
                         *[math.radians(x) for x in camera_config['ypr']]))
         else:
             self.camera_pose = None
-        self.robot_pose = None
+        if config.get("ignore_robot_pose"):
+            self.robot_pose = [[0, 0, 0], [0, 0, 0, 1]]
+        else:
+            self.robot_pose = None
         self.img = None
         self.depth = None
-        self.unknown_robot_pose = config.get("unknown_robot_pose", False)
 
         bus.register('rgbd')
 
@@ -54,20 +56,13 @@ class Bundler(Node):
     def update(self):
         timestamp, channel, data = self.bus.listen()
         setattr(self, channel, data)
-        if (self.camera_pose is not None and
+        if (self.robot_pose is not None and
+            self.camera_pose is not None and
             self.img is not None
             and self.depth is not None):
-            if self.robot_pose is not None:
-                self.publish(
-                        'rgbd',
-                        [self.robot_pose,
-                         self.camera_pose,
-                         self.img,
-                         compress(self.reproject(self.depth))])
-            elif self.unknown_robot_pose:
-                self.publish(
+            self.publish(
                     'rgbd',
-                    [None,  # there is no source of the robot pose
+                    [self.robot_pose,
                      self.camera_pose,
                      self.img,
                      compress(self.reproject(self.depth))])
