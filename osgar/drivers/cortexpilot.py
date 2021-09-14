@@ -98,7 +98,7 @@ class Cortexpilot(Node):
         desired_angular_speed = max(-SOFT_ANGULAR_SPEED_LIMIT, min(SOFT_ANGULAR_SPEED_LIMIT, desired_angular_speed))
 
         # this is left and right
-        speed_dir, speed_frac = speed2tank(desired_speed, desired_angular_speed)
+        speed_frac, speed_dir = speed2tank(desired_speed, desired_angular_speed)
 
 #        if speed_frac < 0:
 #            speed_dir = -speed_dir  # Robik V5.1.1 handles backup backwards
