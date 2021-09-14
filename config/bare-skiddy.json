@@ -31,16 +31,16 @@
           "init": {}
       },
       "serial": {
-          "driver": "serial",
+          "driver": "subt.serialloop:SerialLoop",
           "in": ["raw"],
           "out": ["raw"],
-          "init": {"port": "/dev/ttyACM0", "speed": 115200, "timeout": 0.05}
+          "init": {"port": "/dev/ttyACM0", "speed": 115200, "timeout": 0.02}
       }
     },
-    "links": [["app.desired_speed", "cortexpilot.slot_desired_speed"],
+    "links": [["app.desired_speed", "cortexpilot.desired_speed"],
               ["cortexpilot.pose2d", "app.pose2d"],
               ["cortexpilot.emergency_stop", "app.emergency_stop"],
-              ["serial.raw", "cortexpilot.slot_raw"], 
-              ["cortexpilot.raw", "serial.slot_raw"]]
+              ["serial.raw", "cortexpilot.raw"],
+              ["cortexpilot.raw", "serial.raw"]]
   }
 }
