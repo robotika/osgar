@@ -27,6 +27,13 @@ def sint32_diff(a, b):
     return ctypes.c_int32(a - b).value
 
 
+def speed2tank(desired_speed, desired_angular_speed):
+    diff = desired_angular_speed
+    # TODO axis computation
+    # TODO ramps
+    return desired_speed - diff, desired_speed + diff # left, right
+
+
 class Cortexpilot(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
@@ -38,7 +45,7 @@ class Cortexpilot(Node):
         # commands
         self.desired_speed = 0.0  # m/s
         self.desired_angular_speed = 0.0
-        self.cmd_flags = 0x140 # Skiddy, turn 0x40 #0x41  # 0 = remote steering, PWM OFF, laser ON, TODO
+        self.cmd_flags = 0x40  # tank like commands 0x140 # Skiddy, turn 0x40 #0x41  # 0 = remote steering, PWM OFF, laser ON, TODO
         self.speeds = self.plain_speeds()
 
         # status
@@ -83,18 +90,18 @@ class Cortexpilot(Node):
         if self.yaw is None:
             self.yaw = 0.0  # hack!
 
-        speed_frac, speed_dir = next(self.speeds)
+        desired_speed, desired_angular_speed = next(self.speeds)
 
         # limit desired speeds (before application of correction scale factors)
         # to protect robot and environment from SW bugs
-        speed_frac = max(-SOFT_SPEED_LIMIT, min(SOFT_SPEED_LIMIT, speed_frac))
-        speed_dir = max(-SOFT_ANGULAR_SPEED_LIMIT, min(SOFT_ANGULAR_SPEED_LIMIT, speed_dir))
+        desired_speed = max(-SOFT_SPEED_LIMIT, min(SOFT_SPEED_LIMIT, desired_speed))
+        desired_angular_speed = max(-SOFT_ANGULAR_SPEED_LIMIT, min(SOFT_ANGULAR_SPEED_LIMIT, desired_angular_speed))
 
-        speed_dir *= 1.2  # TODO verify/calibrate
+        # this is left and right
+        speed_dir, speed_frac = speed2tank(desired_speed, desired_angular_speed)
 
-
-        if speed_frac < 0:
-            speed_dir = -speed_dir  # Robik V5.1.1 handles backup backwards
+#        if speed_frac < 0:
+#            speed_dir = -speed_dir  # Robik V5.1.1 handles backup backwards
         if self.emergency_stop:  #not self.lidar_valid:
             speed_frac = 0.0
             speed_dir = 0.0
@@ -105,7 +112,7 @@ class Cortexpilot(Node):
         #print(self.time, "{:.4f}, {:.4f} \t {:.4f} {:.4f}".format(speed_frac, speed_dir, self.desired_speed, self.desired_angular_speed))
 
         flags = self.cmd_flags
-        flags |= (1<<8)  # agresive turning
+        #  flags |= (1<<8)  # agresive turning - actually for Skiddy this mean directional control
         if self.emergency_stop is not None:
             if self.emergency_stop:
                 flags |= (1<<11)  # display red LEDs
