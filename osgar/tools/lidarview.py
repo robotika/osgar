@@ -456,7 +456,7 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
     screen.blit(foreground, (0, 0))
     pygame.display.flip()
 
-    pygame.key.set_repeat(200, 20)
+    pygame.key.set_repeat(200, 60)
 
     paused = False
     camera_on = True

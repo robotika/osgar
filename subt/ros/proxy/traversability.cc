@@ -1,14 +1,18 @@
 #include <cassert>
 #include <map>
 #include <cmath>
+#include <mutex>
 #include <random>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/core.hpp>
 #include <ros/ros.h>
+#if WITH_RTABMAP
 #include <rtabmap_ros/RGBDImage.h>
+#endif
 #include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/LaserScan.h>
@@ -17,10 +21,7 @@
 #include <tf/transform_listener.h>
 
 #include <opencv2/imgproc.hpp>
-
-// Temporary
-#include <iostream>
-#include <opencv2/imgcodecs.hpp>
+#include <opencv2/calib3d.hpp>
 
 namespace osgar
 {
@@ -64,21 +65,29 @@ class Traversability
 
     bool Init();
 
+    int num_threads() const { return config_.num_threads; }
+
   private:
     ros::NodeHandle ros_handle_;
     ros::Subscriber depth_handler_;
+#if WITH_RTABMAP
     ros::Subscriber rgbd_handler_;
+#endif
     ros::Subscriber camera_info_handler_;
     ros::Subscriber scan_handler_;
     ros::Subscriber points_handler_;
     ros::Subscriber breadcrumb_handler_;
     tf::TransformListener transform_listener_;
 
+    std::mutex camera_infos_mutex_;
     std::unordered_map<std::string, sensor_msgs::CameraInfo::ConstPtr> camera_infos_;
+    std::mutex rnd_mutex_;
     std::mt19937 rnd_gen_;
     std::uniform_real_distribution<float> rnd_;
 
     struct {
+      int num_threads;
+
       std::string robot_frame_id;
       std::string world_frame_id;
 
@@ -97,6 +106,8 @@ class Traversability
       // Maximum metric distance between two points for them to be still
       // considered part of the same surface.
       float max_neighbor_distance;
+      // In a stereo camera with block-matching algorithm, the left-most columns may be useless.
+      int blind_columns_left;
 
       // How often to publish outputs.
       ros::Duration publish_rate;
@@ -156,6 +167,7 @@ class Traversability
     } config_;
 
     // Maps are keyed by frame_ids of individual sensors.
+    std::mutex observations_mutex_;
     std::map<std::string, int> observation_seq_id_;
     std::map<std::string, std::vector<Observation>> observations_;
 
@@ -177,7 +189,9 @@ class Traversability
 
     void OnCameraInfo(const sensor_msgs::CameraInfo::ConstPtr& msg);
     void OnDepth(const sensor_msgs::Image::ConstPtr& msg);
+#if WITH_RTABMAP
     void OnRGBD(const rtabmap_ros::RGBDImage::ConstPtr& msg);
+#endif
     void OnScan(const sensor_msgs::LaserScan::ConstPtr& msg);
     void OnPoints(const sensor_msgs::PointCloud2::ConstPtr& msg);
     void OnBreadcrumb(const std_msgs::Empty::ConstPtr& msg);
@@ -186,6 +200,7 @@ class Traversability
 
 bool Traversability::Init()
 {
+  ros_handle_.param("num_threads", config_.num_threads, 1);
   ros_handle_.param<std::string>("robot_frame_id", config_.robot_frame_id, "");
   ros_handle_.param<std::string>("world_frame_id", config_.world_frame_id, "global");
   ros_handle_.param("max_depth_observations", config_.max_depth_observations, 30 * 6);
@@ -195,6 +210,7 @@ bool Traversability::Init()
   ros_handle_.param("horizontal_pixel_offset", config_.horizontal_pixel_offset, 12);
   ros_handle_.param("vertical_pixel_offset", config_.vertical_pixel_offset, 12);
   ros_handle_.param("max_neighbor_distance", config_.max_neighbor_distance, 0.3f);
+  ros_handle_.param("blind_columns_left", config_.blind_columns_left, 0);
   ros_handle_.param("max_relative_z", config_.max_relative_z, 40.f);
   ros_handle_.param("max_scan_observations", config_.max_scan_observations, 20 * 6);
   ros_handle_.param("min_lidar_range", config_.min_lidar_range, 0.f);
@@ -221,7 +237,9 @@ bool Traversability::Init()
 
   camera_info_handler_ = ros_handle_.subscribe("input/camera_info", 10, &Traversability::OnCameraInfo, this);
   depth_handler_ = ros_handle_.subscribe("input/depth", 10, &Traversability::OnDepth, this);
+#if WITH_RTABMAP
   rgbd_handler_ = ros_handle_.subscribe("input/rgbd", 10, &Traversability::OnRGBD, this);
+#endif
   scan_handler_ = ros_handle_.subscribe("input/scan", 10, &Traversability::OnScan, this);
   points_handler_ = ros_handle_.subscribe("input/points", 10, &Traversability::OnPoints, this);
   breadcrumb_handler_ = ros_handle_.subscribe("input/breadcrumb", 10, &Traversability::OnBreadcrumb, this);
@@ -244,7 +262,7 @@ std::optional<tf::StampedTransform> Traversability::GetTransform(
       transform_listener_.lookupTransform(target_frame, source_frame, when, pose);
       return pose;
     }
-    catch (tf::TransformException e)
+    catch (tf::TransformException& e)
     {
       error = e;
       ros::Duration(0.005).sleep();
@@ -263,6 +281,7 @@ void Traversability::InsertObservation(
     return;
   }
 
+  std::lock_guard<std::mutex> lock(observations_mutex_);
   auto& observations = observations_[frame_id];
   if (observations.size() == max_num_observations_per_source)
   {
@@ -278,6 +297,7 @@ void Traversability::InsertObservation(
 
 void Traversability::OnCameraInfo(const sensor_msgs::CameraInfo::ConstPtr& msg)
 {
+  std::lock_guard<std::mutex> lock(camera_infos_mutex_);
   camera_infos_.insert({msg->header.frame_id, msg});
 }
 
@@ -297,6 +317,7 @@ void Traversability::OnDepth(const sensor_msgs::Image::ConstPtr& msg)
   HandleDepth(input_img_ptr->image, msg->header.frame_id, msg->header.stamp);
 }
 
+#if WITH_RTABMAP
 void Traversability::OnRGBD(const rtabmap_ros::RGBDImage::ConstPtr& msg)
 {
   cv::Mat decompressed = cv::imdecode(msg->depth_compressed.data, cv::IMREAD_UNCHANGED);
@@ -307,16 +328,24 @@ void Traversability::OnRGBD(const rtabmap_ros::RGBDImage::ConstPtr& msg)
                 decompressed.step);
   HandleDepth(depth, msg->header.frame_id, msg->header.stamp);
 }
+#endif
 
 void Traversability::HandleDepth(
     const cv::Mat& img, const std::string& camera_frame_id,
     const ros::Time& stamp)
 {
-  const auto camera_info = camera_infos_.find(camera_frame_id);
-  if (camera_info == camera_infos_.end())
+  sensor_msgs::CameraInfo::ConstPtr ci;
   {
-    ROS_DEBUG("Received an image from a camera with unknown parameters: %s", camera_frame_id.c_str());
-    return;
+    std::lock_guard<std::mutex> lock(camera_infos_mutex_);
+    const auto camera_info = camera_infos_.find(camera_frame_id);
+
+    if (camera_info == camera_infos_.end())
+    {
+      ROS_DEBUG("Received an image from a camera with unknown parameters: %s", camera_frame_id.c_str());
+      return;
+    }
+
+    ci = camera_info->second;
   }
 
   std::optional<tf::StampedTransform> sensor_pose =
@@ -329,7 +358,6 @@ void Traversability::HandleDepth(
 
   cv::Mat fog_filtered_img;
   cv::medianBlur(img, fog_filtered_img, 5);
-  const auto& ci = camera_info->second;
   // Intrinsic camera matrix before undistortion.
   const cv::Mat camera_k(3, 3, CV_64F, const_cast<double*>(ci->K.data()));
   // Camera distortion parameters.
@@ -371,7 +399,7 @@ void Traversability::HandleDepth(
       full_size_uv_u = u * config_.depth_image_stride;
       const float depth = undistorted_img_row_v[u];
       auto& pt = xyz_row_v[u];
-      if (depth <= 0 || depth > config_.max_depth || std::isnan(depth))
+      if (depth <= 0 || depth > config_.max_depth || std::isnan(depth) || u < config_.blind_columns_left / config_.depth_image_stride)
       {
         pt = INVALID_POINT;
       }
@@ -446,7 +474,7 @@ void Traversability::HandleDepth(
   constexpr int BACKGROUND_COMPONENT = 0;
   for (int v = 0; v < undistorted_img.rows; ++v)
   {
-    for (int u = 0; u < undistorted_img.cols; ++u)
+    for (int u = config_.blind_columns_left / config_.depth_image_stride; u < undistorted_img.cols; ++u)
     {
       const int32_t hor = horizontal_components.at<int32_t>(v, u);
       const int32_t ver = vertical_components.at<int32_t>(v, u);
@@ -491,7 +519,7 @@ void Traversability::HandleDepth(
   const auto& robot_xyz = robot_pose->getOrigin();
   const auto& sensor_xyz = sensor_pose->getOrigin();
   size_t cnt = 0;
-  for (int u = 0; u < undistorted_img.cols - horizontal_pixel_offset; ++u)
+  for (int u = config_.blind_columns_left / config_.depth_image_stride; u < undistorted_img.cols - horizontal_pixel_offset; ++u)
   {
     bool obscured_view = false;
     bool ground_visible = false;
@@ -708,18 +736,21 @@ void Traversability::OnTimer(const ros::TimerEvent& event)
 
   // Convert all collected pointclouds to be relative to the current robot pose.
   std::vector<tf::Vector3> local_pts;
-  for (const auto single_source_observations : observations_)
   {
-    const auto& observations = single_source_observations.second;
-    for (const auto& observation : observations)
+    std::lock_guard<std::mutex> lock(observations_mutex_);
+    for (const auto single_source_observations : observations_)
     {
-      for (const auto& pt : observation)
+      const auto& observations = single_source_observations.second;
+      for (const auto& observation : observations)
       {
-        const auto local_pt = *to_local * pt;
-        if (local_pt.z() < config_.max_relative_z &&
-	    !NearBreadcrumb(pt))
+        for (const auto& pt : observation)
         {
-          local_pts.push_back(local_pt);
+          const auto local_pt = *to_local * pt;
+          if (local_pt.z() < config_.max_relative_z &&
+              !NearBreadcrumb(pt))
+          {
+            local_pts.push_back(local_pt);
+          }
         }
       }
     }
@@ -741,6 +772,7 @@ void Traversability::OnTimer(const ros::TimerEvent& event)
   {
     for (size_t i = 0; i < nearby_pts.size(); ++i)
     {
+      std::lock_guard<std::mutex> lock(rnd_mutex_);
       size_t j = rnd_(rnd_gen_) * nearby_pts.size();
       if (i != j)
       {
@@ -845,5 +877,6 @@ int main(int argc, char** argv)
   {
     return -1;
   }
-  ros::spin();
+  ros::MultiThreadedSpinner spinner(traversability.num_threads());
+  spinner.spin();
 }

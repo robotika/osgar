@@ -51,6 +51,7 @@ void DepthFilter::OnDepth(const sensor_msgs::Image::ConstPtr& msg)
   }
   catch (cv_bridge::Exception& e)
   {
+    ROS_ERROR("cv_bridge exception: %s", e.what());
     return;
   }
 

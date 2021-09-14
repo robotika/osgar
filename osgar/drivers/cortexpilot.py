@@ -19,6 +19,9 @@ ENC_SCALE = 0.01  # Skiddy, Robik=1.241/9958
 WHEEL_DISTANCE = 0.267  # Skiddy, Robik=0.88  # meters TODO confirm
 RAMP_STEP = 0.1  # fractional number for speed in -1.0 .. 1.0
 
+SOFT_SPEED_LIMIT = 1.0  # m/s ... software speed limit, abs() value
+SOFT_ANGULAR_SPEED_LIMIT = math.radians(45)  # rad/s
+
 
 def sint32_diff(a, b):
     return ctypes.c_int32(a - b).value
@@ -47,6 +50,11 @@ class Cortexpilot(Node):
         self.lidar_valid = False
         self.lidar_timestamp = 0
         self.uptime = None
+        self.verbose = False
+        self.last_cmd = (0, 0, None)  # motors + timestamp
+        self.last_processed_cmd = None  # i.e. already accepted by cortexpilot
+        self.watchdog_count = 0  # how many times was watchdog triggered?
+        self.min_watchdog_dt = None
 
     def send_pose(self):
         x, y, heading = self.pose
@@ -76,13 +84,23 @@ class Cortexpilot(Node):
             self.yaw = 0.0  # hack!
 
         speed_frac, speed_dir = next(self.speeds)
+
+        # limit desired speeds (before application of correction scale factors)
+        # to protect robot and environment from SW bugs
+        speed_frac = max(-SOFT_SPEED_LIMIT, min(SOFT_SPEED_LIMIT, speed_frac))
+        speed_dir = max(-SOFT_ANGULAR_SPEED_LIMIT, min(SOFT_ANGULAR_SPEED_LIMIT, speed_dir))
+
         speed_dir *= 1.2  # TODO verify/calibrate
+
 
         if speed_frac < 0:
             speed_dir = -speed_dir  # Robik V5.1.1 handles backup backwards
         if self.emergency_stop:  #not self.lidar_valid:
             speed_frac = 0.0
             speed_dir = 0.0
+
+        self.last_processed_cmd = self.last_cmd
+        self.last_cmd = (speed_frac, speed_dir, self.time)
 
         #print(self.time, "{:.4f}, {:.4f} \t {:.4f} {:.4f}".format(speed_frac, speed_dir, self.desired_speed, self.desired_angular_speed))
 
@@ -151,6 +169,19 @@ class Cortexpilot(Node):
         # 4 byte SpeedM1 (float)       12 - normalized motor M1 (R) speed <-1.0 1.0>
         # 4 byte SpeedM2 (float)       16 - normalized motor M2 (L) speed <-1.0 1.0>
         motors = struct.unpack_from('<ff', data, offset + 12)
+        if self.verbose:
+            dt = None
+            if self.last_processed_cmd is not None and self.last_processed_cmd[-1] is not None:
+                dt = (self.time - self.last_processed_cmd[-1]).total_seconds()
+            if (self.last_processed_cmd is not None and
+                    abs(motors[0]) + abs(motors[1]) < 0.01 and
+                    abs(self.last_processed_cmd[0]) + abs(self.last_processed_cmd[1]) > 0.01):
+                self.watchdog_count += 1
+                if self.min_watchdog_dt is None:
+                    self.min_watchdog_dt = dt
+                else:
+                    self.min_watchdog_dt = min(dt, self.min_watchdog_dt)
+            print(self.time, 'Motors', motors, self.watchdog_count, f'dt={dt} min={self.min_watchdog_dt}')
 
         # skipped parsing of:
         # 4 byte ActualDir (float)     20 - normalized direction for PID controller
@@ -259,6 +290,31 @@ class Cortexpilot(Node):
 #            scan[-zero_sides:] = [0]*zero_sides
             self.publish('scan', scan)
 
+    def slot_raw(self, timestamp, data):
+        self.time = timestamp
+        self._buf += data
+        packet = self.get_packet()
+        if packet is not None:
+            if len(packet) < 100:  # TODO cmd value
+                print(packet)
+            else:
+                prev = self.flags
+                self.parse_packet(packet)
+                if prev != self.flags:
+                    print(self.time, 'Flags:', hex(self.flags))
+            self.publish('raw', self.create_packet())
+
+    def slot_desired_speed(self, timestamp, data):
+        self.time = timestamp
+        self.desired_speed, self.desired_angular_speed = data[0] / 1000.0, math.radians(data[1] / 100.0)
+        if abs(self.desired_speed) < 0.2 and abs(self.desired_angular_speed) > 0.2:
+            if self.speeds.__name__ != "oscilate":
+                self.speeds = self.oscilate()
+        else:
+            if self.speeds.__name__ == "oscilate":
+                self.speeds = self.plain_speeds()
+        self.cmd_flags |= 0x02  # PWM ON
+
     def run(self):
         try:
             self.publish('raw', self.query_version())
@@ -266,30 +322,11 @@ class Cortexpilot(Node):
                 dt, channel, data = self.listen()
                 self.time = dt
                 if channel == 'raw':
-                    self._buf += data
-                    packet = self.get_packet()
-                    if packet is not None:
-                        if len(packet) < 100:  # TODO cmd value
-                            print(packet)
-                        else:
-                            prev = self.flags
-                            self.parse_packet(packet)
-                            if prev != self.flags:
-                                print(self.time, 'Flags:', hex(self.flags))
-                        self.publish('raw', self.create_packet())
-                if channel == 'desired_speed':
-                    self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)                    
-                    if abs(self.desired_speed) < 0.2 and abs(self.desired_angular_speed) > 0.2:
-                        if self.speeds.__name__ != "oscilate":
-                            self.speeds = self.oscilate()
-                    else:
-                        if self.speeds.__name__ == "oscilate":
-                            self.speeds = self.plain_speeds()
-                    self.cmd_flags |= 0x02  # PWM ON
-#                    if data == [0, 0]:
-#                        print("TURN OFF")
-#                        self.cmd_flags = 0x00  # turn everything OFF (hack for now)
-
+                    self.slot_raw(dt, data)
+                elif channel == 'desired_speed':
+                    self.slot_desired_speed(dt, data)
+                else:
+                    assert False, channel  # unsupported input channel
         except BusShutdownException:
             pass
 
