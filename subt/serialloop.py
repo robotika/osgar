@@ -30,6 +30,8 @@ class SerialLoop:
 
         self.init_raw_data = b'\x00\x00\x03\x01\x01\xfb'  # query version
         self.loop_raw_data = b'\x00\x00\x0f\x01\x0e\x00\x00\x00\x00\x00\x00\x00\x80@\x05\x00\x00\x1d'  # speed 0, 0
+        self.drop_factor = config.get('drop_factor', 2)  # drop every 2nd
+        self.count_msg = 0
 
 
     def start(self):
@@ -46,7 +48,9 @@ class SerialLoop:
             data = self.com.read(1024)
             if len(data) > 0:
                 self.com.write(self.loop_raw_data)
-                self.bus.publish('raw', data)
+                if self.count_msg % self.drop_factor == 0:
+                    self.bus.publish('raw', data)
+                self.count_msg += 1
 
     def slot_raw(self, timestamp, data):
         self.loop_raw_data = data
