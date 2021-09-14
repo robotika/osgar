@@ -1,0 +1,46 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["emergency_stop", "pose2d"],
+          "out": ["desired_speed"],
+          "init": {
+            "init_path": "2.5,0",
+            "max_speed": 0.5,
+            "symmetric": true,
+            "direction_adherence": 45,
+            "obstacle_influence": 1.4,
+            "speed_policy": "conservative",
+            "min_safe_dist": 0.8,
+            "dangerous_dist": 0.5,
+            "rotation_p": 1.6,
+            "virtual_bumper_sec": 75,
+            "virtual_bumper_radius": 10.0,
+	    "virtual_world": true,
+            "follow_wall": {
+              "max_wall_distance": 5.0
+            }
+          }
+      },
+      "cortexpilot": {
+          "driver": "osgar.drivers.cortexpilot:Cortexpilot",
+          "in": ["raw", "desired_speed"],
+          "out": ["raw", "encoders", "emergency_stop", "pose2d", "scan"],
+          "init": {}
+      },
+      "serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyACM0", "speed": 115200, "timeout": 0.05}
+      }
+    },
+    "links": [["app.desired_speed", "cortexpilot.slot_desired_speed"],
+              ["cortexpilot.pose2d", "app.pose2d"],
+              ["cortexpilot.emergency_stop", "app.emergency_stop"],
+              ["serial.raw", "cortexpilot.slot_raw"], 
+              ["cortexpilot.raw", "serial.slot_raw"]]
+  }
+}
