@@ -36,6 +36,12 @@
           "out": ["raw"],
           "init": {"port": "/dev/ttyACM0", "speed": 115200, "timeout": 0.02}
       },
+      "localization": {
+	      "driver": "subt.odoimuloc:Localization",
+	      "in": ["orientation", "odom"],
+	      "out": ["pose3d"],
+	      "init":{}
+      },
       "depth": {
         "driver": "realsense",
         "init": {
@@ -243,6 +249,8 @@
               ["cortexpilot.emergency_stop", "app.emergency_stop"],
               ["serial.raw", "cortexpilot.raw"],
               ["cortexpilot.raw", "serial.raw"],
+              ["cortexpilot.pose2d", "localization.odom"],
+              ["cortexpilot.orientation", "localization.orientation"],
               ["lidar_tcp.raw", "lidar.raw"],
               ["lidar.raw", "lidar_tcp.raw"],
               ["lidar_back_tcp.raw", "lidar_back.raw"],
