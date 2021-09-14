@@ -18,8 +18,6 @@ class ArtifactDetectorJetson(Node):
         super().__init__(config, bus)
         bus.register("localized_artf", "dropped", "debug_image", "debug_result")
         self.time = None
-        self.width = None
-        self.height = None
         self.camera_pose = config.get("camera_pose", ([0, 0, 0], [0, 0, 0, 1]))
         self.fx = config.get("fx", 149.01)
         self.detector = CvDetector(1).subt_detector
@@ -51,18 +49,12 @@ class ArtifactDetectorJetson(Node):
 
     def detect(self, img_data):
         img = cv2.imdecode(np.frombuffer(img_data, dtype=np.uint8), cv2.IMREAD_COLOR)
-        if self.width is None:
-            self.height, self.width = img.shape[:2]
-        assert self.width == img.shape[1], (self.width, img.shape[1])
-        assert self.height == img.shape[0], (self.height, img.shape[0])
-
         result = self.detector(img)
         if result:
             self.publish('debug_result', result)
             for res in result:
-                dist = 2  # There is no source of the artf dist in this moment so just put some number
-                report = result2report(res, (dist, self.width, self.height), self.fx, self.last_pose3d,
-                                            self.camera_pose, 10)  # TODO real camera_pose and robot_pose
+                fake_depth = np.ones(img.shape[:2]) * 1  # There is no source of the artf dist in this moment so just put some number
+                report = result2report(res, fake_depth, self.fx, self.last_pose3d, self.camera_pose, 10)
                 if report is not None:
                     self.publish('localized_artf', report)
                     self.publish('debug_image', img_data)
