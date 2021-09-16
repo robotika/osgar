@@ -11,7 +11,7 @@ class Pull:
 
     def __init__(self, config, bus):
         bus.register(*config['outputs'])
-        self.set_bind = config.get("bind", False)
+        self.is_bind_set = config.get("bind", False)
         self.endpoint = config.get('endpoint', 'tcp://127.0.0.1:5565')
         self.timeout = config.get('timeout', 1) # default recv timeout 1s
         self.thread = Thread(target=self.run)
@@ -27,14 +27,13 @@ class Pull:
     def run(self):
         context = zmq.Context.instance()
         socket = context.socket(zmq.PULL)
+        # https://stackoverflow.com/questions/7538988/zeromq-how-to-prevent-infinite-wait
         socket.RCVTIMEO = int(self.timeout * 1000)  # convert to milliseconds
 
-        if self.set_bind:
+        if self.is_bind_set:
             socket.LINGER = 100
             socket.bind(self.endpoint)
-
         else:
-            # https://stackoverflow.com/questions/7538988/zeromq-how-to-prevent-infinite-wait
             socket.connect(self.endpoint)
 
         with contextlib.closing(socket):
