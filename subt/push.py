@@ -12,7 +12,7 @@ class Push:
 
     def __init__(self, config, bus):
         bus.register()
-        self.bind = config.get("bind", False)
+        self.is_bind_set = config.get("bind", False)
         self.endpoint = config.get('endpoint', 'tcp://127.0.0.1:5566')
         self.timeout = config.get('timeout', 1) # default send timeout 1s, effective on full queue only
         self.thread = Thread(target=self.run)
@@ -29,7 +29,7 @@ class Push:
         context = zmq.Context.instance()
         socket = context.socket(zmq.PUSH)
 
-        if self.bind:
+        if self.is_bind_set:
             socket.setsockopt(zmq.LINGER, 100)  # milliseconds
             socket.bind(self.endpoint)
         else:
