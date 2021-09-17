@@ -15,7 +15,7 @@
             "speed_policy": "conservative",
             "min_safe_dist": 0.8,
             "dangerous_dist": 0.5,
-            "rotation_p": 1.6,
+            "rotation_p": 3.0,
             "virtual_bumper_sec": 75,
             "virtual_bumper_radius": 10.0,
 	    "virtual_world": true,

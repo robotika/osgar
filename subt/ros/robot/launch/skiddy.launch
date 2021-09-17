@@ -69,9 +69,9 @@
     <param name="max_bump_height" value="0.1"/>
     <param name="max_slope" value="25"/>
     <param name="depth_subsampling" value="143"/>
-    <!-- Six seconds worth of history. -->
-    <param name="max_depth_observations" value="60"/> <!-- 6 * 10 Hz -->
-    <param name="max_scan_observations" value="30"/> <!-- 6 * 5 Hz -->
+    <!-- Twelve seconds worth of history. -->
+    <param name="max_depth_observations" value="120"/> <!-- 12 * 10 Hz -->
+    <param name="max_scan_observations" value="60"/> <!-- 12 * 5 Hz -->
     <param name="max_num_nearby_points" value="16000"/>
     <param name="robot_frame_id" value="robot"/>
     <remap from="local_map/input/camera_info" to="osgar/from/all_depth/camera_info"/>
