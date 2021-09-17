@@ -78,7 +78,6 @@
     <remap from="local_map/input/depth" to="osgar/from/all_depth/depth"/>
     <remap from="local_map/input/scan" to="osgar/from/all_scan"/>
     <remap from="local_map/output/scan" to="osgar/to/scan"/>
-    <remap from="local_map/output/map" to="osgar/to/points"/>
   </node>
 
   <!-- Data stream from ROS to Osgar -->
