@@ -17,21 +17,8 @@ except ImportError:
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 from osgar.lib.depth import decompress as decompress_depth
-from osgar.lib.quaternion import rotate_vector, rotation_matrix
-from subt.artifacts import (RESCUE_RANDY, BACKPACK, PHONE, HELMET, ROPE, EXTINGUISHER, DRILL, VENT, CUBE)
-
-
-NAME2IGN = {
-    'survivor': RESCUE_RANDY,
-    'backpack': BACKPACK,
-    'phone': PHONE,
-    'helmet': HELMET,
-    'rope': ROPE,
-    'fire_extinguisher': EXTINGUISHER,
-    'drill': DRILL,
-    'vent': VENT,
-    'cube' : CUBE
-}
+from osgar.lib.quaternion import rotate_vector, rotation_matrix, transform
+from subt.artf_utils import NAME2IGN
 
 
 def check_borders(result, borders):
@@ -80,12 +67,6 @@ def as_matrix(translation, rotation):
     return m
 
 
-def transform(transformation, xyz):
-    shift, rotation = transformation
-    rotated = rotate_vector(xyz, rotation)
-    return [sum(v) for v in zip(rotated, shift)]
-
-
 def result2report(result, depth, fx, robot_pose, camera_pose, max_depth):
     """return relative XYZ distances to camera"""
     if depth is None:
@@ -106,9 +87,9 @@ def result2report(result, depth, fx, robot_pose, camera_pose, max_depth):
                   scale * (width/2 - (x_min + x_max)/2)/fx,  # Y-coordinate is to the left
                   scale * (height/2 - (y_min + y_max)/2)/fx]  # Z-up
     # Coordinate of the artifact relative to the robot.
-    robot_rel = transform(camera_pose, camera_rel)
+    robot_rel = transform(camera_rel, camera_pose)
     # Global coordinate of the artifact.
-    world_xyz = transform(robot_pose, robot_rel)
+    world_xyz = transform(robot_rel, robot_pose)
     return [NAME2IGN[result[0][0]], world_xyz]
 
 
