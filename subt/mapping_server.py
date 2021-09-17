@@ -6,6 +6,9 @@ import requests
 import time
 import cbor
 import gzip
+import struct
+
+import numpy as np
 
 from osgar.lib.serialize import deserialize
 from osgar.logger import LogReader, lookup_stream_id
@@ -38,20 +41,38 @@ class CommandPostRelay(object):
         return res
 
 
-def create_map(arr):
+def create_map(arr, time_sec=0.0):
     return {
+        'header': {
+            'stamp': time_sec,
+            'frame_id': 'darpa'
+        },
+        'origin': {
+            'position': {
+                'x': 0.0,
+                'y': 0.0,
+                'z': 0.0
+            },
+            'orientation': {
+                'x': 0.0,
+                'y': 0.0,
+                'z': 0.0,
+                'w': 1.0
+            }
+        },
         'fields':
             [
                 {'name': 'x', 'offset': 0, 'datatype': 7, 'count': 1},
                 {'name': 'y', 'offset': 4, 'datatype': 7, 'count': 1},
                 {'name': 'z', 'offset': 8, 'datatype': 7, 'count': 1},
+                {'name': 'rgba', 'offset': 12, 'datatype': 6, 'count': 1},
             ],
-        'point_step': 12,
+        'point_step': 16,
         'data': arr[0].tobytes()
     }
 
 
-def mapping_server(logfile, cpr, loop=False):
+def mapping_server0(logfile, cpr, loop=False):
     stream_id = lookup_stream_id(logfile, 'fromros.points')
     with LogReader(args.logfile, only_stream_id=stream_id) as logreader:
         for timestamp, stream, raw_data in logreader:
@@ -68,6 +89,19 @@ def mapping_server(logfile, cpr, loop=False):
             if not loop:
                 break
             time.sleep(1.0)
+
+def mapping_server(logfile, cpr, loop=False):
+    i = 0
+    while True:
+        cloud = create_map(np.zeros(shape=(1, 0, 3), dtype=np.float32), time_sec=i)
+        cloud['data'] = struct.pack('<fffI', i, 1, 2, 0xFF000000)
+        print(cloud, len(cloud))
+        res = cpr.send_map_msg(u'PointCloud2', msg=cloud, name=u'Skiddy')  # vs. Kloubak
+        print(res)
+        if not loop:
+            break
+        time.sleep(1.0)
+        i += 1
 
 
 if __name__ == '__main__':
