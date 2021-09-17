@@ -8,7 +8,7 @@
             "out": ["raw"],
             "init": {
               "url": "http://192.168.0.32/image?res=half",
-              "sleep": 0.2,
+              "sleep": 0.1,
               "timeout": 1.0
           }
       },
@@ -18,7 +18,7 @@
             "out": ["raw"],
             "init": {
               "url": "http://192.168.0.33/image?res=half",
-              "sleep": 0.2,
+              "sleep": 0.1,
               "timeout": 1.0
           }
       },
@@ -83,7 +83,7 @@
       ["detector_rear.localized_artf", "transmitter.localized_artf_rear"],
       ["detector_rear.debug_image", "transmitter.debug_image_rear"],
 
-      ["T200.pose3d", "transmitter.pose3d"],
+      ["T200_rear.pose3d", "transmitter.pose3d"],
       ["D435_slope.depth", "transmitter.depth"],
 
       ["receiver.angle", "detector.angle"],
