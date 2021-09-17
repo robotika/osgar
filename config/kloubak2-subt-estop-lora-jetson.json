@@ -168,9 +168,22 @@
           "driver": "subt.pull:Pull",
           "init": {
             "endpoint": "tcp://192.168.0.23:5557",
-            "outputs": ["localized_artf", "debug_image", "pose3d", "depth"]
+            "outputs": ["pose3d", "depth"]
           }
        },
+      "from_jetson_rear": {
+          "driver": "subt.pull:Pull",
+          "init": {
+            "endpoint": "tcp://192.168.0.24:5557",
+            "outputs": ["pose3d", "depth", "localized_artf", "debug_image", "localized_artf_rear", "debug_image_rear"]
+          }
+       },
+      "to_jetson_rear": {
+          "driver": "subt.push:Push",
+          "init": {
+            "endpoint": "tcp://192.168.0.24:5558"
+          }
+      },
       "system": {
 	      "driver": "systemmonitor",
 	      "in": [],
@@ -209,7 +222,9 @@
               ["app.artf_xyz", "lora.artf"],
               ["kloubak.joint_angle", "app.joint_angle"],
               ["gas_serial.raw", "gas_detector.raw"],
-              ["gas_detector.raw", "gas_serial.raw"]
+              ["gas_detector.raw", "gas_serial.raw"],
+              ["kloubak.angle", "to_jetson_rear.angle"],
+              ["localization.pose3d", "to_jetson_rear.pose3d"]
       ]
   }
 }
