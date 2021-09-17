@@ -1,5 +1,5 @@
 """
-    Quick check of robot logfiles.
+    Quick check of kloubak logfiles.
 """
 import os
 
@@ -9,8 +9,7 @@ from osgar.lib.serialize import deserialize
 
 
 # Relevant streams, expected min frequency and expected max gap between msg.
-g_relevant_streams = {
-    "kloubak":{
+g_relevant_streams = {  # used just for kloubak robot
         "kloubak.encoders": [19, 0.5],
         "kloubak.can": [79, 0.5],
         "kloubak.joint_angle": [19, 0.5],
@@ -22,8 +21,6 @@ g_relevant_streams = {
         "imu.rotation": [14, 0.5],
         "wifi.wifiscan": [0.7, 2],
         "gas_detector.co2": [1, 3]
-    },
-    "skiddy":{}  # TODO
 }
 
 
@@ -35,7 +32,7 @@ def main(logfile, streams):
     relevant_streams_id = [lookup_stream_id(logfile, name) for name in streams.keys()]
     stat_list = [np.array([])] * len(relevant_streams_id)
     ecoder_stream_id = lookup_stream_id(logfile, "kloubak.encoders")
-    was_time_in_sec = None
+    prev_time_in_sec = None
     time_diff = None
     with LogReader(logfile, only_stream_id=relevant_streams_id) as log:
         for timestamp, stream_id, data in log:
@@ -45,15 +42,13 @@ def main(logfile, streams):
 
             if stream_id == ecoder_stream_id:
                 encoders = deserialize(data)
-                for num in encoders:
-                    if num > 100:
-                        if was_time_in_sec is not None:
-                            time_diff = time_in_sec - was_time_in_sec
-                        print(f"\nEncoders: {encoders}, time diff: {time_diff}")
-                was_time_in_sec = time_in_sec
+                for enc in encoders:
+                    if enc > abs(100):
+                        if prev_time_in_sec is not None:
+                            time_diff = time_in_sec - prev_time_in_sec
+                        print(f"\nEncoders: {encoders}, time diff: {time_diff}, at {timestamp}")
+                prev_time_in_sec = time_in_sec
 
-    if g_is_check_encoders:
-        return
     for arr, name in zip(stat_list, streams):
         gaps_event = False
         if len(arr) <= 1:
@@ -86,20 +81,17 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('logfile', help='filename of stored file or directory')
-    parser.add_argument('--robot', help='robot name', default="kloubak")
     parser.add_argument('--keyword', help='keyword in a logname, e.g. kloubak2-subt-estop-lora-jetson')
-    parser.add_argument('--check-encoders', help='check unexpected data on kloubak encoders only', action='store_true')
     args = parser.parse_args()
 
-    relevant_streams = g_relevant_streams[args.robot]
-    g_is_check_encoders = args.check_encoders
+    relevant_streams = g_relevant_streams
     logfile = args.logfile
     if os.path.isdir(logfile):
         if args.keyword:
             keyword = args.keyword
         else:
-            print("WARNING: logname keyword is not defined. Used robot name.")
-            keyword = args.robot
+            print("WARNING: logname keyword is not defined. Used robot name: kloubak.")
+            keyword = "kloubak"
 
         logname_list = os.listdir(logfile)
         for logname in logname_list:
