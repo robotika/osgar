@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "serial": {
+          "driver": "subt.serialloop:SerialLoop",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyACM0", "speed": 115200, "timeout": 0.02}
+      },
+      "fromapp": {
+          "driver": "subt.pull:Pull",
+          "out": ["raw"],
+          "init": {
+              "endpoint": "tcp://127.0.0.1:5590",
+              "bind": true,
+              "outputs": ["raw"]
+          }
+      },
+      "toapp": {
+          "driver": "subt.push:Push",
+          "init": {
+              "endpoint": "tcp://127.0.0.1:5591",
+              "bind": true
+          }
+      }
+    },
+    "links": [["fromapp.raw", "serial.raw"],
+              ["serial.raw", "toapp.raw"]]
+  }
+}
