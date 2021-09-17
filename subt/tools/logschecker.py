@@ -5,6 +5,7 @@ import os
 
 import numpy as np
 from osgar.logger import LogReader, lookup_stream_id
+from osgar.lib.serialize import deserialize
 
 
 # Relevant streams, expected min frequency and expected max gap between msg.
@@ -20,13 +21,7 @@ g_relevant_streams = {
         "imu.orientation": [14, 0.5],
         "imu.rotation": [14, 0.5],
         "wifi.wifiscan": [0.7, 2],
-        "gas_detector.co2": [1, 3],
-        "rosmsg.image": [1, 3],
-        "rosmsg.pose2d": [10, 1],
-        "rosmsg.depth": [1, 3],
-        "rosmsg_rear.image": [1, 3],
-        "rosmsg_rear.pose2d": [10, 1],
-        "rosmsg_rear.depth": [1, 3]
+        "gas_detector.co2": [1, 3]
     },
     "skiddy":{}  # TODO
 }
@@ -39,12 +34,26 @@ def main(logfile, streams):
     print("-"*60)
     relevant_streams_id = [lookup_stream_id(logfile, name) for name in streams.keys()]
     stat_list = [np.array([])] * len(relevant_streams_id)
+    ecoder_stream_id = lookup_stream_id(logfile, "kloubak.encoders")
+    was_time_in_sec = None
+    time_diff = None
     with LogReader(logfile, only_stream_id=relevant_streams_id) as log:
         for timestamp, stream_id, data in log:
             time_in_sec = timestamp.total_seconds()
             item_id = relevant_streams_id.index(stream_id)
             stat_list[item_id] = np.append(stat_list[item_id], time_in_sec)
 
+            if stream_id == ecoder_stream_id:
+                encoders = deserialize(data)
+                for num in encoders:
+                    if num > 100:
+                        if was_time_in_sec is not None:
+                            time_diff = time_in_sec - was_time_in_sec
+                        print(f"\nEncoders: {encoders}, time diff: {time_diff}")
+                was_time_in_sec = time_in_sec
+
+    if g_is_check_encoders:
+        return
     for arr, name in zip(stat_list, streams):
         gaps_event = False
         if len(arr) <= 1:
@@ -79,9 +88,11 @@ if __name__ == "__main__":
     parser.add_argument('logfile', help='filename of stored file or directory')
     parser.add_argument('--robot', help='robot name', default="kloubak")
     parser.add_argument('--keyword', help='keyword in a logname, e.g. kloubak2-subt-estop-lora-jetson')
+    parser.add_argument('--check-encoders', help='check unexpected data on kloubak encoders only', action='store_true')
     args = parser.parse_args()
 
     relevant_streams = g_relevant_streams[args.robot]
+    g_is_check_encoders = args.check_encoders
     logfile = args.logfile
     if os.path.isdir(logfile):
         if args.keyword:
