@@ -38,7 +38,8 @@ class Cortexpilot(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('raw', 'encoders', 'emergency_stop', 'pose2d', 
-                     'voltage', 'rotation', 'orientation', 'scan')
+                     'voltage', 'rotation', 'orientation', 'scan',
+                     'dropped')
 
         self._buf = b''
 
@@ -297,22 +298,17 @@ class Cortexpilot(Node):
 #            scan[-zero_sides:] = [0]*zero_sides
             self.publish('scan', scan)
 
-    def slot_raw(self, timestamp, data):
-        self.time = timestamp
-        self._buf += data
-        packet = self.get_packet()
-        if packet is not None:
-            if len(packet) < 100:  # TODO cmd value
-                print(packet)
-            else:
-                prev = self.flags
-                self.parse_packet(packet)
-                if prev != self.flags:
-                    print(self.time, 'Flags:', hex(self.flags))
-            self.publish('raw', self.create_packet())
+    def process_packet(self, packet):
+        assert packet is not None
+        if len(packet) < 100:  # TODO cmd value
+            print(packet)
+        else:
+            prev = self.flags
+            self.parse_packet(packet)
+            if prev != self.flags:
+                print(self.time, 'Flags:', hex(self.flags))
 
-    def slot_desired_speed(self, timestamp, data):
-        self.time = timestamp
+    def on_desired_speed(self, data):
         self.desired_speed, self.desired_angular_speed = data[0] / 1000.0, math.radians(data[1] / 100.0)
         if abs(self.desired_speed) < 0.2 and abs(self.desired_angular_speed) > 0.2:
             if self.speeds.__name__ != "oscilate":
@@ -324,14 +320,31 @@ class Cortexpilot(Node):
 
     def run(self):
         try:
-            self.publish('raw', self.query_version())
+            now = self.publish('raw', self.query_version())
+            dropped = 0
             while True:
                 dt, channel, data = self.listen()
                 self.time = dt
                 if channel == 'raw':
-                    self.slot_raw(dt, data)
+                    self._buf += data
+                    prev = None
+                    while True:
+                        packet = self.get_packet()
+                        if packet is None:
+                            if dt > now:
+                                packet = prev
+                                if packet is not None:
+                                    dropped -= 1
+                            break
+                        prev = packet
+                        dropped += 1
+                    if packet is not None:
+                        self.publish('dropped', dropped)
+                        dropped = 0
+                        self.process_packet(packet)
+                        now = self.publish('raw', self.create_packet())
                 elif channel == 'desired_speed':
-                    self.slot_desired_speed(dt, data)
+                    self.on_desired_speed(data)
                 else:
                     assert False, channel  # unsupported input channel
         except BusShutdownException:
