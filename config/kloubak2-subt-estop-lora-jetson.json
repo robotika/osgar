@@ -213,7 +213,6 @@
               ["kloubak.pose2d", "localization.odom"],
               ["imu.orientation", "localization.orientation"],
               ["localization.pose3d", "app.pose3d"],
-              ["kloubak.pose2d", "app.pose2d"],
               ["lidar_tcp.raw", "lidar.raw"],
               ["lidar.raw", "lidar_tcp.raw"],
               ["lidar_back_tcp.raw", "lidar_back.raw"],
@@ -242,3 +241,4 @@
       ]
   }
 }
+
