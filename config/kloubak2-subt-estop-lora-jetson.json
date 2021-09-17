@@ -17,14 +17,6 @@
             "safety_turning_coeff": 0.6
           }
       },
-      "detector": {
-          "driver": "subt.artifacts:ArtifactDetector",
-          "in": ["image", "scan"],
-          "out": ["artf", "dropped"],
-          "init": {
-            "virtual_world": false
-          }
-      },
       "reporter": {
           "driver": "subt.artf_reporter:ArtifactReporter",
           "in": ["artf_xyz"],
@@ -196,7 +188,14 @@
 	      "out": ["pose3d"],
 	      "init":{}
       },
-            "system": {
+      "from_jetson_front": {
+          "driver": "subt.pull:Pull",
+          "init": {
+            "endpoint": "tcp://192.168.0.23:5557",
+            "outputs": ["localized_artf", "debug_image", "pose3d", "depth"]
+          }
+       },
+      "system": {
 	      "driver": "systemmonitor",
 	      "in": [],
 	      "out": ["cpu", "ram", "temp"],
@@ -226,9 +225,6 @@
               ["estop_serial.raw", "estop.raw"],
               ["estop.raw", "estop_serial.raw"],
               ["estop.emergency_stop", "app.emergency_stop"],
-              ["camera.raw", "detector.image"],
-              ["lidar.scan", "detector.scan"],
-              ["detector.artf", "app.artf"],
               ["app.artf_xyz", "reporter.artf_xyz"],
               ["lora_serial.raw", "lora.raw"],
               ["lora.raw", "lora_serial.raw"],
@@ -241,9 +237,7 @@
               ["gas_detector.raw", "gas_serial.raw"],
               ["receiver.raw", "rosmsg.slot_raw"],
               ["rosmsg.scan", "scan_mixer.rs_scan"],
-              ["lidar.scan", "scan_mixer.scan"],
-              ["wifi.wifiscan", "detector.wifiscan"],
-              ["gas_detector.co2", "detector.co2"]
+              ["lidar.scan", "scan_mixer.scan"]
       ]
   }
 }
