@@ -184,7 +184,7 @@
       "detector": {
         "driver": "subt.artf_edgetpu_detector:Detector",
         "in": ["front", "rear"],
-        "out" : [],
+        "out" : ['localized_artf', 'debug_rgbd'],
         "init": {
           "camera": {
             "front": {

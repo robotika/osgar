@@ -38,6 +38,12 @@ def rotate_vector(vector, quaternion):
     return multiply(part1, con)[:-1]
 
 
+def transform(vector, transformation):
+    translation, rotation = transformation
+    rotated = rotate_vector(vector, rotation)
+    return [sum(v) for v in zip(rotated, translation)]
+
+
 def normalize(quaternion):
     x0, y0, z0, w0 = quaternion
     sqr_size = x0*x0 + y0*y0 + z0*z0 + w0*w0
