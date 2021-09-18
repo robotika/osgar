@@ -188,6 +188,7 @@
         "in": ["front", "rear"],
         "out" : ["localized_artf", "debug_rgbd"],
         "init": {
+          "device": ":0",
           "camera": {
             "front": {
               "w": 640,

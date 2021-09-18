@@ -19,7 +19,7 @@ class Detector(Node):
         self.verbose = verbose
 
         model_path = config.get('model_path', 'subt/models/system/edgetpu.0/model_edgetpu.tflite')
-        self.interpreter = edgetpu.make_interpreter(model_path)
+        self.interpreter = edgetpu.make_interpreter(model_path, device=config.get('device'))
         self.interpreter.allocate_tensors()
 
         self.thresholds = config.get('thresholds', {
