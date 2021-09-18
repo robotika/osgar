@@ -265,8 +265,19 @@
           "in": ["raw"],
           "out": ["raw"],
           "init": {"port": "/dev/estop", "speed": 9600}
+      },
+      "lora": {
+          "driver": "lora",
+          "in": ["raw", "pose2d"],
+          "out": ["raw", "cmd"],
+          "init": {}
+      },
+      "lora_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/lora", "speed": 115200}
       }
-
     },
     "links": [["app.desired_speed", "cortexpilot.desired_speed"],
               ["cortexpilot.pose2d", "app.pose2d"],
@@ -299,6 +310,12 @@
               ["sec_timer.tick", "app.sim_time_sec"],
               ["estop_serial.raw", "estop.raw"],
               ["estop.raw", "estop_serial.raw"],
-              ["estop.emergency_stop", "app.emergency_stop"]]
+              ["estop.emergency_stop", "app.emergency_stop"],
+              ["lora_serial.raw", "lora.raw"],
+              ["lora.raw", "lora_serial.raw"],
+              ["app.pose2d", "lora.pose2d"],
+              ["lora.cmd", "app.cmd"],
+              ["app.artf_xyz", "lora.artf"]
+    ]
   }
 }
