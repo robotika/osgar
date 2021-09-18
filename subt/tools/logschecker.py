@@ -31,7 +31,7 @@ def main(logfile, streams):
     print("-"*60)
     relevant_streams_id = [lookup_stream_id(logfile, name) for name in streams.keys()]
     stat_list = [np.array([])] * len(relevant_streams_id)
-    ecoder_stream_id = lookup_stream_id(logfile, "kloubak.encoders")
+    encoder_stream_id = lookup_stream_id(logfile, "kloubak.encoders")
     prev_time_in_sec = None
     time_diff = None
     with LogReader(logfile, only_stream_id=relevant_streams_id) as log:
@@ -40,7 +40,7 @@ def main(logfile, streams):
             item_id = relevant_streams_id.index(stream_id)
             stat_list[item_id] = np.append(stat_list[item_id], time_in_sec)
 
-            if stream_id == ecoder_stream_id:
+            if stream_id == encoder_stream_id:
                 encoders = deserialize(data)
                 for enc in encoders:
                     if enc > abs(100):
