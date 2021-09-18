@@ -184,6 +184,12 @@
             "endpoint": "tcp://192.168.0.24:5558"
           }
       },
+       "to_jetson_front": {
+          "driver": "subt.push:Push",
+          "init": {
+            "endpoint": "tcp://192.168.0.24:5558"
+          }
+      },
       "system": {
 	      "driver": "systemmonitor",
 	      "in": [],
@@ -225,7 +231,9 @@
               ["gas_serial.raw", "gas_detector.raw"],
               ["gas_detector.raw", "gas_serial.raw"],
               ["kloubak.angle", "to_jetson_rear.angle"],
-              ["localization.pose3d", "to_jetson_rear.pose3d"]
+              ["localization.pose3d", "to_jetson_rear.pose3d"],
+              ["kloubak.angle", "to_jetson_front.angle"],
+              ["localization.pose3d", "to_jetson_front.pose3d"]
       ]
   }
 }
