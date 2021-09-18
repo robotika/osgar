@@ -189,6 +189,7 @@
         "out" : ["localized_artf", "debug_rgbd"],
         "init": {
           "device": ":0",
+          "batch_size": 2,
           "camera": {
             "front": {
               "w": 640,

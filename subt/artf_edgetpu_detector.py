@@ -6,6 +6,7 @@ from pycoral.utils import edgetpu
 from pycoral.adapters import common as coral_common
 from pycoral.adapters import detect as coral_detection
 
+from osgar.bus import BusShutdownException
 from osgar.lib.depth import compress, decompress
 from osgar.lib.quaternion import transform
 from osgar.node import Node
@@ -14,7 +15,7 @@ from subt.artf_utils import NAME2IGN
 class Detector(Node):
     def __init__(self, config, bus, verbose=False):
         super().__init__(config, bus)
-        bus.register("localized_artf", "debug_rgbd")
+        bus.register('localized_artf', 'debug_rgbd', 'dropped')
 
         self.verbose = verbose
 
@@ -42,12 +43,34 @@ class Detector(Node):
 
         self.camera_params = config['camera']
 
+        self.batch_size = config.get('batch_size', 1)  # how many images process in one step
+
         self.input_size = coral_common.input_size(self.interpreter)
 
 
-    def update(self):
-        timestamp, channel, data  = self.bus.listen()
-        robot_pose, camera_pose, img_data, compressed_depth = data
+    def run(self):
+        try:
+            dropped = 0
+            while True:
+                now = self.publish("dropped", dropped)
+                dropped = -1
+                timestamp = now
+                while timestamp <= now:
+                    timestamp, channel, data = self.bus.listen()
+                    dropped += 1
+                msg = channel, data
+                for count in range(self.batch_size):
+                    self.process(*msg)
+                    if count + 1 < self.batch_size:
+                        # process also immediately following images
+                        timestamp, channel, data = self.bus.listen()
+                        msg = channel, data
+        except BusShutdownException:
+            pass
+
+
+    def process(self, channel, rgbd):
+        robot_pose, camera_pose, img_data, compressed_depth = rgbd
         img = Image.open(BytesIO(img_data)).convert('RGB')
 
         input_img = img.resize(self.input_size, Image.ANTIALIAS)
