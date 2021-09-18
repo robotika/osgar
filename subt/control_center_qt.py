@@ -43,8 +43,13 @@ g_artf_colors = {
         BACKPACK : Qt.red,
         RESCUE_RANDY : Qt.yellow,
         PHONE : Qt.blue,
+        EXTINGUISHER : Qt.darkRed,
+        DRILL : QColor("orange"),
         VENT : Qt.white,
-        GAS : Qt.darkYellow
+        GAS : Qt.darkYellow,
+        HELMET : Qt.gray,
+        ROPE : Qt.darkBlue,
+        CUBE : Qt.cyan
     }
 ARTF_TYPES = g_artf_colors.keys()
 
@@ -94,7 +99,10 @@ class DARPAReporter(osgar.node.Node):
         x, y, z = [a/1000.0 for a in xyz]
 
         name2darpa = {RESCUE_RANDY: 'Survivor', BACKPACK: 'Backpack', PHONE: 'Cell Phone',
-                      GAS: 'Gas', VENT: 'Vent'}
+                      DRILL: 'Drill', EXTINGUISHER: 'Fire Extinguisher',
+                      GAS: 'Gas', VENT: 'Vent',
+                      HELMET: 'Helmet', ROPE: 'Rope',
+                      CUBE: 'Cube'}
         artf_type = name2darpa[name]
 
         before = json.loads(bytes.decode(get_status()))
