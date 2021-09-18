@@ -22,7 +22,7 @@ import osgar.replay
 import osgar.logger
 import osgar.bus
 import osgar.node
-from subt.artifacts import BACKPACK, RESCUE_RANDY, PHONE, VENT, GAS
+from subt.artf_utils import (RESCUE_RANDY, BACKPACK, PHONE, HELMET, ROPE, EXTINGUISHER, DRILL, VENT, CUBE, GAS)
 from subt.report_artf import get_status, report_artf
 
 DEFAULT_ARTF_Z_COORD = 1.0  # when reporting artifacts manually from View
@@ -43,8 +43,13 @@ g_artf_colors = {
         BACKPACK : Qt.red,
         RESCUE_RANDY : Qt.yellow,
         PHONE : Qt.blue,
+        EXTINGUISHER : Qt.darkRed,
+        DRILL : QColor("orange"),
         VENT : Qt.white,
-        GAS : Qt.darkYellow
+        GAS : Qt.darkYellow,
+        HELMET : Qt.gray,
+        ROPE : Qt.darkBlue,
+        CUBE : Qt.cyan
     }
 ARTF_TYPES = g_artf_colors.keys()
 
@@ -94,7 +99,10 @@ class DARPAReporter(osgar.node.Node):
         x, y, z = [a/1000.0 for a in xyz]
 
         name2darpa = {RESCUE_RANDY: 'Survivor', BACKPACK: 'Backpack', PHONE: 'Cell Phone',
-                      GAS: 'Gas', VENT: 'Vent'}
+                      DRILL: 'Drill', EXTINGUISHER: 'Fire Extinguisher',
+                      GAS: 'Gas', VENT: 'Vent',
+                      HELMET: 'Helmet', ROPE: 'Rope',
+                      CUBE: 'Cube'}
         artf_type = name2darpa[name]
 
         before = json.loads(bytes.decode(get_status()))
@@ -375,11 +383,10 @@ class MainWindow(QMainWindow):
         self.cb = QComboBox()
         self.cb.addItem("#0 - ALL")
         self.cb.addItem("-----------------")  # 1 is reserved for the Control Center LoRa
-        self.cb.addItem("#2 - Eduro")
-        self.cb.addItem("#3 - Kloubak K3")
-        self.cb.addItem("#4 - MOBoS")
+        self.cb.addItem("#2 - Skiddy")
+        self.cb.addItem("#3")
+        self.cb.addItem("#4")
         self.cb.addItem("#5 - Kloubak K2")
-        self.cb.addItem("#6 - Maria")
         self.cb.currentIndexChanged.connect(self.selectionchange)
         layout.addWidget(self.cb)
 
