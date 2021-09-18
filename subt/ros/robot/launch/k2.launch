@@ -9,7 +9,7 @@
   <!-- Announces the position of depth camera relative to the center of the robot.
        The name of the announced frame needs to match the name of the corresponding depth stream from Osgar to ROS extended with a "/pose" suffix to distinguish from related optical frames configured below. -->
   <node pkg="tf" type="static_transform_publisher" name="front_camera_tf" args="0.5 0 0.525 0 -0.4363323 0 robot front_depth/pose 100" />
-  <node pkg="tf" type="static_transform_publisher" name="rear_camera_tf" args="-0.5 0 0.59 -3.141592653589793 -0.4363323 0 robot rear_depth/pose 100" />
+  <node pkg="tf" type="static_transform_publisher" name="rear_camera_tf" args="-0.5 0 0.59 -3.141592653589793 -0.4363323 0 angle rear_depth/pose 100" />
 
   <!-- Announces optical camera frames relative to "normal" camera frames.
        The name of the announced frames need to macth the name of the corresponding depth streams from Osgar to ROS. -->
@@ -25,10 +25,10 @@
     <node name="pull_from_osgar" pkg="proxy" type="pull.py">
      <!-- Stream parameters: stream_name:[depth|pose]:...
           Depth streams have extra parameters in the form of width:height:ppx:ppy:fx:fy
-          Pose stream does not have any extra parameters.
+          Pose has one extra parameter representing the name of the coordinate frame this pose belongs to.
 
           Depth camera parameters can be obtained with `rs-enumerate-devices -c`-->
-      <param name="streams" value="front_depth:depth:160:120:80.9344635009765:59.733184814453:95.5871505737305:95.5871505737305,rear_depth:depth:160:120:79.775161743164:59.8928451538085:95.64727783203125:95.64727783203125,front_scan:scan:-135:135:0.1:10.0,rear_scan:scan:-135:135:0.1:10.0,tracking_pose:pose"/>
+      <param name="streams" value="front_depth:depth:160:120:80.9344635009765:59.733184814453:95.5871505737305:95.5871505737305,rear_depth:depth:160:120:79.775161743164:59.8928451538085:95.64727783203125:95.64727783203125,front_scan:scan:-135:135:0.1:10.0,rear_scan:scan:-135:135:0.1:10.0,tracking_pose:pose:odom,angle:pose:robot"/>
     </node>
 
     <!-- Remove noise -->
