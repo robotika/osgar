@@ -73,6 +73,7 @@
     <param name="max_depth_observations" value="72"/> <!-- 12 * 6 Hz -->
     <param name="max_scan_observations" value="60"/> <!-- 12 * 5 Hz -->
     <param name="max_num_nearby_points" value="12000"/>
+    <param name="map_scan_resolution" value="4"/>
     <param name="robot_frame_id" value="robot"/>
     <remap from="local_map/input/camera_info" to="osgar/from/all_depth/camera_info"/>
     <remap from="local_map/input/depth" to="osgar/from/all_depth/depth"/>
