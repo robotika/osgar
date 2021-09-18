@@ -57,10 +57,10 @@
   </group>
 
   <node pkg="proxy" type="traversability" name="local_map" output="screen">
-    <param name="publish_rate" value="0.05"/>
+    <param name="publish_rate" value="0.07"/>
     <param name="num_threads" value="3"/>
     <param name="blind_columns_left" value="20"/>
-    <param name="depth_image_stride" value="1"/>
+    <param name="depth_image_stride" value="2"/>
     <param name="horizontal_pixel_offset" value="3"/>
     <param name="vertical_pixel_offset" value="3"/>
     <param name="synthetic_obstacle_distance" value="0.64"/>
@@ -70,9 +70,9 @@
     <param name="max_slope" value="25"/>
     <param name="depth_subsampling" value="143"/>
     <!-- Twelve seconds worth of history. -->
-    <param name="max_depth_observations" value="120"/> <!-- 12 * 10 Hz -->
+    <param name="max_depth_observations" value="72"/> <!-- 12 * 6 Hz -->
     <param name="max_scan_observations" value="60"/> <!-- 12 * 5 Hz -->
-    <param name="max_num_nearby_points" value="16000"/>
+    <param name="max_num_nearby_points" value="12000"/>
     <param name="robot_frame_id" value="robot"/>
     <remap from="local_map/input/camera_info" to="osgar/from/all_depth/camera_info"/>
     <remap from="local_map/input/depth" to="osgar/from/all_depth/depth"/>
