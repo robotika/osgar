@@ -1,26 +1,8 @@
 {
   "version": 2,
   "robot": {
-    "modules": {
-      "camera": {
-          "driver": "http",
-          "in": [],
-          "out": ["raw"],
-          "init": {
-              "url": "http://192.168.0.32/image?res=half",
-              "sleep": 0.2,
-              "timeout": 1.0
-          }
-      },
-      "detector":{
-        "driver": "subt.jetson_artf_node:ArtifactDetectorJetson",
-        "in": ["image"],
-        "out": ["localized_artf", "dropped", "debug_image", "debug_result"],
-        "init": {
-          "camera_pose": [[0.15, 0, 0.38], [0, 0, 0, 1]]
-        }
-
-      },
+    "modules":
+    {
       "transmitter": {
           "driver": "subt.push:Push",
           "init": {
@@ -50,11 +32,8 @@
       }
     },
     "links": [
-      ["camera.raw", "detector.image"],
-      ["detector.localized_artf", "transmitter.localized_artf"],
-      ["detector.debug_image", "transmitter.debug_image" ],
-      ["T200.pose3d", "detector.pose3d"],
-      ["T200.pose3d", "transmitter.pose3d"]
+      ["T200.pose3d", "transmitter.pose3d"],
+      ["D435_slope.depth", "transmitter.depth"]
     ]
   }
 }
