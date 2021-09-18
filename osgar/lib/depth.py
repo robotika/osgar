@@ -5,6 +5,8 @@
 import cv2
 import numpy as np
 
+from osgar.lib.serialize import deserialize
+
 
 class DepthParams:
     def __init__(
@@ -284,8 +286,11 @@ def decompress(data):
     # It does not, however, store information about endiannes. All we can do is
     # hope that the current machine and the data origin machine have the same
     # one.
-    return cv2.imdecode(np.frombuffer(data, np.uint8),
-                        cv2.IMREAD_UNCHANGED).view(dtype=np.float32)[:,:,0]
+    depth_img = cv2.imdecode(np.frombuffer(data, np.uint8),
+                        cv2.IMREAD_UNCHANGED)
+    if depth_img is not None:
+        return depth_img.view(dtype=np.float32)[:,:,0]
+    return deserialize(data)
 
 
 def compress(depth):

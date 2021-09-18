@@ -6,7 +6,7 @@ from pycoral.utils import edgetpu
 from pycoral.adapters import common as coral_common
 from pycoral.adapters import detect as coral_detection
 
-from osgar.lib.depth import decompress
+from osgar.lib.depth import compress, decompress
 from osgar.lib.quaternion import transform
 from osgar.node import Node
 from subt.artf_utils import NAME2IGN
@@ -96,4 +96,5 @@ class Detector(Node):
                 if self.verbose:
                     print(ign_name, world_xyz, detection.score)
                 self.publish('localized_artf', [ign_name, world_xyz])
-                self.publish('debug_rgbd', data)
+                # Making sure the output depth is compressed. Input depth may or may not be.
+                self.publish('debug_rgbd', [robot_pose, camera_pose, img_data, compress(depth)])

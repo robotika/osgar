@@ -5,6 +5,7 @@ import numpy as np
 
 from osgar.lib.depth import compress
 from osgar.lib.quaternion import euler_to_quaternion
+from osgar.lib.serialize import serialize
 from osgar.node import Node
 
 
@@ -18,6 +19,9 @@ class Bundler(Node):
                                           [0.0, 1.0, 0.0, 0.0],
                                           [0.0, 0.0, 1.0, 0.0]]))
         camera_config = config.get('camera')
+        serialization_method = config.get('serialization', 'compressed')
+        assert(serialization_method in ['compressed', 'raw']), serialization_method
+        self.serialization = compress if serialization_method == 'compressed' else serialize
         if camera_config is not None:
             self.camera_pose = (
                     camera_config['xyz'],
@@ -62,7 +66,7 @@ class Bundler(Node):
                     [self.robot_pose,
                      self.camera_pose,
                      self.img,
-                     compress(self.reproject(self.depth))])
+                     self.serialization(self.reproject(self.depth))])
             self.img = None
             self.depth = None
         return channel
