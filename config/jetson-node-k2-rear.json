@@ -60,8 +60,8 @@
             "device": "D400",
             "depth_subsample": 1,
             "depth_rgb": true,
-            "depth_resolution": [640, 360],
-            "rgb_resolution": [640, 360],
+            "depth_resolution": [640, 480],
+            "rgb_resolution": [640, 480],
             "depth_fps": 6
           }
       },
@@ -71,6 +71,12 @@
             "serial_number": "2322110715",
             "device": "T200",
             "pose_subsample": 20
+          }
+      },
+      "to_front_jetson": {
+        "driver": "subt.push:Push",
+          "init": {
+            "endpoint": "tcp://192.168.0.23:5560"
           }
       }
     },
@@ -85,6 +91,7 @@
 
       ["T200_rear.pose3d", "transmitter.pose3d"],
       ["D435_slope.depth", "transmitter.depth"],
+      ["D435_slope.depth", "to_front_jetson.depth"],
 
       ["receiver.angle", "detector.angle"],
       ["receiver.pose3d", "detector.pose3d"],
