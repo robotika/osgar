@@ -24,7 +24,7 @@ would be teambase, but then it would be the single point of failure.
 """
 from osgar.node import Node
 from subt.trace import Trace, distance3D
-from subt.artifacts import (BACKPACK, PHONE, RESCUE_RANDY,  # common artifacts
+from subt.artf_utils import (BACKPACK, PHONE, RESCUE_RANDY,  # common artifacts
                             DRILL, EXTINGUISHER,  # tunnel
                             VENT, GAS,  # urban
                             HELMET, ROPE,  # cave

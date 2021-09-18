@@ -22,7 +22,7 @@ import osgar.replay
 import osgar.logger
 import osgar.bus
 import osgar.node
-from subt.artifacts import BACKPACK, RESCUE_RANDY, PHONE, VENT, GAS
+from subt.artf_utils import (RESCUE_RANDY, BACKPACK, PHONE, HELMET, ROPE, EXTINGUISHER, DRILL, VENT, CUBE, GAS)
 from subt.report_artf import get_status, report_artf
 
 DEFAULT_ARTF_Z_COORD = 1.0  # when reporting artifacts manually from View
