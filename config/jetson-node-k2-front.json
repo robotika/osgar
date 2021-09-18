@@ -100,7 +100,7 @@
         "in": [],
         "out": [],
         "init": {
-          "launch_file": "subt/ros/robot/launch/skiddy.launch"
+          "launch_file": "subt/ros/robot/launch/k2.launch"
         }
       },
       "toros": {
