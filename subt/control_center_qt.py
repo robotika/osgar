@@ -383,11 +383,10 @@ class MainWindow(QMainWindow):
         self.cb = QComboBox()
         self.cb.addItem("#0 - ALL")
         self.cb.addItem("-----------------")  # 1 is reserved for the Control Center LoRa
-        self.cb.addItem("#2 - Eduro")
-        self.cb.addItem("#3 - Kloubak K3")
-        self.cb.addItem("#4 - MOBoS")
+        self.cb.addItem("#2 - Skiddy")
+        self.cb.addItem("#3")
+        self.cb.addItem("#4")
         self.cb.addItem("#5 - Kloubak K2")
-        self.cb.addItem("#6 - Maria")
         self.cb.currentIndexChanged.connect(self.selectionchange)
         layout.addWidget(self.cb)
 
