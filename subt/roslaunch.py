@@ -25,7 +25,12 @@ class ROSLaunch(Node):
 
     def quit(self):
         print('roslaunch is shutting down ...')
-        os.killpg(self.ros_process.pid, signal.SIGHUP)
+        try:
+            os.killpg(self.ros_process.pid, signal.SIGHUP)
+        except ProcessLookupError:
+            # The process group no longer exists. It may have even be stopped by
+            # request_stop()
+            return
         try:
             self.ros_process.wait(timeout=5)
         except subprocess.TimeoutExpired:
