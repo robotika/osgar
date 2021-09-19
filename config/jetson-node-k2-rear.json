@@ -50,7 +50,7 @@
         "init": {
           "bind": true,
           "endpoint": "tcp://*:5558",
-          "outputs": ["angle", "pose3d"]
+          "outputs": ["pose3d", "joint_angle_pose"]
         }
       },
       "D435_slope": {
