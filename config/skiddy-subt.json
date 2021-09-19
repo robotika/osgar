@@ -323,6 +323,7 @@
               ["lora.raw", "lora_serial.raw"],
               ["app.pose2d", "lora.pose2d"],
               ["lora.cmd", "app.cmd"],
+              ["detector.localized_artf", "reporter.artf_xyz"],
               ["reporter.artf_cmd", "lora.artf"]
     ]
   }
