@@ -480,7 +480,7 @@ class RobotKloubak(Node):
 #                    print(self.last_joint_angle)
                     self.last_joint_angle = joint_rad(analog_joint_angle)
                     self.publish('joint_angle', [round(math.degrees(self.last_joint_angle)*100)])
-                    self.publish('joint_angle_pose', [[[0, 0, 0], euler_to_quaternion(math.pi-self.last_joint_angle, 0, 0)]])
+                    self.publish('joint_angle_pose', [[0, 0, 0], euler_to_quaternion(math.pi-self.last_joint_angle, 0, 0)])
             else:
                 self.can_errors += 1
         elif msg_id == CAN_ID_VOLTAGE:
