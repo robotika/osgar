@@ -115,6 +115,8 @@
 
       ["T200.pose3d", "transmitter.pose3d"],
       ["D435_slope.depth", "transmitter.depth"],
+      ["fromros.scan360", "transmitter.scan360"],
+      ["fromros.points", "transmitter.points"],
 
       ["D435_slope.depth", "small.depth"],
       ["from_jetson_rear_receiver.depth", "small_rear.depth"],
