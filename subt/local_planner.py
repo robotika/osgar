@@ -187,7 +187,7 @@ class LocalPlannerNumpy:
     def update(self, scan):
         self.scan = np.asarray(scan[::self.scan_subsample] if self.scan_subsample > 1 else scan) * 1e-3
 
-        if self.angles is None or len(self.scan) != self.angles.shape[0]:
+        if self.angles is None or len(self.scan) != self.angles.shape[1]:
             n = len(self.scan)
             delta = (self.scan_end - self.scan_start) / (n - 1)
             self.angles = np.linspace(
