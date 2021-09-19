@@ -210,6 +210,14 @@
           }
         }
       },
+      "reporter": {
+          "driver": "subt.artf_reporter:ArtifactReporter",
+          "in": ["artf_xyz"],
+          "out": ["artf_cmd"],
+          "init": {
+            "repeat_report_sec": 10
+          }
+      },
       "small": {
         "driver": "resize",
         "in": ["depth"],
@@ -315,7 +323,7 @@
               ["lora.raw", "lora_serial.raw"],
               ["app.pose2d", "lora.pose2d"],
               ["lora.cmd", "app.cmd"],
-              ["app.artf_xyz", "lora.artf"]
+              ["reporter.artf_cmd", "lora.artf"]
     ]
   }
 }
