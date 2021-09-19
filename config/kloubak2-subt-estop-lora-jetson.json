@@ -168,7 +168,7 @@
           "driver": "subt.pull:Pull",
           "init": {
             "endpoint": "tcp://192.168.0.23:5557",
-            "outputs": ["pose3d", "depth"]
+            "outputs": ["pose3d", "depth", "scan360", "points"]
           }
        },
       "from_jetson_rear": {
