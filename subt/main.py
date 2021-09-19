@@ -1121,7 +1121,13 @@ class SubTChallenge:
 
     def play(self):
         if self.is_virtual:
-            return self.play_virtual_track()
+            try:
+                with EmergencyStopMonitor(self):
+                    return self.play_virtual_track()
+            except EmergencyStopException:
+                print(self.time, "EMERGENCY STOP - terminating")
+            self.send_speed_cmd(0, 0)
+            self.wait(timedelta(seconds=3))
         else:
             return self.play_system_track()
 

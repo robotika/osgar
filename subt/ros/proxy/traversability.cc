@@ -134,6 +134,8 @@ class Traversability
       // Minimum range set in the published synthetic lidar scan representing
       // local map.
       float min_map_scan_range;
+      // Anglular resolution of the produced map scan.
+      float map_scan_resolution;
 
       // Traversability slope threshold, in radians. User input in ROS launch
       // file needs to be in degrees.
@@ -223,8 +225,10 @@ bool Traversability::Init()
   ros_handle_.param("max_num_nearby_points", config_.max_num_nearby_points, 60000);
   ros_handle_.param("map_range", config_.map_range, 8.0f);
   ros_handle_.param("min_map_scan_range", config_.min_map_scan_range, 0.001f);
+  ros_handle_.param("map_scan_resolution", config_.map_scan_resolution, 1.0f);  // In degrees.
+  config_.map_scan_resolution *= M_PI / 180;  // Converting to radians.
   ros_handle_.param("max_slope", config_.max_slope, 35.0f); // In degrees.
-  config_.max_slope = config_.max_slope * M_PI / 180;  // Converting to radians.
+  config_.max_slope *= M_PI / 180;  // Converting to radians.
   ros_handle_.param("max_bump_height", config_.max_bump_height, 0.068f);
   ros_handle_.param("max_dip_down", config_.max_dip_down, 0.2f);
   ros_handle_.param("max_dip_up", config_.max_dip_up, 0.35f);
@@ -831,8 +835,8 @@ void Traversability::OnTimer(const ros::TimerEvent& event)
     local_scan.header.frame_id = config_.robot_frame_id;
     local_scan.header.stamp = event.current_real;
     local_scan.angle_min = -M_PI;
-    local_scan.angle_max = 179 * M_PI / 180;
-    local_scan.angle_increment = M_PI / 180;
+    local_scan.angle_max = M_PI - config_.map_scan_resolution;
+    local_scan.angle_increment = config_.map_scan_resolution;
     local_scan.range_min = config_.min_map_scan_range;
     local_scan.range_max = config_.map_range;
     local_scan.ranges.resize(

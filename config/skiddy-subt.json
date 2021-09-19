@@ -15,7 +15,7 @@
             "speed_policy": "conservative",
             "min_safe_dist": 0.8,
             "dangerous_dist": 0.5,
-            "rotation_p": 1.6,
+            "rotation_p": 3.0,
             "virtual_bumper_sec": 75,
             "virtual_bumper_radius": 10.0,
 	    "virtual_world": true,
@@ -30,18 +30,31 @@
           "out": ["raw", "encoders", "emergency_stop", "pose2d", "scan"],
           "init": {}
       },
-      "serial": {
-          "driver": "subt.serialloop:SerialLoop",
-          "in": ["raw"],
-          "out": ["raw"],
-          "init": {"port": "/dev/ttyACM0", "speed": 115200, "timeout": 0.02}
+      "toserial": {
+          "driver": "subt.push:Push",
+          "init": {
+              "endpoint": "tcp://127.0.0.1:5590"
+          }
+      },
+      "fromserial": {
+          "driver": "subt.pull:Pull",
+          "init": {
+              "endpoint": "tcp://127.0.0.1:5591",
+              "outputs": ["raw"]
+          }
+      },
+      "localization": {
+	      "driver": "subt.odoimuloc:Localization",
+	      "in": ["orientation", "odom"],
+	      "out": ["pose3d"],
+	      "init":{}
       },
       "depth": {
         "driver": "realsense",
         "init": {
           "device": "D400",
           "serial_number": "848312070179",
-          "depth_subsample": 3,
+          "depth_subsample": 1,
           "depth_rgb": true,
           "depth_resolution": [
             640,
@@ -51,7 +64,7 @@
             640,
             480
           ],
-          "depth_fps": 30
+          "depth_fps": 6
         }
       },
       "depth_rear": {
@@ -59,7 +72,7 @@
         "init": {
           "device": "D400",
           "serial_number": "938422071072",
-          "depth_subsample": 3,
+          "depth_subsample": 1,
           "depth_rgb": true,
           "depth_resolution": [
             640,
@@ -69,7 +82,7 @@
             640,
             480
           ],
-          "depth_fps": 30
+          "depth_fps": 6
         }
       },
       "tracking": {
@@ -77,7 +90,7 @@
           "init": {
             "device": "T200",
             "serial_number": "2322110762",
-            "pose_subsample": 10
+            "pose_subsample": 15
           }
       },
       "lidar": {
@@ -134,7 +147,8 @@
               [0.000281749, 0.999997, -0.00245158, 0.000188795995200053],
               [-0.00818002, 0.0024538, 0.999964, 0.000308448070427403]
             ]
-          }
+          },
+          "serialization": "raw"
       },
       "bundler_rear": {
           "driver": "subt.bundle_rgbd:Bundler",
@@ -166,13 +180,16 @@
               [-0.00991762, 0.99995, -0.000935794, 0.000105238395917695],
               [0.000133109, 0.000937161, 1, 0.000633214542176574]
             ]
-          }
+          },
+          "serialization": "raw"
       },
       "detector": {
         "driver": "subt.artf_edgetpu_detector:Detector",
         "in": ["front", "rear"],
-        "out" : [],
+        "out" : ["localized_artf", "debug_rgbd"],
         "init": {
+          "device": ":0",
+          "batch_size": 2,
           "camera": {
             "front": {
               "w": 640,
@@ -192,6 +209,14 @@
             }
           }
         }
+      },
+      "reporter": {
+          "driver": "subt.artf_reporter:ArtifactReporter",
+          "in": ["artf_xyz"],
+          "out": ["artf_cmd"],
+          "init": {
+            "repeat_report_sec": 10
+          }
       },
       "small": {
         "driver": "resize",
@@ -236,19 +261,44 @@
         "init": {
           "sleep": 1.0
         }
+      },
+     "estop": {
+          "driver": "subt.estop:EStop",
+          "in": ["raw"],
+          "out": ["raw", "emergency_stop"],
+          "init": {}
+      },
+      "estop_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/estop", "speed": 9600}
+      },
+      "lora": {
+          "driver": "lora",
+          "in": ["raw", "pose2d"],
+          "out": ["raw", "cmd"],
+          "init": {}
+      },
+      "lora_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/lora", "speed": 115200}
       }
     },
     "links": [["app.desired_speed", "cortexpilot.desired_speed"],
               ["cortexpilot.pose2d", "app.pose2d"],
               ["cortexpilot.emergency_stop", "app.emergency_stop"],
-              ["serial.raw", "cortexpilot.raw"],
-              ["cortexpilot.raw", "serial.raw"],
+              ["fromserial.raw", "cortexpilot.raw"],
+              ["cortexpilot.raw", "toserial.raw"],
+              ["cortexpilot.pose2d", "localization.odom"],
+              ["cortexpilot.orientation", "localization.orientation"],
               ["lidar_tcp.raw", "lidar.raw"],
               ["lidar.raw", "lidar_tcp.raw"],
               ["lidar_back_tcp.raw", "lidar_back.raw"],
               ["lidar_back.raw", "lidar_back_tcp.raw"],
-              ["lidar.scan", "app.scan"],
-              ["lidar_back.scan", "app.scan_back"],
+              ["fromros.scan360", "app.scan360"],
               ["tracking.pose3d", "app.pose3d"],
               ["tracking.pose3d", "bundler.robot_pose"],
               ["depth.color", "bundler.img"],
@@ -265,6 +315,16 @@
               ["tracking.pose3d", "toros.tracking_pose"],
               ["lidar.scan", "toros.front_scan"],
               ["lidar_back.scan", "toros.rear_scan"],
-              ["sec_timer.tick", "app.sim_time_sec"]]
+              ["sec_timer.tick", "app.sim_time_sec"],
+              ["estop_serial.raw", "estop.raw"],
+              ["estop.raw", "estop_serial.raw"],
+              ["estop.emergency_stop", "app.emergency_stop"],
+              ["lora_serial.raw", "lora.raw"],
+              ["lora.raw", "lora_serial.raw"],
+              ["app.pose2d", "lora.pose2d"],
+              ["lora.cmd", "app.cmd"],
+              ["detector.localized_artf", "reporter.artf_xyz"],
+              ["reporter.artf_cmd", "lora.artf"]
+    ]
   }
 }

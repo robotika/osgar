@@ -17,14 +17,6 @@
             "safety_turning_coeff": 0.6
           }
       },
-      "detector": {
-          "driver": "subt.artifacts:ArtifactDetector",
-          "in": ["image", "scan"],
-          "out": ["artf", "dropped"],
-          "init": {
-            "virtual_world": false
-          }
-      },
       "reporter": {
           "driver": "subt.artf_reporter:ArtifactReporter",
           "in": ["artf_xyz"],
@@ -166,37 +158,33 @@
           "out": ["raw"],
           "init": {"port": "/dev/gas_detector", "speed": 115200}
       },
-      "receiver": {
-          "driver": "zeromq",
-          "in": [],
-          "out": ["raw"],
-          "init": {
-            "mode": "PULL",
-            "timeout":0.5,
-            "endpoint": "tcp://192.168.2.23:5555"
-          }
-      },
-      "rosmsg": {
-          "driver": "rosmsg",
-          "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
-          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin"],
-          "init": {
-            "downsample": 1
-          }
-      },
-      "scan_mixer": {
-	      "driver": "subt.scan_mixer:ScanMixer",
-	      "in": ["scan", "rs_scan", "slope_scan"],
-	      "out": ["scan"],
-	      "init":{}
-      },
       "localization": {
 	      "driver": "subt.odoimuloc:Localization",
 	      "in": ["orientation", "odom"],
 	      "out": ["pose3d"],
 	      "init":{}
       },
-            "system": {
+      "from_jetson_front": {
+          "driver": "subt.pull:Pull",
+          "init": {
+            "endpoint": "tcp://192.168.0.23:5557",
+            "outputs": ["pose3d", "depth"]
+          }
+       },
+      "from_jetson_rear": {
+          "driver": "subt.pull:Pull",
+          "init": {
+            "endpoint": "tcp://192.168.0.24:5557",
+            "outputs": ["pose3d", "depth", "localized_artf", "debug_image", "localized_artf_rear", "debug_image_rear"]
+          }
+       },
+      "to_jetson_rear": {
+          "driver": "subt.push:Push",
+          "init": {
+            "endpoint": "tcp://192.168.0.24:5558"
+          }
+      },
+      "system": {
 	      "driver": "systemmonitor",
 	      "in": [],
 	      "out": ["cpu", "ram", "temp"],
@@ -212,13 +200,14 @@
               ["can.can", "kloubak.slot_can"],
               ["app.desired_speed", "kloubak.slot_desired_speed"],
               ["kloubak.pose2d", "localization.odom"],
+              ["kloubak.pose2d", "app.pose2d"],
               ["imu.orientation", "localization.orientation"],
               ["localization.pose3d", "app.pose3d"],
               ["lidar_tcp.raw", "lidar.raw"],
               ["lidar.raw", "lidar_tcp.raw"],
               ["lidar_back_tcp.raw", "lidar_back.raw"],
               ["lidar_back.raw", "lidar_back_tcp.raw"],
-              ["scan_mixer.scan", "app.scan"],
+              ["lidar.scan", "app.scan"],
               ["lidar_back.scan", "app.scan_back"],
               ["kloubak.emergency_stop", "app.emergency_stop"],
               ["imu_serial.raw", "imu.raw"],
@@ -226,24 +215,17 @@
               ["estop_serial.raw", "estop.raw"],
               ["estop.raw", "estop_serial.raw"],
               ["estop.emergency_stop", "app.emergency_stop"],
-              ["camera.raw", "detector.image"],
-              ["lidar.scan", "detector.scan"],
-              ["detector.artf", "app.artf"],
               ["app.artf_xyz", "reporter.artf_xyz"],
               ["lora_serial.raw", "lora.raw"],
               ["lora.raw", "lora_serial.raw"],
               ["app.pose2d", "lora.pose2d"],
               ["lora.cmd", "app.cmd"],
               ["app.artf_xyz", "lora.artf"],
-              ["kloubak.bumpers_rear", "app.bumpers_rear"],
               ["kloubak.joint_angle", "app.joint_angle"],
               ["gas_serial.raw", "gas_detector.raw"],
               ["gas_detector.raw", "gas_serial.raw"],
-              ["receiver.raw", "rosmsg.slot_raw"],
-              ["rosmsg.scan", "scan_mixer.rs_scan"],
-              ["lidar.scan", "scan_mixer.scan"],
-              ["wifi.wifiscan", "detector.wifiscan"],
-              ["gas_detector.co2", "detector.co2"]
+              ["kloubak.angle", "to_jetson_rear.angle"],
+              ["localization.pose3d", "to_jetson_rear.pose3d"]
       ]
   }
 }
