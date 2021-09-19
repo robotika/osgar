@@ -28,7 +28,7 @@
           Pose has one extra parameter representing the name of the coordinate frame this pose belongs to.
 
           Depth camera parameters can be obtained with `rs-enumerate-devices -c`-->
-      <param name="streams" value="front_depth:depth:160:120:80.9344635009765:59.733184814453:95.5871505737305:95.5871505737305,rear_depth:depth:160:120:79.775161743164:59.8928451538085:95.64727783203125:95.64727783203125,front_scan:scan:-135:135:0.1:10.0,rear_scan:scan:-135:135:0.1:10.0,tracking_pose:pose:odom,angle:pose:robot"/>
+      <param name="streams" value="front_depth:depth:160:120:79.6225509643555:60.6515312194825:96.43636322021474:96.43636322021474,rear_depth:depth:160:120:78.89627838134776:59.74887466430675:95.43363952636724:95.43363952636724,front_scan:scan:-135:135:0.1:10.0,rear_scan:scan:-135:135:0.1:10.0,tracking_pose:pose:odom,angle:pose:robot"/>
     </node>
 
     <!-- Remove noise -->
@@ -63,14 +63,14 @@
     <param name="depth_image_stride" value="1"/>
     <param name="horizontal_pixel_offset" value="3"/>
     <param name="vertical_pixel_offset" value="3"/>
-    <param name="synthetic_obstacle_distance" value="0.64"/>
+    <param name="synthetic_obstacle_distance" value="0.44"/>
     <param name="visible_ground_min" value="0.3"/>
     <param name="visible_ground_max" value="3.4"/>
     <param name="max_bump_height" value="0.1"/>
     <param name="max_slope" value="25"/>
     <param name="depth_subsampling" value="143"/>
     <!-- Six seconds worth of history. -->
-    <param name="max_depth_observations" value="60"/> <!-- 6 * 10 Hz -->
+    <param name="max_depth_observations" value="36"/> <!-- 6 * 6 Hz -->
     <param name="max_scan_observations" value="30"/> <!-- 6 * 5 Hz -->
     <param name="max_num_nearby_points" value="16000"/>
     <param name="robot_frame_id" value="robot"/>
@@ -87,6 +87,6 @@
     <param name="output_pointcloud_channel" value="points"/>
   </node>
 
-  <node name="record" pkg="rosbag" type="record" args="-a -o /tmp/skiddy"/>
+  <node name="record" pkg="rosbag" type="record" args="-a -o /tmp/k2"/>
 
 </launch>
