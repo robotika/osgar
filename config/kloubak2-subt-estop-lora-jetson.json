@@ -230,9 +230,9 @@
               ["kloubak.joint_angle", "app.joint_angle"],
               ["gas_serial.raw", "gas_detector.raw"],
               ["gas_detector.raw", "gas_serial.raw"],
-              ["kloubak.angle", "to_jetson_rear.angle"],
+              ["kloubak.joint_angle_pose", "to_jetson_rear.joint_angle_pose"],
               ["localization.pose3d", "to_jetson_rear.pose3d"],
-              ["kloubak.angle", "to_jetson_front.angle"],
+              ["kloubak.joint_angle_pose", "to_jetson_front.joint_angle_pose"],
               ["localization.pose3d", "to_jetson_front.pose3d"]
       ]
   }
