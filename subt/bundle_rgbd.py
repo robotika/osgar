@@ -3,8 +3,10 @@ import math
 import cv2
 import numpy as np
 
+from osgar.bus import BusShutdownException
 from osgar.lib.depth import compress
 from osgar.lib.quaternion import euler_to_quaternion
+from osgar.lib.serialize import serialize
 from osgar.node import Node
 
 
@@ -18,6 +20,9 @@ class Bundler(Node):
                                           [0.0, 1.0, 0.0, 0.0],
                                           [0.0, 0.0, 1.0, 0.0]]))
         camera_config = config.get('camera')
+        serialization_method = config.get('serialization', 'compressed')
+        assert(serialization_method in ['compressed', 'raw']), serialization_method
+        self.serialization = compress if serialization_method == 'compressed' else serialize
         if camera_config is not None:
             self.camera_pose = (
                     camera_config['xyz'],
@@ -29,7 +34,7 @@ class Bundler(Node):
         self.img = None
         self.depth = None
 
-        bus.register('rgbd:null')
+        bus.register('rgbd:null', 'dropped')
 
         # Pixel coordinates relative to the center of the image, with positive
         # directions to the right and up.
@@ -50,22 +55,36 @@ class Bundler(Node):
                              pzs])
         self.ones = np.ones((self.depth_params['h'], self.depth_params['w']))
 
-    def update(self):
-        timestamp, channel, data = self.bus.listen()
-        setattr(self, channel, data)
-        if (self.robot_pose is not None and
-            self.camera_pose is not None and
-            self.img is not None
-            and self.depth is not None):
-            self.publish(
-                    'rgbd',
-                    [self.robot_pose,
-                     self.camera_pose,
-                     self.img,
-                     compress(self.reproject(self.depth))])
-            self.img = None
-            self.depth = None
-        return channel
+    def run(self):
+        try:
+            dropped = 0
+            while True:
+                now = self.publish("dropped", dropped)
+                dropped = 0
+                timestamp = now
+                while timestamp <= now:
+                    timestamp, channel, data = self.bus.listen()
+                    # It is OK for pose information to be very frequent and
+                    # because they are never reset to None, they always
+                    # overwrite previous information.
+                    if (getattr(self, channel) is not None and
+                            channel not in ['robot_pose', 'camera_pose']):
+                        dropped += 1
+                    setattr(self, channel, data)
+                if (self.robot_pose is not None and
+                    self.camera_pose is not None and
+                    self.img is not None
+                    and self.depth is not None):
+                    self.publish(
+                            'rgbd',
+                            [self.robot_pose,
+                             self.camera_pose,
+                             self.img,
+                             self.serialization(self.reproject(self.depth))])
+                    self.img = None
+                    self.depth = None
+        except BusShutdownException:
+            pass
 
     def reproject(self, depth):
         depth = depth / 1000.0
