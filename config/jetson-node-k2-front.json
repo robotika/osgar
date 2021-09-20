@@ -122,6 +122,8 @@
       ["from_jetson_rear_receiver.depth", "small_rear.depth"],
       ["small.depth", "toros.front_depth"],
       ["small_rear.depth", "toros.rear_depth"],
+      ["lidar.scan", "toros.front_scan"],
+      ["lidar_back.scan", "toros.rear_scan"],
       ["T200.pose3d", "toros.tracking_pose"],
 
       ["from_apu_receiver.joint_angle_pose", "toros.angle"]
