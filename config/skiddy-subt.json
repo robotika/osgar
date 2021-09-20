@@ -316,7 +316,7 @@
               ["depth_rear.depth", "bundler_rear.depth"],
               ["bundler.rgbd", "detector.front"],
               ["bundler_rear.rgbd", "detector.rear"],
-              ["detector.localized_arf", "artifact_filter.localized_artf"],
+              ["detector.localized_artf", "artifact_filter.localized_artf"],
               ["artifact_filter.artf_xyz", "reporter.artf_xyz"],
               ["depth.depth", "small.depth"],
               ["depth_rear.depth", "small_rear.depth"],
