@@ -5,13 +5,15 @@ from unittest.mock import patch, MagicMock
 import sys
 sys.modules['cbor'] = MagicMock()
 
-from subt.mapping_server import create_empty_map
+import numpy as np
+
+from subt.mapping_server import create_map
 
 
 class MappingServerTest(unittest.TestCase):
 
     def test_empty_map(self):
-        m = create_empty_map()
+        m = create_map(np.zeros(shape=(1, 0, 3), dtype=np.float32))
         self.assertEqual(m['data'], b'')
 
 
