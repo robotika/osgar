@@ -187,7 +187,7 @@ class LocalPlannerNumpy:
     def update(self, scan):
         self.scan = np.asarray(scan[::self.scan_subsample] if self.scan_subsample > 1 else scan) * 1e-3
 
-        if self.angles is None or len(self.scan) != self.angles.shape[0]:
+        if self.angles is None or len(self.scan) != self.angles.shape[1]:
             n = len(self.scan)
             delta = (self.scan_end - self.scan_start) / (n - 1)
             self.angles = np.linspace(
@@ -243,28 +243,6 @@ class LocalPlannerNumpy:
         return good[best], self.considered_directions[best][0]
 
 
-class LocalPlanner:
-    def __init__(self, *args, **kwargs):
-        self.opt = LocalPlannerOpt(*args, **kwargs)
-        self.ref = LocalPlannerRef(*args, **kwargs)
-        self.nump = LocalPlannerNumpy(*args, **kwargs)
-
-    def update(self, scan):
-        self.opt.update(scan)
-        self.ref.update(scan)
-        self.nump.update(scan)
-
-    def recommend(self, desired_dir):
-#        global g_count
-#        g_count += 1
-#        g_pr.enable()
-        ret = self.nump.recommend(desired_dir)
-#        ret = self.opt.recommend(desired_dir)
-#        ref = self.ref.recommend(desired_dir)
-#        g_pr.disable()
-#        if g_count % 100 == 0:
-#            g_pr.print_stats()
-#        assert ret == ref, (ret, ref)
-        return ret
+LocalPlanner = LocalPlannerNumpy
 
 # vim: expandtab sw=4 ts=4

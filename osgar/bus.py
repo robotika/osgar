@@ -95,16 +95,16 @@ class _BusHandler:
             self.out[output].append((receiver.queue, input))
 
     def publish(self, channel, data):
-        with self.logger.lock:
-            stream_id = self.stream_id[channel]  # local maping of indexes
-            if stream_id in self.no_output:
-                to_write = serialize(None)  # i.e. at least there will be timestamp record
-            else:
-                to_write = serialize(data)
-                if stream_id in self.compressed_output:
-                    to_write = compress(to_write)
-            timestamp = self.logger.write(stream_id, to_write)
+        stream_id = self.stream_id[channel]  # local maping of indexes
+        if stream_id in self.no_output:
+            to_write = serialize(None)  # i.e. at least there will be timestamp record
+        else:
+            to_write = serialize(data)
+            if stream_id in self.compressed_output:
+                to_write = compress(to_write)
 
+        with self.logger.lock:
+            timestamp = self.logger.write(stream_id, to_write)
             if self._time is not None:
                 delay = timestamp - self._time
                 if delay > self.max_delay:
@@ -138,11 +138,10 @@ class _BusHandler:
         self.queue.put(None)
 
     def report_error(self, **err):
-        with self.logger.lock:
-            data = dict(name=self.name)
-            err.pop('name', None)
-            data.update(err)
-            self.logger.write(0, bytes(str(data), encoding='ascii'))
+        data = dict(name=self.name)
+        err.pop('name', None)
+        data.update(err)
+        self.logger.write(0, bytes(str(data), encoding='ascii'))
 
 
 class LogBusHandler:

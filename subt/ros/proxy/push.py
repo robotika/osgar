@@ -10,12 +10,18 @@ import rospy
 from osgar.lib.serialize import serialize
 from sensor_msgs.msg import LaserScan, PointCloud2
 
+def send_msg(socket, msg):
+    try:
+        socket.send_multipart(msg)
+    except zmq.ZMQError as e:
+        print('Failed to push a message from ROS:', e)
+
 
 def publish_scan(scan, push, push_lock, channel):
     scan = [(0 if math.isinf(x) else int(1000*x)) for x in scan.ranges]
     raw = serialize(scan)
     with push_lock:
-        push.send_multipart([channel, raw])
+        send_msg(push, [channel, raw])
 
 
 def publish_pointcloud(points, push, push_lock, channel):
@@ -26,7 +32,7 @@ def publish_pointcloud(points, push, push_lock, channel):
     points3d = arr.reshape((points.height, points.width, 3))
     raw = serialize(points3d)
     with push_lock:
-        push.send_multipart([channel, raw])
+        send_msg(push, [channel, raw])
 
 
 if __name__ == '__main__':

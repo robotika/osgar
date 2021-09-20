@@ -146,9 +146,9 @@
               [0.999967, -0.000261684, 0.00818068, 0.0149064091965556],
               [0.000281749, 0.999997, -0.00245158, 0.000188795995200053],
               [-0.00818002, 0.0024538, 0.999964, 0.000308448070427403]
-            ]
-          },
-          "serialization": "raw"
+            ],
+            "serialization": "raw"
+          }
       },
       "bundler_rear": {
           "driver": "subt.bundle_rgbd:Bundler",
@@ -179,9 +179,9 @@
               [0.999951, 0.00991749, -0.000142397, 0.0144655723124743],
               [-0.00991762, 0.99995, -0.000935794, 0.000105238395917695],
               [0.000133109, 0.000937161, 1, 0.000633214542176574]
-            ]
-          },
-          "serialization": "raw"
+            ],
+	    "serialization": "raw"
+          }
       },
       "detector": {
         "driver": "subt.artf_edgetpu_detector:Detector",
@@ -216,6 +216,14 @@
           "out": ["artf_cmd"],
           "init": {
             "repeat_report_sec": 10
+          }
+      },
+      "artifact_filter": {
+          "driver": "subt.artf_filter:ArtifactFilter",
+          "in": ["robot_name", "localized_artf"],
+          "out": ["artf_xyz"],
+          "init": {
+            "min_observations": 2
           }
       },
       "small": {
@@ -308,6 +316,9 @@
               ["depth_rear.depth", "bundler_rear.depth"],
               ["bundler.rgbd", "detector.front"],
               ["bundler_rear.rgbd", "detector.rear"],
+              ["detector.localized_artf", "artifact_filter.localized_artf"],
+              ["artifact_filter.artf_xyz", "reporter.artf_xyz"],
+              ["reporter.artf_lora", "lora.artf"],
               ["depth.depth", "small.depth"],
               ["depth_rear.depth", "small_rear.depth"],
               ["small.depth", "toros.front_depth"],
@@ -322,9 +333,7 @@
               ["lora_serial.raw", "lora.raw"],
               ["lora.raw", "lora_serial.raw"],
               ["app.pose2d", "lora.pose2d"],
-              ["lora.cmd", "app.cmd"],
-              ["detector.localized_artf", "reporter.artf_xyz"],
-              ["reporter.artf_cmd", "lora.artf"]
+              ["lora.cmd", "app.cmd"]
     ]
   }
 }

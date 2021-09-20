@@ -17,6 +17,8 @@ class Go(Node):
         self.speed = config['max_speed']
         self.dist = config['dist']
         self.timeout = timedelta(seconds=config['timeout'])
+        self.emergency_stop = None
+
 
     def send_speed_cmd(self, speed, angular_speed):
         return self.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
@@ -31,6 +33,9 @@ class Go(Node):
             if self.start_pose is None:
                 self.start_pose = pose
             self.traveled_dist = math.hypot(pose[0] - self.start_pose[0], pose[1] - self.start_pose[1])
+
+        elif channel == 'emergency_stop':
+            pass  # already set by Node
 
     def wait(self, dt):  # TODO refactor to some common class
         if self.time is None:
@@ -49,6 +54,9 @@ class Go(Node):
             self.send_speed_cmd(-self.speed, 0.0)
         while self.traveled_dist < abs(self.dist) and self.time - start_time < self.timeout:
             self.update()
+            if self.emergency_stop:
+                print(self.time, "Emergency STOP")
+                break
         print(self.time, "STOP")
         self.send_speed_cmd(0.0, 0.0)
         self.wait(timedelta(seconds=1))
