@@ -332,7 +332,7 @@
               ["estop.emergency_stop", "app.emergency_stop"],
               ["lora_serial.raw", "lora.raw"],
               ["lora.raw", "lora_serial.raw"],
-              ["app.pose2d", "lora.pose2d"],
+              ["tracking.pose3d", "lora.pose3d"],
               ["lora.cmd", "app.cmd"]
     ]
   }

@@ -30,9 +30,11 @@
 """
 from datetime import timedelta
 from ast import literal_eval
+import math
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
+from osgar.lib import quaternion
 
 ALIVE_MESSAGE = b'alive'
 ALLOWED_DEVICE_IDS = [1, 2, 3, 4, 5, 6]
@@ -160,6 +162,11 @@ class LoRa(Node):
             self.on_radio(self.radio)
         elif channel == 'pose2d':
             if self.last_transmit is None or self.time > self.last_transmit + self.min_transmit_dt:
+                self.send_data(bytes(str(self.pose2d), encoding='ascii'))
+        elif channel == 'pose3d':
+            if self.last_transmit is None or self.time > self.last_transmit + self.min_transmit_dt:
+                xyz, quat = self.pose3d
+                pose2d = [int(round(x*1000)), int(round(y*1000)), int(round(100*math.degrees(quaternion.heading(quat))))]
                 self.send_data(bytes(str(self.pose2d), encoding='ascii'))
         elif channel == 'cmd':
             assert len(self.cmd) == 2, self.cmd
