@@ -67,7 +67,6 @@ class _BusHandler:
         self._time = None
         self.max_delay = timedelta()
         self.max_delay_timestamp = timedelta()
-        self.lock = threading.Lock()
 
     def register(self, *outputs):
         for name_and_type in outputs:
@@ -103,9 +102,9 @@ class _BusHandler:
             to_write = serialize(data)
             if stream_id in self.compressed_output:
                 to_write = compress(to_write)
-        timestamp = self.logger.write(stream_id, to_write)
 
-        with self.lock:
+        with self.logger.lock:
+            timestamp = self.logger.write(stream_id, to_write)
             if self._time is not None:
                 delay = timestamp - self._time
                 if delay > self.max_delay:
