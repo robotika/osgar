@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
 <launch>
+  <param name="enable_statistics" value="true"/>
+
   <!-- Announces position of the point tracked by tracking camera relative to the center of the robot. -->
   <node pkg="tf" type="static_transform_publisher" name="tracked_point_tf" args="0.282 0 0.33 0 0 0 global odom 100" />
   <!-- Announces the position of the center of the robot relative to the point tracked by tracking camera in Osgar.

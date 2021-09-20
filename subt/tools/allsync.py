@@ -9,11 +9,8 @@ from blessings import Terminal
 def main():
 
     all_robots = {
-        "eduro":"/home/robot/git/osgar/logs/",
-        "k2": "/home/robot/git/osgar/logs/",
-        "k3": "/home/robot/git/osgar/logs/",
-        "mobos": "~/logs/",
-        "maria":"~/logs/",
+        "k2": "root@10.0.0.21:/home/robot/git/osgar/logs/",
+        "skiddy": "owner@10.0.0.30:/home/owner/Develop/osgar/sync/",
     }
 
     import argparse
@@ -33,7 +30,7 @@ def main():
             for robot, logs in robots.items():
                 print(t.bold(f"Syncing {robot}:"))
                 print(t.dim, end="", flush=True)
-                a = subprocess.call(["rsync", "-v", "--append", "--progress", "--recursive", f"{robot}:{logs}", f"{home}/logs/{robot}"])
+                a = subprocess.call(["rsync", "-v", "--append", "--progress", "--recursive", f"{logs}", f"{home}/logs/{robot}"])
                 print(t.normal, end="", flush=True)
                 if a == 0:
                     print(t.green("OK"))

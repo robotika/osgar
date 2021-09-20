@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
 <launch>
+  <param name="enable_statistics" value="true"/>
+
   <node pkg="tf" type="static_transform_publisher" name="tracked_point_tf" args="-0.135 0 0.375 0 0 0 global odom 100" />
   <!-- Announces the position of the center of the robot relative to the point tracked by tracking camera in Osgar.
        The tracked point name needs to match the name of the stream sent from Osgar to ROS. -->
