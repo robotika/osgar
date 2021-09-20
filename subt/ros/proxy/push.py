@@ -12,7 +12,7 @@ from sensor_msgs.msg import LaserScan, PointCloud2
 
 def send_msg(socket, msg):
     try:
-        socket.send_multipart(msg):
+        socket.send_multipart(msg)
     except zmq.ZMQError as e:
         print('Failed to push a message from ROS:', e)
 
