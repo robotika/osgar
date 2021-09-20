@@ -8,8 +8,8 @@
 
   <!-- Announces the position of depth camera relative to the center of the robot.
        The name of the announced frame needs to match the name of the corresponding depth stream from Osgar to ROS extended with a "/pose" suffix to distinguish from related optical frames configured below. -->
-  <node pkg="tf" type="static_transform_publisher" name="front_camera_tf" args="0.5 0 0.525 0 -0.4363323 0 robot front_depth/pose 100" />
-  <node pkg="tf" type="static_transform_publisher" name="rear_camera_tf" args="-0.5 0 0.59 -3.141592653589793 -0.4363323 0 angle rear_depth/pose 100" />
+  <node pkg="tf" type="static_transform_publisher" name="front_camera_tf" args="0.5 0 0.525 0 0.35779249665883756 0 robot front_depth/pose 100" />
+  <node pkg="tf" type="static_transform_publisher" name="rear_camera_tf" args="0.5 0 0.59 0 0.35779249665883756 0 angle rear_depth/pose 100" />
 
   <!-- Announces optical camera frames relative to "normal" camera frames.
        The name of the announced frames need to macth the name of the corresponding depth streams from Osgar to ROS. -->
@@ -63,16 +63,18 @@
     <param name="depth_image_stride" value="1"/>
     <param name="horizontal_pixel_offset" value="3"/>
     <param name="vertical_pixel_offset" value="3"/>
-    <param name="synthetic_obstacle_distance" value="0.57"/>
+    <param name="synthetic_obstacle_distance" value="0.7"/>
     <param name="visible_ground_min" value="0.3"/>
-    <param name="visible_ground_max" value="3.4"/>
+    <param name="visible_ground_max" value="2.1"/>
     <param name="max_bump_height" value="0.1"/>
     <param name="max_slope" value="25"/>
-    <param name="depth_subsampling" value="143"/>
-    <!-- Six seconds worth of history. -->
-    <param name="max_depth_observations" value="36"/> <!-- 6 * 6 Hz -->
-    <param name="max_scan_observations" value="30"/> <!-- 6 * 5 Hz -->
-    <param name="max_num_nearby_points" value="16000"/>
+    <param name="depth_subsampling" value="13"/>
+    <!-- Eight seconds worth of history. -->
+    <param name="max_depth_observations" value="48"/> <!-- 8 * 6 Hz -->
+    <param name="max_scan_observations" value="40"/> <!-- 8 * 5 Hz -->
+    <param name="max_dip_up" value="0.035"/>
+    <param name="max_relative_z" value="0.8"/>
+    <param name="max_num_nearby_points" value="10000"/>
     <param name="robot_frame_id" value="robot"/>
     <remap from="local_map/input/camera_info" to="osgar/from/all_depth/camera_info"/>
     <remap from="local_map/input/depth" to="osgar/from/all_depth/depth"/>
