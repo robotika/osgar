@@ -75,7 +75,7 @@ class ArtifactReporter(Node):
                 print(" ", artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
             s = '%s %.2f %.2f %.2f\n' % (artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
             self.publish('artf_cmd', bytes('artf ' + s, encoding='ascii'))
-            self.publish('artf_lora', [artf_type, ix, iy, iz])
+            self.publish('artf_lora', [[artf_type, ix, iy, iz]])
         if count > 0 and self.verbose:
             print('report completed')
 
