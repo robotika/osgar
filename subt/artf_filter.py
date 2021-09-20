@@ -5,7 +5,7 @@
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 from subt.trace import distance3D
-from subt.artifacts import DRILL, GAS
+from subt.artf_utils import DRILL, GAS
 
 
 class ArtifactFilter(Node):
