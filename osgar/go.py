@@ -55,8 +55,9 @@ class Go(Node):
         while self.traveled_dist < abs(self.dist) and self.time - start_time < self.timeout:
             self.update()
             if self.emergency_stop:
-                print(self.time, "STOP")
+                print(self.time, "Emergency STOP")
                 break
+        print(self.time, "STOP")
         self.send_speed_cmd(0.0, 0.0)
         self.wait(timedelta(seconds=1))
         print(self.time, "distance:", self.traveled_dist, "time:", (self.time - start_time).total_seconds())
