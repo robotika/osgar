@@ -16,7 +16,7 @@ from osgar.logger import LogReader, lookup_stream_id
 
 #URL_BASE = "http://localhost:8000"  # local docker test
 
-URL_BASE = "http://10.100.1.201:8000"  # local docker test
+URL_BASE = "http://10.100.1.201:8000"  # Finals DARPA mapping server
 
 
 class CommandPostRelay(object):
@@ -67,9 +67,8 @@ def create_map(arr, time_sec=0.0):
                 {'name': 'x', 'offset': 0, 'datatype': 7, 'count': 1},
                 {'name': 'y', 'offset': 4, 'datatype': 7, 'count': 1},
                 {'name': 'z', 'offset': 8, 'datatype': 7, 'count': 1},
-#                {'name': 'rgba', 'offset': 12, 'datatype': 6, 'count': 1},
             ],
-        'point_step': 12, #6,
+        'point_step': 12,
         'data': arr[0].tobytes()
     }
 
@@ -94,11 +93,12 @@ def mapping_server(logfile, cpr, loop=False):
                 break
             time.sleep(1.0)
 
+
 def mapping_server0(logfile, cpr, loop=False):
     i = 0
     while True:
         cloud = create_map(np.zeros(shape=(1, 0, 3), dtype=np.float32), time_sec=i)
-        cloud['data'] = struct.pack('<fffI', i, 1, 2, 0xFF000000)
+        cloud['data'] = struct.pack('<fff', i, 1, 2)
         print(cloud, len(cloud))
         res = cpr.send_map_msg(u'PointCloud2', msg=cloud, name=u'Skiddy')  # vs. Kloubak
         print(res)
