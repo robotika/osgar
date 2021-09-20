@@ -36,6 +36,7 @@ class ArtifactReporterTest(unittest.TestCase):
             reporter.update()
         # well, I am not sure how to ensure only 2 calls :(
         bus.publish.assert_has_calls([call('artf_cmd', b'artf TYPE_BACKPACK 0.10 0.20 -0.00\n'),
+                                      call('artf_lora', ['TYPE_BACKPACK', 100, 200, -3]),
                                       call('artf_all', [['TYPE_BACKPACK', [100, 200, -3], "name", None]]),]*2)
 
     def test_artf_empty_repeat(self):

@@ -57,7 +57,7 @@ def artf_sort_fcn(element):
 class ArtifactReporter(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register("artf_cmd", "artf_all")
+        bus.register("artf_cmd", "artf_all", "artf_lora")
         self.repeat_report_sec = config.get('repeat_report_sec')
         self.artf_xyz = []
         self.artf_xyz_accumulated = []  # items are [type, position, source, flag]
@@ -75,6 +75,7 @@ class ArtifactReporter(Node):
                 print(" ", artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
             s = '%s %.2f %.2f %.2f\n' % (artf_type, ix/1000.0, iy/1000.0, iz/1000.0)
             self.publish('artf_cmd', bytes('artf ' + s, encoding='ascii'))
+            self.publish('artf_lora', [artf_type, ix, iy, iz])
         if count > 0 and self.verbose:
             print('report completed')
 
