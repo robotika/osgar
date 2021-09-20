@@ -208,6 +208,9 @@ class SubTChallenge:
         self.neighborhood_size = config.get('neighborhood_size', 12.0)
         self.approach_angle = math.radians(config.get('approach_angle', 45))
 
+        self.gc_interval = config.get('gc_interval', 100)
+        self.gc_n = 0
+
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
         self.xyz = None  # unknown initial 3D position
         self.yaw, self.pitch, self.roll = 0, 0, 0
@@ -263,6 +266,10 @@ class SubTChallenge:
         if config.get('start_paused', False):
             self.pause_start_time = timedelta()  # paused from the very beginning
 
+        self.scan_directions = None
+        self.scan_directions_cos = None
+        self.scan_directions_sin = None
+
     def is_home(self):
         HOME_RADIUS = 20.0
         home_position = self.trace.start_position()
@@ -282,10 +289,13 @@ class SubTChallenge:
         return False
 
     def speed_limit(self):
-        directions = np.radians(np.linspace(-135, 135, num=len(self.scan)))
+        if self.scan_directions is None or self.scan_directions.shape[0] != len(self.scan):
+            self.scan_directions = np.radians(np.linspace(-135, 135, num=len(self.scan)))
+            self.scan_directions_cos = np.cos(self.scan_directions)
+            self.scan_directions_sin = np.sin(self.scan_directions)
         scan = np.asarray(self.scan) / 1000.0
-        pts_x = scan * np.cos(directions)
-        pts_y = scan * np.sin(directions)
+        pts_x = scan * self.scan_directions_cos
+        pts_y = scan * self.scan_directions_sin
         of_interest = np.logical_and.reduce(np.stack([
                 scan > 0.01,
                 pts_x > 0,
@@ -312,8 +322,11 @@ class SubTChallenge:
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_desired_speed(speed, angular_speed)
         self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
-        # Corresponds to gc.disable() in __main__. See a comment there for more details.
-        gc.collect()
+        self.gc_n += 1
+        if self.gc_n == self.gc_interval:
+            # Corresponds to gc.disable() in main(). See a comment there for more details.
+            gc.collect()
+            self.gc_n = 0
 
     def go_straight(self, how_far, timeout=None):
         print(self.time, "go_straight %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position, self.flipped)
