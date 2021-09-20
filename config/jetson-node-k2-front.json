@@ -123,8 +123,7 @@
       ["small.depth", "toros.front_depth"],
       ["small_rear.depth", "toros.rear_depth"],
       ["T200.pose3d", "toros.tracking_pose"],
-      ["lidar.scan", "toros.front_scan"],
-      ["lidar_back.scan", "toros.rear_scan"],
+
       ["from_apu_receiver.joint_angle_pose", "toros.angle"]
     ]
   }
