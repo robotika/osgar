@@ -14,7 +14,9 @@ from osgar.lib.serialize import deserialize
 from osgar.logger import LogReader, lookup_stream_id
 
 
-URL_BASE = "http://localhost:8000"  # local docker test
+#URL_BASE = "http://localhost:8000"  # local docker test
+
+URL_BASE = "http://10.100.1.201:8000"  # local docker test
 
 
 class CommandPostRelay(object):
@@ -65,14 +67,14 @@ def create_map(arr, time_sec=0.0):
                 {'name': 'x', 'offset': 0, 'datatype': 7, 'count': 1},
                 {'name': 'y', 'offset': 4, 'datatype': 7, 'count': 1},
                 {'name': 'z', 'offset': 8, 'datatype': 7, 'count': 1},
-                {'name': 'rgba', 'offset': 12, 'datatype': 6, 'count': 1},
+#                {'name': 'rgba', 'offset': 12, 'datatype': 6, 'count': 1},
             ],
-        'point_step': 16,
+        'point_step': 12, #6,
         'data': arr[0].tobytes()
     }
 
 
-def mapping_server0(logfile, cpr, loop=False):
+def mapping_server(logfile, cpr, loop=False):
     stream_id = lookup_stream_id(logfile, 'fromros.points')
     with LogReader(args.logfile, only_stream_id=stream_id) as logreader:
         for timestamp, stream, raw_data in logreader:
@@ -80,6 +82,8 @@ def mapping_server0(logfile, cpr, loop=False):
             assert len(arr) == 1, arr  # array of arrays, but maybe it is mistake no ROS serializer side?
             if len(arr[0]) == 0:
                 continue  # but maybe we should report at least one empty map?
+
+            print('SENDING', len(arr[0]))
 
             cloud = create_map(arr)
             print(cloud)
@@ -90,7 +94,7 @@ def mapping_server0(logfile, cpr, loop=False):
                 break
             time.sleep(1.0)
 
-def mapping_server(logfile, cpr, loop=False):
+def mapping_server0(logfile, cpr, loop=False):
     i = 0
     while True:
         cloud = create_map(np.zeros(shape=(1, 0, 3), dtype=np.float32), time_sec=i)
