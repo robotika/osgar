@@ -66,7 +66,7 @@ class ArtifactFilter(Node):
 
     def handle_artf(self, artifact_data, world_xyz):
         ax, ay, az = world_xyz
-        if 0 < ax < 0 and -0 < ay < 0:  # AND of currently available staging areas
+        if 0 < ax < 0 and -0 < ay < 0:  # Finals System - empty staging area
             # Urban (-20 < ax < 0 and -10 < ay < 10)
             # Cave  (-50 < ax < 0 and -25 < ay < 25)
             # Finals (Virtual) (-20 < ax < 0 and -10 < ay < 10)
