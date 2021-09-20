@@ -20,7 +20,7 @@ WHEEL_DISTANCE = 0.267  # Skiddy, Robik=0.88  # meters TODO confirm
 RAMP_STEP = 0.1  # fractional number for speed in -1.0 .. 1.0
 
 SOFT_SPEED_LIMIT = 1.0  # m/s ... software speed limit, abs() value
-SOFT_ANGULAR_SPEED_LIMIT = math.radians(45)  # rad/s
+SOFT_ANGULAR_SPEED_LIMIT = math.radians(15)  # rad/s
 
 
 def sint32_diff(a, b):
@@ -310,12 +310,14 @@ class Cortexpilot(Node):
 
     def on_desired_speed(self, data):
         self.desired_speed, self.desired_angular_speed = data[0] / 1000.0, math.radians(data[1] / 100.0)
+        """
         if abs(self.desired_speed) < 0.2 and abs(self.desired_angular_speed) > 0.2:
             if self.speeds.__name__ != "oscilate":
                 self.speeds = self.oscilate()
         else:
             if self.speeds.__name__ == "oscilate":
                 self.speeds = self.plain_speeds()
+                """
         self.cmd_flags |= 0x02  # PWM ON
 
     def run(self):
