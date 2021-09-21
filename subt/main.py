@@ -983,7 +983,7 @@ class SubTChallenge:
         self.wait(timedelta(seconds=3))
 #############################################
 
-    def go_to_entrance(self):
+    def go_to_entrance_VirtualTODOFIX(self):
         """
         Navigate to the base station tile end
         """
@@ -1002,6 +1002,18 @@ class SubTChallenge:
         safety_limit = None if is_trace3d else 0.2  # UGV may need some collision avoidance during leaving the starting area
                                                     # while the CoRo Pam drone generates fake artifacts near ground
         self.follow_trace(trace, timeout=timedelta(seconds=30), max_target_distance=2.5, safety_limit=safety_limit, is_trace3d=is_trace3d)
+
+    def go_to_entrance(self):
+        print("checking paused state")
+        if self.pause_start_time is not None:
+            print('PAUSED - waiting for release')
+            while self.pause_start_time is not None:
+                self.update()
+        print("go_to_entrance - System HACK")
+        if distance(self.xyz, (0, 0)) > 0.1 or self.init_path is not None:
+            print('init_path is used')
+            self.system_nav_trace(self.init_path)
+        self.send_speed_cmd(0, 0)
 
     def play_virtual_part_explore(self):
         start_time = self.sim_time_sec
