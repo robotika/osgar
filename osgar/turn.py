@@ -19,7 +19,7 @@ class Turn(Node):
         self.desired_angle = math.radians(config['angle_deg'])
         self.timeout = timedelta(seconds=config['timeout'])
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
-        self.max_angular_speed = math.radians(45)
+        self.max_angular_speed = math.radians(config['max_angular_speed_deg'])
         self.is_moving = None  # unknown
 
     def send_speed_cmd(self, speed, angular_speed):
@@ -91,6 +91,7 @@ if __name__ == "__main__":
     parser_run.add_argument('config', nargs='+', help='configuration file')
     parser_run.add_argument('--note', help='add description')
     parser_run.add_argument('--speed', '-s', help="speed in m/s (default: from config)", type=float)
+    parser_run.add_argument('--angular-speed', help="speed in deg/s (default: 45deg/s)", type=float, default=45.0)
     parser_run.add_argument('--angle', '-a', help="angle in degrees (default: %(default)sdeg)", type=float, default=90.0)
     parser_run.add_argument('--timeout', help='seconds before stopping (default: %(default)s)', type=int, default=10)
 
@@ -118,6 +119,9 @@ if __name__ == "__main__":
         cfg['robot']['modules']['app']['init']['timeout'] = args.timeout
         if args.speed is not None:
             cfg['robot']['modules']['app']['init']['max_speed'] = args.speed
+
+        if args.angular_speed is not None:
+            cfg['robot']['modules']['app']['init']['max_angular_speed_deg'] = args.angular_speed
 
         record(cfg, prefix)
 
