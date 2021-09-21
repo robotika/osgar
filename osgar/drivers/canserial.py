@@ -263,24 +263,29 @@ class CANSerial(Thread):
             self.buf, packet = self.split_buffer(self.buf)  # i.e. process only existing buffer now
 
     def slot_raw(self, timestamp, data):
-        if len(data) > 0:
-            self.buf += data
-            if not self.ready:
-                self.ready, self.buf = subt_recovery(self.buf)
+        try:
+            if len(data) > 0:
+                self.buf += data
                 if not self.ready:
-                    return
-            for packet in self.process_gen(b''):  # workaround for "external self.buf update"
-                msg_id, rtr, size = parse_header(packet)
-                if rtr == 0:
-                    assert size + 2 == len(packet), (size, len(packet))
-                # TODO verify how rtr is handled on PCAN?
-                if msg_id not in self.firewall_ok:
-                    print(self.time, hex(msg_id), msg_id)
-                    # TODO publish to 'rejected'
                     self.ready, self.buf = subt_recovery(self.buf)
                     if not self.ready:
-                        break
-                self.bus.publish('can', [msg_id, packet[2:], 0])
+                        return
+                for packet in self.process_gen(b''):  # workaround for "external self.buf update"
+                    msg_id, rtr, size = parse_header(packet)
+                    if rtr == 0:
+                        assert size + 2 == len(packet), (size, len(packet))
+                    # TODO verify how rtr is handled on PCAN?
+                    if msg_id not in self.firewall_ok:
+                        print(self.time, hex(msg_id), msg_id)
+                        # TODO publish to 'rejected'
+                        self.ready, self.buf = subt_recovery(self.buf)
+                        if not self.ready:
+                            break
+                    self.bus.publish('can', [msg_id, packet[2:], 0])
+        except AssertionError as e:
+            print(e)
+            self.ready = False
+
 
     def slot_can(self, timestamp, data):
         if self.can_bridge_initialized:
