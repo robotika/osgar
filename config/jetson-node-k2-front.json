@@ -1,0 +1,131 @@
+{
+  "version": 2,
+  "robot": {
+    "modules":
+    {
+      "transmitter": {
+          "driver": "subt.push:Push",
+          "init": {
+            "bind": true,
+            "endpoint": "tcp://*:5557"
+          }
+      },
+      "from_apu_receiver":{
+        "driver": "subt.pull:Pull",
+        "init": {
+          "bind": true,
+          "endpoint": "tcp://*:5558",
+          "outputs": ["joint_angle_pose", "pose3d"]
+        }
+      },
+      "from_jetson_rear_receiver":{
+        "driver": "subt.pull:Pull",
+        "init": {
+          "bind": true,
+          "endpoint": "tcp://*:5560",
+          "outputs": ["depth"]
+        }
+      },
+      "lidar": {
+          "driver": "lidar",
+          "in": ["raw"],
+          "out": ["raw", "scan"],
+          "init": {"sleep": 0.1, "mask": [45, -45], "blind_zone": 100}
+      },
+      "lidar_tcp": {
+          "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"host": "192.168.0.1", "port": 2111, "timeout": 0.5}
+      },
+      "lidar_back": {
+          "driver": "lidar",
+          "in": ["raw"],
+          "out": ["raw", "scan"],
+          "init": {"sleep": 0.1, "mask": [45, -45], "blind_zone": 100}
+      },
+      "lidar_back_tcp": {
+          "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"host": "192.168.0.82", "port": 2111, "timeout": 0.5}
+      },
+      "T200": {
+          "driver": "realsense",
+          "init": {
+            "serial_number": "929122111204",
+            "device": "T200",
+            "pose_subsample": 20
+          }
+      },
+      "D435_slope": {
+          "driver": "realsense",
+          "init": {
+            "serial_number": "939622072545",
+            "device": "D400",
+            "depth_subsample": 1,
+            "depth_rgb": true,
+            "depth_resolution": [640, 480],
+            "rgb_resolution": [640, 480],
+            "depth_fps": 6
+          }
+      },
+      "small": {
+        "driver": "resize",
+        "in": ["depth"],
+        "out": ["depth"],
+        "init": {
+          "width": 160,
+          "height": 120
+        }
+      },
+      "small_rear": {
+        "driver": "resize",
+        "in": ["depth"],
+        "out": ["depth"],
+        "init": {
+          "width": 160,
+          "height": 120
+        }
+      },
+      "fromros": {
+          "driver": "subt.pull:Pull",
+          "out": ["scan360", "points"],
+          "init": {
+              "outputs": ["scan360", "points"]
+          }
+      },
+      "ros": {
+        "driver": "subt.roslaunch:ROSLaunch",
+        "in": [],
+        "out": [],
+        "init": {
+          "launch_file": "subt/ros/robot/launch/k2.launch"
+        }
+      },
+      "toros": {
+          "driver": "subt.push:Push"
+      }
+    },
+    "links": [
+      ["lidar_tcp.raw", "lidar.raw"],
+      ["lidar.raw", "lidar_tcp.raw"],
+      ["lidar_back_tcp.raw", "lidar_back.raw"],
+      ["lidar_back.raw", "lidar_back_tcp.raw"],
+
+      ["T200.pose3d", "transmitter.pose3d"],
+      ["fromros.scan360", "transmitter.scan360"],
+      ["fromros.points", "transmitter.points"],
+
+      ["D435_slope.depth", "small.depth"],
+      ["from_jetson_rear_receiver.depth", "small_rear.depth"],
+      ["small.depth", "toros.front_depth"],
+      ["small_rear.depth", "toros.rear_depth"],
+      ["lidar.scan", "toros.front_scan"],
+      ["lidar_back.scan", "toros.rear_scan"],
+      ["T200.pose3d", "toros.tracking_pose"],
+
+      ["from_apu_receiver.joint_angle_pose", "toros.angle"]
+    ]
+  }
+}

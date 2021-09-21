@@ -208,6 +208,9 @@ class SubTChallenge:
         self.neighborhood_size = config.get('neighborhood_size', 12.0)
         self.approach_angle = math.radians(config.get('approach_angle', 45))
 
+        self.gc_interval = config.get('gc_interval', 100)
+        self.gc_n = 0
+
         self.last_position = (0, 0, 0)  # proper should be None, but we really start from zero
         self.xyz = None  # unknown initial 3D position
         self.yaw, self.pitch, self.roll = 0, 0, 0
@@ -246,7 +249,7 @@ class SubTChallenge:
         if 'init_path' in config:
             pts_s = [s.split(',') for s in config['init_path'].split(';')]
             self.init_path = [(float(x), float(y)) for x, y in pts_s]
-        self.robot_name = None
+        self.robot_name = config.get('robot_name')
         scan_subsample = config.get('scan_subsample', 1)
         obstacle_influence = config.get('obstacle_influence', 0.8)
         direction_adherence = math.radians(config.get('direction_adherence', 90))
@@ -262,6 +265,10 @@ class SubTChallenge:
         self.pause_start_time = None
         if config.get('start_paused', False):
             self.pause_start_time = timedelta()  # paused from the very beginning
+
+        self.scan_directions = None
+        self.scan_directions_cos = None
+        self.scan_directions_sin = None
 
     def is_home(self):
         HOME_RADIUS = 20.0
@@ -282,10 +289,13 @@ class SubTChallenge:
         return False
 
     def speed_limit(self):
-        directions = np.radians(np.linspace(-135, 135, num=len(self.scan)))
+        if self.scan_directions is None or self.scan_directions.shape[0] != len(self.scan):
+            self.scan_directions = np.radians(np.linspace(-135, 135, num=len(self.scan)))
+            self.scan_directions_cos = np.cos(self.scan_directions)
+            self.scan_directions_sin = np.sin(self.scan_directions)
         scan = np.asarray(self.scan) / 1000.0
-        pts_x = scan * np.cos(directions)
-        pts_y = scan * np.sin(directions)
+        pts_x = scan * self.scan_directions_cos
+        pts_y = scan * self.scan_directions_sin
         of_interest = np.logical_and.reduce(np.stack([
                 scan > 0.01,
                 pts_x > 0,
@@ -312,8 +322,11 @@ class SubTChallenge:
         if self.virtual_bumper is not None:
             self.virtual_bumper.update_desired_speed(speed, angular_speed)
         self.bus.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
-        # Corresponds to gc.disable() in __main__. See a comment there for more details.
-        gc.collect()
+        self.gc_n += 1
+        if self.gc_n == self.gc_interval:
+            # Corresponds to gc.disable() in main(). See a comment there for more details.
+            gc.collect()
+            self.gc_n = 0
 
     def go_straight(self, how_far, timeout=None):
         print(self.time, "go_straight %.1f (speed: %.1f)" % (how_far, self.max_speed), self.last_position, self.flipped)
@@ -970,7 +983,7 @@ class SubTChallenge:
         self.wait(timedelta(seconds=3))
 #############################################
 
-    def go_to_entrance(self):
+    def go_to_entrance_VirtualTODOFIX(self):
         """
         Navigate to the base station tile end
         """
@@ -989,6 +1002,18 @@ class SubTChallenge:
         safety_limit = None if is_trace3d else 0.2  # UGV may need some collision avoidance during leaving the starting area
                                                     # while the CoRo Pam drone generates fake artifacts near ground
         self.follow_trace(trace, timeout=timedelta(seconds=30), max_target_distance=2.5, safety_limit=safety_limit, is_trace3d=is_trace3d)
+
+    def go_to_entrance(self):
+        print("checking paused state")
+        if self.pause_start_time is not None:
+            print('PAUSED - waiting for release')
+            while self.pause_start_time is not None:
+                self.update()
+        print("go_to_entrance - System HACK")
+        if distance(self.xyz, (0, 0)) > 0.1 or self.init_path is not None:
+            print('init_path is used')
+            self.system_nav_trace(self.init_path)
+        self.send_speed_cmd(0, 0)
 
     def play_virtual_part_explore(self):
         start_time = self.sim_time_sec
@@ -1121,7 +1146,13 @@ class SubTChallenge:
 
     def play(self):
         if self.is_virtual:
-            return self.play_virtual_track()
+            try:
+                with EmergencyStopMonitor(self):
+                    return self.play_virtual_track()
+            except EmergencyStopException:
+                print(self.time, "EMERGENCY STOP - terminating")
+            self.send_speed_cmd(0, 0)
+            self.wait(timedelta(seconds=3))
         else:
             return self.play_system_track()
 
@@ -1144,6 +1175,7 @@ def main():
     from osgar.lib.config import config_load
 
     parser = argparse.ArgumentParser(description='SubT Challenge')
+    parser.add_argument('--use-old-record', help="use old osgar.record instead of zmqrouter", action='store_true')
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
     subparsers.required = True
     parser_run = subparsers.add_parser('run', help='run on real HW')
@@ -1159,7 +1191,6 @@ def main():
     parser_run.add_argument('--init-path', help='inital path to be followed from (0, 0). 2D coordinates are separated by ;')
     parser_run.add_argument('--start-paused', dest='start_paused', action='store_true',
                             help='start robot Paused and wait for LoRa Continue command')
-    parser_run.add_argument('--use-old-record', help="use old osgar.record instead of zmqrouter", action='store_true')
 
     parser_replay = subparsers.add_parser('replay', help='replay from logfile')
     parser_replay.add_argument('logfile', help='recorded log file')
@@ -1199,6 +1230,8 @@ def main():
             cfg['robot']['modules']['app']['init']['right_wall'] = 'auto'
         else:
             cfg['robot']['modules']['app']['init']['right_wall'] = args.side == 'right'
+            cmd = 'R' if args.side == 'right' else 'L'
+            cfg['robot']['modules']['app']['init']['robot_name'] = f'A{args.timeout}{cmd}'
         cfg['robot']['modules']['app']['init']['timeout'] = args.timeout
         if args.init_path is not None:
             cfg['robot']['modules']['app']['init']['init_path'] = args.init_path

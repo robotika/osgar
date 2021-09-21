@@ -10,6 +10,7 @@ import enum
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
+from osgar.lib.quaternion import euler_to_quaternion
 
 #WHEEL_DISTANCE = 0.475  # m
 WHEEL_DISTANCE = 0.496  # m K2, can be modified by config
@@ -241,7 +242,7 @@ class RobotKloubak(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('pose2d', 'emergency_stop', 'encoders', 'can', 'joint_angle',
-                     'bumpers_front', 'bumpers_rear',
+                     'joint_angle_pose','bumpers_front', 'bumpers_rear',
                      'downdrops_front', 'downdrops_rear')
         setup_global_const(config)
 
@@ -471,12 +472,15 @@ class RobotKloubak(Node):
 #                    print(self.last_joint_angle, self.last_joint_angle2)
                     self.last_joint_angle, self.last_joint_angle2 = joint_rad(analog_joint_angle), joint_rad(analog_joint_angle2, second_ang=True)
                     self.publish('joint_angle', [round(math.degrees(self.last_joint_angle)*100), round(math.degrees(self.last_joint_angle2)*100)])
+                    self.publish('joint_angle_pose', [[[0, 0, 0], euler_to_quaternion(math.pi - self.last_joint_angle, 0, 0)],
+                                                      [[0, 0, 0], euler_to_quaternion(math.pi - self.last_joint_angle2, 0, 0)]])
                 else:
                     analog_joint_angle = struct.unpack('>i', payload)[0]
 #                    print(self.last_joint_angle,payload)
 #                    print(self.last_joint_angle)
                     self.last_joint_angle = joint_rad(analog_joint_angle)
                     self.publish('joint_angle', [round(math.degrees(self.last_joint_angle)*100)])
+                    self.publish('joint_angle_pose', [[0, 0, 0], euler_to_quaternion(math.pi-self.last_joint_angle, 0, 0)])
             else:
                 self.can_errors += 1
         elif msg_id == CAN_ID_VOLTAGE:

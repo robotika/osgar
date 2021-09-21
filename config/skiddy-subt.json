@@ -7,8 +7,21 @@
           "in": ["emergency_stop", "pose2d"],
           "out": ["desired_speed"],
           "init": {
+            "init_path": "2.5,0",
             "max_speed": 0.5,
-            "symmetric": false
+            "symmetric": true,
+            "direction_adherence": 45,
+            "obstacle_influence": 1.4,
+            "speed_policy": "conservative",
+            "min_safe_dist": 0.8,
+            "dangerous_dist": 0.5,
+            "rotation_p": 3.0,
+            "virtual_bumper_sec": 75,
+            "virtual_bumper_radius": 10.0,
+	    "virtual_world": true,
+            "follow_wall": {
+              "max_wall_distance": 5.0
+            }
           }
       },
       "cortexpilot": {
@@ -17,28 +30,41 @@
           "out": ["raw", "encoders", "emergency_stop", "pose2d", "scan"],
           "init": {}
       },
-      "serial": {
-          "driver": "serial",
-          "in": ["raw"],
-          "out": ["raw"],
-          "init": {"port": "/dev/ttyACM0", "speed": 115200}
+      "toserial": {
+          "driver": "subt.push:Push",
+          "init": {
+              "endpoint": "tcp://127.0.0.1:5590"
+          }
+      },
+      "fromserial": {
+          "driver": "subt.pull:Pull",
+          "init": {
+              "endpoint": "tcp://127.0.0.1:5591",
+              "outputs": ["raw"]
+          }
+      },
+      "localization": {
+	      "driver": "subt.odoimuloc:Localization",
+	      "in": ["orientation", "odom"],
+	      "out": ["pose3d"],
+	      "init":{}
       },
       "depth": {
         "driver": "realsense",
         "init": {
           "device": "D400",
           "serial_number": "848312070179",
-          "depth_subsample": 3,
+          "depth_subsample": 1,
           "depth_rgb": true,
           "depth_resolution": [
             640,
-            360
+            480
           ],
           "rgb_resolution": [
             640,
-            360
+            480
           ],
-          "depth_fps": 30
+          "depth_fps": 6
         }
       },
       "depth_rear": {
@@ -46,17 +72,17 @@
         "init": {
           "device": "D400",
           "serial_number": "938422071072",
-          "depth_subsample": 3,
+          "depth_subsample": 1,
           "depth_rgb": true,
           "depth_resolution": [
             640,
-            360
+            480
           ],
           "rgb_resolution": [
             640,
-            360
+            480
           ],
-          "depth_fps": 30
+          "depth_fps": 6
         }
       },
       "tracking": {
@@ -64,7 +90,7 @@
           "init": {
             "device": "T200",
             "serial_number": "2322110762",
-            "pose_subsample": 20
+            "pose_subsample": 15
           }
       },
       "lidar": {
@@ -90,18 +116,224 @@
           "in": ["raw"],
           "out": ["raw"],
           "init": {"host": "192.168.1.71", "port": 2111, "timeout": 0.5}
+      },
+      "bundler": {
+          "driver": "subt.bundle_rgbd:Bundler",
+          "in": ["robot_pose", "img", "depth"],
+          "out": ["rgbd"],
+          "init": {
+            "camera": {
+              "xyz": [0.0, -0.0175, 0.03],
+              "ypr": [0.0, 0.0, 0.0]
+            },
+            "rgb": {
+              "w": 640,
+              "h": 480,
+              "fx": 614.595886230469,
+              "fy": 614.745910644531,
+              "cx": 320.756683349609,
+              "cy": 245.478973388672
+            },
+            "depth": {
+              "w": 640,
+              "h": 480,
+              "fx": 382.348602294922,
+              "fy": 382.348602294922,
+              "cx": 323.737854003906,
+              "cy": 238.932739257812
+            },
+            "extrinsics": [
+              [0.999967, -0.000261684, 0.00818068, 0.0149064091965556],
+              [0.000281749, 0.999997, -0.00245158, 0.000188795995200053],
+              [-0.00818002, 0.0024538, 0.999964, 0.000308448070427403]
+            ],
+            "serialization": "raw"
+          }
+      },
+      "bundler_rear": {
+          "driver": "subt.bundle_rgbd:Bundler",
+          "in": ["robot_pose", "img", "depth"],
+          "out": ["rgbd"],
+          "init": {
+            "camera": {
+              "xyz": [0.564, 0.0175, 0.03],
+              "ypr": [180.0, 0.0, 0.0]
+            },
+            "rgb": {
+              "w": 640,
+              "h": 480,
+              "fx": 615.746765136719,
+              "fy": 615.988037109375,
+              "cx": 315.426666259766,
+              "cy": 239.346115112305
+            },
+            "depth": {
+              "w": 640,
+              "h": 480,
+              "fx": 319.100646972656,
+              "fy": 239.571380615234,
+              "cx": 382.589111328125,
+              "cy": 382.589111328125
+            },
+            "extrinsics": [
+              [0.999951, 0.00991749, -0.000142397, 0.0144655723124743],
+              [-0.00991762, 0.99995, -0.000935794, 0.000105238395917695],
+              [0.000133109, 0.000937161, 1, 0.000633214542176574]
+            ],
+	    "serialization": "raw"
+          }
+      },
+      "detector": {
+        "driver": "subt.artf_edgetpu_detector:Detector",
+        "in": ["front", "rear"],
+        "out" : ["localized_artf", "debug_rgbd"],
+        "init": {
+          "device": ":0",
+          "batch_size": 2,
+          "camera": {
+            "front": {
+              "w": 640,
+              "h": 480,
+              "fx": 614.595886230469,
+              "fy": 614.745910644531,
+              "cx": 320.756683349609,
+              "cy": 245.478973388672
+            },
+            "rear": {
+              "w": 640,
+              "h": 480,
+              "fx": 615.746765136719,
+              "fy": 615.988037109375,
+              "cx": 315.426666259766,
+              "cy": 239.346115112305
+            }
+          }
+        }
+      },
+      "reporter": {
+          "driver": "subt.artf_reporter:ArtifactReporter",
+          "in": ["artf_xyz"],
+          "out": ["artf_cmd"],
+          "init": {
+            "repeat_report_sec": 10
+          }
+      },
+      "artifact_filter": {
+          "driver": "subt.artf_filter:ArtifactFilter",
+          "in": ["robot_name", "localized_artf"],
+          "out": ["artf_xyz"],
+          "init": {
+            "min_observations": 2
+          }
+      },
+      "small": {
+        "driver": "resize",
+        "in": ["depth"],
+        "out": ["depth"],
+        "init": {
+          "width": 160,
+          "height": 120
+        }
+      },
+      "small_rear": {
+        "driver": "resize",
+        "in": ["depth"],
+        "out": ["depth"],
+        "init": {
+          "width": 160,
+          "height": 120
+        }
+      },
+      "fromros": {
+          "driver": "subt.pull:Pull",
+          "out": ["scan360", "points"],
+          "init": {
+              "outputs": ["scan360", "points"]
+          }
+      },
+      "ros": {
+        "driver": "subt.roslaunch:ROSLaunch",
+        "in": [],
+        "out": [],
+        "init": {
+          "launch_file": "subt/ros/robot/launch/skiddy.launch"
+        }
+      },
+      "toros": {
+          "driver": "subt.push:Push"
+      },
+      "sec_timer": {
+        "driver": "timer",
+        "in": [],
+        "out": ["tick"],
+        "init": {
+          "sleep": 1.0
+        }
+      },
+     "estop": {
+          "driver": "subt.estop:EStop",
+          "in": ["raw"],
+          "out": ["raw", "emergency_stop"],
+          "init": {}
+      },
+      "estop_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/estop", "speed": 9600}
+      },
+      "lora": {
+          "driver": "lora",
+          "in": ["raw", "pose2d"],
+          "out": ["raw", "cmd"],
+          "init": {}
+      },
+      "lora_serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/lora", "speed": 115200}
       }
     },
     "links": [["app.desired_speed", "cortexpilot.desired_speed"],
               ["cortexpilot.pose2d", "app.pose2d"],
               ["cortexpilot.emergency_stop", "app.emergency_stop"],
-              ["serial.raw", "cortexpilot.raw"], 
-              ["cortexpilot.raw", "serial.raw"],
+              ["fromserial.raw", "cortexpilot.raw"],
+              ["cortexpilot.raw", "toserial.raw"],
+              ["cortexpilot.pose2d", "localization.odom"],
+              ["cortexpilot.orientation", "localization.orientation"],
               ["lidar_tcp.raw", "lidar.raw"],
               ["lidar.raw", "lidar_tcp.raw"],
               ["lidar_back_tcp.raw", "lidar_back.raw"],
               ["lidar_back.raw", "lidar_back_tcp.raw"],
-              ["lidar.scan", "app.scan"],
-              ["tracking.pose3d", "app.pose3d"]]
+              ["fromros.scan360", "app.scan360"],
+              ["tracking.pose3d", "app.pose3d"],
+              ["tracking.pose3d", "bundler.robot_pose"],
+              ["depth.color", "bundler.img"],
+              ["depth.depth", "bundler.depth"],
+              ["tracking.pose3d", "bundler_rear.robot_pose"],
+              ["depth_rear.color", "bundler_rear.img"],
+              ["depth_rear.depth", "bundler_rear.depth"],
+              ["bundler.rgbd", "detector.front"],
+              ["bundler_rear.rgbd", "detector.rear"],
+              ["detector.localized_artf", "artifact_filter.localized_artf"],
+              ["artifact_filter.artf_xyz", "reporter.artf_xyz"],
+              ["reporter.artf_lora", "lora.artf"],
+              ["depth.depth", "small.depth"],
+              ["depth_rear.depth", "small_rear.depth"],
+              ["small.depth", "toros.front_depth"],
+              ["small_rear.depth", "toros.rear_depth"],
+              ["tracking.pose3d", "toros.tracking_pose"],
+              ["lidar.scan", "toros.front_scan"],
+              ["lidar_back.scan", "toros.rear_scan"],
+              ["sec_timer.tick", "app.sim_time_sec"],
+              ["estop_serial.raw", "estop.raw"],
+              ["estop.raw", "estop_serial.raw"],
+              ["estop.emergency_stop", "app.emergency_stop"],
+              ["lora_serial.raw", "lora.raw"],
+              ["lora.raw", "lora_serial.raw"],
+              ["tracking.pose3d", "lora.pose3d"],
+              ["lora.cmd", "app.cmd"]
+    ]
   }
 }

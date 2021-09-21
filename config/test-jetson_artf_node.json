@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "camera": {
+          "driver": "osgar.drivers.opencv:LogOpenCVCamera",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+              "port": 0,
+              "sleep": 1.0
+          }
+      },
+      "detector":{
+        "driver": "subt.jetson_artf_node:ArtifactDetectorJetson",
+        "in": ["image"],
+        "out": ["localized_artf", "dropped", "debug_image", "debug_result"],
+        "init": {}
+
+      }
+    },
+    "links": [["camera.raw", "detector.image"]]
+  }
+}

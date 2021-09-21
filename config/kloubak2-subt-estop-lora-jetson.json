@@ -14,23 +14,8 @@
             "virtual_bumper_sec": 10.0,
             "virtual_bumper_radius": 0.5,
             "scan_subsample": 3,
-            "safety_turning_coeff": 0.6
-          }
-      },
-      "detector": {
-          "driver": "subt.artifacts:ArtifactDetector",
-          "in": ["image", "scan"],
-          "out": ["artf", "dropped"],
-          "init": {
-            "virtual_world": false
-          }
-      },
-      "reporter": {
-          "driver": "subt.artf_reporter:ArtifactReporter",
-          "in": ["artf_xyz"],
-          "out": [],
-          "init": {
-            "path": "call_base_x2l.txt"
+            "safety_turning_coeff": 0.6,
+            "virtual_world": true
           }
       },
       "kloubak": {
@@ -167,45 +152,70 @@
           "out": ["raw"],
           "init": {"port": "/dev/gas_detector", "speed": 115200}
       },
-      "receiver": {
-          "driver": "zeromq",
-          "in": [],
-          "out": ["raw"],
-          "init": {
-            "mode": "PULL",
-            "timeout":0.5,
-            "endpoint": "tcp://192.168.2.23:5555"
-          }
-      },
-      "rosmsg": {
-          "driver": "rosmsg",
-          "in": ["slot_raw", "desired_speed", "tick", "stdout", "request_origin"],
-          "out": ["rot", "acc", "scan", "image", "pose2d", "sim_time_sec", "cmd", "origin"],
-          "init": {
-            "downsample": 1
-          }
-      },
-      "scan_mixer": {
-	      "driver": "subt.scan_mixer:ScanMixer",
-	      "in": ["scan", "rs_scan", "slope_scan"],
-	      "out": ["scan"],
-	      "init":{}
-      },
       "localization": {
 	      "driver": "subt.odoimuloc:Localization",
 	      "in": ["orientation", "odom"],
 	      "out": ["pose3d"],
 	      "init":{}
       },
-            "system": {
+      "from_jetson_front": {
+          "driver": "subt.pull:Pull",
+          "init": {
+            "endpoint": "tcp://192.168.0.23:5557",
+            "outputs": ["pose3d", "depth", "scan360", "points"]
+          }
+       },
+      "from_jetson_rear": {
+          "driver": "subt.pull:Pull",
+          "init": {
+            "endpoint": "tcp://192.168.0.24:5557",
+            "outputs": ["pose3d", "depth", "localized_artf", "debug_image", "localized_artf_rear", "debug_image_rear"]
+          }
+       },
+      "to_jetson_rear": {
+          "driver": "subt.push:Push",
+          "init": {
+            "endpoint": "tcp://192.168.0.24:5558"
+          }
+      },
+       "to_jetson_front": {
+          "driver": "subt.push:Push",
+          "init": {
+            "endpoint": "tcp://192.168.0.23:5558"
+          }
+      },
+      "system": {
 	      "driver": "systemmonitor",
 	      "in": [],
 	      "out": ["cpu", "ram", "temp"],
 	      "init": {
 	          "dmesg": true
 	      }
+      },
+      "sec_timer": {
+        "driver": "timer",
+        "in": [],
+        "out": ["tick"],
+        "init": {
+          "sleep": 1.0
+        }
+      },
+      "reporter": {
+          "driver": "subt.artf_reporter:ArtifactReporter",
+          "in": ["artf_xyz"],
+          "out": ["artf_cmd"],
+          "init": {
+            "repeat_report_sec": 10
+          }
+      },
+      "artifact_filter": {
+          "driver": "subt.artf_filter:ArtifactFilter",
+          "in": ["robot_name", "localized_artf"],
+          "out": ["artf_xyz"],
+          "init": {
+            "min_observations": 2
+          }
       }
-	      
     },
     "links": [["serial.raw", "can.slot_raw"],
               ["can.raw", "serial.slot_raw"],
@@ -213,39 +223,39 @@
               ["can.can", "kloubak.slot_can"],
               ["app.desired_speed", "kloubak.slot_desired_speed"],
               ["kloubak.pose2d", "localization.odom"],
+              ["kloubak.pose2d", "app.pose2d"],
               ["imu.orientation", "localization.orientation"],
-              ["localization.pose3d", "app.pose3d"],
+              ["from_jetson_front.pose3d", "app.pose3d"],
               ["lidar_tcp.raw", "lidar.raw"],
               ["lidar.raw", "lidar_tcp.raw"],
               ["lidar_back_tcp.raw", "lidar_back.raw"],
               ["lidar_back.raw", "lidar_back_tcp.raw"],
-              ["scan_mixer.scan", "app.scan"],
-              ["lidar_back.scan", "app.scan_back"],
+              ["from_jetson_front.scan360", "app.scan360"],
               ["kloubak.emergency_stop", "app.emergency_stop"],
               ["imu_serial.raw", "imu.raw"],
               ["imu.rotation", "app.rot"],
               ["estop_serial.raw", "estop.raw"],
               ["estop.raw", "estop_serial.raw"],
               ["estop.emergency_stop", "app.emergency_stop"],
-              ["camera.raw", "detector.image"],
-              ["lidar.scan", "detector.scan"],
-              ["detector.artf", "app.artf"],
-              ["app.artf_xyz", "reporter.artf_xyz"],
               ["lora_serial.raw", "lora.raw"],
               ["lora.raw", "lora_serial.raw"],
-              ["app.pose2d", "lora.pose2d"],
+              ["from_jetson_front.pose3d", "lora.pose3d"],
               ["lora.cmd", "app.cmd"],
               ["app.artf_xyz", "lora.artf"],
-              ["kloubak.bumpers_rear", "app.bumpers_rear"],
               ["kloubak.joint_angle", "app.joint_angle"],
               ["gas_serial.raw", "gas_detector.raw"],
               ["gas_detector.raw", "gas_serial.raw"],
-              ["receiver.raw", "rosmsg.slot_raw"],
-              ["rosmsg.scan", "scan_mixer.rs_scan"],
-              ["lidar.scan", "scan_mixer.scan"],
-              ["wifi.wifiscan", "detector.wifiscan"],
-              ["gas_detector.co2", "detector.co2"]
-      ]
+              ["kloubak.joint_angle_pose", "to_jetson_rear.joint_angle_pose"],
+              ["from_jetson_front.pose3d", "to_jetson_rear.pose3d"],
+              ["kloubak.joint_angle_pose", "to_jetson_front.joint_angle_pose"],
+              ["sec_timer.tick", "app.sim_time_sec"],
+              ["sec_timer.tick", "reporter.sim_time_sec"],
+
+              ["from_jetson_rear.localized_artf", "artifact_filter.localized_artf"],
+              ["from_jetson_rear.localized_artf_rear", "artifact_filter.localized_artf"],
+              ["artifact_filter.artf_xyz", "reporter.artf_xyz"],
+              ["reporter.artf_lora", "lora.artf"]
+    ]
   }
 }
 

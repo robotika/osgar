@@ -2,6 +2,27 @@
   "version": 2,
   "robot": {
     "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["emergency_stop", "pose3d", "scan360"],
+          "out": ["desired_speed"],
+          "init": {
+            "init_path": "2.5,0",
+	    "virtual_world": true,
+            "max_speed": 0.1,
+            "symmetric": false,
+            "speed_policy": "conservative",
+            "rotation_p": 0.5,
+	    "max_obstacle_distance": 0.4,
+            "dangerous_dist": 0.15,
+            "min_safe_dist": 1.0,
+            "virtual_bumper_sec": 120.0,
+            "virtual_bumper_radius": 1.0,
+	    "follow_wall": {
+              "max_wall_distance": 0.8
+	    }
+          }
+      },
       "timer": {
         "driver": "timer",
         "in": [],
@@ -9,11 +30,6 @@
         "init": {
           "sleep": 0.05
         }
-      },
-      "demo": {
-        "driver": "osgar.drivers.deedee:Demo",
-        "in": ["tick", "pose2d"],
-        "out": ["desired_speed"]
       },
       "deedee": {
         "driver": "osgar.drivers.deedee:Deedee",
@@ -40,29 +56,179 @@
         "init": {
           "devices": [{"type": "D400", "serial_number": "038122250496", "name": "front"},
                       {"type": "D400", "serial_number": "035622251357", "name": "rear"},
-                      {"type": "T200", "serial_number": "952322110907", "name": "tracking"}
+                      {"type": "T200", "serial_number": "952322110907", "name": "tracking", "pitch": -90, "yaw": 180}
           ],
-          "depth_subsample": 3,
+          "depth_subsample": 1,
           "depth_rgb": true,
           "depth_resolution": [
             640,
-            360
+            480
           ],
           "rgb_resolution": [
             640,
-            360
+            480
           ],
-          "depth_fps": 30,
-          "pose_subsample": 20
+          "depth_fps": 5,
+          "pose_subsample": 25
+        }
+      },
+      "bundler_front": {
+          "driver": "subt.bundle_rgbd:Bundler",
+          "in": ["robot_pose", "img", "depth"],
+          "out": ["rgbd"],
+          "init": {
+            "camera": {
+              "xyz": [0.035, 0.05, -0.015],
+              "ypr": [0.0, 28.0, 0.0]
+            },
+            "rgb": {
+              "w": 640,
+              "h": 480,
+              "fx": 379.168151855469,
+              "fy": 378.769561767578,
+              "cx": 317.768188476562,
+              "cy": 251.154098510742
+            },
+            "depth": {
+              "w": 640,
+              "h": 480,
+              "fx": 382.484588623047,
+              "fy": 382.484588623047,
+              "cx": 315.080291748047,
+              "cy": 234.100143432617
+            },
+            "extrinsics": [
+              [1.0, 0.000677165, 0.000712974, -0.0591711737215519],
+              [-0.000678469, 0.999998, 0.00183018, 3.08681665046606e-05],
+              [-0.000711733, -0.00183066, 0.999998, 0.000453586981166154]
+            ],
+	    "serialization": "raw"
+          }
+      },
+      "bundler_rear": {
+          "driver": "subt.bundle_rgbd:Bundler",
+          "in": ["robot_pose", "img", "depth"],
+          "out": ["rgbd"],
+          "init": {
+            "camera": {
+              "xyz": [-0.035, -0.05, -0.015],
+              "ypr": [180.0, 28.0, 0.0]
+            },
+            "rgb": {
+              "w": 640,
+              "h": 480,
+              "fx": 382.580444335938,
+              "fy": 382.306060791016,
+              "cx": 318.145568847656,
+              "cy": 382.306060791016
+            },
+            "depth": {
+              "w": 640,
+              "h": 480,
+              "fx": 385.122985839844,
+              "fy": 385.122985839844,
+              "cx": 321.560302734375,
+              "cy": 239.787292480469
+            },
+            "extrinsics": [
+              [0.999997, 4.05157e-05, 0.00246853, -0.0591028854250908],
+              [-4.94213e-05, 0.999994, 0.00360768, 6.01844913035166e-05],
+              [-0.00246837, -0.00360779, 0.99999, 0.000353081908542663]
+            ],
+	    "serialization": "raw"
+          }
+      },
+      "detector": {
+        "driver": "subt.artf_edgetpu_detector:Detector",
+        "in": ["front", "rear"],
+        "out" : [],
+        "init": {
+          "camera": {
+            "front": {
+              "w": 640,
+              "h": 480,
+              "fx": 379.168151855469,
+              "fy": 378.769561767578,
+              "cx": 317.768188476562,
+              "cy": 251.154098510742
+            },
+            "rear": {
+              "w": 640,
+              "h": 480,
+              "fx": 382.580444335938,
+              "fy": 382.306060791016,
+              "cx": 318.145568847656,
+              "cy": 382.306060791016
+            }
+          }
+        }
+      },
+      "small_front": {
+        "driver": "resize",
+        "in": ["depth"],
+        "out": ["depth"],
+        "init": {
+          "width": 80,
+          "height": 60
+        }
+      },
+      "small_rear": {
+        "driver": "resize",
+        "in": ["depth"],
+        "out": ["depth"],
+        "init": {
+          "width": 80,
+          "height": 60
+        }
+      },
+      "ros": {
+        "driver": "subt.roslaunch:ROSLaunch",
+        "in": [],
+        "out": [],
+        "init": {
+          "launch_file": "subt/ros/robot/launch/deedee.launch"
+        }
+      },
+      "fromros": {
+          "driver": "subt.pull:Pull",
+          "out": "scan360",
+          "init": {
+              "outputs": ["scan360"]
+          }
+      },
+      "toros": {
+          "driver": "subt.push:Push"
+      },
+      "sec_timer": {
+        "driver": "timer",
+        "in": [],
+        "out": ["tick"],
+        "init": {
+          "sleep": 1.0
         }
       }
     },
     "links": [["timer.tick", "deedee.tick"],
-              ["demo.desired_speed", "deedee.desired_speed"],
               ["deedee.cmd", "slip.packet"],
-              ["deedee.pose2d", "demo.pose2d"],
               ["slip.packet", "deedee.info"],
               ["slip.raw", "serial.raw"],
-              ["serial.raw", "slip.raw"]]
+              ["serial.raw", "slip.raw"],
+              ["realsense.front_depth", "small_front.depth"],
+              ["realsense.rear_depth", "small_rear.depth"],
+              ["realsense.tracking_pose3d", "bundler_front.robot_pose"],
+              ["realsense.front_color", "bundler_front.img"],
+              ["realsense.front_depth", "bundler_front.depth"],
+              ["realsense.tracking_pose3d", "bundler_rear.robot_pose"],
+              ["realsense.rear_color", "bundler_rear.img"],
+              ["realsense.rear_depth", "bundler_rear.depth"],
+              ["bundler_front.rgbd", "detector.front"],
+              ["bundler_rear.rgbd", "detector.rear"],
+              ["small_front.depth", "toros.front_depth"],
+              ["small_rear.depth", "toros.rear_depth"],
+              ["realsense.tracking_pose3d", "toros.tracking_pose"],
+              ["fromros.scan360", "app.scan360"],
+              ["realsense.tracking_pose3d", "app.pose3d"],
+              ["app.desired_speed", "deedee.desired_speed"],
+              ["sec_timer.tick", "app.sim_time_sec"]]
   }
 }

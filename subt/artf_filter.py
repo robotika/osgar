@@ -5,7 +5,7 @@
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 from subt.trace import distance3D
-from subt.artifacts import DRILL, GAS
+from subt.artf_utils import DRILL, GAS
 
 
 class ArtifactFilter(Node):
@@ -66,9 +66,10 @@ class ArtifactFilter(Node):
 
     def handle_artf(self, artifact_data, world_xyz):
         ax, ay, az = world_xyz
-        if -20 < ax < 0 and -10 < ay < 10:  # AND of currently available staging areas
+        if 0 < ax < 0 and -0 < ay < 0:  # Finals System - empty staging area
             # Urban (-20 < ax < 0 and -10 < ay < 10)
             # Cave  (-50 < ax < 0 and -25 < ay < 25)
+            # Finals (Virtual) (-20 < ax < 0 and -10 < ay < 10)
             # filter out elements on staging area
             if self.verbose:
                 print(self.time, 'Robot at staging area:', (ax, ay, az))

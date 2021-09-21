@@ -3,12 +3,15 @@
 #include <cmath>
 #include <random>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/core.hpp>
 #include <ros/ros.h>
+#if WITH_RTABMAP
 #include <rtabmap_ros/RGBDImage.h>
+#endif
 #include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/LaserScan.h>
@@ -17,10 +20,7 @@
 #include <tf/transform_listener.h>
 
 #include <opencv2/imgproc.hpp>
-
-// Temporary
-#include <iostream>
-#include <opencv2/imgcodecs.hpp>
+#include <opencv2/calib3d.hpp>
 
 namespace osgar
 {
@@ -54,7 +54,9 @@ class Flyability
   private:
     ros::NodeHandle ros_handle_;
     ros::Subscriber depth_handler_;
+#if WITH_RTABMAP
     ros::Subscriber rgbd_handler_;
+#endif
     ros::Subscriber camera_info_handler_;
     ros::Subscriber scan_handler_;
     ros::Subscriber range_handler_;
@@ -146,7 +148,9 @@ class Flyability
 
     void OnCameraInfo(const sensor_msgs::CameraInfo::ConstPtr& msg);
     void OnDepth(const sensor_msgs::Image::ConstPtr& msg);
+#if WITH_RTABMAP
     void OnRGBD(const rtabmap_ros::RGBDImage::ConstPtr& msg);
+#endif
     void OnScan(const sensor_msgs::LaserScan::ConstPtr& msg);
     void OnRange(const sensor_msgs::LaserScan::ConstPtr& msg);
     void OnTimer(const ros::TimerEvent& event);
@@ -184,7 +188,9 @@ bool Flyability::Init()
 
   camera_info_handler_ = ros_handle_.subscribe("input/camera_info", 10, &Flyability::OnCameraInfo, this);
   depth_handler_ = ros_handle_.subscribe("input/depth", 10, &Flyability::OnDepth, this);
+#if WITH_RTABMAP
   rgbd_handler_ = ros_handle_.subscribe("input/rgbd", 10, &Flyability::OnRGBD, this);
+#endif
   scan_handler_ = ros_handle_.subscribe("input/scan", 10, &Flyability::OnScan, this);
   range_handler_ = ros_handle_.subscribe("input/range", 10, &Flyability::OnRange, this);
 
@@ -208,7 +214,7 @@ std::optional<tf::StampedTransform> Flyability::GetTransform(
       transform_listener_.lookupTransform(target_frame, source_frame, when, pose);
       return pose;
     }
-    catch (tf::TransformException e)
+    catch (tf::TransformException& e)
     {
       error = e;
       ros::Duration(0.005).sleep();
@@ -261,6 +267,7 @@ void Flyability::OnDepth(const sensor_msgs::Image::ConstPtr& msg)
   HandleDepth(input_img_ptr->image, msg->header.frame_id, msg->header.stamp);
 }
 
+#if WITH_RTABMAP
 void Flyability::OnRGBD(const rtabmap_ros::RGBDImage::ConstPtr& msg)
 {
   cv::Mat decompressed = cv::imdecode(msg->depth_compressed.data, cv::IMREAD_UNCHANGED);
@@ -271,6 +278,7 @@ void Flyability::OnRGBD(const rtabmap_ros::RGBDImage::ConstPtr& msg)
                 decompressed.step);
   HandleDepth(depth, msg->header.frame_id, msg->header.stamp);
 }
+#endif
 
 void Flyability::HandleDepth(
     const cv::Mat& img, const std::string& camera_frame_id,
