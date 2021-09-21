@@ -82,17 +82,21 @@ def print_packet(data, dbc = {}):
             return hex(msg_id), [hex(x) for x in data[2:]]
 
 
-def subt_recovery(buf):
-    print('Recovering ...', buf.hex())
+def subt_recovery(buf, verbose=False):
+    if verbose:
+        print('Recovering ...', buf.hex())
     if len(buf) >= 6 and b'\x00\x41' in buf[:-3]:
         i = buf.index(b'\x00\x41')
-        print('FOUND 0041!', i)
-        if buf[i+3:i+6] == b'\x00\x21\x00':
+        if verbose:
+            print('FOUND 0041!', i)
+        if buf[i+3:i+6] == b'\x00\x21\x00' or buf[i+3:i+6] == b'\x00\x21\x01':
             print('fixed.')
             return True, buf[i:]
-        print('skipping part', i)
+        if verbose:
+            print('skipping part', i)
         return False, buf[i+1:]
-    print('not recovered.')
+    if verbose:
+        print('not recovered.')
     return False, buf
 
 
@@ -106,6 +110,7 @@ class CANSerial(Thread):
         self.buf = b''
         self.time = None
         ok_list = [0x7f2, 0x7f1, 1, 2,
+                   0x11, 0x12, 0x13, 0x14,
                    0x80, 0x81, 0x82, 0x83,
                    0x91, 0x92, 0x93, 0x94]  # TODO config
         self.firewall_ok = set(ok_list)
@@ -118,6 +123,7 @@ class CANSerial(Thread):
         self.can_bridge_initialized = False
         self.modules_for_restart = set()
         self.ready = True  # SubT hack to recover
+        self.verbose = False
 
     @staticmethod
     def split_buffer(data):
@@ -267,7 +273,7 @@ class CANSerial(Thread):
             if len(data) > 0:
                 self.buf += data
                 if not self.ready:
-                    self.ready, self.buf = subt_recovery(self.buf)
+                    self.ready, self.buf = subt_recovery(self.buf, verbose=self.verbose)
                     if not self.ready:
                         return
                 for packet in self.process_gen(b''):  # workaround for "external self.buf update"
@@ -278,7 +284,7 @@ class CANSerial(Thread):
                     if msg_id not in self.firewall_ok:
                         print(self.time, hex(msg_id), msg_id)
                         # TODO publish to 'rejected'
-                        self.ready, self.buf = subt_recovery(self.buf)
+                        self.ready, self.buf = subt_recovery(self.buf, verbose=self.verbose)
                         if not self.ready:
                             break
                     self.bus.publish('can', [msg_id, packet[2:], 0])
