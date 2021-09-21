@@ -90,7 +90,6 @@
       ["detector_rear.debug_image", "transmitter.debug_image_rear"],
 
       ["T200_rear.pose3d", "transmitter.pose3d"],
-      ["D435_slope.depth", "transmitter.depth"],
       ["D435_slope.depth", "to_front_jetson.depth"],
 
       ["receiver.angle", "detector.angle"],
