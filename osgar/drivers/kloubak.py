@@ -17,7 +17,7 @@ WHEEL_DISTANCE = 0.496  # m K2, can be modified by config
 CENTER_AXLE_DISTANCE = 0.348  # distance from potentiometer, can be modified by config
 VESC_REPORT_FREQ = 20  # was 100  # Hz
 SPEED_ENC_SCALE = (33/25)*0.25 * math.pi / (4 * 3 * 60 * VESC_REPORT_FREQ)  # scale 4x found experimentally
-ENC_SCALE = (33/25)*8.0/950  # TODO proper calibration (scale for large 33" wheels, old were 25")
+ENC_SCALE = (33/25)*8.0/950 * 0.923  # The last number is based the calibration made during DARPA Subt final.
 TURNING_ANGULAR_SPEED = math.pi/8
 
 AD_CENTER = 531 # K2, can be modified by config
