@@ -1004,6 +1004,11 @@ class SubTChallenge:
         self.follow_trace(trace, timeout=timedelta(seconds=30), max_target_distance=2.5, safety_limit=safety_limit, is_trace3d=is_trace3d)
 
     def go_to_entrance(self):
+        print("checking paused state")
+        if self.pause_start_time is not None:
+            print('PAUSED - waiting for release')
+            while self.pause_start_time is not None:
+                self.update()
         print("go_to_entrance - System HACK")
         if distance(self.xyz, (0, 0)) > 0.1 or self.init_path is not None:
             print('init_path is used')
