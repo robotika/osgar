@@ -14,7 +14,8 @@
             "virtual_bumper_sec": 10.0,
             "virtual_bumper_radius": 0.5,
             "scan_subsample": 3,
-            "safety_turning_coeff": 0.6
+            "safety_turning_coeff": 0.6,
+            "virtual_world": true
           }
       },
       "reporter": {
@@ -197,8 +198,15 @@
 	      "init": {
 	          "dmesg": true
 	      }
+      },
+      "sec_timer": {
+        "driver": "timer",
+        "in": [],
+        "out": ["tick"],
+        "init": {
+          "sleep": 1.0
+        }
       }
-	      
     },
     "links": [["serial.raw", "can.slot_raw"],
               ["can.raw", "serial.slot_raw"],
@@ -213,8 +221,7 @@
               ["lidar.raw", "lidar_tcp.raw"],
               ["lidar_back_tcp.raw", "lidar_back.raw"],
               ["lidar_back.raw", "lidar_back_tcp.raw"],
-              ["lidar.scan", "app.scan"],
-              ["lidar_back.scan", "app.scan_back"],
+              ["from_jetson_front.scan360", "app.scan360"],
               ["kloubak.emergency_stop", "app.emergency_stop"],
               ["imu_serial.raw", "imu.raw"],
               ["imu.rotation", "app.rot"],
@@ -233,8 +240,9 @@
               ["kloubak.joint_angle_pose", "to_jetson_rear.joint_angle_pose"],
               ["localization.pose3d", "to_jetson_rear.pose3d"],
               ["kloubak.joint_angle_pose", "to_jetson_front.joint_angle_pose"],
-              ["localization.pose3d", "to_jetson_front.pose3d"]
-      ]
+              ["localization.pose3d", "to_jetson_front.pose3d"],
+              ["sec_timer.tick", "app.sim_time_sec"]
+    ]
   }
 }
 
