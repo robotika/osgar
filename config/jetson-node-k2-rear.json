@@ -58,11 +58,11 @@
           "init": {
             "serial_number": "846112072840",
             "device": "D400",
-            "depth_subsample": 3,
+            "depth_subsample": 1,
             "depth_rgb": true,
             "depth_resolution": [640, 480],
             "rgb_resolution": [640, 480],
-            "depth_fps": 30
+            "depth_fps": 6
           }
       },
       "T200_rear": {
@@ -90,6 +90,7 @@
       ["detector_rear.debug_image", "transmitter.debug_image_rear"],
 
       ["T200_rear.pose3d", "transmitter.pose3d"],
+      ["D435_slope.depth", "transmitter.depth"],
       ["D435_slope.depth", "to_front_jetson.depth"],
 
       ["receiver.angle", "detector.angle"],
