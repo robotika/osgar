@@ -70,7 +70,7 @@
     <param name="max_slope" value="25"/>
     <param name="depth_subsampling" value="13"/>
     <!-- Eight seconds worth of history. -->
-    <param name="max_depth_observations" value="54"/> <!-- 6 * 9 Hz -->
+    <param name="max_depth_observations" value="36"/> <!-- 6 * 6 Hz -->
     <param name="max_scan_observations" value="30"/> <!-- 6 * 5 Hz -->
     <param name="max_dip_up" value="0.035"/>
     <param name="max_relative_z" value="4"/>
