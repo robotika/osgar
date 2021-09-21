@@ -74,7 +74,12 @@ def create_map(arr, time_sec=0.0):
 
 
 def mapping_server(logfile, cpr, loop=False):
-    stream_id = lookup_stream_id(logfile, 'fromros.points')
+    try:
+        name = u'Skiddy'
+        stream_id = lookup_stream_id(logfile, 'fromros.points')
+    except ValueError:
+        name = u'Kloubak'
+        stream_id = lookup_stream_id(logfile, 'from_jetson_front.points')
     with LogReader(args.logfile, only_stream_id=stream_id) as logreader:
         for timestamp, stream, raw_data in logreader:
             arr = deserialize(raw_data)
@@ -87,7 +92,7 @@ def mapping_server(logfile, cpr, loop=False):
             cloud = create_map(arr)
             print(cloud)
             if cpr is not None:
-                res = cpr.send_map_msg(u'PointCloud2', msg=cloud, name=u'Skiddy')  # vs. Kloubak
+                res = cpr.send_map_msg(u'PointCloud2', msg=cloud, name=name)
                 print(res)
             if not loop:
                 break
