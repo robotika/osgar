@@ -18,7 +18,7 @@
 
   <!-- Announces placements of lidars. -->
   <node pkg="tf" type="static_transform_publisher" name="front_scan_tf" args="0.39 0.0 0.42 0 0 0 robot front_scan 100" />
-  <node pkg="tf" type="static_transform_publisher" name="rear_scan_tf" args="-0.39 0.0 0.49 -3.141592653589793 0 0 robot rear_scan 100" />
+  <node pkg="tf" type="static_transform_publisher" name="rear_scan_tf" args="-0.39 0.0 0.49 -3.141592653589793 0 3.141592653589793 robot rear_scan 100" />
 
   <group ns="osgar/from">
     <!-- Data stream from Osgar to ROS -->
