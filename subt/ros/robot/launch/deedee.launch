@@ -22,10 +22,10 @@
     <node name="pull_from_osgar" pkg="proxy" type="pull.py">
      <!-- Stream parameters: stream_name:[depth|pose]:...
           Depth streams have extra parameters in the form of width:height:ppx:ppy:fx:fy
-          Pose stream does not have any extra parameters.
+          Pose has one extra parameter representing the name of the coordinate frame this pose belongs to.
 
           Depth camera parameters can be obtained with `rs-enumerate-devices -c`-->
-      <param name="streams" value="front_depth:depth:80:60:40.195037841796875:29.973411560058626:48.1403732299805:48.1403732299805,rear_depth:depth:80:60:39.385036468505874:29.262517929077124:47.810573577880874:47.810573577880874,tracking_pose:pose"/>
+      <param name="streams" value="front_depth:depth:80:60:40.195037841796875:29.973411560058626:48.1403732299805:48.1403732299805,rear_depth:depth:80:60:39.385036468505874:29.262517929077124:47.810573577880874:47.810573577880874,tracking_pose:pose:odom"/>
     </node>
 
     <!-- Remove noise -->

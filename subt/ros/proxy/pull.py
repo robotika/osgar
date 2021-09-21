@@ -19,8 +19,7 @@ if __name__ == '__main__':
     rospy.init_node('pull', log_level=rospy.DEBUG)
 
     endpoint = rospy.get_param('~endpoint', 'tcp://*:5566')
-    robot_frame_id = rospy.get_param('~robot_frame_id', 'robot')
-    odom_frame_id = rospy.get_param('~odom_frame_id', 'odom')
+    pose_frame_ids = {}
 
     streams = rospy.get_param('~streams')
     assert(streams)
@@ -59,6 +58,9 @@ if __name__ == '__main__':
             min_range, max_range = [float(x) for x in stream_params[4:6]]
             scan_ranges[stream_name] = (min_angle, max_angle, min_range, max_range)
             scan_publishers[stream_name] = rospy.Publisher(stream_name, LaserScan, queue_size=5)
+        elif stream_type == 'pose':
+            frame_id = stream_params[2]
+            pose_frame_ids[stream_name] = frame_id
 
     context = zmq.Context.instance()
     pull = context.socket(zmq.PULL)
@@ -88,7 +90,7 @@ if __name__ == '__main__':
                 xyz, quat = data
                 t = TransformStamped()
                 t.header.stamp = now
-                t.header.frame_id = odom_frame_id
+                t.header.frame_id = pose_frame_ids[channel]
                 t.child_frame_id = channel
                 ((t.transform.translation.x,
                   t.transform.translation.y,
