@@ -18,7 +18,7 @@ class LogSerial:
         if 'port' in config:
             if config.get('rtscts'):
                 self.com = serial.Serial(config['port'], config['speed'], rtscts=True)
-#                self.com.setRTS()  # set that APU is always ready (???)
+                self.com.setRTS()
             else:
                 self.com = serial.Serial(config['port'], config['speed'])
             self.com.timeout = config.get('timeout', 0.01)  # default expects updates < 100Hz
