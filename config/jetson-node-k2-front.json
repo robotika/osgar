@@ -63,11 +63,11 @@
           "init": {
             "serial_number": "939622072545",
             "device": "D400",
-            "depth_subsample": 1,
+            "depth_subsample": 5,
             "depth_rgb": true,
             "depth_resolution": [640, 480],
             "rgb_resolution": [640, 480],
-            "depth_fps": 6
+            "depth_fps": 30
           }
       },
       "small": {
@@ -88,13 +88,6 @@
           "height": 120
         }
       },
-      "fromros": {
-          "driver": "subt.pull:Pull",
-          "out": ["scan360", "points"],
-          "init": {
-              "outputs": ["scan360", "points"]
-          }
-      },
       "ros": {
         "driver": "subt.roslaunch:ROSLaunch",
         "in": [],
@@ -114,8 +107,6 @@
       ["lidar_back.raw", "lidar_back_tcp.raw"],
 
       ["T200.pose3d", "transmitter.pose3d"],
-      ["fromros.scan360", "transmitter.scan360"],
-      ["fromros.points", "transmitter.points"],
 
       ["D435_slope.depth", "small.depth"],
       ["from_jetson_rear_receiver.depth", "small_rear.depth"],
