@@ -82,6 +82,24 @@ def print_packet(data, dbc = {}):
             return hex(msg_id), [hex(x) for x in data[2:]]
 
 
+def subt_recovery(buf, verbose=False):
+    if verbose:
+        print('Recovering ...', buf.hex())
+    if len(buf) >= 6 and b'\x00\x41' in buf[:-3]:
+        i = buf.index(b'\x00\x41')
+        if verbose:
+            print('FOUND 0041!', i)
+        if buf[i+3:i+6] == b'\x00\x21\x00' or buf[i+3:i+6] == b'\x00\x21\x01':
+            print('fixed.')
+            return True, buf[i:]
+        if verbose:
+            print('skipping part', i)
+        return False, buf[i+1:]
+    if verbose:
+        print('not recovered.')
+    return False, buf
+
+
 class CANSerial(Thread):
     def __init__(self, config, bus):
         bus.register('can', 'raw')
@@ -90,6 +108,12 @@ class CANSerial(Thread):
 
         self.bus = bus
         self.buf = b''
+        self.time = None
+        ok_list = [0x7f2, 0x7f1, 1, 2,
+                   0x11, 0x12, 0x13, 0x14,
+                   0x80, 0x81, 0x82, 0x83,
+                   0x91, 0x92, 0x93, 0x94]  # TODO config
+        self.firewall_ok = set(ok_list)
 
         speed = config.get('speed', '1M')  # default 1Mbit
         if speed not in CAN_SPEED:
@@ -98,6 +122,8 @@ class CANSerial(Thread):
         self.is_canopen = config.get('canopen', False)
         self.can_bridge_initialized = False
         self.modules_for_restart = set()
+        self.ready = True  # SubT hack to recover
+        self.verbose = False
 
     @staticmethod
     def split_buffer(data):
@@ -243,13 +269,29 @@ class CANSerial(Thread):
             self.buf, packet = self.split_buffer(self.buf)  # i.e. process only existing buffer now
 
     def slot_raw(self, timestamp, data):
-        if len(data) > 0:
-            for packet in self.process_gen(data):
-                msg_id, rtr, size = parse_header(packet)
-                if rtr == 0:
-                    assert size + 2 == len(packet), (size, len(packet))
-                # TODO verify how rtr is handled on PCAN?
-                self.bus.publish('can', [msg_id, packet[2:], 0])
+        try:
+            if len(data) > 0:
+                self.buf += data
+                if not self.ready:
+                    self.ready, self.buf = subt_recovery(self.buf, verbose=self.verbose)
+                    if not self.ready:
+                        return
+                for packet in self.process_gen(b''):  # workaround for "external self.buf update"
+                    msg_id, rtr, size = parse_header(packet)
+                    if rtr == 0:
+                        assert size + 2 == len(packet), (size, len(packet))
+                    # TODO verify how rtr is handled on PCAN?
+                    if msg_id not in self.firewall_ok:
+                        print(self.time, hex(msg_id), msg_id)
+                        # TODO publish to 'rejected'
+                        self.ready, self.buf = subt_recovery(self.buf, verbose=self.verbose)
+                        if not self.ready:
+                            break
+                    self.bus.publish('can', [msg_id, packet[2:], 0])
+        except AssertionError as e:
+            print(e)
+            self.ready = False
+
 
     def slot_can(self, timestamp, data):
         if self.can_bridge_initialized:
@@ -264,6 +306,7 @@ class CANSerial(Thread):
         try:
             while True:
                 dt, channel, data = self.bus.listen()
+                self.time = dt
                 if channel == 'raw':
                     self.slot_raw(dt, data)
                 elif channel == 'can':
