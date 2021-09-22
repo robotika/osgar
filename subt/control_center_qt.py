@@ -15,7 +15,7 @@ from PyQt5.QtCore import pyqtSignal, QSize, Qt, QPointF, QLineF
 from PyQt5.QtGui import QPalette, QKeySequence, QPainter, QColor, QFont, QTransform, QIcon, QPolygonF
 from PyQt5.QtWidgets import ( QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout,
                               QMessageBox, QMainWindow, QAction, QToolBar, QMenuBar, QCheckBox,
-                              QDockWidget, QComboBox, QMenu)
+                              QDockWidget, QComboBox, QMenu, QLineEdit)
 
 import osgar.record
 import osgar.replay
@@ -313,6 +313,7 @@ class MainWindow(QMainWindow):
         self._createMenu()
         self._createStatusBar()
         self._createDock()
+        self._createLineEdit()
         self.setCentralWidget(View())
         self.recorder = None
         self.cc = None
@@ -394,6 +395,21 @@ class MainWindow(QMainWindow):
         layout.addWidget(QPushButton("&Continue Mission", clicked=self.on_continue_mission))
         layout.addWidget(QPushButton("&Stop Mission", clicked=self.on_stop_mission))
         layout.addWidget(QPushButton("&Go Home", clicked=self.on_go_home))
+        w.setLayout(layout)
+        d.setWidget(w)
+        d.setDisabled(True)
+        self.addDockWidget(Qt.RightDockWidgetArea, d)
+
+    def _createLineEdit(self):
+        d = QDockWidget("Z-coord", self)
+        w = QWidget()
+        layout = QVBoxLayout()
+        layout.setAlignment(Qt.AlignTop)
+
+        self.edit = QLineEdit()
+        self.edit.setText('-1.0')
+        layout.addWidget(self.edit)
+
         w.setLayout(layout)
         d.setWidget(w)
         d.setDisabled(True)
