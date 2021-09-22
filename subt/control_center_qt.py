@@ -26,6 +26,7 @@ from subt.artf_utils import (RESCUE_RANDY, BACKPACK, PHONE, HELMET, ROPE, EXTING
 from subt.report_artf import get_status, report_artf
 
 DEFAULT_ARTF_Z_COORD = 1  # when reporting artifacts manually from View
+DARPA_X_OFFSET = -4  # the robots do not start at (0, 0, 0) but 4m in front of the gate
 
 g_filename = None  # filename for replay log
 
@@ -274,12 +275,12 @@ class OsgarControlCenter:
                 return
             if channel == "robot_status":
                 robot_id, (x, y, heading), status = data
-                pose2d = [x/1000, y/1000, math.radians(heading/100)]
+                pose2d = [x/1000 - DARPA_X_OFFSET, y/1000, math.radians(heading/100)]
                 self.view.robot_status.emit(robot_id, pose2d, status)
             elif channel == "artf":
                 robot_id, (artf, x, y, z) = data
-                print(dt, robot_id, artf, (x/1000, y/1000, z/1000))
-                self.view.artf_xyz.emit(artf, (x/1000, y/1000, z/1000))
+                print(dt, robot_id, artf, (x/1000 - DARPA_X_OFFSET, y/1000, z/1000))
+                self.view.artf_xyz.emit(artf, (x/1000 - DARPA_X_OFFSET, y/1000, z/1000))
 
     def pause_mission(self):
         self.bus.publish('cmd', [self.robot_id, b'Pause'])
