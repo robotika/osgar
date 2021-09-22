@@ -58,11 +58,11 @@
           "init": {
             "serial_number": "846112072840",
             "device": "D400",
-            "depth_subsample": 1,
+            "depth_subsample": 5,
             "depth_rgb": true,
             "depth_resolution": [640, 480],
             "rgb_resolution": [640, 480],
-            "depth_fps": 6
+            "depth_fps": 30
           }
       },
       "T200_rear": {

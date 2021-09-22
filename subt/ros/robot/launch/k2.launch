@@ -18,7 +18,7 @@
 
   <!-- Announces placements of lidars. -->
   <node pkg="tf" type="static_transform_publisher" name="front_scan_tf" args="0.39 0.0 0.42 0 0 0 robot front_scan 100" />
-  <node pkg="tf" type="static_transform_publisher" name="rear_scan_tf" args="-0.39 0.0 0.49 -3.141592653589793 0 3.141592653589793 robot rear_scan 100" />
+  <node pkg="tf" type="static_transform_publisher" name="rear_scan_tf" args="0.39 0.0 0.49 0 0 0 angle rear_scan 100" />
 
   <group ns="osgar/from">
     <!-- Data stream from Osgar to ROS -->
@@ -59,7 +59,7 @@
   <node pkg="proxy" type="traversability" name="local_map" output="screen">
     <param name="publish_rate" value="0.2"/>
     <param name="num_threads" value="3"/>
-    <param name="blind_columns_left" value="20"/>
+    <param name="blind_columns_left" value="15"/>
     <param name="depth_image_stride" value="1"/>
     <param name="horizontal_pixel_offset" value="3"/>
     <param name="vertical_pixel_offset" value="3"/>
