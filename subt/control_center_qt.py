@@ -25,7 +25,7 @@ import osgar.node
 from subt.artf_utils import (RESCUE_RANDY, BACKPACK, PHONE, HELMET, ROPE, EXTINGUISHER, DRILL, VENT, CUBE, GAS)
 from subt.report_artf import get_status, report_artf
 
-DEFAULT_ARTF_Z_COORD = 1.0  # when reporting artifacts manually from View
+DEFAULT_ARTF_Z_COORD = 1  # when reporting artifacts manually from View
 
 g_filename = None  # filename for replay log
 
@@ -414,6 +414,7 @@ class MainWindow(QMainWindow):
         d.setWidget(w)
         d.setDisabled(True)
         self.addDockWidget(Qt.RightDockWidgetArea, d)
+        self.edit.textChanged.connect(self.on_z_coord_change)
 
     def on_start_stop(self, state):
         if self.recorder is None:
@@ -460,6 +461,12 @@ class MainWindow(QMainWindow):
         print(artf, xyz)
         self.cc.report_artf(artf, xyz)
 
+    def on_z_coord_change(self, value):
+        print(value)
+        try:
+            self.centralWidget().z_coord = float(value)
+        except ValueError:
+            pass  # not valid number yet
 
 def record(view, cfg):
     with osgar.logger.LogWriter(prefix='control-center-', note=str(sys.argv)) as log:
@@ -510,6 +517,7 @@ class View(QWidget):
         self.robot_statuses = {}
         self.artifacts = []
         self.reported_artifacts = []
+        self.z_coord = DEFAULT_ARTF_Z_COORD
 
     def on_robot_status(self, robot, pose2d, status):
         #self.show_message.emit(f"robot {robot}: pose2d {pose2d}, status {status}", 3000)
@@ -518,6 +526,9 @@ class View(QWidget):
 
     def on_artf_xyz(self, artf_type, xyz):
         self.artifacts.append((artf_type, xyz))
+
+    def on_z_coord(self, z_coord):
+        self.z_coord = z_coord
 
     def _transform(self):
         t = QTransform() # world transform
@@ -628,7 +639,7 @@ class View(QWidget):
                 t = self._transform()
                 t, ok = t.inverted()
                 pt = t.map(e.localPos())
-                self.reported_artifacts.append((action.text(), (pt.x(), pt.y(), DEFAULT_ARTF_Z_COORD)))
+                self.reported_artifacts.append((action.text(), (pt.x(), pt.y(), self.z_coord)))
                 self.update()
                 self.manual_artf.emit(*self.reported_artifacts[-1])
 
