@@ -14,7 +14,15 @@
             "virtual_bumper_sec": 10.0,
             "virtual_bumper_radius": 0.5,
             "scan_subsample": 3,
-            "safety_turning_coeff": 0.6
+            "safety_turning_coeff": 0.6,
+            "direction_adherence": 45,
+            "obstacle_influence": 0.4,
+            "min_safe_dist": 1.1,
+            "dangerous_dist": 0.7,
+            "min_speed": 0.1,
+            "follow_wall": {
+              "max_wall_distance": 3.0
+            }
           }
       },
       "detector": {
