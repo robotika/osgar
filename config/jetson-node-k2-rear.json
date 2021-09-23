@@ -84,8 +84,8 @@
       ["detector_rear.localized_artf", "transmitter.localized_artf_rear"],
       ["detector_rear.debug_image", "transmitter.debug_image_rear"],
 
-      ["realsence.tracking_pose3d", "transmitter.pose3d"],
-      ["realsence.rear_depth", "to_front_jetson.depth"],
+      ["realsense.tracking_pose3d", "transmitter.pose3d"],
+      ["realsense.rear_depth", "to_front_jetson.depth"],
 
       ["receiver.angle", "detector.angle"],
       ["receiver.pose3d", "detector.pose3d"],
