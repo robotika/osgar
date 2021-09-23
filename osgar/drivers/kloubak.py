@@ -168,7 +168,7 @@ def calculate_wheels_speeds( desired_speed, desired_angular_speed, actual_angle 
         v_fr = v_rr = desired_speed / actual_radius * (actual_radius + WHEEL_DISTANCE / 2)
     if abs( desired_angle - actual_angle ) < 0.05: # in radians cca 2.9 deg
         return v_fl, v_fr, v_rl, v_rr
-    turning_angular_speed = min(math.pi / 3, abs(desired_angle - actual_angle) * 1 + math.pi / 16)
+    turning_angular_speed = min(math.pi / 6, abs(desired_angle - actual_angle) * 1 + math.pi / 16)
 #    speed_correction = CENTER_AXLE_DISTANCE * TURNING_ANGULAR_SPEED * math.tan(actual_angle / 2)
     speed_correction = CENTER_AXLE_DISTANCE * turning_angular_speed * math.tan(actual_angle/2)  # positive for left, negative for right
     turning_wheel_speed = turning_angular_speed * WHEEL_DISTANCE / 2

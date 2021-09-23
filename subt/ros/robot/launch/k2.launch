@@ -59,7 +59,7 @@
   <node pkg="proxy" type="traversability" name="local_map" output="screen">
     <param name="publish_rate" value="0.2"/>
     <param name="num_threads" value="3"/>
-    <param name="blind_columns_left" value="15"/>
+    <param name="blind_columns_left" value="20"/>
     <param name="depth_image_stride" value="1"/>
     <param name="horizontal_pixel_offset" value="3"/>
     <param name="vertical_pixel_offset" value="3"/>
