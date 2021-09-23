@@ -214,6 +214,14 @@
           "init": {
             "min_observations": 2
           }
+      },
+      "fromros": {
+          "driver": "subt.pull:Pull",
+          "out": ["scan360", "points"],
+          "init": {
+              "endpoint": "tcp://192.168.0.23:5565",
+              "outputs": ["scan360", "points"]
+          }
       }
     },
     "links": [["serial.raw", "can.slot_raw"],
@@ -229,7 +237,7 @@
               ["lidar.raw", "lidar_tcp.raw"],
               ["lidar_back_tcp.raw", "lidar_back.raw"],
               ["lidar_back.raw", "lidar_back_tcp.raw"],
-              ["from_jetson_front.scan360", "app.scan360"],
+              ["fromros.scan360", "app.scan360"],
               ["kloubak.emergency_stop", "app.emergency_stop"],
               ["imu_serial.raw", "imu.raw"],
               ["imu.rotation", "app.rot"],

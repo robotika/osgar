@@ -81,6 +81,8 @@ if __name__ == '__main__':
                 depth = (data/1000.0).astype(np.float32) 
                 depth_msg = cv_bridge.cv2_to_imgmsg(depth, encoding='passthrough')
                 depth_msg.header.frame_id = channel
+                now.nsecs -= 200000000  # it is 200 ms
+                now.canon()
                 depth_msg.header.stamp = now
                 camera_info = camera_infos[channel]
                 camera_info.header.stamp = now

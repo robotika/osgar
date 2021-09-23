@@ -53,25 +53,20 @@
           "outputs": ["pose3d", "joint_angle_pose"]
         }
       },
-      "D435_slope": {
-          "driver": "realsense",
-          "init": {
-            "serial_number": "846112072840",
-            "device": "D400",
-            "depth_subsample": 1,
-            "depth_rgb": true,
-            "depth_resolution": [640, 480],
-            "rgb_resolution": [640, 480],
-            "depth_fps": 6
-          }
-      },
-      "T200_rear": {
-          "driver": "realsense",
-          "init": {
-            "serial_number": "2322110715",
-            "device": "T200",
-            "pose_subsample": 20
-          }
+      "realsense": {
+        "driver": "realsense_multicam",
+        "init": {
+          "devices": [{"type": "D400", "serial_number": "846112072840", "name": "rear"},
+                      {"type": "T200", "serial_number": "2322110715", "name": "tracking"}
+          ],
+          "depth_subsample": 5,
+          "depth_resolution": [
+            640,
+            480
+          ],
+          "depth_fps": 30,
+          "pose_subsample": 20
+        }
       },
       "to_front_jetson": {
         "driver": "subt.push:Push",
@@ -89,8 +84,8 @@
       ["detector_rear.localized_artf", "transmitter.localized_artf_rear"],
       ["detector_rear.debug_image", "transmitter.debug_image_rear"],
 
-      ["T200_rear.pose3d", "transmitter.pose3d"],
-      ["D435_slope.depth", "to_front_jetson.depth"],
+      ["realsense.tracking_pose3d", "transmitter.pose3d"],
+      ["realsense.rear_depth", "to_front_jetson.depth"],
 
       ["receiver.angle", "detector.angle"],
       ["receiver.pose3d", "detector.pose3d"],

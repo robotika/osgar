@@ -168,7 +168,7 @@ def calculate_wheels_speeds( desired_speed, desired_angular_speed, actual_angle 
         v_fr = v_rr = desired_speed / actual_radius * (actual_radius + WHEEL_DISTANCE / 2)
     if abs( desired_angle - actual_angle ) < 0.05: # in radians cca 2.9 deg
         return v_fl, v_fr, v_rl, v_rr
-    turning_angular_speed = min(math.pi / 3, abs(desired_angle - actual_angle) * 1 + math.pi / 16)
+    turning_angular_speed = min(math.pi / 6, abs(desired_angle - actual_angle) * 1 + math.pi / 16)
 #    speed_correction = CENTER_AXLE_DISTANCE * TURNING_ANGULAR_SPEED * math.tan(actual_angle / 2)
     speed_correction = CENTER_AXLE_DISTANCE * turning_angular_speed * math.tan(actual_angle/2)  # positive for left, negative for right
     turning_wheel_speed = turning_angular_speed * WHEEL_DISTANCE / 2
@@ -625,32 +625,32 @@ class RobotKloubak(Node):
                 self.joint_debug_arr.append([timestamp.total_seconds(), angle*180/math.pi, compute_desired_angle( self.desired_speed, self. desired_angular_speed )*180/math.pi] )
 
         if self.process_packet(data):
-            stop = [0, 0, 0, 0]
-#
+#            stop = [0, 0, 0, 0]
+
             if self.verbose:
                 self.speed_debug_arr.append( [ timestamp.total_seconds(), self.v_fl, self.v_fr, self.v_rl, self.v_rr ] )
 
-            if self.desired_speed != 0: # and self.drive_mode == DriveMode.ALL: ?
-                if self.last_encoders_front_right is not None:
-                    v_fr_2 = int(round(self.v_fr / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
-                    self.publish('can', CAN_triplet(0x31, list(struct.pack('>i', v_fr_2))))  # front right
-                if self.last_encoders_front_left is not None:
-                    v_fl_2 = int(round(self.v_fl / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
-                    self.publish('can', CAN_triplet(0x32, list(struct.pack('>i', v_fl_2))))  # front left
-                if self.last_encoders_rear_right is not None:
-                    v_rr_2 = int(round(self.v_rr / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
-                    self.publish('can', CAN_triplet(0x33, list(struct.pack('>i', v_rr_2))))  # rear right
-                if self.last_encoders_rear_left is not None:
-                    v_rl_2 = int(round(self.v_rl / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
-                    self.publish('can', CAN_triplet(0x34, list(struct.pack('>i', v_rl_2))))  # rear left
+            #if self.desired_speed != 0: # and self.drive_mode == DriveMode.ALL: ?
+            if self.last_encoders_front_right is not None:
+                v_fr_2 = int(round(self.v_fr / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
+                self.publish('can', CAN_triplet(0x31, list(struct.pack('>i', v_fr_2))))  # front right
+            if self.last_encoders_front_left is not None:
+                v_fl_2 = int(round(self.v_fl / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
+                self.publish('can', CAN_triplet(0x32, list(struct.pack('>i', v_fl_2))))  # front left
+            if self.last_encoders_rear_right is not None:
+                v_rr_2 = int(round(self.v_rr / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
+                self.publish('can', CAN_triplet(0x33, list(struct.pack('>i', v_rr_2))))  # rear right
+            if self.last_encoders_rear_left is not None:
+                v_rl_2 = int(round(self.v_rl / (VESC_REPORT_FREQ * SPEED_ENC_SCALE)))
+                self.publish('can', CAN_triplet(0x34, list(struct.pack('>i', v_rl_2))))  # rear left
 
 #            elif self.drive_mode == DriveMode.FRONT ?
 
-            else:
-                self.publish('can', CAN_triplet(0x11, stop))  # right front
-                self.publish('can', CAN_triplet(0x12, stop))  # left front
-                self.publish('can', CAN_triplet(0x13, stop))  # right rear
-                self.publish('can', CAN_triplet(0x14, stop))  # left rear
+#            else:
+#                self.publish('can', CAN_triplet(0x11, stop))  # right front
+#                self.publish('can', CAN_triplet(0x12, stop))  # left front
+#                self.publish('can', CAN_triplet(0x13, stop))  # right rear
+#                self.publish('can', CAN_triplet(0x14, stop))  # left rear
 
 
     def update_drive_front_wheels(self, timestamp, data):
