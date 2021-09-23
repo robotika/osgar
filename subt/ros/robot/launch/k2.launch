@@ -90,6 +90,6 @@
     <param name="output_pointcloud_channel" value="points"/>
   </node>
 
-  <node name="record" pkg="rosbag" type="record" args="-a -o /tmp/k2"/>
+  <node name="record" pkg="rosbag" type="record" args="-a -o k2"/>
 
 </launch>
