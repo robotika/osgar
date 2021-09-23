@@ -275,12 +275,12 @@ class OsgarControlCenter:
                 return
             if channel == "robot_status":
                 robot_id, (x, y, heading), status = data
-                pose2d = [x/1000 - DARPA_X_OFFSET, y/1000, math.radians(heading/100)]
+                pose2d = [x/1000 + DARPA_X_OFFSET, y/1000, math.radians(heading/100)]
                 self.view.robot_status.emit(robot_id, pose2d, status)
             elif channel == "artf":
                 robot_id, (artf, x, y, z) = data
-                print(dt, robot_id, artf, (x/1000 - DARPA_X_OFFSET, y/1000, z/1000))
-                self.view.artf_xyz.emit(artf, (x/1000 - DARPA_X_OFFSET, y/1000, z/1000))
+                print(dt, robot_id, artf, (x/1000 + DARPA_X_OFFSET, y/1000, z/1000))
+                self.view.artf_xyz.emit(artf, (x/1000 + DARPA_X_OFFSET, y/1000, z/1000))
 
     def pause_mission(self):
         self.bus.publish('cmd', [self.robot_id, b'Pause'])
