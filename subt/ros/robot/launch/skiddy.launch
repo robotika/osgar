@@ -69,7 +69,7 @@
     <param name="visible_ground_min" value="0.3"/>
     <param name="visible_ground_max" value="3.4"/>
     <param name="max_bump_height" value="0.1"/>
-    <param name="max_slope" value="35"/>
+    <param name="max_slope" value="25"/>
     <param name="depth_subsampling" value="143"/>
     <!-- Twelve seconds worth of history. -->
     <param name="max_depth_observations" value="72"/> <!-- 12 * 6 Hz -->
