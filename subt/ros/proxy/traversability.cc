@@ -259,7 +259,7 @@ std::optional<tf::StampedTransform> Traversability::GetTransform(
 {
   tf::StampedTransform pose;
   tf::TransformException error("none");
-  for (int i = 0; i < 40; ++i)
+  /*for (int i = 0; i < 40; ++i)
   {
     try
     {
@@ -271,8 +271,20 @@ std::optional<tf::StampedTransform> Traversability::GetTransform(
       error = e;
       ros::Duration(0.005).sleep();
     }
-  }
-  ROS_ERROR("%s", error.what());
+  }*/
+
+    try
+    {
+      transform_listener_.waitForTransform(target_frame, source_frame, when, ros::Duration(0.2));
+      transform_listener_.lookupTransform(target_frame, source_frame, when, pose);
+      return pose;
+    }
+    catch (tf::TransformException& e)
+    {
+      error = e;
+      ros::Duration(0.005).sleep();
+    }
+  ROS_ERROR("MD-%s", error.what());
   return {};
 }
 
