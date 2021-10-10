@@ -91,6 +91,7 @@ class Deedee(Node):
         self.wheel_base = config.get('wheel_base', 0.298)
         self.max_command_validity = config.get('max_command_validity', 0.8)
         self.control_timeout = datetime.timedelta(seconds=config.get('control_timeout', 1.0))
+        self.desired_speed = None
         self.last_cmd_time = None
 
 
@@ -100,13 +101,16 @@ class Deedee(Node):
             self.on_speed_cmd(timestamp, data)
         elif channel == 'info':
             self.on_info(data)
-        elif channel == 'tick' and (
+        elif channel == 'tick':
+            if (self.desired_speed is None or
                 self.last_cmd_time is None or
                 timestamp - self.last_cmd_time >= self.control_timeout):
-            self.send_speed_cmd(timestamp, 0, 0)
+                self.send_speed_cmd(0, 0)
+            else:
+                self.send_speed_cmd(*self.desired_speed)
 
 
-    def send_speed_cmd(self, timestamp, forward, rotation):
+    def send_speed_cmd(self, forward, rotation):
         # Send the speed command.
         delta = self.wheel_base * rotation / 2
         left, right = int(round((forward - delta) * 1000)), int(round((forward + delta) * 1000))
@@ -115,7 +119,6 @@ class Deedee(Node):
         checksum = -sum(cmd) & 0xFF
         cmd += bytes([checksum])
         self.publish('cmd', cmd)
-        self.last_cmd_time = timestamp
 
         # Immediately ask for the current state.
         req = ord('?')
@@ -126,7 +129,8 @@ class Deedee(Node):
 
     def on_speed_cmd(self, timestamp, msg):
         forward, rotation = msg
-        self.send_speed_cmd(timestamp, forward / 1000, math.radians(rotation / 100))
+        self.desired_speed = forward / 1000, math.radians(rotation / 100)
+        self.last_cmd_time = timestamp
 
 
     def on_info(self, msg):

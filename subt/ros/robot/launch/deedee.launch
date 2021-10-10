@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 <launch>
+	<!--
   <param name="enable_statistics" value="true"/>
+-->
 
   <node pkg="tf" type="static_transform_publisher" name="tracked_point_tf" args="-0.135 0 0.375 0 0 0 global odom 100" />
   <!-- Announces the position of the center of the robot relative to the point tracked by tracking camera in Osgar.
@@ -56,12 +58,14 @@
     <param name="num_threads" value="3"/>
     <param name="blind_columns_left" value="15"/>
     <param name="depth_image_stride" value="1"/>
+    <param name="horizontal_pixel_offset" value="2"/>
+    <param name="vertical_pixel_offset" value="2"/>
     <param name="synthetic_obstacle_distance" value="0.35"/>
     <param name="visible_ground_min" value="0.10"/>
     <param name="visible_ground_max" value="0.80"/>
     <param name="max_bump_height" value="0.1"/>
-    <param name="depth_subsampling" value="493"/>
-    <param name="max_num_nearby_points" value="4000"/>
+    <param name="depth_subsampling" value="13"/>
+    <param name="max_num_nearby_points" value="16000"/>
     <param name="robot_frame_id" value="robot"/>
     <remap from="local_map/input/camera_info" to="osgar/from/all_depth/camera_info"/>
     <remap from="local_map/input/depth" to="osgar/from/all_depth/depth"/>
