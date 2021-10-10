@@ -58,7 +58,7 @@
                       {"type": "D400", "serial_number": "035622251357", "name": "rear"},
                       {"type": "T200", "serial_number": "952322110907", "name": "tracking", "pitch": -90, "yaw": 180}
           ],
-          "depth_subsample": 1,
+          "depth_subsample": 2,
           "depth_rgb": true,
           "depth_resolution": [
             640,
@@ -68,7 +68,7 @@
             640,
             480
           ],
-          "depth_fps": 5,
+          "depth_fps": 15,
           "pose_subsample": 25
         }
       },
