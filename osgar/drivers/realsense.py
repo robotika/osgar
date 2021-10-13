@@ -58,7 +58,6 @@ class RealSense(Node):
             self.tracking_sensor_yaw_quat = euler_to_quaternion(
                 math.radians(config.get('tracking_sensor_yaw', 0)), 0, 0)
         elif self.device in ['D400', 'L500']:
-            bus.register('depth:gz', 'color', 'infra')
             self.depth_subsample = config.get("depth_subsample", 3)
             self.depth_rgb = config.get("depth_rgb", False)
             self.depth_infra = config.get("depth_infra", False)
@@ -70,6 +69,13 @@ class RealSense(Node):
             if self.depth_rgb or self.depth_infra:
                 import cv2
                 global cv2
+
+            self.rgbd = config.get("rgbd", False)
+            if self.rgbd:
+                assert self
+                bus.register('rgbd', 'infra')
+            else:
+                bus.register('depth:gz', 'color', 'infra')
         else:
             g_logger.warning("Device is not specified in the config!")
 
