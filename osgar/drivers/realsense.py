@@ -252,12 +252,15 @@ class Multicam(Node):
         self.depth_subsample = config.get('depth_subsample', 3)
         self.depth_rgb = config.get('depth_rgb', False)
         self.depth_infra = config.get('depth_infra', False)
-        self.default_depth_resolution = config.get('depth_resolution', [640, 360])
-        self.default_rgb_resolution = config.get('rgb_resolution', [640, 360])
         self.depth_fps = config.get('depth_fps', 30)
         self.pose_subsample = config.get('pose_subsample', 20)
         self.tracking_sensor_pitch_quat_inv = {}
         self.tracking_sensor_yaw_quat = {}
+        self.camera_pose = config.get("camera_pose", [[0, 0, 0], [0, 0, 0, 1]])
+        self.img_format = config.get("img_format", "*.jpeg")
+        self.rgbd = config.get("rgbd", False)
+        if self.rgbd:
+            assert self.depth_rgb, self.depth_rgb
 
         streams = []
         for device in self.devices:
@@ -276,7 +279,11 @@ class Multicam(Node):
                 self.tracking_sensor_yaw_quat[name] = euler_to_quaternion(
                         math.radians(device.get('yaw', 0)), 0, 0)
             elif device_type in ['D400', 'L500']:
-                for stream in ['depth:gz', 'color', 'infra']:
+                if self.rgbd:
+                    streams_to_register = ['rgbd_raw:gz', 'infra']
+                else:
+                    streams_to_register = ['depth:gz', 'color', 'infra']
+                for stream in streams_to_register:
                     streams.append(f'{name}_{stream}')
 
                 if self.depth_rgb or self.depth_infra:
@@ -337,8 +344,13 @@ class Multicam(Node):
     def depth_callback(self, frameset):
         try:
             assert frameset.is_frameset()
-            depth_frame = frameset.as_frameset().get_depth_frame()
-            profile = depth_frame.get_profile()
+            if self.rgbd:
+                frameset_as = self.align.process(frameset.as_frameset())
+            else:
+                frameset_as = frameset.as_frameset()
+            depth_frame = frameset_as.get_depth_frame()
+
+            profile = frameset.get_profile()
             with self.origins_lock:
                 try:
                     name = self.origins[profile.unique_id()]
@@ -352,25 +364,29 @@ class Multicam(Node):
             depth_image = np.asanyarray(depth_frame.as_depth_frame().get_data())
 
             if self.depth_rgb:
-                color_frame = frameset.as_frameset().get_color_frame()
+                color_frame = frameset_as.get_color_frame()
                 assert color_frame.is_video_frame()
                 color_image = np.asanyarray(color_frame.as_video_frame().get_data())
-                __, data = cv2.imencode('*.jpeg', color_image)
+                __, data = cv2.imencode(self.img_format, color_image)
 
             if self.depth_infra:
-                infra_frame = frameset.as_frameset().get_infrared_frame()
+                infra_frame = frameset_as.get_infrared_frame()
                 assert infra_frame.is_video_frame()
                 infra_image = np.asanyarray(infra_frame.as_video_frame().get_data())
-                __, infra_data = cv2.imencode('*.jpeg', infra_image)
+                __, infra_data = cv2.imencode(self.img_format, infra_image)
 
         except Exception as e:
             print(e)
             self.finished.set()
             return
 
-        self.publish(f'{name}_depth', depth_image)
-        if self.depth_rgb:
-            self.publish(f'{name}_color', data.tobytes())
+        if self.rgbd:
+            self.publish(f'{name}_rgbd_raw',
+                         [None, self.camera_pose, data.tobytes(), serialize(depth_image)])  # None for robot pose
+        else:
+            self.publish(f'{name}_depth', depth_image)
+            if self.depth_rgb:
+                self.publish(f'{name}_color', data.tobytes())
         if self.depth_infra:
             self.publish(f'{name}_infra', infra_data.tobytes())
 
@@ -390,6 +406,8 @@ class Multicam(Node):
                 info_msg = f'Enabling streams: {name}_depth'
                 if self.depth_rgb:
                     info_msg += f', {name}_color'
+                    if self.rgbd:
+                        info_msg += " (rgbd allowed)"
                 if self.depth_infra:
                     info_msg += f', {name}_infra'
                 g_logger.info(info_msg)
@@ -397,13 +415,16 @@ class Multicam(Node):
                 depth_pipeline = rs.pipeline(ctx)
                 depth_cfg = rs.config()
                 depth_cfg.enable_device(serial_number)
-                w, h = self.default_depth_resolution
+                w, h = device.get('depth_resolution', [640, 360])
                 depth_cfg.enable_stream(rs.stream.depth, w, h, rs.format.z16, self.depth_fps)
                 if self.depth_rgb:
-                    w, h = self.default_rgb_resolution
+                    w, h = device.get('rgb_resolution', [640, 360])
                     depth_cfg.enable_stream(rs.stream.color, w, h, rs.format.bgr8, self.depth_fps)
+                    if self.rgbd:
+                        align_to = rs.stream.color
+                        self.align = rs.align(align_to)
                 if self.depth_infra:
-                    w, h = self.default_depth_resolution
+                    w, h = device.get('depth_resolution', [640, 360])
                     depth_cfg.enable_stream(rs.stream.infrared, w, h, rs.format.y8, self.depth_fps)
                 if depth_cfg.can_resolve(depth_pipeline):
                     self.pipelines.append(depth_pipeline)
