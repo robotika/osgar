@@ -26,6 +26,7 @@ except:
 
 from osgar.node import Node
 from osgar.lib import quaternion
+from osgar.lib.serialize import serialize
 
 
 # https://github.com/IntelRealSense/librealsense/blob/master/doc/t265.md#sensor-origin-and-coordinate-system
@@ -65,6 +66,8 @@ class RealSense(Node):
             self.default_rgb_resolution = config.get("rgb_resolution", [640, 360])
             self.depth_fps = config.get("depth_fps", 30)
             self.disable_emitor = config.get("disable_emitor", False)
+            self.camera_pose = config.get("camera_pose", [[0, 0, 0], [0, 0, 0, 1]])
+            self.img_format = config.get("img_format", "*.jpeg")
 
             if self.depth_rgb or self.depth_infra:
                 import cv2
@@ -72,8 +75,8 @@ class RealSense(Node):
 
             self.rgbd = config.get("rgbd", False)
             if self.rgbd:
-                assert self
-                bus.register('rgbd', 'infra')
+                assert self.depth_rgb, self.depth_rgb
+                bus.register('rgbd_raw:gz', 'infra')
             else:
                 bus.register('depth:gz', 'color', 'infra')
         else:
@@ -122,7 +125,12 @@ class RealSense(Node):
     def depth_callback(self, frameset):
         try:
             assert frameset.is_frameset()
-            depth_frame = frameset.as_frameset().get_depth_frame()
+            if self.rgbd:
+                frameset_as = self.align.process(frameset.as_frameset())
+            else:
+                frameset_as = frameset.as_frameset()
+            depth_frame = frameset_as.get_depth_frame()
+
             n = depth_frame.get_frame_number()
             if n % self.depth_subsample != 0:
                 return
@@ -130,25 +138,28 @@ class RealSense(Node):
             depth_image = np.asanyarray(depth_frame.as_depth_frame().get_data())
 
             if self.depth_rgb:
-                color_frame = frameset.as_frameset().get_color_frame()
+                color_frame = frameset_as.get_color_frame()
                 assert color_frame.is_video_frame()
                 color_image = np.asanyarray(color_frame.as_video_frame().get_data())
-                __, data = cv2.imencode('*.jpeg', color_image)
+                __, data = cv2.imencode(self.img_format, color_image)
 
             if self.depth_infra:
-                infra_frame = frameset.as_frameset().get_infrared_frame()
+                infra_frame = frameset_as.get_infrared_frame()
                 assert infra_frame.is_video_frame()
                 infra_image = np.asanyarray(infra_frame.as_video_frame().get_data())
-                __, infra_data = cv2.imencode('*.jpeg', infra_image)
+                __, infra_data = cv2.imencode(self.img_format, infra_image)
 
         except Exception as e:
             print(e)
             self.finished.set()
             return
 
-        self.publish('depth', depth_image)
-        if self.depth_rgb:
-            self.publish('color', data.tobytes())
+        if self.rgbd:
+            self.publish('rgbd_raw', [None, self.camera_pose, data.tobytes(), serialize(depth_image)])  # None for robot pose
+        else:
+            self.publish('depth', depth_image)
+            if self.depth_rgb:
+                self.publish('color', data.tobytes())
         if self.depth_infra:
             self.publish('infra', infra_data.tobytes())
 
@@ -160,6 +171,8 @@ class RealSense(Node):
             info_msg = "Enabling streams: depth"
             if self.depth_rgb:
                 info_msg += ", depth_rgb"
+                if self.rgbd:
+                    info_msg += " (rgbd allowed)"
             if self.depth_infra:
                 info_msg += ", depth_infra"
             g_logger.info(info_msg)
@@ -173,6 +186,9 @@ class RealSense(Node):
             if self.depth_rgb:
                 w, h = self.default_rgb_resolution
                 depth_cfg.enable_stream(rs.stream.color, w, h, rs.format.bgr8, self.depth_fps)
+                if self.rgbd:
+                    align_to = rs.stream.color
+                    self.align = rs.align(align_to)
             if self.depth_infra:
                 w, h = self.default_depth_resolution
                 depth_cfg.enable_stream(rs.stream.infrared, w, h, rs.format.y8, self.depth_fps)
