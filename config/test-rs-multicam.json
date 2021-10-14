@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+        "driver": "realsense_multicam",
+        "init": {
+          "devices": [{"type": "D400", "serial_number": "920312071702", "name": "D435",
+                      "depth_resolution": [1280, 720], "rgb_resolution":  [1280, 720]},
+                      {"type": "D400", "serial_number": "934222071502", "name": "D435_B"}
+          ],
+          "depth_subsample": 10,
+          "depth_rgb": true,
+          "depth_infra": true,
+          "depth_fps": 30,
+          "rgbd": true,
+          "img_format": "*.png"
+        }
+      }
+    },
+    "links": []
+  }
+}
