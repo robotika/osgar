@@ -6,6 +6,8 @@ import itertools
 import pypozyx
 
 from osgar.node import Node
+from osgar.bus import BusShutdownException
+
 
 class Pozyx(Node):
     def __init__(self, config, bus):
@@ -19,9 +21,9 @@ class Pozyx(Node):
         try:
             device_range = pypozyx.DeviceRange()
             while self.bus.is_alive():
-                for from_id, to_id in intertools.combinations(self.devices, 2):
-                    status = pozyx.doRanging(from_id, device_range, to_id)
-                    self. publish([status, from_id, to_id, [device_range.timestamp, device_range.distance, device_range.RSS]])
+                for from_id, to_id in itertools.combinations(self.devices, 2):
+                    status = self.pozyx.doRanging(from_id, device_range, to_id)
+                    self.publish('range', [status, from_id, to_id, [device_range.timestamp, device_range.distance, device_range.RSS]])
         except BusShutdownException:
             pass
 
