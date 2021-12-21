@@ -31,7 +31,8 @@ all_drivers = dict(
     realsense_multicam="osgar.drivers.realsense:Multicam",
     velodyne="osgar.drivers.velodyne:Velodyne",
     systemmonitor="osgar.drivers.system_monitor:SystemMonitor",
-    resize="osgar.drivers.resize:Resize"
+    resize="osgar.drivers.resize:Resize",
+    pozyx="osgar.drivers.pozyx:Pozyx",
 )
 
 
