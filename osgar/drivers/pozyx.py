@@ -15,6 +15,7 @@ class Pozyx(Node):
         bus.register('range')
         serial_port = config['port']
         self.devices = [int(x, 16) for x in config.get('devices', [])]  # unfortunately JSON does not support hex
+        self.devices.append(None)  # extra range to the base (must be last, 2nd param)
         self.pozyx = pypozyx.PozyxSerial(serial_port)
         self.verbose = False
 
@@ -47,12 +48,16 @@ if __name__ == '__main__':
     t = []
     for dt, channel, raw in LogReader(args.logfile, only_stream_id=stream_id):
         data = deserialize(raw)
-        t.append(dt.total_seconds())
-        arr.append(data[3][1])  # range
+        dist = data[3][1]  # range
+        if dist < 100000:  # 100m limit
+            t.append(dt.total_seconds())
+            arr.append(dist)
+        else:
+            print(data)
 
     print(len(arr))
 
-    plt.plot(t, arr, 'o-')
+    plt.plot(t, arr, 'o')
     plt.show()
 
 # vim: expandtab sw=4 ts=4
