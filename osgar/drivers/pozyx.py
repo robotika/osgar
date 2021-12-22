@@ -51,6 +51,7 @@ if __name__ == '__main__':
         dist = data[3][1]  # range
         if dist < 100000:  # 100m limit
             t.append(dt.total_seconds())
+#            t.append(data[3][0]/1000.0)  # timestamp (sec)
             arr.append(dist)
         else:
             print(data)
