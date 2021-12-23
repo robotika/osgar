@@ -34,6 +34,7 @@ class Pozyx(Node):
 
 if __name__ == '__main__':
     import argparse
+    import os.path
     import matplotlib.pyplot as plt
     from osgar.logger import lookup_stream_id, LogReader
     from osgar.lib.serialize import deserialize
@@ -45,20 +46,33 @@ if __name__ == '__main__':
 
     stream_id = lookup_stream_id(args.logfile, 'pozyx.range')
     arr = []
-    t = []
     for dt, channel, raw in LogReader(args.logfile, only_stream_id=stream_id):
         data = deserialize(raw)
+        assert data[0] in [0, 1, 8], data
+        if data[0] != pypozyx.POZYX_SUCCESS:
+            continue
         dist = data[3][1]  # range
         if dist < 100000:  # 100m limit
-            t.append(dt.total_seconds())
-#            t.append(data[3][0]/1000.0)  # timestamp (sec)
-            arr.append(dist)
+            t = dt.total_seconds()
+#            t = data[3][0]/1000.0  # timestamp (sec)
+            arr.append((t, (data[1], data[2]), dist))
         else:
             print(data)
 
     print(len(arr))
 
-    plt.plot(t, arr, 'o')
+    groups = set([from_to for _, from_to, _ in arr])
+    print(groups)
+
+    for from_to in groups:
+        tmp = [(t, dist) for t, link, dist in arr if link == from_to]
+        x = [t for t, dist in tmp]
+        y = [dist/1000.0 for t, dist in tmp]
+        plt.plot(x, y, 'o', label=from_to)
+    plt.xlabel('time (s)')
+    plt.ylabel('range (m)')
+    plt.legend()
+    plt.title(os.path.basename(args.logfile))
     plt.show()
 
 # vim: expandtab sw=4 ts=4
