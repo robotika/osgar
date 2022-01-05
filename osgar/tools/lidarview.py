@@ -223,7 +223,7 @@ def get_image(data):
     elif isinstance(data, tuple):
         img_data, depth_data = data
         image = pygame.image.load(io.BytesIO(img_data), 'JPG').convert()
-        g_depth = decompress_depth(depth_data)
+        g_depth = decompress_depth(depth_data)/1000
     elif isinstance(data, list):
         # image stereo artefact localization
         # expects localized pair of images [camera_name, [robot_pose, camera_pose, image], [robot_pose, camera_pose, image]]
