@@ -252,7 +252,6 @@ class Multicam(Node):
         self.depth_subsample = config.get('depth_subsample', 3)
         self.depth_rgb = config.get('depth_rgb', False)
         self.depth_infra = config.get('depth_infra', False)
-        self.depth_fps = config.get('depth_fps', 30)
         self.pose_subsample = config.get('pose_subsample', 20)
         self.tracking_sensor_pitch_quat_inv = {}
         self.tracking_sensor_yaw_quat = {}
@@ -416,16 +415,17 @@ class Multicam(Node):
                 depth_cfg = rs.config()
                 depth_cfg.enable_device(serial_number)
                 w, h = device.get('depth_resolution', [640, 360])
-                depth_cfg.enable_stream(rs.stream.depth, w, h, rs.format.z16, self.depth_fps)
+                depth_fps = device.get('depth_fps', 30)
+                depth_cfg.enable_stream(rs.stream.depth, w, h, rs.format.z16, depth_fps)
                 if self.depth_rgb:
                     w, h = device.get('rgb_resolution', [640, 360])
-                    depth_cfg.enable_stream(rs.stream.color, w, h, rs.format.bgr8, self.depth_fps)
+                    depth_cfg.enable_stream(rs.stream.color, w, h, rs.format.bgr8, depth_fps)
                     if self.rgbd:
                         align_to = rs.stream.color
                         self.align = rs.align(align_to)
                 if self.depth_infra:
                     w, h = device.get('depth_resolution', [640, 360])
-                    depth_cfg.enable_stream(rs.stream.infrared, w, h, rs.format.y8, self.depth_fps)
+                    depth_cfg.enable_stream(rs.stream.infrared, w, h, rs.format.y8, depth_fps)
                 if depth_cfg.can_resolve(depth_pipeline):
                     self.pipelines.append(depth_pipeline)
                     configs.append(depth_cfg)
