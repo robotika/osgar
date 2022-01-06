@@ -6,14 +6,15 @@
         "driver": "realsense_multicam",
         "init": {
           "devices": [{"type": "D400", "serial_number": "920312071702", "name": "D435",
-                      "depth_resolution": [1280, 720], "rgb_resolution":  [1280, 720]},
-                      {"type": "D400", "serial_number": "934222071502", "name": "D435_B"}
+                      "depth_resolution": [640, 360], "rgb_resolution":  [640, 360], "depth_fps": 30},
+
+                      {"type": "D400", "serial_number": "934222071502", "name": "D435_B",
+                      "depth_resolution": [1280, 720], "rgb_resolution":  [1280, 720], "depth_fps": 6}
           ],
-          "depth_subsample": 10,
+          "depth_subsample": 3,
           "depth_rgb": true,
           "depth_infra": true,
-          "depth_fps": 30,
-          "rgbd": true,
+          "rgbd": false,
           "img_format": "*.png"
         }
       }
