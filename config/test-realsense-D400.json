@@ -10,7 +10,9 @@
             "depth_rgb": true,
             "depth_resolution": [640, 360],
             "rgb_resolution": [640, 360],
-            "depth_fps": 30
+            "depth_fps": 30,
+            "rgbd": true,
+            "img_format": "*.jpeg"
           }
       }
     },
