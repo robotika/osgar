@@ -75,6 +75,14 @@ WORLDS = dict(
     fpr3 = "Finals Preliminary Round World 3",
 
     fr = "Final Prize Round",
+    fr1 = "Finals Prize Round World 1",
+    fr2 = "Finals Prize Round World 2",
+    fr3 = "Finals Prize Round World 3",
+    fr4 = "Finals Prize Round World 4",
+    fr5 = "Finals Prize Round World 5",
+    fr6 = "Finals Prize Round World 6",
+    fr7 = "Finals Prize Round World 7",
+    fr8 = "Finals Prize Round World 8",
 )
 
 ROBOTS=dict(
