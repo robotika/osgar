@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "osgar.drivers.o3d3xx_camera:O3DCamera",
+          "init": {}
+      }
+    },
+    "links": []
+  }
+}
