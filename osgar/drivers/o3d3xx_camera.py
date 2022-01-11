@@ -18,8 +18,11 @@ class O3DCamera:
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.bus = bus
         self.address = config.get("address", "192.168.0.69")
+        self.resolution = config.get("resolution", [176, 132])
         self.bus.register('depth', 'amplitude_image')
         self.cam = o3d3xx.FormatClient(self.address, 50010, o3d3xx.PCICFormat.blobs("amplitude_image", "distance_image"))
+        # self.bus.register('depth', 'amplitude_image', "confidence_image")
+        # self.cam = o3d3xx.FormatClient(self.address, 50010, o3d3xx.PCICFormat.blobs("amplitude_image", "distance_image", "confidence_image"))
 
 
     def start(self):
@@ -29,20 +32,20 @@ class O3DCamera:
         self.input_thread.join(timeout=timeout)
 
     def run_input(self):
+        w, h = self.resolution
         while self.bus.is_alive():
             # Capture frame-by-frame
             data = self.cam.readNextFrame()
-            assert "distance_image" in data
-            assert "amplitude_image" in data
-            depth = np.frombuffer(data['distance_image'],dtype='uint16').reshape(132,176)
-            amplitude_image = np.frombuffer(data['amplitude_image'],dtype='uint16').reshape(132,176)
-            self.bus.publish("depth", depth)
-            self.bus.publish("amplitude_image", amplitude_image)
-            # for name in data:
-            #     print(name)
-            # print("---------------")
+            if "distance_image" in data:
+                depth = np.frombuffer(data['distance_image'], dtype='uint16').reshape(h, w)
+                self.bus.publish("depth", depth)
+            if "amplitude_image" in data:
+                amplitude_image = np.frombuffer(data['amplitude_image'],dtype='uint16').reshape(h, w)
+                self.bus.publish("amplitude_image", amplitude_image)
+            # if "confidence_image" in data:
+            #     # See documentation: https://www.ifm.com/mounting/706397UK.pdf, page 30 (Additional Information for CONFIDENCE_IMAGE)
+            #     confidence_image = np.frombuffer(data['confidence_image'],dtype='uint8').reshape(h, w)
+            #     self.bus.publish("confidence_image", confidence_image)
 
     def request_stop(self):
         self.bus.shutdown()
-
-# vim: expandtab sw=4 ts=4
