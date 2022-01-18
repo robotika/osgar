@@ -6,7 +6,9 @@
           "driver": "application",
           "in": ["encoders", "emergency_stop", "pose2d", "buttons"],
           "out": ["desired_speed"],
-          "init": {}
+          "init": {
+            "max_speed": 0.5
+          }
       },
       "kloubak": {
           "driver": "kloubak",
