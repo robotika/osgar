@@ -26,7 +26,10 @@ class PeakCAN:
     def __init__(self, config, bus):
         self.bus = bus
         bus.register('can')
-        self.canbus = can.interface.Bus(bustype='pcan', channel='PCAN_USBBUS1', bitrate=500000)
+        can_filters = config.get("can_filters")
+        # The can_filters is a list e.g. [{"can_id": 0x0, "can_mask": 0x00, "extended": False}]
+        # https://python-can.readthedocs.io/en/master/bus.html#can.BusABC.set_filters
+        self.canbus = can.interface.Bus(bustype='pcan', channel='PCAN_USBBUS1', bitrate=500000, can_filters=can_filters)
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.output_thread = Thread(target=self.run_output, daemon=True)
 
