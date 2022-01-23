@@ -12,7 +12,7 @@ from osgar.bus import BusShutdownException
 class Pozyx(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('range')
+        bus.register('range', 'settings')
         serial_port = config['port']
         self.sleep_sec = config.get("sleep")
         self.devices = [int(x, 16) for x in config.get('devices', [])]  # unfortunately JSON does not support hex
@@ -20,8 +20,33 @@ class Pozyx(Node):
         self.pozyx = pypozyx.PozyxSerial(serial_port)
         self.verbose = False
 
+    def get_settings(self):
+        settings = pypozyx.UWBSettings()
+        for remote_id in self.devices:
+            if self.pozyx.getUWBSettings(settings, remote_id=remote_id):
+                print(remote_id, settings)
+                self.publish('settings', (remote_id, str(settings)))
+
+    def set_settings(self):
+        for remote_id in self.devices:
+            settings = pypozyx.UWBSettings()
+            settings.bitrate = 0  # {0: '110 kbit/s', 1: '850 kbit/s', 2: '6.81 Mbit/s'}
+            settings.channel = 5
+            settings.prf = 2  # {1: '16 MHz', 2: '64 MHz'}
+            settings.gain_db = 11.5
+            # {0x0C: '4096 symbols', 0x28: '2048 symbols', 0x18: '1536 symbols', 0x08: '1024 symbols',
+            #  0x34: '512 symbols', 0x24: '256 symbols', 0x14: '128 symbols', 0x04: '64 symbols'}
+            settings.plen = 0x08
+            if self.pozyx.setUWBSettings(settings, remote_id=remote_id):
+                print('set OK', remote_id)
+            else:
+                print('ERROR', remote_id)
+
     def run(self):
         try:
+            self.get_settings()
+            self.set_settings()
+            self.get_settings()
             device_range = pypozyx.DeviceRange()
             while self.bus.is_alive():
                 for from_id, to_id in itertools.combinations(self.devices, 2):
