@@ -31,12 +31,12 @@ class Pozyx(Node):
         for remote_id in self.devices:
             settings = pypozyx.UWBSettings()
             settings.bitrate = 0  # {0: '110 kbit/s', 1: '850 kbit/s', 2: '6.81 Mbit/s'}
-            settings.channel = 5
+            settings.channel = 1
             settings.prf = 2  # {1: '16 MHz', 2: '64 MHz'}
-            settings.gain_db = 11.5
+            settings.gain_db = 33.0
             # {0x0C: '4096 symbols', 0x28: '2048 symbols', 0x18: '1536 symbols', 0x08: '1024 symbols',
             #  0x34: '512 symbols', 0x24: '256 symbols', 0x14: '128 symbols', 0x04: '64 symbols'}
-            settings.plen = 0x08
+            settings.plen = 0x0C
             if self.pozyx.setUWBSettings(settings, remote_id=remote_id):
                 print('set OK', remote_id)
             else:
