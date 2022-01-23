@@ -14,6 +14,7 @@ class Pozyx(Node):
         super().__init__(config, bus)
         bus.register('range')
         serial_port = config['port']
+        self.sleep_sec = config.get("sleep")
         self.devices = [int(x, 16) for x in config.get('devices', [])]  # unfortunately JSON does not support hex
         self.devices.append(None)  # extra range to the base (must be last, 2nd param)
         self.pozyx = pypozyx.PozyxSerial(serial_port)
@@ -28,6 +29,8 @@ class Pozyx(Node):
                     if self.verbose:
                         print(device_range)
                     self.publish('range', [status, from_id, to_id, [device_range.timestamp, device_range.distance, device_range.RSS]])
+                    if self.sleep_sec is not None:
+                        self.sleep(self.sleep_sec)
         except BusShutdownException:
             pass
 
@@ -42,6 +45,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('logfile', help='logfile path')
+    parser.add_argument('-t', '--timestamps', help='use Pozyx timestamps', action='store_true')
     args = parser.parse_args()
 
     stream_id = lookup_stream_id(args.logfile, 'pozyx.range')
@@ -53,8 +57,10 @@ if __name__ == '__main__':
             continue
         dist = data[3][1]  # range
         if dist < 100000:  # 100m limit
-            t = dt.total_seconds()
-#            t = data[3][0]/1000.0  # timestamp (sec)
+            if args.timestamps:
+                t = data[3][0]/1000.0  # timestamp (sec)
+            else:
+                t = dt.total_seconds()
             arr.append((t, (data[1], data[2]), dist))
         else:
             print(data)
