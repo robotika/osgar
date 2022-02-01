@@ -29,7 +29,7 @@
           "in": ["can"],
           "out": ["can"],
           "init": {
-            "can_filters": [{"can_id": 0, "can_mask": 0, "extended": false}]
+            "can_filters": [{"can_id": "0x0", "can_mask": "0x0", "extended": false}]
           }
       }
     },
