@@ -22,12 +22,26 @@ from osgar.bus import BusShutdownException
 
 IS_EXTENDED_ID_MASK = 0x1
 
+
+def convert_filter_str2hex(filters):
+    ret = []
+    for filter_item in filters:
+        can_id = filter_item["can_id"]
+        can_mask = filter_item["can_mask"]
+        filter_item["can_id"] = int(can_id, 16)
+        filter_item["can_mask"] = int(can_mask, 16)
+        ret.append(filter_item)
+
+    return ret
+
 class PeakCAN:
     def __init__(self, config, bus):
         self.bus = bus
         bus.register('can')
         can_filters = config.get("can_filters")
         # The can_filters is a list e.g. [{"can_id": 0x0, "can_mask": 0x00, "extended": False}]
+        # Convert string to hex
+        can_filters = convert_filter_str2hex(can_filters)
         # https://python-can.readthedocs.io/en/master/bus.html#can.BusABC.set_filters
         self.canbus = can.interface.Bus(bustype='pcan', channel='PCAN_USBBUS1', bitrate=500000, can_filters=can_filters)
         self.input_thread = Thread(target=self.run_input, daemon=True)
