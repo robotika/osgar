@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "gps": {
+          "driver": "gps",
+          "in": ["raw"],
+          "out": ["position"],
+          "init": {}
+      },
+      "gps_serial": {
+          "driver": "serial",
+          "in": [],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyUSB0", "speed": 4800}
+      },
+      "pozyx": {
+          "driver": "pozyx",
+          "in": [],
+          "out": ["range"],
+          "init": {
+            "port": "/dev/ttyACM0",
+            "devices": ["0x0D67", "0x0D7F", "0x0D53", "0x6826"]
+          }
+      }
+    },
+    "links": [["gps_serial.raw", "gps.raw"]]    
+  }
+}
