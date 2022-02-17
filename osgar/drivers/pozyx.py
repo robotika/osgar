@@ -2,6 +2,7 @@
   OSGAR Pozyx (utrawide-band trilateration) wrapper
 """
 import itertools
+import math
 
 import pypozyx
 
@@ -59,21 +60,13 @@ class Pozyx(Node):
         except BusShutdownException:
             pass
 
+############### supporting tools #####################
 
-if __name__ == '__main__':
-    import argparse
-    import os.path
-    import matplotlib.pyplot as plt
+def read_data(logfile):
     from osgar.logger import lookup_stream_id, LogReader
     from osgar.lib.serialize import deserialize
 
-
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('logfile', help='logfile path')
-    parser.add_argument('-t', '--timestamps', help='use Pozyx timestamps', action='store_true')
-    args = parser.parse_args()
-
-    stream_id = lookup_stream_id(args.logfile, 'pozyx.range')
+    stream_id = lookup_stream_id(logfile, 'pozyx.range')
     arr = []
     for dt, channel, raw in LogReader(args.logfile, only_stream_id=stream_id):
         data = deserialize(raw)
@@ -89,9 +82,10 @@ if __name__ == '__main__':
             arr.append((t, (data[1], data[2]), dist))
         else:
             print(data)
+    return arr
 
-    print(len(arr))
 
+def draw_ranges(arr, title):
     groups = set([from_to for _, from_to, _ in arr])
     print(groups)
 
@@ -103,7 +97,74 @@ if __name__ == '__main__':
     plt.xlabel('time (s)')
     plt.ylabel('range (m)')
     plt.legend()
-    plt.title(os.path.basename(args.logfile))
+    plt.title(title)
     plt.show()
+
+
+def create_map(arr, anchors):
+    ret = []
+    x, y = 0, 0
+    for t, (src_node, dst_node), dist_mm in arr:
+        dist = dist_mm/1000.0
+        if src_node in anchors and dst_node in anchors:
+            a = anchors[src_node]
+            b = anchors[dst_node]
+            map_dist = math.hypot(a[0] - b[0], a[1] - b[1])
+            if abs(map_dist - dist) > 1.0:
+                print(a, b, map_dist, dist)
+        else:
+            if src_node in anchors:
+                xyz = anchors[src_node]
+                tag = dst_node
+            elif dst_node in anchors:
+                xyz = anchors[dst_node]
+                tag = src_node
+            else:
+                assert 0, f'Incomplete anchors! {anchors}, {src_node, dst_node}'
+            assert tag is None, tag
+            vec = xyz[0] - x, xyz[1] - y
+            vec_size = math.hypot(vec[0], vec[1])
+            err = vec_size - dist
+            k = err
+            x += k * vec[0]/vec_size
+            y += k * vec[1]/vec_size
+            ret.append((x, y))
+    return ret
+
+
+def draw_map(m, title):
+    arr_x = [x for x, y in m]
+    arr_y = [y for x, y in m]
+    plt.plot(arr_x, arr_y, 'o-')
+    plt.axes().set_aspect('equal', 'datalim')
+    plt.title(title)
+    plt.show()
+
+
+if __name__ == '__main__':
+    import argparse
+    import os.path
+    import matplotlib.pyplot as plt
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('logfile', help='logfile path')
+    parser.add_argument('-t', '--timestamps', help='use Pozyx timestamps', action='store_true')
+    parser.add_argument('--map', help='display map instead of ranges', action='store_true')
+    args = parser.parse_args()
+
+    title = os.path.basename(args.logfile)
+    arr = read_data(args.logfile)
+    print(len(arr))
+    if args.map:
+        anchors = {
+            0x0D67: (0, 0, 0),
+            0x0D7F: (10.4, 0, 0),
+            0x0D53: (12.721, 29.308, 0),
+            0x6826: (5, 30, 0)
+        }
+        m = create_map(arr, anchors)
+        draw_map(m, title)
+    else:
+       draw_ranges(arr, title)
 
 # vim: expandtab sw=4 ts=4
