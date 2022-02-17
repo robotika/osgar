@@ -66,7 +66,7 @@ class RealSense(Node):
             self.default_rgb_resolution = config.get("rgb_resolution", [640, 360])
             self.depth_fps = config.get("depth_fps", 30)
             self.disable_emitor = config.get("disable_emitor", False)
-            self.camera_pose = config.get("camera_pose", [[0, 0, 0], [0, 0, 0, 1]])
+            camera_pose = config.get("camera_pose", [[0, 0, 0], [0, 0, 0, 1]])
             self.img_format = config.get("img_format", "*.jpeg")
 
             if self.depth_rgb or self.depth_infra:
@@ -76,9 +76,8 @@ class RealSense(Node):
             self.rgbd = config.get("rgbd", False)
             if self.rgbd:
                 assert self.depth_rgb, self.depth_rgb
-                bus.register('rgbd_raw:gz', 'infra')
-            else:
-                bus.register('depth:gz', 'color', 'infra')
+                self.rgbd_bundle = {"camera_pose": camera_pose}  # TODO add meta data
+            bus.register('depth:gz', 'color', 'infra', 'rgbd_raw:gz')
         else:
             g_logger.warning("Device is not specified in the config!")
 
@@ -155,7 +154,8 @@ class RealSense(Node):
             return
 
         if self.rgbd:
-            self.publish('rgbd_raw', [None, self.camera_pose, data.tobytes(), serialize(depth_image)])  # None for robot pose
+            self.rgbd_bundle["data"] = [data.tobytes(), serialize(depth_image)]
+            self.publish('rgbd_raw', self.rgbd_bundle)
         else:
             self.publish('depth', depth_image)
             if self.depth_rgb:
