@@ -3,6 +3,7 @@
 """
 import itertools
 import math
+from collections import defaultdict
 
 import pypozyx
 
@@ -101,7 +102,7 @@ def draw_ranges(arr, title):
     plt.show()
 
 
-def create_map(arr, anchors):
+def create_map(arr, anchors, selected=None):
     ret = []
     x, y = 0, 0
     for t, (src_node, dst_node), dist_mm in arr:
@@ -120,10 +121,15 @@ def create_map(arr, anchors):
                 xyz = anchors[dst_node]
                 tag = src_node
             else:
-                assert 0, f'Incomplete anchors! {anchors}, {src_node, dst_node}'
-            assert tag is None, tag
+#                assert 0, f'Incomplete anchors! {anchors}, {src_node, dst_node}'
+                continue
+            if tag != selected:
+                continue
+#            assert tag is None, tag
             vec = xyz[0] - x, xyz[1] - y
             vec_size = math.hypot(vec[0], vec[1])
+            if abs(vec_size) < 0.1:
+                continue
             err = vec_size - dist
             k = err
             x += k * vec[0]/vec_size
@@ -138,7 +144,28 @@ def draw_map(m, title):
     plt.plot(arr_x, arr_y, 'o-')
     plt.axes().set_aspect('equal', 'datalim')
     plt.title(title)
-    plt.show()
+
+
+def get_anchors_xyz(arr, anchor_names):
+    import numpy as np
+
+    dist_array = defaultdict(list)
+    for t, (src_node, dst_node), dist_mm in arr:
+        dist = dist_mm/1000.0
+        if src_node in anchor_names and dst_node in anchor_names:
+            dist_array[(src_node, dst_node)].append(dist)
+    res = dict([(pair, np.median(d)) for pair, d in dist_array.items()] +
+               [((pair[1], pair[0]), np.median(d)) for pair, d in dist_array.items()])
+
+    assert len(anchor_names) >= 3, anchor_names  # at least triangle
+    A, B, C = anchor_names[:3]
+    ret = {}
+    a, b, c = res[(B, C)], res[(A, C)], res[(A, B)]
+    ret[A] = (0, 0, 0)
+    ret[B] = (c, 0, 0)
+    angle = math.acos((a*a - c*c - b*b)/(-2*c*b))
+    ret[C] = (b*math.cos(angle), b*math.sin(angle), 0)
+    return ret
 
 
 if __name__ == '__main__':
@@ -156,14 +183,18 @@ if __name__ == '__main__':
     arr = read_data(args.logfile)
     print(len(arr))
     if args.map:
-        anchors = {
+        old_anchors = {
             0x0D67: (0, 0, 0),
             0x0D7F: (10.4, 0, 0),
             0x0D53: (12.721, 29.308, 0),
             0x6826: (5, 30, 0)
         }
-        m = create_map(arr, anchors)
+        anchors = get_anchors_xyz(arr, [3431, 26727, None])
+        m = create_map(arr, anchors, selected=0xD7F)  # 3455
         draw_map(m, title)
+        m = create_map(arr, anchors, selected=3411)
+        draw_map(m, title)
+        plt.show()
     else:
        draw_ranges(arr, title)
 
