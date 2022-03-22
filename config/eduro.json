@@ -7,6 +7,7 @@
           "in": ["encoders", "scan", "emergency_stop", "pose2d", "buttons"],
           "out": ["desired_speed"],
           "init": {
+            "max_speed": 0.5,
             "laser_pose2d": [0.13, 0.055, 0]
           }
       },
@@ -39,7 +40,7 @@
           "driver": "tcp",
           "in": ["raw"],
           "out": ["raw"],
-          "init": {"host": "192.168.2.71", "port": 2111, "timeout": 3.0}
+          "init": {"host": "192.168.1.52", "port": 2111, "timeout": 3.0}
       },
       "camera": {
           "driver": "http",
