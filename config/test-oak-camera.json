@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "osgar.drivers.oak-camera:OakCamera",
+          "init": {
+            "fps": 5
+          }
+      }
+    },
+    "links": []
+  }
+}
