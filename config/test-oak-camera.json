@@ -5,7 +5,9 @@
       "app": {
           "driver": "osgar.drivers.oak-camera:OakCamera",
           "init": {
-            "fps": 5
+            "fps": 5,
+            "color": true,
+            "depth": true
           }
       }
     },
