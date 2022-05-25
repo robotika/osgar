@@ -8,6 +8,19 @@ from threading import Thread
 import depthai as dai
 
 
+def cam_is_available(cam_ip):
+    devices = dai.DeviceBootloader.getAllAvailableDevices()
+    available_devices = []
+    for dev in devices:
+        if cam_ip == dev.desc.name:
+            return True
+        available_devices.append(dev.desc.name)
+    print("IP %s was not found" %cam_ip)
+    print("Found devices: %s" %", ".join(available_devices))
+
+    return False
+
+
 class OakCamera:
     def __init__(self, config, bus):
         self.input_thread = Thread(target=self.run_input, daemon=True)
@@ -17,6 +30,8 @@ class OakCamera:
         self.fps = config.get('fps', 10)
         self.use_depth = config.get('depth', False)
         self.use_color = config.get('color', False)
+        self.cam_ip = config.get('cam_ip')
+        # Set camera IP via: https://github.com/luxonis/depthai-python/blob/main/examples/bootloader/poe_set_ip.py
 
         self.mono_resolution = dai.MonoCameraProperties.SensorResolution.THE_400_P
         self.color_resolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P
@@ -78,8 +93,17 @@ class OakCamera:
 
         # TODO imu
 
+        if self.cam_ip and cam_is_available(self.cam_ip):  # USB cameras?
+            device_info = dai.DeviceInfo()
+            device_info.state = dai.XLinkDeviceState.X_LINK_BOOTLOADER
+            device_info.desc.protocol = dai.XLinkProtocol.X_LINK_TCP_IP
+            device_info.desc.name = self.cam_ip
+        else:
+            device_info = None
+            print("Used the first available device.")
+
         # Connect to device and start pipeline
-        with dai.Device(pipeline) as device:
+        with dai.Device(pipeline, device_info) as device:
             while self.bus.is_alive():
                 queue_events = device.getQueueEvents(queue_names)
 
