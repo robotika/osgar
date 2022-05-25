@@ -3,9 +3,10 @@
 """
 
 from threading import Thread
-# import numpy as np
-
 import depthai as dai
+import logging
+
+g_logger = logging.getLogger(__name__)
 
 
 def cam_is_available(cam_ip):
@@ -15,8 +16,9 @@ def cam_is_available(cam_ip):
         if cam_ip == dev.desc.name:
             return True
         available_devices.append(dev.desc.name)
-    print("IP %s was not found" %cam_ip)
-    print("Found devices: %s" %", ".join(available_devices))
+
+    g_logger.warning(f"IP {cam_ip} was not found!")
+    g_logger.info(f'Found devices: {", ".join(available_devices)}')
 
     return False
 
@@ -59,6 +61,8 @@ class OakCamera:
             color.setResolution(self.color_resolution)
             color.setBoardSocket(dai.CameraBoardSocket.RGB)
             color.setFps(self.fps)
+            # Set manual focus for more predictable behavior. Value 130 allows align color and depth frames.
+            # https://docs.luxonis.com/projects/api/en/latest/samples/StereoDepth/rgb_depth_aligned/
             color.initialControl.setManualFocus(130)
             color_encoder.setDefaultProfilePreset(self.fps, dai.VideoEncoderProperties.Profile.MJPEG)
 
@@ -88,7 +92,8 @@ class OakCamera:
             right.out.link(stereo.right)
             stereo.depth.link(depth_out.input)
 
-        if not queue_names:  # No stream enabled
+        if not queue_names:
+            g_logger.error("No stream enabled!")
             return
 
         # TODO imu
@@ -100,7 +105,7 @@ class OakCamera:
             device_info.desc.name = self.cam_ip
         else:
             device_info = None
-            print("Used the first available device.")
+            g_logger.info("Used the first available device.")
 
         # Connect to device and start pipeline
         with dai.Device(pipeline, device_info) as device:
