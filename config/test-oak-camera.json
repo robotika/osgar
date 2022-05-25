@@ -3,11 +3,12 @@
   "robot": {
     "modules": {
       "app": {
-          "driver": "osgar.drivers.oak-camera:OakCamera",
+          "driver": "osgar.drivers.oak_camera:OakCamera",
           "init": {
             "fps": 5,
             "color": true,
-            "depth": true
+            "depth": true,
+            "cam_ip": "192.168.1.51"
           }
       }
     },
