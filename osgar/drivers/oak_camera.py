@@ -1,5 +1,6 @@
 """
-    Driver TODO
+    Osgar driver for Luxonis OAK cameras.
+    https://www.luxonis.com/
 """
 
 from threading import Thread
@@ -30,13 +31,32 @@ class OakCamera:
 
         self.bus.register('depth', 'color', 'rotation')
         self.fps = config.get('fps', 10)
-        self.use_depth = config.get('depth', False)
-        self.use_color = config.get('color', False)
+        self.is_depth = config.get('is_depth', False)
+        self.is_color = config.get('is_color', False)
         self.cam_ip = config.get('cam_ip')
         # Set camera IP via: https://github.com/luxonis/depthai-python/blob/main/examples/bootloader/poe_set_ip.py
 
-        self.mono_resolution = dai.MonoCameraProperties.SensorResolution.THE_400_P
-        self.color_resolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P
+        self.is_extended_disparity = config.get("stereo_extended_disparity", False)
+        self.is_subpixel = config.get("stereo_subpixel", False)
+        self.is_left_right_check = config.get("stereo_left_right_check", False)
+        assert not(self.is_extended_disparity and self.is_subpixel)  # Do not use extended_disparity and subpixel together.
+
+        mono_resolution_value = config.get("mono_resolution", "THE_400_P")
+        assert mono_resolution_value in ["THE_400_P", "THE_480_P", "THE_720_P", "THE_800_P"], mono_resolution_value
+        self.mono_resolution = getattr(dai.MonoCameraProperties.SensorResolution, mono_resolution_value)
+
+        color_resolution_value = config.get("color_resolution", "THE_1080_P")
+        assert color_resolution_value in["THE_1080_P", "THE_4_K", "THE_12_MP", "THE_13_MP"], color_resolution_value
+        self.color_resolution = getattr(dai.ColorCameraProperties.SensorResolution, color_resolution_value)
+
+        median_filter_value = config.get("stereo_median_filter", "KERNEL_7x7")
+        assert median_filter_value in ["KERNEL_7x7", "KERNEL_5x5", "KERNEL_3x3", "MEDIAN_OFF"], median_filter_value
+        self.median_filter = getattr(dai.MedianFilter, median_filter_value)
+
+        stereo_mode_value = config.get("stereo_mode", "HIGH_DENSITY")
+        assert stereo_mode_value in ["HIGH_DENSITY", "HIGH_ACCURACY"], stereo_mode_value
+        self.stereo_mode = getattr(dai.node.StereoDepth.PresetMode, stereo_mode_value)
+
 
 
     def start(self):
@@ -50,7 +70,7 @@ class OakCamera:
         queue_names = []
 
         # Define sources and outputs, set properties and linking nodes.
-        if self.use_color:
+        if self.is_color:
             color = pipeline.create(dai.node.ColorCamera)
             color_encoder = pipeline.create(dai.node.VideoEncoder)
             color_out = pipeline.create(dai.node.XLinkOut)
@@ -69,7 +89,7 @@ class OakCamera:
             color.video.link(color_encoder.input)
             color_encoder.bitstream.link(color_out.input)
 
-        if self.use_depth:
+        if self.is_depth:
             left = pipeline.create(dai.node.MonoCamera)
             right = pipeline.create(dai.node.MonoCamera)
             stereo = pipeline.create(dai.node.StereoDepth)
@@ -85,8 +105,12 @@ class OakCamera:
             right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
             right.setFps(self.fps)
 
-            stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)  # TODO verify meaning
-            stereo.setLeftRightCheck(True)  # https://docs.luxonis.com/en/latest/pages/faq/#left-right-check-depth-mode
+            stereo.setDefaultProfilePreset(self.stereo_mode)
+            # https://docs.luxonis.com/projects/api/en/latest/components/nodes/stereo_depth/#currently-configurable-blocks
+            stereo.initialConfig.setMedianFilter(self.median_filter)
+            stereo.setExtendedDisparity(self.is_extended_disparity)
+            stereo.setSubpixel(self.is_subpixel)
+            stereo.setLeftRightCheck(self.is_left_right_check)  # https://docs.luxonis.com/en/latest/pages/faq/#left-right-check-depth-mode
 
             left.out.link(stereo.left)
             right.out.link(stereo.right)
