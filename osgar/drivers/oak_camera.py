@@ -41,6 +41,8 @@ class OakCamera:
         self.is_left_right_check = config.get("stereo_left_right_check", False)
         assert not(self.is_extended_disparity and self.is_subpixel)  # Do not use extended_disparity and subpixel together.
 
+        self.color_manual_focus = config.get("color_manual_focus")
+
         mono_resolution_value = config.get("mono_resolution", "THE_400_P")
         assert mono_resolution_value in ["THE_400_P", "THE_480_P", "THE_720_P", "THE_800_P"], mono_resolution_value
         self.mono_resolution = getattr(dai.MonoCameraProperties.SensorResolution, mono_resolution_value)
@@ -81,9 +83,11 @@ class OakCamera:
             color.setResolution(self.color_resolution)
             color.setBoardSocket(dai.CameraBoardSocket.RGB)
             color.setFps(self.fps)
-            # Set manual focus for more predictable behavior. Value 130 allows align color and depth frames.
+            # Value 130 for manual focus allows align color and depth frames.
             # https://docs.luxonis.com/projects/api/en/latest/samples/StereoDepth/rgb_depth_aligned/
-            color.initialControl.setManualFocus(130)
+            if self.color_manual_focus is not None:
+                color.initialControl.setManualFocus(self.color_manual_focus)
+
             color_encoder.setDefaultProfilePreset(self.fps, dai.VideoEncoderProperties.Profile.MJPEG)
 
             color.video.link(color_encoder.input)
