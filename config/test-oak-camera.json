@@ -9,8 +9,11 @@
             "is_color": true,
             "is_depth": true,
             "cam_ip": "192.168.1.51",
+
             "mono_resolution": "THE_400_P",
             "color_resolution": "THE_1080_P",
+            "color_manual_focus": 130,
+
             "stereo_median_filter": "KERNEL_7x7",
             "stereo_mode": "HIGH_DENSITY",
             "stereo_extended_disparity": false,
