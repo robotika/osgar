@@ -2,9 +2,17 @@
   "version": 2,
   "robot": {
     "modules": {
+      "app": {
+          "driver": "application",
+          "in": [],
+          "out": ["desired_speed"],
+          "init": {
+            "max_speed": 0.5
+          }
+      },
       "spider": {
           "driver": "spider",
-          "in": ["can"],
+          "in": ["can", "move"],
           "out": ["can"],
           "init": {}
       },
@@ -22,7 +30,10 @@
                    "rtscts":true, "reset":true}
       }
     },
-    "links": [["spider.can", "can.can"],
+    "links": [["app.desired_speed", "spider.move"],
+              ["spider.status", "app.status"],
+              ["spider.pose2d", "app.pose2d"],
+              ["spider.can", "can.can"],
               ["can.can", "spider.can"],
               ["serial.raw", "can.raw"], 
               ["can.raw", "serial.raw"]]
