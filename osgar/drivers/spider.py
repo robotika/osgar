@@ -10,7 +10,7 @@ from osgar.node import Node
 from osgar.bus import BusShutdownException
 
 
-SPIDER_ENC_SCALE = 0.0023
+SPIDER_ENC_SCALE = 0.00218
 WHEEL_DISTANCE = 1.5  # TODO calibrate
 
 
@@ -140,10 +140,12 @@ class Spider(Node):
                 val = struct.unpack_from('HHBBH', packet, 2)
                 if verbose:
                     print("User:", val[2]&0x7F, val[3]&0x7F, val)
-            elif msg_id == 0x2A0:
+            elif msg_id == 0x182: # 0x2A0
                 # encoders
-                assert len(packet) == 2 + 4, packet
-                val = struct.unpack_from('hh', packet, 2)
+                assert len(packet) == 2 + 8, packet
+
+                val_raw = struct.unpack_from('ii', packet, 2)
+                val = (val_raw[0], -val_raw[1])  # The second encoder is overturned. To be fixed on Spider!
                 if self.prev_enc is None:
                     self.prev_enc = val
                 diff = [sint8_diff(a, b) for a, b in zip(val, self.prev_enc)]
