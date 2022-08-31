@@ -12,7 +12,7 @@
           "driver": "can",
           "in": ["raw", "can"],
           "out": ["can", "raw"],
-          "init": {}
+          "init": {"canopen": true}
       },
       "serial": {
           "driver": "serial",
