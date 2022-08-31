@@ -145,7 +145,7 @@ class Spider(Node):
                 assert len(packet) == 2 + 8, packet
 
                 val_raw = struct.unpack_from('ii', packet, 2)
-                val = (val_raw[0], -val_raw[1])  # The second encoder is overturned. To be fixed on Spider!
+                val = (-val_raw[0], val_raw[1])  # The first encoder is overturned. To be fixed on Spider!
                 if self.prev_enc is None:
                     self.prev_enc = val
                 diff = [sint8_diff(a, b) for a, b in zip(val, self.prev_enc)]
