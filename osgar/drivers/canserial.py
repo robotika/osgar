@@ -109,12 +109,16 @@ class CANSerial(Thread):
         self.bus = bus
         self.buf = b''
         self.time = None
-        ok_list = [0x7f2, 0x7f1, 1, 2,
-                   0x11, 0x12, 0x13, 0x14,
-                   0x21, 0x22, 0x23, 0x24,  # braking
-                   0x80, 0x81, 0x82, 0x83,
-                   0x91, 0x92, 0x93, 0x94]  # TODO config
-        self.firewall_ok = set(ok_list)
+        self.firewall_ok = None
+        ok_list = config.get("firewall_ok_list")
+        if ok_list:
+            self.firewall_ok = set(ok_list)
+        # ok_list for Kloubak K2
+        # ok_list = [0x7f2, 0x7f1, 1, 2,
+        #            0x11, 0x12, 0x13, 0x14,
+        #            0x21, 0x22, 0x23, 0x24,  # braking
+        #            0x80, 0x81, 0x82, 0x83,
+        #            0x91, 0x92, 0x93, 0x94]  # TODO config
 
         speed = config.get('speed', '1M')  # default 1Mbit
         if speed not in CAN_SPEED:
@@ -282,7 +286,7 @@ class CANSerial(Thread):
                     if rtr == 0:
                         assert size + 2 == len(packet), (size, len(packet))
                     # TODO verify how rtr is handled on PCAN?
-                    if msg_id not in self.firewall_ok:
+                    if self.firewall_ok and msg_id not in self.firewall_ok:
                         print(self.time, hex(msg_id), msg_id)
                         # TODO publish to 'rejected'
                         self.ready, self.buf = subt_recovery(self.buf, verbose=self.verbose)
