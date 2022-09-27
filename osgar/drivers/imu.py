@@ -87,9 +87,9 @@ class IMU(Thread):
                         yaw += 360
                     if yaw > 180:
                         yaw -= 360
+                    yaw, pitch, roll = [a + b/100 for a, b in zip([yaw, pitch, roll], self.offset)]  # correct for offset
                     quat = euler_to_quaternion(math.radians(yaw), math.radians(pitch), math.radians(roll))
                     angles = [int(round(x * 100)) for x in [yaw, pitch, roll]]
-                    angles = [a + b for a, b in zip(angles, self.offset)]  # correct for offset
                     self.bus.publish('rotation', angles)
                     self.bus.publish('orientation', quat)
         except BusShutdownException:
