@@ -3,8 +3,10 @@
 """
 
 from threading import Thread
+import math
 
 from osgar.bus import BusShutdownException
+from osgar.lib.quaternion import euler_to_quaternion
 
 
 def parse_line(line):
@@ -33,7 +35,7 @@ def parse_line(line):
 
 class IMU(Thread):
     def __init__(self, config, bus):
-        bus.register('orientation', 'rotation')
+        bus.register('orientation', 'rotation', 'data')
         Thread.__init__(self)
         self.setDaemon(True)
 
@@ -75,7 +77,7 @@ class IMU(Thread):
                 dt, __, data = packet
                 for out in self.process_gen(data):
                     assert out is not None
-                    self.bus.publish('orientation', out)
+                    self.bus.publish('data', out)
                     # publish separately yaw, pitch and roll in 1/100th deg
                     yaw, pitch, roll = out[0]
                     # The  VN-100  uses a right-handed coordinate system. A positive yaw angle
@@ -85,9 +87,11 @@ class IMU(Thread):
                         yaw += 360
                     if yaw > 180:
                         yaw -= 360
+                    yaw, pitch, roll = [a + b/100 for a, b in zip([yaw, pitch, roll], self.offset)]  # correct for offset
+                    quat = euler_to_quaternion(math.radians(yaw), math.radians(pitch), math.radians(roll))
                     angles = [int(round(x * 100)) for x in [yaw, pitch, roll]]
-                    angles = [a + b for a, b in zip(angles, self.offset)]  # correct for offset
                     self.bus.publish('rotation', angles)
+                    self.bus.publish('orientation', quat)
         except BusShutdownException:
             pass
 

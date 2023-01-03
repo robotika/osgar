@@ -2,34 +2,32 @@
   Spider3 Rider Driver
 """
 
-
 import struct
-from threading import Thread
+import ctypes
+import math
 
+from osgar.node import Node
 from osgar.bus import BusShutdownException
 
 
-CAN_BRIDGE_READY = b'\xfe\x10'  # CAN bridge is ready to accept configuration commands
-CAN_BRIDGE_SYNC = b'\xFF'*10    # CAN bridge synchronization bytes
-CAN_SPEED_1MB = b'\xfe\x57'     # configure CAN bridge to communicate on 1Mb CAN network
-CAN_BRIDGE_START = b'\xfe\x31'  # start bridge
+SPIDER_ENC_SCALE = 0.00218
+WHEEL_DISTANCE = 1.5  # TODO calibrate
 
 
-def CAN_packet(msg_id, data):
-    header = [(msg_id>>3) & 0xff, (msg_id<<5) & 0xe0 | (len(data) & 0xf)]
-    return bytes(header + data)
+def CAN_triplet(msg_id, data):
+    return [msg_id, bytes(data), 0]  # flags=0, i.e basic addressing
 
 
-class Spider(Thread):
+def sint8_diff(a, b):
+    return ctypes.c_int8(a - b).value
+
+
+class Spider(Node):
     def __init__(self, config, bus):
-        bus.register('can', 'status')
-        Thread.__init__(self)
-        self.setDaemon(True)
+        super().__init__(config, bus)
+        bus.register('can', 'status', 'encoders', 'pose2d')
 
         self.bus = bus
-        self.buf = b''
-
-        self.can_bridge_initialized = False
         self.status_word = None  # not defined yet
         self.wheel_angles = None  # four wheel angles as received via CAN
         self.zero_steering = None  # zero position of all 4 wheels
@@ -38,22 +36,51 @@ class Spider(Thread):
         self.alive = 0  # toggle with 128
         self.desired_angle = None  # in Spider mode desired weels direction
         self.desired_speed = None
+        self.desired_angular_speed = None  # for CAR mode
+        self.speed_history_left = []
+        self.speed_history_right = []
+        self.speed = None  # unknown
+        self.verbose = False  # TODO node
+        self.debug_arr = []
+        self.pose2d = (0.0, 0.0, 0.0)  # x, y in meters, heading in radians (not corrected to 2PI)
+        self.prev_enc = None  # not defined
+        self.paused = True  # safe default
+        self.valve = None
 
-    @staticmethod
-    def split_buffer(data):
-        # skip 0xFF prefix bytes (CAN bridge control bytes)
-        data = data.lstrip(b'\xff')
+    def update_speed(self, diff):
+        self.speed_history_left.append(diff[0])
+        self.speed_history_right.append(diff[1])
+        self.speed_history_left = self.speed_history_left[-10:]
+        self.speed_history_right = self.speed_history_right[-10:]
 
-        if len(data) >= 2:
-            # see https://en.wikipedia.org/wiki/CAN_bus
-            header = data[:2]
-            rtr = (header[1] >> 4) & 0x1  # Remote transmission request
-            size = (header[1]) & 0x0f
-            if rtr:
-                return data[2:], header
-            elif len(data) >= 2 + size:
-                return data[2+size:], data[:2+size]
-        return data, b''  # no complete packet available yet
+        self.speed = SPIDER_ENC_SCALE * (sum(self.speed_history_left) + sum(self.speed_history_right))  # 20Hz -> left + right = 1s
+
+    def update_pose2d(self, diff):
+        x, y, heading = self.pose2d
+
+        metricL = SPIDER_ENC_SCALE * diff[0]
+        metricR = SPIDER_ENC_SCALE * diff[1]
+
+        dist = (metricL + metricR)/2.0
+        angle = (metricR - metricL)/WHEEL_DISTANCE
+
+        # advance robot by given distance and angle
+        if abs(angle) < 0.0000001:  # EPS
+            # Straight movement - a special case
+            x += dist * math.cos(heading)
+            y += dist * math.sin(heading)
+            #Not needed: heading += angle
+        else:
+            # Arc
+            r = dist / angle
+            x += -r * math.sin(heading) + r * math.sin(heading + angle)
+            y += +r * math.cos(heading) - r * math.cos(heading + angle)
+            heading += angle # not normalized
+        self.pose2d = (x, y, heading)
+
+    def send_pose2d(self):
+        x, y, heading = self.pose2d
+        self.bus.publish('pose2d', [round(x*1000), round(y*1000), round(math.degrees(heading)*100)])
 
     @staticmethod
     def fix_range(value):
@@ -64,30 +91,30 @@ class Spider(Thread):
             value -= 512
         return value
 
-    def process_packet(self, packet, verbose=False):
-        if packet == CAN_BRIDGE_READY:
-            self.bus.publish('can', CAN_BRIDGE_SYNC)
-            self.bus.publish('can', CAN_SPEED_1MB)
-            self.bus.publish('can', CAN_BRIDGE_START)
-            self.can_bridge_initialized = True
-            return None
-
-        if len(packet) >= 2:
-            msg_id = ((packet[0]) << 3) | (((packet[1]) >> 5) & 0x1f)
+    def process_packet(self, data, verbose=False):
+        msg_id, packet, flags = data
+        if True:  #len(packet) >= 2:
+#            msg_id = ((packet[0]) << 3) | (((packet[1]) >> 5) & 0x1f)
+            packet = b'XX' + packet  # hack for backward compatibility
             if verbose:
                 print(hex(msg_id), packet[2:])
             if msg_id == 0x200:
+                prev = self.status_word
                 self.status_word = struct.unpack('H', packet[2:])[0]
+                if prev is None or (prev & 0x7FFF != self.status_word & 0x7FFF):
+                    self.paused = (self.status_word & 0x10) == 0
+                    mode = 'CAR' if self.status_word & 0x10 else 'SPIDER'
+                    print(self.time, hex(self.status_word & 0x7FFF), 'Mode:', mode)
                 if self.wheel_angles is not None and self.zero_steering is not None:
                     ret = [self.status_word, [Spider.fix_range(a - b) for a, b in zip(self.wheel_angles, self.zero_steering)]]
                 else:
                     ret = [self.status_word, None]
 
                 # handle steering
-                if self.desired_angle is not None and self.desired_speed is not None:
-                    self.send((self.desired_speed, self.desired_angle))
+                if self.desired_speed is not None and not self.paused:
+                    self.send_speed((self.desired_speed, self.desired_angular_speed))
                 else:
-                    self.send((0, 0))
+                    self.send_speed((0, 0))
                 return ret
 
             elif msg_id == 0x201:
@@ -96,6 +123,10 @@ class Spider(Thread):
                 if verbose and self.wheel_angles is not None and self.zero_steering is not None:
                     print('Wheels:',
                           [Spider.fix_range(a - b) for a, b in zip(self.wheel_angles, self.zero_steering)])
+            elif msg_id == 0x202:
+                assert len(packet) == 2 + 8, packet
+                valves = struct.unpack_from('HHHH', packet, 2)
+                self.valve = (valves[0] - valves[2], valves[1] - valves[3])
             elif msg_id == 0x203:
                 assert len(packet) == 2 + 8, packet
                 prev = self.zero_steering
@@ -109,6 +140,25 @@ class Spider(Thread):
                 val = struct.unpack_from('HHBBH', packet, 2)
                 if verbose:
                     print("User:", val[2]&0x7F, val[3]&0x7F, val)
+            elif msg_id == 0x182: # 0x2A0
+                # encoders
+                assert len(packet) == 2 + 8, packet
+
+                val_raw = struct.unpack_from('ii', packet, 2)
+                # The left encoder is overturned. To be fixed on Spider! Reordered (left, right)
+                val = (val_raw[1], -val_raw[0])
+                if self.prev_enc is None:
+                    self.prev_enc = val
+                diff = [sint8_diff(a, b) for a, b in zip(val, self.prev_enc)]
+                self.publish('encoders', list(diff))
+                self.update_speed(diff)
+                self.update_pose2d(diff)
+                self.send_pose2d()
+                self.prev_enc = val
+                if verbose:
+                    print("Enc:", val)
+                    if self.valve is not None:
+                        self.debug_arr.append([self.time.total_seconds(), *diff] + list(self.valve) + [self.speed])
 
     def process_gen(self, data, verbose=False):
         self.buf, packet = self.split_buffer(self.buf + data)
@@ -118,38 +168,38 @@ class Spider(Thread):
                 yield ret
             self.buf, packet = self.split_buffer(self.buf)  # i.e. process only existing buffer now
 
-    def run(self):
-        try:
-            while True:
-                dt, channel, data = self.bus.listen()
-                if channel == 'raw':
-                    if len(data) > 0:
-                        for status in self.process_gen(data):
-                            if status is not None:
-                                self.bus.publish('status', status)
-                elif channel == 'move':
-                    self.desired_speed, self.desired_angle = data
-                else:
-                    assert False, channel  # unsupported channel
-        except BusShutdownException:
-            pass
 
-    def request_stop(self):
-        self.bus.shutdown()
+    def update(self):
+        channel = super().update()
+        if channel == 'can':
+            status = self.process_packet(self.can, verbose=self.verbose)
+            if status is not None:
+                self.bus.publish('status', status)
+# move is for SPIDER mode, which is currently not supported
+#        elif channel == 'move':
+#            self.desired_speed, self.desired_angle = self.move
+        elif channel == 'desired_speed':
+            speed_mm, angular_speed_mrad = self.desired_speed  # really ugly!!!
+            self.desired_speed = speed_mm/1000.0
+            self.desired_angular_speed = math.radians(angular_speed_mrad/100.0)
+        else:
+            assert False, channel  # unsupported channel
 
-    def send(self, data):
-        if self.can_bridge_initialized:
+    def send_speed(self, data):
+        if True:  #self.can_bridge_initialized:
             speed, angular_speed = data
-            if speed > 0:
+            if abs(speed) > 0:
+#                print(self.status_word & 0x7fff)
                 if self.status_word is None or self.status_word & 0x10 != 0:
+                    # car mode
                     angle_cmd = int(angular_speed)  # TODO verify angle, byte resolution
                 else:
-                    print('SPIDER MODE')
+                    # spider mode
                     desired_angle = int(angular_speed)  # TODO proper naming etc.
                     if self.wheel_angles is not None and self.zero_steering is not None:
                         curr = Spider.fix_range(self.wheel_angles[0] - self.zero_steering[0])
                         diff = Spider.fix_range(desired_angle - curr)
-                        print('DIFF', diff)
+#                        print('DIFF', diff)
                         if abs(diff) < 5:
                             angle_cmd = 0
                         elif diff < 0:
@@ -158,20 +208,40 @@ class Spider(Thread):
                             angle_cmd = 0x80 + 50
                     else:
                         angle_cmd = 0
-                if speed >= 10:
-                    packet = CAN_packet(0x401, [0x80 + 127, angle_cmd])
+                sign_offset = 0x80 if speed > 0 else 0x0
+                if self.speed is not None:
+                    err = min(127, 80 + max(0, int(100*(speed - self.speed))))
                 else:
-                    packet = CAN_packet(0x401, [0x80 + 80, angle_cmd])
+                    err = 80  # currently min value
+                packet = CAN_triplet(0x401, [sign_offset + err, angle_cmd])
+#                if abs(speed) >= 10:
+#                    packet = CAN_triplet(0x401, [sign_offset + 127, angle_cmd])
+#                else:
+#                    packet = CAN_triplet(0x401, [sign_offset + 80, angle_cmd])
             else:
-                packet = CAN_packet(0x401, [0, 0])  # STOP packet
+                packet = CAN_triplet(0x401, [0, 0])  # STOP packet
             self.bus.publish('can', packet)
 
             # alive
-            packet = CAN_packet(0x400, [self.status_cmd, self.alive])
+            packet = CAN_triplet(0x400, [self.status_cmd, self.alive])
             self.bus.publish('can', packet)
             self.alive = 128 - self.alive
         else:
             print('CAN bridge not initialized yet!')
 #            self.logger.write(0, 'ERROR: CAN bridge not initialized yet! [%s]' % str(data))
+
+    def draw(self):
+        # for debugging
+        import matplotlib.pyplot as plt
+        arr = self.debug_arr
+        t = [a[0] for a in arr]
+        values = [a[1:] for a in arr]
+
+        line = plt.plot(t, values, '-o', linewidth=2)
+
+        plt.xlabel('time (s)')
+        plt.legend(['left', 'right'])
+        plt.show()
+
 
 # vim: expandtab sw=4 ts=4

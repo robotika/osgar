@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "osgar.drivers.oak_camera:OakCamera",
+          "init": {
+            "fps": 5,
+            "is_color": true,
+            "is_depth": true,
+            "cam_ip": "192.168.1.51",
+
+            "mono_resolution": "THE_400_P",
+            "color_resolution": "THE_1080_P",
+            "color_manual_focus": 130,
+
+            "stereo_median_filter": "KERNEL_7x7",
+            "stereo_mode": "HIGH_DENSITY",
+            "stereo_extended_disparity": false,
+            "stereo_subpixel": false,
+            "stereo_left_right_check": false
+          }
+      }
+    },
+    "links": []
+  }
+}

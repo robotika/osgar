@@ -58,7 +58,8 @@ class FollowMe(Node):
     def followme(self):
         print("Follow Me!")
 
-        SCAN_SIZE = 811  # TODO config
+        # SCAN_SIZE = 811  # TODO config
+        SCAN_SIZE = 271
         SCANS_PER_DEG = SCAN_SIZE//270
 
         # limit tracking to front 180deg only due to mounting (back laser is blocked by robot body)
