@@ -57,8 +57,8 @@ class Pozyx(Node):
     def run(self):
         try:
             self.get_settings()
-            self.set_settings()
-            self.get_settings()
+#            self.set_settings()
+#            self.get_settings()
             self.setup_gpio()
             device_range = pypozyx.DeviceRange()
             gpio_reg = pypozyx.SingleRegister()
