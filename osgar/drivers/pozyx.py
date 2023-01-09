@@ -14,10 +14,11 @@ from osgar.bus import BusShutdownException
 class Pozyx(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('range', 'settings')
+        bus.register('range', 'settings', 'gpio')
         serial_port = config['port']
         self.sleep_sec = config.get("sleep")
         self.devices = [int(x, 16) for x in config.get('devices', [])]  # unfortunately JSON does not support hex
+        self.gpio_devices = [int(x, 16) for x in config.get('gpio', [])]
         self.devices.append(None)  # extra range to the base (must be last, 2nd param)
         self.pozyx = pypozyx.PozyxSerial(serial_port)
         self.verbose = False
@@ -44,12 +45,23 @@ class Pozyx(Node):
             else:
                 print('ERROR', remote_id)
 
+    def setup_gpio(self):
+        mode = pypozyx.SingleRegister()
+        pull = pypozyx.SingleRegister()
+        mode.value = pypozyx.PozyxConstants.GPIO_DIGITAL_INPUT
+        pull.value = pypozyx.PozyxConstants.GPIO_PULL_UP
+        for device_id in self.gpio_devices:
+            for i in range(4):
+                self.pozyx.setConfigGPIO(i + 1, mode, pull, device_id)
+
     def run(self):
         try:
             self.get_settings()
             self.set_settings()
             self.get_settings()
+            self.setup_gpio()
             device_range = pypozyx.DeviceRange()
+            gpio_reg = pypozyx.SingleRegister()
             while self.bus.is_alive():
                 for from_id, to_id in itertools.combinations(self.devices, 2):
                     status = self.pozyx.doRanging(from_id, device_range, to_id)
@@ -58,6 +70,11 @@ class Pozyx(Node):
                     self.publish('range', [status, from_id, to_id, [device_range.timestamp, device_range.distance, device_range.RSS]])
                     if self.sleep_sec is not None:
                         self.sleep(self.sleep_sec)
+                for device_id in self.gpio_devices:
+                    # TODO use low level read, which will grab all 4 digital inputs at once
+                    status = self.pozyx.getGPIO(1, gpio_reg, device_id)
+                    self.publish('gpio', [status, device_id, gpio_reg.value])
+
         except BusShutdownException:
             pass
 
