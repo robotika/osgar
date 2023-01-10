@@ -53,7 +53,7 @@ class FollowMeUWB(Node):
                     if self.verbose:
                         print(diff)
                         self.debug_arr.append((self.time.total_seconds(), diff))
-                    angular_speed = math.degrees(10)
+                    angular_speed = math.radians(10)
                     if abs(diff) < 0.05:
                         self.send_speed_cmd(0.0, 0.0)
                     elif diff > 0:
