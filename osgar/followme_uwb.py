@@ -19,14 +19,72 @@ class FollowMeUWB(Node):
         self.raise_exception_on_stop = False
         self.verbose = False
 
+        self.left_range = None
+        self.right_range = None
+        self.back_range = None
+        self.debug_arr = []
+
+    def on_scan(self, data):
+        pass  # ignore for now
+
+    def on_encoders(self, data):
+        pass  # ignore for now
+
+    def on_pose2d(self, data):
+        pass  # ignore for now
+
+    def on_pozyx_range(self, data):
+        # [1, 3431, 3411, [2777589, 357, -78]]
+        if data[0] == 1:
+            tag = 0x6827
+            if data[1] == tag or data[2] == tag:
+                src = data[1] if data[2] == tag else data[2]
+                dist = data[3][1] / 1000
+                if src == 0xD53:
+                    self.left_range = dist
+                elif src == 0xD67:
+                    self.right_range = dist
+                else:
+                    assert src is None, src
+                    self.back_range = dist
+
+                if self.left_range is not None and self.right_range is not None:
+                    diff = self.left_range - self.right_range
+                    if self.verbose:
+                        print(diff)
+                        self.debug_arr.append((self.time.total_seconds(), diff))
+                    angular_speed = math.degrees(10)
+                    if abs(diff) < 0.05:
+                        self.send_speed_cmd(0.0, 0.0)
+                    elif diff > 0:
+                        self.send_speed_cmd(0.0, -angular_speed)
+                    else:
+                        self.send_speed_cmd(0.0, angular_speed)
+
+    def on_pozyx_gpio(self, data):
+        pass  # ignore for now
+
+    def on_buttons(self, data):
+        pass  # ignore for now
+
     def update(self):  # yes, refactoring to some common node would be nice!
         channel = super().update()  # define self.time
         handler = getattr(self, "on_" + channel, None)
         if handler is not None:
             handler(getattr(self, channel))
         else:
-            pass
-#            assert False, channel  # unknown
+            assert False, channel  # unknown
+
+    def draw(self):
+        import matplotlib.pyplot as plt
+        t = [a[0] for a in self.debug_arr]
+        x = [a[1] for a in self.debug_arr]
+        line = plt.plot(t, x, '-o', linewidth=2, label=f'diff')
+
+        plt.xlabel('time (s)')
+        plt.ylabel('distance diff (m)')
+        plt.legend()
+        plt.show()
 
 
 
