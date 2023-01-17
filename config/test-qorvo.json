@@ -1,0 +1,34 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "timer": {
+        "driver": "timer",
+        "init": {
+          "sleep": 1.0
+        }
+      },
+      "qorvo": {
+          "driver": "osgar.drivers.qorvo:Qorvo",
+          "in": ["raw"],
+          "out": ["range", "raw"],
+          "init": {
+          }
+      },
+      "qserial": {
+        "driver": "serial",
+        "in": ["raw"],
+        "out": ["raw"],
+          "init": {
+            "port": "/dev/ttyACM0",
+            "speed": 115200
+          }
+        }
+    },
+    "links": [
+      ["timer.tick", "qorvo.timer"],
+      ["qorvo.raw", "qserial.raw"],
+      ["qserial.raw", "qorvo.raw"]
+    ]
+  }
+}
