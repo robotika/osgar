@@ -3,12 +3,15 @@
 """
 import math
 from datetime import timedelta
+from statistics import median
 
 from osgar.node import Node
 from osgar.followme import EmergencyStopException
 
 # Notes:
 # Expects 3 anchors mounted on Eduro robot
+
+FILTER_SIZE = 10
 
 
 class FollowMeUWB(Node):
@@ -21,6 +24,8 @@ class FollowMeUWB(Node):
 
         self.left_range = None
         self.right_range = None
+        self.left_range_arr = []
+        self.right_range_arr = []
         self.back_range = None
         self.debug_arr = []
 
@@ -41,9 +46,13 @@ class FollowMeUWB(Node):
                 src = data[1] if data[2] == tag else data[2]
                 dist = data[3][1] / 1000
                 if src == 0xD53:
-                    self.left_range = dist
+                    self.left_range_arr.append(dist)
+                    self.left_range_arr = self.left_range_arr[-FILTER_SIZE:]
+                    self.left_range = median(self.left_range_arr)
                 elif src == 0xD67:
-                    self.right_range = dist
+                    self.right_range_arr.append(dist)
+                    self.right_range_arr = self.right_range_arr[-FILTER_SIZE:]
+                    self.right_range = median(self.right_range_arr)
                 else:
                     assert src is None, src
                     self.back_range = dist
@@ -60,6 +69,20 @@ class FollowMeUWB(Node):
                         self.send_speed_cmd(0.0, -angular_speed)
                     else:
                         self.send_speed_cmd(0.0, angular_speed)
+
+    def on_pozyx_left(self, data):
+        if data[2] is None:
+            data[2] = 0xD53
+            return self.on_pozyx_range(data)
+        else:
+            print('Left error', data)
+
+    def on_pozyx_right(self, data):
+        if data[2] is None:
+            data[2] = 0xD67
+            return self.on_pozyx_range(data)
+        else:
+            print('Right error', data)
 
     def on_pozyx_gpio(self, data):
         pass  # ignore for now
@@ -108,7 +131,7 @@ class FollowMeUWB(Node):
             self.update()
 
     def send_speed_cmd(self, speed, angular_speed):
-        return self.bus.publish('desired_speed', 
+        return self.bus.publish('desired_speed',
                 [round(speed*1000), round(math.degrees(angular_speed)*100)])
 
     def followme_orig(self):
