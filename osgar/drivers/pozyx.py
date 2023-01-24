@@ -80,11 +80,11 @@ class Pozyx(Node):
 
 ############### supporting tools #####################
 
-def read_data(logfile):
+def read_data(logfile, stream='pozyx.range'):
     from osgar.logger import lookup_stream_id, LogReader
     from osgar.lib.serialize import deserialize
 
-    stream_id = lookup_stream_id(logfile, 'pozyx.range')
+    stream_id = lookup_stream_id(logfile, stream)
     arr = []
     for dt, channel, raw in LogReader(args.logfile, only_stream_id=stream_id):
         data = deserialize(raw)
@@ -194,10 +194,11 @@ if __name__ == '__main__':
     parser.add_argument('logfile', help='logfile path')
     parser.add_argument('-t', '--timestamps', help='use Pozyx timestamps', action='store_true')
     parser.add_argument('--map', help='display map instead of ranges', action='store_true')
+    parser.add_argument('--stream', help='input stream', default='pozyx.range')
     args = parser.parse_args()
 
     title = os.path.basename(args.logfile)
-    arr = read_data(args.logfile)
+    arr = read_data(args.logfile, stream=args.stream)
     print(len(arr))
     if args.map:
         old_anchors = {
