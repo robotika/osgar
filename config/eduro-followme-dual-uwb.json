@@ -8,7 +8,9 @@
           "out": ["desired_speed"],
           "init": {
             "max_speed": 0.5,
-            "laser_pose2d": [0.13, 0.055, 0]
+            "laser_pose2d": [0.13, 0.055, 0],
+            "left_id": "0x0D67",
+            "right_id": "0xD53"
           }
       },
       "eduro": {
@@ -52,7 +54,7 @@
               "timeout": 1.0
           }
       },
-      "pozyx_left": {
+      "pozyx0": {
           "driver": "pozyx",
           "in": [],
           "out": ["range", "gpio"],
@@ -62,7 +64,7 @@
             "note": "in PC connected 0x0D53"
           }
       },
-      "pozyx_right": {
+      "pozyx1": {
           "driver": "pozyx",
           "in": [],
           "out": ["range", "gpio"],
@@ -85,8 +87,8 @@
               ["eduro.emergency_stop", "app.emergency_stop"],
               ["eduro.pose2d", "app.pose2d"],
               ["eduro.buttons", "app.buttons"],
-              ["pozyx_left.range", "app.pozyx_range"],
-              ["pozyx_right.range", "app.pozyx_range"],
-              ["pozyx_left.gpio", "app.pozyx_gpio"]]
+              ["pozyx0.range", "app.pozyx_range"],
+              ["pozyx1.range", "app.pozyx_range"],
+              ["pozyx0.gpio", "app.pozyx_gpio"]]
   }
 }

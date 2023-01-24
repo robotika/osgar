@@ -22,6 +22,9 @@ class FollowMeUWB(Node):
         self.raise_exception_on_stop = False
         self.verbose = False
 
+        self.left_id = int(config['left_id'], 16)
+        self.right_id = int(config['right_id'], 16)
+
         self.left_range = None
         self.right_range = None
         self.left_range_arr = []
@@ -45,11 +48,11 @@ class FollowMeUWB(Node):
             if data[1] == tag or data[2] == tag:
                 src = data[1] if data[2] == tag else data[2]
                 dist = data[3][1] / 1000
-                if src == 0xD53:
+                if src == self.left_id:
                     self.left_range_arr.append(dist)
                     self.left_range_arr = self.left_range_arr[-FILTER_SIZE:]
                     self.left_range = median(self.left_range_arr)
-                elif src == 0xD67:
+                elif src == self.right_id:
                     self.right_range_arr.append(dist)
                     self.right_range_arr = self.right_range_arr[-FILTER_SIZE:]
                     self.right_range = median(self.right_range_arr)
