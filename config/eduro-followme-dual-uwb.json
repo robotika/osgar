@@ -85,8 +85,8 @@
               ["eduro.emergency_stop", "app.emergency_stop"],
               ["eduro.pose2d", "app.pose2d"],
               ["eduro.buttons", "app.buttons"],
-              ["pozyx_left.range", "app.pozyx_left"],
-              ["pozyx_right.range", "app.pozyx_right"],
+              ["pozyx_left.range", "app.pozyx_range"],
+              ["pozyx_right.range", "app.pozyx_range"],
               ["pozyx_left.gpio", "app.pozyx_gpio"]]
   }
 }
