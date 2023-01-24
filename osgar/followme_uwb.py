@@ -72,14 +72,14 @@ class FollowMeUWB(Node):
 
     def on_pozyx_left(self, data):
         if data[2] is None:
-            data[2] = 0xD53
+            data[2] = 0xD67
             return self.on_pozyx_range(data)
         else:
             print('Left error', data)
 
     def on_pozyx_right(self, data):
         if data[2] is None:
-            data[2] = 0xD67
+            data[2] = 0xD53
             return self.on_pozyx_range(data)
         else:
             print('Right error', data)
