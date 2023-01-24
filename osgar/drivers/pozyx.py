@@ -21,6 +21,7 @@ class Pozyx(Node):
         self.gpio_devices = [int(x, 16) for x in config.get('gpio', [])]
         self.devices.append(None)  # extra range to the base (must be last, 2nd param)
         self.pozyx = pypozyx.PozyxSerial(serial_port)
+        self.my_id = None  # unknown
         self.verbose = False
 
     def get_settings(self):
@@ -56,6 +57,10 @@ class Pozyx(Node):
 
     def run(self):
         try:
+            network_id = pypozyx.NetworkID()
+            self.pozyx.getNetworkId(network_id)
+            my_id = network_id.id
+            print('Detected', hex(my_id))
             self.get_settings()
 #            self.set_settings()
 #            self.get_settings()
@@ -65,6 +70,10 @@ class Pozyx(Node):
             while self.bus.is_alive():
                 for from_id, to_id in itertools.combinations(self.devices, 2):
                     status = self.pozyx.doRanging(from_id, device_range, to_id)
+                    if to_id is None:
+                        to_id = my_id
+                    if from_id is None:
+                        from_id = my_id
                     if self.verbose:
                         print(device_range)
                     self.publish('range', [status, from_id, to_id, [device_range.timestamp, device_range.distance, device_range.RSS]])
