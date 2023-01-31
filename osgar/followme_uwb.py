@@ -62,16 +62,21 @@ class FollowMeUWB(Node):
 
                 if self.left_range is not None and self.right_range is not None:
                     diff = self.left_range - self.right_range
+                    dist = (self.left_range + self.right_range)/2
                     if self.verbose:
-                        print(diff)
+                        print(diff, dist)
                         self.debug_arr.append((self.time.total_seconds(), diff))
                     angular_speed = math.radians(10)
+                    speed = 0.0
+                    if dist > 1.2:
+                        speed = 0.1
+
                     if abs(diff) < 0.05:
-                        self.send_speed_cmd(0.0, 0.0)
+                        self.send_speed_cmd(speed, 0.0)
                     elif diff > 0:
-                        self.send_speed_cmd(0.0, -angular_speed)
+                        self.send_speed_cmd(speed, -angular_speed)
                     else:
-                        self.send_speed_cmd(0.0, angular_speed)
+                        self.send_speed_cmd(speed, angular_speed)
 
     def on_pozyx_left(self, data):
         if data[2] is None:
