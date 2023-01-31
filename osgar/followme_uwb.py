@@ -69,7 +69,7 @@ class FollowMeUWB(Node):
                     angular_speed = math.radians(10)
                     speed = 0.0
                     if dist > 1.2:
-                        speed = 0.1
+                        speed = min(0.5, 0.1 + (dist - 1.2) * 0.4)
 
                     if abs(diff) < 0.05:
                         self.send_speed_cmd(speed, 0.0)
