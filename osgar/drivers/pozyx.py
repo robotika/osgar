@@ -14,11 +14,12 @@ from osgar.bus import BusShutdownException
 class Pozyx(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('range', 'settings', 'gpio')
+        bus.register('range', 'settings', 'gpio', 'sensor')
         serial_port = config['port']
         self.sleep_sec = config.get("sleep")
         self.devices = [int(x, 16) for x in config.get('devices', [])]  # unfortunately JSON does not support hex
         self.gpio_devices = [int(x, 16) for x in config.get('gpio', [])]
+        self.sensor_devices = [int(x, 16) for x in config.get('sensor', [])]
         self.devices.append(None)  # extra range to the base (must be last, 2nd param)
         self.pozyx = pypozyx.PozyxSerial(serial_port)
         self.my_id = None  # unknown
@@ -67,6 +68,7 @@ class Pozyx(Node):
             self.setup_gpio()
             device_range = pypozyx.DeviceRange()
             gpio_reg = pypozyx.SingleRegister()
+            raw_sensor_data_reg = pypozyx.RawSensorData()
             while self.bus.is_alive():
                 for from_id, to_id in itertools.combinations(self.devices, 2):
                     status = self.pozyx.doRanging(from_id, device_range, to_id)
@@ -83,6 +85,9 @@ class Pozyx(Node):
                     # TODO use low level read, which will grab all 4 digital inputs at once
                     status = self.pozyx.getGPIO(1, gpio_reg, device_id)
                     self.publish('gpio', [status, device_id, gpio_reg.value])
+                for device_id in self.sensor_devices:
+                    status = self.pozyx.getAllSensorData(raw_sensor_data_reg, device_id)
+                    self.publish('sensor', [status, device_id, str(raw_sensor_data_reg)])
 
         except BusShutdownException:
             pass
