@@ -156,7 +156,7 @@ def draw(foreground, pose, scan, poses=[], image=None, bbox=None, callback=None,
 
     if callback is not None:
         debug_poly = []
-        callback(scan, debug_poly)
+        callback(pose, scan, debug_poly)
         for poly in debug_poly:
             prev = None
             pts = [scr(x, y) for x, y in poly]
