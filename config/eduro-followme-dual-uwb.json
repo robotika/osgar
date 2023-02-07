@@ -89,6 +89,7 @@
               ["eduro.pose2d", "app.pose2d"],
               ["eduro.buttons", "app.buttons"],
               ["pozyx0.range", "app.pozyx_range"],
+              ["pozyx0.sensor", "app.tag_sensor"],
               ["pozyx1.range", "app.pozyx_range"],
               ["pozyx0.gpio", "app.pozyx_gpio"]]
   }

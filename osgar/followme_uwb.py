@@ -78,6 +78,10 @@ class FollowMeUWB(Node):
                     else:
                         self.send_speed_cmd(speed, angular_speed)
 
+    def on_tag_sensor(self, data):
+        row = [int(x) for x in data[2].split(',')]
+#        self.debug_arr.append((self.time.total_seconds(), row[-7:-4]))
+
     def on_pozyx_left(self, data):
         if data[2] is None:
             data[2] = 0xD67
