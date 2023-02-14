@@ -73,7 +73,7 @@ class FollowMeUWB(Node):
                     speed = 0.0
                     if dist > 1.2:
                         speed = min(0.5, 0.1 + (dist - 1.2) * 0.4)
-                    if self.last_min_dist is not None and self.last_min_dist < 1000:
+                    if self.last_min_dist is not None and self.last_min_dist < 700:
                         speed = 0.0
 
                     if self.follow_enabled:
