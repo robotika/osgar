@@ -6,7 +6,7 @@ from datetime import timedelta
 from statistics import median
 
 from osgar.node import Node
-from osgar.followme import EmergencyStopException
+from osgar.followme import EmergencyStopException, min_dist
 
 # Notes:
 # Expects 3 anchors mounted on Eduro robot
@@ -21,6 +21,7 @@ class FollowMeUWB(Node):
         self.last_position = [0, 0, 0]  # proper should be None, but we really start from zero
         self.raise_exception_on_stop = False
         self.verbose = False
+        self.last_min_dist = None  # unknown
 
         self.left_id = int(config['left_id'], 16)
         self.right_id = int(config['right_id'], 16)
@@ -33,7 +34,8 @@ class FollowMeUWB(Node):
         self.debug_arr = []
 
     def on_scan(self, data):
-        pass  # ignore for now
+        assert len(data) == 271, len(data)
+        self.last_min_dist = min_dist(data[45:-45])
 
     def on_encoders(self, data):
         pass  # ignore for now
@@ -70,7 +72,8 @@ class FollowMeUWB(Node):
                     speed = 0.0
                     if dist > 1.2:
                         speed = min(0.5, 0.1 + (dist - 1.2) * 0.4)
-
+                    if self.last_min_dist is not None and self.last_min_dist < 1000:
+                        speed = 0.0
                     if abs(diff) < 0.05:
                         self.send_speed_cmd(speed, 0.0)
                     elif diff > 0:
