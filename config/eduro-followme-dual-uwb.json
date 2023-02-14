@@ -72,6 +72,7 @@
           "init": {
             "port": "/dev/ttyACM1",
             "devices": ["0x6827"],
+            "gpio":  ["0x6827"],
             "note": "in PC connected 0x0D67"
           }
       }
@@ -91,6 +92,6 @@
               ["pozyx0.range", "app.pozyx_range"],
               ["pozyx0.sensor", "app.tag_sensor"],
               ["pozyx1.range", "app.pozyx_range"],
-              ["pozyx0.gpio", "app.pozyx_gpio"]]
+              ["pozyx1.gpio", "app.pozyx_gpio"]]
   }
 }

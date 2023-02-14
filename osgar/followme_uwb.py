@@ -22,6 +22,7 @@ class FollowMeUWB(Node):
         self.raise_exception_on_stop = False
         self.verbose = False
         self.last_min_dist = None  # unknown
+        self.follow_enabled = None  # unknown
 
         self.left_id = int(config['left_id'], 16)
         self.right_id = int(config['right_id'], 16)
@@ -74,12 +75,16 @@ class FollowMeUWB(Node):
                         speed = min(0.5, 0.1 + (dist - 1.2) * 0.4)
                     if self.last_min_dist is not None and self.last_min_dist < 1000:
                         speed = 0.0
-                    if abs(diff) < 0.05:
-                        self.send_speed_cmd(speed, 0.0)
-                    elif diff > 0:
-                        self.send_speed_cmd(speed, -angular_speed)
+
+                    if self.follow_enabled:
+                        if abs(diff) < 0.05:
+                            self.send_speed_cmd(speed, 0.0)
+                        elif diff > 0:
+                            self.send_speed_cmd(speed, -angular_speed)
+                        else:
+                            self.send_speed_cmd(speed, angular_speed)
                     else:
-                        self.send_speed_cmd(speed, angular_speed)
+                        self.send_speed_cmd(0, 0)
 
     def on_tag_sensor(self, data):
         row = [int(x) for x in data[2].split(',')]
@@ -100,7 +105,10 @@ class FollowMeUWB(Node):
             print('Right error', data)
 
     def on_pozyx_gpio(self, data):
-        pass  # ignore for now
+        # [1, 26663, 0]
+        valid, device_id, digital_input = data
+        if valid:
+            self.follow_enabled = (digital_input == 0)
 
     def on_buttons(self, data):
         pass  # ignore for now
