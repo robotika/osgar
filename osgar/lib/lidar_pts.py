@@ -82,4 +82,41 @@ def equal_scans(scan1, scan2, tollerance=10):
     diff = arr1 - arr2
     return np.abs(diff).max() <= tollerance
 
+###################################
+from shapely.geometry import MultiPoint
+def loam_element(pose, scan, debug_poly=None, dist_limit=0.1, len_limit=2):
+    assert len(scan) == 271, len(scan)
+    if pose is None:
+        heading = 0  # not available
+    else:
+        x, y, heading = pose
+
+    pts = []
+    groups = []
+    prev = None
+    for i, i_dist in enumerate(scan):
+        if i_dist == 0 or i_dist >= 10000:
+            continue
+        angle = math.radians(270 * (i / len(scan)) - 135) + heading
+        dist = i_dist/1000.0
+        x, y = dist * math.cos(angle), dist * math.sin(angle)
+        if prev is not None:
+            xp, yp = prev
+            d = math.hypot(x - xp, y - yp)
+            if d > dist_limit:
+                if len(pts) > len_limit:
+                    bb = MultiPoint(pts).minimum_rotated_rectangle
+                    groups.append(list(bb.exterior.coords))
+                pts = [(x, y)]
+            else:
+                pts.append((x, y))
+        prev = x, y
+    if len(pts) > len_limit:
+        groups.append(pts)
+
+    if debug_poly is not None:
+        for pts in groups:
+            debug_poly.append(pts)
+
+
 # vim: expandtab sw=4 ts=4

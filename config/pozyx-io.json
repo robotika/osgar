@@ -5,12 +5,11 @@
       "pozyx": {
           "driver": "pozyx",
           "in": [],
-          "out": ["range"],
+          "out": ["range", "gpio"],
           "init": {
             "port": "/dev/ttyACM0",
-            "devices": ["0x6827"],
-            "sensor": ["0x6827"],
-            "gpio":  ["0x6827"]
+            "devices": ["0xD67", "0xD53","0x6827"],
+            "gpio": ["0x6827"]
           }
       }
     },

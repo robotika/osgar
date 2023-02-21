@@ -14,12 +14,15 @@ from osgar.bus import BusShutdownException
 class Pozyx(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('range', 'settings')
+        bus.register('range', 'settings', 'gpio', 'sensor')
         serial_port = config['port']
         self.sleep_sec = config.get("sleep")
         self.devices = [int(x, 16) for x in config.get('devices', [])]  # unfortunately JSON does not support hex
+        self.gpio_devices = [int(x, 16) for x in config.get('gpio', [])]
+        self.sensor_devices = [int(x, 16) for x in config.get('sensor', [])]
         self.devices.append(None)  # extra range to the base (must be last, 2nd param)
         self.pozyx = pypozyx.PozyxSerial(serial_port)
+        self.my_id = None  # unknown
         self.verbose = False
 
     def get_settings(self):
@@ -44,30 +47,58 @@ class Pozyx(Node):
             else:
                 print('ERROR', remote_id)
 
+    def setup_gpio(self):
+        mode = pypozyx.SingleRegister()
+        pull = pypozyx.SingleRegister()
+        mode.value = pypozyx.PozyxConstants.GPIO_DIGITAL_INPUT
+        pull.value = pypozyx.PozyxConstants.GPIO_PULL_UP
+        for device_id in self.gpio_devices:
+            for i in range(4):
+                self.pozyx.setConfigGPIO(i + 1, mode, pull, device_id)
+
     def run(self):
         try:
+            network_id = pypozyx.NetworkID()
+            self.pozyx.getNetworkId(network_id)
+            my_id = network_id.id
+            print('Detected', hex(my_id))
             self.get_settings()
-            self.set_settings()
-            self.get_settings()
+#            self.set_settings()
+#            self.get_settings()
+            self.setup_gpio()
             device_range = pypozyx.DeviceRange()
+            gpio_reg = pypozyx.SingleRegister()
+            raw_sensor_data_reg = pypozyx.RawSensorData()
             while self.bus.is_alive():
                 for from_id, to_id in itertools.combinations(self.devices, 2):
                     status = self.pozyx.doRanging(from_id, device_range, to_id)
+                    if to_id is None:
+                        to_id = my_id
+                    if from_id is None:
+                        from_id = my_id
                     if self.verbose:
                         print(device_range)
                     self.publish('range', [status, from_id, to_id, [device_range.timestamp, device_range.distance, device_range.RSS]])
                     if self.sleep_sec is not None:
                         self.sleep(self.sleep_sec)
+                for device_id in self.gpio_devices:
+                    # TODO use low level read, which will grab all 4 digital inputs at once
+                    status = self.pozyx.getGPIO(1, gpio_reg, device_id)
+                    self.publish('gpio', [status, device_id, gpio_reg.value])
+                for device_id in self.sensor_devices:
+                    status = self.pozyx.getAllSensorData(raw_sensor_data_reg, device_id)
+                    self.publish('sensor', [status, device_id, str(raw_sensor_data_reg)])
+
         except BusShutdownException:
             pass
 
 ############### supporting tools #####################
 
-def read_data(logfile):
+def read_data(logfile, stream='pozyx.range'):
     from osgar.logger import lookup_stream_id, LogReader
     from osgar.lib.serialize import deserialize
 
-    stream_id = lookup_stream_id(logfile, 'pozyx.range')
+    stream_id = lookup_stream_id(logfile, stream)
     arr = []
     for dt, channel, raw in LogReader(args.logfile, only_stream_id=stream_id):
         data = deserialize(raw)
@@ -177,10 +208,11 @@ if __name__ == '__main__':
     parser.add_argument('logfile', help='logfile path')
     parser.add_argument('-t', '--timestamps', help='use Pozyx timestamps', action='store_true')
     parser.add_argument('--map', help='display map instead of ranges', action='store_true')
+    parser.add_argument('--stream', help='input stream', default='pozyx.range')
     args = parser.parse_args()
 
     title = os.path.basename(args.logfile)
-    arr = read_data(args.logfile)
+    arr = read_data(args.logfile, stream=args.stream)
     print(len(arr))
     if args.map:
         old_anchors = {
