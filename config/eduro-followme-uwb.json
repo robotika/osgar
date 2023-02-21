@@ -2,7 +2,7 @@
   "version": 2,
   "robot": {
     "modules": {
-      "app": {
+      "followme": {
           "driver": "osgar.followme_uwb:FollowMeUWB",
           "in": ["encoders", "scan", "emergency_stop", "pose2d", "buttons"],
           "out": ["desired_speed"],
@@ -67,15 +67,15 @@
               ["can.raw", "serial.raw"],
               ["eduro.can", "can.can"],
               ["can.can", "eduro.can"],
-              ["eduro.encoders", "app.encoders"],
-              ["app.desired_speed", "eduro.desired_speed"],
+              ["eduro.encoders", "followme.encoders"],
+              ["followme.desired_speed", "eduro.desired_speed"],
               ["lidar_tcp.raw", "lidar.raw"], 
               ["lidar.raw", "lidar_tcp.raw"],
-              ["lidar.scan", "app.scan"],
-              ["eduro.emergency_stop", "app.emergency_stop"],
-              ["eduro.pose2d", "app.pose2d"],
-              ["eduro.buttons", "app.buttons"],
-              ["pozyx.range", "app.pozyx_range"],
-              ["pozyx.gpio", "app.pozyx_gpio"]]
+              ["lidar.scan", "followme.scan"],
+              ["eduro.emergency_stop", "followme.emergency_stop"],
+              ["eduro.pose2d", "followme.pose2d"],
+              ["eduro.buttons", "followme.buttons"],
+              ["pozyx.range", "followme.pozyx_range"],
+              ["pozyx.gpio", "followme.pozyx_gpio"]]
   }
 }
