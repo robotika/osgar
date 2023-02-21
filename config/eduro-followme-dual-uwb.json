@@ -9,8 +9,8 @@
           "init": {
             "max_speed": 0.5,
             "laser_pose2d": [0.13, 0.055, 0],
-            "left_id": "0x0D67",
-            "right_id": "0xD53"
+            "left_id": "0xD53",
+            "right_id": "0xD67"
           }
       },
       "eduro": {
