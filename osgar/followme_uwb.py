@@ -57,7 +57,7 @@ class FollowMeUWB(Node):
                 d = math.hypot(data[0] - p[0], data[1] - p[1]) / 1000.0
                 if d < DIST_STEP:
                     break
-            if i == 0:
+            if i == 0 or not self.follow_enabled:
                 self.send_speed_cmd(0, 0)
             else:
                 speed = 0.0
