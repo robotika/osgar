@@ -13,6 +13,11 @@ from osgar.followme import EmergencyStopException, min_dist
 
 FILTER_SIZE = 10
 
+MODE_FOLLOW_UWB = 1
+MODE_FOLLOW_PATH = 2
+
+DIST_STEP = 0.2
+
 
 class FollowMeUWB(Node):
     def __init__(self, config, bus):
@@ -33,6 +38,8 @@ class FollowMeUWB(Node):
         self.right_range_arr = []
         self.back_range = None
         self.debug_arr = []
+        self.navigation_mode = None  # not selected
+        self.path = []
 
     def on_scan(self, data):
         assert len(data) == 271, len(data)
@@ -42,9 +49,32 @@ class FollowMeUWB(Node):
         pass  # ignore for now
 
     def on_pose2d(self, data):
-        pass  # ignore for now
+        if self.navigation_mode == MODE_FOLLOW_UWB:
+            if len(self.path) == 0 or self.path[-1] != data:
+                self.path.append(data)
+        elif self.navigation_mode == MODE_FOLLOW_PATH:
+            for i, p in enumerate(self.path):
+                d = math.hypot(data[0] - p[0], data[1] - p[1]) / 1000.0
+                if d < DIST_STEP:
+                    break
+            if i == 0:
+                self.send_speed_cmd(0, 0)
+            else:
+                speed = 0.0
+                diff = (data[2] - p[2] + 18000) % 36000
+                if abs(diff) < 100:
+                    angular_speed = 0
+                    speed = 0.1
+                elif diff < 0:
+                    angular_speed = math.radians(10)
+                else:
+                    angular_speed = -math.radians(10)
+                self.send_speed_cmd(speed, angular_speed)
 
     def on_pozyx_range(self, data):
+        if self.navigation_mode != MODE_FOLLOW_UWB:
+            return
+
         # [1, 3431, 3411, [2777589, 357, -78]]
         if data[0] == 1:
             tag = 0x6827
@@ -97,7 +127,11 @@ class FollowMeUWB(Node):
             self.follow_enabled = (digital_input == 0)
 
     def on_buttons(self, data):
-        pass  # ignore for now
+        assert 'blue_selected' in data, data
+        if data['blue_selected']:
+            self.navigation_mode = MODE_FOLLOW_PATH
+        else:
+            self.navigation_mode = MODE_FOLLOW_UWB
 
     def update(self):  # yes, refactoring to some common node would be nice!
         channel = super().update()  # define self.time
@@ -107,7 +141,7 @@ class FollowMeUWB(Node):
         else:
             assert False, channel  # unknown
 
-    def draw(self):
+    def draw0(self):
         import matplotlib.pyplot as plt
         t = [a[0] for a in self.debug_arr]
         x = [a[1] for a in self.debug_arr]
@@ -115,6 +149,15 @@ class FollowMeUWB(Node):
 
         plt.xlabel('time (s)')
         plt.ylabel('distance diff (m)')
+        plt.legend()
+        plt.show()
+
+    def draw(self):
+        import matplotlib.pyplot as plt
+        x = [a[0]/1000.0 for a in self.path]
+        y = [a[1]/1000.0 for a in self.path]
+        line = plt.plot(x, y, '-o', linewidth=2, label='path')
+        plt.axes().set_aspect('equal', 'datalim')
         plt.legend()
         plt.show()
 
