@@ -141,7 +141,6 @@ class LogWriter:
                 dt = datetime.datetime.now(datetime.timezone.utc) - self.start_time
             packet = format_packet(stream_id, data, dt)
             self.f.write(b"".join(packet))
-            self.f.flush()  # MD hack
         return dt
 
     def close(self):
