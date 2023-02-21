@@ -90,20 +90,6 @@ class FollowMeUWB(Node):
         row = [int(x) for x in data[2].split(',')]
 #        self.debug_arr.append((self.time.total_seconds(), row[-7:-4]))
 
-    def on_pozyx_left(self, data):
-        if data[2] is None:
-            data[2] = 0xD67
-            return self.on_pozyx_range(data)
-        else:
-            print('Left error', data)
-
-    def on_pozyx_right(self, data):
-        if data[2] is None:
-            data[2] = 0xD53
-            return self.on_pozyx_range(data)
-        else:
-            print('Right error', data)
-
     def on_pozyx_gpio(self, data):
         # [1, 26663, 0]
         valid, device_id, digital_input = data
