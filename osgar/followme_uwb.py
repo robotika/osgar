@@ -61,7 +61,8 @@ class FollowMeUWB(Node):
                 self.send_speed_cmd(0, 0)
             else:
                 speed = 0.0
-                diff = (data[2] - p[2] + 18000) % 36000
+                diff = (data[2] - p[2]) % 36000 - 18000
+                print(diff)
                 if abs(diff) < 100:
                     angular_speed = 0
                     speed = 0.1
