@@ -124,9 +124,14 @@ class FollowMeUWB(Node):
         # [1, 26663, 0]
         valid, device_id, digital_input = data
         if valid:
-            self.follow_enabled = (digital_input == 0)
+            self.follow_enabled = (digital_input & 0x1 == 0)
+            if digital_input & 0x100 == 0:  # GPIO #2
+                self.navigation_mode = MODE_FOLLOW_PATH  # | for follow
+            else:
+                self.navigation_mode = MODE_FOLLOW_UWB
 
     def on_buttons(self, data):
+        return  # use remote buttons instead
         assert 'blue_selected' in data, data
         if data['blue_selected']:
             self.navigation_mode = MODE_FOLLOW_PATH
