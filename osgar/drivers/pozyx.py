@@ -67,7 +67,7 @@ class Pozyx(Node):
 #            self.get_settings()
             self.setup_gpio()
             device_range = pypozyx.DeviceRange()
-            gpio_reg = pypozyx.SingleRegister()
+            gpio_reg = pypozyx.SingleRegister(size=2)  # read both GPIO 1 and GPIO 2
             raw_sensor_data_reg = pypozyx.RawSensorData()
             while self.bus.is_alive():
                 for from_id, to_id in itertools.combinations(self.devices, 2):
