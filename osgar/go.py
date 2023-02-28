@@ -106,8 +106,8 @@ if __name__ == "__main__":
         cfg['robot']['modules']['app']['init']['timeout'] = args.timeout
         if args.speed is not None:
             cfg['robot']['modules']['app']['init']['max_speed'] = args.speed
-        if args.angle is not None:
-            cfg['robot']['modules']['app']['init']['desired_angle'] = math.radians(args.angle)
+        if args.spider_angle is not None:
+            cfg['robot']['modules']['app']['init']['desired_angle'] = math.radians(args.spider_angle)
 
         record(cfg, prefix)
 
