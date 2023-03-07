@@ -1,0 +1,53 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "video": {
+          "driver": "opencv",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+            "port": 0
+          }
+      },
+      "detector": {
+          "driver": "examples.gimbal_tracker.gimbal_tracker:Detector",
+          "in": [],
+          "out": ["bbox"],
+          "init": {
+            "port": 0
+          }
+      },
+      "controller": {
+          "driver": "examples.gimbal_tracker.gimbal_tracker:Controller",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+            "port": 0
+          }
+      },
+      "servo": {
+          "driver": "examples.gimbal_tracker.gimbal_tracker:Servo",
+          "in": [],
+          "out": ["raw"],
+          "init": {
+            "port": 0
+          }
+      },
+      "timer": {
+          "driver": "timer",
+          "in": [],
+          "out": ["tick"],
+          "init": {
+            "sleep": 0.1
+          }
+      }
+    },
+    "links": [
+      ["detector.bbox", "controller.bbox"],
+      ["controller.desired_position", "servo.desired_position"],
+      ["servo.position", "controller.position"],
+      ["timer.tick", "servo.tick"]
+    ]
+  }
+}
