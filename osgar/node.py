@@ -33,7 +33,7 @@ class Node(Thread):
         self.time = timestamp
         handler = getattr(self, "on_" + channel, None)
         if handler is not None:
-            handler(getattr(self, channel))
+            handler(data)
         else:
             assert False, channel  # unknown
         return channel
