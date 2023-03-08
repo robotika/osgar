@@ -27,12 +27,4 @@ class ArtifactGasDetector(Node):
     def on_bottom_scan(self, data):
         self.last_bottom_scan = data[0]
 
-    def update(self):
-        channel = super().update()
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-        else:
-            assert False, channel  # not supported channel
-
 # vim: expandtab sw=4 ts=4
