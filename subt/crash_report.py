@@ -29,15 +29,6 @@ class CrashReport(Node):
                 self.publish('crash_rgbd', rec)
             self.buf.clear()
 
-    def update(self):
-        channel = super().update()
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-        else:
-            assert False, channel  # unsupported channel
-        return channel
-
 
 if __name__ == "__main__":
     import argparse
