@@ -156,10 +156,9 @@ class LordIMU(Node):
         self.raw = None  # not automatically defined yet
         self.verbose = False
 
-    def update(self):
-        channel = super().update()
-        assert channel == 'raw', channel
-        self._buf += self.raw 
+    def on_raw(self, data):
+        self.raw = data
+        self._buf += self.raw
         while True:
             packet, self._buf = get_packet(self._buf)
             if packet is None:
