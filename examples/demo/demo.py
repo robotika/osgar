@@ -56,14 +56,13 @@ class MyApp(Node):
                     break
             print(self.time, 'stop at', self.time - start_time)
 
-    def update(self):
+    def on_pose2d(self, data):
         prev = self.pose2d
-        channel = super().update()
-        if channel == 'pose2d':
-            x_mm, y_mm, heading_mdeg = self.pose2d
-            self.last_position = (x_mm/1000.0, y_mm/1000.0,
-                                  math.radians(heading_mdeg/100.0))
-            self.is_moving = (prev != self.pose2d)
+        self.pose2d = data
+        x_mm, y_mm, heading_mdeg = self.pose2d
+        self.last_position = (x_mm/1000.0, y_mm/1000.0,
+                              math.radians(heading_mdeg/100.0))
+        self.is_moving = (prev != self.pose2d)
 
     def run0(self):
         print("MyApp example - figure 8!")

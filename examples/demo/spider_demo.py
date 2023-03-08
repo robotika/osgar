@@ -68,20 +68,21 @@ class MyApp(Node):
         while self.time - start_time < dt:
             self.update()
 
-    def update(self):
+    def on_pose2d(self, data):
         prev = self.pose2d
-        channel = super().update()
-        if channel == 'pose2d':
-            x_mm, y_mm, heading_mdeg = self.pose2d
-            self.last_position = (x_mm/1000.0, y_mm/1000.0,
-                                  math.radians(heading_mdeg/100.0))
-            self.is_moving = (prev != self.pose2d)
-        elif channel == 'min_dist':
-            dist, azi = self.min_dist
-            if self.safety_limit is not None and dist < self.safety_limit:
-                print(dist, 'at direction', azi/100)
-                self.send_speed_cmd(0.0, 0.0)
-                raise ObstacleException()
+        self.pose2d = data
+        x_mm, y_mm, heading_mdeg = self.pose2d
+        self.last_position = (x_mm / 1000.0, y_mm / 1000.0,
+                              math.radians(heading_mdeg / 100.0))
+        self.is_moving = (prev != self.pose2d)
+
+    def on_min_dist(self, data):
+        self.min_dist = data
+        dist, azi = self.min_dist
+        if self.safety_limit is not None and dist < self.safety_limit:
+            print(dist, 'at direction', azi/100)
+            self.send_speed_cmd(0.0, 0.0)
+            raise ObstacleException()
 
     def run(self):
         print("Spider demo back & forth!")
