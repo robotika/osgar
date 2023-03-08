@@ -56,10 +56,4 @@ class Breadcrumbs(Node):
         if data not in self.locations:
             self.locations.append(data)
 
-    def update(self):
-        channel = super().update()
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-
 # vim: expandtab sw=4 ts=4
