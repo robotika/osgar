@@ -51,14 +51,6 @@ class Slip(Node):
         next(self.slip_stream)  # Warmimg the generator up.
 
 
-    def update(self):
-        timestamp, channel, data = self.bus.listen()
-        if channel == 'raw':
-            self.on_raw(data)
-        elif channel == 'packet':
-            self.on_packet(data)
-
-
     def on_packet(self, data):
         buf = io.BytesIO()
         # Flush data on the line.
@@ -94,21 +86,13 @@ class Deedee(Node):
         self.desired_speed = None
         self.last_cmd_time = None
 
-
-    def update(self):
-        timestamp, channel, data = self.bus.listen()
-        if channel == 'desired_speed':
-            self.on_speed_cmd(timestamp, data)
-        elif channel == 'info':
-            self.on_info(data)
-        elif channel == 'tick':
-            if (self.desired_speed is None or
-                self.last_cmd_time is None or
-                timestamp - self.last_cmd_time >= self.control_timeout):
-                self.send_speed_cmd(0, 0)
-            else:
-                self.send_speed_cmd(*self.desired_speed)
-
+    def on_tick(self, data):
+        if (self.desired_speed is None or
+            self.last_cmd_time is None or
+            self.time - self.last_cmd_time >= self.control_timeout):
+            self.send_speed_cmd(0, 0)
+        else:
+            self.send_speed_cmd(*self.desired_speed)
 
     def send_speed_cmd(self, forward, rotation):
         # Send the speed command.
@@ -127,11 +111,10 @@ class Deedee(Node):
         self.publish('cmd', cmd)
 
 
-    def on_speed_cmd(self, timestamp, msg):
-        forward, rotation = msg
+    def on_desired_speed(self, data):
+        forward, rotation = data
         self.desired_speed = forward / 1000, math.radians(rotation / 100)
-        self.last_cmd_time = timestamp
-
+        self.last_cmd_time = self.time
 
     def on_info(self, msg):
         checksum = sum(msg) & 0xFF
@@ -152,18 +135,16 @@ class Deedee(Node):
             print('Communication error: {}'.format(msg[:-1]))
             self.publish('stdout', msg[:-1].decode('ascii'))
 
+
 class Demo(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('desired_speed')
 
-
-    def update(self):
-        timestamp, channel, data = self.bus.listen()
-        if channel == 'pose2d':
-            x, y, phi = data
-            x, y = x / 1000, y / 1000
-            # mm/s
-            velocity = 0 if math.hypot(x, y) >= 1.0 else 100
-            self.publish('desired_speed', [velocity, 0])
+    def on_pose2d(self, data):
+        x, y, phi = data
+        x, y = x / 1000, y / 1000
+        # mm/s
+        velocity = 0 if math.hypot(x, y) >= 1.0 else 100
+        self.publish('desired_speed', [velocity, 0])
 
