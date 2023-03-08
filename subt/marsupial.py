@@ -43,12 +43,4 @@ class Marsupial(Node):
                 if cmd_list[0][0] == 'wait':
                     self.release_at = cmd_list[0][1]
 
-    def update(self):
-        channel = super().update()
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-        else:
-            assert False, channel  # not supported
-
 # vim: expandtab sw=4 ts=4
