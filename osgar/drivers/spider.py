@@ -168,22 +168,19 @@ class Spider(Node):
                 yield ret
             self.buf, packet = self.split_buffer(self.buf)  # i.e. process only existing buffer now
 
+    def on_can(self, data):
+        status = self.process_packet(data, verbose=self.verbose)
+        if status is not None:
+            self.bus.publish('status', status)
 
-    def update(self):
-        channel = super().update()
-        if channel == 'can':
-            status = self.process_packet(self.can, verbose=self.verbose)
-            if status is not None:
-                self.bus.publish('status', status)
-# move is for SPIDER mode, which is currently not supported
-#        elif channel == 'move':
-#            self.desired_speed, self.desired_angle = self.move
-        elif channel == 'desired_speed':
-            speed_mm, angular_speed_mrad = self.desired_speed  # really ugly!!!
-            self.desired_speed = speed_mm/1000.0
-            self.desired_angular_speed = math.radians(angular_speed_mrad/100.0)
-        else:
-            assert False, channel  # unsupported channel
+    # move is for SPIDER mode, which is currently not supported
+    #        elif channel == 'move':
+    #            self.desired_speed, self.desired_angle = self.move
+
+    def on_desired_speed(self, data):
+        speed_mm, angular_speed_mrad = self.desired_speed  # really ugly!!!
+        self.desired_speed = speed_mm / 1000.0
+        self.desired_angular_speed = math.radians(angular_speed_mrad / 100.0)
 
     def send_speed(self, data):
         if True:  #self.can_bridge_initialized:
