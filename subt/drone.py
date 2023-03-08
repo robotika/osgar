@@ -139,16 +139,6 @@ class Drone(Node):
     def on_desired_altitude(self, data):
         pass  # self.desired_altitude already updated by Node
 
-    def update(self):
-        channel = super().update()
-
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-        else:
-            assert False, "unknown input {channel}"
-
-
     def draw(self):
         import matplotlib.pyplot as plt
 
