@@ -172,36 +172,32 @@ class DepthToScan(Node):
         self.depth_params = DepthParams(**config.get('depth_params', {}))
         self.filter_fog = config.get('filter_fog', False)
 
-    def update(self):
-        channel = super().update()
-        assert channel in ["scan", "rgbd"], channel
+    def on_scan(self, data):
+        self.scan = data
+        depth = None
+        if self.rgbd is not None:
+            robot_pose, camera_pose, __rgb_compressed, depth_compressed = self.rgbd
+            __robot_xyz, robot_rotation = robot_pose
+            __camera_xyz, camera_rotation = camera_pose
+            full_rotation = multiply_quaternions(robot_rotation, camera_rotation)
+            yaw, pitch, roll = euler_zyx(full_rotation)
+            depth = decompress_depth(depth_compressed)
 
-        if channel == 'scan':
-            depth = None
-            if self.rgbd is not None:
-                robot_pose, camera_pose, __rgb_compressed, depth_compressed = self.rgbd
-                __robot_xyz, robot_rotation = robot_pose
-                __camera_xyz, camera_rotation = camera_pose
-                full_rotation = multiply_quaternions(robot_rotation, camera_rotation)
-                yaw, pitch, roll = euler_zyx(full_rotation)
-                depth = decompress_depth(depth_compressed)
+        if depth is None:
+            self.publish('scan', self.scan)
 
-            if depth is None:
-                self.publish('scan', self.scan)
-                return channel  # when no depth data are available ...
+        if self.filter_fog:
+            depth = cv2.medianBlur(depth, 5)
+            scan = cv2.medianBlur(np.asarray(self.scan, dtype=np.uint16), 5)[:, 0]
+        else:
+            scan = self.scan
 
-            if self.filter_fog:
-                depth = cv2.medianBlur(depth, 5)
-                scan = cv2.medianBlur(np.asarray(self.scan, dtype=np.uint16), 5)[:,0]
-            else:
-                scan = self.scan
+        depth_scan = depth2dist(depth, self.depth_params, pitch, roll, yaw)
+        new_scan = adjust_scan(scan, depth_scan, self.depth_params)
+        self.publish('scan', new_scan.tolist())
 
-            depth_scan = depth2dist(depth, self.depth_params, pitch, roll, yaw)
-            new_scan = adjust_scan(scan, depth_scan, self.depth_params)
-            self.publish('scan', new_scan.tolist())
-
-        return channel
-
+    def on_rgbd(self, data):
+        self.rgbd = data
 
 
 if __name__ == '__main__':
