@@ -32,17 +32,17 @@ class FollowMe(Node):
         self.verbose = False
         self.last_scan = None
 
-    def update(self):
-        channel = super().update()  # define self.time
-        if channel == 'pose2d':
-            self.last_position = self.pose2d
-        elif channel == 'scan':
-            if self.verbose:
-                print(min_dist(self.scan)/1000.0)
-            self.last_scan = self.scan
-        elif channel == 'emergency_stop':
-            if self.raise_exception_on_stop and self.emergency_stop:
-                raise EmergencyStopException()
+    def on_pose2d(self, data):
+        self.last_position = data
+
+    def on_scan(self, data):
+        if self.verbose:
+            print(min_dist(data) / 1000.0)
+        self.last_scan = data
+
+    def on_emergency_stop(self, data):
+        if self.raise_exception_on_stop and data:
+            raise EmergencyStopException()
 
     def wait(self, dt):  # TODO refactor to some common class
         if self.time is None:
