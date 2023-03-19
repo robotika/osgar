@@ -21,6 +21,7 @@ import utils
 
 
 
+
 class Detector(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
@@ -54,8 +55,18 @@ class Detector(Node):
 
         # Run object detection estimation using the model.
         detection_result = self.detector.detect(input_tensor)
+        bbox=[]
+        for detection in detection_result.detections:
+            if detection.categories[0].category_name=='person':
+                #print(detection.bounding_box)
+
+                bb_center_x=detection.bounding_box.origin_x+detection.bounding_box.width/2
+                bb_center_y=detection.bounding_box.origin_y+detection.bounding_box.height/2
+                cv2.rectangle(image, (int(bb_center_x-10), int(bb_center_y-10)), (int(bb_center_x+10), int(bb_center_y+10)), (255, 0, 0))
+                
+                bbox.append([bb_center_x, bb_center_y])
         
-        self.publish('bbox', 100)
+        self.publish('bbox', bbox)
         
         #---- test
         # Draw keypoints and edges on input image
@@ -78,6 +89,7 @@ class Detector(Node):
                     1, (0, 0, 255), 1) # font size, text_color, font_thickness
     
         cv2.imshow('object_detector', image)
+        
         cv2.waitKey(1)
         #---- test
         
@@ -92,61 +104,62 @@ class Controller(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('desired_position')
+        self.unsec_det=0
+        self.angle_x=90
+        self.angle_y=90
 
     def on_position(self, data):
         pass
 
     
     def on_bbox(self, data):
-        self.publish('desired_position', [data,data])
         
+        P=0.01
+        im_width=640
+        im_height=480
+
         
-        person_detected=0
-        # track
-        detection_results=data
-        #while False:
-        for detection in detection_result.detections:
-            if detection.categories[0].category_name=='person':
-                #print(detection.bounding_box)
-
-                bb_center_x=detection.bounding_box.origin_x+detection.bounding_box.width/2
-                bb_center_y=detection.bounding_box.origin_y+detection.bounding_box.height/2
                 
-                cv2.rectangle(image, (int(bb_center_x-10), int(bb_center_y-10)), (int(bb_center_x+10), int(bb_center_y+10)), (255, 0, 0))
-
-                if 0 < bb_center_x < im_width and 0 < bb_center_y < im_height:
-                    angle_x=angle_x+P*(bb_center_x-im_width/2) # 62.2/640 P by melo byt 0.1
-                    angle_y=angle_y-P*(bb_center_y-im_height/2) # 48.8/480 P by melo byt 0.1
-                    
-                    if 10 < angle_x < 170 and 10 < angle_y < 170:
-                        
-                        unsec_det=0
-                        person_detected=1
-                    
-                        self.publish('desired_position', (angle_x,angle_y))
-                        #time.sleep(1)
-                    else:
-                        msg='angle out of range = reset tracking'
-                        angle_x=90
-                        angle_y=90
-                        self.publish('desired_position', (angle_x,angle_y))
-                break
-                                            
-                
-                
-        if person_detected==0:   
-            unsec_det=unsec_det+1
+        if len(data) > 0:
+            #print(data)
+            bb_center_x=data[0][0] # beru prvni detekci .. tady by se mel resit tracking
+            bb_center_y=data[0][1] 
             
-        if unsec_det==5:
+            
+            
+            if 0 < bb_center_x < im_width and 0 < bb_center_y < im_height:
+                self.angle_x=self.angle_x+P*(bb_center_x-im_width/2) # 62.2/640 P by melo byt 0.1
+                self.angle_y=self.angle_y-P*(bb_center_y-im_height/2) # 48.8/480 P by melo byt 0.1
+                
+                if 10 < self.angle_x < 170 and 10 < self.angle_y < 170:
+                    
+                    self.unsec_det=0
+                    person_detected=1
+                
+                    self.publish('desired_position', [self.angle_x,self.angle_y])
+                    #time.sleep(1)
+                else:
+                    msg='angle out of range = reset tracking'
+                    self.angle_x=90
+                    self.angle_y=90
+                    self.publish('desired_position', [self.angle_x,self.angle_y])
+                                 
+                
+        else: 
+            self.unsec_det=self.unsec_det+1
+            
+        if self.unsec_det==5:
             msg='person not detected = reset tracking'
             angle_x=90
             angle_y=90
-            self.publish('desired_position', (angle_x,angle_y))
-            unsec_det=0
-        elif unsec_det==0:
-            msg='person detected'
+            self.publish('desired_position', [self.angle_x,self.angle_y])
+            self.unsec_det=0
+        elif self.unsec_det==0:
+            msg='person detected ' + "%d" % self.angle_x + " " + "%d" % self.angle_y
         else:
-            msg='person not detected ' + "%d" % unsec_det
+            msg='person not detected ' + "%d" % self.unsec_det
+            
+        #print(msg)
         
 
 
@@ -158,7 +171,9 @@ class Servo(Node):
 
         #inicialialization and setting servo on default position !! no logic to slow down movement ..
         
-        self.position = 90
+        self.position_x = 90
+        self.position_y = 90
+        
         self.angle_x = 90
         self.angle_y = 90
 
@@ -173,19 +188,20 @@ class Servo(Node):
         
     def on_tick(self, data):
 
-        if self.position<round(self.angle_x):
-                self.position += 1
+        if self.position_x<round(self.angle_x):
+                self.position_x += 1
             
-        if self.position>round(self.angle_y):
-                self.position -= 1
+        if self.position_y>round(self.angle_y):
+                self.position_y -= 1
         
-        self.pca.servo[0].angle = self.position
-        self.pca.servo[1].angle = self.position
-        self.publish('position', self.position)
+        self.pca.servo[0].angle = self.position_x
+        self.pca.servo[1].angle = self.position_y
+        self.publish('position', [self.position_x, self.position_y] )
         #print(self.position)
 
         
     def on_desired_position(self, data):
         self.angle_x=data[0]
         self.angle_y=data[1]
+        print(data)
 

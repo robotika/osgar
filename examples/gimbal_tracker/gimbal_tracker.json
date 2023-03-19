@@ -12,7 +12,7 @@
       },
       "detector": {
           "driver": "examples.gimbal_tracker.gimbal_tracker:Detector",
-          "in": [],
+          "in": ["raw"],
           "out": ["bbox"],
           "init": {
             "port": 0
@@ -20,15 +20,15 @@
       },
       "controller": {
           "driver": "examples.gimbal_tracker.gimbal_tracker:Controller",
-          "in": [],
-          "out": ["raw"],
+          "in": ["bbox"],
+          "out": ["desired_position"],
           "init": {
             "port": 0
           }
       },
       "servo": {
           "driver": "examples.gimbal_tracker.gimbal_tracker:Servo",
-          "in": [],
+          "in": ["desired_position","tick"],
           "out": ["raw"],
           "init": {
             "port": 0
