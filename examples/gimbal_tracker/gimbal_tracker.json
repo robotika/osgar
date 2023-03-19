@@ -46,8 +46,9 @@
     "links": [
       ["detector.bbox", "controller.bbox"],
       ["controller.desired_position", "servo.desired_position"],
-      ["servo.position", "controller.position"],
-      ["timer.tick", "servo.tick"]
+      ["servo.position", "detector.position"],
+      ["timer.tick", "servo.tick"],
+      ["video.raw", "detector.raw"]
     ]
   }
 }
