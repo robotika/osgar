@@ -86,15 +86,6 @@ class Radio(Node):
         self.sim_time_sec = data  # duplicate for super().update(), used just for easier unittesting
         self.send_data('sim_time_sec', data)
 
-    def update(self):
-        channel = super().update()  # define self.time
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-        else:
-            assert False, channel  # not supported
-        return channel
-
     def draw(self):
         """
         Debug Draw

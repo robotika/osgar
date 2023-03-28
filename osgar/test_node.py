@@ -24,6 +24,20 @@ class NodeTest(unittest.TestCase):
         tester.register('vel')
         bus.connect('tester.vel', 'mynode.vel')
         dt = tester.publish('vel', 3)
+        with self.assertRaises(AssertionError):
+            node.update()
+
+    def test_update2(self):
+        class VelNode(Node):
+            def on_vel(self, data):
+                self.vel = data
+        empty_config = {}
+        bus = Bus(logger=MagicMock())
+        node = VelNode(config=empty_config, bus=bus.handle('mynode'))
+        tester = bus.handle('tester')
+        tester.register('vel')
+        bus.connect('tester.vel', 'mynode.vel')
+        dt = tester.publish('vel', 3)
         node.update()
         self.assertEqual(node.time, dt)
         self.assertEqual(node.vel, 3)

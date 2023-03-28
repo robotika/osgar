@@ -138,6 +138,7 @@ class ArtifactReporter(Node):
         return min(dist)/1000.0  # due to mm scaling
 
     def on_sim_time_sec(self, data):
+        self.sim_time_sec = data
         if self.repeat_report_sec is None or self.sim_time_sec % self.repeat_report_sec != 0:
             return
         if len(self.artf_xyz) == 0:
@@ -147,6 +148,7 @@ class ArtifactReporter(Node):
         self.publish('artf_all', self.artf_xyz_accumulated)
 
     def on_artf_xyz(self, data):
+        self.artf_xyz = data
         for item in data:
             atype, pos, src, scored = item
             if [atype, pos] not in [arr[:2] for arr in self.artf_xyz_accumulated]:
@@ -177,13 +179,5 @@ class ArtifactReporter(Node):
                 self.publish('artf_all', self.artf_xyz_accumulated)  # broadcast new update
                 # trigger sending next artifact if there is any
                 self.publish_artf(self.artf_xyz_accumulated)
-
-    def update(self):
-        channel = super().update()  # define self.time
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-        return channel
-
 
 # vim: expandtab sw=4 ts=4

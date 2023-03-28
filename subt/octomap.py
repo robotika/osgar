@@ -300,14 +300,6 @@ class Octomap(Node):
                                z * self.resolution + self.min_z]
                               for x, y, z in path]
 
-    def update(self):
-        channel = super().update()
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-        else:
-            assert False, channel  # unknown channel
-
 
 def draw_iteration(data, waypoints=None, paused=False):
     global level, scaled

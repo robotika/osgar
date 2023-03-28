@@ -198,13 +198,20 @@ class FollowWall(Node):
     def send_speed_cmd(self, speed, angular_speed):
         return self.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
 
-    def update(self):  # hack, this method should be called run instead!       
-        channel = super().update()  # define self.time
+    def on_scan(self, data):
+        self.scan = data
+
+    def on_emergency_stop(self, data):
+        self.send_speed_cmd(0.0, 0.0)
+        self.request_stop()  # it should be "delayed"
+
+    def run(self):  # hack, this method should be called run instead!
+        self.update()  # define self.time
 
         desired_speed = 0.0
         start_time = self.time
         while self.time - start_time < timedelta(minutes=1):
-            channel = super().update()
+            channel = self.update()
             if channel == 'scan':
                 size = len(self.scan)
                 dist = min_dist(self.scan[size//3:2*size//3])
@@ -216,10 +223,6 @@ class FollowWall(Node):
                     desired_speed = self.max_speed
                 desired_angular_speed = 0.7 * tangent_angle  # TODO better P-regulator based on angle and free space
                 self.send_speed_cmd(desired_speed, desired_angular_speed)
-
-            elif channel == 'emergency_stop':
-                self.send_speed_cmd(0.0, 0.0)
-                self.request_stop()  # it should be "delayed"
 
 
 if __name__ == "__main__":

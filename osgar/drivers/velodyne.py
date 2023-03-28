@@ -56,9 +56,7 @@ class Velodyne(Node):
         self.offset_step = config.get('offset_step', 200)  # skip every second packet (we need 1deg resolution input 0.4)
         assert self.offset_step % 100 == 0, self.offset_step  # must be divisible by 100
 
-    def update(self):
-        channel = super().update()
-        assert channel == 'raw', channel
-        self.publish('xyz', parse_packet(self.raw, offset_step=self.offset_step))
+    def on_raw(self, data):
+        self.publish('xyz', parse_packet(data, offset_step=self.offset_step))
 
 # vim: expandtab sw=4 ts=4

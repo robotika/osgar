@@ -129,55 +129,62 @@ class LoRa(Node):
             else:
                 assert False, arr  # unexpected size/type
 
+    def on_raw(self, data):
+        self.raw = data  # backward compatibility
+        if self.verbose:
+            print(self.time, "update raw", data)
+
+        self.buf, packet = split_lora_buffer(self.buf + self.raw)
+        while len(packet) > 0:
+            self.recent_packets.append(packet)
+            addr, data = parse_lora_packet(packet)
+            if addr is not None and data.startswith(b'['):
+                arr = literal_eval(data.decode('ascii'))
+                if len(arr) == 3:
+                    pose2d = arr
+                    self.publish('robot_status', [addr[-1], pose2d, b'running'])  # TODO read it from robot
+                else:
+                    assert len(arr) == 4, arr  # artifact, x, y z
+                    self.publish('artf', [addr[-1], arr])
+                if self.verbose:
+                    self.debug_robot_poses.append((self.time.total_seconds(), addr[-1], pose))
+            cmd = parse_my_cmd(self.device_id, data)
+            if cmd is not None:
+                self.publish('cmd', cmd)
+            if addr is not None and self.device_id is not None and self.device_id not in addr:
+                if self.verbose:
+                    print('re-transmit')
+                self.send_data(packet.strip())  # re-transmit data from other robots
+            self.buf, packet = split_lora_buffer(self.buf)
+
+    def on_pose2d(self, data):
+        self.pose2d = data
+        if self.last_transmit is None or self.time > self.last_transmit + self.min_transmit_dt:
+            self.send_data(bytes(str(self.pose2d), encoding='ascii'))
+
+    def on_pose3d(self, data):
+        self.pose3d = data
+        if self.last_transmit is None or self.time > self.last_transmit + self.min_transmit_dt:
+            xyz, quat = self.pose3d
+            x, y, z = xyz
+            pose2d = [int(round(x * 1000)), int(round(y * 1000)),
+                      int(round(100 * math.degrees(quaternion.heading(quat))))]
+            self.send_data(bytes(str(pose2d), encoding='ascii'))
+
+    def on_cmd(self, data):
+        self.cmd = data
+        assert len(self.cmd) == 2, self.cmd
+        self.send_data(b'%d:%s:%d' % (self.cmd[0], self.cmd[1], int(self.time.total_seconds())))
+
+    def on_artf(self, data):
+        self.artf = data
+        # send data as they are, ignore transmit time, ignore transmit failure
+        for artf_item in self.artf:
+            self.send_data(bytes(str(artf_item), encoding='ascii'))
+
     def update(self):
         self.recent_packets = []
         channel = super().update()  # define self.time
-        if channel == 'raw':
-            if self.verbose:
-                print(self.time, "update", channel, self.raw)
-
-            self.buf, packet = split_lora_buffer(self.buf + self.raw)
-            while len(packet) > 0:
-                self.recent_packets.append(packet)
-                addr, data = parse_lora_packet(packet)
-                if addr is not None and data.startswith(b'['):
-                    arr = literal_eval(data.decode('ascii'))
-                    if len(arr) == 3:
-                        pose2d = arr
-                        self.publish('robot_status', [addr[-1], pose2d, b'running'])  # TODO read it from robot
-                    else:
-                        assert len(arr) == 4, arr  # artifact, x, y z
-                        self.publish('artf', [addr[-1], arr])
-                    if self.verbose:
-                        self.debug_robot_poses.append((self.time.total_seconds(), addr[-1], pose))
-                cmd = parse_my_cmd(self.device_id, data)
-                if cmd is not None:
-                    self.publish('cmd', cmd)
-                if addr is not None and self.device_id is not None and self.device_id not in addr:
-                    if self.verbose:
-                        print('re-transmit')
-                    self.send_data(packet.strip())  # re-transmit data from other robots
-                self.buf, packet = split_lora_buffer(self.buf)
-        elif channel == 'radio':
-            self.on_radio(self.radio)
-        elif channel == 'pose2d':
-            if self.last_transmit is None or self.time > self.last_transmit + self.min_transmit_dt:
-                self.send_data(bytes(str(self.pose2d), encoding='ascii'))
-        elif channel == 'pose3d':
-            if self.last_transmit is None or self.time > self.last_transmit + self.min_transmit_dt:
-                xyz, quat = self.pose3d
-                x, y, z = xyz
-                pose2d = [int(round(x*1000)), int(round(y*1000)), int(round(100*math.degrees(quaternion.heading(quat))))]
-                self.send_data(bytes(str(pose2d), encoding='ascii'))
-        elif channel == 'cmd':
-            assert len(self.cmd) == 2, self.cmd
-            self.send_data(b'%d:%s:%d' % (self.cmd[0], self.cmd[1], int(self.time.total_seconds())))
-        elif channel == 'artf':
-            # send data as they are, ignore transmit time, ignore transmit failure
-            for artf_item in self.artf:
-                self.send_data(bytes(str(artf_item), encoding='ascii'))
-        else:
-            assert False, channel  # not supported
         return channel
 
     def run(self):

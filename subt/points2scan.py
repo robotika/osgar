@@ -27,15 +27,6 @@ class PointsToScan(Node):
         dist_i[mask] = 0
         self.publish('scan360', dist_i.tolist())
 
-    def update(self):
-        channel = super().update()
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-        else:
-            assert False, channel  # unsupported channel
-        return channel
-
     def draw(self):
         import matplotlib.pyplot as plt
 

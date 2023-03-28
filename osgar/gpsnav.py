@@ -65,13 +65,12 @@ class GPSNavigation(Node):
     def send_speed_cmd(self, speed, angular_speed):
         return self.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
 
-    def update(self):
-        channel = super().update()  # define self.time
-        if channel == 'position':
-            self.last_position = self.position
-        elif channel == 'rot':  # should be rather 'rotation'
-            yaw, pitch, roll = self.rot
-            self.last_imu_yaw = math.radians(yaw/100.0)
+    def on_position(self, data):
+        self.last_position = data
+
+    def on_rot(self, data):
+        yaw, pitch, roll = data
+        self.last_imu_yaw = math.radians(yaw/100.0)
 
     def register(self, callback):
         self.monitors.append(callback)

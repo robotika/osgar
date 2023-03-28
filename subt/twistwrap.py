@@ -16,13 +16,4 @@ class TwistWrap(Node):
         angular = [0.0, 0.0, math.radians(data[1]/100.0)]
         self.publish('cmd_vel', [linear, angular])
 
-    def update(self):
-        channel = super().update()
-
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-        else:
-            assert False, "unknown input {channel}"
-
 # vim: expandtab sw=4 ts=4

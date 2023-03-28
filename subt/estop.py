@@ -22,11 +22,8 @@ class EStop(Node):
         self._buf = b''
         self.master = config.get('master', False)
 
-    def update(self):  # hack, this method should be called run instead!
-        channel = super().update()  # define self.time
-        assert channel == "raw", channel
-        self._buf += self.raw
-
+    def on_raw(self, data):
+        self._buf += data
         packet = None
         while HEADER in self._buf and self._buf.index(HEADER) + PACKET_SIZE <= len(self._buf):
             i = self._buf.index(HEADER)

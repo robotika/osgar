@@ -45,12 +45,3 @@ class Localization(Node):
         dist3d = quaternion.rotate_vector([dist, 0, 0], self.orientation)
         self.xyz = [a + b for a, b in zip(self.xyz, dist3d)]
         self.bus.publish('pose3d', [self.xyz, self.orientation])
-
-    def update(self):
-        channel = super().update()
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-        else:
-            assert False, channel  # unsupported channel
-        return channel
