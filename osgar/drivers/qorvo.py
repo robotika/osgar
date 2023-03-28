@@ -21,13 +21,5 @@ class Qorvo(Node):
         if not self.initialized:
             self.publish("raw", b'\n')
 
-    def update(self):  # yes, refactoring to some common node would be nice!
-        channel = super().update()  # define self.time
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-        else:
-            assert False, channel  # unknown
-
 
 # vim: expandtab sw=4 ts=4

@@ -85,15 +85,6 @@ class MultiTraceManager(Node):
                 for name in update:
                     self.publish('robot_trace', {name : update[name][:CUT_NUM]})
 
-    def update(self):
-        channel = super().update()  # define self.time
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-        else:
-            assert False, channel  # not supported
-        return channel
-
     def draw(self):
         import matplotlib.pyplot as plt
         robot_ids = sorted(self.traces)

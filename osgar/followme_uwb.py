@@ -99,14 +99,6 @@ class FollowMeUWB(Node):
     def on_buttons(self, data):
         pass  # ignore for now
 
-    def update(self):  # yes, refactoring to some common node would be nice!
-        channel = super().update()  # define self.time
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-        else:
-            assert False, channel  # unknown
-
     def draw(self):
         import matplotlib.pyplot as plt
         t = [a[0] for a in self.debug_arr]

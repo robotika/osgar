@@ -31,7 +31,11 @@ class Node(Thread):
     def update(self):
         timestamp, channel, data = self.bus.listen()
         self.time = timestamp
-        setattr(self, channel, data)
+        handler = getattr(self, "on_" + channel, None)
+        if handler is not None:
+            handler(data)
+        else:
+            assert False, channel  # unknown
         return channel
 
     def run(self):

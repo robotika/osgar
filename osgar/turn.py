@@ -25,18 +25,14 @@ class Turn(Node):
     def send_speed_cmd(self, speed, angular_speed):
         return self.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
 
-    def update(self):
-        channel = super().update()  # define self.time
-        if self.verbose:
-            print(self.time, 'Go', channel)
-        if channel == 'pose2d':
-            x, y, heading = self.pose2d
-            pose = (x/1000.0, y/1000.0, math.radians(heading/100.0))
-            if self.start_pose is None:
-                self.start_pose = pose
-            self.last_position = pose
-            if self.last_position is not None:
-                self.is_moving = (self.last_position != pose)
+    def on_pose2d(self, data):
+        x, y, heading = data
+        pose = (x / 1000.0, y / 1000.0, math.radians(heading / 100.0))
+        if self.start_pose is None:
+            self.start_pose = pose
+        self.last_position = pose
+        if self.last_position is not None:
+            self.is_moving = (self.last_position != pose)
 
     def wait(self, dt):  # TODO refactor to some common class
         if self.time is None:

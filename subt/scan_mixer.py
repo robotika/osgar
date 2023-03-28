@@ -20,40 +20,35 @@ class ScanMixer(Node):
         self.rs_scan_time = timedelta(0)
         self.verbose = False
 
-    def update(self):
-        channel = super().update()
-        assert channel in ["scan", "rs_scan"], channel
+    def on_rs_scan(self, data):
+        self.rs_scan = data
+        self.rs_scan_time = self.time
 
-        if channel == 'rs_scan':
-            self.rs_scan_time = self.time
-        elif channel == 'scan':
-            #assert len(self.scan) in [271, ], len(self.scan)  # Eduro=271
-            if self.rs_scan is not None:
-                max_delay = timedelta(milliseconds=500)
-                rs_delay = self.time - self.rs_scan_time
-                if rs_delay > max_delay:
-                    g_logger.debug(f"rs_scan older than {max_delay}: {rs_delay}")
-                    self.publish('scan', self.scan)
-                else:
-                    indexes = np.linspace(0, len(self.rs_scan), num=len(self.scan), endpoint=False, dtype=int)
-                    rs_scan = np.asarray(self.rs_scan)
-                    scan = np.asarray(self.scan)
-                    # replace infinity with long distance
-                    infinity = 30000
-                    rs_scan[rs_scan == 0] = infinity
-                    scan[scan == 0] = infinity
-                    # resample
-                    rs_scan = rs_scan[indexes]
-                    scan = np.minimum(rs_scan, scan)
-                    # replace long distance with infinity
-                    scan[scan == infinity] = 0
-                    self.publish('scan', scan.tolist())
-            else:
+    def on_scan(self, data):
+        self.scan = data
+        #assert len(self.scan) in [271, ], len(self.scan)  # Eduro=271
+        if self.rs_scan is not None:
+            max_delay = timedelta(milliseconds=500)
+            rs_delay = self.time - self.rs_scan_time
+            if rs_delay > max_delay:
+                g_logger.debug(f"rs_scan older than {max_delay}: {rs_delay}")
                 self.publish('scan', self.scan)
+            else:
+                indexes = np.linspace(0, len(self.rs_scan), num=len(self.scan), endpoint=False, dtype=int)
+                rs_scan = np.asarray(self.rs_scan)
+                scan = np.asarray(self.scan)
+                # replace infinity with long distance
+                infinity = 30000
+                rs_scan[rs_scan == 0] = infinity
+                scan[scan == 0] = infinity
+                # resample
+                rs_scan = rs_scan[indexes]
+                scan = np.minimum(rs_scan, scan)
+                # replace long distance with infinity
+                scan[scan == infinity] = 0
+                self.publish('scan', scan.tolist())
         else:
-            assert False, channel  # unsupported channel
-
-        return channel
+            self.publish('scan', self.scan)
 
 
 if __name__ == "__main__":

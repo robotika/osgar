@@ -178,13 +178,10 @@ class Spider(Node):
         self.desired_speed = speed_mm / 1000.0
         self.desired_angle = math.radians(desired_angle_mdeg / 100.0)
 
-    def update(self):  # yes, refactoring to some common node would be nice!
-        channel = super().update()  # define self.time
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-        else:
-            assert False, channel  # unknown
+    def on_desired_speed(self, data):
+        speed_mm, angular_speed_mrad = self.desired_speed  # really ugly!!!
+        self.desired_speed = speed_mm / 1000.0
+        self.desired_angular_speed = math.radians(angular_speed_mrad / 100.0)
 
     def send_speed(self, data):
         if True:  #self.can_bridge_initialized:

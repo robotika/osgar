@@ -55,10 +55,9 @@ class MotorDriverVESC(Node):
         self.packet = [[], [], [], []]
         self.tachometer = [None, None, None, None]  # for motors #1, #2, #3 and #4
 
-    def update(self):
-        channel = super().update()
-        assert channel == 'can', channel
-        msg_id, data, flags = self.can  # via update()
+    def on_can(self, data):
+        self.can = data
+        msg_id, data, flags = data
         if (msg_id & 0xF00) == 0x500:
             motor_index = (msg_id & 0xFF) - 1  # reindexed motors from #1 to array index 0
             assert data[0] % 7 == 0, data[0]

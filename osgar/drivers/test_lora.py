@@ -110,15 +110,12 @@ class LoRaTest(unittest.TestCase):
     def test_report_artifact(self):
         bus = MagicMock()
         c = LoRa(bus=bus, config={'device_id':1})
-        with patch('osgar.node.Node.update') as p:
-            p.return_value = 'raw'
-            c.raw = b"3|['TYPE_BACKPACK', 3506, -18369, -752]\n"
-            c.update()
-            self.assertEqual(bus.method_calls,
-                             [call.register('raw', 'cmd', 'robot_status', 'artf', 'artf_xyz'),
-                              call.publish('artf', [3, ['TYPE_BACKPACK', 3506, -18369, -752]]),
-                              call.publish('raw', b"3|['TYPE_BACKPACK', 3506, -18369, -752]\n")]
-                             )
+        c.on_raw(b"3|['TYPE_BACKPACK', 3506, -18369, -752]\n")
+        self.assertEqual(bus.method_calls,
+                         [call.register('raw', 'cmd', 'robot_status', 'artf', 'artf_xyz'),
+                          call.publish('artf', [3, ['TYPE_BACKPACK', 3506, -18369, -752]]),
+                          call.publish('raw', b"3|['TYPE_BACKPACK', 3506, -18369, -752]\n")]
+                         )
 
     def test_on_radio(self):
         # virtual world

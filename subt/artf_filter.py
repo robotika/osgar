@@ -90,14 +90,6 @@ class ArtifactFilter(Node):
         if self.verbose:
             print('Breadcrumb:', data)
 
-    def update(self):
-        channel = super().update()
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-        else:
-            assert False, channel  # unknown channel
-
     def draw(self):
         import matplotlib.pyplot as plt
 

@@ -39,15 +39,6 @@ class Teambase(Node):
                 print(self.time, 'received:', arr)
                 self.artifacts.append(arr)
 
-    def update(self):
-        channel = super().update()
-
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-        else:
-            assert False, channel  # not supported channel
-
     def draw(self):
         import matplotlib.pyplot as plt
         robot_ids = sorted(list(set([a[0] for a in self.debug_arr])))
