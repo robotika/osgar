@@ -241,7 +241,7 @@ class Spider(Node):
         line = plt.plot(t, values, '-o', linewidth=2)
 
         plt.xlabel('time (s)')
-        plt.legend(['left', 'right'])
+        plt.legend(['left', 'right', 'valve1', 'valve2', 'speed'])
         plt.show()
 
 
