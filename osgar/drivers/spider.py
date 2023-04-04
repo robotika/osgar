@@ -46,8 +46,15 @@ class Spider(Node):
         self.prev_enc = None  # not defined
         self.paused = True  # safe default
         self.valve = None
+        self.last_diff_time = None
 
     def update_speed(self, diff):
+        if self.last_diff_time is not None:
+            if diff == [0, 0] and (self.time - self.last_diff_time).total_seconds() < 0.025:  # 50ms for 20Hz
+                self.last_diff_time = self.time
+                # skip update due to duplicity CAN messages
+                return
+        self.last_diff_time = self.time
         self.speed_history_left.append(diff[0])
         self.speed_history_right.append(diff[1])
         self.speed_history_left = self.speed_history_left[-10:]
