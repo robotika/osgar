@@ -34,7 +34,7 @@ class Spider(Node):
         self.speed_cmd = [0, 0]
         self.status_cmd = 3
         self.alive = 0  # toggle with 128
-        self.desired_angle = None  # in Spider mode desired weels direction
+        self.desired_angle = None  # in Spider mode desired wheels direction
         self.desired_speed = None
         self.desired_angular_speed = None  # for CAR mode
         self.speed_history_left = []
@@ -46,8 +46,15 @@ class Spider(Node):
         self.prev_enc = None  # not defined
         self.paused = True  # safe default
         self.valve = None
+        self.last_diff_time = None
 
     def update_speed(self, diff):
+        if self.last_diff_time is not None:
+            if diff == [0, 0] and (self.time - self.last_diff_time).total_seconds() < 0.025:  # 50ms for 20Hz
+                self.last_diff_time = self.time
+                # skip update due to duplicity CAN messages
+                return
+        self.last_diff_time = self.time
         self.speed_history_left.append(diff[0])
         self.speed_history_right.append(diff[1])
         self.speed_history_left = self.speed_history_left[-10:]
@@ -111,8 +118,8 @@ class Spider(Node):
                     ret = [self.status_word, None]
 
                 # handle steering
-                if self.desired_speed is not None and not self.paused:
-                    self.send_speed((self.desired_speed, self.desired_angular_speed))
+                if self.desired_speed is not None and self.desired_angle is not None and not self.paused:
+                    self.send_speed((self.desired_speed, self.desired_angle))
                 else:
                     self.send_speed((0, 0))
                 return ret
@@ -171,11 +178,12 @@ class Spider(Node):
     def on_can(self, data):
         status = self.process_packet(data, verbose=self.verbose)
         if status is not None:
-            self.bus.publish('status', status)
+            self.publish('status', status)
 
-    # move is for SPIDER mode, which is currently not supported
-    #        elif channel == 'move':
-    #            self.desired_speed, self.desired_angle = self.move
+    def on_move(self, data):
+        speed_mm, desired_angle_mdeg = data
+        self.desired_speed = speed_mm / 1000.0
+        self.desired_angle = math.radians(desired_angle_mdeg / 100.0)
 
     def on_desired_speed(self, data):
         speed_mm, angular_speed_mrad = self.desired_speed  # really ugly!!!
@@ -237,7 +245,7 @@ class Spider(Node):
         line = plt.plot(t, values, '-o', linewidth=2)
 
         plt.xlabel('time (s)')
-        plt.legend(['left', 'right'])
+        plt.legend(['left', 'right', 'valve1', 'valve2', 'speed'])
         plt.show()
 
 

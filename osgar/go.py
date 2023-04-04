@@ -17,6 +17,7 @@ class Go(Node):
         self.speed = config['max_speed']
         self.dist = config['dist']
         self.timeout = timedelta(seconds=config['timeout'])
+        self.desired_spider_angle = config.get('desired_angle', 0.0)
         self.emergency_stop = None
 
     def send_speed_cmd(self, speed, angular_speed):
@@ -44,9 +45,9 @@ class Go(Node):
         print(self.time, "Go!")
         start_time = self.time
         if self.dist >= 0:
-            self.send_speed_cmd(self.speed, 0.0)
+            self.send_speed_cmd(self.speed, self.desired_spider_angle)
         else:
-            self.send_speed_cmd(-self.speed, 0.0)
+            self.send_speed_cmd(-self.speed, self.desired_spider_angle)
         while self.traveled_dist < abs(self.dist) and self.time - start_time < self.timeout:
             self.update()
             if self.emergency_stop:
@@ -74,6 +75,7 @@ if __name__ == "__main__":
     parser_run.add_argument('--speed', '-s', help="speed in m/s (default: from config)", type=float)
     parser_run.add_argument('--dist', '-d', help="distance in m (default: %(default)sm)", type=float, default=1.0)
     parser_run.add_argument('--timeout', help='seconds before stopping (default: %(default)s)', type=int, default=10)
+    parser_run.add_argument('--spider-angle', '-a', help='for Spider mode desired angle in degrees', type=int, default=0)
 
     parser_replay = subparsers.add_parser('replay', help='replay from logfile')
     parser_replay.add_argument('logfile', help='recorded log file')
@@ -99,6 +101,8 @@ if __name__ == "__main__":
         cfg['robot']['modules']['app']['init']['timeout'] = args.timeout
         if args.speed is not None:
             cfg['robot']['modules']['app']['init']['max_speed'] = args.speed
+        if args.spider_angle is not None:
+            cfg['robot']['modules']['app']['init']['desired_angle'] = math.radians(args.spider_angle)
 
         record(cfg, prefix)
 
