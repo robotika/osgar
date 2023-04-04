@@ -39,7 +39,7 @@ class Spider(Node):
         self.desired_angular_speed = None  # for CAR mode
         self.speed_history_left = []
         self.speed_history_right = []
-        self.speed = None  # unknown
+        self.speed = 0.0  # suppose we start from standstill
         self.verbose = False  # TODO node
         self.debug_arr = []
         self.pose2d = (0.0, 0.0, 0.0)  # x, y in meters, heading in radians (not corrected to 2PI)
@@ -47,6 +47,8 @@ class Spider(Node):
         self.paused = True  # safe default
         self.valve = None
         self.last_diff_time = None
+        self.already_moved = False
+        self.err_sum = 0.0  # accumulated error for speed controller
 
     def update_speed(self, diff):
         if self.last_diff_time is not None:
@@ -84,6 +86,10 @@ class Spider(Node):
             y += +r * math.cos(heading) - r * math.cos(heading + angle)
             heading += angle # not normalized
         self.pose2d = (x, y, heading)
+        if not self.already_moved:
+            self.already_moved = abs(x) > 0.1 or abs(y) > 0.1
+            if self.already_moved:
+                print(self.time, 'Motion detected - motion control enabled', self.pose2d)
 
     def send_pose2d(self):
         x, y, heading = self.pose2d
@@ -193,7 +199,7 @@ class Spider(Node):
     def send_speed(self, data):
         if True:  #self.can_bridge_initialized:
             speed, angular_speed = data
-            if abs(speed) > 0:
+            if abs(speed) > 0 or self.already_moved:  # for initial sequence it is necessary to send (0, 0) for starting motor
 #                print(self.status_word & 0x7fff)
                 if self.status_word is None or self.status_word & 0x10 != 0:
                     # car mode
@@ -213,16 +219,16 @@ class Spider(Node):
                             angle_cmd = 0x80 + 50
                     else:
                         angle_cmd = 0
-                sign_offset = 0x80 if speed > 0 else 0x0
-                if self.speed is not None:
-                    err = min(127, 80 + max(0, int(100*(speed - self.speed))))
-                else:
-                    err = 80  # currently min value
-                packet = CAN_triplet(0x401, [sign_offset + err, angle_cmd])
-#                if abs(speed) >= 10:
-#                    packet = CAN_triplet(0x401, [sign_offset + 127, angle_cmd])
-#                else:
-#                    packet = CAN_triplet(0x401, [sign_offset + 80, angle_cmd])
+
+                # there is relatively large dead-zone -80..80 but there is also offset keeping
+                # previous speed
+                err = speed - self.speed
+                self.err_sum += err
+                scale_p = 100  # proportional
+                scale_i = 10  # integration
+                value = min(127, max(-127, int(scale_p * err + scale_i * self.err_sum)))
+                sign_offset = 0x80 if value > 0 else 0x0  # NBB format
+                packet = CAN_triplet(0x401, [sign_offset + abs(value), angle_cmd])
             else:
                 packet = CAN_triplet(0x401, [0, 0])  # STOP packet
             self.bus.publish('can', packet)
