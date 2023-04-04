@@ -227,7 +227,7 @@ class Spider(Node):
                 scale_p = 100  # proportional
                 scale_i = 10  # integration
                 value = min(127, max(-127, int(scale_p * err + scale_i * self.err_sum)))
-                sign_offset = 0x80 if value > 0 else 0x0  # NBB format
+                sign_offset = 0x80 if value < 0 else 0x0  # NBB format, swapped front-rear of Spider
                 packet = CAN_triplet(0x401, [sign_offset + abs(value), angle_cmd])
             else:
                 packet = CAN_triplet(0x401, [0, 0])  # STOP packet
