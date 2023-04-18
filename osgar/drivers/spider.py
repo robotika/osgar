@@ -50,6 +50,9 @@ class Spider(Node):
         self.already_moved = False
         self.err_sum = 0.0  # accumulated error for speed controller
 
+        self.debug_step = 1
+        self.debug_speed = 0
+
     def update_speed(self, diff):
         if self.last_diff_time is not None:
             if diff == [0, 0] and (self.time - self.last_diff_time).total_seconds() < 0.025:  # 50ms for 20Hz
@@ -227,6 +230,14 @@ class Spider(Node):
                 scale_p = 100  # proportional
                 scale_i = 10  # integration
                 value = min(127, max(-127, int(scale_p * err + scale_i * self.err_sum)))
+                # hack-begin
+                value = self.debug_speed
+                self.debug_speed += self.debug_step
+                if abs(self.debug_speed) > 127:
+                    print('Changing direction', self.debug_step, self.debug_speed)
+                    self.debug_speed = value
+                    self.debug_step = -self.debug_step
+                # hack-end
                 sign_offset = 0x80 if value < 0 else 0x0  # NBB format, swapped front-rear of Spider
                 packet = CAN_triplet(0x401, [sign_offset + abs(value), angle_cmd])
             else:
