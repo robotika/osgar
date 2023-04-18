@@ -50,7 +50,7 @@ class Spider(Node):
         self.already_moved = False
         self.err_sum = 0.0  # accumulated error for speed controller
 
-        self.debug_step = 1
+        self.debug_step = -1
         self.debug_speed = 0
 
     def update_speed(self, diff):
@@ -58,7 +58,7 @@ class Spider(Node):
             if diff == [0, 0] and (self.time - self.last_diff_time).total_seconds() < 0.025:  # 50ms for 20Hz
                 self.last_diff_time = self.time
                 # skip update due to duplicity CAN messages
-                return
+                return False
         self.last_diff_time = self.time
         self.speed_history_left.append(diff[0])
         self.speed_history_right.append(diff[1])
@@ -66,6 +66,7 @@ class Spider(Node):
         self.speed_history_right = self.speed_history_right[-10:]
 
         self.speed = SPIDER_ENC_SCALE * (sum(self.speed_history_left) + sum(self.speed_history_right))  # 20Hz -> left + right = 1s
+        return True
 
     def update_pose2d(self, diff):
         x, y, heading = self.pose2d
@@ -167,14 +168,21 @@ class Spider(Node):
                     self.prev_enc = val
                 diff = [sint8_diff(a, b) for a, b in zip(val, self.prev_enc)]
                 self.publish('encoders', list(diff))
-                self.update_speed(diff)
+                valid_enc = self.update_speed(diff)
                 self.update_pose2d(diff)
                 self.send_pose2d()
                 self.prev_enc = val
-                if verbose:
+                if verbose and valid_enc:
                     print("Enc:", val)
                     if self.valve is not None:
-                        self.debug_arr.append([self.time.total_seconds(), *diff] + list(self.valve) + [self.speed])
+                        value = self.debug_speed
+                        if abs(value) < 64:
+                            value = 0
+                        elif value < 0:
+                            value = -127
+                        else:
+                            value = 127
+                        self.debug_arr.append([self.time.total_seconds(), *diff] + list(self.valve) + [self.speed, value])
 
     def process_gen(self, data, verbose=False):
         self.buf, packet = self.split_buffer(self.buf + data)
@@ -237,6 +245,12 @@ class Spider(Node):
                     print('Changing direction', self.debug_step, self.debug_speed)
                     self.debug_speed = value
                     self.debug_step = -self.debug_step
+                if abs(value) < 32:
+                    value = 0
+                elif value < 0:
+                    value = -32*(abs(value)//32)
+                else:
+                    value = 32*(abs(value)//32)
                 # hack-end
                 sign_offset = 0x80 if value < 0 else 0x0  # NBB format, swapped front-rear of Spider
                 packet = CAN_triplet(0x401, [sign_offset + abs(value), angle_cmd])
