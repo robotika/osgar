@@ -238,7 +238,8 @@ class Spider(Node):
                 scale_p = 100  # proportional
                 scale_i = 10  # integration
                 value = min(127, max(-127, int(scale_p * err + scale_i * self.err_sum)))
-                # hack-begin
+#                print(f'desired speed={speed}, speed={self.speed:.2f}, err={err:.2f}, err_sum={self.err_sum:.2f}, value={value}')
+                """ # hack-begin
                 value = self.debug_speed
                 self.debug_speed += self.debug_step
                 if abs(self.debug_speed) > 127:
@@ -251,7 +252,7 @@ class Spider(Node):
                     value = -32*(abs(value)//32)
                 else:
                     value = 32*(abs(value)//32)
-                # hack-end
+                # hack-end  """
                 sign_offset = 0x80 if value < 0 else 0x0  # NBB format, swapped front-rear of Spider
                 packet = CAN_triplet(0x401, [sign_offset + abs(value), angle_cmd])
             else:
