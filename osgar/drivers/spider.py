@@ -179,14 +179,7 @@ class Spider(Node):
                 if verbose and valid_enc:
                     print("Enc:", val)
                     if self.valve is not None:
-                        value = self.debug_speed
-                        if abs(value) < 64:
-                            value = 0
-                        elif value < 0:
-                            value = -127
-                        else:
-                            value = 127
-                        self.debug_arr.append([self.time.total_seconds(), *diff] + list(self.valve) + [self.speed, value])
+                        self.debug_arr.append([self.time.total_seconds(), *diff] + list(self.valve) + [self.speed, self.debug_speed])
 
     def process_gen(self, data, verbose=False):
         self.buf, packet = self.split_buffer(self.buf + data)
@@ -242,6 +235,7 @@ class Spider(Node):
                 scale_p = 100  # proportional
                 scale_i = 10  # integration
                 value = min(127, max(-127, int(scale_p * err + scale_i * self.err_sum)))
+                self.debug_speed = value
 #                print(f'desired speed={speed}, speed={self.speed:.2f}, err={err:.2f}, err_sum={self.err_sum:.2f}, value={value}')
                 """ # hack-begin
                 value = self.debug_speed
@@ -281,7 +275,7 @@ class Spider(Node):
         line = plt.plot(t, values, '-o', linewidth=2)
 
         plt.xlabel('time (s)')
-        plt.legend(['left', 'right', 'valve1', 'valve2', 'speed'])
+        plt.legend(['left', 'right', 'valve1', 'valve2', 'speed', 'control'])
         plt.show()
 
 
