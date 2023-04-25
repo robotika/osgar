@@ -59,6 +59,9 @@ class Spider(Node):
                 self.last_diff_time = self.time
                 # skip update due to duplicity CAN messages
                 return False
+        if abs(diff[0]) + abs(diff[1]) >= 40:
+            # max valid observed was 20
+            return False
         self.last_diff_time = self.time
         self.speed_history_left.append(diff[0])
         self.speed_history_right.append(diff[1])
@@ -169,8 +172,9 @@ class Spider(Node):
                 diff = [sint8_diff(a, b) for a, b in zip(val, self.prev_enc)]
                 self.publish('encoders', list(diff))
                 valid_enc = self.update_speed(diff)
-                self.update_pose2d(diff)
-                self.send_pose2d()
+                if valid_enc:
+                    self.update_pose2d(diff)
+                    self.send_pose2d()
                 self.prev_enc = val
                 if verbose and valid_enc:
                     print("Enc:", val)
