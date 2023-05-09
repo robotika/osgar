@@ -1,0 +1,63 @@
+"""
+    A simple robotic simulator to become familiar with the Osgar.
+"""
+
+import gym
+import yaml
+from argparse import Namespace
+import math
+import numpy as np
+from osgar.node import Node
+from osgar.bus import BusShutdownException
+
+
+class GymSimulator(Node):
+    def __init__(self, config, bus):
+        super().__init__(config, bus)
+        bus.register('pose2d', 'scan', 'sim_time')
+        with open('config_example_map.yaml') as file:
+            conf_dict = yaml.load(file, Loader=yaml.FullLoader)
+        self.conf = Namespace(**conf_dict)
+        self.speed = 0
+        self.angular_speed = 0
+
+    def on_desired_speed(self, data):
+        speed, angular_speed = data
+        # print(angular_speed)
+        self.speed = speed / 1000
+        self.angular_speed = math.radians(angular_speed / 100)
+
+    def on_tick(self, data):
+        # step simulation
+        pass
+
+    def send_data(self, obs):
+        scan = (obs["scans"][0]*1000).astype(np.int16).tolist()
+        self.publish("scan", scan)
+        x = obs["poses_x"][0]
+        y = obs["poses_y"][0]
+        heading = obs["poses_theta"][0]
+        print(heading, x, y)
+        self.publish('pose2d', [round(x * 1000), round(y * 1000), round(math.degrees(heading) * 100)])
+
+    def run(self):
+        try:
+            racecar_env = gym.make('f110_gym:f110-v0', map=self.conf.map_path, num_agents=1, timestep = 0.02)
+            obs, step_reward, done, info = racecar_env.reset(np.array([[0., 0., math.pi/2]]))  # pose of agent
+            # simulation loop
+            sim_time = 0
+            racecar_env.render()
+            # loops when env not done
+            while not done:
+                self.update()
+                # stepping through the environment
+                # print("tu", self.angular_speed)
+                obs, step_reward, done, info = racecar_env.step(np.array([[0.001, self.speed]]))
+                racecar_env.render(mode='human')
+                self.send_data(obs)
+                sim_time += step_reward
+                self.publish('sim_time', sim_time)
+
+            self.request_stop()
+        except BusShutdownException:
+            pass
