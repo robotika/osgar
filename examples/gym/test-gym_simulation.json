@@ -1,0 +1,33 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "application",
+          "in": ["pose2d", "scan"],
+          "out": ["desired_speed"],
+          "init": {
+            "max_speed": 1.0,
+            "desired_angle": 0.1
+          }
+      },
+      "gym": {
+          "driver": "examples.gym.gym_simulator:GymSimulator",
+          "in": ["desired_speed", "tick"],
+          "out": ["pose2d", "tick"],
+          "init": {}
+      },
+      "tick": {
+          "driver": "timer",
+          "in": [],
+          "out": ["tickw"],
+          "init": {
+            "sleep": 0.05
+          }
+      }
+    },
+    "links": [["app.desired_speed", "gym.desired_speed"],
+              ["tick.tick", "gym.tick"],
+              ["gym.pose2d", "app.pose2d"]]
+  }
+}
