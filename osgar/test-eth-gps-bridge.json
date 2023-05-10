@@ -1,0 +1,34 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "gps_tcp": {
+          "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {
+              "host": "192.168.2.10",
+              "port": 10001,
+              "bufsize": 2000
+          }
+      },
+      "gps": {
+        "driver": "gps",
+        "init": {}
+      },
+      "rtk_modem": {
+        "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {
+              "host": "192.168.2.11",
+              "port": 10001,
+              "bufsize": 2000
+        }
+      }
+    },
+    "links": [["gps_tcp.raw", "gps.raw"],
+              ["gps_tcp.raw", "rtk_modem.raw"],
+              ["rtk_modem.raw", "gps_eth.raw"]]
+  }
+}
