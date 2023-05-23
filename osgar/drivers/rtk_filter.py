@@ -22,8 +22,9 @@ class RTKFilter(Node):
             return  # not there yet
         self.buf += data
         if b'$GNGGA' in self.buf:
-            if b'\r\n' in self.buf[self.buf.index(b'$GNGGA'):]:
-                self.publish('filtered', self.buf)
+            packet = self.buf[self.buf.index(b'$GNGGA'):]
+            if b'\r\n' in packet:
+                self.publish('filtered', packet[:packet.index(b'\r\n')+2])
                 self.trigger_time = self.time + timedelta(seconds=1)
                 self.buf = b''
 
