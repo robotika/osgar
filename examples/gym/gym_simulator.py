@@ -2,12 +2,14 @@
     A simple robotic simulator to become familiar with the Osgar.
 """
 
-import gym
-from f110_gym.envs.base_classes import Integrator
+import math
 import yaml
 from argparse import Namespace
-import math
 import numpy as np
+
+import gym
+from f110_gym.envs.base_classes import Integrator
+
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 
@@ -16,7 +18,8 @@ class GymSimulator(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('pose2d', 'scan', 'sim_time')
-        with open('config_example_map.yaml') as file:
+        map_config = config['map_config']
+        with open(map_config) as file:
             conf_dict = yaml.load(file, Loader=yaml.FullLoader)
         self.conf = Namespace(**conf_dict)
         self.speed = 0

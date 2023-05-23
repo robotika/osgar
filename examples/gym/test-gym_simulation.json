@@ -15,7 +15,9 @@
           "driver": "examples.gym.gym_simulator:GymSimulator",
           "in": ["desired_speed", "tick"],
           "out": ["pose2d", "tick"],
-          "init": {}
+          "init": {
+            "map_config": "config_example_map.yaml"
+          }
       },
       "tick": {
           "driver": "timer",
