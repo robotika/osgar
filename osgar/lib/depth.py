@@ -94,7 +94,7 @@ class DepthParams:
                 np.arange(self.camw).reshape((1, self.camw)), self.camh, axis=0)
         pys = self.ry - np.repeat(
                 np.arange(self.camh).reshape((self.camh, 1)), self.camw, axis=1)
-        pzs = np.ones((self.camh, self.camw), dtype=np.float)
+        pzs = np.ones((self.camh, self.camw), dtype=np.float32)
         # For each pixel in the image, a vector representing its corresponding
         # direction in the scene with a unit forward axis.
         self.ps = np.dstack([pzs, pxs / self.fx, pys / self.fy]).T.reshape((3, -1)).reshape((3, self.camw, self.camh)).T
@@ -148,7 +148,7 @@ def depth2danger(depth, params):
 
     # Filter out noise.
     danger = cv2.filter2D(
-            danger.astype(np.float),
+            danger.astype(np.float32),
             -1,
             np.ones(params.noise_filter_window)) > params.noise_filter_threshold
 
@@ -260,7 +260,7 @@ def depth2dist(depth, params, pitch=None, roll=None, yaw=None, debug_col=None):
 
     # Filter out noise.
     danger = cv2.filter2D(
-            noisy_danger.astype(np.float),
+            noisy_danger.astype(np.float32),
             -1,
             np.ones(params.noise_filter_window)) > params.noise_filter_threshold
 

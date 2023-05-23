@@ -250,7 +250,7 @@ class ArtifactDetectorDNN(Node):
                 TO_OPTICAL = np.array([[ 0, -1,  0, 0],
                                        [ 0,  0, -1, 0],
                                        [ 1,  0,  0, 0],
-                                       [ 0,  0,  0, 1]], dtype=np.float)
+                                       [ 0,  0,  0, 1]], dtype=np.float32)
                 FROM_OPTICAL = TO_OPTICAL.T  # inverse
                 # projection_matrix = camera_matrix @ camera_pose
                 # https://stackoverflow.com/questions/16101747/how-can-i-get-the-camera-projection-matrix-out-of-calibratecamera-return-value
