@@ -37,6 +37,6 @@
     "links": [["gps_tcp.raw", "gps.raw"],
               ["gps_tcp.raw", "rtk_filter.nmea"],
               ["rtk_filter.filtered", "rtk_modem.raw"],
-              ["rtk_modem.raw", "gps_eth.raw"]]
+              ["rtk_modem.raw", "gps_tcp.raw"]]
   }
 }
