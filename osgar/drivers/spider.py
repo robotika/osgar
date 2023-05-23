@@ -39,7 +39,7 @@ class Spider(Node):
         self.desired_angular_speed = None  # for CAR mode
         self.speed_history_left = []
         self.speed_history_right = []
-        self.speed = None  # unknown
+        self.speed = 0.0  # suppose we start from standstill
         self.verbose = False  # TODO node
         self.debug_arr = []
         self.pose2d = (0.0, 0.0, 0.0)  # x, y in meters, heading in radians (not corrected to 2PI)
@@ -47,13 +47,18 @@ class Spider(Node):
         self.paused = True  # safe default
         self.valve = None
         self.last_diff_time = None
+        self.already_moved = False
+        self.err_sum = 0.0  # accumulated error for speed controller
 
     def update_speed(self, diff):
         if self.last_diff_time is not None:
             if diff == [0, 0] and (self.time - self.last_diff_time).total_seconds() < 0.025:  # 50ms for 20Hz
                 self.last_diff_time = self.time
                 # skip update due to duplicity CAN messages
-                return
+                return False
+        if abs(diff[0]) + abs(diff[1]) >= 40:
+            # max valid observed was 20
+            return False
         self.last_diff_time = self.time
         self.speed_history_left.append(diff[0])
         self.speed_history_right.append(diff[1])
@@ -61,6 +66,7 @@ class Spider(Node):
         self.speed_history_right = self.speed_history_right[-10:]
 
         self.speed = SPIDER_ENC_SCALE * (sum(self.speed_history_left) + sum(self.speed_history_right))  # 20Hz -> left + right = 1s
+        return True
 
     def update_pose2d(self, diff):
         x, y, heading = self.pose2d
@@ -84,6 +90,10 @@ class Spider(Node):
             y += +r * math.cos(heading) - r * math.cos(heading + angle)
             heading += angle # not normalized
         self.pose2d = (x, y, heading)
+        if not self.already_moved:
+            self.already_moved = abs(x) > 0.1 or abs(y) > 0.1
+            if self.already_moved:
+                print(self.time, 'Motion detected - motion control enabled', self.pose2d)
 
     def send_pose2d(self):
         x, y, heading = self.pose2d
@@ -158,14 +168,15 @@ class Spider(Node):
                     self.prev_enc = val
                 diff = [sint8_diff(a, b) for a, b in zip(val, self.prev_enc)]
                 self.publish('encoders', list(diff))
-                self.update_speed(diff)
-                self.update_pose2d(diff)
-                self.send_pose2d()
+                valid_enc = self.update_speed(diff)
+                if valid_enc:
+                    self.update_pose2d(diff)
+                    self.send_pose2d()
                 self.prev_enc = val
-                if verbose:
+                if verbose and valid_enc:
                     print("Enc:", val)
                     if self.valve is not None:
-                        self.debug_arr.append([self.time.total_seconds(), *diff] + list(self.valve) + [self.speed])
+                        self.debug_arr.append([self.time.total_seconds(), *diff] + list(self.valve) + [self.speed, self.debug_speed])
 
     def process_gen(self, data, verbose=False):
         self.buf, packet = self.split_buffer(self.buf + data)
@@ -193,7 +204,7 @@ class Spider(Node):
     def send_speed(self, data):
         if True:  #self.can_bridge_initialized:
             speed, angular_speed = data
-            if abs(speed) > 0:
+            if abs(speed) > 0 or self.already_moved:  # for initial sequence it is necessary to send (0, 0) for starting motor
 #                print(self.status_word & 0x7fff)
                 if self.status_word is None or self.status_word & 0x10 != 0:
                     # car mode
@@ -213,16 +224,18 @@ class Spider(Node):
                             angle_cmd = 0x80 + 50
                     else:
                         angle_cmd = 0
-                sign_offset = 0x80 if speed > 0 else 0x0
-                if self.speed is not None:
-                    err = min(127, 80 + max(0, int(100*(speed - self.speed))))
-                else:
-                    err = 80  # currently min value
-                packet = CAN_triplet(0x401, [sign_offset + err, angle_cmd])
-#                if abs(speed) >= 10:
-#                    packet = CAN_triplet(0x401, [sign_offset + 127, angle_cmd])
-#                else:
-#                    packet = CAN_triplet(0x401, [sign_offset + 80, angle_cmd])
+
+                # there is relatively large dead-zone -80..80 but there is also offset keeping
+                # previous speed
+                err = speed - self.speed
+                self.err_sum += err
+                scale_p = 100  # proportional
+                scale_i = 10  # integration
+                value = min(127, max(-127, int(scale_p * err + scale_i * self.err_sum)))
+                self.debug_speed = value
+#                print(f'desired speed={speed}, speed={self.speed:.2f}, err={err:.2f}, err_sum={self.err_sum:.2f}, value={value}')
+                sign_offset = 0x80 if value < 0 else 0x0  # NBB format, swapped front-rear of Spider
+                packet = CAN_triplet(0x401, [sign_offset + abs(value), angle_cmd])
             else:
                 packet = CAN_triplet(0x401, [0, 0])  # STOP packet
             self.bus.publish('can', packet)
@@ -245,7 +258,7 @@ class Spider(Node):
         line = plt.plot(t, values, '-o', linewidth=2)
 
         plt.xlabel('time (s)')
-        plt.legend(['left', 'right', 'valve1', 'valve2', 'speed'])
+        plt.legend(['left', 'right', 'valve1', 'valve2', 'speed', 'control'])
         plt.show()
 
 
