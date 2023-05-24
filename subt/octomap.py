@@ -130,18 +130,18 @@ def frontiers(img, start, draw=False):
     mask_right = green[:, 2:, :] & white[:, 1:-1, :]
     mask_left = green[:, :-2, :] & white[:, 1:-1, :]
     mask = mask_left | mask_right
-    z = np.zeros((size[0], 1, size[2]), dtype=np.bool)
+    z = np.zeros((size[0], 1, size[2]), dtype=bool)
     mask = np.hstack([z, mask, z])
 
     mask_up = green[2:, :, :] & white[1:-1, :, :]
     mask_down = green[:-2, :, :] & white[1:-1, :, :]
-    z = np.zeros((1, size[1], size[2]), dtype=np.bool)
+    z = np.zeros((1, size[1], size[2]), dtype=bool)
     mask2 = mask_up | mask_down
     mask = np.vstack([z, mask2, z]) | mask
 
     z_mask_up = green[:, :, 2:] & white[:, :, 1:-1]
     z_mask_down = green[:, :, :-2] & white[:, :, 1:-1]
-    z = np.zeros((size[0], size[1], 1), dtype=np.bool)
+    z = np.zeros((size[0], size[1], 1), dtype=bool)
     mask3 = z_mask_up | z_mask_down
 #    mask = np.concatenate([z, mask3, z], axis=2) | mask
 
@@ -181,9 +181,9 @@ def frontiers(img, start, draw=False):
     drivable_safe_y = drivable[2:, :] & drivable[1:-1, :] & drivable[:-2, :]
     drivable_safe_xy = drivable_safe_y[:, 2:] & drivable_safe_y[:, 1:-1] & drivable_safe_y[:, :-2]
     # add non-drivable frame to match original image size
-    z = np.zeros((size[0] - 2, 1, size[2]), dtype=np.bool)
+    z = np.zeros((size[0] - 2, 1, size[2]), dtype=bool)
     tmp = np.hstack([z, drivable_safe_xy, z])
-    z = np.zeros((1, size[1], size[2]), dtype=np.bool)
+    z = np.zeros((1, size[1], size[2]), dtype=bool)
     drivable = np.vstack([z, tmp, z])
 
     for limit_score in [3*max(score)/4, max(score)/4, 0]:
