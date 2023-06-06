@@ -89,7 +89,7 @@ class MonoTraversability:
                         cv2.circle(shown, tuple(corner), 3, (0, 0, 0xFF))
                 if curr_corners.shape[0] > 0:
                     prev_corners, status, err = cv2.calcOpticalFlowPyrLK(curr_img, self.prev_img, curr_corners, None)
-                    status = status[:,0].astype(np.bool)
+                    status = status[:,0].astype(bool)
                     status = np.logical_and(status, err[:,0] < 1.0 / self.min_tracking_confidence)
                     num_tracked = np.sum(status)
                     if num_tracked >= 3:  # We need at least three points to detect a plane.
@@ -105,7 +105,7 @@ class MonoTraversability:
                         TO_OPTICAL = np.matrix([[ 0, -1,  0, 0],
                                                [ 0,  0, -1, 0],
                                                [ 1,  0,  0, 0],
-                                               [ 0,  0,  0, 1]], dtype=np.float)
+                                               [ 0,  0,  0, 1]], dtype=float)
                         FROM_OPTICAL = TO_OPTICAL.T  # inverse
                         # projection_matrix = camera_matrix @ camera_pose
                         # https://stackoverflow.com/questions/16101747/how-can-i-get-the-camera-projection-matrix-out-of-calibratecamera-return-value

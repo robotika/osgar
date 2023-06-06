@@ -47,7 +47,7 @@ class Bundler(Node):
                     (self.depth_params['h'], 1)),
                 self.depth_params['w'], axis=1)
         pzs = np.ones((self.depth_params['h'], self.depth_params['w']),
-                      dtype=np.float)
+                      dtype=float)
         # For each pixel in the image, a vector representing its corresponding
         # direction in the depth scene with a unit forward axis.
         self.ps = np.dstack([pxs / self.depth_params['fx'],

@@ -240,7 +240,7 @@ class ArtifactDetectorDNN(Node):
             curr_uvs, status, err = cv2.calcOpticalFlowPyrLK(prev_img_gray, curr_img_gray, prev_uvs.astype(np.float32), None)
             num_tracked = np.sum(status)
             if num_tracked > 0:
-                status = status[:,0].astype(np.bool)
+                status = status[:,0].astype(bool)
                 curr_uvs = curr_uvs[status]
                 prev_uvs = prev_uvs[status]
                 assert(curr_uvs.shape == prev_uvs.shape)
@@ -250,7 +250,7 @@ class ArtifactDetectorDNN(Node):
                 TO_OPTICAL = np.array([[ 0, -1,  0, 0],
                                        [ 0,  0, -1, 0],
                                        [ 1,  0,  0, 0],
-                                       [ 0,  0,  0, 1]], dtype=np.float)
+                                       [ 0,  0,  0, 1]], dtype=float)
                 FROM_OPTICAL = TO_OPTICAL.T  # inverse
                 # projection_matrix = camera_matrix @ camera_pose
                 # https://stackoverflow.com/questions/16101747/how-can-i-get-the-camera-projection-matrix-out-of-calibratecamera-return-value
