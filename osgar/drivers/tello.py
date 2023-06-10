@@ -4,11 +4,40 @@
   for details see blog at
      https://robotika.cz/robots/paula/
 """
+# doc:
+#   https://terra-1-g.djicdn.com/2d4dce68897a46b19fc717f3576b7c6a/Tello%20%E7%BC%96%E7%A8%8B%E7%9B%B8%E5%85%B3/For%20Tello/Tello%20SDK%20Documentation%20EN_1.3_1122.pdf
+
+from enum import Enum
 
 import cv2
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
+
+# Available commands - SDK page 3
+class TelloCmd(Enum):
+    COMMAND = b'command'  # entry SDK mode
+    TAKEOFF = b'takeoff'  # Tello auto takeoff
+    LAND = b'land'  # Tello auto land
+    STREAMON = b'streamon'  # Set video stream on
+    STREAMOFF = b'streamoff'  # Set video stream off
+    EMERGENCY = b'emergency'  # Stop all motors immediately
+    UP = b'up'  # Tello fly up with distance x cm, x: 20-500
+    DOWN = b'down'  # Tello fly down with distance x cm, x: 20-500
+    LEFT = b'left'  # Tello fly left with distance x cm, x: 20-500
+    RIGHT = b'right'  # Tello fly right with distance x cm, x: 20-500
+    FORWARD = b'forward'  # Tello fly forward with distance x cm, x: 20-500
+    BACK = b'back'  # Tello fly back with distance x cm, x: 20-500
+    CW = b'cw'  # Tello rotate x degree clockwise, x: 1-3600
+    CCW = b'ccw'  # Tello rotate x degree counter-clockwise, x: 1-3600
+    FLIP = b'flip'  # Tello fly flip x, l (left), r (right), f (forward), b (back)
+    GO = b'GO'  # go x y z speed - Tello fly to x y z in speed (cm/s) (x: 20-500, y: 20-500, z: 20-500, speed: 10-100)
+    CURVE = b'curve'  # curve x1 y1 z1 x2 y2 z2 speed - Tello fly a curve defined by the current and two given coordinates
+            # with speed (cm/s) If the arc radius is not within the range of 0.5-10 meters, it responses false
+            # x1, x2: 20-500, y1, y2: 20-500, z1, z2: 20-500, speed: 10-60, x/y/z can’t be between -20 – 20 at the same time .
+    SPEED = b'speed'  # set speed to x cm/s, x: 10-100
+    RC = b'rc'  # rc a b c d - Send RC control via four channels. a: left/right (-100~100), b: forward/backward (-100~100),
+            # c: up/down (-100~100), d: yaw (-100~100)
 
 
 def save_h264_img(payload):
@@ -35,9 +64,12 @@ class TelloDrone(Node):
         self.tasks = [
             [1, b'streamon'],
             [2, b'takeoff'],
-            [10, b'cw 360'],
-            [11, b'up 30'],
+            [11, b'up 300'],
             [12, b'cw 360'],
+            [12, b'go 200 0 300'],
+            [12, b'go 200 200 300'],
+            [12, b'go 0 0 300'],
+            [12, b'go 0 0 100'],
             [20, b'land'],
             [22, b'streamoff']
         ]
