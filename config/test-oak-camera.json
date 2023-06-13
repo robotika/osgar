@@ -8,7 +8,10 @@
             "fps": 10,
             "is_color": true,
             "is_depth": true,
+            "laser_dot_projector": 1200,
             "is_imu_rotation": true,
+            "batch_report_thr": 10,
+            "game_rotation_vector": false,
             "cam_ip": "169.254.1.222",
 
             "mono_resolution": "THE_400_P",

@@ -31,10 +31,13 @@ class OakCamera:
 
         self.bus.register('depth', 'color', 'rotation_list')
         self.fps = config.get('fps', 10)
-        print(self.fps)
         self.is_depth = config.get('is_depth', False)
+        self.laser_dot_projector = config.get("laser_dot_projector", 0)
+        assert self.laser_dot_projector >= 1200  # The limit is 1200 mA.
         self.is_color = config.get('is_color', False)
         self.is_imu_rotation = config.get('is_imu_rotation', False)
+        self.batch_report_thr = config.get('batch_report_thr', 20)
+        self.game_rotation_vector = config.get('game_rotation_vector', False)
         self.cam_ip = config.get('cam_ip')
         # Set camera IP via: https://github.com/luxonis/depthai-python/blob/main/examples/bootloader/poe_set_ip.py
 
@@ -129,8 +132,12 @@ class OakCamera:
             imu_out.setStreamName("rotation")
             queue_names.append("rotation")
 
-            imu.enableIMUSensor(dai.IMUSensor.ROTATION_VECTOR, 100)
-            imu.setBatchReportThreshold(20)
+            if self.game_rotation_vector:
+                imu.enableIMUSensor(dai.IMUSensor.GAME_ROTATION_VECTOR, 100)  # without magnetometer
+            else:
+                imu.enableIMUSensor(dai.IMUSensor.ROTATION_VECTOR, 100)
+            #
+            imu.setBatchReportThreshold(self.batch_report_thr)
             imu.setMaxBatchReports(20)
             imu.out.link(imu_out.input)
 
@@ -150,15 +157,15 @@ class OakCamera:
 
         # Connect to device and start pipeline
         with dai.Device(pipeline, device_info) as device:
+            if self.laser_dot_projector:
+                device.setIrLaserDotProjectorBrightness(self.laser_dot_projector)
             while self.bus.is_alive():
                 queue_events = device.getQueueEvents(queue_names)
 
                 for queue_name in queue_events:
                     packets = device.getOutputQueue(queue_name).tryGetAll()
                     if len(packets) > 0:
-                        #print(queue_name)
                         if queue_name == "depth":
-                            print(len(packets))
                             depth_frame = packets[-1].getFrame()  # use latest packet
                             self.bus.publish("depth", depth_frame)
 
@@ -167,19 +174,17 @@ class OakCamera:
                             self.bus.publish("color", color_frame)
 
                         if queue_name == "rotation":
-                            #print(len(packets))
+                            print(len(packets))
                             for packet in packets:
-                                #print(len(packet.packets))
-                                #for data in packet.packets:
-                                #    rotdata = data.rotationVector
-                                #    print(f"{rotdata.getTimestampDevice()}, {rotdata.i:.3f}, {rotdata.j:.3f}, {rotdata.k:.3f}, {rotdata.real:.3f}")
-
+                                print(len(packet.packets))
                                 quaternions = [[data.rotationVector.getTimestampDevice().total_seconds(),  # timestamp
+                                                data.rotationVector.rotationVectorAccuracy,  # Accuracy in rad, zero for GAME_ROTATION_VECTOR ?
                                                 data.rotationVector.i, data.rotationVector.j,
-                                                data.rotationVector.k, data.rotationVector.real]
+                                                data.rotationVector.k, data.rotationVector.real
+                                                ]
                                                for data in packet.packets]
                                 self.bus.publish("rotation_list", quaternions)
 
     def request_stop(self):
-        self.bus.sleep(1)
+        self.bus.sleep(2)
         self.bus.shutdown()
