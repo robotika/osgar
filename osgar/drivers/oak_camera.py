@@ -29,10 +29,12 @@ class OakCamera:
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.bus = bus
 
-        self.bus.register('depth', 'color', 'rotation')
+        self.bus.register('depth', 'color', 'rotation_list')
         self.fps = config.get('fps', 10)
+        print(self.fps)
         self.is_depth = config.get('is_depth', False)
         self.is_color = config.get('is_color', False)
+        self.is_imu_rotation = config.get('is_imu_rotation', False)
         self.cam_ip = config.get('cam_ip')
         # Set camera IP via: https://github.com/luxonis/depthai-python/blob/main/examples/bootloader/poe_set_ip.py
 
@@ -120,11 +122,22 @@ class OakCamera:
             right.out.link(stereo.right)
             stereo.depth.link(depth_out.input)
 
+        if self.is_imu_rotation:
+            imu = pipeline.create(dai.node.IMU)
+            imu_out = pipeline.create(dai.node.XLinkOut)
+
+            imu_out.setStreamName("rotation")
+            queue_names.append("rotation")
+
+            imu.enableIMUSensor(dai.IMUSensor.ROTATION_VECTOR, 100)
+            imu.setBatchReportThreshold(20)
+            imu.setMaxBatchReports(20)
+            imu.out.link(imu_out.input)
+
         if not queue_names:
             g_logger.error("No stream enabled!")
             return
 
-        # TODO imu
 
         if self.cam_ip and cam_is_available(self.cam_ip):  # USB cameras?
             device_info = dai.DeviceInfo()
@@ -141,18 +154,32 @@ class OakCamera:
                 queue_events = device.getQueueEvents(queue_names)
 
                 for queue_name in queue_events:
-                    if queue_name == "depth":
-                        packets = device.getOutputQueue(queue_name).tryGetAll()
-                        if len(packets) > 0:
+                    packets = device.getOutputQueue(queue_name).tryGetAll()
+                    if len(packets) > 0:
+                        #print(queue_name)
+                        if queue_name == "depth":
+                            print(len(packets))
                             depth_frame = packets[-1].getFrame()  # use latest packet
                             self.bus.publish("depth", depth_frame)
 
-                    if queue_name == "color":
-                        packets = device.getOutputQueue(queue_name).tryGetAll()
-                        if len(packets) > 0:
+                        if queue_name == "color":
                             color_frame = packets[-1].getData().tobytes()  # use latest packet
                             self.bus.publish("color", color_frame)
 
+                        if queue_name == "rotation":
+                            #print(len(packets))
+                            for packet in packets:
+                                #print(len(packet.packets))
+                                #for data in packet.packets:
+                                #    rotdata = data.rotationVector
+                                #    print(f"{rotdata.getTimestampDevice()}, {rotdata.i:.3f}, {rotdata.j:.3f}, {rotdata.k:.3f}, {rotdata.real:.3f}")
+
+                                quaternions = [[data.rotationVector.getTimestampDevice().total_seconds(),  # timestamp
+                                                data.rotationVector.i, data.rotationVector.j,
+                                                data.rotationVector.k, data.rotationVector.real]
+                                               for data in packet.packets]
+                                self.bus.publish("rotation_list", quaternions)
 
     def request_stop(self):
+        self.bus.sleep(1)
         self.bus.shutdown()
