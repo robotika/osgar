@@ -174,9 +174,7 @@ class OakCamera:
                             self.bus.publish("color", color_frame)
 
                         if queue_name == "rotation":
-                            print(len(packets))
                             for packet in packets:
-                                print(len(packet.packets))
                                 quaternions = [[data.rotationVector.getTimestampDevice().total_seconds(),  # timestamp
                                                 data.rotationVector.rotationVectorAccuracy,  # Accuracy in rad, zero for GAME_ROTATION_VECTOR ?
                                                 data.rotationVector.i, data.rotationVector.j,
