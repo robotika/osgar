@@ -29,15 +29,16 @@ class OakCamera:
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.bus = bus
 
-        self.bus.register('depth', 'color', 'rotation_list')
+        self.bus.register('depth', 'color', 'orientation_list')
         self.fps = config.get('fps', 10)
         self.is_depth = config.get('is_depth', False)
-        self.laser_dot_projector = config.get("laser_dot_projector", 0)
-        assert self.laser_dot_projector >= 1200  # The limit is 1200 mA.
+        self.laser_projector_current = config.get("laser_projector_current", 0)
+        assert self.laser_projector_current <= 1200  # The limit is 1200 mA.
         self.is_color = config.get('is_color', False)
-        self.is_imu_rotation = config.get('is_imu_rotation', False)
-        self.batch_report_thr = config.get('batch_report_thr', 20)
-        self.game_rotation_vector = config.get('game_rotation_vector', False)
+        self.is_imu_enabled = config.get('is_imu_enabled', False)
+        # Preferred number of IMU records in one packet
+        self.number_imu_records = config.get('number_imu_records', 20)
+        self.disable_magnetometer_fusion = config.get('disable_magnetometer_fusion', False)
         self.cam_ip = config.get('cam_ip')
         # Set camera IP via: https://github.com/luxonis/depthai-python/blob/main/examples/bootloader/poe_set_ip.py
 
@@ -125,19 +126,19 @@ class OakCamera:
             right.out.link(stereo.right)
             stereo.depth.link(depth_out.input)
 
-        if self.is_imu_rotation:
+        if self.is_imu_enabled:
             imu = pipeline.create(dai.node.IMU)
             imu_out = pipeline.create(dai.node.XLinkOut)
 
-            imu_out.setStreamName("rotation")
-            queue_names.append("rotation")
+            imu_out.setStreamName("orientation")
+            queue_names.append("orientation")
 
-            if self.game_rotation_vector:
+            if self.disable_magnetometer_fusion:
                 imu.enableIMUSensor(dai.IMUSensor.GAME_ROTATION_VECTOR, 100)  # without magnetometer
             else:
                 imu.enableIMUSensor(dai.IMUSensor.ROTATION_VECTOR, 100)
             #
-            imu.setBatchReportThreshold(self.batch_report_thr)
+            imu.setBatchReportThreshold(self.number_imu_records)
             imu.setMaxBatchReports(20)
             imu.out.link(imu_out.input)
 
@@ -157,8 +158,8 @@ class OakCamera:
 
         # Connect to device and start pipeline
         with dai.Device(pipeline, device_info) as device:
-            if self.laser_dot_projector:
-                device.setIrLaserDotProjectorBrightness(self.laser_dot_projector)
+            if self.laser_projector_current:
+                device.setIrLaserDotProjectorBrightness(self.laser_projector_current)
             while self.bus.is_alive():
                 queue_events = device.getQueueEvents(queue_names)
 
@@ -173,7 +174,7 @@ class OakCamera:
                             color_frame = packets[-1].getData().tobytes()  # use latest packet
                             self.bus.publish("color", color_frame)
 
-                        if queue_name == "rotation":
+                        if queue_name == "orientation":
                             for packet in packets:
                                 quaternions = [[data.rotationVector.getTimestampDevice().total_seconds(),  # timestamp
                                                 data.rotationVector.rotationVectorAccuracy,  # Accuracy in rad, zero for GAME_ROTATION_VECTOR ?
@@ -181,8 +182,7 @@ class OakCamera:
                                                 data.rotationVector.k, data.rotationVector.real
                                                 ]
                                                for data in packet.packets]
-                                self.bus.publish("rotation_list", quaternions)
+                                self.bus.publish("orientation_list", quaternions)
 
     def request_stop(self):
-        self.bus.sleep(2)
         self.bus.shutdown()
