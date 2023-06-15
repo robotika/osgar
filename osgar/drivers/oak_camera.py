@@ -33,7 +33,7 @@ class OakCamera:
         self.fps = config.get('fps', 10)
         self.is_depth = config.get('is_depth', False)
         self.laser_projector_current = config.get("laser_projector_current", 0)
-        assert self.laser_projector_current <= 1200  # The limit is 1200 mA.
+        assert self.laser_projector_current <= 1200, self.laser_projector_current  # The limit is 1200 mA.
         self.is_color = config.get('is_color', False)
         self.is_imu_enabled = config.get('is_imu_enabled', False)
         # Preferred number of IMU records in one packet
@@ -137,7 +137,7 @@ class OakCamera:
                 imu.enableIMUSensor(dai.IMUSensor.GAME_ROTATION_VECTOR, 100)  # without magnetometer
             else:
                 imu.enableIMUSensor(dai.IMUSensor.ROTATION_VECTOR, 100)
-            #
+
             imu.setBatchReportThreshold(self.number_imu_records)
             imu.setMaxBatchReports(20)
             imu.out.link(imu_out.input)
