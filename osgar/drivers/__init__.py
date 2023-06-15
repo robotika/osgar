@@ -33,6 +33,7 @@ all_drivers = dict(
     systemmonitor="osgar.drivers.system_monitor:SystemMonitor",
     resize="osgar.drivers.resize:Resize",
     pozyx="osgar.drivers.pozyx:Pozyx",
+    rtk_filter="osgar.drivers.rtk_filter:RTKFilter",
 )
 
 

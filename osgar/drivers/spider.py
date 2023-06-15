@@ -49,6 +49,7 @@ class Spider(Node):
         self.last_diff_time = None
         self.already_moved = False
         self.err_sum = 0.0  # accumulated error for speed controller
+        self.debug_speed = 0
 
     def update_speed(self, diff):
         if self.last_diff_time is not None:
