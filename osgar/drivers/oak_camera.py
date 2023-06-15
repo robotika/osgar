@@ -29,10 +29,16 @@ class OakCamera:
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.bus = bus
 
-        self.bus.register('depth', 'color', 'rotation')
+        self.bus.register('depth', 'color', 'orientation_list')
         self.fps = config.get('fps', 10)
         self.is_depth = config.get('is_depth', False)
+        self.laser_projector_current = config.get("laser_projector_current", 0)
+        assert self.laser_projector_current <= 1200, self.laser_projector_current  # The limit is 1200 mA.
         self.is_color = config.get('is_color', False)
+        self.is_imu_enabled = config.get('is_imu_enabled', False)
+        # Preferred number of IMU records in one packet
+        self.number_imu_records = config.get('number_imu_records', 20)
+        self.disable_magnetometer_fusion = config.get('disable_magnetometer_fusion', False)
         self.cam_ip = config.get('cam_ip')
         # Set camera IP via: https://github.com/luxonis/depthai-python/blob/main/examples/bootloader/poe_set_ip.py
 
@@ -120,11 +126,26 @@ class OakCamera:
             right.out.link(stereo.right)
             stereo.depth.link(depth_out.input)
 
+        if self.is_imu_enabled:
+            imu = pipeline.create(dai.node.IMU)
+            imu_out = pipeline.create(dai.node.XLinkOut)
+
+            imu_out.setStreamName("orientation")
+            queue_names.append("orientation")
+
+            if self.disable_magnetometer_fusion:
+                imu.enableIMUSensor(dai.IMUSensor.GAME_ROTATION_VECTOR, 100)  # without magnetometer
+            else:
+                imu.enableIMUSensor(dai.IMUSensor.ROTATION_VECTOR, 100)
+
+            imu.setBatchReportThreshold(self.number_imu_records)
+            imu.setMaxBatchReports(20)
+            imu.out.link(imu_out.input)
+
         if not queue_names:
             g_logger.error("No stream enabled!")
             return
 
-        # TODO imu
 
         if self.cam_ip and cam_is_available(self.cam_ip):  # USB cameras?
             device_info = dai.DeviceInfo()
@@ -137,22 +158,31 @@ class OakCamera:
 
         # Connect to device and start pipeline
         with dai.Device(pipeline, device_info) as device:
+            if self.laser_projector_current:
+                device.setIrLaserDotProjectorBrightness(self.laser_projector_current)
             while self.bus.is_alive():
                 queue_events = device.getQueueEvents(queue_names)
 
                 for queue_name in queue_events:
-                    if queue_name == "depth":
-                        packets = device.getOutputQueue(queue_name).tryGetAll()
-                        if len(packets) > 0:
+                    packets = device.getOutputQueue(queue_name).tryGetAll()
+                    if len(packets) > 0:
+                        if queue_name == "depth":
                             depth_frame = packets[-1].getFrame()  # use latest packet
                             self.bus.publish("depth", depth_frame)
 
-                    if queue_name == "color":
-                        packets = device.getOutputQueue(queue_name).tryGetAll()
-                        if len(packets) > 0:
+                        if queue_name == "color":
                             color_frame = packets[-1].getData().tobytes()  # use latest packet
                             self.bus.publish("color", color_frame)
 
+                        if queue_name == "orientation":
+                            for packet in packets:
+                                quaternions = [[data.rotationVector.getTimestampDevice().total_seconds(),  # timestamp
+                                                data.rotationVector.rotationVectorAccuracy,  # Accuracy in rad, zero for GAME_ROTATION_VECTOR ?
+                                                data.rotationVector.i, data.rotationVector.j,
+                                                data.rotationVector.k, data.rotationVector.real
+                                                ]
+                                               for data in packet.packets]
+                                self.bus.publish("orientation_list", quaternions)
 
     def request_stop(self):
         self.bus.shutdown()
