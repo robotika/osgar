@@ -3,7 +3,6 @@
 """
 
 from threading import Thread
-import time
 
 from osgar.logger import LogReader, lookup_stream_names
 from osgar.lib.serialize import deserialize
@@ -47,7 +46,7 @@ class ReplayDriver:
             sub_channel = self.pins[channel]
             self.bus.publish(sub_channel, data)
             if sub_channel == sleeping_channel:
-                time.sleep(period)
+                self.bus.sleep(period)
         print('Replay completed!')
 
     def request_stop(self):
