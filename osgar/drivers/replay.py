@@ -15,8 +15,7 @@ class ReplayDriver:
 
         self.filename = config['filename']
         self.pins = config['pins']
-        for channel in self.pins.values():
-            self.bus.register(channel)
+        self.bus.register(*self.pins.values())
         self.sleep_channel = config.get('sleep_channel')  # e.g. ['scan', 0.05]
 
 
@@ -35,8 +34,7 @@ class ReplayDriver:
         print(ids)
         if self.sleep_channel:
             sleeping_channel, period = self.sleep_channel
-        for timestamp, channel_index, data_raw in LogReader(self.filename,
-                only_stream_id=ids):
+        for timestamp, channel_index, data_raw in LogReader(self.filename, only_stream_id=ids):
             if not self.bus.is_alive():
                 break
             channel = names[channel_index - 1]
