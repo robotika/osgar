@@ -195,7 +195,7 @@ class Spider(Node):
     def on_move(self, data):
         speed_mm, desired_angle_mdeg = data
         self.desired_speed = speed_mm / 1000.0
-        self.desired_angle = math.radians(desired_angle_mdeg / 100.0)
+        self.desired_angle = desired_angle_mdeg / 100.0
 
     def on_desired_speed(self, data):
         speed_mm, angular_speed_mrad = self.desired_speed  # really ugly!!!
@@ -204,19 +204,16 @@ class Spider(Node):
 
     def send_speed(self, data):
         if True:  #self.can_bridge_initialized:
-            speed, angular_speed = data
+            speed, desired_angle = data
             if abs(speed) > 0 or self.already_moved:  # for initial sequence it is necessary to send (0, 0) for starting motor
-#                print(self.status_word & 0x7fff)
-                if self.status_word is None or self.status_word & 0x10 != 0:
-                    # car mode
-                    angle_cmd = int(angular_speed)  # TODO verify angle, byte resolution
-                else:
-                    # spider mode
-                    desired_angle = int(angular_speed)  # TODO proper naming etc.
+                # print(self.status_word & 0x7fff)
+                if self.status_word is not None:  # or self.status_word & 0x10 != 0:
+                    # only spider mode is working now
+                    desired_angle = int(round(desired_angle))
                     if self.wheel_angles is not None and self.zero_steering is not None:
                         curr = Spider.fix_range(self.wheel_angles[0] - self.zero_steering[0])
-                        diff = Spider.fix_range(desired_angle - curr)
-#                        print('DIFF', diff)
+                        diff = Spider.fix_range(desired_angle - curr)  # TODO units?
+                        # print('DIFF', diff)
                         if abs(diff) < 5:
                             angle_cmd = 0
                         elif diff < 0:
@@ -230,11 +227,15 @@ class Spider(Node):
                 # previous speed
                 err = speed - self.speed
                 self.err_sum += err
-                scale_p = 100  # proportional
+                scale_p = 200  # proportional
                 scale_i = 10  # integration
+                # the err_sum may grow to infinity if desired speed is not reached
+                if abs(self.err_sum*scale_i) > 127:
+                    self.err_sum = math.copysign(127/scale_i, self.err_sum)
                 value = min(127, max(-127, int(scale_p * err + scale_i * self.err_sum)))
                 self.debug_speed = value
-#                print(f'desired speed={speed}, speed={self.speed:.2f}, err={err:.2f}, err_sum={self.err_sum:.2f}, value={value}')
+                # print(f'{self.time}, desired speed={speed}, speed={self.speed:.2f}, err={err:.2f},
+                # err_sum={self.err_sum:.2f}, value={value}')
                 sign_offset = 0x80 if value < 0 else 0x0  # NBB format, swapped front-rear of Spider
                 packet = CAN_triplet(0x401, [sign_offset + abs(value), angle_cmd])
             else:
