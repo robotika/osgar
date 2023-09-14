@@ -207,21 +207,27 @@ class Spider(Node):
             speed, desired_angle = data
             if abs(speed) > 0 or self.already_moved:  # for initial sequence it is necessary to send (0, 0) for starting motor
                 # print(self.status_word & 0x7fff)
-                if self.status_word is not None:  # or self.status_word & 0x10 != 0:
-                    # only spider mode is working now
+                if self.status_word is None:
+                    return
+                if self.status_word & 0x10 != 0:
+                    # car mode
+                    desired_angle = int(round(desired_angle/2))
+                else:
+                    # spider mode
                     desired_angle = int(round(desired_angle))
-                    if self.wheel_angles is not None and self.zero_steering is not None:
-                        curr = Spider.fix_range(self.wheel_angles[0] - self.zero_steering[0])
-                        diff = Spider.fix_range(desired_angle - curr)  # TODO units?
-                        # print('DIFF', diff)
-                        if abs(diff) < 5:
-                            angle_cmd = 0
-                        elif diff < 0:
-                            angle_cmd = 50
-                        else:
-                            angle_cmd = 0x80 + 50
-                    else:
+                if self.wheel_angles is not None and self.zero_steering is not None:
+                    print(self.wheel_angles)
+                    curr = Spider.fix_range(self.wheel_angles[0] - self.zero_steering[0])
+                    diff = Spider.fix_range(desired_angle - curr)  # TODO units?
+                    # print('DIFF', diff)
+                    if abs(diff) < 5:
                         angle_cmd = 0
+                    elif diff < 0:
+                        angle_cmd = 50
+                    else:
+                        angle_cmd = 0x80 + 50
+                else:
+                    angle_cmd = 0
 
                 # there is relatively large dead-zone -80..80 but there is also offset keeping
                 # previous speed
@@ -238,6 +244,7 @@ class Spider(Node):
                 # err_sum={self.err_sum:.2f}, value={value}')
                 sign_offset = 0x80 if value < 0 else 0x0  # NBB format, swapped front-rear of Spider
                 packet = CAN_triplet(0x401, [sign_offset + abs(value), angle_cmd])
+
             else:
                 packet = CAN_triplet(0x401, [0, 0])  # STOP packet
             self.bus.publish('can', packet)
