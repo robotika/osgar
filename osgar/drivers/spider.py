@@ -211,16 +211,17 @@ class Spider(Node):
                     return
                 if self.status_word & 0x10 != 0:
                     # car mode
-                    desired_angle = int(round(desired_angle/2))
-                else:
-                    # spider mode
-                    desired_angle = int(round(desired_angle))
+                    desired_angle = desired_angle/2
+
                 if self.wheel_angles is not None and self.zero_steering is not None:
-                    print(self.wheel_angles)
-                    curr = Spider.fix_range(self.wheel_angles[0] - self.zero_steering[0])
-                    diff = Spider.fix_range(desired_angle - curr)  # TODO units?
-                    # print('DIFF', diff)
-                    if abs(diff) < 5:
+                    # print(self.wheel_angles)
+                    # wheel angles: (L_rear, L_front, R_front, R_rear)
+                    curr_L = Spider.fix_range(self.wheel_angles[1] - self.zero_steering[1])
+                    curr_R = Spider.fix_range(self.wheel_angles[2] - self.zero_steering[2])
+                    curr_robot_angle = (curr_L + curr_R)/2 * 360/512  # +/- 180 deg
+                    diff = desired_angle - curr_robot_angle
+                    # print('DIFF', diff, 'curr', curr_robot_angle, curr_L, curr_R)
+                    if abs(diff) < 2:
                         angle_cmd = 0
                     elif diff < 0:
                         angle_cmd = 50
