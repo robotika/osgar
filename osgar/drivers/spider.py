@@ -219,14 +219,12 @@ class Spider(Node):
                     curr_L = Spider.fix_range(self.wheel_angles[1] - self.zero_steering[1])
                     curr_R = Spider.fix_range(self.wheel_angles[2] - self.zero_steering[2])
                     curr_robot_angle = (curr_L + curr_R)/2 * 360/512  # +/- 180 deg
-                    diff = desired_angle - curr_robot_angle
-                    # print('DIFF', diff, 'curr', curr_robot_angle, curr_L, curr_R)
-                    if abs(diff) < 2:
-                        angle_cmd = 0
-                    elif diff < 0:
-                        angle_cmd = 50
-                    else:
-                        angle_cmd = 0x80 + 50
+                    err_steering = desired_angle - curr_robot_angle
+                    # print('DIFF', err_steering, 'curr', curr_robot_angle, curr_L, curr_R)
+                    angle_value = min(127, max(-127, int(2 * err_steering)))  # only proportional yet
+                    angle_cmd = abs(angle_value) if angle_value < 0 else 0x80 + angle_value
+                    # print(angle_value, angle_cmd)
+
                 else:
                     angle_cmd = 0
 
