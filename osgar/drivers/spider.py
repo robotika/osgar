@@ -14,6 +14,12 @@ SPIDER_ENC_SCALE = 0.00218
 WHEEL_DISTANCE = 1.5  # TODO calibrate
 
 
+def limit_value(value):  # limit the value to +/- 127
+    if abs(value) > 127:
+        value = math.copysign(127, value)
+    return value
+
+
 def CAN_triplet(msg_id, data):
     return [msg_id, bytes(data), 0]  # flags=0, i.e basic addressing
 
@@ -49,6 +55,7 @@ class Spider(Node):
         self.last_diff_time = None
         self.already_moved = False
         self.err_sum = 0.0  # accumulated error for speed controller
+        self.err_steering_sum = 0.0  # accumulated error for steering controller
         self.debug_speed = 0
 
     def update_speed(self, diff):
@@ -219,9 +226,14 @@ class Spider(Node):
                     curr_L = Spider.fix_range(self.wheel_angles[1] - self.zero_steering[1])
                     curr_R = Spider.fix_range(self.wheel_angles[2] - self.zero_steering[2])
                     curr_robot_angle = (curr_L + curr_R)/2 * 360/512  # +/- 180 deg
+
                     err_steering = desired_angle - curr_robot_angle
+                    self.err_steering_sum += err_steering
+                    steer_p = 2 * err_steering  # proportional part for steering
+                    steer_i = 0.2 * self.err_steering_sum  # integration part for steering
+                    steer_i = limit_value(steer_i)
                     # print('DIFF', err_steering, 'curr', curr_robot_angle, curr_L, curr_R)
-                    angle_value = min(127, max(-127, int(2 * err_steering)))  # only proportional yet
+                    angle_value = min(127, max(-127, int(steer_p + steer_i)))  # only proportional yet
                     angle_cmd = abs(angle_value) if angle_value < 0 else 0x80 + angle_value
                     # print(angle_value, angle_cmd)
 
@@ -232,13 +244,13 @@ class Spider(Node):
                 # previous speed
                 err = speed - self.speed
                 self.err_sum += err
-                scale_p = 200  # proportional
-                scale_i = 10  # integration
+                p_part = 200 * err  # proportional
+                i_part = 10 * self.err_sum  # integration
                 # the err_sum may grow to infinity if desired speed is not reached
-                if abs(self.err_sum*scale_i) > 127:
-                    self.err_sum = math.copysign(127/scale_i, self.err_sum)
-                value = min(127, max(-127, int(scale_p * err + scale_i * self.err_sum)))
+                i_part = limit_value(i_part)
+                value = min(127, max(-127, int(p_part + i_part)))
                 self.debug_speed = value
+
                 # print(f'{self.time}, desired speed={speed}, speed={self.speed:.2f}, err={err:.2f},
                 # err_sum={self.err_sum:.2f}, value={value}')
                 sign_offset = 0x80 if value < 0 else 0x0  # NBB format, swapped front-rear of Spider
