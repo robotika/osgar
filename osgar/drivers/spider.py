@@ -214,9 +214,9 @@ class Spider(Node):
     def send_speed(self, data):
         # set PI controller
         speed_p = 200
-        speed_i = 20
-        steer_p = 2
-        steer_i = 0.2
+        speed_i = 15
+        steer_p = 1.5
+        steer_i = 0.1
         if True:  #self.can_bridge_initialized:
             speed, desired_angle = data
             if abs(speed) > 0 or self.already_moved:  # for initial sequence it is necessary to send (0, 0) for starting motor
@@ -240,10 +240,10 @@ class Spider(Node):
                     i_part_steering = steer_i * self.err_steering_sum  # integration part for steering
                     if self.verbose:
                         print('DIFF', err_steering, 'curr', curr_robot_angle)
-                    print(self.time, 'DIFF', err_steering, 'curr', curr_robot_angle)
+                    #print(self.time, 'DIFF', err_steering, 'curr', curr_robot_angle)
                     angle_value = min(127, max(-127, int(p_part_steering + i_part_steering)))
                     angle_cmd = abs(angle_value) if angle_value < 0 else 0x80 + angle_value
-                    print("p", p_part_steering, "i", i_part_steering, angle_value, angle_cmd)
+                    #print("p", p_part_steering, "i", i_part_steering, angle_value, angle_cmd)
 
                 else:
                     angle_cmd = 0
