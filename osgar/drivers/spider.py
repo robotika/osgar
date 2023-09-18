@@ -14,10 +14,12 @@ SPIDER_ENC_SCALE = 0.00218
 WHEEL_DISTANCE = 1.5  # TODO calibrate
 
 
-def limit_value(value):  # limit the value to +/- 127
-    if abs(value) > 127:
-        value = math.copysign(127, value)
-    return value
+def limit_sum_err(sum_err, err, scale_i):
+    # The err_sum may grow to infinity if desired speed/angle is not reached. Limit the value * i to +/- 127
+    sum_err += err
+    if abs(sum_err * scale_i) > 127:
+        sum_err = math.copysign(127/scale_i, sum_err)
+    return sum_err
 
 
 def CAN_triplet(msg_id, data):
@@ -210,6 +212,11 @@ class Spider(Node):
         self.desired_angular_speed = math.radians(angular_speed_mrad / 100.0)
 
     def send_speed(self, data):
+        # set PI controller
+        speed_p = 200
+        speed_i = 20
+        steer_p = 2
+        steer_i = 0.2
         if True:  #self.can_bridge_initialized:
             speed, desired_angle = data
             if abs(speed) > 0 or self.already_moved:  # for initial sequence it is necessary to send (0, 0) for starting motor
@@ -228,14 +235,15 @@ class Spider(Node):
                     curr_robot_angle = (curr_L + curr_R)/2 * 360/512  # +/- 180 deg
 
                     err_steering = desired_angle - curr_robot_angle
-                    self.err_steering_sum += err_steering
-                    steer_p = 2 * err_steering  # proportional part for steering
-                    steer_i = 0.2 * self.err_steering_sum  # integration part for steering
-                    steer_i = limit_value(steer_i)
-                    # print('DIFF', err_steering, 'curr', curr_robot_angle, curr_L, curr_R)
-                    angle_value = min(127, max(-127, int(steer_p + steer_i)))  # only proportional yet
+                    self.err_steering_sum = limit_sum_err(self.err_steering_sum, err_steering, steer_i)
+                    p_part_steering =  steer_p * err_steering  # proportional part for steering
+                    i_part_steering = steer_i * self.err_steering_sum  # integration part for steering
+                    if self.verbose:
+                        print('DIFF', err_steering, 'curr', curr_robot_angle)
+                    print(self.time, 'DIFF', err_steering, 'curr', curr_robot_angle)
+                    angle_value = min(127, max(-127, int(p_part_steering + i_part_steering)))
                     angle_cmd = abs(angle_value) if angle_value < 0 else 0x80 + angle_value
-                    # print(angle_value, angle_cmd)
+                    print("p", p_part_steering, "i", i_part_steering, angle_value, angle_cmd)
 
                 else:
                     angle_cmd = 0
@@ -243,11 +251,9 @@ class Spider(Node):
                 # there is relatively large dead-zone -80..80 but there is also offset keeping
                 # previous speed
                 err = speed - self.speed
-                self.err_sum += err
-                p_part = 200 * err  # proportional
-                i_part = 10 * self.err_sum  # integration
-                # the err_sum may grow to infinity if desired speed is not reached
-                i_part = limit_value(i_part)
+                self.err_sum = limit_sum_err(self.err_sum, err, speed_i)
+                p_part = speed_p * err  # proportional
+                i_part = speed_i * self.err_sum  # integration
                 value = min(127, max(-127, int(p_part + i_part)))
                 self.debug_speed = value
 
