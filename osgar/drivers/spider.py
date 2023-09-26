@@ -11,7 +11,19 @@ from osgar.bus import BusShutdownException
 
 
 SPIDER_ENC_SCALE = 0.00218
-WHEEL_DISTANCE = 1.5  # TODO calibrate
+WHEEL_DISTANCE = 1.33
+AXLE_DISTANCE = 1.24
+MAX_WHEEL_ANGLE = math.radians(80)
+
+
+def get_desired_angle(speed, angular_speed):
+    if speed == 0:
+        return 0
+    # The formula is similar to Kloubak but not the same because the steering geometry is different.
+    angle = 2 * math.asin(AXLE_DISTANCE * angular_speed / 2 / speed)
+    if abs(angle) > MAX_WHEEL_ANGLE:
+        return math.copysign(MAX_WHEEL_ANGLE, angle)
+    return angle
 
 
 def limit_sum_err(sum_err, err, scale_i):
@@ -44,7 +56,6 @@ class Spider(Node):
         self.alive = 0  # toggle with 128
         self.desired_angle = None  # in Spider mode desired wheels direction
         self.desired_speed = None
-        self.desired_angular_speed = None  # for CAR mode
         self.speed_history_left = []
         self.speed_history_right = []
         self.speed = 0.0  # suppose we start from standstill
@@ -204,19 +215,21 @@ class Spider(Node):
     def on_move(self, data):
         speed_mm, desired_angle_mdeg = data
         self.desired_speed = speed_mm / 1000.0
-        self.desired_angle = desired_angle_mdeg / 100.0
+        self.desired_angle = math.radians(desired_angle_mdeg / 100.0)
 
     def on_desired_speed(self, data):
-        speed_mm, angular_speed_mrad = self.desired_speed  # really ugly!!!
+        # This take sense for CAR mode only! TODO assert?
+        speed_mm, angular_speed_mrad = data
         self.desired_speed = speed_mm / 1000.0
-        self.desired_angular_speed = math.radians(angular_speed_mrad / 100.0)
+        angular_speed = math.radians(angular_speed_mrad / 100.0)
+        self.desired_angle = get_desired_angle(self.desired_speed, angular_speed)
 
     def send_speed(self, data):
         # set PI controller
         speed_p = 200
         speed_i = 15
-        steer_p = 1.5
-        steer_i = 0.1
+        steer_p = 86
+        steer_i = 5.7
         if True:  #self.can_bridge_initialized:
             speed, desired_angle = data
             if abs(speed) > 0 or self.already_moved:  # for initial sequence it is necessary to send (0, 0) for starting motor
@@ -232,14 +245,14 @@ class Spider(Node):
                     # wheel angles: (L_rear, L_front, R_front, R_rear)
                     curr_L = Spider.fix_range(self.wheel_angles[1] - self.zero_steering[1])
                     curr_R = Spider.fix_range(self.wheel_angles[2] - self.zero_steering[2])
-                    curr_robot_angle = (curr_L + curr_R)/2 * 360/512  # +/- 180 deg
+                    curr_robot_angle = math.radians((curr_L + curr_R)/2 * 360/512)  # +/- PI
 
                     err_steering = desired_angle - curr_robot_angle
                     self.err_steering_sum = limit_sum_err(self.err_steering_sum, err_steering, steer_i)
-                    p_part_steering =  steer_p * err_steering  # proportional part for steering
+                    p_part_steering = steer_p * err_steering  # proportional part for steering
                     i_part_steering = steer_i * self.err_steering_sum  # integration part for steering
                     if self.verbose:
-                        print('DIFF', err_steering, 'curr', curr_robot_angle)
+                        print('DIFF', math.degrees(err_steering), 'curr', math.degrees(curr_robot_angle))
                     #print(self.time, 'DIFF', err_steering, 'curr', curr_robot_angle)
                     angle_value = min(127, max(-127, int(p_part_steering + i_part_steering)))
                     angle_cmd = abs(angle_value) if angle_value < 0 else 0x80 + angle_value
