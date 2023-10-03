@@ -62,7 +62,6 @@
               ["lidar.raw", "lidar_tcp.raw"],
               ["lidar.scan", "app.scan"],
               ["eduro.emergency_stop", "app.emergency_stop"],
-              ["eduro.pose2d", "app.pose2d"],
-              ["eduro.buttons", "app.buttons"]]
+              ["eduro.pose2d", "app.pose2d"]]
   }
 }
