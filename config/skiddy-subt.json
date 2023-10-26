@@ -31,7 +31,7 @@
           "init": {}
       },
       "toserial": {
-          "driver": "subt.push:Push",
+          "driver": "osgar.drivers.push:Push",
           "init": {
               "endpoint": "tcp://127.0.0.1:5590"
           }
@@ -260,7 +260,7 @@
         }
       },
       "toros": {
-          "driver": "subt.push:Push"
+          "driver": "osgar.drivers.push:Push"
       },
       "sec_timer": {
         "driver": "timer",

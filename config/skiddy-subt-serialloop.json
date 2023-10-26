@@ -18,7 +18,7 @@
           }
       },
       "toapp": {
-          "driver": "subt.push:Push",
+          "driver": "osgar.drivers.push:Push",
           "init": {
               "endpoint": "tcp://127.0.0.1:5591",
               "bind": true

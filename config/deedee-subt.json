@@ -197,7 +197,7 @@
           }
       },
       "toros": {
-          "driver": "subt.push:Push"
+          "driver": "osgar.drivers.push:Push"
       },
       "sec_timer": {
         "driver": "timer",

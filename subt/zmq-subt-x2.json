@@ -89,7 +89,7 @@
           }
       },
       "torospy": {
-          "driver": "subt.push:Push"
+          "driver": "osgar.drivers.push:Push"
       },
       "twister": {
           "driver": "subt.twistwrap:TwistWrap"

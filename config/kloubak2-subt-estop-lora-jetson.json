@@ -180,13 +180,13 @@
           }
        },
       "to_jetson_rear": {
-          "driver": "subt.push:Push",
+          "driver": "osgar.drivers.push:Push",
           "init": {
             "endpoint": "tcp://192.168.0.24:5558"
           }
       },
        "to_jetson_front": {
-          "driver": "subt.push:Push",
+          "driver": "osgar.drivers.push:Push",
           "init": {
             "endpoint": "tcp://192.168.0.23:5558"
           }

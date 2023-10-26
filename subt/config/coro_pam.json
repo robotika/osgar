@@ -126,7 +126,7 @@
           }
       },
       "torospy": {
-          "driver": "subt.push:Push"
+          "driver": "osgar.drivers.push:Push"
       },
       "logimage": {
           "driver": "subt.image_extractor:ImageExtractor",
