@@ -118,7 +118,7 @@
           }
       },
       "fromrospy": {
-          "driver": "subt.pull:Pull",
+          "driver": "osgar.drivers.pull:Pull",
           "init": {
               "outputs": ["acc", "top_scan", "bottom_scan", "pose3d", "battery_state", "score", "gas_detected",
                           "rgbd_front:null", "rgbd_left:null", "rgbd_right:null",

@@ -166,14 +166,14 @@
 	      "init":{}
       },
       "from_jetson_front": {
-          "driver": "subt.pull:Pull",
+          "driver": "osgar.drivers.pull:Pull",
           "init": {
             "endpoint": "tcp://192.168.0.23:5557",
             "outputs": ["pose3d", "depth", "scan360", "points"]
           }
        },
       "from_jetson_rear": {
-          "driver": "subt.pull:Pull",
+          "driver": "osgar.drivers.pull:Pull",
           "init": {
             "endpoint": "tcp://192.168.0.24:5557",
             "outputs": ["pose3d", "depth", "localized_artf", "debug_image", "localized_artf_rear", "debug_image_rear"]
@@ -224,7 +224,7 @@
           }
       },
       "fromros": {
-          "driver": "subt.pull:Pull",
+          "driver": "osgar.drivers.pull:Pull",
           "out": ["scan360", "points"],
           "init": {
               "endpoint": "tcp://192.168.0.23:5565",

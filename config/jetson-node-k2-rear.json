@@ -46,7 +46,7 @@
           }
       },
       "receiver":{
-        "driver": "subt.pull:Pull",
+        "driver": "osgar.drivers.pull:Pull",
         "init": {
           "bind": true,
           "endpoint": "tcp://*:5558",

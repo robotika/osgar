@@ -190,7 +190,7 @@
         }
       },
       "fromros": {
-          "driver": "subt.pull:Pull",
+          "driver": "osgar.drivers.pull:Pull",
           "out": "scan360",
           "init": {
               "outputs": ["scan360"]

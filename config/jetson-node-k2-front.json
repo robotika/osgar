@@ -11,7 +11,7 @@
           }
       },
       "from_apu_receiver":{
-        "driver": "subt.pull:Pull",
+        "driver": "osgar.drivers.pull:Pull",
         "init": {
           "bind": true,
           "endpoint": "tcp://*:5558",
@@ -19,7 +19,7 @@
         }
       },
       "from_jetson_rear_receiver":{
-        "driver": "subt.pull:Pull",
+        "driver": "osgar.drivers.pull:Pull",
         "init": {
           "bind": true,
           "endpoint": "tcp://*:5560",

@@ -37,7 +37,7 @@
           }
       },
       "fromserial": {
-          "driver": "subt.pull:Pull",
+          "driver": "osgar.drivers.pull:Pull",
           "init": {
               "endpoint": "tcp://127.0.0.1:5591",
               "outputs": ["raw"]
@@ -245,7 +245,7 @@
         }
       },
       "fromros": {
-          "driver": "subt.pull:Pull",
+          "driver": "osgar.drivers.pull:Pull",
           "out": ["scan360", "points"],
           "init": {
               "outputs": ["scan360", "points"]

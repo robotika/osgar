@@ -9,7 +9,7 @@
           "init": {"port": "/dev/ttyACM0", "speed": 115200, "timeout": 0.02}
       },
       "fromapp": {
-          "driver": "subt.pull:Pull",
+          "driver": "osgar.drivers.pull:Pull",
           "out": ["raw"],
           "init": {
               "endpoint": "tcp://127.0.0.1:5590",
