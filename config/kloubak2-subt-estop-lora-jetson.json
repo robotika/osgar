@@ -160,7 +160,7 @@
           "init": {"port": "/dev/gas_detector", "speed": 115200}
       },
       "localization": {
-	      "driver": "subt.odoimuloc:Localization",
+	      "driver": "osgar.drivers.odoimuloc:Localization",
 	      "in": ["orientation", "odom"],
 	      "out": ["pose3d"],
 	      "init":{}
