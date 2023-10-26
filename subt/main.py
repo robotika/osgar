@@ -20,7 +20,7 @@ from osgar.lib.virtual_bumper import VirtualBumper
 from osgar.lib.lidar_pts import equal_scans
 from osgar.lib.loop import LoopDetector
 
-from subt.local_planner import LocalPlanner
+from osgar.lib.local_planner import LocalPlanner
 from subt.trace import Trace, distance3D
 from subt.name_decoder import parse_robot_name
 
