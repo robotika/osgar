@@ -11,7 +11,7 @@ from osgar.bus import Bus
 from osgar.lib import quaternion
 from osgar.lib.unittest import TestCase
 
-from subt.odoimuloc import Localization
+from osgar.drivers.odoimuloc import Localization
 
 
 class LocalizationTest(TestCase):

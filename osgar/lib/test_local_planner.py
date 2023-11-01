@@ -1,7 +1,7 @@
 import unittest
 import math
 
-from subt.local_planner import LocalPlanner, LocalPlannerRef, LocalPlannerOpt, LocalPlannerNumpy
+from osgar.lib.local_planner import LocalPlanner, LocalPlannerRef, LocalPlannerOpt, LocalPlannerNumpy
 
 
 class SubTChallengeTest(unittest.TestCase):

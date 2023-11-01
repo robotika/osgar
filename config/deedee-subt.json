@@ -190,14 +190,14 @@
         }
       },
       "fromros": {
-          "driver": "subt.pull:Pull",
+          "driver": "osgar.drivers.pull:Pull",
           "out": "scan360",
           "init": {
               "outputs": ["scan360"]
           }
       },
       "toros": {
-          "driver": "subt.push:Push"
+          "driver": "osgar.drivers.push:Push"
       },
       "sec_timer": {
         "driver": "timer",

@@ -4,14 +4,14 @@
     "modules":
     {
       "transmitter": {
-          "driver": "subt.push:Push",
+          "driver": "osgar.drivers.push:Push",
           "init": {
             "bind": true,
             "endpoint": "tcp://*:5557"
           }
       },
       "from_apu_receiver":{
-        "driver": "subt.pull:Pull",
+        "driver": "osgar.drivers.pull:Pull",
         "init": {
           "bind": true,
           "endpoint": "tcp://*:5558",
@@ -19,7 +19,7 @@
         }
       },
       "from_jetson_rear_receiver":{
-        "driver": "subt.pull:Pull",
+        "driver": "osgar.drivers.pull:Pull",
         "init": {
           "bind": true,
           "endpoint": "tcp://*:5560",
@@ -92,7 +92,7 @@
         }
       },
       "toros": {
-          "driver": "subt.push:Push"
+          "driver": "osgar.drivers.push:Push"
       }
     },
     "links": [
