@@ -12,15 +12,59 @@ class OsgarView:
         self.log_path = None
         self.log_data = None
 
+        self.channel_types_dic = {
+            "image": ["image", "color"],
+            "depth_image": [],
+            "scan": ["scan"],
+            "scan3d": [],
+            "pose2d": ["pose2d"],
+            "pose3d": ["pose3d"],
+            "gps": ["position"],
+            "gps_utm": [],
+            "numeric_data": ["desired_speed", "encoders"]
+        }
+
         # tag ids
         self.main_setting_id = "main_setting_id"
         self.load_log_id = "load_log_id"
+        self.streams_tab_id = "streams_tab_id"
+
+    def get_stream_type(self, streams):
+        ret = []
+        for stream in streams:
+            channel = stream.split(".")[1]
+            for channel_type, channel_names in self.channel_types_dic.items():
+                if channel in channel_names:
+                    ret.append([stream, channel_type])
+                    break
+            else:
+                ret.append([stream, "NaN"])
+        return ret
+
+
+    def clean_item_children(self, parent_id, key = 1):
+        children = dpg.get_item_children(parent_id, key)
+        for child in children:
+            dpg.delete_item(child)
+
+    def fill_stream_table(self, streams):  # TODO metadata for some streams
+        self.clean_item_children(self.streams_tab_id)  # delete table first
+        streams_and_types = self.get_stream_type(streams)
+        for stream, channel_type in streams_and_types:
+            with dpg.table_row(parent=self.streams_tab_id):
+                for item in [stream, channel_type]:
+                    dpg.add_text(item)
+        # Add checkbox
+        for row_id in dpg.get_item_children(self.streams_tab_id, 1):
+            dpg.add_checkbox(parent=row_id)
+            dpg.add_button(parent=row_id, label="Setting", callback=None)
 
     def load_log_callback(self, sender, app_data):
         log_path = app_data["file_path_name"]
         assert log_path.endswith(".log"), log_path
-        names = lookup_stream_names(log_path)
-        print(names)
+        streams = lookup_stream_names(log_path)
+        self.fill_stream_table(streams)
+        print(streams)
 
     def main(self):
         dpg.create_context()
@@ -44,6 +88,12 @@ class OsgarView:
             with dpg.group(horizontal=True):
                 dpg.add_button(label="Load log", callback=lambda: dpg.show_item(self.load_log_id))
 
+            with dpg.collapsing_header(label="Available streams"):
+                with dpg.table(header_row=True, resizable=True, policy=dpg.mvTable_SizingStretchProp, tag=self.streams_tab_id):
+                    dpg.add_table_column(label="Stream name")
+                    dpg.add_table_column(label="Type")
+                    dpg.add_table_column(label="")
+                    dpg.add_table_column(label="")
 
 
         dpg.setup_dearpygui()
