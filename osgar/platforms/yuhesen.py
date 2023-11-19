@@ -2,8 +2,16 @@
   Support for commercially available outdoor delivery platform FR-07 Pro from company Yuhesen
 """
 import struct
+from enum import Enum
 
 from osgar.node import Node
+
+
+class Gear(Enum):
+    PARK = 1
+    REVERSE = 2
+    NEUTRAL = 3
+    DRIVE = 4
 
 
 class FR07(Node):
@@ -17,6 +25,10 @@ class FR07(Node):
         self.last_vehicle_mode = None
         self.last_error_status = None
         self.counters = {}
+
+        self.desired_gear = Gear.DRIVE
+        self.desired_speed = 0.0  # m/s
+        self.desired_steering_angle_deg = 0.0  # degrees
 
     def on_can(self, data):
         msg_id, payload, msg_type = data
@@ -48,6 +60,22 @@ class FR07(Node):
 #                print(self.time, f'speed = {speed}')
                 self.last_speed = speed
             steering = ((payload[2] & 0xF0) << 8) + (payload[3] << 4) + (payload[4] & 0x0F)  # 0.01 deg
+
+            # trigger command in response
+
+            desired_speed_int = int(self.desired_speed * 1000)
+            desired_steering_angle_int = int(self.desired_steering_angle_deg * 100)
+            cmd = [
+                self.desired_gear.value | ((desired_speed_int << 4) & 0xF0),
+                (desired_speed_int >> 4) & 0xFF,
+                ((desired_speed_int >> 12) & 0xF) | ((desired_steering_angle_int << 4) & 0xF0),
+                (desired_steering_angle_int >> 4) & 0xFF,
+                (desired_steering_angle_int >> 12) & 0xF,
+                0,
+                payload[6]  # running counter
+            ]
+            cmd.append(cmd[0] ^ cmd[1] ^ cmd[2] ^ cmd[3] ^ cmd[4] ^ cmd[5] ^ cmd[6])
+            self.publish('can', [0x18C4D2D0, bytes(cmd), 1])
             if self.last_steering != steering:
 #                print(self.time, f'steering = {steering}')
                 self.last_steering = steering
