@@ -58,12 +58,12 @@ class FR07(Node):
             # 0100e0ff0f20 d0e1
             target_gear = payload[0] & 0xF
             assert target_gear in [1, 2, 3, 4], target_gear  # P, R, N, D
-            speed = ((payload[0] & 0xF0) << 8) + (payload[1] << 4) + (payload[2] & 0x0F)  # 0.001 m/s
+            speed = ((payload[0] & 0xF0) >> 4) + (payload[1] << 4) + ((payload[2] & 0x0F) << 12)  # 0.001 m/s
             if self.last_speed != speed:
 #                print(self.time, f'speed = {speed}')
                 self.last_speed = speed
-            steering = ((payload[2] & 0xF0) << 8) + (payload[3] << 4) + (payload[4] & 0x0F)  # 0.01 deg
-
+            uint16_steering = ((payload[2] & 0xF0) >> 4) + (payload[3] << 4) + ((payload[4] & 0x0F) << 12)  # 0.01 deg
+            steering = struct.unpack('<h', struct.pack('H', uint16_steering))[0]
             # trigger command in response
 
             desired_speed_int = int(self.desired_speed * 1000)

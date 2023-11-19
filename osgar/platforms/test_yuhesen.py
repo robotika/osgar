@@ -21,9 +21,15 @@ class FR07Test(unittest.TestCase):
         robot.on_can([0x18c4d2ef, bytes.fromhex('0100700000102041'), 1])
         bus.publish.assert_called_with('can', [0x18C4D2D0, bytes.fromhex('843801000000209d'), 1])
 
+        robot.on_can([0x18c4d2ef, bytes.fromhex('843801000000209d'), 1])
+        self.assertEqual(robot.last_speed, 5000)
+
     def test_control_steering(self):
         bus = MagicMock()
         robot = FR07(bus=bus, config={})
         robot.desired_steering_angle_deg = -25.0  # deg (from user manual)
         robot.on_can([0x18c4d2ef, bytes.fromhex('0100700000102041'), 1])
         bus.publish.assert_called_with('can', [0x18C4D2D0, bytes.fromhex('0400c0630f002088'), 1])
+
+        robot.on_can([0x18c4d2ef, bytes.fromhex('0400c0630f002088'), 1])
+        self.assertEqual(robot.last_steering, -2500)
