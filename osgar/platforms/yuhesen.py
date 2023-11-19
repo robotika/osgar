@@ -78,5 +78,7 @@ class FR07(Node):
             if self.last_error_status != error_status:
                 print(self.time, f'Error status: {error_status}')
                 self.last_error_status = error_status
+        elif msg_id == 0x0:  # During boot-up
+            print('BOOT', msg_id, payload.hex(), msg_type)
         else:
             assert 0, hex(msg_id)  # not supported CAN message ID
