@@ -24,6 +24,7 @@ class FR07(Node):
         self.last_emergency_stop = None
         self.last_vehicle_mode = None
         self.last_error_status = None
+        self.last_bumpers = None
         self.counters = {}
 
         self.desired_gear = Gear.DRIVE
@@ -45,7 +46,9 @@ class FR07(Node):
                 self.counters[msg_id] = payload[-2]
             else:
                 self.counters[msg_id] = (self.counters[msg_id] + 16) & 0xF0  # upper nybble
-                assert self.counters[msg_id] == payload[-2], (self.counters[msg_id], payload[-2])
+                if self.counters[msg_id] != payload[-2]:
+                    print(self.time, '!!! LOST PACKET !!!', hex(msg_id), self.counters[msg_id], payload[-2])
+                    self.counters[msg_id] = payload[-2]
 
             # checksum
             xor = payload[0] ^ payload[1] ^ payload[2] ^ payload[3] ^ payload[4] ^ payload[5] ^ payload[6]
@@ -54,7 +57,7 @@ class FR07(Node):
         if msg_id == 0x18c4d2ef:  # Chassis control feedback command
             # 0100e0ff0f20 d0e1
             target_gear = payload[0] & 0xF
-            assert target_gear == 1, target_gear  # P
+            assert target_gear in [1, 2, 3, 4], target_gear  # P, R, N, D
             speed = ((payload[0] & 0xF0) << 8) + (payload[1] << 4) + (payload[2] & 0x0F)  # 0.001 m/s
             if self.last_speed != speed:
 #                print(self.time, f'speed = {speed}')
@@ -80,7 +83,7 @@ class FR07(Node):
 #                print(self.time, f'steering = {steering}')
                 self.last_steering = steering
             vehicle_mode = (payload[5] & 0x30) >> 4
-            assert vehicle_mode in [1, 2], vehicle_mode  # 1=remote, 2=stop  (waiting for 0=auto)
+            assert vehicle_mode in [0, 1, 2], vehicle_mode  # 0=auto, 1=remote, 2=stop
             if self.last_vehicle_mode != vehicle_mode:
                 print(self.time, f'Vehicle mode: {vehicle_mode}')
                 self.last_vehicle_mode = vehicle_mode
@@ -93,14 +96,17 @@ class FR07(Node):
             assert payload[0] == 0, payload.hex()  # I/O control enabling status feedback  1=on, 0=off
             assert payload[1] in [0x00, 0x10, 0x20, 0x24, 0x28, 0x30, 0x34, 0x38], payload.hex()  # lights
             assert payload[2] in [0, 1], payload.hex()  # Loudspeaker
-            assert payload[3] == 0, payload.hex()  # bumpers
+            if self.last_bumpers != payload[3]:
+                print(self.time, 'Bumpers', payload[3])
+                self.last_bumpers = payload[3]
             assert payload[5] == 0, payload.hex()  # enforced charging
 
         elif msg_id == 0x18c4dcef:  # MCU driver (not documented)
             pass
 
         elif msg_id == 0x18c4deef:  # Chassis speedometer feedback
-            assert payload[:-2].hex() == '000000000000', payload.hex()
+            milage, accumulated_angle = struct.unpack('<II', payload)
+            assert accumulated_angle == 0, (milage, accumulated_angle)  # reserved
 
         elif msg_id == 0x18c4e1ef:  # Battery BMS information feedback
             assert payload[:-2].hex() == '000000000000', payload.hex()
