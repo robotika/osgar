@@ -16,9 +16,28 @@ class FR07(Node):
         self.last_emergency_stop = None
         self.last_vehicle_mode = None
         self.last_error_status = None
+        self.counters = {}
 
     def on_can(self, data):
         msg_id, payload, msg_type = data
+
+        if msg_id == 0x0:  # During boot-up
+            print('BOOT', msg_id, payload.hex(), msg_type)
+            return
+
+        # all FR-07 messages use the full CAN message length
+        assert len(payload) == 8, len(payload)
+        if msg_id != 0x18C4DEEF:  # "Chassis speedometer feedback" does not have the counter
+            # running counters (i.e. no lost messages)
+            if msg_id not in self.counters:
+                self.counters[msg_id] = payload[-2]
+            else:
+                self.counters[msg_id] = (self.counters[msg_id] + 16) & 0xF0  # upper nybble
+                assert self.counters[msg_id] == payload[-2], (self.counters[msg_id], payload[-2])
+
+            # checksum
+            xor = payload[0] ^ payload[1] ^ payload[2] ^ payload[3] ^ payload[4] ^ payload[5] ^ payload[6]
+            assert xor == payload[7], (xor,  payload[7])
 
         if msg_id == 0x18c4d2ef:  # Chassis control feedback command
             # 0100e0ff0f20 d0e1
@@ -78,7 +97,5 @@ class FR07(Node):
             if self.last_error_status != error_status:
                 print(self.time, f'Error status: {error_status}')
                 self.last_error_status = error_status
-        elif msg_id == 0x0:  # During boot-up
-            print('BOOT', msg_id, payload.hex(), msg_type)
         else:
             assert 0, hex(msg_id)  # not supported CAN message ID
