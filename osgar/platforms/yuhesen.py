@@ -88,9 +88,9 @@ class FR07(Node):
                 print(self.time, f'Vehicle mode: {vehicle_mode}')
                 self.last_vehicle_mode = vehicle_mode
         elif msg_id == 0x18c4d7ef:  # Left rear wheel information feedback
-            pass
+            left_speed, left_pulse_count = struct.unpack('<hi', payload[:6])
         elif msg_id == 0x18c4d8ef:  # Right rear wheel information feedback
-            pass
+            right_speed, right_pulse_count = struct.unpack('<hi', payload[:6])
 
         elif msg_id == 0x18c4daef:  # Chassis I/O status feedback
             assert payload[0] == 0, payload.hex()  # I/O control enabling status feedback  1=on, 0=off
@@ -100,6 +100,17 @@ class FR07(Node):
                 print(self.time, 'Bumpers', payload[3])
                 self.last_bumpers = payload[3]
             assert payload[5] == 0, payload.hex()  # enforced charging
+
+            cmd = [
+                1,  # I/O control enabled
+                0,  # lamps off
+                1,  # laudspeaker
+                0, 0, # reserved
+                0,  # enforced power-on flag for charging
+                payload[6]  # running counter
+            ]
+            cmd.append(cmd[0] ^ cmd[1] ^ cmd[2] ^ cmd[3] ^ cmd[4] ^ cmd[5] ^ cmd[6])
+            self.publish('can', [0x18C4D7D0, bytes(cmd), 1])
 
         elif msg_id == 0x18c4dcef:  # MCU driver (not documented)
             pass
