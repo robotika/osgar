@@ -93,8 +93,8 @@ class FR07(Node):
             right_speed, right_pulse_count = struct.unpack('<hi', payload[:6])
 
         elif msg_id == 0x18c4daef:  # Chassis I/O status feedback
-            assert payload[0] == 0, payload.hex()  # I/O control enabling status feedback  1=on, 0=off
-            assert payload[1] in [0x00, 0x10, 0x20, 0x24, 0x28, 0x30, 0x34, 0x38], payload.hex()  # lights
+#            assert payload[0] == 0, payload.hex()  # I/O control enabling status feedback  1=on, 0=off
+#            assert payload[1] in [0x00, 0x10, 0x20, 0x24, 0x28, 0x30, 0x34, 0x38], payload.hex()  # lights
             assert payload[2] in [0, 1], payload.hex()  # Loudspeaker
             if self.last_bumpers != payload[3]:
                 print(self.time, 'Bumpers', payload[3])
@@ -103,7 +103,7 @@ class FR07(Node):
 
             cmd = [
                 1,  # I/O control enabled
-                0,  # lamps off
+                0x20,  # lamps off
                 1,  # laudspeaker
                 0, 0, # reserved
                 0,  # enforced power-on flag for charging
