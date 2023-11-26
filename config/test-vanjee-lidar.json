@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "vanjee": {
+          "driver": "vanjee",
+          "in": ["raw"],
+          "out": ["raw", "xyz"],
+          "init": {}
+      },
+      "vanjee_udp": {
+          "driver": "udp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"host": "192.168.0.2", "port": 6050, "timeout": 3.0, "bufsize": 100000}
+      }
+    },
+    "links": [["vanjee_udp.raw", "vanjee.raw"],
+              ["vanjee.raw", "vanjee_udp.raw"]
+      ]
+  }
+}
