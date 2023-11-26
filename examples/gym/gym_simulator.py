@@ -34,6 +34,11 @@ class GymSimulator(Node):
         else:
             self.steer = 0
 
+    def on_move(self, data):
+        speed, steering_angle_100deg = data
+        self.speed = speed / 1000
+        self.steer = math.radians(steering_angle_100deg / 100.0)
+
     def on_tick(self, data):
         # step simulation
         pass
