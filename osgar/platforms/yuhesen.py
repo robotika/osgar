@@ -30,6 +30,7 @@ class FR07(Node):
         self.desired_gear = Gear.DRIVE
         self.desired_speed = 0.0  # m/s
         self.desired_steering_angle_deg = 0.0  # degrees
+        self.debug_arr = []
 
     def on_can(self, data):
         msg_id, payload, msg_type = data
@@ -89,8 +90,12 @@ class FR07(Node):
                 self.last_vehicle_mode = vehicle_mode
         elif msg_id == 0x18c4d7ef:  # Left rear wheel information feedback
             left_speed, left_pulse_count = struct.unpack('<hi', payload[:6])
+            if self.verbose:
+                self.debug_arr.append([self.time.total_seconds(), 'left', left_speed/1000.0])
         elif msg_id == 0x18c4d8ef:  # Right rear wheel information feedback
             right_speed, right_pulse_count = struct.unpack('<hi', payload[:6])
+            if self.verbose:
+                self.debug_arr.append([self.time.total_seconds(), 'right', right_speed/1000.0])
 
         elif msg_id == 0x18c4daef:  # Chassis I/O status feedback
 #            assert payload[0] == 0, payload.hex()  # I/O control enabling status feedback  1=on, 0=off
@@ -103,7 +108,7 @@ class FR07(Node):
 
             cmd = [
                 1,  # I/O control enabled
-                0x20,  # lamps off
+                0x20,  # lamps (0x20-front)
                 1,  # laudspeaker
                 0, 0, # reserved
                 0,  # enforced power-on flag for charging
@@ -144,3 +149,16 @@ class FR07(Node):
                 self.last_error_status = error_status
         else:
             assert 0, hex(msg_id)  # not supported CAN message ID
+
+    def draw(self):
+        import matplotlib.pyplot as plt
+
+        for selection in ['left', 'right']:
+            t = [a[0] for a in self.debug_arr if a[1] == selection]
+            x = [a[2] for a in self.debug_arr if a[1] == selection]
+            line = plt.plot(t, x, '-o', linewidth=2, label=f'speed {selection}')
+
+        plt.xlabel('time (s)')
+        plt.ylabel('speed (m/s)')
+        plt.legend()
+        plt.show()
