@@ -8,7 +8,8 @@
           "out": ["desired_speed"],
           "init": {
             "max_speed": 0.5,
-            "laser_pose2d": [0.13, 0.055, 0]
+            "dist": 1.0,
+            "timeout": 10
           }
       },
       "eduro": {
