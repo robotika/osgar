@@ -1,11 +1,14 @@
 """
   Support for commercially available outdoor delivery platform FR-07 Pro from company Yuhesen
 """
+import math
 import struct
 from enum import Enum
 
 from osgar.node import Node
 
+
+WHEEL_DISTANCE = 0.645  # meters left and right rear wheel
 
 class Gear(Enum):
     PARK = 1
@@ -18,19 +21,49 @@ class FR07(Node):
 
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('can', 'emergency_stop')
+        bus.register('can', 'emergency_stop', 'pose2d')
         self.last_steering = None
         self.last_speed = None
         self.last_emergency_stop = None
         self.last_vehicle_mode = None
         self.last_error_status = None
         self.last_bumpers = None
+        self.last_left_speed = None
+        self.last_right_speed = None
+        self.pose = 0, 0, 0
+        self.pose_counter = 0
         self.counters = {}
 
         self.desired_gear = Gear.DRIVE
         self.desired_speed = 0.0  # m/s
         self.desired_steering_angle_deg = 0.0  # degrees
         self.debug_arr = []
+
+    def publish_pose2d(self, left, right):
+        dt = 0.04  # 25Hz
+
+        x, y, heading = self.pose
+
+        metricL = left * dt
+        metricR = right * dt
+
+        dist = (metricL + metricR)/2.0
+        angle = (metricR - metricL)/WHEEL_DISTANCE
+
+        # advance robot by given distance and angle
+        if abs(angle) < 0.0000001:  # EPS
+            # Straight movement - a special case
+            x += dist * math.cos(heading)
+            y += dist * math.sin(heading)
+            # Not needed: heading += angle
+        else:
+            # Arc
+            r = dist / angle
+            x += -r * math.sin(heading) + r * math.sin(heading + angle)
+            y += +r * math.cos(heading) - r * math.cos(heading + angle)
+            heading += angle  # not normalized
+        self.pose = (x, y, heading)
+        self.publish('pose2d', [round(x*1000), round(y*1000), round(math.degrees(heading)*100)])
 
     def on_can(self, data):
         msg_id, payload, msg_type = data
@@ -90,11 +123,15 @@ class FR07(Node):
                 self.last_vehicle_mode = vehicle_mode
         elif msg_id == 0x18c4d7ef:  # Left rear wheel information feedback
             left_speed, left_pulse_count = struct.unpack('<hi', payload[:6])
+            self.last_left_speed = left_speed/1000.0
+            self.pose_counter += 1
             if self.verbose:
                 self.debug_arr.append([self.time.total_seconds(), 'left', left_speed/1000.0])
                 self.debug_arr.append([self.time.total_seconds(), 'left_pulse', left_pulse_count])
         elif msg_id == 0x18c4d8ef:  # Right rear wheel information feedback
             right_speed, right_pulse_count = struct.unpack('<hi', payload[:6])
+            self.last_right_speed = right_speed/1000.0
+            self.pose_counter += 1
             if self.verbose:
                 self.debug_arr.append([self.time.total_seconds(), 'right', right_speed/1000.0])
                 self.debug_arr.append([self.time.total_seconds(), 'right_pulse', right_pulse_count])
@@ -151,6 +188,9 @@ class FR07(Node):
                 self.last_error_status = error_status
         else:
             assert 0, hex(msg_id)  # not supported CAN message ID
+        if self.pose_counter >= 8:  # report left & right at 25Hz
+            self.pose_counter = 0
+            self.publish_pose2d(self.last_left_speed, self.last_right_speed)
 
     def draw(self):
         import matplotlib.pyplot as plt
