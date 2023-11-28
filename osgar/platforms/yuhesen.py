@@ -92,10 +92,12 @@ class FR07(Node):
             left_speed, left_pulse_count = struct.unpack('<hi', payload[:6])
             if self.verbose:
                 self.debug_arr.append([self.time.total_seconds(), 'left', left_speed/1000.0])
+                self.debug_arr.append([self.time.total_seconds(), 'left_pulse', left_pulse_count])
         elif msg_id == 0x18c4d8ef:  # Right rear wheel information feedback
             right_speed, right_pulse_count = struct.unpack('<hi', payload[:6])
             if self.verbose:
                 self.debug_arr.append([self.time.total_seconds(), 'right', right_speed/1000.0])
+                self.debug_arr.append([self.time.total_seconds(), 'right_pulse', right_pulse_count])
 
         elif msg_id == 0x18c4daef:  # Chassis I/O status feedback
 #            assert payload[0] == 0, payload.hex()  # I/O control enabling status feedback  1=on, 0=off
@@ -153,7 +155,7 @@ class FR07(Node):
     def draw(self):
         import matplotlib.pyplot as plt
 
-        for selection in ['left', 'right']:
+        for selection in ['left', 'right']:  # 'left_pulse', 'right_pulse'
             t = [a[0] for a in self.debug_arr if a[1] == selection]
             x = [a[2] for a in self.debug_arr if a[1] == selection]
             line = plt.plot(t, x, '-o', linewidth=2, label=f'speed {selection}')
