@@ -160,33 +160,33 @@
           "init": {"port": "/dev/gas_detector", "speed": 115200}
       },
       "localization": {
-	      "driver": "subt.odoimuloc:Localization",
+	      "driver": "osgar.drivers.odoimuloc:Localization",
 	      "in": ["orientation", "odom"],
 	      "out": ["pose3d"],
 	      "init":{}
       },
       "from_jetson_front": {
-          "driver": "subt.pull:Pull",
+          "driver": "osgar.drivers.pull:Pull",
           "init": {
             "endpoint": "tcp://192.168.0.23:5557",
             "outputs": ["pose3d", "depth", "scan360", "points"]
           }
        },
       "from_jetson_rear": {
-          "driver": "subt.pull:Pull",
+          "driver": "osgar.drivers.pull:Pull",
           "init": {
             "endpoint": "tcp://192.168.0.24:5557",
             "outputs": ["pose3d", "depth", "localized_artf", "debug_image", "localized_artf_rear", "debug_image_rear"]
           }
        },
       "to_jetson_rear": {
-          "driver": "subt.push:Push",
+          "driver": "osgar.drivers.push:Push",
           "init": {
             "endpoint": "tcp://192.168.0.24:5558"
           }
       },
        "to_jetson_front": {
-          "driver": "subt.push:Push",
+          "driver": "osgar.drivers.push:Push",
           "init": {
             "endpoint": "tcp://192.168.0.23:5558"
           }
@@ -224,7 +224,7 @@
           }
       },
       "fromros": {
-          "driver": "subt.pull:Pull",
+          "driver": "osgar.drivers.pull:Pull",
           "out": ["scan360", "points"],
           "init": {
               "endpoint": "tcp://192.168.0.23:5565",

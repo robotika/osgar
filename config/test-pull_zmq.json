@@ -3,7 +3,7 @@
   "robot": {
     "modules": {
       "pull": {
-          "driver": "subt.pull:Pull",
+          "driver": "osgar.drivers.pull:Pull",
           "init": {
             "endpoint": "tcp://192.168.0.23:5557",
             "outputs": ["localized_artf", "debug_image"]

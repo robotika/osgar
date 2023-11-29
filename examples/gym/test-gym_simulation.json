@@ -28,7 +28,7 @@
           }
       }
     },
-    "links": [["app.desired_speed", "gym.desired_speed"],
+    "links": [["app.desired_speed", "gym.move"],
               ["tick.tick", "gym.tick"],
               ["gym.pose2d", "app.pose2d"]]
   }

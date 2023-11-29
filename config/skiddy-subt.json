@@ -31,20 +31,20 @@
           "init": {}
       },
       "toserial": {
-          "driver": "subt.push:Push",
+          "driver": "osgar.drivers.push:Push",
           "init": {
               "endpoint": "tcp://127.0.0.1:5590"
           }
       },
       "fromserial": {
-          "driver": "subt.pull:Pull",
+          "driver": "osgar.drivers.pull:Pull",
           "init": {
               "endpoint": "tcp://127.0.0.1:5591",
               "outputs": ["raw"]
           }
       },
       "localization": {
-	      "driver": "subt.odoimuloc:Localization",
+	      "driver": "osgar.drivers.odoimuloc:Localization",
 	      "in": ["orientation", "odom"],
 	      "out": ["pose3d"],
 	      "init":{}
@@ -245,7 +245,7 @@
         }
       },
       "fromros": {
-          "driver": "subt.pull:Pull",
+          "driver": "osgar.drivers.pull:Pull",
           "out": ["scan360", "points"],
           "init": {
               "outputs": ["scan360", "points"]
@@ -260,7 +260,7 @@
         }
       },
       "toros": {
-          "driver": "subt.push:Push"
+          "driver": "osgar.drivers.push:Push"
       },
       "sec_timer": {
         "driver": "timer",

@@ -11,7 +11,27 @@ from osgar.bus import BusShutdownException
 
 
 SPIDER_ENC_SCALE = 0.00218
-WHEEL_DISTANCE = 1.5  # TODO calibrate
+WHEEL_DISTANCE = 1.33
+AXLE_DISTANCE = 1.24
+MAX_WHEEL_ANGLE = math.radians(80)
+
+
+def get_desired_angle(speed, angular_speed):
+    if speed == 0:
+        return 0
+    # The formula is similar to Kloubak but not the same because the steering geometry is different.
+    angle = 2 * math.asin(AXLE_DISTANCE * angular_speed / 2 / speed)
+    if abs(angle) > MAX_WHEEL_ANGLE:
+        return math.copysign(MAX_WHEEL_ANGLE, angle)
+    return angle
+
+
+def limit_sum_err(sum_err, err, scale_i):
+    # The err_sum may grow to infinity if desired speed/angle is not reached. Limit the value * i to +/- 127
+    sum_err += err
+    if abs(sum_err * scale_i) > 127:
+        sum_err = math.copysign(127/scale_i, sum_err)
+    return sum_err
 
 
 def CAN_triplet(msg_id, data):
@@ -36,7 +56,6 @@ class Spider(Node):
         self.alive = 0  # toggle with 128
         self.desired_angle = None  # in Spider mode desired wheels direction
         self.desired_speed = None
-        self.desired_angular_speed = None  # for CAR mode
         self.speed_history_left = []
         self.speed_history_right = []
         self.speed = 0.0  # suppose we start from standstill
@@ -49,6 +68,7 @@ class Spider(Node):
         self.last_diff_time = None
         self.already_moved = False
         self.err_sum = 0.0  # accumulated error for speed controller
+        self.err_steering_sum = 0.0  # accumulated error for steering controller
         self.debug_speed = 0
 
     def update_speed(self, diff):
@@ -198,45 +218,63 @@ class Spider(Node):
         self.desired_angle = math.radians(desired_angle_mdeg / 100.0)
 
     def on_desired_speed(self, data):
-        speed_mm, angular_speed_mrad = self.desired_speed  # really ugly!!!
+        # This take sense for CAR mode only! TODO assert?
+        speed_mm, angular_speed_mrad = data
         self.desired_speed = speed_mm / 1000.0
-        self.desired_angular_speed = math.radians(angular_speed_mrad / 100.0)
+        angular_speed = math.radians(angular_speed_mrad / 100.0)
+        self.desired_angle = get_desired_angle(self.desired_speed, angular_speed)
 
     def send_speed(self, data):
+        # set PI controller
+        speed_p = 200
+        speed_i = 15
+        steer_p = 86
+        steer_i = 5.7
         if True:  #self.can_bridge_initialized:
-            speed, angular_speed = data
+            speed, desired_angle = data
             if abs(speed) > 0 or self.already_moved:  # for initial sequence it is necessary to send (0, 0) for starting motor
-#                print(self.status_word & 0x7fff)
-                if self.status_word is None or self.status_word & 0x10 != 0:
+                # print(self.status_word & 0x7fff)
+                if self.status_word is None:
+                    return
+                if self.status_word & 0x10 != 0:
                     # car mode
-                    angle_cmd = int(angular_speed)  # TODO verify angle, byte resolution
+                    desired_angle = desired_angle/2
+
+                if self.wheel_angles is not None and self.zero_steering is not None:
+                    # print(self.wheel_angles)
+                    # wheel angles: (L_rear, L_front, R_front, R_rear)
+                    curr_L = Spider.fix_range(self.wheel_angles[1] - self.zero_steering[1])
+                    curr_R = Spider.fix_range(self.wheel_angles[2] - self.zero_steering[2])
+                    curr_robot_angle = math.radians((curr_L + curr_R)/2 * 360/512)  # +/- PI
+
+                    err_steering = desired_angle - curr_robot_angle
+                    self.err_steering_sum = limit_sum_err(self.err_steering_sum, err_steering, steer_i)
+                    p_part_steering = steer_p * err_steering  # proportional part for steering
+                    i_part_steering = steer_i * self.err_steering_sum  # integration part for steering
+                    if self.verbose:
+                        print('DIFF', math.degrees(err_steering), 'curr', math.degrees(curr_robot_angle))
+                    #print(self.time, 'DIFF', err_steering, 'curr', curr_robot_angle)
+                    angle_value = min(127, max(-127, int(p_part_steering + i_part_steering)))
+                    angle_cmd = abs(angle_value) if angle_value < 0 else 0x80 + angle_value
+                    #print("p", p_part_steering, "i", i_part_steering, angle_value, angle_cmd)
+
                 else:
-                    # spider mode
-                    desired_angle = int(angular_speed)  # TODO proper naming etc.
-                    if self.wheel_angles is not None and self.zero_steering is not None:
-                        curr = Spider.fix_range(self.wheel_angles[0] - self.zero_steering[0])
-                        diff = Spider.fix_range(desired_angle - curr)
-#                        print('DIFF', diff)
-                        if abs(diff) < 5:
-                            angle_cmd = 0
-                        elif diff < 0:
-                            angle_cmd = 50
-                        else:
-                            angle_cmd = 0x80 + 50
-                    else:
-                        angle_cmd = 0
+                    angle_cmd = 0
 
                 # there is relatively large dead-zone -80..80 but there is also offset keeping
                 # previous speed
                 err = speed - self.speed
-                self.err_sum += err
-                scale_p = 100  # proportional
-                scale_i = 10  # integration
-                value = min(127, max(-127, int(scale_p * err + scale_i * self.err_sum)))
+                self.err_sum = limit_sum_err(self.err_sum, err, speed_i)
+                p_part = speed_p * err  # proportional
+                i_part = speed_i * self.err_sum  # integration
+                value = min(127, max(-127, int(p_part + i_part)))
                 self.debug_speed = value
-#                print(f'desired speed={speed}, speed={self.speed:.2f}, err={err:.2f}, err_sum={self.err_sum:.2f}, value={value}')
+
+                # print(f'{self.time}, desired speed={speed}, speed={self.speed:.2f}, err={err:.2f},
+                # err_sum={self.err_sum:.2f}, value={value}')
                 sign_offset = 0x80 if value < 0 else 0x0  # NBB format, swapped front-rear of Spider
                 packet = CAN_triplet(0x401, [sign_offset + abs(value), angle_cmd])
+
             else:
                 packet = CAN_triplet(0x401, [0, 0])  # STOP packet
             self.bus.publish('can', packet)

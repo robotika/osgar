@@ -34,6 +34,7 @@ all_drivers = dict(
     resize="osgar.drivers.resize:Resize",
     pozyx="osgar.drivers.pozyx:Pozyx",
     rtk_filter="osgar.drivers.rtk_filter:RTKFilter",
+    vanjee="osgar.drivers.vanjee:VanJeeLidar",
 )
 
 
