@@ -88,13 +88,13 @@ def main(record=record):
     parser.add_argument('--duration', help='recording duration (sec), default infinite', type=float)
     parser.add_argument('--log', help='force record log filename')
     parser.add_argument('--application', help='import string to application', default=None)
-    parser.add_argument('--param', action='append',
-                        help='optional configuration parameters like go.max_speed=0.1')
+    parser.add_argument('--params', nargs='+',
+                        help='optional list of configuration parameters like app.max_speed=0.1 app.dist=-2.0')
     args = parser.parse_args()
 
 
     prefix = os.path.basename(args.config[0]).split('.')[0] + '-'
-    cfg = config_load(*args.config, application=args.application, params=args.param)
+    cfg = config_load(*args.config, application=args.application, params=args.params)
     record(cfg, log_prefix=prefix, duration_sec=args.duration, log_filename=args.log)
 
 
