@@ -8,7 +8,9 @@
           "out": ["desired_speed"],
           "init": {
             "max_speed": 1.0,
-            "desired_angle": 0.1
+            "desired_angle": 0,
+            "dist": 1,
+            "timeout": 10
           }
       },
       "gym": {
@@ -24,7 +26,7 @@
           "in": [],
           "out": ["tick"],
           "init": {
-            "sleep": 0.05
+            "sleep": 0.02
           }
       }
     },
