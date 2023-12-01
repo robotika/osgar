@@ -5,6 +5,7 @@ import json
 import numbers
 import sys
 from importlib import import_module
+from ast import literal_eval
 
 from osgar.drivers import all_drivers
 
@@ -35,7 +36,7 @@ def _application2import(application):
     return f"{s.name}:{application.__qualname__}"
 
 
-def config_load(*filenames, application=None):
+def config_load(*filenames, application=None, params=None):
     ret = {}
     for filename in filenames:
         with open(filename) as f:
@@ -43,6 +44,13 @@ def config_load(*filenames, application=None):
             assert 'version' in data, data
             assert data['version'] in SUPPORTED_VERSIONS, data['version']
             ret = merge_dict(ret, data)
+    if params is not None:
+        for param in params:
+            assert '=' in param, param
+            key_path, str_value = param.split('=')
+            key = key_path.split('.')
+            assert len(key) == 2, key
+            ret['robot']['modules'][key[0]]['init'][key[1]] = literal_eval(str_value)
     if application is None:
         return ret
     if not isinstance(application, str):
