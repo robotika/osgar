@@ -3,7 +3,7 @@
   "robot": {
     "modules": {
       "app": {
-          "driver": "application",
+          "driver": "osgar.go:Go",
           "in": ["pose2d", "scan"],
           "out": ["desired_speed"],
           "init": {
@@ -22,7 +22,7 @@
       "tick": {
           "driver": "timer",
           "in": [],
-          "out": ["tickw"],
+          "out": ["tick"],
           "init": {
             "sleep": 0.05
           }
