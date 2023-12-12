@@ -1,5 +1,5 @@
 """
-    TODO
+    Example with follow wall algorithm and Osgar local planner.
 """
 import math
 
@@ -41,18 +41,15 @@ class MyRace(Node):
         pass
 
     def on_scan(self, data):
-        # data[-90:] = [0]*90
         self.scan = data
         safety = 1
         desired_direction = normalizeAnglePIPI(follow_wall_angle(self.scan, gap_size=1.5, wall_dist=1, right_wall=False))
         if desired_direction is not None:
-            # print(self.time, desired_direction)
             if self.verbose:
                 print("wall", self.time, desired_direction)
             if self.local_planner:
                 self.local_planner.update(data)
                 safety, desired_direction = self.local_planner.recommend(desired_direction)
                 if self.verbose:
-                    print("planner", desired_direction, "\n")
-            # print("planer",safety, desired_direction, "\n")
+                    print("planner", desired_direction)
             self.go_safely(desired_direction, safety)
