@@ -7,7 +7,7 @@
           "in": ["pose2d", "scan"],
           "out": ["move"],
           "init": {
-            "max_speed": 5
+            "max_speed": 4
           }
       },
       "gym": {
