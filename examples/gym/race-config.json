@@ -2,20 +2,17 @@
   "version": 2,
   "robot": {
     "modules": {
-      "app": {
-          "driver": "osgar.go:Go",
+      "race": {
+          "driver": "examples.gym.my_race:MyRace",
           "in": ["pose2d", "scan"],
-          "out": ["desired_speed"],
+          "out": ["move"],
           "init": {
-            "max_speed": 1.0,
-            "desired_angle": 0,
-            "dist": 1,
-            "timeout": 10
+            "max_speed": 4
           }
       },
       "gym": {
           "driver": "examples.gym.gym_simulator:GymSimulator",
-          "in": ["desired_speed", "tick"],
+          "in": ["move", "tick"],
           "out": ["pose2d", "tick"],
           "init": {
             "map_config": "config_example_map.yaml"
@@ -30,8 +27,10 @@
           }
       }
     },
-    "links": [["app.desired_speed", "gym.move"],
+    "links": [["race.move", "gym.move"],
               ["tick.tick", "gym.tick"],
-              ["gym.pose2d", "app.pose2d"]]
+              ["gym.pose2d", "race.pose2d"],
+              ["gym.scan", "race.scan"]
+    ]
   }
 }
