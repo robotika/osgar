@@ -86,10 +86,12 @@ def draw_scans(scan1, scan2, pairs=None, filename=None):
         plt.savefig(filename)
 
 
-def my_icp(scan1, scan2, debug_output_path=None):
-    for i in range(10):
+def my_icp(scan1, scan2, debug_path_prefix=None, num_iter=10):
+    for i in range(num_iter):
         pairs = nearest(scan1, scan2)
-        filename = f'{debug_output_path}image{i:02}.png' if debug_output_path is not None else None
+        filename = f'{debug_path_prefix}image{i:02}.png' if debug_path_prefix is not None else None
+        if filename:
+            print(filename)
         draw_scans(scan1, scan2, pairs, filename=filename)
         trans, rot = transform(pairs)
         scan2b = np.matmul(np.array(scan2), rot.T) + trans.T
@@ -99,15 +101,26 @@ def my_icp(scan1, scan2, debug_output_path=None):
     return scan2
 
 
-def run_icp(filename):
+def run_icp(filename, debug_path_prefix=None, num_iter=10):
     prev = None
     for i, scan in enumerate(scan_gen(filename)):
         if i % 10 != 0:
             continue
         if prev is not None:
-            my_icp(prev, scan)
+            my_icp(prev, scan, debug_path_prefix=debug_path_prefix, num_iter=num_iter)
             break
         prev = scan
+
+
+def create_animation(path_prefix, num_iter=10):
+    from PIL import Image
+    frames = []
+    for i in range(num_iter):
+        filename = f'{path_prefix}image{i:02}.png'
+        frames.append(Image.open(filename))
+    assert len(frames) > 0
+    frames[0].save(path_prefix + 'image.gif', format='GIF', append_images=frames,
+                   save_all=True, duration=1000, loop=0)  # display in ms, number of loops
 
 
 if __name__ == "__main__":
@@ -115,5 +128,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('logfile', help='OSGAR logfile')
+    parser.add_argument('--debug-path-prefix', '-d', help='save intermediate files')
+    parser.add_argument('--num', '-n', help='number of iterations', type=int, default=10)
     args = parser.parse_args()
-    run_icp(args.logfile)
+    run_icp(args.logfile, debug_path_prefix=args.debug_path_prefix, num_iter=args.num)
+    if args.debug_path_prefix is not None:
+        create_animation(args.debug_path_prefix, num_iter=args.num)
