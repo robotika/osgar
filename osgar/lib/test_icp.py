@@ -34,8 +34,8 @@ class ICPTest(unittest.TestCase):
             shifted_pairs.append(((x1, y1), (x2+dx, y2+dy)))
         trans, rot = transform(shifted_pairs)
         np.testing.assert_almost_equal(rot, np.array([[0, 1], [-1, 0]]))
-        self.assertAlmostEqual(dx, -trans[0])
-        self.assertAlmostEqual(dy, -trans[1])
+        self.assertAlmostEqual(dx, trans[1])  # after rotation
+        self.assertAlmostEqual(dy, -trans[0])
 
     def test_icp(self):
         dx = 0.1
@@ -44,8 +44,5 @@ class ICPTest(unittest.TestCase):
         scan2 = []
         for x, y in scan1:
             scan2.append((x+dx, y+dy))
-        my_icp(scan1, scan2)
-        trans, rot = transform(pairs)
-        self.assertAlmostEqual(dx, -trans[0])
-        self.assertAlmostEqual(dy, -trans[1])
-        np.testing.assert_almost_equal(rot, np.identity(2))
+        scan2corrected = my_icp(scan1, scan2)
+        np.testing.assert_almost_equal(np.array(scan1), scan2corrected)

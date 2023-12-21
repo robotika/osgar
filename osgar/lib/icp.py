@@ -1,27 +1,11 @@
 import math
 
-from simpleicp import PointCloud, SimpleICP
-from simpleicp.simpleicp import SimpleICPException
 import numpy as np
 import matplotlib.pyplot as plt
 
 from osgar.logger import LogReader, lookup_stream_id
 from osgar.lib.serialize import deserialize
 
-
-def demo():
-    # Read point clouds from xyz files into n-by-3 numpy arrays
-    X_fix = np.genfromtxt("bunny_part1.xyz")
-    X_mov = np.genfromtxt("bunny_part2.xyz")
-
-    # Create point cloud objects
-    pc_fix = PointCloud(X_fix, columns=["x", "y", "z"])
-    pc_mov = PointCloud(X_mov, columns=["x", "y", "z"])
-
-    # Create simpleICP object, add point clouds, and run algorithm!
-    icp = SimpleICP()
-    icp.add_point_clouds(pc_fix, pc_mov)
-    H, X_mov_transformed, rigid_body_transformation_params, distance_residuals = icp.run(max_overlap_distance=1)
 
 
 def scan_gen(filename):
@@ -39,10 +23,13 @@ def scan_gen(filename):
                     x, y = d * math.cos(a), d * math.sin(a)
                     scan.append((x, y))
             yield scan
-            hack += 1
+            hack += 1  # hack artifical rotation
 
 
 def nearest(scan1, scan2):
+    """
+    return pairs of nearest points from scan2 for each point in scan1
+    """
     pairs = []
     for pt1 in scan1:
         min_d = None
@@ -58,6 +45,9 @@ def nearest(scan1, scan2):
 
 
 def transform(pairs):
+    """
+    return translation and rotation matrix for given list of pair 2D points
+    """
     sum_x1, sum_y1 = 0, 0
     sum_x2, sum_y2 = 0, 0
     for (x1, y1), (x2, y2) in pairs:
@@ -76,15 +66,10 @@ def transform(pairs):
         c += (y1-yc1) * (x2-xc2)
         d += (y1-yc1) * (y2-yc2)
 
-    print(a, b, c, d)
     m = np.array([a, b, c, d]).reshape(2, 2)
     U, S, V = np.linalg.svd(m)
-#    rot = U * V.T
-#    rot = U * V
     rot = np.matmul(U, V)
-#    rot = np.array([[1, 0], [0, 1]])
     trans = np.array([xc1, yc1]) - np.matmul(rot, np.array([xc2, yc2]).T)
-    print(trans, rot)
     return trans, rot
 
 
@@ -95,19 +80,23 @@ def draw_scans(scan1, scan2, pairs=None, filename=None):
     if pairs is not None:
         for (x1, y1), (x2, y2) in pairs:
             plt.plot([x1, x2], [y1, y2], 'g')
+    plt.axis('equal')
 #    plt.show()
     if filename is not None:
         plt.savefig(filename)
 
-def my_icp(scan1, scan2):
-    for i in range(20):
+
+def my_icp(scan1, scan2, debug_output_path=None):
+    for i in range(10):
         pairs = nearest(scan1, scan2)
-        draw_scans(scan1, scan2, pairs, filename=f'image{i:02}.png')
+        filename = f'{debug_output_path}image{i:02}.png' if debug_output_path is not None else None
+        draw_scans(scan1, scan2, pairs, filename=filename)
         trans, rot = transform(pairs)
         scan2b = np.matmul(np.array(scan2), rot.T) + trans.T
         scan2 = scan2b
 
     draw_scans(scan1, scan2)
+    return scan2
 
 
 def run_icp(filename):
@@ -128,17 +117,3 @@ if __name__ == "__main__":
     parser.add_argument('logfile', help='OSGAR logfile')
     args = parser.parse_args()
     run_icp(args.logfile)
-
-    """
-    if prev is not None:
-        pc_fix = PointCloud(prev, columns=["x", "y", "z"])
-        pc_mov = PointCloud(scan, columns=["x", "y", "z"])
-
-        # Create simpleICP object, add point clouds, and run algorithm!
-        icp = SimpleICP()
-        icp.add_point_clouds(pc_fix, pc_mov)
-        try:
-            H, X_mov_transformed, rigid_body_transformation_params, distance_residuals = icp.run(max_overlap_distance=1)
-            print(H)
-        except SimpleICPException:
-            print('Exception')"""
