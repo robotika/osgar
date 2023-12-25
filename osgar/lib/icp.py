@@ -10,7 +10,6 @@ from osgar.lib.serialize import deserialize
 
 def scan_gen(filename):
     stream_id = lookup_stream_id(filename, 'vanjee.scan')
-    hack = 0
     with LogReader(filename, only_stream_id=stream_id) as log:
         for timestamp, stream_id, raw_data in log:
             data = deserialize(raw_data)
@@ -18,12 +17,11 @@ def scan_gen(filename):
             scan = []
             for i, d in enumerate(data):
                 if d > 0:
-                    a = math.radians(hack + 360*i/1800.0)
+                    a = math.radians(360*i/1800.0)
                     d /= 1000.0
                     x, y = d * math.cos(a), d * math.sin(a)
                     scan.append((x, y))
             yield scan
-            hack += 1  # hack artifical rotation
 
 
 def nearest(scan1, scan2):
@@ -86,8 +84,8 @@ def draw_scans(scan1, scan2, pairs=None, filename=None):
         plt.savefig(filename)
 
 
-def my_icp(scan1, scan2, debug_path_prefix=None, num_iter=10):
-    for i in range(num_iter):
+def my_icp(scan1, scan2, debug_path_prefix=None, num_iter=10, offset=0):
+    for i in range(offset, offset + num_iter):
         pairs = nearest(scan1, scan2)
         filename = f'{debug_path_prefix}image{i:02}.png' if debug_path_prefix is not None else None
         if filename:
@@ -103,12 +101,15 @@ def my_icp(scan1, scan2, debug_path_prefix=None, num_iter=10):
 
 def run_icp(filename, debug_path_prefix=None, num_iter=10):
     prev = None
+    offset = 0
     for i, scan in enumerate(scan_gen(filename)):
         if i % 10 != 0:
             continue
         if prev is not None:
-            my_icp(prev, scan, debug_path_prefix=debug_path_prefix, num_iter=num_iter)
-            break
+            matched_scan = my_icp(prev, scan, debug_path_prefix=debug_path_prefix,
+                                  num_iter=num_iter, offset=offset)
+            offset += num_iter
+            print(i, len(prev))
         prev = scan
 
 
