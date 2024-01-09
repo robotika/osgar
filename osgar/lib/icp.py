@@ -68,10 +68,13 @@ def transform(pairs):
     U, S, V = np.linalg.svd(m)
     rot = np.matmul(U, V)
     trans = np.array([xc1, yc1]) - np.matmul(rot, np.array([xc2, yc2]).T)
-    return trans, rot
+    ret = np.identity(3)
+    ret[:2, :2] = rot
+    ret[:2, 2] = trans
+    return ret
 
 
-def draw_scans(scan1, scan2, pairs=None, filename=None):
+def draw_scans(scan1, scan2, pairs=None, filename=None, show=False):
     plt.clf()
     plt.plot(*zip(*scan1), '-x')
     plt.plot(*zip(*scan2), '-o')
@@ -79,39 +82,50 @@ def draw_scans(scan1, scan2, pairs=None, filename=None):
         for (x1, y1), (x2, y2) in pairs:
             plt.plot([x1, x2], [y1, y2], 'g')
     plt.axis('equal')
-#    plt.show()
     if filename is not None:
         plt.savefig(filename)
+    if show:
+        plt.show()
 
 
 def my_icp(scan1, scan2, debug_path_prefix=None, num_iter=10, offset=0):
+    total_mat = np.identity(3)
     for i in range(offset, offset + num_iter):
         pairs = nearest(scan1, scan2)
         filename = f'{debug_path_prefix}image{i:02}.png' if debug_path_prefix is not None else None
         if filename:
             print(filename)
         draw_scans(scan1, scan2, pairs, filename=filename)
-        trans, rot = transform(pairs)
-        scan2b = np.matmul(np.array(scan2), rot.T) + trans.T
-        scan2 = scan2b
+        mat = transform(pairs)
+        scan2b = np.matmul(np.array([[x, y, 1] for x, y, in scan2]), mat.T)
+        scan2 = [(x, y) for x, y, one in scan2b]
+        total_mat = np.matmul(total_mat, mat)
 
     draw_scans(scan1, scan2)
-    return scan2
+    return total_mat
 
 
 def run_icp(filename, debug_path_prefix=None, num_iter=10):
     prev = None
     offset = 0
+    acc_mat = np.identity(3)
+    acc_scan = []
     for i, scan in enumerate(scan_gen(filename)):
         if i % 10 != 0:
             continue
         if prev is not None:
-            matched_scan = my_icp(prev, scan, debug_path_prefix=debug_path_prefix,
+            mat = my_icp(prev, scan, debug_path_prefix=debug_path_prefix,
                                   num_iter=num_iter, offset=offset)
             offset += num_iter
-            print(i, len(prev))
+            acc_mat = np.matmul(acc_mat, mat)
+            print(i, len(prev), acc_mat)
         prev = scan
+        tmp = np.matmul(np.array([[x, y, 1] for x, y, in scan]), acc_mat.T)
+        acc_scan.extend([(x, y) for x, y, one in tmp])
+        if i >= 20:
+            break
 
+    draw_scans(acc_scan, [], show=True)
 
 def create_animation(path_prefix, num_iter=10):
     from PIL import Image
