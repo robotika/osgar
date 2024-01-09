@@ -8,7 +8,9 @@
           "out": ["desired_speed"],
           "init": {
             "max_speed": 0.5,
-            "laser_pose2d": [0.13, 0.055, 0]
+            "laser_pose2d": [0.13, 0.055, 0],
+            "scan_size": 1800,
+            "scan_fov_deg": -360
           }
       },
       "eduro": {
@@ -72,7 +74,7 @@
               ["app.desired_speed", "eduro.desired_speed"],
               ["lidar_tcp.raw", "lidar.raw"], 
               ["lidar.raw", "lidar_tcp.raw"],
-              ["lidar.scan", "app.scan"],
+              ["vanjee.scan", "app.scan"],
               ["eduro.emergency_stop", "app.emergency_stop"],
               ["eduro.pose2d", "app.pose2d"],
               ["vanjee_udp.raw", "vanjee.raw"],
