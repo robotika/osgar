@@ -33,7 +33,7 @@ class VanJeeLidar(Node):
         assert data[16:18] == bytes.fromhex('01 04'), data[16:18].hex()
         bank, motor_speed = struct.unpack_from('>BH', data, 18)
         assert 1 <= bank <= 16, bank
-        assert 38000 <= motor_speed <= 39300, motor_speed
+#        assert 38000 <= motor_speed <= 39300, motor_speed  # disabled as it can be easily "of of range"
         if bank == 1:
             self.points = []  # reset last scan
 
