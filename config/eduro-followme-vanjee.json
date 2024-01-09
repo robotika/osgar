@@ -72,11 +72,10 @@
               ["app.desired_speed", "eduro.desired_speed"],
               ["lidar_tcp.raw", "lidar.raw"], 
               ["lidar.raw", "lidar_tcp.raw"],
-              ["vanjee.scan", "app.scan"],
+              ["lidar.scan", "app.scan"],
               ["eduro.emergency_stop", "app.emergency_stop"],
               ["eduro.pose2d", "app.pose2d"],
               ["vanjee_udp.raw", "vanjee.raw"],
               ["vanjee.raw", "vanjee_udp.raw"]]
-
   }
 }
