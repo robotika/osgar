@@ -102,7 +102,7 @@ def my_icp(scan1, scan2, debug_path_prefix=None, num_iter=10, offset=0):
         scan2 = [(x, y) for x, y, one in scan2b]
         total_mat = np.matmul(total_mat, mat)
 
-    draw_scans(scan1, scan2)
+#    draw_scans(scan1, scan2)
     return total_mat
 
 
