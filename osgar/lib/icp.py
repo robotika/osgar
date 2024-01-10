@@ -89,20 +89,22 @@ def draw_scans(scan1, scan2, pairs=None, filename=None, show=False):
         plt.show()
 
 
-def my_icp(scan1, scan2, debug_path_prefix=None, num_iter=10, offset=0):
+def my_icp(scan1, scan2, debug_path_prefix=None, num_iter=10, offset=0, draw_it=False):
     total_mat = np.identity(3)
     for i in range(offset, offset + num_iter):
         pairs = nearest(scan1, scan2)
         filename = f'{debug_path_prefix}image{i:02}.png' if debug_path_prefix is not None else None
         if filename:
             print(filename)
-        draw_scans(scan1, scan2, pairs, filename=filename)
+        if draw_it:
+            draw_scans(scan1, scan2, pairs, filename=filename)
         mat = transform(pairs)
         scan2b = np.matmul(np.array([[x, y, 1] for x, y, in scan2]), mat.T)
         scan2 = [(x, y) for x, y, one in scan2b]
         total_mat = np.matmul(total_mat, mat)
 
-#    draw_scans(scan1, scan2)
+    if draw_it:
+        draw_scans(scan1, scan2)
     return total_mat
 
 
