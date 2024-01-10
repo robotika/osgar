@@ -1,7 +1,6 @@
 import math
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from osgar.logger import LogReader, lookup_stream_id
 from osgar.lib.serialize import deserialize
@@ -75,6 +74,8 @@ def transform(pairs):
 
 
 def draw_scans(scan1, scan2, pairs=None, filename=None, show=False):
+    import matplotlib.pyplot as plt
+
     plt.clf()
     plt.plot(*zip(*scan1), '-x')
     plt.plot(*zip(*scan2), '-o')
