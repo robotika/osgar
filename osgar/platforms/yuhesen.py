@@ -199,6 +199,10 @@ class FR07(Node):
             self.pose_counter = 0
             self.publish_pose2d(self.last_left_speed, self.last_right_speed)
 
+    def on_desired_steering(self, data):
+        self.desired_speed = data[0]/1000  # m/s
+        self.desired_steering_angle_deg = data[1]/100  # degrees
+
     def draw(self):
         import matplotlib.pyplot as plt
 
