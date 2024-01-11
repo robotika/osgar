@@ -31,6 +31,8 @@ class FollowMe(Node):
         self.raise_exception_on_stop = False
         self.verbose = False
         self.last_scan = None
+        self.scan_size = config.get('scan_size', 271)
+        self.scan_fov_deg = config.get('scan_fov_deg', 270)
 
     def on_pose2d(self, data):
         self.last_position = data
@@ -58,9 +60,8 @@ class FollowMe(Node):
     def followme(self):
         print("Follow Me!")
 
-        # SCAN_SIZE = 811  # TODO config
-        SCAN_SIZE = 271
-        SCANS_PER_DEG = SCAN_SIZE//270
+        SCAN_SIZE = self.scan_size
+        SCANS_PER_DEG = abs(SCAN_SIZE//self.scan_fov_deg)  # FOV can be negative for flipped lidar
 
         # limit tracking to front 180deg only due to mounting (back laser is blocked by robot body)
         LIMIT_LOW = 0  # SCAN_SIZE//6
@@ -70,7 +71,7 @@ class FollowMe(Node):
         thresholds = []
         for i in range(SCAN_SIZE):
             if LIMIT_LOW <= i <= LIMIT_HIGH:
-                deg = -135 + 270 * i / SCAN_SIZE
+                deg = -self.scan_fov_deg/2 + self.scan_fov_deg * i / SCAN_SIZE
                 rad = math.radians(deg)
                 thresh = 1000 * (0.17 + 0.17 * max(0, math.cos(rad)))  # [mm]
             else:
@@ -104,7 +105,7 @@ class FollowMe(Node):
                 if near > 1.3 or any(x < thresh for (x, thresh) in zip(self.last_scan, thresholds) if x > CLOSE_REFLECTIONS):
                     self.send_speed_cmd(0.0, 0.0)
                 else:
-                    angle = math.radians(270 * index/SCAN_SIZE - 135) + masterAngleOffset
+                    angle = math.radians(self.scan_fov_deg * index/SCAN_SIZE - self.scan_fov_deg/2) + masterAngleOffset
                     desiredAngle = 0
                     desiredDistance = 0.4
                     speed = 0.2 + 2 * (near - desiredDistance)
