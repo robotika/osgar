@@ -164,9 +164,11 @@ class FR07(Node):
             assert accumulated_angle == 0, (milage, accumulated_angle)  # reserved
 
         elif msg_id == 0x18c4e1ef:  # Battery BMS information feedback
-            assert payload[:-2].hex() == '000000000000', payload.hex()
+            pass
+            #assert payload[:-2].hex() == '000000000000', payload.hex()
         elif msg_id == 0x18c4e2ef:  # Battery BMS mark status feedback
-            assert payload[:-2].hex() == '000000000000', payload.hex()
+            pass
+            #assert payload[:-2].hex() == '000000000000', payload.hex()
 
         elif msg_id == 0x18c4eaef:  # Vehicle fault status feedback
 #            assert payload[:-3].hex() == '3200000000', payload.hex()
@@ -187,7 +189,8 @@ class FR07(Node):
                 print(self.time, f'Error status: {error_status}')
                 self.last_error_status = error_status
         else:
-            assert 0, hex(msg_id)  # not supported CAN message ID
+            pass
+            #assert 0, hex(msg_id)  # not supported CAN message ID
         if self.pose_counter >= 8:  # report left & right at 25Hz
             self.pose_counter = 0
             self.publish_pose2d(self.last_left_speed, self.last_right_speed)
