@@ -38,6 +38,7 @@ class FR07(Node):
         self.desired_speed = 0.0  # m/s
         self.desired_steering_angle_deg = 0.0  # degrees
         self.debug_arr = []
+        self.verbose = False
 
     def publish_pose2d(self, left, right):
         dt = 0.04  # 25Hz
@@ -164,11 +165,15 @@ class FR07(Node):
             assert accumulated_angle == 0, (milage, accumulated_angle)  # reserved
 
         elif msg_id == 0x18c4e1ef:  # Battery BMS information feedback
-            pass
-            #assert payload[:-2].hex() == '000000000000', payload.hex()
+            voltage, current, remaining = struct.unpack('<HHH', payload[:6])
+            if self.verbose:
+                print('Voltage', voltage/100, current/100, remaining/100)
         elif msg_id == 0x18c4e2ef:  # Battery BMS mark status feedback
-            pass
-            #assert payload[:-2].hex() == '000000000000', payload.hex()
+            percentage = payload[0]
+            temperature_max = ((payload[3] >> 4) & 0xF) + (payload[4] << 4)
+            temperature_min = payload[5] + ((payload[6] & 0xF) << 8)
+            if self.verbose:
+                print('Temperature', temperature_min/10, temperature_max/10)
 
         elif msg_id == 0x18c4eaef:  # Vehicle fault status feedback
 #            assert payload[:-3].hex() == '3200000000', payload.hex()
@@ -189,8 +194,7 @@ class FR07(Node):
                 print(self.time, f'Error status: {error_status}')
                 self.last_error_status = error_status
         else:
-            pass
-            #assert 0, hex(msg_id)  # not supported CAN message ID
+            assert 0, hex(msg_id)  # not supported CAN message ID
         if self.pose_counter >= 8:  # report left & right at 25Hz
             self.pose_counter = 0
             self.publish_pose2d(self.last_left_speed, self.last_right_speed)
