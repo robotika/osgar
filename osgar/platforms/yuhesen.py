@@ -101,7 +101,7 @@ class FR07(Node):
             steering = struct.unpack('<h', struct.pack('H', uint16_steering))[0]
             # trigger command in response
 
-            desired_speed_int = int(self.desired_speed * 1000)
+            desired_speed_int = int(abs(self.desired_speed * 1000))
             desired_steering_angle_int = int(self.desired_steering_angle_deg * 100)
             cmd = [
                 self.desired_gear.value | ((desired_speed_int << 4) & 0xF0),
@@ -200,8 +200,15 @@ class FR07(Node):
             self.publish_pose2d(self.last_left_speed, self.last_right_speed)
 
     def on_desired_steering(self, data):
-        self.desired_speed = data[0]/1000  # m/s
-        self.desired_steering_angle_deg = data[1]/100  # degrees
+        speed_mm_per_sec, steering_deg_msec = data
+        if speed_mm_per_sec > 0:
+            self.desired_gear = Gear.DRIVE
+        elif speed_mm_per_sec < 0:
+            self.desired_gear = Gear.REVERSE
+        else:
+            pass  # for zero leave it as it is now
+        self.desired_speed = speed_mm_per_sec/1000  # m/s
+        self.desired_steering_angle_deg = steering_deg_msec/100  # degrees
 
     def draw(self):
         import matplotlib.pyplot as plt
