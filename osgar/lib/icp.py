@@ -67,6 +67,9 @@ def transform(pairs):
     U, S, V = np.linalg.svd(m)
     rot = np.matmul(U, V)
     trans = np.array([xc1, yc1]) - np.matmul(rot, np.array([xc2, yc2]).T)
+
+    # combine rotation and translation into one matrix
+    # https://lavalle.pl/planning/node99.html
     ret = np.identity(3)
     ret[:2, :2] = rot
     ret[:2, 2] = trans
