@@ -44,6 +44,6 @@ class ICPTest(unittest.TestCase):
         scan2 = []
         for x, y in scan1:
             scan2.append((x+dx, y+dy))
-        mat = my_icp(scan1, scan2)
-        scan2corrected = np.array([(x, y) for x, y, one in np.matmul(np.array([[x, y, 1] for x, y, in scan2]), mat.T)])
+        mat = my_icp(scan1, scan2, num_iter=3)
+        scan2corrected = np.array([(x, y) for x, y, one in np.matmul(mat, np.array([[x, y, 1] for x, y, in scan2]).T).T])
         np.testing.assert_almost_equal(np.array(scan1), scan2corrected)

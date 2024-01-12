@@ -99,9 +99,9 @@ def my_icp(scan1, scan2, debug_path_prefix=None, num_iter=10, offset=0, draw_it=
         if draw_it:
             draw_scans(scan1, scan2, pairs, filename=filename)
         mat = transform(pairs)
-        scan2b = np.matmul(np.array([[x, y, 1] for x, y, in scan2]), mat.T)
-        scan2 = [(x, y) for x, y, one in scan2b]
-        total_mat = np.matmul(total_mat, mat)
+        scan2b = mat @ np.array([[x, y, 1] for x, y, in scan2]).T
+        scan2 = [(x, y) for x, y, one in scan2b.T]
+        total_mat = mat @ total_mat
 
     if draw_it:
         draw_scans(scan1, scan2)
@@ -113,22 +113,22 @@ def run_icp(filename, debug_path_prefix=None, num_iter=10):
     offset = 0
     acc_mat = np.identity(3)
     acc_scan = []
+    draw_it = debug_path_prefix is not None
     for i, scan in enumerate(scan_gen(filename)):
         if i % 10 != 0:
             continue
         if prev is not None:
             mat = my_icp(prev, scan, debug_path_prefix=debug_path_prefix,
-                                  num_iter=num_iter, offset=offset)
+                                  num_iter=num_iter, offset=offset, draw_it=draw_it)
             offset += num_iter
             acc_mat = np.matmul(acc_mat, mat)
             print(i, len(prev), acc_mat)
         prev = scan
         tmp = np.matmul(np.array([[x, y, 1] for x, y, in scan]), acc_mat.T)
         acc_scan.extend([(x, y) for x, y, one in tmp])
-        if i >= 20:
-            break
 
     draw_scans(acc_scan, [], show=True)
+
 
 def create_animation(path_prefix, num_iter=10):
     from PIL import Image
