@@ -28,16 +28,11 @@ def nearest(scan1, scan2):
     return pairs of nearest points from scan2 for each point in scan1
     """
     pairs = []
+    a = np.array(scan2)
     for pt1 in scan1:
-        min_d = None
-        candidate = None
-        for pt2 in scan2:
-            d = math.hypot(pt1[0]-pt2[0], pt1[1]-pt2[1])
-            if min_d is None or d < min_d:
-                min_d = d
-                candidate = pt2
-        assert candidate is not None
-        pairs.append((pt1, candidate))
+        pt = np.array(pt1)
+        index = np.argmin(np.linalg.norm(a - pt, axis=1))
+        pairs.append((pt1, scan2[index]))
     return pairs
 
 
