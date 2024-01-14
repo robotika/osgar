@@ -200,7 +200,11 @@ class FR07(Node):
             self.publish_pose2d(self.last_left_speed, self.last_right_speed)
 
     def on_desired_steering(self, data):
-        speed_mm_per_sec, steering_deg_msec = data
+        """
+        Store desired speed and steering angle.
+        Input is the pair of speed in millimeters per second and steering angle in hundredth of degree
+        """
+        speed_mm_per_sec, steering_deg_hundredth = data
         if speed_mm_per_sec > 0:
             self.desired_gear = Gear.DRIVE
         elif speed_mm_per_sec < 0:
@@ -208,7 +212,7 @@ class FR07(Node):
         else:
             pass  # for zero leave it as it is now
         self.desired_speed = speed_mm_per_sec/1000  # m/s
-        self.desired_steering_angle_deg = steering_deg_msec/100  # degrees
+        self.desired_steering_angle_deg = steering_deg_hundredth/100  # degrees
 
     def draw(self):
         import matplotlib.pyplot as plt
