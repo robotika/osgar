@@ -16,7 +16,7 @@ def scan_gen(filename):
             scan = []
             for i, d in enumerate(data):
                 if d > 0:
-                    a = math.radians(360*i/1800.0)
+                    a = math.radians(-360*i/1800.0)
                     d /= 1000.0
                     x, y = d * math.cos(a), d * math.sin(a)
                     scan.append((x, y))
@@ -75,7 +75,7 @@ def draw_scans(scan1, scan2, pairs=None, filename=None, show=False):
     import matplotlib.pyplot as plt
 
     plt.clf()
-    plt.plot(*zip(*scan1), '-x')
+    plt.plot(*zip(*scan1), 'x')
     plt.plot(*zip(*scan2), '-o')
     if pairs is not None:
         for (x1, y1), (x2, y2) in pairs:
@@ -99,7 +99,7 @@ def my_icp(scan1, scan2, debug_path_prefix=None, num_iter=10, offset=0, draw_it=
         mat = transform(pairs)
         scan2b = mat @ np.array([[x, y, 1] for x, y, in scan2]).T
         scan2 = [(x, y) for x, y, one in scan2b.T]
-        total_mat = mat @ total_mat
+        total_mat = mat @ total_mat  # it is always transformation from scan1 to scan2_n
 
     if draw_it:
         draw_scans(scan1, scan2)
@@ -119,11 +119,11 @@ def run_icp(filename, debug_path_prefix=None, num_iter=10):
             mat = my_icp(prev, scan, debug_path_prefix=debug_path_prefix,
                                   num_iter=num_iter, offset=offset, draw_it=draw_it)
             offset += num_iter
-            acc_mat = np.matmul(acc_mat, mat)
+            acc_mat = acc_mat @ mat  # here transition A->B and B->C means multiplication on the right side
             print(i, len(prev), acc_mat)
         prev = scan
-        tmp = np.matmul(np.array([[x, y, 1] for x, y, in scan]), acc_mat.T)
-        acc_scan.extend([(x, y) for x, y, one in tmp])
+        tmp = acc_mat @ np.array([[x, y, 1] for x, y, in scan]).T
+        acc_scan.extend([(x, y) for x, y, one in tmp.T])
 
     draw_scans(acc_scan, [], show=True)
 
