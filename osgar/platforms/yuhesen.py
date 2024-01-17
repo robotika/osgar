@@ -38,6 +38,7 @@ class FR07(Node):
         self.desired_speed = 0.0  # m/s
         self.desired_steering_angle_deg = 0.0  # degrees
         self.debug_arr = []
+        self.verbose = False
 
     def publish_pose2d(self, left, right):
         dt = 0.04  # 25Hz
@@ -100,7 +101,7 @@ class FR07(Node):
             steering = struct.unpack('<h', struct.pack('H', uint16_steering))[0]
             # trigger command in response
 
-            desired_speed_int = int(self.desired_speed * 1000)
+            desired_speed_int = int(abs(self.desired_speed * 1000))
             desired_steering_angle_int = int(self.desired_steering_angle_deg * 100)
             cmd = [
                 self.desired_gear.value | ((desired_speed_int << 4) & 0xF0),
@@ -164,9 +165,15 @@ class FR07(Node):
             assert accumulated_angle == 0, (milage, accumulated_angle)  # reserved
 
         elif msg_id == 0x18c4e1ef:  # Battery BMS information feedback
-            assert payload[:-2].hex() == '000000000000', payload.hex()
+            voltage, current, remaining = struct.unpack('<HHH', payload[:6])
+            if self.verbose:
+                print('Voltage', voltage/100, current/100, remaining/100)
         elif msg_id == 0x18c4e2ef:  # Battery BMS mark status feedback
-            assert payload[:-2].hex() == '000000000000', payload.hex()
+            percentage = payload[0]
+            temperature_max = ((payload[3] >> 4) & 0xF) + (payload[4] << 4)
+            temperature_min = payload[5] + ((payload[6] & 0xF) << 8)
+            if self.verbose:
+                print('Temperature', temperature_min/10, temperature_max/10)
 
         elif msg_id == 0x18c4eaef:  # Vehicle fault status feedback
 #            assert payload[:-3].hex() == '3200000000', payload.hex()
@@ -191,6 +198,21 @@ class FR07(Node):
         if self.pose_counter >= 8:  # report left & right at 25Hz
             self.pose_counter = 0
             self.publish_pose2d(self.last_left_speed, self.last_right_speed)
+
+    def on_desired_steering(self, data):
+        """
+        Store desired speed and steering angle.
+        Input is the pair of speed in millimeters per second and steering angle in hundredth of degree
+        """
+        speed_mm_per_sec, steering_deg_hundredth = data
+        if speed_mm_per_sec > 0:
+            self.desired_gear = Gear.DRIVE
+        elif speed_mm_per_sec < 0:
+            self.desired_gear = Gear.REVERSE
+        else:
+            pass  # for zero leave it as it is now
+        self.desired_speed = speed_mm_per_sec/1000  # m/s
+        self.desired_steering_angle_deg = steering_deg_hundredth/100  # degrees
 
     def draw(self):
         import matplotlib.pyplot as plt

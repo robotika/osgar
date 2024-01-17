@@ -16,7 +16,7 @@ def scan_gen(filename):
             scan = []
             for i, d in enumerate(data):
                 if d > 0:
-                    a = math.radians(360*i/1800.0)
+                    a = math.radians(-360*i/1800.0)
                     d /= 1000.0
                     x, y = d * math.cos(a), d * math.sin(a)
                     scan.append((x, y))
@@ -28,16 +28,11 @@ def nearest(scan1, scan2):
     return pairs of nearest points from scan2 for each point in scan1
     """
     pairs = []
+    a = np.array(scan2)
     for pt1 in scan1:
-        min_d = None
-        candidate = None
-        for pt2 in scan2:
-            d = math.hypot(pt1[0]-pt2[0], pt1[1]-pt2[1])
-            if min_d is None or d < min_d:
-                min_d = d
-                candidate = pt2
-        assert candidate is not None
-        pairs.append((pt1, candidate))
+        pt = np.array(pt1)
+        index = np.argmin(np.linalg.norm(a - pt, axis=1))
+        pairs.append((pt1, scan2[index]))
     return pairs
 
 
@@ -67,6 +62,9 @@ def transform(pairs):
     U, S, V = np.linalg.svd(m)
     rot = np.matmul(U, V)
     trans = np.array([xc1, yc1]) - np.matmul(rot, np.array([xc2, yc2]).T)
+
+    # combine rotation and translation into one matrix
+    # https://lavalle.pl/planning/node99.html
     ret = np.identity(3)
     ret[:2, :2] = rot
     ret[:2, 2] = trans
@@ -77,7 +75,7 @@ def draw_scans(scan1, scan2, pairs=None, filename=None, show=False):
     import matplotlib.pyplot as plt
 
     plt.clf()
-    plt.plot(*zip(*scan1), '-x')
+    plt.plot(*zip(*scan1), 'x')
     plt.plot(*zip(*scan2), '-o')
     if pairs is not None:
         for (x1, y1), (x2, y2) in pairs:
@@ -99,9 +97,9 @@ def my_icp(scan1, scan2, debug_path_prefix=None, num_iter=10, offset=0, draw_it=
         if draw_it:
             draw_scans(scan1, scan2, pairs, filename=filename)
         mat = transform(pairs)
-        scan2b = np.matmul(np.array([[x, y, 1] for x, y, in scan2]), mat.T)
-        scan2 = [(x, y) for x, y, one in scan2b]
-        total_mat = np.matmul(total_mat, mat)
+        scan2b = mat @ np.array([[x, y, 1] for x, y, in scan2]).T
+        scan2 = [(x, y) for x, y, one in scan2b.T]
+        total_mat = mat @ total_mat  # it is always transformation from scan1 to scan2_n
 
     if draw_it:
         draw_scans(scan1, scan2)
@@ -113,22 +111,22 @@ def run_icp(filename, debug_path_prefix=None, num_iter=10):
     offset = 0
     acc_mat = np.identity(3)
     acc_scan = []
+    draw_it = debug_path_prefix is not None
     for i, scan in enumerate(scan_gen(filename)):
         if i % 10 != 0:
             continue
         if prev is not None:
             mat = my_icp(prev, scan, debug_path_prefix=debug_path_prefix,
-                                  num_iter=num_iter, offset=offset)
+                                  num_iter=num_iter, offset=offset, draw_it=draw_it)
             offset += num_iter
-            acc_mat = np.matmul(acc_mat, mat)
+            acc_mat = acc_mat @ mat  # here transition A->B and B->C means multiplication on the right side
             print(i, len(prev), acc_mat)
         prev = scan
-        tmp = np.matmul(np.array([[x, y, 1] for x, y, in scan]), acc_mat.T)
-        acc_scan.extend([(x, y) for x, y, one in tmp])
-        if i >= 20:
-            break
+        tmp = acc_mat @ np.array([[x, y, 1] for x, y, in scan]).T
+        acc_scan.extend([(x, y) for x, y, one in tmp.T])
 
     draw_scans(acc_scan, [], show=True)
+
 
 def create_animation(path_prefix, num_iter=10):
     from PIL import Image
