@@ -36,7 +36,7 @@ def _application2import(application):
     return f"{s.name}:{application.__qualname__}"
 
 
-def config_load(*filenames, application=None, params=None):
+def config_load(*filenames, application=None, params=None, without=None):
     ret = {}
     for filename in filenames:
         with open(filename) as f:
@@ -51,6 +51,17 @@ def config_load(*filenames, application=None, params=None):
             key = key_path.split('.')
             assert len(key) == 2, key
             ret['robot']['modules'][key[0]]['init'][key[1]] = literal_eval(str_value)
+    if without is not None:
+        for module in without:
+            assert module in ret['robot']['modules'], f"Module {module} not in {ret['robot']['modules'].keys()}"
+            del ret['robot']['modules'][module]
+            new_links = []
+            key = module + '.'
+            for link_from, link_to in ret['robot']['links']:
+                if link_from.startswith(key) or link_to.startswith(key):
+                    continue
+                new_links.append([link_from, link_to])
+            ret['robot']['links'] = new_links
     if application is None:
         return ret
     if not isinstance(application, str):
