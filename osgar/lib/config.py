@@ -50,7 +50,11 @@ def config_load(*filenames, application=None, params=None, without=None):
             key_path, str_value = param.split('=')
             key = key_path.split('.')
             assert len(key) == 2, key
-            ret['robot']['modules'][key[0]]['init'][key[1]] = literal_eval(str_value)
+            try:
+                value_to_set = literal_eval(str_value)
+            except:
+                value_to_set = str_value
+            ret['robot']['modules'][key[0]]['init'][key[1]] = value_to_set
     if without is not None:
         for module in without:
             assert module in ret['robot']['modules'], f"Module {module} not in {ret['robot']['modules'].keys()}"
