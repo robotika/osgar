@@ -15,7 +15,7 @@
           "in": ["move", "tick"],
           "out": ["pose2d", "tick"],
           "init": {
-            "map_config": "config_example_map.yaml"
+            "map_config": "configs/config_example_map.yaml"
           }
       },
       "tick": {
