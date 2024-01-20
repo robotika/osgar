@@ -15,7 +15,7 @@
       },
       "gym": {
           "driver": "examples.gym.gym_simulator:GymSimulator",
-          "in": ["desired_speed", "tick"],
+          "in": ["desired_steering", "tick"],
           "out": ["pose2d", "tick"],
           "init": {
             "map_config": "configs/config_example_map.yaml"
@@ -30,7 +30,7 @@
           }
       }
     },
-    "links": [["app.desired_speed", "gym.move"],
+    "links": [["app.desired_speed", "gym.desired_steering"],
               ["tick.tick", "gym.tick"],
               ["gym.pose2d", "app.pose2d"]]
   }

@@ -12,7 +12,7 @@ from osgar.lib.local_planner import LocalPlanner
 class MyRace(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register("move")
+        bus.register("desired_steering")
         self.bus = bus
         self.max_speed = config.get("max_speed", 0.8)
         use_local_planner = config.get("local_planner", False)
@@ -30,7 +30,7 @@ class MyRace(Node):
 
     def send_speed(self, speed, desired_direction):
         # reverse direction
-        return self.publish('move', [round(speed * 1000), round(math.degrees(desired_direction) * 100)])
+        return self.publish('desired_steering', [round(speed * 1000), round(math.degrees(desired_direction) * 100)])
 
     def go_safely(self, desired_direction, safety):
         # TODO stop if a obstacle is too close?

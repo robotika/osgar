@@ -5,14 +5,14 @@
       "race": {
           "driver": "examples.gym.my_race:MyRace",
           "in": ["pose2d", "scan"],
-          "out": ["move"],
+          "out": ["desired_steering"],
           "init": {
             "max_speed": 4
           }
       },
       "gym": {
           "driver": "examples.gym.gym_simulator:GymSimulator",
-          "in": ["move", "tick"],
+          "in": ["desired_steering", "tick"],
           "out": ["pose2d", "tick"],
           "init": {
             "map_config": "configs/config_example_map.yaml"
@@ -27,7 +27,7 @@
           }
       }
     },
-    "links": [["race.move", "gym.move"],
+    "links": [["race.desired_steering", "gym.desired_steering"],
               ["tick.tick", "gym.tick"],
               ["gym.pose2d", "race.pose2d"],
               ["gym.scan", "race.scan"]
