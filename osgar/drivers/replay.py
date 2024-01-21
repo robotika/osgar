@@ -42,6 +42,8 @@ class ReplayDriver:
             data = deserialize(data_raw)
             # TODO reuse timestamp
             sub_channel = self.pins[channel]
+            if ":" in sub_channel:
+                sub_channel = sub_channel.split(":")[0]
             self.bus.publish(sub_channel, data)
             if sub_channel == sleeping_channel:
                 self.bus.sleep(period)

@@ -89,7 +89,8 @@ def main(record=record):
     parser.add_argument('--log', help='force record log filename')
     parser.add_argument('--application', help='import string to application', default=None)
     parser.add_argument('--params', nargs='+',
-                        help='optional list of configuration parameters like app.max_speed=0.1 app.dist=-2.0')
+                        help='optional list of configuration parameters like app.max_speed=0.1 app.dist=-2.0. '
+                             'For string parameters use double quotes e.g.: app.logfile=\'"name.log"\'')
     parser.add_argument('--without', nargs='+',
                         help='list of modules which should not be loaded/initialized/started')
     args = parser.parse_args()
