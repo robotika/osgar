@@ -64,7 +64,29 @@
           "in": ["raw"],
           "out": ["raw"],
           "init": {"host": "192.168.0.2", "port": 6050, "timeout": 3.0, "bufsize": 100000}
-      }
+      },
+      "oak": {
+          "driver": "osgar.drivers.oak_camera:OakCamera",
+          "init": {
+            "fps": 10,
+            "is_color": true,
+            "is_depth": true,
+            "laser_projector_current": 1200,
+            "is_imu_enabled": true,
+            "number_imu_records": 10,
+            "disable_magnetometer_fusion": false,
+            "cam_ip": "169.254.1.222",
+
+            "mono_resolution": "THE_400_P",
+            "color_resolution": "THE_1080_P",
+            "color_manual_focus": 130,
+
+            "stereo_median_filter": "KERNEL_3x3",
+            "stereo_mode": "HIGH_ACCURACY",
+            "stereo_extended_disparity": false,
+            "stereo_subpixel": false,
+            "stereo_left_right_check": true
+          }
     },
     "links": [["serial.raw", "can.raw"], 
               ["can.raw", "serial.raw"],
