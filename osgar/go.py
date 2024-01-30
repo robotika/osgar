@@ -62,6 +62,7 @@ class Go(Node):
     def run(self):
         for run_number in range(self.repeat):
             self.traveled_dist = 0.0
+            self.start_pose = None
             self.sub_run()
             if self.emergency_stop:
                 print(self.time, "(run) Emergency STOP")
