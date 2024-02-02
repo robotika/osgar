@@ -18,6 +18,7 @@ class Go(Node):
         self.dist = config['dist']
         self.timeout = timedelta(seconds=config['timeout'])
         self.desired_spider_angle = config.get('desired_angle', 0.0)
+        self.repeat = config.get('repeat', 1)
         self.emergency_stop = None
 
     def send_speed_cmd(self, speed, angular_speed):
@@ -40,7 +41,7 @@ class Go(Node):
         while self.time - start_time < dt:
             self.update()
 
-    def run(self):
+    def sub_run(self):
         self.update()  # define self.time
         print(self.time, "Go!")
         start_time = self.time
@@ -51,12 +52,22 @@ class Go(Node):
         while self.traveled_dist < abs(self.dist) and self.time - start_time < self.timeout:
             self.update()
             if self.emergency_stop:
-                print(self.time, "Emergency STOP")
+                print(self.time, "(sub_run) Emergency STOP")
                 break
         print(self.time, "STOP")
         self.send_speed_cmd(0.0, 0.0)
         self.wait(timedelta(seconds=1))
         print(self.time, "distance:", self.traveled_dist, "time:", (self.time - start_time).total_seconds())
+
+    def run(self):
+        for run_number in range(self.repeat):
+            self.traveled_dist = 0.0
+            self.start_pose = None
+            self.sub_run()
+            if self.emergency_stop:
+                print(self.time, "(run) Emergency STOP")
+                break
+            self.dist = -self.dist  # next run will be in opposite direction
 
 
 if __name__ == "__main__":
