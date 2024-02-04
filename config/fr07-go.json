@@ -44,6 +44,18 @@
           "stereo_subpixel": false,
           "stereo_left_right_check": true
         }
+      },
+      "gps": {
+          "driver": "gps",
+          "in": ["raw"],
+          "out": ["position"],
+          "init": {}
+      },
+      "gps_serial": {
+          "driver": "serial",
+          "in": [],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyUSB0", "speed": 4800}
       }
     },
     "links": [
@@ -51,7 +63,8 @@
       ["platform.can", "can.can"],
       ["app.desired_speed", "platform.desired_steering"],
       ["platform.emergency_stop", "app.emergency_stop"],
-      ["platform.pose2d", "app.pose2d"]
+      ["platform.pose2d", "app.pose2d"],
+      ["gps_serial.raw", "gps.raw"]
     ]
   }
 }
