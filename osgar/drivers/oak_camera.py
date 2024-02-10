@@ -34,6 +34,8 @@ class OakCamera:
         self.is_depth = config.get('is_depth', False)
         self.laser_projector_current = config.get("laser_projector_current", 0)
         assert self.laser_projector_current <= 1200, self.laser_projector_current  # The limit is 1200 mA.
+        self.flood_light_current = config.get("flood_light_current", 0)
+        assert self.flood_light_current <= 1500, self.flood_light_current  # The limit is 1500 mA.
         self.is_color = config.get('is_color', False)
         self.is_imu_enabled = config.get('is_imu_enabled', False)
         # Preferred number of IMU records in one packet
@@ -163,6 +165,8 @@ class OakCamera:
         with dai.Device(pipeline, device_info) as device:
             if self.laser_projector_current:
                 device.setIrLaserDotProjectorBrightness(self.laser_projector_current)
+            if self.flood_light_current:
+                device.setIrFloodLightBrightness(self.flood_light_current)
             while self.bus.is_alive():
                 queue_events = device.getQueueEvents(queue_names)
 
