@@ -57,13 +57,15 @@ class FollowPath(Node):
         if len(second) <= 1:
             return 0, 0
         pt = Route(second).pointAtDist(dist=0.2)  # maybe speed dependent
-        angle = Route(second).turnAngleAt(pt)
+        angle = Route(second).turnAngleAt(pt, radius=0.1)
         return self.max_speed, pose[2] - angle
 
     def on_pose2d(self, data):
         x, y, heading = data
         self.last_position = [x / 1000.0, y / 1000.0, math.radians(heading / 100.0)]
         speed, angular_speed = self.control(self.last_position)
+        if self.verbose:
+            print(speed, angular_speed)
         self.send_speed_cmd(speed, angular_speed)
 
     def on_emergency_stop(self, data):
