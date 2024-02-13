@@ -4,6 +4,7 @@
 import math
 
 from osgar.lib.route import Route as GPSRoute, DummyConvertor
+from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.node import Node
 from osgar.followme import EmergencyStopException
 
@@ -57,8 +58,11 @@ class FollowPath(Node):
         if len(second) <= 1:
             return 0, 0
         pt = Route(second).pointAtDist(dist=0.2)  # maybe speed dependent
-        angle = Route(second).turnAngleAt(pt, radius=0.1)
-        return self.max_speed, angle - pose[2]
+        pt2 = Route(second).pointAtDist(dist=0.2+0.1)
+        angle = math.atan2(pt2[1]-pt[1], pt2[0]-pt[0])
+        if self.verbose:
+            print(second, pt, angle)
+        return self.max_speed, normalizeAnglePIPI(angle - pose[2])
 
     def on_pose2d(self, data):
         x, y, heading = data
