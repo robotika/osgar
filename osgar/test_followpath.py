@@ -48,6 +48,8 @@ class FollowPathTest(unittest.TestCase):
         app = FollowPath(config=config, bus=bus.handle('app'))
         self.assertEqual(app.control([0, 0, 0]), (max_speed, 0))
 
+        self.assertEqual(app.control([0, 0, 0.1]), (max_speed, -0.1))
+
     def test_follow_path(self):
         bus = Bus(MagicMock())
         config = {

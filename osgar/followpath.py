@@ -58,7 +58,7 @@ class FollowPath(Node):
             return 0, 0
         pt = Route(second).pointAtDist(dist=0.2)  # maybe speed dependent
         angle = Route(second).turnAngleAt(pt, radius=0.1)
-        return self.max_speed, pose[2] - angle
+        return self.max_speed, angle - pose[2]
 
     def on_pose2d(self, data):
         x, y, heading = data
