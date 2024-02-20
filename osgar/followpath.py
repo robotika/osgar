@@ -33,9 +33,12 @@ class FollowPath(Node):
             return 0, 0
         pt = Route(second).pointAtDist(dist=0.2)  # maybe speed dependent
         pt2 = Route(second).pointAtDist(dist=0.2+0.1)
+        if math.hypot(pt2[1]-pt[1], pt2[0]-pt[0]) < 0.001:
+            # at the very end, or not defined angle
+            return 0, 0
         angle = math.atan2(pt2[1]-pt[1], pt2[0]-pt[0])
         if self.verbose:
-            print(second, pt, angle)
+            print(self.time, second, pt, angle)
         return self.max_speed, normalizeAnglePIPI(angle - pose[2])
 
     def on_pose2d(self, data):
@@ -49,17 +52,6 @@ class FollowPath(Node):
     def on_emergency_stop(self, data):
         if self.raise_exception_on_stop and data:
             raise EmergencyStopException()
-
-    def draw(self):
-        import matplotlib.pyplot as plt
-        t = [a[0] for a in self.debug_arr]
-        x = [a[1] for a in self.debug_arr]
-        line = plt.plot(t, x, '-o', linewidth=2, label=f'diff')
-
-        plt.xlabel('time (s)')
-        plt.ylabel('distance diff (m)')
-        plt.legend()
-        plt.show()
 
     def send_speed_cmd(self, speed, angular_speed):
         return self.bus.publish(

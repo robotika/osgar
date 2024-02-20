@@ -39,6 +39,8 @@ class FollowPathTest(unittest.TestCase):
         }
         app = FollowPath(config=config, bus=bus.handle('app'))
 
+        # STOP at the end of segment!
+        self.assertEqual(app.control([2.9, 0, 0]), (0, 0))
 
 
 # vim: expandtab sw=4 ts=4
