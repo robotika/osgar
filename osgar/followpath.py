@@ -27,32 +27,6 @@ class FollowPath(Node):
         self.raise_exception_on_stop = False
         self.verbose = False
 
-    def nearest(self, pose, path):
-        if len(path) == 0:
-            return None, None
-        if len(path) == 1:
-            return path[0], None
-        # dense points? crossing lines?
-        min_dist = None
-        best = None, None
-        x, y, heading = pose
-        for i, p in enumerate(path):
-            dist = math.hypot(p[0] - x, p[1] - y)
-            if min_dist is None or dist < min_dist:
-                best = i
-                min_dist = dist
-        if best == 0:
-            return path[0], path[1]
-        if best == len(path) - 1:
-            return path[-1], None
-        # choose before or after
-        dist_before = math.hypot(path[best - 1][0] - x, path[best - 1][1] - y)
-        dist_after = math.hypot(path[best + 1][0] - x, path[best + 1][1] - y)
-        if dist_before < dist_after:
-            return path[best - 1], path[best]
-        else:
-            return path[best], path[best + 1]
-
     def control(self, pose):
         first, second = self.route.routeSplit(pose[:2])
         if len(second) <= 1:
