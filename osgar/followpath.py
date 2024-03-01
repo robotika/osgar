@@ -28,6 +28,16 @@ class FollowPath(Node):
         self.verbose = False
 
     def control(self, pose):
+        """
+        Based on current "pose2d" robot position and "self.route" return desired speed and angular speed.
+
+        The current implementation takes nearest point on the route and predicts next position following
+        the route (now hardcoded 20cm). Then calculate absolute direction (via following another 10cm)
+        and define angular speed to reach this absolute direction within 1 second. If the nearest position
+        is already by the end of route then stop.
+
+        Note, that there is no correction based on signed distance from route.
+        """
         first, second = self.route.routeSplit(pose[:2])
         if len(second) <= 1:
             return 0, 0
