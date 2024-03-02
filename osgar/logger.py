@@ -38,6 +38,7 @@ from threading import RLock
 from ast import literal_eval
 import mmap
 import pathlib
+import gzip
 
 g_logger = logging.getLogger(__name__)
 
@@ -160,7 +161,10 @@ class LogReader:
     def __init__(self, filename, follow=False, only_stream_id=None):
         self.filename = filename
         self.follow = follow
-        self.f = open(self.filename, 'rb')
+        if str(self.filename).endswith('gz'):  # support both string and pathlib.Path
+            self.f = gzip.open(self.filename)
+        else:
+            self.f = open(self.filename, 'rb')
         data = self._read(4)
         assert data == MAGIC, data
 
