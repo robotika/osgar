@@ -1,0 +1,70 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "osgar.followpath:FollowPath",
+          "in": ["emergency_stop", "pose2d", "path"],
+          "out": ["desired_speed"],
+          "init": {
+            "max_speed": 0.1,
+            "path": [[0, 0], [1, 0], [1, 1]],
+            "timeout": 10
+          }
+      },
+      "platform": {
+        "driver": "osgar.platforms.yuhesen:FR07",
+        "in": ["can"],
+        "out": ["can"],
+        "init": {}
+      },
+      "can": {
+        "driver": "pcan",
+        "in": ["can"],
+        "out": ["can"],
+        "init": {}
+      },
+      "oak": {
+        "driver": "osgar.drivers.oak_camera:OakCamera",
+        "init": {
+          "fps": 10,
+          "is_color": true,
+          "is_depth": true,
+          "laser_projector_current": 1200,
+          "is_imu_enabled": true,
+          "number_imu_records": 10,
+          "disable_magnetometer_fusion": false,
+          "cam_ip": "169.254.1.222",
+          "mono_resolution": "THE_400_P",
+          "color_resolution": "THE_1080_P",
+          "color_manual_focus": 130,
+          "stereo_median_filter": "KERNEL_3x3",
+          "stereo_mode": "HIGH_ACCURACY",
+          "stereo_extended_disparity": false,
+          "stereo_subpixel": false,
+          "stereo_left_right_check": true
+        }
+      },
+      "gps": {
+          "driver": "gps",
+          "in": ["raw"],
+          "out": ["position"],
+          "init": {}
+      },
+      "gps_serial": {
+          "driver": "serial",
+          "in": [],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyUSB0", "speed": 4800}
+      }
+    },
+    "links": [
+      ["can.can", "platform.can"],
+      ["platform.can", "can.can"],
+      ["app.desired_speed", "platform.desired_steering"],
+      ["platform.emergency_stop", "app.emergency_stop"],
+      ["platform.pose2d", "app.pose2d"],
+      ["gps_serial.raw", "gps.raw"]
+    ]
+  }
+}
