@@ -14,11 +14,11 @@
           "out": ["raw"],
           "init": {
               "host": "192.168.1.12",
-              "port": 10001,
+              "port": 10002,
               "bufsize": 2000
           }
       }
     },
-    "links": [["imu_serial.raw", "imu.raw"]]
+    "links": [["imu_tcp.raw", "imu.raw"]]
   }
 }
