@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "imu": {
+          "driver": "imu",
+          "in": ["raw"],
+          "out": ["orientation", "rotation", "data"],
+          "init": {}
+      },
+      "imu_tcp": {
+          "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {
+              "host": "192.168.1.12",
+              "port": 10001,
+              "bufsize": 2000
+          }
+      }
+    },
+    "links": [["imu_serial.raw", "imu.raw"]]
+  }
+}
