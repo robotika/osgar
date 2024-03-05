@@ -28,7 +28,9 @@ def parse_line(line):
     assert line.startswith(b'$VNYMR'), line
     assert b'*' in line, line
     s = line.split(b'*')[0].split(b',')
-    assert len(s) == 13, s
+    if len(s) != 13:
+        print(f"IMU ERR: incorrect input length! {len(s)}")
+    # assert len(s) == 13, s
     arr = [float(x) for x in s[1:]]
     return [arr[:3], arr[3:6], arr[6:9], arr[9:]]
 
@@ -91,6 +93,7 @@ class IMU(Thread):
                     quat = euler_to_quaternion(math.radians(yaw), math.radians(pitch), math.radians(roll))
                     angles = [int(round(x * 100)) for x in [yaw, pitch, roll]]
                     self.bus.publish('rotation', angles)
+                    # print(angles)
                     self.bus.publish('orientation', quat)
         except BusShutdownException:
             pass
