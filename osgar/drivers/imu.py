@@ -42,11 +42,10 @@ class IMU(Thread):
         bus.register('orientation', 'rotation', 'data')
         Thread.__init__(self)
         self.setDaemon(True)
-
         self.offset = config.get("offset", [0, 0, 0])  # rotation offset in 1/100th of degree
-
         self.bus = bus
         self.buf = b''
+        self.verbose = False
 
     # Copy & Paste from gps.py - refactor!
     @staticmethod
@@ -97,7 +96,8 @@ class IMU(Thread):
                     quat = euler_to_quaternion(math.radians(yaw), math.radians(pitch), math.radians(roll))
                     angles = [int(round(x * 100)) for x in [yaw, pitch, roll]]
                     self.bus.publish('rotation', angles)
-                    # print(angles)
+                    if self.verbose:
+                        print(angles)
                     self.bus.publish('orientation', quat)
         except BusShutdownException:
             pass
