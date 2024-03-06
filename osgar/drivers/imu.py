@@ -7,6 +7,7 @@ import math
 
 from osgar.bus import BusShutdownException
 from osgar.lib.quaternion import euler_to_quaternion
+from osgar.drivers.gps import checksum  # NMEA checksum used for $VNYMR message
 
 
 def parse_line(line):
@@ -27,10 +28,11 @@ def parse_line(line):
     """
     assert line.startswith(b'$VNYMR'), line
     assert b'*' in line, line
+    if checksum(line[1:-3]) != line[-2:]:
+        print('Checksum error!', line, checksum(line[1:-3]))
+        return None
     s = line.split(b'*')[0].split(b',')
-    if len(s) != 13:
-        print(f"IMU ERR: incorrect input length! {len(s)}")
-    # assert len(s) == 13, s
+    assert len(s) == 13, s
     arr = [float(x) for x in s[1:]]
     return [arr[:3], arr[3:6], arr[6:9], arr[9:]]
 
@@ -57,10 +59,12 @@ class IMU(Thread):
             return data, b''
         return data[start+end+3:], data[start:start+end+3]
 
-    def process_packet(self, line):
+    @staticmethod
+    def process_packet(line):
         if line.startswith(b'$VNYMR'):
             result = parse_line(line)
-            return result
+            if result:
+                return result
         return None
 
     def process_gen(self, data):
