@@ -2,10 +2,11 @@
     Osgar driver for Luxonis OAK cameras.
     https://www.luxonis.com/
 """
-
 from threading import Thread
-import depthai as dai
+from pathlib import Path
 import logging
+
+import depthai as dai
 
 g_logger = logging.getLogger(__name__)
 
@@ -29,7 +30,8 @@ class OakCamera:
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.bus = bus
 
-        self.bus.register('depth', 'color', 'orientation_list')
+        self.labels = config.get("mappings", {}).get("labels", [])
+        self.bus.register(*(['depth', 'color', 'orientation_list'] + self.labels))
         self.fps = config.get('fps', 10)
         self.is_depth = config.get('is_depth', False)
         self.laser_projector_current = config.get("laser_projector_current", 0)
@@ -68,7 +70,77 @@ class OakCamera:
         assert stereo_mode_value in ["HIGH_DENSITY", "HIGH_ACCURACY"], stereo_mode_value
         self.stereo_mode = getattr(dai.node.StereoDepth.PresetMode, stereo_mode_value)
 
+        self.oak_config_model = config.get("model")
+        self.oak_config_nn_config = config.get("nn_config", {})
 
+    def config_oak_nn(self, pipeline, camRgb):
+        """
+        Configure OAK pipeline for processing neural network
+        """
+        # code taken from
+        # https://github.com/luxonis/depthai-experiments/blob/master/gen2-yolo/device-decoding/main_api.py
+        nnConfig = self.oak_config_nn_config  # "nn_config" section
+
+        # parse input shape
+        if "input_size" in nnConfig:
+            W, H = tuple(map(int, nnConfig.get("input_size").split('x')))
+
+        # extract metadata
+        metadata = nnConfig.get("NN_specific_metadata", {})
+        classes = metadata.get("classes", {})
+        coordinates = metadata.get("coordinates", {})
+        anchors = metadata.get("anchors", {})
+        anchorMasks = metadata.get("anchor_masks", {})
+        iouThreshold = metadata.get("iou_threshold", {})
+        confidenceThreshold = metadata.get("confidence_threshold", {})
+
+        print(metadata)
+
+        # parse labels
+#        nnMappings = self.oak_config_mappings  # "mappings" section
+#        labels = nnMappings.get("labels", {})
+
+        # get model path
+        nnPath = self.oak_config_model.get("blob")  # "model" section
+        assert Path(nnPath).exists(), "No blob found at '{}'!".format(nnPath)
+        # sync outputs
+        syncNN = True
+
+        # Create pipeline
+#        pipeline = dai.Pipeline()
+
+        # Define sources and outputs
+#        camRgb = pipeline.create(dai.node.ColorCamera)
+        detectionNetwork = pipeline.create(dai.node.YoloDetectionNetwork)
+        xoutRgb = pipeline.create(dai.node.XLinkOut)
+        nnOut = pipeline.create(dai.node.XLinkOut)
+
+        xoutRgb.setStreamName("rgb")
+        nnOut.setStreamName("nn")
+
+        # Properties - NOTE - overwriting defaults from config!
+        camRgb.setPreviewSize(W, H)
+
+        camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+        camRgb.setInterleaved(False)
+        camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+        camRgb.setFps(40)
+
+        # Network specific settings
+        detectionNetwork.setConfidenceThreshold(confidenceThreshold)
+        detectionNetwork.setNumClasses(classes)
+        detectionNetwork.setCoordinateSize(coordinates)
+        detectionNetwork.setAnchors(anchors)
+        detectionNetwork.setAnchorMasks(anchorMasks)
+        detectionNetwork.setIouThreshold(iouThreshold)
+        detectionNetwork.setBlobPath(nnPath)
+        detectionNetwork.setNumInferenceThreads(2)
+        detectionNetwork.input.setBlocking(False)
+
+        # Linking
+        camRgb.preview.link(detectionNetwork.input)
+        detectionNetwork.passthrough.link(xoutRgb.input)
+        detectionNetwork.out.link(nnOut.input)
 
     def start(self):
         self.input_thread.start()
@@ -147,10 +219,15 @@ class OakCamera:
             imu.setMaxBatchReports(20)
             imu.out.link(imu_out.input)
 
+        if self.oak_config_model is not None:
+            # configure OAK neural network
+            assert self.is_color, "RGC camera must be enabled!"
+            self.config_oak_nn(pipeline, color)  # note, that "color" is RGB camera
+            queue_names.append("nn")
+
         if not queue_names:
             g_logger.error("No stream enabled!")
             return
-
 
         if self.cam_ip and cam_is_available(self.cam_ip):  # USB cameras?
             device_info = dai.DeviceInfo()
@@ -190,6 +267,14 @@ class OakCamera:
                                                 ]
                                                for data in packet.packets]
                                 self.bus.publish("orientation_list", quaternions)
+
+                        if queue_name == "nn":
+                            detections = packets[-1].detections
+                            for detection in detections:
+                                bbox = (detection.xmin, detection.ymin, detection.xmax, detection.ymax)
+                                print(self.labels[detection.label], detection.confidence, bbox)
+                                self.bus.publish(self.labels[detection.label],
+                                                 [self.labels[detection.label], detection.confidence, list(bbox)])
 
     def request_stop(self):
         self.bus.shutdown()
