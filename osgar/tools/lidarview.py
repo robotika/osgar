@@ -416,14 +416,14 @@ class Framer:
                 arr = deserialize(data)
                 assert len(arr) == 3
                 self.pose = (arr[0]/1000.0, arr[1]/1000.0, math.radians(arr[2]/100.0))
-                x, y, heading = self.pose
-                self.pose = (x * math.cos(g_rotation_offset_rad) - y * math.sin(g_rotation_offset_rad),
-                             x * math.sin(g_rotation_offset_rad) + y * math.cos(g_rotation_offset_rad),
-                             heading + g_rotation_offset_rad)
-                if self.lidar_id is None and self.camera_id is None:
-                    keyframe = self.keyframe
-                    self.keyframe = False
-                    return timestamp, self.frame, self.pose, self.pose3d, self.scan, self.scan2, self.image, self.image2, self.bbox, self.joint, keyframe, self.title, False
+            x, y, heading = self.pose
+            self.pose = (x * math.cos(g_rotation_offset_rad) - y * math.sin(g_rotation_offset_rad),
+                         x * math.sin(g_rotation_offset_rad) + y * math.cos(g_rotation_offset_rad),
+                         heading + g_rotation_offset_rad)
+            if self.lidar_id is None and self.camera_id is None:
+                keyframe = self.keyframe
+                self.keyframe = False
+                return timestamp, self.frame, self.pose, self.pose3d, self.scan, self.scan2, self.image, self.image2, self.bbox, self.joint, keyframe, self.title, False
         return timedelta(), self.frame, self.pose, self.pose3d, self.scan, self.scan2, self.image, self.image2, self.bbox, self.joint, self.keyframe, self.title, True
 
 
