@@ -7,6 +7,7 @@ import math
 
 from osgar.bus import BusShutdownException
 from osgar.lib.quaternion import euler_to_quaternion
+from osgar.drivers.gps import checksum  # NMEA checksum used for $VNYMR message
 
 
 def parse_line(line):
@@ -27,6 +28,9 @@ def parse_line(line):
     """
     assert line.startswith(b'$VNYMR'), line
     assert b'*' in line, line
+    if checksum(line[1:-3]) != line[-2:]:
+        print('Checksum error!', line, checksum(line[1:-3]))
+        return None
     s = line.split(b'*')[0].split(b',')
     assert len(s) == 13, s
     arr = [float(x) for x in s[1:]]
@@ -38,11 +42,10 @@ class IMU(Thread):
         bus.register('orientation', 'rotation', 'data')
         Thread.__init__(self)
         self.setDaemon(True)
-
         self.offset = config.get("offset", [0, 0, 0])  # rotation offset in 1/100th of degree
-
         self.bus = bus
         self.buf = b''
+        self.verbose = False
 
     # Copy & Paste from gps.py - refactor!
     @staticmethod
@@ -55,10 +58,12 @@ class IMU(Thread):
             return data, b''
         return data[start+end+3:], data[start:start+end+3]
 
-    def process_packet(self, line):
+    @staticmethod
+    def process_packet(line):
         if line.startswith(b'$VNYMR'):
             result = parse_line(line)
-            return result
+            if result:
+                return result
         return None
 
     def process_gen(self, data):
@@ -91,6 +96,8 @@ class IMU(Thread):
                     quat = euler_to_quaternion(math.radians(yaw), math.radians(pitch), math.radians(roll))
                     angles = [int(round(x * 100)) for x in [yaw, pitch, roll]]
                     self.bus.publish('rotation', angles)
+                    if self.verbose:
+                        print(angles)
                     self.bus.publish('orientation', quat)
         except BusShutdownException:
             pass
