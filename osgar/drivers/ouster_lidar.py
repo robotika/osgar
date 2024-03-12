@@ -2,24 +2,21 @@
   Ouster lidar drivers
 """
 
-import logging
 import json
 
 from osgar.node import Node
-from osgar.bus import BusShutdownException
-
-
-g_logger = logging.getLogger(__name__)
 
 
 class OusterLidarDummy(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('http_request')
+        bus.register('http_request', 'lidar_config')
         self.lidar_url = config["lidar_url"]
         self.config_params = config.get("config_params")
         self.headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
-        self.configuration_status = 0
+        self.configuration_done = False
+        self.configuration_saved = False
+        self.verbose = False
 
     def send_conf_params(self):
         data = json.dumps(self.config_params).encode('utf-8')
@@ -32,18 +29,19 @@ class OusterLidarDummy(Node):
         pass
         # print(len(packet))
 
-    def update(self):
-        timestamp, channel, data = self.bus.listen()
-        if channel == "udp_packet":
-            self.process_udp(data)
-            if self.configuration_status == 0:
-                if self.config_params:
-                    self.send_conf_params()
-                    self.configuration_status = 1
-                else:
-                    self.request_configuration()
-                    self.configuration_status = 3
-        elif channel == "response":
-            print(data)
-            assert self.configuration_status != 0
+    def on_udp_packet(self, data):
+        if not self.configuration_done:
+            if self.config_params:
+                self.send_conf_params()
+
             self.request_configuration()
+            self.configuration_done = True
+        self.process_udp(data)
+
+    def on_response(self, data):
+        assert self.configuration_done
+        assert not self.configuration_saved  # The configuration should be delivered only once.
+        if self.verbose:
+            print(data)
+        self.publish("lidar_config", data.decode())
+        self.configuration_saved = True
