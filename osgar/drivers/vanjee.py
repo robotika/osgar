@@ -60,4 +60,91 @@ class VanJeeLidar(Node):
             pass
 
 
+#######################################################
+# External utilities based on 3rd party code snippets
+import socket
+
+
+#from utils_719c import checksum
+def checksum(data):
+    result = 0
+    for b in data[2:-4]:
+        result ^= b
+    return result
+
+
+def handle_response(data):
+    (frame_header, frame_length, frame_number, timestanmp, check_type, frame_type,
+     device_type, reserved_a, reserved_b, command, subcommand, param1, param2,
+     ip0, ip1, ip2, ip3, port, mac0, mac1, mac2, mac3, mac4, mac5,
+     check_code, end_of_frame) = struct.unpack(
+        '>HHHIBBHIIBBBBBBBBHBBBBBBHH', data)
+    assert (frame_header == 0xFFAA)
+    assert (end_of_frame == 0xEEEE)
+    assert (check_code == checksum(data))
+    assert (frame_length == 0x26)
+    assert (frame_type == 0x02)
+    assert (device_type == 0x190C)
+    assert (command == 0x05)
+    assert (subcommand == 0x01)
+    assert (param1 == 0)
+    assert (param2 == 0)
+    print(f'address: {ip0}.{ip1}.{ip2}.{ip3}:{port} ' +
+          f'[{mac0}:{mac1}:{mac2}:{mac3}:{mac4}:{mac5}]')
+
+
+def get_ip_719c(broadcast_address, own_port, lidar_port):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    # Without this bind, the broadcast does not work.
+    sock.bind((broadcast_address, own_port))
+
+    own_ip = bytes([int(x) for x in broadcast_address.split('.')])
+    cmd = bytearray(
+        b'\xFF\xAA' +
+        b'\x00\x20' +
+        b'\x00\x00' +
+        b'\x00\x00\x00\x00' +
+        b'\x01' +
+        b'\x01' +
+        b'\x19\x0c' +
+        b'\x00\x00\x00\x00\x00\x00\x00\x00' +
+        b'\x05' +
+        b'\x01' +
+        b'\x00' +
+        b'\x00' +
+        own_ip +
+        struct.pack('>H', own_port) +
+        b'\x00\x00' +
+        b'\xEE\xEE')
+    cmd[-3] = checksum(cmd)
+
+    assert (len(own_ip) == 4), len(own_ip)
+    assert (len(cmd) == 36), len(cmd)
+
+    sock.sendto(cmd, (broadcast_address, lidar_port))
+    # We need to bind to '' to be able to receive a broadcast to 255.255.255.255.
+    # However, the bind() above prevents us from doing it with the existing
+    # socket. So let's quickly (!) create a new one.
+    sock.close()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.bind(('', own_port))
+    sock.settimeout(5)
+    try:
+        data = sock.recv(1024)
+        handle_response(data)
+    except TimeoutError:
+        print('No device found.')
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--broadcast-address', default='192.168.0.255')
+    parser.add_argument('--own-port', default=6061, type=int)
+    parser.add_argument('--lidar-port', default=6060, type=int)
+    args = parser.parse_args()
+
+    get_ip_719c(args.broadcast_address, args.own_port, args.lidar_port)
+
 # vim: expandtab sw=4 ts=4
