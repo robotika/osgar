@@ -137,14 +137,63 @@ def get_ip_719c(broadcast_address, own_port, lidar_port):
         print('No device found.')
 
 
+def address_parts(addr):
+    return [int(a) for a in addr.split('.')]
+
+
+def set_ip_719c(lidar_new_address, lidar_new_mask, lidar_new_gateway, lidar_old_address, lidar_port):
+    assert (lidar_new_address is not None)
+    assert (lidar_new_gateway is not None)
+    assert (lidar_new_address != lidar_new_gateway)
+
+    cmd = bytearray(
+        b'\xFF\xAA' +
+        b'\x00\x2E' +
+        b'\x00\x00' +
+        b'\x00\x00\x00\x00' +
+        b'\x01' +
+        b'\x01' +
+        b'\x19\x0c' +
+        b'\x00\x00\x00\x00\x00\x00\x00\x00' +
+        b'\x02\x14\x00\x00' +
+        b'\x00\x00\x00\x00' +
+        b'\x00\x00\x00\x00' +
+        b'\x00\x00\x00\x00' +
+        b'\x00\x00\x00\x00\x00\x00\x00\x00' +
+        b'\x00\x00' +
+        b'\xEE\xEE'
+    )
+
+    cmd[26:30] = address_parts(lidar_new_address)
+    cmd[30:34] = address_parts(lidar_new_mask)
+    cmd[34:38] = address_parts(lidar_new_gateway)
+    cmd[-3] = checksum(cmd)
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.sendto(cmd, (lidar_old_address, lidar_port))
+
+
 if __name__ == '__main__':
     import argparse
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('--broadcast-address', default='192.168.0.255')
     parser.add_argument('--own-port', default=6061, type=int)
     parser.add_argument('--lidar-port', default=6060, type=int)
     args = parser.parse_args()
+"""
+    # set IP
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--lidar-old-address', default='192.168.0.2')
+    parser.add_argument('--lidar-port', default=6060, type=int)
+    parser.add_argument('--lidar-new-address', required=True)
+    parser.add_argument('--lidar-new-mask', default='255.255.255.0')
+    parser.add_argument('--lidar-new-gateway', required=True)
+    args = parser.parse_args()
 
-    get_ip_719c(args.broadcast_address, args.own_port, args.lidar_port)
+#    get_ip_719c(args.broadcast_address, args.own_port, args.lidar_port)
+
+    set_ip_719c(args.lidar_new_address, args.lidar_new_mask, args.lidar_new_gateway,
+                args.lidar_old_address, args.lidar_port)
 
 # vim: expandtab sw=4 ts=4
