@@ -175,25 +175,28 @@ def set_ip_719c(lidar_new_address, lidar_new_mask, lidar_new_gateway, lidar_old_
 
 if __name__ == '__main__':
     import argparse
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--broadcast-address', default='192.168.0.255')
-    parser.add_argument('--own-port', default=6061, type=int)
-    parser.add_argument('--lidar-port', default=6060, type=int)
-    args = parser.parse_args()
-"""
-    # set IP
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--lidar-old-address', default='192.168.0.2')
-    parser.add_argument('--lidar-port', default=6060, type=int)
-    parser.add_argument('--lidar-new-address', required=True)
-    parser.add_argument('--lidar-new-mask', default='255.255.255.0')
-    parser.add_argument('--lidar-new-gateway', required=True)
+    parser = argparse.ArgumentParser(description=__doc__)
+    subparsers = parser.add_subparsers(help='sub-command help', dest='command')
+    subparsers.required = True
+    parser_get = subparsers.add_parser('get', help='get lidar IP address and port')
+    parser_get.add_argument('--broadcast-address', default='192.168.0.255')
+    parser_get.add_argument('--own-port', default=6061, type=int)
+    parser_get.add_argument('--lidar-port', default=6060, type=int)
+
+    parser_set = subparsers.add_parser('set', help='set lidar new IP address')
+    parser_set.add_argument('--lidar-old-address', default='192.168.0.2')
+    parser_set.add_argument('--lidar-port', default=6060, type=int)
+    parser_set.add_argument('--lidar-new-address', required=True)
+    parser_set.add_argument('--lidar-new-mask', default='255.255.255.0')
+    parser_set.add_argument('--lidar-new-gateway', required=True)
     args = parser.parse_args()
 
-#    get_ip_719c(args.broadcast_address, args.own_port, args.lidar_port)
-
-    set_ip_719c(args.lidar_new_address, args.lidar_new_mask, args.lidar_new_gateway,
-                args.lidar_old_address, args.lidar_port)
+    if args.command == 'get':
+        get_ip_719c(args.broadcast_address, args.own_port, args.lidar_port)
+    elif args.command == 'set':
+        set_ip_719c(args.lidar_new_address, args.lidar_new_mask, args.lidar_new_gateway,
+                    args.lidar_old_address, args.lidar_port)
+    else:
+        assert 0, f'Unknown command "{args.command}"'
 
 # vim: expandtab sw=4 ts=4
