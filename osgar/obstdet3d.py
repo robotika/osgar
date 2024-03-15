@@ -15,7 +15,7 @@ class ObstacleDetector3D(Node):
         assert data.shape == (400, 640), data.shape
         selection = data[150:250, 300:340]
         mask = selection > 0  # not valid data?
-        dist = selection[mask].min()
+        dist = selection[mask].min() / 1000
         self.publish('obstacle', dist)
 #        print(self.time, dist)
 
