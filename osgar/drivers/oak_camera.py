@@ -31,7 +31,10 @@ class OakCamera:
         self.bus = bus
 
         self.labels = config.get("mappings", {}).get("labels", [])
-        self.bus.register(*(['depth', 'color', 'orientation_list'] + self.labels))
+        if len(self.labels) > 0:
+            self.bus.register(*(['depth', 'color', 'orientation_list', 'detections'] + self.labels))
+        else:
+            self.bus.register(*(['depth', 'color', 'orientation_list']))
         self.fps = config.get('fps', 10)
         self.is_depth = config.get('is_depth', False)
         self.laser_projector_current = config.get("laser_projector_current", 0)
@@ -267,11 +270,14 @@ class OakCamera:
 
                         if queue_name == "nn":
                             detections = packets[-1].detections
+                            bbox_list = []
                             for detection in detections:
                                 bbox = (detection.xmin, detection.ymin, detection.xmax, detection.ymax)
                                 print(self.labels[detection.label], detection.confidence, bbox)
                                 self.bus.publish(self.labels[detection.label],
                                                  [self.labels[detection.label], detection.confidence, list(bbox)])
+                                bbox_list.append([self.labels[detection.label], detection.confidence, list(bbox)])
+                            self.bus.publish('detections', bbox_list)
 
     def request_stop(self):
         self.bus.shutdown()
