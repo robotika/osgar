@@ -31,10 +31,9 @@ class OakCamera:
         self.bus = bus
 
         self.labels = config.get("mappings", {}).get("labels", [])
-        if len(self.labels) > 0:
-            self.bus.register(*(['depth', 'color', 'orientation_list', 'detections'] + self.labels))
-        else:
-            self.bus.register(*(['depth', 'color', 'orientation_list']))
+        self.bus.register('depth', 'color', 'orientation_list', 'detections',
+                          # *_seq streams are needed for output sync amd they are published BEFORE payload data
+                          'depth_seq', 'color_seq', 'detections_seq')
         self.fps = config.get('fps', 10)
         self.is_depth = config.get('is_depth', False)
         self.laser_projector_current = config.get("laser_projector_current", 0)
@@ -250,12 +249,17 @@ class OakCamera:
                 for queue_name in queue_events:
                     packets = device.getOutputQueue(queue_name).tryGetAll()
                     if len(packets) > 0:
+                        seq_num = packets[-1].getSequenceNum()  # for sync of various outputs
+                        dt = packets[-1].getTimestamp()  # datetime.timedelta
+                        timestamp_us = ((dt.days * 24 * 3600 + dt.seconds) * 1000000 + dt.microseconds)
                         if queue_name == "depth":
                             depth_frame = packets[-1].getFrame()  # use latest packet
+                            self.bus.publish("depth_seq", [seq_num, timestamp_us])
                             self.bus.publish("depth", depth_frame)
 
                         if queue_name == "color":
                             color_frame = packets[-1].getData().tobytes()  # use latest packet
+                            self.bus.publish("color_seq", [seq_num, timestamp_us])
                             self.bus.publish("color", color_frame)
 
                         if queue_name == "orientation":
@@ -274,9 +278,8 @@ class OakCamera:
                             for detection in detections:
                                 bbox = (detection.xmin, detection.ymin, detection.xmax, detection.ymax)
                                 print(self.labels[detection.label], detection.confidence, bbox)
-                                self.bus.publish(self.labels[detection.label],
-                                                 [self.labels[detection.label], detection.confidence, list(bbox)])
                                 bbox_list.append([self.labels[detection.label], detection.confidence, list(bbox)])
+                            self.bus.publish("detections_seq", [seq_num, timestamp_us])
                             self.bus.publish('detections', bbox_list)
 
     def request_stop(self):
