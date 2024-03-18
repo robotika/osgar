@@ -30,7 +30,6 @@ class OakCamera:
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.bus = bus
 
-        self.labels = config.get("mappings", {}).get("labels", [])
         self.bus.register('depth', 'color', 'orientation_list', 'detections',
                           # *_seq streams are needed for output sync amd they are published BEFORE payload data
                           'depth_seq', 'color_seq', 'detections_seq')
@@ -74,6 +73,9 @@ class OakCamera:
 
         self.oak_config_model = config.get("model")
         self.oak_config_nn_config = config.get("nn_config", {})
+        self.labels = config.get("mappings", {}).get("labels", [])
+
+        self.is_debug_mode = config.get('debug', False)  # run with debug output level
 
     def config_oak_nn(self, pipeline, camRgb):
         """
@@ -98,26 +100,14 @@ class OakCamera:
 
         print(metadata)
 
-        # parse labels
-#        nnMappings = self.oak_config_mappings  # "mappings" section
-#        labels = nnMappings.get("labels", {})
-
         # get model path
         nnPath = self.oak_config_model.get("blob")  # "model" section
         assert Path(nnPath).exists(), "No blob found at '{}'!".format(nnPath)
-        # sync outputs
-        syncNN = True
-
-        # Create pipeline
-#        pipeline = dai.Pipeline()
 
         # Define sources and outputs
-#        camRgb = pipeline.create(dai.node.ColorCamera)
         detectionNetwork = pipeline.create(dai.node.YoloDetectionNetwork)
-        xoutRgb = pipeline.create(dai.node.XLinkOut)
         nnOut = pipeline.create(dai.node.XLinkOut)
 
-        xoutRgb.setStreamName("rgb")
         nnOut.setStreamName("nn")
 
         # Properties - NOTE - overwriting defaults from config!
@@ -126,7 +116,7 @@ class OakCamera:
         camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         camRgb.setInterleaved(False)
         camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-        camRgb.setFps(40)
+        camRgb.setFps(self.fps)
 
         # Network specific settings
         detectionNetwork.setConfidenceThreshold(confidenceThreshold)
@@ -141,7 +131,6 @@ class OakCamera:
 
         # Linking
         camRgb.preview.link(detectionNetwork.input)
-        detectionNetwork.passthrough.link(xoutRgb.input)
         detectionNetwork.out.link(nnOut.input)
 
     def start(self):
@@ -242,6 +231,11 @@ class OakCamera:
 
         # Connect to device and start pipeline
         with dai.Device(pipeline, device_info) as device:
+            if self.is_debug_mode:
+                # Set debugging level
+                device.setLogLevel(dai.LogLevel.DEBUG)
+                device.setLogOutputLevel(dai.LogLevel.DEBUG)
+
             if self.laser_projector_current:
                 device.setIrLaserDotProjectorBrightness(self.laser_projector_current)
             if self.flood_light_current:
