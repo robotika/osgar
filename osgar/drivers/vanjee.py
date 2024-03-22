@@ -24,7 +24,7 @@ class VanJeeLidar(Node):
         assert length == 1380, length
         frame = struct.unpack_from('>H', data, 4)[0]
         if self.last_frame is not None:
-            assert self.last_frame + 1 == frame, (self.last_frame, frame)
+            assert (self.last_frame + 1) & 0xFFFF == frame, (self.last_frame, frame)
         self.last_frame = frame
         assert data[6:8] == bytes.fromhex('0000'), data[6:10].hex()  # reserved
         # reserved [8:10]  - variable
