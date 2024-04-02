@@ -406,16 +406,17 @@ class Framer:
                     return timestamp, self.frame, self.pose, self.pose3d, self.scan, self.scan2, self.image, self.image2, self.bbox, self.joint, keyframe, self.title, False
             elif stream_id == self.joint_id:
                 self.joint = deserialize(data)
-            elif stream_id == self.pose3d_id:
-                pose3d, orientation = deserialize(data)
-                assert len(pose3d) == 3
-                assert len(orientation) == 4
-                self.pose = [pose3d[0], pose3d[1], quaternion.heading(orientation)]
-                self.pose3d = [pose3d, orientation]
-            elif stream_id == self.pose2d_id:
-                arr = deserialize(data)
-                assert len(arr) == 3
-                self.pose = (arr[0]/1000.0, arr[1]/1000.0, math.radians(arr[2]/100.0))
+            elif stream_id in [self.pose2d_id, self.pose3d_id]:
+                if stream_id == self.pose3d_id:
+                    pose3d, orientation = deserialize(data)
+                    assert len(pose3d) == 3
+                    assert len(orientation) == 4
+                    self.pose = [pose3d[0], pose3d[1], quaternion.heading(orientation)]
+                    self.pose3d = [pose3d, orientation]
+                else:
+                    arr = deserialize(data)
+                    assert len(arr) == 3
+                    self.pose = (arr[0] / 1000.0, arr[1] / 1000.0, math.radians(arr[2] / 100.0))
                 x, y, heading = self.pose
                 self.pose = (x * math.cos(g_rotation_offset_rad) - y * math.sin(g_rotation_offset_rad),
                              x * math.sin(g_rotation_offset_rad) + y * math.cos(g_rotation_offset_rad),
