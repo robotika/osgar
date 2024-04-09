@@ -22,6 +22,8 @@ class FR07(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('can', 'emergency_stop', 'pose2d')
+        self.max_speed = config.get('max_speed', 0.5)
+        self.max_steering_deg = config.get('max_steering_deg', 45.0)
         self.last_steering = None
         self.last_speed = None
         self.last_emergency_stop = None
@@ -212,7 +214,12 @@ class FR07(Node):
         else:
             pass  # for zero leave it as it is now
         self.desired_speed = speed_mm_per_sec/1000  # m/s
+        if self.max_speed is not None:
+            self.desired_speed = min(self.max_speed, max(-self.max_speed, self.desired_speed))
         self.desired_steering_angle_deg = steering_deg_hundredth/100  # degrees
+        if self.max_steering_deg is not None:
+            self.desired_steering_angle_deg = min(self.max_steering_deg,
+                                                  max(-self.max_steering_deg, self.desired_steering_angle_deg))
 
     def draw(self):
         import matplotlib.pyplot as plt
