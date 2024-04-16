@@ -17,6 +17,7 @@
             "mono_resolution": "THE_400_P",
             "color_resolution": "THE_1080_P",
             "color_manual_focus": 130,
+            "color_manual_exposure": null,
 
             "stereo_median_filter": "KERNEL_3x3",
             "stereo_mode": "HIGH_ACCURACY",
