@@ -2,10 +2,11 @@
     Osgar driver for Luxonis OAK cameras.
     https://www.luxonis.com/
 """
-
 from threading import Thread
-import depthai as dai
+from pathlib import Path
 import logging
+
+import depthai as dai
 
 g_logger = logging.getLogger(__name__)
 
@@ -29,11 +30,15 @@ class OakCamera:
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.bus = bus
 
-        self.bus.register('depth', 'color', 'orientation_list')
+        self.bus.register('depth', 'color', 'orientation_list', 'detections',
+                          # *_seq streams are needed for output sync amd they are published BEFORE payload data
+                          'depth_seq', 'color_seq', 'detections_seq')
         self.fps = config.get('fps', 10)
         self.is_depth = config.get('is_depth', False)
         self.laser_projector_current = config.get("laser_projector_current", 0)
         assert self.laser_projector_current <= 1200, self.laser_projector_current  # The limit is 1200 mA.
+        self.flood_light_current = config.get("flood_light_current", 0)
+        assert self.flood_light_current <= 1500, self.flood_light_current  # The limit is 1500 mA.
         self.is_color = config.get('is_color', False)
         self.is_imu_enabled = config.get('is_imu_enabled', False)
         # Preferred number of IMU records in one packet
@@ -66,7 +71,67 @@ class OakCamera:
         assert stereo_mode_value in ["HIGH_DENSITY", "HIGH_ACCURACY"], stereo_mode_value
         self.stereo_mode = getattr(dai.node.StereoDepth.PresetMode, stereo_mode_value)
 
+        self.oak_config_model = config.get("model")
+        self.oak_config_nn_config = config.get("nn_config", {})
+        self.labels = config.get("mappings", {}).get("labels", [])
 
+        self.is_debug_mode = config.get('debug', False)  # run with debug output level
+
+    def config_oak_nn(self, pipeline, camRgb):
+        """
+        Configure OAK pipeline for processing neural network
+        """
+        # code taken from
+        # https://github.com/luxonis/depthai-experiments/blob/master/gen2-yolo/device-decoding/main_api.py
+        nnConfig = self.oak_config_nn_config  # "nn_config" section
+
+        # parse input shape
+        if "input_size" in nnConfig:
+            W, H = tuple(map(int, nnConfig.get("input_size").split('x')))
+
+        # extract metadata
+        metadata = nnConfig.get("NN_specific_metadata", {})
+        classes = metadata.get("classes", {})
+        coordinates = metadata.get("coordinates", {})
+        anchors = metadata.get("anchors", {})
+        anchorMasks = metadata.get("anchor_masks", {})
+        iouThreshold = metadata.get("iou_threshold", {})
+        confidenceThreshold = metadata.get("confidence_threshold", {})
+
+        print(metadata)
+
+        # get model path
+        nnPath = self.oak_config_model.get("blob")  # "model" section
+        assert Path(nnPath).exists(), "No blob found at '{}'!".format(nnPath)
+
+        # Define sources and outputs
+        detectionNetwork = pipeline.create(dai.node.YoloDetectionNetwork)
+        nnOut = pipeline.create(dai.node.XLinkOut)
+
+        nnOut.setStreamName("nn")
+
+        # Properties - NOTE - overwriting defaults from config!
+        camRgb.setPreviewSize(W, H)
+
+        camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+        camRgb.setInterleaved(False)
+        camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+        camRgb.setFps(self.fps)
+
+        # Network specific settings
+        detectionNetwork.setConfidenceThreshold(confidenceThreshold)
+        detectionNetwork.setNumClasses(classes)
+        detectionNetwork.setCoordinateSize(coordinates)
+        detectionNetwork.setAnchors(anchors)
+        detectionNetwork.setAnchorMasks(anchorMasks)
+        detectionNetwork.setIouThreshold(iouThreshold)
+        detectionNetwork.setBlobPath(nnPath)
+        detectionNetwork.setNumInferenceThreads(2)
+        detectionNetwork.input.setBlocking(False)
+
+        # Linking
+        camRgb.preview.link(detectionNetwork.input)
+        detectionNetwork.out.link(nnOut.input)
 
     def start(self):
         self.input_thread.start()
@@ -146,10 +211,15 @@ class OakCamera:
             imu.setMaxBatchReports(20)
             imu.out.link(imu_out.input)
 
+        if self.oak_config_model is not None:
+            # configure OAK neural network
+            assert self.is_color, "RGC camera must be enabled!"
+            self.config_oak_nn(pipeline, color)  # note, that "color" is RGB camera
+            queue_names.append("nn")
+
         if not queue_names:
             g_logger.error("No stream enabled!")
             return
-
 
         if self.cam_ip and cam_is_available(self.cam_ip):  # USB cameras?
             device_info = dai.DeviceInfo()
@@ -162,20 +232,32 @@ class OakCamera:
 
         # Connect to device and start pipeline
         with dai.Device(pipeline, device_info) as device:
+            if self.is_debug_mode:
+                # Set debugging level
+                device.setLogLevel(dai.LogLevel.DEBUG)
+                device.setLogOutputLevel(dai.LogLevel.DEBUG)
+
             if self.laser_projector_current:
                 device.setIrLaserDotProjectorBrightness(self.laser_projector_current)
+            if self.flood_light_current:
+                device.setIrFloodLightBrightness(self.flood_light_current)
             while self.bus.is_alive():
                 queue_events = device.getQueueEvents(queue_names)
 
                 for queue_name in queue_events:
                     packets = device.getOutputQueue(queue_name).tryGetAll()
                     if len(packets) > 0:
+                        seq_num = packets[-1].getSequenceNum()  # for sync of various outputs
+                        dt = packets[-1].getTimestamp()  # datetime.timedelta
+                        timestamp_us = ((dt.days * 24 * 3600 + dt.seconds) * 1000000 + dt.microseconds)
                         if queue_name == "depth":
                             depth_frame = packets[-1].getFrame()  # use latest packet
+                            self.bus.publish("depth_seq", [seq_num, timestamp_us])
                             self.bus.publish("depth", depth_frame)
 
                         if queue_name == "color":
                             color_frame = packets[-1].getData().tobytes()  # use latest packet
+                            self.bus.publish("color_seq", [seq_num, timestamp_us])
                             self.bus.publish("color", color_frame)
 
                         if queue_name == "orientation":
@@ -187,6 +269,16 @@ class OakCamera:
                                                 ]
                                                for data in packet.packets]
                                 self.bus.publish("orientation_list", quaternions)
+
+                        if queue_name == "nn":
+                            detections = packets[-1].detections
+                            bbox_list = []
+                            for detection in detections:
+                                bbox = (detection.xmin, detection.ymin, detection.xmax, detection.ymax)
+                                print(self.labels[detection.label], detection.confidence, bbox)
+                                bbox_list.append([self.labels[detection.label], detection.confidence, list(bbox)])
+                            self.bus.publish("detections_seq", [seq_num, timestamp_us])
+                            self.bus.publish('detections', bbox_list)
 
     def request_stop(self):
         self.bus.shutdown()
