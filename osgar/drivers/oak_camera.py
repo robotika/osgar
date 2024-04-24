@@ -53,7 +53,7 @@ class OakCamera:
         assert not(self.is_extended_disparity and self.is_subpixel)  # Do not use extended_disparity and subpixel together.
 
         self.color_manual_focus = config.get("color_manual_focus")  # 0..255 [far..near]
-        self.color_manual_exposure = config.get("color_manual_exposure")  # 1..33000 [us]
+        self.color_manual_exposure = config.get("color_manual_exposure")  # [exposure, iso] 1..33000 [us] and 100..1600
 
         mono_resolution_value = config.get("mono_resolution", "THE_400_P")
         assert mono_resolution_value in ["THE_400_P", "THE_480_P", "THE_720_P", "THE_800_P"], mono_resolution_value
@@ -160,7 +160,8 @@ class OakCamera:
             if self.color_manual_focus is not None:
                 color.initialControl.setManualFocus(self.color_manual_focus)
             if self.color_manual_exposure is not None:
-                color.initialControl.setManualExposure(self.color_manual_exposure, 100)  # exposure time and ISO
+                exposure, iso = self.color_manual_exposure
+                color.initialControl.setManualExposure(exposure, iso)  # exposure time and ISO
 
             color_encoder.setDefaultProfilePreset(self.fps, dai.VideoEncoderProperties.Profile.MJPEG)
 
