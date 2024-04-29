@@ -147,12 +147,25 @@ def draw(foreground, pose, scan, poses=[], image=None, bbox=None, callback=None,
 
         foreground.blit(cameraView, (0, 0))
 
-        for b in bbox:
-            assert len(b) > 5, b
-            name, x, y, width, height = b[:5]
-            color = (0, 255, 0)
-            rect = pygame.Rect(x, y, width, height)
-            pygame.draw.rect(image, color, rect, 2)
+        def frameNorm(w, h, bbox):
+            normVals = np.full(len(bbox), w)
+            normVals[::2] = h
+            return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
+
+        for frame_detections in bbox:
+            for detection in frame_detections:
+                if len(detection) == 0:
+                    continue  # empty bbox is allowed now
+                # old format (b=detection)
+                #assert len(b) > 5, b
+                #name, x, y, width, height = b[:5]
+                # new (temporary?) format
+                w, h = image.get_size()
+                a, b, c, d = frameNorm(h, h, detection[2]).tolist()
+                name, x, y, width, height = detection[0],  a + (w - h) / 2, b, c - a, d - b
+                color = (0, 255, 0)
+                rect = pygame.Rect(x, y, width, height)
+                pygame.draw.rect(image, color, rect, 4)
 
     if callback is not None:
         debug_poly = []
