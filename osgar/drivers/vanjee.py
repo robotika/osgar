@@ -14,6 +14,8 @@ class VanJeeLidar(Node):
         super().__init__(config, bus)
         self.last_frame = None  # not defined
         self.points = []
+        self.debug_arr = []
+        self.verbose = False
 
     def on_raw(self, data):
         assert len(data) in [34, 1384], len(data)
@@ -47,6 +49,8 @@ class VanJeeLidar(Node):
                 self.publish('scan10', scan10)
                 scanup = self.points[7::8]  # -10, -5, 0, 0.3
                 self.publish('scanup', scanup)
+                if self.verbose:
+                    self.debug_arr.append((self.time.total_seconds(), self.points[:]))
             else:
                 print(self.time, f'Incomplete scan - only {len(self.points)//2} points out of 7200')  # intensity, dist in mm
 
@@ -59,6 +63,20 @@ class VanJeeLidar(Node):
         except BusShutdownException:
             pass
 
+    def draw(self):
+        import matplotlib.pyplot as plt
+#        t = [a[0] for a in self.debug_arr]
+#        x = [a[1] for a in self.debug_arr]
+#        line = plt.plot(t, x, '-o', linewidth=2, label=f'Locomotive X')
+#        angles = [a[5::8] for a in self.debug_arr[0]]
+        for i in [1, 3, 5]:
+            angles = self.debug_arr[0][1][i::8]
+            plt.plot(angles, 'o', linewidth=2)
+
+#        plt.xlabel('time (s)')
+#        plt.ylabel('distance (m)')
+        plt.legend()
+        plt.show()
 
 #######################################################
 # External utilities based on 3rd party code snippets
