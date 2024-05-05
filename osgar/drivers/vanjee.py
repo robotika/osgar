@@ -65,17 +65,42 @@ class VanJeeLidar(Node):
 
     def draw(self):
         import matplotlib.pyplot as plt
+        from matplotlib.widgets import Slider
 #        t = [a[0] for a in self.debug_arr]
 #        x = [a[1] for a in self.debug_arr]
 #        line = plt.plot(t, x, '-o', linewidth=2, label=f'Locomotive X')
 #        angles = [a[5::8] for a in self.debug_arr[0]]
-        for i in [1, 3, 5]:
-            angles = self.debug_arr[0][1][i::8]
-            plt.plot(angles, 'o', linewidth=2)
 
-#        plt.xlabel('time (s)')
+        fig, ax = plt.subplots()
+
+        i = 0
+        angles = self.debug_arr[i][1][1::8]
+        line10, = ax.plot(angles, 'o', linewidth=2, label='-10 deg')
+        angles = self.debug_arr[i][1][3::8]
+        line5, = ax.plot(angles, 'o', linewidth=2, label='-5 deg')
+
+        # adjust the main plot to make room for the sliders
+        fig.subplots_adjust(bottom=0.25, left=0.2)
+
+        axfreq = fig.add_axes([0.25, 0.1, 0.65, 0.03])
+        freq_slider = Slider(
+            ax=axfreq,
+            label='Frame',
+            valmin=0,
+            valmax=len(self.debug_arr)-1,
+            valinit=i,
+            valstep=1,
+        )
+
+        def update(val):
+            i = int(freq_slider.val)
+            line10.set_ydata(self.debug_arr[i][1][1::8])
+            line5.set_ydata(self.debug_arr[i][1][3::8])
+
+        #        plt.xlabel('time (s)')
 #        plt.ylabel('distance (m)')
-        plt.legend()
+        freq_slider.on_changed(update)
+        fig.legend()
         plt.show()
 
 #######################################################
