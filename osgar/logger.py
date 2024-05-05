@@ -197,7 +197,9 @@ class LogReader:
             dt_bytes = header[:4]
             dt = parse_timedelta(dt_bytes)
             stream_id, size = struct.unpack('HH', header[4:])
+            # check for corrupted end of log file (filled with zeros)
             if stream_id == 0 and size == 0:
+                # unexpected size for system stream -> corrupted log file
                 g_logger.error(f"                       ")
                 g_logger.error(f"Zero bytes {self.f.name} from position {start}")
                 count = 0
