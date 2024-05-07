@@ -25,6 +25,18 @@ def cam_is_available(cam_ip):
     return False
 
 
+def get_video_encoder(name):
+    # https://docs.luxonis.com/projects/api/en/latest/components/nodes/video_encoder/
+    if name == 'h264':
+        return dai.VideoEncoderProperties.Profile.H264_MAIN
+    elif name == 'h265':
+        return dai.VideoEncoderProperties.Profile.H265_MAIN
+    elif name == 'mjpeg':
+        return dai.VideoEncoderProperties.Profile.MJPEG
+    else:
+        assert 0, f'"{name}" is not supported'
+
+
 class OakCamera:
     def __init__(self, config, bus):
         self.input_thread = Thread(target=self.run_input, daemon=True)
@@ -40,6 +52,8 @@ class OakCamera:
         self.flood_light_current = config.get("flood_light_current", 0)
         assert self.flood_light_current <= 1500, self.flood_light_current  # The limit is 1500 mA.
         self.is_color = config.get('is_color', False)
+        self.video_encoder = get_video_encoder(config.get('video_encoder', 'mjpeg'))
+
         self.is_imu_enabled = config.get('is_imu_enabled', False)
         # Preferred number of IMU records in one packet
         self.number_imu_records = config.get('number_imu_records', 20)
@@ -163,7 +177,7 @@ class OakCamera:
                 exposure, iso = self.color_manual_exposure
                 color.initialControl.setManualExposure(exposure, iso)  # exposure time and ISO
 
-            color_encoder.setDefaultProfilePreset(self.fps, dai.VideoEncoderProperties.Profile.MJPEG)
+            color_encoder.setDefaultProfilePreset(self.fps, self.video_encoder)
 
             color.video.link(color_encoder.input)
             color_encoder.bitstream.link(color_out.input)
