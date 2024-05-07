@@ -42,7 +42,7 @@ class OakCamera:
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.bus = bus
 
-        self.bus.register('depth', 'color', 'orientation_list', 'detections',
+        self.bus.register('depth:gz', 'color', 'orientation_list', 'detections',
                           # *_seq streams are needed for output sync amd they are published BEFORE payload data
                           'depth_seq', 'color_seq', 'detections_seq')
         self.fps = config.get('fps', 10)
