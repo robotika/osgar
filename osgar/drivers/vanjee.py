@@ -74,10 +74,10 @@ class VanJeeLidar(Node):
         fig, ax = plt.subplots()
 
         i = 0
-        angles = self.debug_arr[i][1][1::8]
-        line10, = ax.plot(angles, 'o', linewidth=2, label='-10 deg')
-        angles = self.debug_arr[i][1][3::8]
-        line5, = ax.plot(angles, 'o', linewidth=2, label='-5 deg')
+        line10, = ax.plot(self.debug_arr[i][1][1::8], 'o', linewidth=2, label='-10 deg')
+        line5, = ax.plot(self.debug_arr[i][1][3::8], 'o', linewidth=2, label='-5 deg')
+        line0, = ax.plot(self.debug_arr[i][1][5::8], 'o', linewidth=2, label='0 deg')
+        line03, = ax.plot(self.debug_arr[i][1][7::8], 'o', linewidth=2, label='0.3 deg')
 
         # adjust the main plot to make room for the sliders
         fig.subplots_adjust(bottom=0.25, left=0.2)
@@ -96,6 +96,8 @@ class VanJeeLidar(Node):
             i = int(freq_slider.val)
             line10.set_ydata(self.debug_arr[i][1][1::8])
             line5.set_ydata(self.debug_arr[i][1][3::8])
+            line0.set_ydata(self.debug_arr[i][1][5::8])
+            line03.set_ydata(self.debug_arr[i][1][7::8])
 
         #        plt.xlabel('time (s)')
 #        plt.ylabel('distance (m)')
