@@ -214,7 +214,7 @@ def depth_map(depth):
     return pygame.image.frombuffer(
             cv2.cvtColor(
                 cv2.applyColorMap(depth, cv2.COLORMAP_JET),
-                cv2.COLOR_BGR2RGB).tostring(),
+                cv2.COLOR_BGR2RGB).tobytes(),
             depth.shape[1::-1], "RGB")
 
 def get_image(data):
@@ -231,7 +231,7 @@ def get_image(data):
             im_color = cv2.applyColorMap(img, cv2.COLORMAP_JET)
 
         # https://stackoverflow.com/questions/19306211/opencv-cv2-image-to-pygame-image
-        image = pygame.image.frombuffer(im_color.tostring(), im_color.shape[1::-1], "RGB")
+        image = pygame.image.frombuffer(im_color.tobytes(), im_color.shape[1::-1], "RGB")
         g_depth = data
     elif isinstance(data, tuple):
         img_data, depth_data = data
@@ -278,7 +278,7 @@ def pygame_to_numpy_image(pygame_img):
 
 def numpy_to_pygame_image(np_image):
     np_img = cv2.cvtColor(np_image, cv2.COLOR_BGR2RGB)
-    return pygame.image.frombuffer(np_img.tostring(), np_img.shape[1::-1], "RGB")
+    return pygame.image.frombuffer(np_img.tobytes(), np_img.shape[1::-1], "RGB")
 
 
 class Frame:
