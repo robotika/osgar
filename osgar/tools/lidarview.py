@@ -243,7 +243,27 @@ def get_image(data):
         assert len(data) == 3, len(data)
         image = pygame.image.load(io.BytesIO(data[1][2]), 'JPG').convert()
     elif data is not None:
-        image = pygame.image.load(io.BytesIO(data), 'JPG').convert()
+        try:
+            image = pygame.image.load(io.BytesIO(data), 'JPG').convert()
+        except pygame.error:
+            # try H264 via OpenCV
+            assert data.startswith(bytes.fromhex('00000001 0950')) or data.startswith(bytes.fromhex('00000001 0930')), data[:20].hex()
+            if data.startswith(bytes.fromhex('00000001 0950')):
+                # I - key frame
+                with open('tmp.h264', 'wb') as f:
+                    f.write(data)
+            elif data.startswith(bytes.fromhex('00000001 0950')):
+                # P-frame}
+                with open('tmp.h264', 'ab') as f:
+                    f.write(data)
+            cap = cv2.VideoCapture('tmp.h264')
+            image = None
+            ret = True
+            while ret:
+                ret, frame = cap.read()
+                if ret:
+                    image = pygame.image.frombuffer(frame.tobytes(), frame.shape[1::-1], "BGR")
+            cap.release()
     else:
         image = None
     return image, (None if g_depth is None else depth_map(g_depth))
