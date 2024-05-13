@@ -252,10 +252,12 @@ def get_image(data):
                 # I - key frame
                 with open('tmp.h264', 'wb') as f:
                     f.write(data)
-            elif data.startswith(bytes.fromhex('00000001 0950')):
+            elif data.startswith(bytes.fromhex('00000001 0930')):
                 # P-frame}
                 with open('tmp.h264', 'ab') as f:
                     f.write(data)
+            else:
+                assert 0, f'Unexpected data {data[:20].hex()}'
             cap = cv2.VideoCapture('tmp.h264')
             image = None
             ret = True
