@@ -14,6 +14,8 @@ class VanJeeLidar(Node):
         super().__init__(config, bus)
         self.last_frame = None  # not defined
         self.points = []
+        self.debug_arr = []
+        self.verbose = False
 
     def on_raw(self, data):
         assert len(data) in [34, 1384], len(data)
@@ -47,6 +49,8 @@ class VanJeeLidar(Node):
                 self.publish('scan10', scan10)
                 scanup = self.points[7::8]  # -10, -5, 0, 0.3
                 self.publish('scanup', scanup)
+                if self.verbose:
+                    self.debug_arr.append((self.time.total_seconds(), self.points[:]))
             else:
                 print(self.time, f'Incomplete scan - only {len(self.points)//2} points out of 7200')  # intensity, dist in mm
 
@@ -59,6 +63,43 @@ class VanJeeLidar(Node):
         except BusShutdownException:
             pass
 
+    def draw(self):
+        import matplotlib.pyplot as plt
+        from matplotlib.widgets import Slider
+
+        fig, ax = plt.subplots()
+
+        i = 0
+        line10, = ax.plot(self.debug_arr[i][1][1::8], 'o', linewidth=2, label='-10 deg')
+        line5, = ax.plot(self.debug_arr[i][1][3::8], 'o', linewidth=2, label='-5 deg')
+        line0, = ax.plot(self.debug_arr[i][1][5::8], 'o', linewidth=2, label='0 deg')
+        line03, = ax.plot(self.debug_arr[i][1][7::8], 'o', linewidth=2, label='0.3 deg')
+
+        # adjust the main plot to make room for the sliders
+        fig.subplots_adjust(bottom=0.25)
+        plt.xlabel('angle index')
+        plt.ylabel('distance (mm)')
+
+        axfreq = fig.add_axes([0.1, 0.1, 0.8, 0.03])
+        freq_slider = Slider(
+            ax=axfreq,
+            label='Frame',
+            valmin=0,
+            valmax=len(self.debug_arr)-1,
+            valinit=i,
+            valstep=1,
+        )
+
+        def update(val):
+            i = int(freq_slider.val)
+            line10.set_ydata(self.debug_arr[i][1][1::8])
+            line5.set_ydata(self.debug_arr[i][1][3::8])
+            line0.set_ydata(self.debug_arr[i][1][5::8])
+            line03.set_ydata(self.debug_arr[i][1][7::8])
+
+        freq_slider.on_changed(update)
+        fig.legend()
+        plt.show()
 
 #######################################################
 # External utilities based on 3rd party code snippets
