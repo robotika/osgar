@@ -214,7 +214,7 @@ def depth_map(depth):
     return pygame.image.frombuffer(
             cv2.cvtColor(
                 cv2.applyColorMap(depth, cv2.COLORMAP_JET),
-                cv2.COLOR_BGR2RGB).tostring(),
+                cv2.COLOR_BGR2RGB).tobytes(),
             depth.shape[1::-1], "RGB")
 
 def get_image(data):
@@ -231,7 +231,7 @@ def get_image(data):
             im_color = cv2.applyColorMap(img, cv2.COLORMAP_JET)
 
         # https://stackoverflow.com/questions/19306211/opencv-cv2-image-to-pygame-image
-        image = pygame.image.frombuffer(im_color.tostring(), im_color.shape[1::-1], "RGB")
+        image = pygame.image.frombuffer(im_color.tobytes(), im_color.shape[1::-1], "RGB")
         g_depth = data
     elif isinstance(data, tuple):
         img_data, depth_data = data
@@ -243,7 +243,29 @@ def get_image(data):
         assert len(data) == 3, len(data)
         image = pygame.image.load(io.BytesIO(data[1][2]), 'JPG').convert()
     elif data is not None:
-        image = pygame.image.load(io.BytesIO(data), 'JPG').convert()
+        try:
+            image = pygame.image.load(io.BytesIO(data), 'JPG').convert()
+        except pygame.error:
+            # try H264 via OpenCV
+            assert data.startswith(bytes.fromhex('00000001 0950')) or data.startswith(bytes.fromhex('00000001 0930')), data[:20].hex()
+            if data.startswith(bytes.fromhex('00000001 0950')):
+                # I - key frame
+                with open('tmp.h264', 'wb') as f:
+                    f.write(data)
+            elif data.startswith(bytes.fromhex('00000001 0930')):
+                # P-frame}
+                with open('tmp.h264', 'ab') as f:
+                    f.write(data)
+            else:
+                assert 0, f'Unexpected data {data[:20].hex()}'
+            cap = cv2.VideoCapture('tmp.h264')
+            image = None
+            ret = True
+            while ret:
+                ret, frame = cap.read()
+                if ret:
+                    image = pygame.image.frombuffer(frame.tobytes(), frame.shape[1::-1], "BGR")
+            cap.release()
     else:
         image = None
     return image, (None if g_depth is None else depth_map(g_depth))
@@ -258,7 +280,7 @@ def pygame_to_numpy_image(pygame_img):
 
 def numpy_to_pygame_image(np_image):
     np_img = cv2.cvtColor(np_image, cv2.COLOR_BGR2RGB)
-    return pygame.image.frombuffer(np_img.tostring(), np_img.shape[1::-1], "RGB")
+    return pygame.image.frombuffer(np_img.tobytes(), np_img.shape[1::-1], "RGB")
 
 
 class Frame:
