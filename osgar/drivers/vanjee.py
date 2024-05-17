@@ -81,6 +81,8 @@ class VanJeeLidar(Node):
 
         # adjust the main plot to make room for the sliders
         fig.subplots_adjust(bottom=0.25, left=0.2)
+        plt.xlabel('angle index')
+        plt.ylabel('distance (mm)')
 
         axfreq = fig.add_axes([0.25, 0.1, 0.65, 0.03])
         freq_slider = Slider(
@@ -99,8 +101,6 @@ class VanJeeLidar(Node):
             line0.set_ydata(self.debug_arr[i][1][5::8])
             line03.set_ydata(self.debug_arr[i][1][7::8])
 
-        #        plt.xlabel('time (s)')
-#        plt.ylabel('distance (m)')
         freq_slider.on_changed(update)
         fig.legend()
         plt.show()
