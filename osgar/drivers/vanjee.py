@@ -76,11 +76,11 @@ class VanJeeLidar(Node):
         line03, = ax.plot(self.debug_arr[i][1][7::8], 'o', linewidth=2, label='0.3 deg')
 
         # adjust the main plot to make room for the sliders
-        fig.subplots_adjust(bottom=0.25, left=0.2)
+        fig.subplots_adjust(bottom=0.25)
         plt.xlabel('angle index')
         plt.ylabel('distance (mm)')
 
-        axfreq = fig.add_axes([0.25, 0.1, 0.65, 0.03])
+        axfreq = fig.add_axes([0.1, 0.1, 0.8, 0.03])
         freq_slider = Slider(
             ax=axfreq,
             label='Frame',
