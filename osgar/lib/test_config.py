@@ -63,5 +63,31 @@ class ConfigTest(unittest.TestCase):
         conf = config_load(filename, application='osgar.lib.test_config:MyTestRobot')
         self.assertTrue(conf['robot']['modules']['app']['driver'].endswith('lib.test_config:MyTestRobot'))
 
+    def test_extra_params(self):
+        conf_dir = '../../config'
+        filename = test_data('eduro.json', conf_dir)
+        conf = config_load(filename)
+        self.assertAlmostEqual(conf['robot']['modules']['app']['init']['max_speed'], 0.5)
+
+        conf = config_load(filename, params=['app.max_speed=0.1'])
+        self.assertAlmostEqual(conf['robot']['modules']['app']['init']['max_speed'], 0.1)
+
+    def test_without(self):
+        conf_dir = '../../config'
+        filename = test_data('test-dual-timer.json', conf_dir)
+        with self.assertRaises(AssertionError):
+            config_load(filename, without=['non_existing_timer'])
+
+        conf = config_load(filename, without=['timer1'])
+        self.assertNotIn('timer1', conf['robot']['modules'])
+        self.assertIn('timer2', conf['robot']['modules'])
+
+    def test_without_links(self):
+        conf_dir = '../../config'
+        filename = test_data('eduro.json', conf_dir)
+        conf = config_load(filename, without=['lidar_tcp'])
+        self.assertNotIn(["lidar_tcp.raw", "lidar.raw"], conf['robot']['links'])
+
+
 # vim: expandtab sw=4 ts=4
 

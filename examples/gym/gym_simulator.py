@@ -11,7 +11,6 @@ import gym
 from f110_gym.envs.base_classes import Integrator
 
 from osgar.node import Node
-from osgar.bus import BusShutdownException
 
 
 class GymSimulator(Node):
@@ -24,6 +23,11 @@ class GymSimulator(Node):
         self.conf = Namespace(**conf_dict)
         self.speed = 0
         self.steer = 0
+        self.sim_time = 0
+        self.racecar_env = None
+        self.step_num = 0
+        self.scan_subsample = 3
+        self.pose_subsample = 2
 
     def on_desired_speed(self, data):
         speed, angular_speed = data
@@ -34,34 +38,37 @@ class GymSimulator(Node):
         else:
             self.steer = 0
 
+    def on_desired_steering(self, data):
+        speed, steering_angle_100deg = data
+        self.speed = speed / 1000
+        self.steer = math.radians(steering_angle_100deg / 100.0)
+
     def on_tick(self, data):
-        # step simulation
-        pass
+        self.step_num += 1
+        obs, step_reward, done, info = self.racecar_env.step(np.array([[self.steer, self.speed]]))
+        self.racecar_env.render(mode='human')
+        self.send_data(obs)
+        self.sim_time += step_reward
+        self.publish('sim_time', self.sim_time)
+        if done:
+            print("Task finished")
+            self.request_stop()
 
     def send_data(self, obs):
-        scan = (obs["scans"][0]*1000).astype(np.int16).tolist()
-        self.publish("scan", scan)
-        x = obs["poses_x"][0]
-        y = obs["poses_y"][0]
-        heading = obs["poses_theta"][0]
-        self.publish('pose2d', [round(x * 1000), round(y * 1000), round(math.degrees(heading) * 100)])
+        if self.step_num % self.scan_subsample == 0:
+            scan = (obs["scans"][0]*1000).astype(np.int16).tolist()
+            self.publish("scan", scan)
+        if self.step_num % self.pose_subsample == 0:
+            x = obs["poses_x"][0]
+            y = obs["poses_y"][0]
+            heading = obs["poses_theta"][0]
+            self.publish('pose2d', [round(x * 1000), round(y * 1000), round(math.degrees(heading) * 100)])
 
     def run(self):
-        try:
-            racecar_env = gym.make('f110_gym:f110-v0', map=self.conf.map_path, num_agents=1, timestep = 0.02,
-                                   integrator=Integrator.RK4)
-            obs, step_reward, done, info = racecar_env.reset(np.array([[self.conf.sx, self.conf.sy, self.conf.stheta]]))
-            sim_time = 0
-            racecar_env.render()
-            # loops when env not done
-            while not done:
-                self.update()
-                obs, step_reward, done, info = racecar_env.step(np.array([[self.steer, self.speed]]))
-                racecar_env.render(mode='human')
-                self.send_data(obs)
-                sim_time += step_reward
-                self.publish('sim_time', sim_time)
-
-            self.request_stop()
-        except BusShutdownException:
-            pass
+        self.racecar_env = gym.make('f110_gym:f110-v0', map=self.conf.map_path, num_agents=1, timestep=0.01,
+                               integrator=Integrator.RK4)
+        obs, step_reward, done, info = self.racecar_env.reset(np.array([[self.conf.sx, self.conf.sy, self.conf.stheta]]))
+        self.sim_time = step_reward
+        self.racecar_env.render()
+        self.send_data(obs)
+        super().run()

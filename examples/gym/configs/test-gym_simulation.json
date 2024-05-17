@@ -3,32 +3,34 @@
   "robot": {
     "modules": {
       "app": {
-          "driver": "application",
+          "driver": "osgar.go:Go",
           "in": ["pose2d", "scan"],
           "out": ["desired_speed"],
           "init": {
             "max_speed": 1.0,
-            "desired_angle": 0.1
+            "desired_angle": 0,
+            "dist": 1,
+            "timeout": 10
           }
       },
       "gym": {
           "driver": "examples.gym.gym_simulator:GymSimulator",
-          "in": ["desired_speed", "tick"],
+          "in": ["desired_steering", "tick"],
           "out": ["pose2d", "tick"],
           "init": {
-            "map_config": "config_example_map.yaml"
+            "map_config": "configs/config_example_map.yaml"
           }
       },
       "tick": {
           "driver": "timer",
           "in": [],
-          "out": ["tickw"],
+          "out": ["tick"],
           "init": {
-            "sleep": 0.05
+            "sleep": 0.02
           }
       }
     },
-    "links": [["app.desired_speed", "gym.desired_speed"],
+    "links": [["app.desired_speed", "gym.desired_steering"],
               ["tick.tick", "gym.tick"],
               ["gym.pose2d", "app.pose2d"]]
   }

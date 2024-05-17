@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "race": {
+          "driver": "examples.gym.my_race:MyRace",
+          "in": ["pose2d", "scan"],
+          "out": ["desired_steering"],
+          "init": {
+            "max_speed": 4
+          }
+      },
+      "gym": {
+          "driver": "examples.gym.gym_simulator:GymSimulator",
+          "in": ["desired_steering", "tick"],
+          "out": ["pose2d", "tick"],
+          "init": {
+            "map_config": "configs/config_example_map.yaml"
+          }
+      },
+      "tick": {
+          "driver": "timer",
+          "in": [],
+          "out": ["tick"],
+          "init": {
+            "sleep": 0.02
+          }
+      }
+    },
+    "links": [["race.desired_steering", "gym.desired_steering"],
+              ["tick.tick", "gym.tick"],
+              ["gym.pose2d", "race.pose2d"],
+              ["gym.scan", "race.scan"]
+    ]
+  }
+}

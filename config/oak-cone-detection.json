@@ -1,0 +1,88 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "oak": {
+          "driver": "osgar.drivers.oak_camera:OakCamera",
+          "init": {
+            "fps": 10,
+            "is_color": true,
+            "is_depth": true,
+            "laser_projector_current": 0,
+            "flood_light_current": 500,
+            "is_imu_enabled": true,
+            "number_imu_records": 10,
+            "disable_magnetometer_fusion": false,
+
+            "mono_resolution": "THE_400_P",
+            "color_resolution": "THE_1080_P",
+            "color_manual_focus": 130,
+
+            "stereo_median_filter": "KERNEL_3x3",
+            "stereo_mode": "HIGH_ACCURACY",
+            "stereo_extended_disparity": false,
+            "stereo_subpixel": false,
+            "stereo_left_right_check": true,
+
+            "model": {
+                  "blob": "cone/coneslayer_openvino_2022.1_6shave.blob"
+            },
+            "nn_config": {
+                "output_format": "detection",
+                "NN_family": "YOLO",
+                "input_size": "416x416",
+                "NN_specific_metadata": {
+                    "classes": 1,
+                    "coordinates": 4,
+                    "anchors": [
+                        2.896484375,
+                        5.90234375,
+                        4.6875,
+                        9.09375,
+                        7.75390625,
+                        14.59375,
+                        12.8359375,
+                        22.84375,
+                        28.59375,
+                        48.25,
+                        53.875,
+                        109.6875,
+                        109.5625,
+                        155.375,
+                        142.25,
+                        243.75,
+                        209.375,
+                        383.0
+                    ],
+                    "anchor_masks": {
+                        "side52": [
+                            0,
+                            1,
+                            2
+                        ],
+                        "side26": [
+                            3,
+                            4,
+                            5
+                        ],
+                        "side13": [
+                            6,
+                            7,
+                            8
+                        ]
+                    },
+                    "iou_threshold": 0.5,
+                    "confidence_threshold": 0.54
+                }
+            },
+            "mappings": {
+                "labels": [
+                    "cone"
+                ]
+            }
+          }
+      }
+    },
+    "links": []
+  }
+}

@@ -157,9 +157,10 @@ class LogWriter:
 
 
 class LogReader:
-    def __init__(self, filename, follow=False, only_stream_id=None):
+    def __init__(self, filename, follow=False, only_stream_id=None, duration=None):
         self.filename = filename
         self.follow = follow
+        self.duration = duration
         self.f = open(self.filename, 'rb')
         data = self._read(4)
         assert data == MAGIC, data
@@ -194,8 +195,23 @@ class LogReader:
             if len(header) < 8:
                 break
             dt_bytes = header[:4]
-            dt =  parse_timedelta(dt_bytes)
+            dt = parse_timedelta(dt_bytes)
             stream_id, size = struct.unpack('HH', header[4:])
+            # check for corrupted end of log file (filled with zeros)
+            if stream_id == 0 and size == 0:
+                # unexpected size for system stream -> corrupted log file
+                g_logger.error(f"                       ")
+                g_logger.error(f"Zero bytes {self.f.name} from position {start}")
+                count = 0
+                while True:
+                    data = self._read(1)
+                    count += 1
+                    if len(data) == 0:
+                        break
+                    assert data[0] == 0, data
+                g_logger.error(f"-------> {count} zeros ({100 * count / (start + count):0.2}%)")
+                g_logger.error(f"                       ")
+                return
             data = self._read(size)
             if len(data) != size:
                 g_logger.error(f"Incomplete log file {self.f.name} from position {start}")
@@ -215,11 +231,13 @@ class LogReader:
 
             if len(self.multiple_streams) == 0 or stream_id in self.multiple_streams:
                 yield dt, stream_id, data
+                if self.duration is not None and dt.total_seconds() > self.duration:
+                    g_logger.info(f"Duration limit {self.duration} reached ({dt})")
+                    break
 
     def close(self):
         self.f.close()
         self.f = None
-
 
     # context manager functions
     def __enter__(self):
