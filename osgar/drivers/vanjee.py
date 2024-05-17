@@ -66,10 +66,6 @@ class VanJeeLidar(Node):
     def draw(self):
         import matplotlib.pyplot as plt
         from matplotlib.widgets import Slider
-#        t = [a[0] for a in self.debug_arr]
-#        x = [a[1] for a in self.debug_arr]
-#        line = plt.plot(t, x, '-o', linewidth=2, label=f'Locomotive X')
-#        angles = [a[5::8] for a in self.debug_arr[0]]
 
         fig, ax = plt.subplots()
 
