@@ -1,0 +1,95 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "spider": {
+          "driver": "spider",
+          "in": ["can"],
+          "out": ["can"],
+          "init": {}
+      },
+      "can": {
+          "driver": "can",
+          "in": ["raw", "can"],
+          "out": ["can", "raw"],
+          "init": {"canopen": true}
+      },
+      "serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyS0", "speed": 115200,
+                   "rtscts":true, "reset":true}
+      },
+      "imu": {
+          "driver": "imu",
+          "in": ["raw"],
+          "out": ["orientation", "rotation", "data"],
+          "init": {}
+      },
+      "localization": {
+	      "driver": "osgar.drivers.localization_node:LocalizationNode",
+	      "in": ["orientation", "pose2d", "position"],
+	      "out": ["pose3d"],
+	      "init":{}
+      },
+      "imu_tcp": {
+          "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {
+              "host": "192.168.1.12",
+              "port": 10002,
+              "bufsize": 2000
+          }
+      },
+
+      "gps_tcp": {
+          "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {
+              "host": "192.168.1.12",
+              "port": 10001,
+              "bufsize": 2000
+          }
+      },
+      "gps": {
+        "driver": "gps",
+        "init": {}
+      },
+      "rtk_filter": {
+        "driver": "rtk_filter",
+          "in": ["nmea"],
+          "out": ["filtered"],
+          "init": {
+        }
+      },
+      "rtk_modem": {
+        "driver": "tcp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {
+              "host": "192.168.1.11",
+              "port": 10001,
+              "bufsize": 2000
+        }
+      }
+    },
+    "links": [["spider.can", "can.can"],
+              ["can.can", "spider.can"],
+              ["serial.raw", "can.raw"],
+              ["can.raw", "serial.raw"],
+              ["imu_tcp.raw", "imu.raw"],
+
+              ["spider.pose2d", "localization.pose2d"],
+              ["imu.orientation", "localization.orientation"],
+              ["gps.position", "localization.position"],
+
+              ["gps_tcp.raw", "gps.raw"],
+              ["gps_tcp.raw", "rtk_filter.nmea"],
+              ["rtk_filter.filtered", "rtk_modem.raw"],
+              ["rtk_modem.raw", "gps_tcp.raw"]
+    ]
+  }
+}
