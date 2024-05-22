@@ -393,6 +393,7 @@ def main():
     parser.add_argument('--format', help='use python format - available fields sec, timestamp, stream_id, data')
     parser.add_argument('--all', help='dump all messages', action='store_true')
     parser.add_argument('--raw', help='dump raw data', action='store_true')
+    parser.add_argument('--duration', help="limit extraction to given time", type=float)
     args = parser.parse_args()
 
     if args.list_names:
@@ -423,7 +424,7 @@ def main():
         for name in args.stream:
             only_stream.append(lookup_stream_id(args.logfile, name))
 
-    with LogReader(args.logfile, only_stream_id=only_stream) as log:
+    with LogReader(args.logfile, only_stream_id=only_stream, duration=args.duration) as log:
         for timestamp, stream_id, data in log:
             if stream_id != 0:
                 data = deserialize(data)
