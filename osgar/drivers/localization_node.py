@@ -62,4 +62,5 @@ class LocalizationNode(Node):
         plt.plot(x, y, "k.-", label="pose3d")
         x, y = list2xy(self.odom_poses)
         plt.plot(x, y, "r.-", label="odom")
+        plt.legend()
         plt.show()
