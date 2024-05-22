@@ -57,6 +57,7 @@ class OsgarView:
                     dpg.add_text(item)
         # Add setting button
         for row_id in dpg.get_item_children(self.streams_tab_id, 1):
+
             dpg.add_button(parent=row_id, label="Setting", callback=None)
 
     def load_log_callback(self, sender, app_data):
@@ -67,6 +68,8 @@ class OsgarView:
         self.log_path = log_path
 
     def load_data_callback(self, sender, app_data):
+        if self.log_path is None:
+            return
         self.log_data = []
         names = ['sys'] + lookup_stream_names(self.log_path)
         sizes = [0] * len(names)
