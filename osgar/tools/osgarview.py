@@ -13,18 +13,6 @@ class OsgarView:
         self.log_path = None
         self.log_data = None
 
-        self.channel_types_dic = {
-            "image": ["image", "color"],
-            "depth": ["depth"],
-            "scan": ["scan"],
-            "scan3d": [],
-            "pose2d": ["pose2d"],
-            "pose3d": ["pose3d"],
-            "gps": ["position"],
-            "gps_utm": [],
-            "numeric": ["desired_speed", "encoders"]
-        }
-
         # tag ids
         self.main_setting_id = "main_setting_id"
         self.load_log_id = "load_log_id"
@@ -36,38 +24,23 @@ class OsgarView:
         for child in children:
             dpg.delete_item(child)
 
-    def get_stream_type(self, streams):
-        ret = []
-        for stream in streams:
-            channel = stream.split(".")[1]
-            for channel_type, channel_names in self.channel_types_dic.items():
-                if channel in channel_names:
-                    ret.append([stream, channel_type])
-                    break
-            else:
-                ret.append([stream, "NaN"])
-        return ret
-
-    def fill_stream_table(self, streams):  # TODO metadata for some streams
+    def fill_stream_table(self, streams, counts, sizes, last_timestamp):  # TODO metadata for some streams
         self.clean_item_children(self.streams_tab_id)  # delete table first
-        streams_and_types = self.get_stream_type(streams)
-        for stream, channel_type in streams_and_types:
+        for stream, size, count in zip(streams, sizes, counts):
             with dpg.table_row(parent=self.streams_tab_id):
-                for item in [stream, channel_type]:
-                    dpg.add_text(item)
-        # Add setting button
-        for row_id in dpg.get_item_children(self.streams_tab_id, 1):
-
-            dpg.add_button(parent=row_id, label="Setting", callback=None)
+                dpg.add_text(stream)
+                dpg.add_text(f"{count}")
+                dpg.add_text(f"{size}")
+                dpg.add_text(f"{count/last_timestamp.total_seconds():.1f} Hz")
+                dpg.add_button(label="Setting", callback=None)
 
     def load_log_callback(self, sender, app_data):
         log_path = app_data["file_path_name"]
         assert log_path.endswith(".log"), log_path
-        streams = lookup_stream_names(log_path)
-        self.fill_stream_table(streams)
         self.log_path = log_path
+        self.load_data()
 
-    def load_data_callback(self, sender, app_data):
+    def load_data(self):
         if self.log_path is None:
             return
         self.log_data = []
@@ -81,6 +54,8 @@ class OsgarView:
                 if stream_id != 0:
                     data = deserialize(data)
                 self.log_data.append([timestamp.total_seconds(), names[stream_id], data])
+            last_timestamp = timestamp
+        self.fill_stream_table(names, counts, sizes, last_timestamp)
 
     def main(self):
         dpg.create_context()
@@ -103,14 +78,12 @@ class OsgarView:
 
             with dpg.group(horizontal=True):
                 dpg.add_button(label="Load log", callback=lambda: dpg.show_item(self.load_log_id))
-                dpg.add_button(label="Load data", callback=self.load_data_callback)
 
             with dpg.collapsing_header(label="Available streams"):
                 with dpg.table(header_row=True, resizable=True, policy=dpg.mvTable_SizingStretchProp, tag=self.streams_tab_id):
                     dpg.add_table_column(label="Stream name")
-                    dpg.add_table_column(label="Type")
                     dpg.add_table_column(label="Count")
-                    dpg.add_table_column(label="Size")
+                    dpg.add_table_column(label="Size        ")
                     dpg.add_table_column(label="Freq.")
                     dpg.add_table_column(label="      ")
 
