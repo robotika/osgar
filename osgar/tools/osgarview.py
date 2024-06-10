@@ -14,9 +14,14 @@ class OsgarView:
         self.log_data = None
 
         # tag ids
+        self.main_win_id = "main_win_id"
         self.main_setting_id = "main_setting_id"
         self.load_log_id = "load_log_id"
         self.streams_tab_id = "streams_tab_id"
+        self.map_win_id = "map_win_id"
+        self.main_plot_id = "main_plot_id"
+        self.map_x_axis_id = "map_x_axis_id"
+        self.map_y_axis_id = "map_y_axis_id"
 
     @staticmethod
     def clean_item_children(parent_id, key = 1):
@@ -60,6 +65,7 @@ class OsgarView:
     def main(self):
         dpg.create_context()
         dpg.create_viewport(title='Osgar viewer', width=1600, height=1000)
+        dpg.add_window(tag=self.main_win_id)
         # Main bar
         with dpg.viewport_menu_bar():
             with dpg.menu(label="File"):
@@ -70,7 +76,7 @@ class OsgarView:
 
             dpg.add_menu_item(label="Help", callback=None)
 
-        with dpg.window(label="Main setting", tag=self.main_setting_id, pos=(0, 20), width=380, height=900):
+        with dpg.child_window(parent=self.main_win_id, label="Main setting", tag=self.main_setting_id, pos=(0, 20), width=380, height=900):
             with dpg.file_dialog(
                     directory_selector=False, show=False, callback=self.load_log_callback, tag=self.load_log_id,
                     width=700, height=400):
@@ -87,8 +93,14 @@ class OsgarView:
                     dpg.add_table_column(label="Freq.")
                     dpg.add_table_column(label="      ")
 
+        with dpg.child_window(parent=self.main_win_id, tag=self.map_win_id, pos=(380, 20), width=-1, height=-1):
+            with dpg.plot(pos=(0, 10), height=-1, width=-1, tag=self.main_plot_id, equal_aspects=True):
+                dpg.add_plot_axis(dpg.mvXAxis, label="x", tag=self.map_x_axis_id)
+                dpg.add_plot_axis(dpg.mvYAxis, label="y", tag=self.map_y_axis_id)
+
         dpg.setup_dearpygui()
         dpg.show_viewport()
+        dpg.set_primary_window(self.main_win_id, True)
         # while dpg.is_dearpygui_running():
             # insert here any code you would like to run in the render loop
             # you can manually stop by using stop_dearpygui()
