@@ -45,6 +45,21 @@ class OsgarView:
         self.log_path = log_path
         self.load_data()
 
+    def set_streams_callback(self, sender, app_data):
+        print(sender)
+
+    def pay_callback(self):
+        pass
+
+    def back_callback(self):
+        pass
+
+    def pause_callback(self):
+        pass
+
+    def stop_callback(self):
+        pass
+
     def load_data(self):
         if self.log_path is None:
             return
@@ -84,6 +99,11 @@ class OsgarView:
 
             with dpg.group(horizontal=True):
                 dpg.add_button(label="Load log", callback=lambda: dpg.show_item(self.load_log_id))
+            with dpg.group(horizontal=True):
+                dpg.add_button(label="Play", callback=self.pay_callback)
+                dpg.add_button(label="Back", callback=self.back_callback)
+                dpg.add_button(label="Pause", callback=self.pause_callback)
+                dpg.add_button(label="Stop", callback=self.stop_callback)
 
             with dpg.collapsing_header(label="Available streams"):
                 with dpg.table(header_row=True, resizable=True, policy=dpg.mvTable_SizingStretchProp, tag=self.streams_tab_id):
@@ -94,7 +114,8 @@ class OsgarView:
                     dpg.add_table_column(label="      ")
 
         with dpg.child_window(parent=self.main_win_id, tag=self.map_win_id, pos=(380, 20), width=-1, height=-1):
-            with dpg.plot(pos=(0, 10), height=-1, width=-1, tag=self.main_plot_id, equal_aspects=True):
+            dpg.add_button(label="Set streams", callback=self.set_streams_callback, tag="map_win")
+            with dpg.plot(pos=(0, 30), height=-1, width=-1, tag=self.main_plot_id, equal_aspects=True):
                 dpg.add_plot_axis(dpg.mvXAxis, label="x", tag=self.map_x_axis_id)
                 dpg.add_plot_axis(dpg.mvYAxis, label="y", tag=self.map_y_axis_id)
 
