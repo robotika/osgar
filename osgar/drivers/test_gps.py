@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime
 
 from osgar.drivers import gps
 
@@ -73,5 +74,34 @@ class GPSTest(unittest.TestCase):
                b"\x00\x00\x00\x00\x00\x00\x00W\x03"
         ret = gps.parse_bin(data)
         self.assertIsNone(ret)
+
+
+    def test_parse_nmea(self):
+        nmea_sentence = b'$GNGGA,190615.40,5007.70786799,N,01422.49430110,E,2,09,1.9,290.1985,M,45.0552,M,01,0533*73'
+        nmea_data = gps.parse_nmea(nmea_sentence)
+        expected_res = {
+            "identifier": "$GNGGA",
+            "lon": 14.224943011,
+            "lon_dir": "E",
+            "lat": 50.0770786799,
+            "lat_dir": "N",
+            "utc_time": datetime.strptime("190615.40", "%H%M%S.%f").time(),
+            "quality": 2,
+            "sats": 9,
+            "hdop": 1.9,
+            "alt": 290.1985,
+            "a-units": "M",
+            "undulation": 45.0552,
+            "u-units": "M",
+            "age": 1,
+            "stn_id": "0533"
+        }
+        self.assertEqual(nmea_data, expected_res)
+
+        nmea_sentence2 = b'$GNGGA,190615.40,,,,,2,09,1.9,290.1985,M,45.0552,M,,*73'
+        nmea_data2 = gps.parse_nmea(nmea_sentence2)
+        self.assertIsNone(nmea_data2["lon"])
+        self.assertIsNone(nmea_data2["lon_dir"])
+        self.assertIsNone(nmea_data2["stn_id"])
 
 # vim: expandtab sw=4 ts=4
