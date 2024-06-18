@@ -20,16 +20,25 @@ def checksum(s):
     return b"%02X" % (sum)
 
 
-def str2ms(s):
-    'convert DDMM.MMMMMM string to arc milliseconds(int)'
-    if s == b'':  # unknown position
-        return None
-    dm, frac = (b'0000' + s).split(b'.')
+def str2deg(s):
+    'convert DDMM.MMMMMM string to deg'
+    assert s != ""
+    assert "." in s, s
+    dm, frac = ('0000' + s).split('.')
     try:
-        return round((int(dm[:-2]) * 60 + float(dm[-2:] + b'.' + frac)) * 60000)
+        return float(dm[:-2]) + float(dm[-2:] + '.' + frac) / 60
     except Exception as e:
         print(e)
         return None
+
+
+def nmea2coord_ms(nmea_data):
+    lon = nmea_data["lon"]
+    lat = nmea_data["lat"]
+    if lon and lat:
+        return [int(round(lon*3_600_000)), int(round(lat*3_600_000))]
+    return [None, None]
+
 
 def parse_nmea(line):
     nmea_list = line.decode().split(",")
@@ -39,9 +48,9 @@ def parse_nmea(line):
     # https://docs.novatel.com/OEM7/Content/Logs/GPGGA.htm
     try:
         nmea_data["identifier"] = nmea_list[0]
-        nmea_data["lon"] = None if nmea_list[4] == "" else float(nmea_list[4]) / 100
+        nmea_data["lon"] = None if nmea_list[4] == "" else str2deg(nmea_list[4])
         nmea_data["lon_dir"] = None if nmea_list[5] == "" else nmea_list[5]
-        nmea_data["lat"] = None if nmea_list[2] == "" else float(nmea_list[2]) / 100
+        nmea_data["lat"] = None if nmea_list[2] == "" else str2deg(nmea_list[2])
         nmea_data["lat_dir"] = None if nmea_list[3] == "" else nmea_list[3]
         nmea_data["utc_time"] = None if nmea_list[1] == "" else datetime.strptime(nmea_list[1], "%H%M%S.%f").time()
         nmea_data["quality"] = None if nmea_list[6] == "" else int(nmea_list[6])
@@ -65,12 +74,10 @@ def parse_line(line):
     assert line.startswith(b'$GNGGA') or line.startswith(b'$GPGGA'), line
     if checksum(line[1:-3]) != line[-2:]:
         print('Checksum error!', line, checksum(line[1:-3]))
-        return [None, None]  # TODO Probably it should not return a list..
-    s = line.split(b',')
-    coord = [str2ms(s[4]), str2ms(s[2])]
+        return None
     nmea_data = parse_nmea(line)
 
-    return coord
+    return nmea_data
 
 
 def parse_bin(data):
@@ -151,7 +158,7 @@ def split_buffer(data):
 
 class GPS(Thread):
     def __init__(self, config, bus):
-        bus.register('position', 'rel_position')
+        bus.register('position', 'rel_position', 'nmea_data')
         Thread.__init__(self)
         self.setDaemon(True)
 
@@ -160,8 +167,8 @@ class GPS(Thread):
 
     def process_packet(self, line):
         if line.startswith(b'$GNGGA') or line.startswith(b'$GPGGA'):
-            coords = parse_line(line)
-            return {'position': coords}
+            nmea_data = parse_line(line)
+            return {'nmea_data': nmea_data}
         elif line.startswith(BIN_PREAMBULE):
             return parse_bin(line)
         return None
@@ -172,7 +179,8 @@ class GPS(Thread):
             ret = self.process_packet(packet)
             if ret is not None:
                 for k, v in ret.items():
-                    yield k, v
+                    if v is not None:
+                        yield k, v
             self.buf, packet = split_buffer(self.buf)  # i.e. process only existing buffer now
 
     def run(self):
@@ -183,6 +191,8 @@ class GPS(Thread):
                 for name, out in self.process_gen(data):
                     assert out is not None
                     self.bus.publish(name, out)
+                    if name == "nmea_data":
+                        self.bus.publish("position", nmea2coord_ms(out))
         except BusShutdownException:
             pass
 
