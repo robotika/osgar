@@ -60,7 +60,7 @@ def parse_nmea(line):
         nmea_data["a-units"] = None if nmea_list[10] == "" else nmea_list[10]
         nmea_data["undulation"] = None if nmea_list[11] == "" else float(nmea_list[11])
         nmea_data["u-units"] = None if nmea_list[12] == "" else nmea_list[12]
-        nmea_data["age"] = None if nmea_list[13] == "" else int(nmea_list[13])
+        nmea_data["age"] = None if nmea_list[13] == "" else float(nmea_list[13])
         stn_id = nmea_list[14].split("*")[0]
         nmea_data["stn_id"] = None if stn_id == "" else stn_id
     except Exception as e:
