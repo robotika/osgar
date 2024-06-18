@@ -4,6 +4,7 @@
 
 from threading import Thread
 import struct
+from datetime import datetime
 
 from osgar.bus import BusShutdownException
 
@@ -30,6 +31,35 @@ def str2ms(s):
         print(e)
         return None
 
+def parse_nmea(line):
+    nmea_list = line.decode().split(",")
+    assert len(nmea_list) == 15
+    nmea_data = {}
+    # NMEA sentence $GPGGA or $GNGGA
+    # https://docs.novatel.com/OEM7/Content/Logs/GPGGA.htm
+    try:
+        nmea_data["identifier"] = nmea_list[0]
+        nmea_data["lon"] = None if nmea_list[4] == "" else float(nmea_list[4]) / 100
+        nmea_data["lon_dir"] = None if nmea_list[5] == "" else nmea_list[5]
+        nmea_data["lat"] = None if nmea_list[2] == "" else float(nmea_list[2]) / 100
+        nmea_data["lat_dir"] = None if nmea_list[3] == "" else nmea_list[3]
+        nmea_data["utc_time"] = None if nmea_list[1] == "" else datetime.strptime(nmea_list[1], "%H%M%S.%f").time()
+        nmea_data["quality"] = None if nmea_list[6] == "" else int(nmea_list[6])
+        nmea_data["sats"] = None if nmea_list[7] == "" else int(nmea_list[7])
+        nmea_data["hdop"] = None if nmea_list[8] == "" else float(nmea_list[8])
+        nmea_data["alt"] = None if nmea_list[9] == "" else float(nmea_list[9])
+        nmea_data["a-units"] = None if nmea_list[10] == "" else nmea_list[10]
+        nmea_data["undulation"] = None if nmea_list[11] == "" else float(nmea_list[11])
+        nmea_data["u-units"] = None if nmea_list[12] == "" else nmea_list[12]
+        nmea_data["age"] = None if nmea_list[13] == "" else int(nmea_list[13])
+        stn_id = nmea_list[14].split("*")[0]
+        nmea_data["stn_id"] = None if stn_id == "" else stn_id
+    except Exception as e:
+        print(e)
+        return None
+
+    return nmea_data
+
 
 def parse_line(line):
     assert line.startswith(b'$GNGGA') or line.startswith(b'$GPGGA'), line
@@ -38,6 +68,8 @@ def parse_line(line):
         return [None, None]  # TODO Probably it should not return a list..
     s = line.split(b',')
     coord = [str2ms(s[4]), str2ms(s[2])]
+    nmea_data = parse_nmea(line)
+
     return coord
 
 
