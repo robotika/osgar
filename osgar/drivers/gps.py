@@ -26,7 +26,7 @@ def str2deg(s):
     dm, frac = ('0000' + s).split('.')
     try:
         return float(dm[:-2]) + float(dm[-2:] + '.' + frac) / 60
-    except Exception as e:
+    except ValueError as e:
         print(e)
         return None
 
@@ -62,7 +62,7 @@ def parse_nmea(line):
         nmea_data["age"] = None if nmea_list[13] == "" else float(nmea_list[13])
         stn_id = nmea_list[14].split("*")[0]
         nmea_data["stn_id"] = None if stn_id == "" else stn_id
-    except Exception as e:
+    except ValueError as e:
         print(e)
         return None
 

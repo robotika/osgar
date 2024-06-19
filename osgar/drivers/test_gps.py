@@ -100,4 +100,9 @@ class GPSTest(unittest.TestCase):
         nmea_data = gps.parse_nmea(line)
         self.assertEqual(nmea_data["lon"], 14.5056)
         self.assertEqual(nmea_data["lat"], 50.08374)
+
+    def test_parse_err_line(self):
+        line = b'$GPGGA,051852.000,5005.0244,N,01430.3360,E,1,06,3.8,253\x00.1,M,45.4,M,,0000*58'
+        self.assertIsNone(gps.parse_nmea(line))
+
 # vim: expandtab sw=4 ts=4
