@@ -75,14 +75,14 @@ class GPSTest(unittest.TestCase):
             "lon_dir": "E",
             "lat": 50.1284644665,
             "lat_dir": "N",
-            "utc_time": datetime.strptime("190615.40", "%H%M%S.%f").time(),
+            "utc_time": "190615.40",
             "quality": 2,
             "sats": 9,
             "hdop": 1.9,
             "alt": 290.1985,
-            "a-units": "M",
+            "a_units": "M",
             "undulation": 45.0552,
-            "u-units": "M",
+            "u_units": "M",
             "age": 1,
             "stn_id": "0533"
         }
