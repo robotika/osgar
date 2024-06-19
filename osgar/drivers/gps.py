@@ -4,7 +4,6 @@
 
 from threading import Thread
 import struct
-from datetime import datetime
 
 from osgar.bus import BusShutdownException
 
@@ -52,7 +51,7 @@ def parse_nmea(line):
         nmea_data["lon_dir"] = None if nmea_list[5] == "" else nmea_list[5]
         nmea_data["lat"] = None if nmea_list[2] == "" else str2deg(nmea_list[2])
         nmea_data["lat_dir"] = None if nmea_list[3] == "" else nmea_list[3]
-        nmea_data["utc_time"] = None if nmea_list[1] == "" else datetime.strptime(nmea_list[1], "%H%M%S.%f").time()
+        nmea_data["utc_time"] = None if nmea_list[1] == "" else nmea_list[1]  # format: "%H%M%S.%f"
         nmea_data["quality"] = None if nmea_list[6] == "" else int(nmea_list[6])
         nmea_data["sats"] = None if nmea_list[7] == "" else int(nmea_list[7])
         nmea_data["hdop"] = None if nmea_list[8] == "" else float(nmea_list[8])
