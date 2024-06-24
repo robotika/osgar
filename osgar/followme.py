@@ -42,7 +42,7 @@ class FollowMe(Node):
 
     def on_scan(self, data):
         if self.verbose:
-            print(min_dist(data) / 1000.0)
+            print(self.time, 'min_dist', min_dist(data) / 1000.0)
         self.last_scan = data
 
     def on_emergency_stop(self, data):
@@ -103,7 +103,7 @@ class FollowMe(Node):
                 maxnear = min( (x for x in self.last_scan if x > CLOSE_REFLECTIONS) ) / 1000.0
 
                 if self.verbose:
-                    print(near, maxnear, index)
+                    print(self.time, 'near', near, maxnear, index)
 
                 if near > self.max_dist_limit or any(x < thresh for (x, thresh) in zip(self.last_scan, thresholds) if x > CLOSE_REFLECTIONS):
                     self.send_speed_cmd(0.0, 0.0)
@@ -111,12 +111,16 @@ class FollowMe(Node):
                     angle = math.radians(self.scan_fov_deg * index/SCAN_SIZE - self.scan_fov_deg/2) + masterAngleOffset
                     desiredAngle = 0
                     desiredDistance = self.desired_dist
-                    speed = 0.2 + 2 * (near - desiredDistance)
-                    rot = 1.5 * (angle - desiredAngle)
+#                    speed = 0.2 + 2 * (near - desiredDistance)
+                    speed = near - desiredDistance
+#                    rot = 1.5 * (angle - desiredAngle)
+                    rot = angle - desiredAngle
                     if speed < 0:
                         speed = 0
                     if speed > self.max_speed:
                         speed = self.max_speed
+                    if self.verbose:
+                        print(self.time, 'speed', speed, angle, rot)
                     self.send_speed_cmd(speed, rot)
 
                 self.last_scan = None
