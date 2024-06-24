@@ -33,6 +33,9 @@ class FollowMe(Node):
         self.last_scan = None
         self.scan_size = config.get('scan_size', 271)
         self.scan_fov_deg = config.get('scan_fov_deg', 270)
+        self.max_speed = config.get('max_speed', 0.5)  # m/s
+        self.max_dist_limit = config.get('max_dist_limit', 1.3)  # m
+        self.desired_dist = config.get('desired_dist', 0.4)  # m
 
     def on_pose2d(self, data):
         self.last_position = data
@@ -107,11 +110,13 @@ class FollowMe(Node):
                 else:
                     angle = math.radians(self.scan_fov_deg * index/SCAN_SIZE - self.scan_fov_deg/2) + masterAngleOffset
                     desiredAngle = 0
-                    desiredDistance = 0.4
+                    desiredDistance = self.desired_dist
                     speed = 0.2 + 2 * (near - desiredDistance)
                     rot = 1.5 * (angle - desiredAngle)
                     if speed < 0:
                         speed = 0
+                    if speed > self.max_speed:
+                        speed = self.max_speed
                     self.send_speed_cmd(speed, rot)
 
                 self.last_scan = None
