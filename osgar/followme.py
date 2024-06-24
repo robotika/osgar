@@ -105,7 +105,7 @@ class FollowMe(Node):
                 if self.verbose:
                     print(near, maxnear, index)
 
-                if near > 1.3 or any(x < thresh for (x, thresh) in zip(self.last_scan, thresholds) if x > CLOSE_REFLECTIONS):
+                if near > self.max_dist_limit or any(x < thresh for (x, thresh) in zip(self.last_scan, thresholds) if x > CLOSE_REFLECTIONS):
                     self.send_speed_cmd(0.0, 0.0)
                 else:
                     angle = math.radians(self.scan_fov_deg * index/SCAN_SIZE - self.scan_fov_deg/2) + masterAngleOffset
