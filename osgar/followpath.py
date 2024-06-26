@@ -42,7 +42,7 @@ class FollowPath(Node):
         Note, that there is no correction based on signed distance from route.
         """
         first, second = self.route.routeSplit(pose[:2])
-        if len(second) <= 1:
+        if len(second) <= 1 or self.finished:
             self.finished = True
             return 0, 0
         pt = Route(second).pointAtDist(dist=0.2)  # maybe speed dependent
@@ -73,8 +73,6 @@ class FollowPath(Node):
         if self.verbose:
             print(speed, angular_speed)
         self.send_speed_cmd(speed, angular_speed)
-        if self.finished:
-            raise BusShutdownException()
 
     def on_emergency_stop(self, data):
         if self.raise_exception_on_stop and data:
