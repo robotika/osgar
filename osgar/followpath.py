@@ -4,6 +4,7 @@
 import math
 
 from osgar.lib.route import Route as GPSRoute, DummyConvertor
+from osgar.lib.line import Line
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.node import Node
 from osgar.bus import BusShutdownException
@@ -51,8 +52,18 @@ class FollowPath(Node):
             self.finished = True
             return 0, 0
         angle = math.atan2(pt2[1]-pt[1], pt2[0]-pt[0])
+        # force robot to move towards original path
+        line = Line(pt, pt2)
+        signed_dist = line.signedDistance(pose)
+        if signed_dist > 1.0:
+           signed_dist = 1.0
+        elif signed_dist < -1.0:
+            signed_dist = -1.0
+        if abs(normalizeAnglePIPI(angle - pose[2])) < math.radians(45):
+            # force correction only if the robot is more-or-less pointing into right direction
+            angle += math.radians(45) * signed_dist
         if self.verbose:
-            print(self.time, second, pt, angle)
+            print(self.time, second[:5], pt, angle, signed_dist, normalizeAnglePIPI(angle - pose[2]))
         return self.max_speed, normalizeAnglePIPI(angle - pose[2])
 
     def on_pose2d(self, data):
