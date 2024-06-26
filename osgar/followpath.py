@@ -61,7 +61,7 @@ class FollowPath(Node):
             signed_dist = -1.0
         if abs(normalizeAnglePIPI(angle - pose[2])) < math.radians(45):
             # force correction only if the robot is more-or-less pointing into right direction
-            angle += math.radians(45) * signed_dist
+            angle -= math.radians(45) * signed_dist
         if self.verbose:
             print(self.time, second[:5], pt, angle, signed_dist, normalizeAnglePIPI(angle - pose[2]))
         return self.max_speed, normalizeAnglePIPI(angle - pose[2])
