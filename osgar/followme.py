@@ -36,6 +36,7 @@ class FollowMe(Node):
         self.max_speed = config.get('max_speed', 0.5)  # m/s
         self.max_dist_limit = config.get('max_dist_limit', 1.3)  # m
         self.desired_dist = config.get('desired_dist', 0.4)  # m
+        self.debug_arr = []
 
     def on_pose2d(self, data):
         self.last_position = data
@@ -106,7 +107,7 @@ class FollowMe(Node):
                     print(self.time, 'near', near, maxnear, index)
 
                 if near > self.max_dist_limit or any(x < thresh for (x, thresh) in zip(self.last_scan, thresholds) if x > CLOSE_REFLECTIONS):
-                    self.send_speed_cmd(0.0, 0.0)
+                    speed, rot, angle = 0, 0, None
                 else:
                     angle = math.radians(self.scan_fov_deg * index/SCAN_SIZE - self.scan_fov_deg/2) + masterAngleOffset
                     desiredAngle = 0
@@ -119,9 +120,10 @@ class FollowMe(Node):
                         speed = 0
                     if speed > self.max_speed:
                         speed = self.max_speed
-                    if self.verbose:
-                        print(self.time, 'speed', speed, angle, rot)
-                    self.send_speed_cmd(speed, rot)
+                if self.verbose:
+                    print(self.time, 'speed', speed, angle, rot)
+                    self.debug_arr.append((self.time.total_seconds(), angle, near, speed))
+                self.send_speed_cmd(speed, rot)
 
                 self.last_scan = None
             self.update()
@@ -135,6 +137,32 @@ class FollowMe(Node):
             self.raise_exception_on_stop = False
             self.send_speed_cmd(0.0, 0.0)
             self.wait(timedelta(seconds=1))
+
+    def draw(self):
+        # https://www.perplexity.ai/search/how-to-draw-with-matplotlib-in-SiM5q62xQIGSni3t0OUpYw
+        import matplotlib.pyplot as plt
+
+        x, y1, y2, y3 = map(list, zip(*self.debug_arr))
+
+        # Create a figure with 3 subplots stacked vertically
+        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(8, 8))
+
+        # Plot the first graph
+        ax1.plot(x, [math.degrees(tmp) if tmp is not None else None for tmp in y1])
+        ax1.set_title('Angle (deg)')
+
+        # Plot the second graph
+        ax2.plot(x, y2)
+        ax2.set_title('Distance (m)')
+
+        # Plot the third graph
+        ax3.plot(x, y3)
+        ax3.set_title('Speed (m/s)')
+
+        # Adjust the spacing between subplots
+        plt.subplots_adjust(hspace=0.5)
+
+        plt.show()
 
 
 if __name__ == "__main__":
