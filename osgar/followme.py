@@ -33,13 +33,17 @@ class FollowMe(Node):
         self.last_scan = None
         self.scan_size = config.get('scan_size', 271)
         self.scan_fov_deg = config.get('scan_fov_deg', 270)
+        self.max_speed = config.get('max_speed', 0.5)  # m/s
+        self.max_dist_limit = config.get('max_dist_limit', 1.3)  # m
+        self.desired_dist = config.get('desired_dist', 0.4)  # m
+        self.debug_arr = []
 
     def on_pose2d(self, data):
         self.last_position = data
 
     def on_scan(self, data):
         if self.verbose:
-            print(min_dist(data) / 1000.0)
+            print(self.time, 'min_dist', min_dist(data) / 1000.0)
         self.last_scan = data
 
     def on_emergency_stop(self, data):
@@ -100,19 +104,26 @@ class FollowMe(Node):
                 maxnear = min( (x for x in self.last_scan if x > CLOSE_REFLECTIONS) ) / 1000.0
 
                 if self.verbose:
-                    print(near, maxnear, index)
+                    print(self.time, 'near', near, maxnear, index)
 
-                if near > 1.3 or any(x < thresh for (x, thresh) in zip(self.last_scan, thresholds) if x > CLOSE_REFLECTIONS):
-                    self.send_speed_cmd(0.0, 0.0)
+                if near > self.max_dist_limit or any(x < thresh for (x, thresh) in zip(self.last_scan, thresholds) if x > CLOSE_REFLECTIONS):
+                    speed, rot, angle = 0, 0, None
                 else:
                     angle = math.radians(self.scan_fov_deg * index/SCAN_SIZE - self.scan_fov_deg/2) + masterAngleOffset
                     desiredAngle = 0
-                    desiredDistance = 0.4
-                    speed = 0.2 + 2 * (near - desiredDistance)
-                    rot = 1.5 * (angle - desiredAngle)
+                    desiredDistance = self.desired_dist
+#                    speed = 0.2 + 2 * (near - desiredDistance)
+                    speed = near - desiredDistance
+#                    rot = 1.5 * (angle - desiredAngle)
+                    rot = angle - desiredAngle
                     if speed < 0:
                         speed = 0
-                    self.send_speed_cmd(speed, rot)
+                    if speed > self.max_speed:
+                        speed = self.max_speed
+                if self.verbose:
+                    print(self.time, 'speed', speed, angle, rot)
+                    self.debug_arr.append((self.time.total_seconds(), angle, near, speed))
+                self.send_speed_cmd(speed, rot)
 
                 self.last_scan = None
             self.update()
@@ -126,6 +137,32 @@ class FollowMe(Node):
             self.raise_exception_on_stop = False
             self.send_speed_cmd(0.0, 0.0)
             self.wait(timedelta(seconds=1))
+
+    def draw(self):
+        # https://www.perplexity.ai/search/how-to-draw-with-matplotlib-in-SiM5q62xQIGSni3t0OUpYw
+        import matplotlib.pyplot as plt
+
+        x, y1, y2, y3 = map(list, zip(*self.debug_arr))
+
+        # Create a figure with 3 subplots stacked vertically
+        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(8, 8))
+
+        # Plot the first graph
+        ax1.plot(x, [math.degrees(tmp) if tmp is not None else None for tmp in y1])
+        ax1.set_title('Angle (deg)')
+
+        # Plot the second graph
+        ax2.plot(x, y2)
+        ax2.set_title('Distance (m)')
+
+        # Plot the third graph
+        ax3.plot(x, y3)
+        ax3.set_title('Speed (m/s)')
+
+        # Adjust the spacing between subplots
+        plt.subplots_adjust(hspace=0.5)
+
+        plt.show()
 
 
 if __name__ == "__main__":

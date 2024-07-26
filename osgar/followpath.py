@@ -4,8 +4,10 @@
 import math
 
 from osgar.lib.route import Route as GPSRoute, DummyConvertor
+from osgar.lib.line import Line
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.node import Node
+from osgar.bus import BusShutdownException
 from osgar.followme import EmergencyStopException
 
 
@@ -26,6 +28,7 @@ class FollowPath(Node):
         self.max_speed = config.get('max_speed', 0.2)
         self.raise_exception_on_stop = False
         self.verbose = False
+        self.finished = False
 
     def control(self, pose):
         """
@@ -39,16 +42,28 @@ class FollowPath(Node):
         Note, that there is no correction based on signed distance from route.
         """
         first, second = self.route.routeSplit(pose[:2])
-        if len(second) <= 1:
+        if len(second) <= 1 or self.finished:
+            self.finished = True
             return 0, 0
         pt = Route(second).pointAtDist(dist=0.2)  # maybe speed dependent
         pt2 = Route(second).pointAtDist(dist=0.2+0.1)
         if math.hypot(pt2[1]-pt[1], pt2[0]-pt[0]) < 0.001:
             # at the very end, or not defined angle
+            self.finished = True
             return 0, 0
         angle = math.atan2(pt2[1]-pt[1], pt2[0]-pt[0])
+        # force robot to move towards original path
+        line = Line(pt, pt2)
+        signed_dist = line.signedDistance(pose)
+        if signed_dist > 1.0:
+           signed_dist = 1.0
+        elif signed_dist < -1.0:
+            signed_dist = -1.0
+        if abs(normalizeAnglePIPI(angle - pose[2])) < math.radians(45):
+            # force correction only if the robot is more-or-less pointing into right direction
+            angle -= math.radians(45) * signed_dist
         if self.verbose:
-            print(self.time, second, pt, angle)
+            print(self.time, second[:5], pt, angle, signed_dist, normalizeAnglePIPI(angle - pose[2]))
         return self.max_speed, normalizeAnglePIPI(angle - pose[2])
 
     def on_pose2d(self, data):

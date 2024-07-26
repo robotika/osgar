@@ -28,11 +28,11 @@ class VanJeeLidar(Node):
         if self.last_frame is not None:
             assert (self.last_frame + 1) & 0xFFFF == frame, (self.last_frame, frame)
         self.last_frame = frame
-        assert data[6:8] == bytes.fromhex('0000'), data[6:10].hex()  # reserved
+#        assert data[6:8] == bytes.fromhex('0000'), data[6:10].hex()  # reserved
         # reserved [8:10]  - variable
-        assert data[11:14] == bytes.fromhex('02 190C'), data[11:14].hex()
+#        assert data[11:14] == bytes.fromhex('02 190C'), data[11:14].hex()
         # reserved [14:16]
-        assert data[16:18] == bytes.fromhex('01 04'), data[16:18].hex()
+#        assert data[16:18] == bytes.fromhex('01 04'), data[16:18].hex()
         bank, motor_speed = struct.unpack_from('>BH', data, 18)
         assert 1 <= bank <= 16, bank
 #        assert 38000 <= motor_speed <= 39300, motor_speed  # disabled as it can be easily "of of range"
