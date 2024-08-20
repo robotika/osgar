@@ -61,6 +61,43 @@ class FollowMe(Node):
         return self.bus.publish('desired_speed', 
                 [round(speed*1000), round(math.degrees(angular_speed)*100)])
 
+    def followme_step(self, scan, index, ):
+        near = 10.0
+        if index is None:
+            low = LIMIT_LOW
+            high = LIMIT_HIGH
+        else:
+            # search in +/- 10deg sector
+            low = max(LIMIT_LOW, index - 10 * SCANS_PER_DEG)
+            high = min(LIMIT_HIGH, index + 10 * SCANS_PER_DEG)
+
+        for i in range(low, high):
+            x = self.last_scan[i]
+            if CLOSE_REFLECTIONS < x < near * 1000:
+                near = x / 1000.0
+                index = i
+        maxnear = min((x for x in self.last_scan if x > CLOSE_REFLECTIONS)) / 1000.0
+
+        if self.verbose:
+            print(self.time, 'near', near, maxnear, index)
+
+        if near > self.max_dist_limit or any(
+                x < thresh for (x, thresh) in zip(self.last_scan, thresholds) if x > CLOSE_REFLECTIONS):
+            speed, rot, angle = 0, 0, None
+        else:
+            angle = math.radians(self.scan_fov_deg * index / SCAN_SIZE - self.scan_fov_deg / 2) + masterAngleOffset
+            desiredAngle = 0
+            desiredDistance = self.desired_dist
+            #                    speed = 0.2 + 2 * (near - desiredDistance)
+            speed = near - desiredDistance
+            #                    rot = 1.5 * (angle - desiredAngle)
+            rot = angle - desiredAngle
+            if speed < 0:
+                speed = 0
+            if speed > self.max_speed:
+                speed = self.max_speed
+        return speed, rot, index
+
     def followme(self):
         print("Follow Me!")
 

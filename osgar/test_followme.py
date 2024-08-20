@@ -20,4 +20,10 @@ class FollowMeTest(unittest.TestCase):
         with self.assertRaises(EmergencyStopException):
             app.followme()
 
+    def test_pushme(self):
+        bus = Bus(MagicMock())
+        app = FollowMe(config={'action': 'push'}, bus=bus.handle('app'))
+        scan = [10000] * 360
+        ret = app.followme_step(scan, index=None)
+
 # vim: expandtab sw=4 ts=4
