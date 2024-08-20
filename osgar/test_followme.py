@@ -23,8 +23,16 @@ class FollowMeTest(unittest.TestCase):
     def test_pushme(self):
         bus = Bus(MagicMock())
         app = FollowMe(config={'action': 'push'}, bus=bus.handle('app'))
+
+        # nothing close near the robot
         scan = [10000] * 360
         app.on_scan(scan)
         ret = app.followme_step(scan, index=None)
+        self.assertEqual(ret, (0, 0, None))
+
+        scan[0] = 1000  # behind the robot
+        app.on_scan(scan)
+        ret = app.followme_step(scan, index=None)
+        self.assertEqual(ret, (0.5, -2.356194490192345, 0))  # diff dist even it is on the other side!
 
 # vim: expandtab sw=4 ts=4

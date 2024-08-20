@@ -72,6 +72,19 @@ class FollowMe(Node):
         LIMIT_HIGH = SCAN_SIZE  # 5*SCAN_SIZE//6
         CLOSE_REFLECTIONS = 10  # ignore readings closer than 10mm, where 0 = infinite (no response)
 
+        # obsolete, to be defined by robot shape, this fits to Eduro only
+        thresholds = []
+        for i in range(SCAN_SIZE):
+            if LIMIT_LOW <= i <= LIMIT_HIGH:
+                deg = -self.scan_fov_deg/2 + self.scan_fov_deg * i / SCAN_SIZE
+                rad = math.radians(deg)
+                thresh = 1000 * (0.17 + 0.17 * max(0, math.cos(rad)))  # [mm]
+            else:
+                thresh = 0
+            thresholds.append(thresh)
+
+        masterAngleOffset = 0  # TODO
+
         near = 10.0
         if index is None:
             low = LIMIT_LOW
