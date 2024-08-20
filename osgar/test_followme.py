@@ -24,6 +24,7 @@ class FollowMeTest(unittest.TestCase):
         bus = Bus(MagicMock())
         app = FollowMe(config={'action': 'push'}, bus=bus.handle('app'))
         scan = [10000] * 360
+        app.on_scan(scan)
         ret = app.followme_step(scan, index=None)
 
 # vim: expandtab sw=4 ts=4
