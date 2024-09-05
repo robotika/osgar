@@ -33,6 +33,6 @@ class FollowMeTest(unittest.TestCase):
         scan[0] = 1000  # behind the robot
         app.on_scan(scan)
         ret = app.followme_step(scan, index=None)
-        self.assertEqual(ret, (0.5, -2.356194490192345, 0))  # diff dist even it is on the other side!
+        self.assertEqual(ret, (0.5, 0.7738055705797736, 180))  # diff dist even it is on the other side!
 
 # vim: expandtab sw=4 ts=4

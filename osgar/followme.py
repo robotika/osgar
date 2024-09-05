@@ -24,6 +24,8 @@ def min_dist(laser_data):
 
 
 class FollowMe(Node):
+    PUSH_ACTION = 'push'
+
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('desired_speed')
@@ -36,6 +38,8 @@ class FollowMe(Node):
         self.max_speed = config.get('max_speed', 0.5)  # m/s
         self.max_dist_limit = config.get('max_dist_limit', 1.3)  # m
         self.desired_dist = config.get('desired_dist', 0.4)  # m
+        self.action = config.get('action', 'follow')
+        assert self.action in ['follow', self.PUSH_ACTION], self.action
         self.debug_arr = []
 
     def on_pose2d(self, data):
@@ -45,6 +49,9 @@ class FollowMe(Node):
         if self.verbose:
             print(self.time, 'min_dist', min_dist(data) / 1000.0)
         self.last_scan = data
+        if self.action == self.PUSH_ACTION:
+            mid_size = len(data)//2
+            self.last_scan = data[mid_size:] + data[:mid_size]
 
     def on_emergency_stop(self, data):
         if self.raise_exception_on_stop and data:
@@ -122,7 +129,7 @@ class FollowMe(Node):
         return speed, rot, index
 
     def followme(self):
-        print("Follow Me!")
+        print(f"{self.action} me!")
 
         SCAN_SIZE = self.scan_size
         SCANS_PER_DEG = abs(SCAN_SIZE//self.scan_fov_deg)  # FOV can be negative for flipped lidar
