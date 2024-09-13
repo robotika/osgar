@@ -12,7 +12,7 @@
             "is_imu_enabled": true,
             "number_imu_records": 10,
             "disable_magnetometer_fusion": false,
-            "cam_ip": "169.254.1.222",
+            "cam_id": "169.254.1.222",
 
             "mono_resolution": "THE_400_P",
             "color_resolution": "THE_1080_P",
