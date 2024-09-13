@@ -13,6 +13,9 @@
             "number_imu_records": 15,
             "disable_magnetometer_fusion": false,
             "mono_resolution": [1280, 800],
+            "stereo_manual_exposure": [5000, 400],
+            "stereo_manual_wb": 3000,
+
             "stereo_median_filter": "KERNEL_7x7",
             "stereo_mode": "HIGH_ACCURACY",
             "stereo_extended_disparity": false,

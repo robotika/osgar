@@ -86,6 +86,9 @@ class OakCamera:
 
         self.color_manual_focus = config.get("color_manual_focus")  # 0..255 [far..near]
         self.color_manual_exposure = config.get("color_manual_exposure")  # [exposure, iso] 1..33000 [us] and 100..1600
+        self.color_manual_wb = config.get("color_manual_wb")  # 1000..12000 K
+        self.stereo_manual_exposure = config.get("stereo_manual_exposure")  # [exposure, iso] 1..33000 [us] and 100..1600
+        self.stereo_manual_wb = config.get("stereo_manual_wb")  # 1000..12000 K
 
         self.mono_resolution = config.get("mono_resolution", (640, 400))
         if isinstance(self.mono_resolution, str):
@@ -196,6 +199,9 @@ class OakCamera:
                 exposure, iso = self.color_manual_exposure
                 color.initialControl.setManualExposure(exposure, iso)  # exposure time and ISO
 
+            if self.color_manual_wb is not None:
+                color.initialControl.setManualWhiteBalance(self.stereo_manual_wb)
+
             color_encoder.setDefaultProfilePreset(self.fps, self.video_encoder)
 
             color.video.link(color_encoder.input)
@@ -230,6 +236,15 @@ class OakCamera:
             right.setSize(self.mono_resolution)
             right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
             right.setFps(self.fps)
+
+            if self.stereo_manual_exposure is not None:
+                exposure, iso = self.stereo_manual_exposure
+                left.initialControl.setManualExposure(exposure, iso)  # exposure time and ISO
+                right.initialControl.setManualExposure(exposure, iso)  # exposure time and ISO
+
+            if self.stereo_manual_wb is not None:
+                left.initialControl.setManualWhiteBalance(self.stereo_manual_wb)
+                right.initialControl.setManualWhiteBalance(self.stereo_manual_wb)
 
             stereo.setDefaultProfilePreset(self.stereo_mode)
             # https://docs.luxonis.com/projects/api/en/latest/components/nodes/stereo_depth/#currently-configurable-blocks
