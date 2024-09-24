@@ -175,18 +175,29 @@ class LogUDP(LogSocket):
 
 class LogHTTP:
     def __init__(self, config, bus):
-        bus.register('raw')
-        self.input_thread = Thread(target=self.run_input, daemon=True)
+        bus.register('raw', 'response')
+        self.url = config.get('url')
+        self.output = config.get('output', False)
+        assert self.url or self.output
+        if self.url:
+            self.input_thread = Thread(target=self.run_input, daemon=True)
+        if self.output:
+            self.output_thread = Thread(target=self.run_output, daemon=True)
 
-        self.url = config['url']
         self.sleep = config.get('sleep', None)
         self.bus = bus
 
     def start(self):
-        self.input_thread.start()
+        if self.url:
+            self.input_thread.start()
+        if self.output:
+            self.output_thread.start()
 
     def join(self, timeout=None):
-        self.input_thread.join(timeout=timeout)
+        if self.url:
+            self.input_thread.join(timeout=timeout)
+        if self.output:
+            self.output_thread.join(timeout=timeout)
 
     def run_input(self):
         while self.bus.is_alive():
@@ -201,6 +212,31 @@ class LogHTTP:
                 pass
             if self.sleep is not None:
                 self.bus.sleep(self.sleep)
+
+    def run_output(self):
+        try:
+            while True:
+                __, channel, out_data = self.bus.listen()
+                if channel == 'raw':
+                    if isinstance(out_data, list):
+                        assert len(out_data) == 3, out_data  # unsupported output data
+                        url, header, data = out_data
+                        request = urllib.request.Request(url, data=data, headers=header, method='POST')
+                    elif isinstance(out_data, str):  # url only
+                        request = out_data
+                    else:
+                        assert False, out_data  # unsupported output data
+
+                    with urllib.request.urlopen(request, timeout=0.5) as f:
+                        response = f.read()
+                    if len(response) > 0:
+                        self.bus.publish('response', response)
+
+                else:
+                    assert False, channel  # unsupported channel
+
+        except BusShutdownException:
+            pass
 
     def request_stop(self):
         self.bus.shutdown()
