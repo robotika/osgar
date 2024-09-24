@@ -10,17 +10,30 @@ import depthai as dai
 
 g_logger = logging.getLogger(__name__)
 
+g_resolution_dic = {
+    "THE_400_P": (640, 400),
+    "THE_480_P": (640, 480),
+    "THE_720_P": (1280, 720),
+    "THE_800_P": (1280, 800),
+    "THE_1080_P": (1920, 1080),
+    "THE_4_K": (3840, 2160),
+    "THE_12_MP": (4000, 3000),
+    "THE_13_MP": (4160, 3120)
+}
 
-def cam_is_available(cam_ip):
-    devices = dai.DeviceBootloader.getAllAvailableDevices()
-    available_devices = []
+def cam_is_available(cam_id):
+    devices = dai.Device.getAllAvailableDevices()
+    available_devices_names = []
+    available_devices_MxId = []
     for dev in devices:
-        if cam_ip == dev.desc.name:
+        if cam_id == dev.desc.name or cam_id == dev.getMxId():
             return True
-        available_devices.append(dev.desc.name)
+        available_devices_names.append(dev.desc.name)
+        available_devices_MxId.append(dev.getMxId())
 
-    g_logger.warning(f"IP {cam_ip} was not found!")
-    g_logger.info(f'Found devices: {", ".join(available_devices)}')
+    g_logger.error(f"{cam_id} was not found!")
+    g_logger.info(f'Found device names: {", ".join(available_devices_names)}')
+    g_logger.info(f'Found device MxIds: {", ".join(available_devices_MxId)}')
 
     return False
 
@@ -44,9 +57,9 @@ class OakCamera:
 
         compress_depth_stream = config.get('compress_depth_stream', True)
         self.bus.register('depth:gz' if compress_depth_stream else 'depth',
-                          'color', 'orientation_list', 'detections',
+                          'color', 'orientation_list', 'detections', 'left_im', 'right_im',
                           # *_seq streams are needed for output sync amd they are published BEFORE payload data
-                          'depth_seq', 'color_seq', 'detections_seq')
+                          'depth_seq', 'color_seq', 'detections_seq', 'left_im_seq', 'right_im_seq')
         self.fps = config.get('fps', 10)
         self.is_depth = config.get('is_depth', False)
         self.laser_projector_current = config.get("laser_projector_current", 0)
@@ -55,13 +68,13 @@ class OakCamera:
         assert self.flood_light_current <= 1500, self.flood_light_current  # The limit is 1500 mA.
         self.is_color = config.get('is_color', False)
         self.video_encoder = get_video_encoder(config.get('video_encoder', 'mjpeg'))
+        self.is_stereo_images = config.get('is_stereo_images', False)
 
         self.is_imu_enabled = config.get('is_imu_enabled', False)
         # Preferred number of IMU records in one packet
         self.number_imu_records = config.get('number_imu_records', 20)
         self.disable_magnetometer_fusion = config.get('disable_magnetometer_fusion', False)
-        self.cam_ip = config.get('cam_ip')
-        # Set camera IP via: https://github.com/luxonis/depthai-python/blob/main/examples/bootloader/poe_set_ip.py
+        self.cam_id = config.get('cam_id')  # https://docs.luxonis.com/software/depthai-components/device/
 
         self.is_extended_disparity = config.get("stereo_extended_disparity", False)
         self.is_subpixel = config.get("stereo_subpixel", False)
@@ -70,10 +83,14 @@ class OakCamera:
 
         self.color_manual_focus = config.get("color_manual_focus")  # 0..255 [far..near]
         self.color_manual_exposure = config.get("color_manual_exposure")  # [exposure, iso] 1..33000 [us] and 100..1600
+        self.color_manual_wb = config.get("color_manual_wb")  # 1000..12000 K
+        self.stereo_manual_exposure = config.get("stereo_manual_exposure")  # [exposure, iso] 1..33000 [us] and 100..1600
+        self.stereo_manual_wb = config.get("stereo_manual_wb")  # 1000..12000 K
 
-        mono_resolution_value = config.get("mono_resolution", "THE_400_P")
-        assert mono_resolution_value in ["THE_400_P", "THE_480_P", "THE_720_P", "THE_800_P"], mono_resolution_value
-        self.mono_resolution = getattr(dai.MonoCameraProperties.SensorResolution, mono_resolution_value)
+        self.mono_resolution = config.get("mono_resolution", (640, 400))
+        if isinstance(self.mono_resolution, str):
+            assert self.mono_resolution in g_resolution_dic, self.mono_resolution
+            self.mono_resolution = g_resolution_dic[self.mono_resolution]
 
         color_resolution_value = config.get("color_resolution", "THE_1080_P")
         assert color_resolution_value in["THE_1080_P", "THE_4_K", "THE_12_MP", "THE_13_MP"], color_resolution_value
@@ -179,37 +196,72 @@ class OakCamera:
                 exposure, iso = self.color_manual_exposure
                 color.initialControl.setManualExposure(exposure, iso)  # exposure time and ISO
 
+            if self.color_manual_wb is not None:
+                color.initialControl.setManualWhiteBalance(self.color_manual_wb)
+
             color_encoder.setDefaultProfilePreset(self.fps, self.video_encoder)
 
             color.video.link(color_encoder.input)
             color_encoder.bitstream.link(color_out.input)
 
-        if self.is_depth:
-            left = pipeline.create(dai.node.MonoCamera)
-            right = pipeline.create(dai.node.MonoCamera)
-            stereo = pipeline.create(dai.node.StereoDepth)
-            depth_out = pipeline.create(dai.node.XLinkOut)
+        if self.is_depth or self.is_stereo_images:
+            left = pipeline.create(dai.node.Camera)
+            right = pipeline.create(dai.node.Camera)
+            if self.is_depth:
+                stereo = pipeline.create(dai.node.StereoDepth)
+                depth_out = pipeline.create(dai.node.XLinkOut)
+                queue_names.append("depth")
+                depth_out.setStreamName("depth")
 
-            queue_names.append("depth")
-            depth_out.setStreamName("depth")
+                stereo.setDefaultProfilePreset(self.stereo_mode)
+                # https://docs.luxonis.com/projects/api/en/latest/components/nodes/stereo_depth/#currently-configurable-blocks
+                stereo.initialConfig.setMedianFilter(self.median_filter)
+                stereo.setExtendedDisparity(self.is_extended_disparity)
+                stereo.setSubpixel(self.is_subpixel)
+                # https://docs.luxonis.com/en/latest/pages/faq/#left-right-check-depth-mode
+                stereo.setLeftRightCheck(self.is_left_right_check)
 
-            left.setResolution(self.mono_resolution)
+                # links
+                left.video.link(stereo.left)
+                right.video.link(stereo.right)
+                stereo.depth.link(depth_out.input)
+
+            if self.is_stereo_images:
+                left_encoder = pipeline.create(dai.node.VideoEncoder)
+                left_encoder.setDefaultProfilePreset(self.fps, self.video_encoder)
+                left_out = pipeline.create(dai.node.XLinkOut)
+
+                right_encoder = pipeline.create(dai.node.VideoEncoder)
+                right_encoder.setDefaultProfilePreset(self.fps, self.video_encoder)
+                right_out = pipeline.create(dai.node.XLinkOut)
+
+                queue_names.append("left")
+                queue_names.append("right")
+                left_out.setStreamName("left")
+                right_out.setStreamName("right")
+
+                # links
+                left.video.link(left_encoder.input)
+                left_encoder.bitstream.link(left_out.input)
+
+                right.video.link(right_encoder.input)
+                right_encoder.bitstream.link(right_out.input)
+
+            left.setSize(self.mono_resolution)
             left.setBoardSocket(dai.CameraBoardSocket.LEFT)
             left.setFps(self.fps)
-            right.setResolution(self.mono_resolution)
+            right.setSize(self.mono_resolution)
             right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
             right.setFps(self.fps)
 
-            stereo.setDefaultProfilePreset(self.stereo_mode)
-            # https://docs.luxonis.com/projects/api/en/latest/components/nodes/stereo_depth/#currently-configurable-blocks
-            stereo.initialConfig.setMedianFilter(self.median_filter)
-            stereo.setExtendedDisparity(self.is_extended_disparity)
-            stereo.setSubpixel(self.is_subpixel)
-            stereo.setLeftRightCheck(self.is_left_right_check)  # https://docs.luxonis.com/en/latest/pages/faq/#left-right-check-depth-mode
+            if self.stereo_manual_exposure is not None:
+                exposure, iso = self.stereo_manual_exposure
+                left.initialControl.setManualExposure(exposure, iso)  # exposure time and ISO
+                right.initialControl.setManualExposure(exposure, iso)  # exposure time and ISO
 
-            left.out.link(stereo.left)
-            right.out.link(stereo.right)
-            stereo.depth.link(depth_out.input)
+            if self.stereo_manual_wb is not None:
+                left.initialControl.setManualWhiteBalance(self.stereo_manual_wb)
+                right.initialControl.setManualWhiteBalance(self.stereo_manual_wb)
 
         if self.is_imu_enabled:
             imu = pipeline.create(dai.node.IMU)
@@ -235,13 +287,14 @@ class OakCamera:
 
         if not queue_names:
             g_logger.error("No stream enabled!")
+            self.request_stop()
             return
 
-        if self.cam_ip and cam_is_available(self.cam_ip):  # USB cameras?
-            device_info = dai.DeviceInfo()
-            device_info.state = dai.XLinkDeviceState.X_LINK_BOOTLOADER
-            device_info.desc.protocol = dai.XLinkProtocol.X_LINK_TCP_IP
-            device_info.desc.name = self.cam_ip
+        if self.cam_id:
+            if not cam_is_available(self.cam_id):
+                self.request_stop()
+                return
+            device_info = dai.DeviceInfo(self.cam_id)
         else:
             device_info = None
             g_logger.info("Used the first available device.")
@@ -270,6 +323,16 @@ class OakCamera:
                             depth_frame = packets[-1].getFrame()  # use latest packet
                             self.bus.publish("depth_seq", [seq_num, timestamp_us])
                             self.bus.publish("depth", depth_frame)
+
+                        if queue_name == "left":
+                            left_frame = packets[-1].getData().tobytes()  # use latest packet
+                            self.bus.publish("left_im_seq", [seq_num, timestamp_us])
+                            self.bus.publish("left_im", left_frame)
+
+                        if queue_name == "right":
+                            right_frame = packets[-1].getData().tobytes()  # use latest packet
+                            self.bus.publish("right_im_seq", [seq_num, timestamp_us])
+                            self.bus.publish("right_im", right_frame)
 
                         if queue_name == "color":
                             color_frame = packets[-1].getData().tobytes()  # use latest packet
