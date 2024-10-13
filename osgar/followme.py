@@ -109,7 +109,7 @@ class FollowMe(Node):
         maxnear = min((x for x in self.last_scan if x > CLOSE_REFLECTIONS)) / 1000.0
 
         if self.verbose:
-            print(self.time, 'near', near, maxnear, index)
+            print(self.time, 'near', near, index, (low, high), maxnear)
 
         if near > self.max_dist_limit or any(
                 x < thresh for (x, thresh) in zip(self.last_scan, thresholds) if x > CLOSE_REFLECTIONS):
@@ -171,7 +171,7 @@ class FollowMe(Node):
                 maxnear = min( (x for x in self.last_scan if x > CLOSE_REFLECTIONS) ) / 1000.0
 
                 if self.verbose:
-                    print(self.time, 'near', near, maxnear, index)
+                    print(self.time, 'near', near, index, (low, high), maxnear)
 
                 if near > self.max_dist_limit or any(x < thresh for (x, thresh) in zip(self.last_scan, thresholds) if x > CLOSE_REFLECTIONS):
                     speed, rot, angle = 0, 0, None
