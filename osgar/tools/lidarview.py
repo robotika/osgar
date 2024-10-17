@@ -217,8 +217,9 @@ def depth_map(depth):
                 cv2.COLOR_BGR2RGB).tobytes(),
             depth.shape[1::-1], "RGB")
 
-def get_image(data):
+def get_image(data, stream_id=None):
     """Extract JPEG or RGBD depth image"""
+    # stream_id is optional for handling H264 cache
     global g_depth
     # https://stackoverflow.com/questions/12569452/how-to-identify-numpy-types-in-python
     if isinstance(data, np.ndarray):
@@ -247,18 +248,19 @@ def get_image(data):
             image = pygame.image.load(io.BytesIO(data), 'JPG').convert()
         except pygame.error:
             # try H264 via OpenCV
+            tmp_filename = f'tmp{stream_id}.h264'
             assert data.startswith(bytes.fromhex('00000001 0950')) or data.startswith(bytes.fromhex('00000001 0930')), data[:20].hex()
             if data.startswith(bytes.fromhex('00000001 0950')):
                 # I - key frame
-                with open('tmp.h264', 'wb') as f:
+                with open(tmp_filename, 'wb') as f:
                     f.write(data)
             elif data.startswith(bytes.fromhex('00000001 0930')):
                 # P-frame}
-                with open('tmp.h264', 'ab') as f:
+                with open(tmp_filename, 'ab') as f:
                     f.write(data)
             else:
                 assert 0, f'Unexpected data {data[:20].hex()}'
-            cap = cv2.VideoCapture('tmp.h264')
+            cap = cv2.VideoCapture(tmp_filename)
             image = None
             ret = True
             while ret:
@@ -413,7 +415,7 @@ class Framer:
             if stream_id == self.lidar_down_id:
                 self.frame.lidar_down = deserialize(data)
             elif stream_id == self.camera_id:
-                self.image, _ = get_image(deserialize(data))
+                self.image, _ = get_image(deserialize(data), stream_id)
                 # bounding boxes associated with an image are stored after the image in the log
                 # therefore, we need to continue reading the log past the image in order to gathering its bounding box data
                 current = self.current
@@ -431,10 +433,10 @@ class Framer:
                     self.keyframe = False
                     return timestamp, self.frame, self.pose, self.pose3d, self.scan, self.scan2, self.image, self.image2, self.bbox, self.joint, keyframe, self.title, False
             elif stream_id == self.camera2_id:
-                self.image2, _ = get_image(deserialize(data))
+                self.image2, _ = get_image(deserialize(data), stream_id)
             elif stream_id == self.rgbd_id:
                 _, _, img_data, depth_data = deserialize(data)
-                self.image, self.image2 = get_image((img_data, depth_data))
+                self.image, self.image2 = get_image((img_data, depth_data), stream_id)
                 if self.lidar_id is None:
                     keyframe = self.keyframe
                     self.keyframe = False
