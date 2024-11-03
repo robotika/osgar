@@ -175,6 +175,7 @@ class FR07(Node):
             temperature_max = ((payload[3] >> 4) & 0xF) + (payload[4] << 4)
             temperature_min = payload[5] + ((payload[6] & 0xF) << 8)
             if self.verbose:
+                print('Percentage', percentage)
                 print('Temperature', temperature_min/10, temperature_max/10)
 
         elif msg_id == 0x18c4eaef:  # Vehicle fault status feedback
