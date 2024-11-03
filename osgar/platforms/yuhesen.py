@@ -189,10 +189,10 @@ class FR07(Node):
             # Auto (IO) control CAN communication error = 0x3
 
             # BMS CAN communication disconnection fault - 44
-            # Emergency stop fault - 45
-            # Remote controller close alarm - 46
+            # Emergency stop fault - 45 (0x20)
+            # Remote controller close alarm - 46 (0x40 - when disconnected)
             # Remote controller receiver disconnection fault - 47
-            error_status = payload[:-3].hex()
+            error_status = payload[:-2].hex()
             if self.last_error_status != error_status:
                 print(self.time, f'Error status: {error_status}')
                 self.last_error_status = error_status
