@@ -157,10 +157,11 @@ class LogWriter:
 
 
 class LogReader:
-    def __init__(self, filename, follow=False, only_stream_id=None, duration=None):
+    def __init__(self, filename, follow=False, only_stream_id=None, clip_start_time_sec=0.0, clip_end_time_sec=None):
         self.filename = filename
         self.follow = follow
-        self.duration = duration
+        self.clip_start_time_sec = clip_start_time_sec
+        self.clip_end_time_sec = clip_end_time_sec
         self.f = open(self.filename, 'rb')
         data = self._read(4)
         assert data == MAGIC, data
@@ -230,10 +231,11 @@ class LogReader:
                 data += part
 
             if len(self.multiple_streams) == 0 or stream_id in self.multiple_streams:
-                yield dt, stream_id, data
-                if self.duration is not None and dt.total_seconds() > self.duration:
-                    g_logger.info(f"Duration limit {self.duration} reached ({dt})")
-                    break
+                if stream_id == 0 or dt.total_seconds() >= self.clip_start_time_sec:
+                    yield dt, stream_id, data
+                    if self.clip_end_time_sec is not None and dt.total_seconds() > self.clip_end_time_sec:
+                        g_logger.info(f"Duration limit {self.clip_end_time_sec - self.clip_start_time_sec} reached ({dt})")
+                        break
 
     def close(self):
         self.f.close()
@@ -393,7 +395,10 @@ def main():
     parser.add_argument('--format', help='use python format - available fields sec, timestamp, stream_id, data')
     parser.add_argument('--all', help='dump all messages', action='store_true')
     parser.add_argument('--raw', help='dump raw data', action='store_true')
-    parser.add_argument('--duration', help="limit extraction to given time", type=float)
+    parser.add_argument('--start-time-sec', '-s', help='start clip at time (sec)',
+                        type=float, default=0.0)
+    parser.add_argument('--end-time-sec', '-e', help='cut end at given time (sec)',
+                        type=float, default=None)
     args = parser.parse_args()
 
     if args.list_names:
@@ -424,7 +429,7 @@ def main():
         for name in args.stream:
             only_stream.append(lookup_stream_id(args.logfile, name))
 
-    with LogReader(args.logfile, only_stream_id=only_stream, duration=args.duration) as log:
+    with LogReader(args.logfile, only_stream_id=only_stream, clip_start_time_sec=args.start_time_sec, clip_end_time_sec=args.end_time_sec) as log:
         for timestamp, stream_id, data in log:
             if stream_id != 0:
                 data = deserialize(data)
