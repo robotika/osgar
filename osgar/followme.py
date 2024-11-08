@@ -181,7 +181,12 @@ class FollowMe(Node):
                     desiredDistance = self.desired_dist
 #                    speed = 0.2 + 2 * (near - desiredDistance)
                     speed = near - desiredDistance
-#                    rot = 1.5 * (angle - desiredAngle)
+                    if self.action == self.PUSH_ACTION:
+                        speed = abs(near - desiredDistance)
+                    else:
+                        speed = near - desiredDistance
+
+                    #                    rot = 1.5 * (angle - desiredAngle)
                     rot = angle - desiredAngle
                     if speed < 0:
                         speed = 0
