@@ -182,7 +182,8 @@ class FollowMe(Node):
 #                    speed = 0.2 + 2 * (near - desiredDistance)
                     speed = near - desiredDistance
                     if self.action == self.PUSH_ACTION:
-                        speed = abs(near - desiredDistance)
+                        # get the max speed at desired distance and slow down in both directions
+                        speed = self.max_speed - abs(desiredDistance - near)  # TODO scaling to self.max_dist_limit??
                     else:
                         speed = near - desiredDistance
 
