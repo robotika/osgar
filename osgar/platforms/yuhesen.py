@@ -32,6 +32,7 @@ class FR07(Node):
         self.last_bumpers = None
         self.last_left_speed = None
         self.last_right_speed = None
+        self.last_battery = None
         self.pose = 0, 0, 0
         self.pose_counter = 0
         self.counters = {}
@@ -174,6 +175,9 @@ class FR07(Node):
             percentage = payload[0]
             temperature_max = ((payload[3] >> 4) & 0xF) + (payload[4] << 4)
             temperature_min = payload[5] + ((payload[6] & 0xF) << 8)
+            if self.last_battery != percentage:
+                print(self.time, 'Battery:', percentage)
+                self.last_battery = percentage
             if self.verbose:
                 print('Percentage', percentage)
                 print('Temperature', temperature_min/10, temperature_max/10)
