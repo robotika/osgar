@@ -1,0 +1,52 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "lidar_udp": {
+          "driver": "udp",
+          "out": ["raw"],
+          "init": {
+              "host": "192.168.1.91",
+              "port": 7502,
+              "bufsize": 100000
+          }
+      },
+      "imu_udp": {
+          "driver": "udp",
+          "out": ["raw"],
+          "init": {
+              "host": "192.168.1.91",
+              "port": 7503,
+              "bufsize": 1024
+        }
+      },
+      "lidar_http": {
+          "driver": "http",
+          "in": ["raw"],
+          "out": ["response"],
+          "init": {
+              "output": true,
+              "timeout": 1.0
+          }
+      },
+
+      "app": {
+          "driver": "osgar.drivers.ouster_lidar:OusterLidarDummy",
+          "in": ["udp_packet", "http_response"],
+          "out": ["http_request"],
+          "init": {
+            "lidar_url": "http://192.168.1.91/api/v1/sensor/config",
+            "config_params": {
+              "lidar_mode": "512x10",
+              "udp_profile_lidar": "LEGACY"
+            }
+        }
+      }
+    },
+    "links": [
+      ["lidar_udp.raw", "app.udp_packet"],
+      ["lidar_http.response", "app.response"],
+      ["app.http_request", "lidar_http.raw"]
+    ]
+  }
+}
