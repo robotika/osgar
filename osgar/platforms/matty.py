@@ -5,18 +5,20 @@
 # https://robotika.cz/robots/matty-twins/
 
 import math
+import struct
 
 from osgar.node import Node
 
 
 WHEEL_DISTANCE = 0.645  # meters left and right rear wheel
 
+SYNC = 0x55
 
 class Matty(Node):
 
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('can', 'emergency_stop', 'pose2d')
+        bus.register('esp_data', 'emergency_stop', 'pose2d')
         self.max_speed = config.get('max_speed', 0.5)
         self.max_steering_deg = config.get('max_steering_deg', 45.0)
         self.last_steering = None
@@ -61,6 +63,10 @@ class Matty(Node):
             heading += angle  # not normalized
         self.pose = (x, y, heading)
         self.publish('pose2d', [round(x*1000), round(y*1000), round(math.degrees(heading)*100)])
+
+    def on_tick(self, data):
+        self.publish('esp_data', bytes([SYNC, 1, ord('S'), (SYNC + 1 + ord('S')) & 0xFF]))
+                                        #'T' + struct.pack('HH', 100, 1000))
 
     def on_esp_data(self, data):
         pass
