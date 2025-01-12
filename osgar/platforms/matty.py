@@ -101,7 +101,7 @@ class Matty(Node):
         if len(packet) == 2:
             # ACK/NAACK
             if packet[0] != self.counter or packet[1] != ord('A'):
-                logging.warning(f'Unexpected message: {(packet.hex(), self.counter)}')
+                logging.warning(f'Unexpected message: {(packet, packet.hex(), self.counter)}')
 
     def on_desired_steering(self, data):
         """

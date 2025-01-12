@@ -13,15 +13,15 @@ class MattyTest(unittest.TestCase):
         bus = MagicMock()
         robot = Matty(bus=bus, config={})
         robot.on_tick(None)
-#        robot.on_esp_data(b'1234')
-#        bus.publish.assert_called_with('emergency_stop', True)
+        bus.publish.assert_called_with('esp_data', bytes.fromhex('55 06 01 54 64 00 E8 03 56')) #  A9
 
     def test_crc(self):
         bus = MagicMock()
         robot = Matty(bus=bus, config={})
         # packet 0 is not acknowledged
-        with self.assertRaises(AssertionError):
-            robot.on_esp_data(bytes.fromhex('55 02 00 4e b0'))
+#        with self.assertRaises(AssertionError):
+        # changed to warnin only
+        robot.on_esp_data(bytes.fromhex('55 02 00 4e b0'))
 
         # ACK and proper counter
         robot.counter = 1
