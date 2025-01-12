@@ -4,7 +4,7 @@ from logging import raiseExceptions
 from unittest.mock import MagicMock
 from datetime import timedelta
 
-from osgar.platforms.matty import Matty
+from osgar.platforms.matty import Matty, add_esc_chars, SYNC, ESC
 
 
 class MattyTest(unittest.TestCase):
@@ -13,7 +13,7 @@ class MattyTest(unittest.TestCase):
         bus = MagicMock()
         robot = Matty(bus=bus, config={})
         robot.on_tick(None)
-        bus.publish.assert_called_with('esp_data', bytes.fromhex('55 06 01 54 64 00 E8 03 56')) #  A9
+        bus.publish.assert_called_with('esp_data', bytes.fromhex('55 06 01 54 64 00 E8 03 56 A9'))
 
     def test_crc(self):
         bus = MagicMock()
@@ -38,3 +38,8 @@ class MattyTest(unittest.TestCase):
         robot = Matty(bus=bus, config={})
         robot.send_speed()
         bus.publish.assert_called_with('esp_data', b'U\x06\x01G\x00\x00\x00\x00\xb2')
+
+    def test_add_esc_chars(self):
+        self.assertEqual(add_esc_chars(bytes([1, 2, 3, 4])), bytes([1, 2, 3, 4]))
+        self.assertEqual(add_esc_chars(bytes([1, SYNC, 3, 4])), bytes([1, ESC, 0xFF & (~SYNC), 3, 4]))
+        self.assertEqual(add_esc_chars(bytes([1, 2, ESC, 4])), bytes([1, 2, ESC, 0xFF & (~ESC), 4]))

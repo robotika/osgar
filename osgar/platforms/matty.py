@@ -14,6 +14,17 @@ from osgar.node import Node
 WHEEL_DISTANCE = 0.645  # meters left and right rear wheel
 
 SYNC = 0x55
+ESC = 0x56
+
+def add_esc_chars(data):
+    ret = []
+    for d in data:
+        if d in [ESC, SYNC]:
+            ret.extend([ESC, 0xFF & (~d)])
+        else:
+            ret.append(d)
+    return bytes(ret)
+
 
 class Matty(Node):
 
@@ -71,7 +82,7 @@ class Matty(Node):
     def send_esp(self, data):
         self.counter += 1
         crc = 0xFF & (256 - (sum(data) + len(data) + 1 + self.counter))
-        self.publish('esp_data', bytes([SYNC, len(data) + 1, self.counter & 0xFF]) + data + bytes([crc]))
+        self.publish('esp_data', bytes([SYNC]) + add_esc_chars(bytes([len(data) + 1, self.counter & 0xFF]) + data + bytes([crc])))
 
     def send_speed(self):
         data = b'G' + struct.pack('<hh', int(self.desired_speed * 1000), int(self.desired_steering_angle_deg * 100))
