@@ -37,6 +37,8 @@ class Matty(Node):
         self.desired_steering_angle_deg = 0.0  # degrees
         self.debug_arr = []
         self.verbose = False
+        self.counter = 0
+        self.buf = b''
 
     def publish_pose2d(self, left, right):
         dt = 0.04  # 25Hz
@@ -64,12 +66,32 @@ class Matty(Node):
         self.pose = (x, y, heading)
         self.publish('pose2d', [round(x*1000), round(y*1000), round(math.degrees(heading)*100)])
 
+    def send_esp(self, data):
+        self.counter += 1
+        crc = 0xFF & (256 - (sum(data) + len(data) + 1 + self.counter))
+        self.publish('esp_data', bytes([SYNC, len(data) + 1, self.counter & 0xFF]) + data + bytes([crc]))
+
     def on_tick(self, data):
-        self.publish('esp_data', bytes([SYNC, 1, ord('S'), (SYNC + 1 + ord('S')) & 0xFF]))
-                                        #'T' + struct.pack('HH', 100, 1000))
+        self.send_esp(b'S')
 
     def on_esp_data(self, data):
-        pass
+        self.buf += data
+        if SYNC not in self.buf:
+            return
+        self.buf = self.buf[self.buf.index(SYNC):]
+        if len(self.buf) < 4:
+            return  # SYNC, len, cmd, crc
+        length = self.buf[1]
+        if len(self.buf) < length + 3:  # SYNC, len and CRC are not counted
+            return  # message not completed yet - timeout??
+        crc = sum(self.buf[1:length + 3])
+        assert crc & 0xFF == 0, crc
+        packet = self.buf[2:length + 2]
+        self.buf = self.buf[length + 3:]
+        if len(packet) == 2:
+            # ACK/NAACK
+            assert packet[0] == self.counter and packet[1] == ord('A'), (packet.hex(), self.counter)
+
 
     def on_desired_steering(self, data):
         """
