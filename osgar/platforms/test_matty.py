@@ -32,3 +32,9 @@ class MattyTest(unittest.TestCase):
         robot = Matty(bus=bus, config={})
         robot.send_esp(b'S')
         bus.publish.assert_called_with('esp_data', bytes().fromhex('55020153aa'))
+
+    def test_send_esp(self):
+        bus = MagicMock()
+        robot = Matty(bus=bus, config={})
+        robot.send_speed()
+        bus.publish.assert_called_with('esp_data', b'U\x06\x01G\x00\x00\x00\x00\xb2')

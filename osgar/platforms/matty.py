@@ -6,6 +6,7 @@
 
 import math
 import struct
+import logging
 
 from osgar.node import Node
 
@@ -39,6 +40,7 @@ class Matty(Node):
         self.verbose = False
         self.counter = 0
         self.buf = b''
+        self.odometry_requested = False
 
     def publish_pose2d(self, left, right):
         dt = 0.04  # 25Hz
@@ -71,8 +73,16 @@ class Matty(Node):
         crc = 0xFF & (256 - (sum(data) + len(data) + 1 + self.counter))
         self.publish('esp_data', bytes([SYNC, len(data) + 1, self.counter & 0xFF]) + data + bytes([crc]))
 
+    def send_speed(self):
+        data = b'G' + struct.pack('<hh', int(self.desired_speed * 1000), int(self.desired_steering_angle_deg * 100))
+        return self.send_esp(data)
+
     def on_tick(self, data):
-        self.send_esp(b'S')
+        if self.odometry_requested:
+            self.send_speed()
+        else:
+            self.send_esp(b'T'+ struct.pack('<HH', 100, 1000))
+            self.odometry_requested = True
 
     def on_esp_data(self, data):
         self.buf += data
@@ -90,8 +100,8 @@ class Matty(Node):
         self.buf = self.buf[length + 3:]
         if len(packet) == 2:
             # ACK/NAACK
-            assert packet[0] == self.counter and packet[1] == ord('A'), (packet.hex(), self.counter)
-
+            if packet[0] != self.counter or packet[1] != ord('A'):
+                logging.warning(f'Unexpected message: {(packet.hex(), self.counter)}')
 
     def on_desired_steering(self, data):
         """
