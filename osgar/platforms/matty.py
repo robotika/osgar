@@ -133,7 +133,7 @@ class Matty(Node):
         self.buf = self.buf[length + 3:]
         if len(packet) == 2:
             # ACK/NAACK
-            if packet[0] != self.counter or packet[1] != ord('A'):
+            if packet[1] != ord('A'):  # packet[0] != self.counter ... ignored for now
                 logging.warning(f'Unexpected message: {(packet, packet.hex(), self.counter)}')
         elif len(packet) == 20:
             assert packet[1] == ord('I'), packet[1]
