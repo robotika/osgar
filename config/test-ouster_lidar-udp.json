@@ -31,7 +31,7 @@
       },
 
       "app": {
-          "driver": "osgar.drivers.ouster_lidar:OusterLidarDummy",
+          "driver": "osgar.drivers.ouster_lidar:OusterLidarUDP",
           "in": ["udp_packet", "http_response"],
           "out": ["http_request"],
           "init": {
