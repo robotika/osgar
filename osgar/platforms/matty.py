@@ -26,6 +26,22 @@ def add_esc_chars(data):
     return bytes(ret)
 
 
+def remove_esc_chars(data):
+    """Undo excape characters to the end of data. Keep SYNC characters"""
+    ret = bytes()
+    esc_i = data.find(ESC)
+    while esc_i >= 0:
+        ret += data[:esc_i]
+        assert esc_i + 1 < len(data)  # what to do with ESC at the end?!
+        orig = 0xFF & (~data[esc_i + 1])
+        assert orig in [ESC, SYNC], hex(orig)
+        ret += bytes([orig])
+        data = data[esc_i + 2:]
+        esc_i = data.find(ESC)
+    ret += data
+    return ret
+
+
 class Matty(Node):
 
     def __init__(self, config, bus):
@@ -96,7 +112,7 @@ class Matty(Node):
             self.odometry_requested = True
 
     def on_esp_data(self, data):
-        self.buf += data
+        self.buf += remove_esc_chars(data)
         if SYNC not in self.buf:
             return
         self.buf = self.buf[self.buf.index(SYNC):]
@@ -106,7 +122,7 @@ class Matty(Node):
         if len(self.buf) < length + 3:  # SYNC, len and CRC are not counted
             return  # message not completed yet - timeout??
         crc = sum(self.buf[1:length + 3])
-        assert crc & 0xFF == 0, crc
+        assert crc & 0xFF == 0, (crc, self.buf.hex())
         packet = self.buf[2:length + 2]
         self.buf = self.buf[length + 3:]
         if len(packet) == 2:
