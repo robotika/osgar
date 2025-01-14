@@ -21,9 +21,9 @@
         }
       },
       "lidar_http": {
-          "driver": "http",
-          "in": ["raw"],
-          "out": ["response"],
+          "driver": "osgar.drivers.logsocket:LogHTTPRequest",
+          "in": ["request"],
+          "out": ["raw"],
           "init": {
               "output": true,
               "timeout": 1.0
@@ -45,8 +45,8 @@
     },
     "links": [
       ["lidar_udp.raw", "app.udp_packet"],
-      ["lidar_http.response", "app.response"],
-      ["app.http_request", "lidar_http.raw"]
+      ["lidar_http.raw", "app.response"],
+      ["app.http_request", "lidar_http.request"]
     ]
   }
 }
