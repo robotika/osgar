@@ -206,6 +206,49 @@ class LogHTTP:
         self.bus.shutdown()
 
 
+class LogHTTPRequest:
+    def __init__(self, config, bus):
+        bus.register('raw')
+        self.input_thread = Thread(target=self.run_input, daemon=True)
+        self.bus = bus
+
+    def start(self):
+        self.input_thread.start()
+
+    def join(self, timeout=None):
+        self.input_thread.join(timeout=timeout)
+
+    def run_input(self):
+        try:
+            while True:
+                __, channel, out_data = self.bus.listen()
+                if channel == 'request':
+                    if isinstance(out_data, list):
+                        assert len(out_data) == 3, out_data  # unsupported output data
+                        url, headers, data = out_data
+                        request = urllib.request.Request(url, data=data, headers=headers, method='POST')
+
+                    elif isinstance(out_data, str):  # url only
+                        request = out_data
+
+                    else:
+                        assert False, out_data  # unsupported output data
+
+                    with urllib.request.urlopen(request, timeout=0.5) as f:
+                        response = f.read()
+                        if len(response) > 0:
+                            self.bus.publish('raw', response)
+
+                else:
+                    assert False, channel  # unsupported channel
+
+        except BusShutdownException:
+            pass
+
+    def request_stop(self):
+        self.bus.shutdown()
+
+
 if __name__ == "__main__":
     import time
     from osgar.bus import Bus
