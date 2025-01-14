@@ -69,6 +69,12 @@ class Matty(Node):
         self.buf = b''
         self.odometry_requested = False
 
+    def parse_odometry(self, data):
+        counter, cmd, status, mode, voltage_mV, current_mA, angle_deg, speed_mms = struct.unpack_from('BBBBHHhh', data)
+        if self.verbose:
+            print(counter, cmd, status, mode, voltage_mV, current_mA, angle_deg, speed_mms)
+        return speed_mms/1000, math.radians(angle_deg/100)
+
     def publish_pose2d(self, left, right):
         dt = 0.04  # 25Hz
 
@@ -129,6 +135,11 @@ class Matty(Node):
             # ACK/NAACK
             if packet[0] != self.counter or packet[1] != ord('A'):
                 logging.warning(f'Unexpected message: {(packet, packet.hex(), self.counter)}')
+        elif len(packet) == 20:
+            assert packet[1] == ord('I'), packet[1]
+            self.parse_odometry(packet)
+        else:
+            assert 0, (length, packet.hex())
 
     def on_desired_steering(self, data):
         """

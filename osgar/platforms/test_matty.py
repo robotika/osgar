@@ -1,7 +1,7 @@
 
 import unittest
-from logging import raiseExceptions
 from unittest.mock import MagicMock
+import math
 from datetime import timedelta
 
 from osgar.platforms.matty import Matty, add_esc_chars, SYNC, ESC, remove_esc_chars
@@ -53,3 +53,10 @@ class MattyTest(unittest.TestCase):
         self.assertEqual(remove_esc_chars(bytes([1, 2, 3, 4])), bytes([1, 2, 3, 4]))
         self.assertEqual(remove_esc_chars(bytes([1, ESC, 0xFF & (~SYNC), 3, 4])), bytes([1, SYNC, 3, 4]))
         self.assertEqual(remove_esc_chars(bytes([1, 2, ESC, 0xFF & (~ESC), 4])), bytes([1, 2, ESC, 4]))
+
+    def test_parse_odometry(self):
+        bus = MagicMock()
+        robot = Matty(bus=bus, config={})
+        speed, steering = robot.parse_odometry(bytes.fromhex('104901025c1c7b000000000065001700dd05ea00'))
+        self.assertAlmostEqual(speed, 0.0)
+        self.assertAlmostEqual(steering, math.radians(0))
