@@ -7,7 +7,7 @@ import json
 from osgar.node import Node
 
 
-class OusterLidarDummy(Node):
+class OusterLidarUDP(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('http_request', 'lidar_config')
@@ -36,12 +36,14 @@ class OusterLidarDummy(Node):
 
             self.request_configuration()
             self.configuration_done = True
-        self.process_udp(data)
+            return
+        if self.configuration_saved:
+            self.process_udp(data)
 
     def on_response(self, data):
         assert self.configuration_done
         assert not self.configuration_saved  # The configuration should be delivered only once.
         if self.verbose:
             print(data)
-        self.publish("lidar_config", data.decode())
+        self.publish("lidar_config", data)
         self.configuration_saved = True
