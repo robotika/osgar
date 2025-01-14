@@ -3,12 +3,12 @@
   "robot": {
     "modules": {
       "app": {
-          "driver": "osgar.go:Go",
-          "in": ["emergency_stop", "pose2d"],
+          "driver": "osgar.followpath:FollowPath",
+          "in": ["emergency_stop", "pose2d", "path"],
           "out": ["desired_speed"],
           "init": {
-            "max_speed": 0.5,
-            "dist": 1.0,
+            "max_speed": 0.1,
+            "path": [[0, 0], [1, 0], [1, 1]],
             "timeout": 10
           }
       },

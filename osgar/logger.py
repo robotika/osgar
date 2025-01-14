@@ -157,9 +157,11 @@ class LogWriter:
 
 
 class LogReader:
-    def __init__(self, filename, follow=False, only_stream_id=None):
+    def __init__(self, filename, follow=False, only_stream_id=None, clip_start_time_sec=0.0, clip_end_time_sec=None):
         self.filename = filename
         self.follow = follow
+        self.clip_start_time_sec = clip_start_time_sec
+        self.clip_end_time_sec = clip_end_time_sec
         self.f = open(self.filename, 'rb')
         data = self._read(4)
         assert data == MAGIC, data
@@ -194,8 +196,23 @@ class LogReader:
             if len(header) < 8:
                 break
             dt_bytes = header[:4]
-            dt =  parse_timedelta(dt_bytes)
+            dt = parse_timedelta(dt_bytes)
             stream_id, size = struct.unpack('HH', header[4:])
+            # check for corrupted end of log file (filled with zeros)
+            if stream_id == 0 and size == 0:
+                # unexpected size for system stream -> corrupted log file
+                g_logger.error(f"                       ")
+                g_logger.error(f"Zero bytes {self.f.name} from position {start}")
+                count = 0
+                while True:
+                    data = self._read(1)
+                    count += 1
+                    if len(data) == 0:
+                        break
+                    assert data[0] == 0, data
+                g_logger.error(f"-------> {count} zeros ({100 * count / (start + count):0.2}%)")
+                g_logger.error(f"                       ")
+                return
             data = self._read(size)
             if len(data) != size:
                 g_logger.error(f"Incomplete log file {self.f.name} from position {start}")
@@ -214,12 +231,15 @@ class LogReader:
                 data += part
 
             if len(self.multiple_streams) == 0 or stream_id in self.multiple_streams:
-                yield dt, stream_id, data
+                if stream_id == 0 or dt.total_seconds() >= self.clip_start_time_sec:
+                    yield dt, stream_id, data
+                    if self.clip_end_time_sec is not None and dt.total_seconds() > self.clip_end_time_sec:
+                        g_logger.info(f"Duration limit {self.clip_end_time_sec - self.clip_start_time_sec} reached ({dt})")
+                        break
 
     def close(self):
         self.f.close()
         self.f = None
-
 
     # context manager functions
     def __enter__(self):
@@ -375,6 +395,10 @@ def main():
     parser.add_argument('--format', help='use python format - available fields sec, timestamp, stream_id, data')
     parser.add_argument('--all', help='dump all messages', action='store_true')
     parser.add_argument('--raw', help='dump raw data', action='store_true')
+    parser.add_argument('--start-time-sec', '-s', help='start clip at time (sec)',
+                        type=float, default=0.0)
+    parser.add_argument('--end-time-sec', '-e', help='cut end at given time (sec)',
+                        type=float, default=None)
     args = parser.parse_args()
 
     if args.list_names:
@@ -405,7 +429,7 @@ def main():
         for name in args.stream:
             only_stream.append(lookup_stream_id(args.logfile, name))
 
-    with LogReader(args.logfile, only_stream_id=only_stream) as log:
+    with LogReader(args.logfile, only_stream_id=only_stream, clip_start_time_sec=args.start_time_sec, clip_end_time_sec=args.end_time_sec) as log:
         for timestamp, stream_id, data in log:
             if stream_id != 0:
                 data = deserialize(data)
