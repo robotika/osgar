@@ -51,11 +51,11 @@ def replay(args, application=None):
 
     duration = args.duration
     if args.force:
-        reader = LogReader(args.logfile, only_stream_id=inputs.keys(), duration=duration)
+        reader = LogReader(args.logfile, only_stream_id=inputs.keys(), clip_end_time_sec=duration)
         bus = LogBusHandlerInputsOnly(reader, inputs=inputs)
     else:
         streams = list(inputs.keys()) + list(outputs.keys())
-        reader = LogReader(args.logfile, only_stream_id=streams, duration=duration)
+        reader = LogReader(args.logfile, only_stream_id=streams, clip_end_time_sec=duration)
         bus = LogBusHandler(reader, inputs, outputs)
 
     driver_name = module_config['driver']
