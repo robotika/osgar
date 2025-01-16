@@ -7,6 +7,7 @@
 import math
 import struct
 import logging
+import datetime
 
 from osgar.node import Node
 
@@ -34,7 +35,8 @@ def remove_esc_chars(data):
         ret += data[:esc_i]
         assert esc_i + 1 < len(data)  # what to do with ESC at the end?!
         orig = 0xFF & (~data[esc_i + 1])
-        assert orig in [ESC, SYNC], hex(orig)
+        if orig not in [ESC, SYNC]:
+            logging.warning(f'Esc error {hex(orig)}'),
         ret += bytes([orig])
         data = data[esc_i + 2:]
         esc_i = data.find(ESC)
@@ -61,7 +63,7 @@ class Matty(Node):
         self.pose_counter = 0
         self.counters = {}
 
-        self.desired_speed = 0.0  # m/s
+        self.desired_speed = -0.1  # m/s
         self.desired_steering_angle_deg = 0.0  # degrees
         self.debug_arr = []
         self.verbose = False
@@ -71,7 +73,7 @@ class Matty(Node):
 
     def parse_odometry(self, data):
         counter, cmd, status, mode, voltage_mV, current_mA, angle_deg, speed_mms = struct.unpack_from('BBBBHHhh', data)
-        if self.verbose:
+        if True: #self.verbose:
             print(counter, cmd, status, mode, voltage_mV, current_mA, angle_deg, speed_mms)
         return speed_mms/1000, math.radians(angle_deg/100)
 
@@ -114,8 +116,9 @@ class Matty(Node):
         if self.odometry_requested:
             self.send_speed()
         else:
-            self.send_esp(b'T'+ struct.pack('<HH', 100, 1000))
             self.odometry_requested = True
+#            self.send_esp(b'S')
+            self.send_esp(b'T'+ struct.pack('<HH', 1000, 250))
 
     def on_esp_data(self, data):
         self.buf += remove_esc_chars(data)
@@ -128,7 +131,9 @@ class Matty(Node):
         if len(self.buf) < length + 3:  # SYNC, len and CRC are not counted
             return  # message not completed yet - timeout??
         crc = sum(self.buf[1:length + 3])
-        assert crc & 0xFF == 0, (crc, self.buf.hex())
+        if crc & 0xFF != 0:
+            logging.warning(f'CRC error {(crc, self.buf, self.buf.hex())}')
+            return
         packet = self.buf[2:length + 2]
         self.buf = self.buf[length + 3:]
         if len(packet) == 2:
