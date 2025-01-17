@@ -72,9 +72,11 @@ class Matty(Node):
         self.odometry_requested = False
 
     def parse_odometry(self, data):
-        counter, cmd, status, mode, voltage_mV, current_mA, angle_deg, speed_mms = struct.unpack_from('BBBBHHhh', data)
+        counter, cmd, status, mode, voltage_mV, current_mA, angle_deg, speed_mms = struct.unpack_from('<BBBBHHhh', data)
+        enc = struct.unpack_from('<HHHH', data, 12)
         if True: #self.verbose:
-            print(counter, cmd, status, mode, voltage_mV, current_mA, angle_deg, speed_mms)
+            print(counter, cmd, status, mode, voltage_mV, current_mA, angle_deg, speed_mms, enc)
+            self.debug_arr.append([self.time.total_seconds(), enc])
         return speed_mms/1000, math.radians(angle_deg/100)
 
     def publish_pose2d(self, left, right):
@@ -118,7 +120,7 @@ class Matty(Node):
         else:
             self.odometry_requested = True
 #            self.send_esp(b'S')
-            self.send_esp(b'T'+ struct.pack('<HH', 1000, 250))
+            self.send_esp(b'T'+ struct.pack('<HH', 100, 1000))
 
     def on_esp_data(self, data):
         self.buf += remove_esc_chars(data)
@@ -165,3 +167,16 @@ class Matty(Node):
         if self.max_steering_deg is not None:
             self.desired_steering_angle_deg = min(self.max_steering_deg,
                                                   max(-self.max_steering_deg, self.desired_steering_angle_deg))
+
+    def draw(self):
+        import matplotlib.pyplot as plt
+
+        for selection in range(4):
+            t = [a[0] for a in self.debug_arr]
+            x = [a[1][selection] for a in self.debug_arr]
+            line = plt.plot(t, x, '-o', linewidth=2, label=f'enc {selection + 1}')
+
+        plt.xlabel('time (s)')
+        plt.ylabel('enc')
+        plt.legend()
+        plt.show()
