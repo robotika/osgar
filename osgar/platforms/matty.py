@@ -79,16 +79,13 @@ class Matty(Node):
             self.debug_arr.append([self.time.total_seconds(), enc])
         return speed_mms/1000, math.radians(angle_deg/100)
 
-    def publish_pose2d(self, left, right):
-        dt = 0.04  # 25Hz
+    def publish_pose2d(self, speed, joint_angle):
+        dt = 0.1  # 10Hz - maybe use real-time
 
         x, y, heading = self.pose
 
-        metricL = left * dt
-        metricR = right * dt
-
-        dist = (metricL + metricR)/2.0
-        angle = (metricR - metricL)/WHEEL_DISTANCE
+        dist = speed * dt
+        angle = joint_angle * dt  # TODO properly calculate
 
         # advance robot by given distance and angle
         if abs(angle) < 0.0000001:  # EPS
@@ -144,7 +141,8 @@ class Matty(Node):
                 logging.warning(f'Unexpected message: {(packet, packet.hex(), self.counter)}')
         elif len(packet) == 20:
             assert packet[1] == ord('I'), packet[1]
-            self.parse_odometry(packet)
+            speed, joint_angle = self.parse_odometry(packet)
+            self.publish_pose2d(speed, joint_angle)
         else:
             assert 0, (length, packet.hex())
 
@@ -154,12 +152,6 @@ class Matty(Node):
         Input is the pair of speed in millimeters per second and steering angle in hundredth of degree
         """
         speed_mm_per_sec, steering_deg_hundredth = data
-        if speed_mm_per_sec > 0:
-            self.desired_gear = Gear.DRIVE
-        elif speed_mm_per_sec < 0:
-            self.desired_gear = Gear.REVERSE
-        else:
-            pass  # for zero leave it as it is now
         self.desired_speed = speed_mm_per_sec/1000  # m/s
         if self.max_speed is not None:
             self.desired_speed = min(self.max_speed, max(-self.max_speed, self.desired_speed))
