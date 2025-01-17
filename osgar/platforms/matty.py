@@ -51,19 +51,9 @@ class Matty(Node):
         bus.register('esp_data', 'emergency_stop', 'pose2d')
         self.max_speed = config.get('max_speed', 0.5)
         self.max_steering_deg = config.get('max_steering_deg', 45.0)
-        self.last_steering = None
-        self.last_speed = None
-        self.last_emergency_stop = None
-        self.last_vehicle_mode = None
-        self.last_error_status = None
-        self.last_bumpers = None
-        self.last_left_speed = None
-        self.last_right_speed = None
         self.pose = 0, 0, 0
-        self.pose_counter = 0
-        self.counters = {}
 
-        self.desired_speed = -0.1  # m/s
+        self.desired_speed = 0  # m/s
         self.desired_steering_angle_deg = 0.0  # degrees
         self.debug_arr = []
         self.verbose = False
@@ -72,18 +62,16 @@ class Matty(Node):
         self.odometry_requested = False
 
     def parse_odometry(self, data):
-        counter, cmd, status, mode, voltage_mV, current_mA, angle_deg, speed_mms = struct.unpack_from('<BBBBHHhh', data)
+        counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_deg = struct.unpack_from('<BBBBHHhh', data)
         enc = struct.unpack_from('<HHHH', data, 12)
         if True: #self.verbose:
-            print(counter, cmd, status, mode, voltage_mV, current_mA, angle_deg, speed_mms, enc)
+            print(counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_deg, enc)
             self.debug_arr.append([self.time.total_seconds(), enc])
         return speed_mms/1000, math.radians(angle_deg/100)
 
     def publish_pose2d(self, speed, joint_angle):
         dt = 0.1  # 10Hz - maybe use real-time
-
         x, y, heading = self.pose
-
         dist = speed * dt
         angle = joint_angle * dt  # TODO properly calculate
 
@@ -116,7 +104,6 @@ class Matty(Node):
             self.send_speed()
         else:
             self.odometry_requested = True
-#            self.send_esp(b'S')
             self.send_esp(b'T'+ struct.pack('<HH', 100, 1000))
 
     def on_esp_data(self, data):
