@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "platform": {
+        "driver": "osgar.platforms.matty:Matty",
+        "in": ["esp_data"],
+        "out": ["esp_data"],
+        "init": {}
+      },
+      "timer": {
+        "driver": "timer",
+        "in": [],
+        "out": ["tick"],
+        "init": {
+          "sleep": 0.1
+        }
+      },
+      "serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyUSB0", "speed": 115200}
+      }
+    },
+    "links": [
+      ["serial.raw", "platform.esp_data"],
+      ["platform.esp_data", "serial.raw"],
+      ["timer.tick", "platform.tick"]
+    ]
+  }
+}

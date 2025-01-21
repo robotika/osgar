@@ -36,9 +36,9 @@ class Go(Node):
 
     def send_speed_cmd(self, speed, angular_speed=None, steering_angle=None):
         if angular_speed is not None:
-            return self.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
+            self.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
         if steering_angle is not None:
-            return self.publish('desired_steering', [round(speed*1000), round(math.degrees(steering_angle)*100)])
+            self.publish('desired_steering', [round(speed*1000), round(math.degrees(steering_angle)*100)])
 
     def on_pose2d(self, data):
         x, y, heading = data
