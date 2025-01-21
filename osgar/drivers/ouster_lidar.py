@@ -27,7 +27,7 @@ class OusterLidarUDP(Node):
 
     def process_udp(self, packet):
         pass
-        # print(len(packet))
+        # TODO in some future step
 
     def on_udp_packet(self, data):
         if not self.configuration_done:
