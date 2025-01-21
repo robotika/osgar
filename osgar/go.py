@@ -10,19 +10,35 @@ from osgar.node import Node
 class Go(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('desired_speed')
+        bus.register('desired_speed', 'desired_steering')
         self.start_pose = None
         self.traveled_dist = 0.0
         self.verbose = False
         self.speed = config['max_speed']
         self.dist = config['dist']
         self.timeout = timedelta(seconds=config['timeout'])
-        self.desired_spider_angle = config.get('desired_angle', 0.0)
+
+        self.desired_steering_angle = None  # not defined, do not publish by default
+        self.desired_angular_speed = None
+        steering_deg = config.get('steering_deg')  # desired steering angle in degrees
+        angular_speed_degs = config.get('angular_speed_degs')  # desired angular speed in degrees per second
+        if steering_deg is None and angular_speed_degs is None:
+            # if nothing is specified publish both interfaces
+            self.desired_steering_angle = 0
+            self.desired_angular_speed = 0
+        if steering_deg is not None:
+            self.desired_steering_angle = math.radians(steering_deg)
+        if angular_speed_degs is not None:
+            self.desired_angular_speed = math.radians(angular_speed_degs)
+
         self.repeat = config.get('repeat', 1)
         self.emergency_stop = None
 
-    def send_speed_cmd(self, speed, angular_speed):
-        return self.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
+    def send_speed_cmd(self, speed, angular_speed=None, steering_angle=None):
+        if angular_speed is not None:
+            return self.publish('desired_speed', [round(speed*1000), round(math.degrees(angular_speed)*100)])
+        if steering_angle is not None:
+            return self.publish('desired_steering', [round(speed*1000), round(math.degrees(steering_angle)*100)])
 
     def on_pose2d(self, data):
         x, y, heading = data
@@ -46,16 +62,19 @@ class Go(Node):
         print(self.time, "Go!")
         start_time = self.time
         if self.dist >= 0:
-            self.send_speed_cmd(self.speed, self.desired_spider_angle)
+            self.send_speed_cmd(self.speed,
+                                angular_speed=self.desired_angular_speed, steering_angle=self.desired_steering_angle)
         else:
-            self.send_speed_cmd(-self.speed, self.desired_spider_angle)
+            # TODO flip also steering angle?!
+            self.send_speed_cmd(-self.speed,
+                                angular_speed=self.desired_angular_speed, steering_angle=self.desired_steering_angle)
         while self.traveled_dist < abs(self.dist) and self.time - start_time < self.timeout:
             self.update()
             if self.emergency_stop:
                 print(self.time, "(sub_run) Emergency STOP")
                 break
         print(self.time, "STOP")
-        self.send_speed_cmd(0.0, 0.0)
+        self.send_speed_cmd(0.0, angular_speed=0.0, steering_angle=self.desired_steering_angle)
         self.wait(timedelta(seconds=1))
         print(self.time, "distance:", self.traveled_dist, "time:", (self.time - start_time).total_seconds())
 
