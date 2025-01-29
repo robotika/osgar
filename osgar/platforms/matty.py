@@ -104,7 +104,7 @@ class Matty(Node):
             self.send_speed()
         else:
             self.odometry_requested = True
-            self.send_esp(b'T'+ struct.pack('<HH', 100, 1000))
+            self.send_esp(b'T'+ struct.pack('<HH', 100, 150))  # keep watchdog short
 
     def on_esp_data(self, data):
         self.buf += remove_esc_chars(data)
