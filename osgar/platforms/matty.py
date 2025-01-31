@@ -8,6 +8,7 @@ import math
 import struct
 import logging
 import datetime
+from enum import Enum
 
 from osgar.node import Node
 
@@ -25,6 +26,14 @@ def add_esc_chars(data):
         else:
             ret.append(d)
     return bytes(ret)
+
+
+class RobotStatus(Enum):
+    EMERGENCY_STOP  = 0x01
+    VOLTAGE_LOW     = 0x02
+    ERROR_ENCODER   = 0x10
+    ERROR_POWER     = 0x20
+    RUNNING         = 0x80
 
 
 def remove_esc_chars(data):
@@ -64,7 +73,9 @@ class Matty(Node):
     def parse_odometry(self, data):
         counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_deg = struct.unpack_from('<BBBBHHhh', data)
         enc = struct.unpack_from('<HHHH', data, 12)
-        if True: #self.verbose:
+        if status & RobotStatus.ERROR_ENCODER.value:
+            print(self.time, 'Status ERROR_ENCODER', hex(status))
+        if self.verbose:
             print(counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_deg, enc)
             self.debug_arr.append([self.time.total_seconds(), enc])
         return speed_mms/1000, math.radians(angle_deg/100)
