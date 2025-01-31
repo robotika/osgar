@@ -26,6 +26,8 @@ class FollowPath(Node):
         self.last_position = [0, 0, 0]  # proper should be None, but we really start from zero
         self.route = Route(pts=config.get('path', []))
         self.max_speed = config.get('max_speed', 0.2)
+        self.obstacle_stop_dist = config.get('obstacle_stop_dist', None)  # default no restriction
+        self.last_obstacle = None  # no info available
         self.raise_exception_on_stop = False
         self.verbose = False
         self.finished = False
@@ -64,6 +66,10 @@ class FollowPath(Node):
             angle -= math.radians(45) * signed_dist
         if self.verbose:
             print(self.time, second[:5], pt, angle, signed_dist, normalizeAnglePIPI(angle - pose[2]))
+
+        if self.obstacle_stop_dist is not None:
+            if self.last_obstacle is None:
+                return 0, 0  # maybe different steering angle?
         return self.max_speed, normalizeAnglePIPI(angle - pose[2])
 
     def on_pose2d(self, data):
@@ -79,7 +85,7 @@ class FollowPath(Node):
             raise EmergencyStopException()
 
     def on_obstacle(self, data):
-        pass  # placeholder for slowing down and wait
+        self.last_obstacle = data
 
     def send_speed_cmd(self, speed, angular_speed):
         return self.bus.publish(
