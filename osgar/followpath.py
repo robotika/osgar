@@ -78,6 +78,9 @@ class FollowPath(Node):
         if self.raise_exception_on_stop and data:
             raise EmergencyStopException()
 
+    def on_obstacle(self, data):
+        pass  # placeholder for slowing down and wait
+
     def send_speed_cmd(self, speed, angular_speed):
         return self.bus.publish(
             'desired_speed',
