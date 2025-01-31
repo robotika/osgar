@@ -73,7 +73,7 @@ class Matty(Node):
     def parse_odometry(self, data):
         counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_deg = struct.unpack_from('<BBBBHHhh', data)
         enc = struct.unpack_from('<HHHH', data, 12)
-        if status & RobotStatus.ERROR_ENCODER.value:
+        if (status & RobotStatus.ERROR_ENCODER.value) and (status & RobotStatus.ERROR_POWER.value) == 0:
             print(self.time, 'Status ERROR_ENCODER', hex(status))
         if self.verbose:
             print(counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_deg, enc)
