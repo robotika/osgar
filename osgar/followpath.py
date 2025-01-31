@@ -68,7 +68,7 @@ class FollowPath(Node):
             print(self.time, second[:5], pt, angle, signed_dist, normalizeAnglePIPI(angle - pose[2]))
 
         if self.obstacle_stop_dist is not None:
-            if self.last_obstacle is None:
+            if self.last_obstacle is None or self.last_obstacle < self.obstacle_stop_dist:
                 return 0, 0  # maybe different steering angle?
         return self.max_speed, normalizeAnglePIPI(angle - pose[2])
 
