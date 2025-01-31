@@ -76,7 +76,7 @@ class Matty(Node):
         if (status & RobotStatus.ERROR_ENCODER.value) and (status & RobotStatus.ERROR_POWER.value) == 0:
             print(self.time, 'Status ERROR_ENCODER', hex(status))
         if self.verbose:
-            print(counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_deg, enc)
+            print(self.time, counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_deg, enc)
             self.debug_arr.append([self.time.total_seconds(), enc])
         return speed_mms/1000, math.radians(angle_deg/100)
 
