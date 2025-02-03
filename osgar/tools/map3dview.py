@@ -39,10 +39,6 @@ def visualize3d(logfile, depth_name, camera_name):
     vis.add_geometry(pcd)
     # https://www.open3d.org/docs/latest/python_api/open3d.visualization.ViewControl.html
     ctr = vis.get_view_control()
-    ctr.set_front([ 0.038523686988841843, -0.11245546606954208, -0.99290971074507473 ])
-    ctr.set_lookat([ -0.21639217215263715, 1.0339043338883831, 14.773016440432482 ])
-    ctr.set_up([ -0.024914348639606877, -0.99344650502891818, 0.11154961621490113 ])
-    ctr.set_zoom(0.3)
 
     with LogReader(logfile, only_stream_id=only_stream) as log:
         for timestamp, stream_id, data in log:
@@ -54,6 +50,7 @@ def visualize3d(logfile, depth_name, camera_name):
                 # Create Open3D point cloud object
                 pcd.points = o3d.utility.Vector3dVector(get_points(buf))
                 vis.update_geometry(pcd)
+                vis.reset_view_point(reset_bounding_box=True)
                 ctr.set_front([0.038523686988841843, -0.11245546606954208, -0.99290971074507473])
                 ctr.set_lookat([-0.21639217215263715, 1.0339043338883831, 14.773016440432482])
                 ctr.set_up([-0.024914348639606877, -0.99344650502891818, 0.11154961621490113])
@@ -61,6 +58,9 @@ def visualize3d(logfile, depth_name, camera_name):
                 if not vis.poll_events():
                     break
                 vis.update_renderer()
+                if timestamp > timedelta(seconds=10):
+                    break
+    vis.run()
     vis.destroy_window()
 
 def main():
