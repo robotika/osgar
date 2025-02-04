@@ -55,14 +55,16 @@ def visualize3d(logfile, depth_name, camera_name, pose2d_name=None):
 
     with LogReader(logfile, only_stream_id=only_stream) as log:
         pose = 0, 0, 0
+        points = []
         for timestamp, stream_id, data in log:
             if timestamp < timedelta(seconds=4.5):
                 continue
             buf = deserialize(data)
             if stream_id == depth_stream:
-                print(timestamp, pose)
+                print(timestamp, pose, len(points))
                 # Create Open3D point cloud object
-                pcd.points = o3d.utility.Vector3dVector(move_points(get_points(buf), pose))
+                points.extend(move_points(get_points(buf), pose))
+                pcd.points = o3d.utility.Vector3dVector(points)
                 vis.update_geometry(pcd)
                 vis.reset_view_point(reset_bounding_box=True)
                 ctr.set_front([0.038523686988841843, -0.11245546606954208, -0.99290971074507473])
@@ -72,7 +74,7 @@ def visualize3d(logfile, depth_name, camera_name, pose2d_name=None):
                 if not vis.poll_events():
                     break
                 vis.update_renderer()
-                if timestamp > timedelta(seconds=10):
+                if timestamp > timedelta(seconds=10) or len(points)> 2_000_000:
                     break
             if stream_id == pose2d_stream:
                 pose = buf[0]/1000.0, buf[1]/1000.0, math.radians(buf[2]/100)
