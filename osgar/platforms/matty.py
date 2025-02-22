@@ -59,7 +59,7 @@ class Matty(Node):
 
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('esp_data', 'emergency_stop', 'pose2d')
+        bus.register('esp_data', 'emergency_stop', 'pose2d', 'bumpers_front', 'bumpers_rear')
         self.max_speed = config.get('max_speed', 0.5)
         self.max_steering_deg = config.get('max_steering_deg', 45.0)
         self.pose = 0, 0, 0
@@ -83,6 +83,10 @@ class Matty(Node):
             print(self.time, 'Bumpers:',
                   'front' if bumpers & RobotStatus.BUMPER_FRONT.value else '',
                   'back' if bumpers & RobotStatus.BUMPER_BACK.value else '')
+            if self.last_bumpers is None or ((self.last_bumpers ^ bumpers) & RobotStatus.BUMPER_FRONT.value):
+                self.publish('bumpers_front', (bumpers & RobotStatus.BUMPER_FRONT.value) != 0)
+            if self.last_bumpers is None or ((self.last_bumpers ^ bumpers) & RobotStatus.BUMPER_BACK.value):
+                self.publish('bumpers_rear', (bumpers & RobotStatus.BUMPER_BACK.value) != 0)
             self.last_bumpers = bumpers
         if self.verbose:
             print(self.time, counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_deg, enc)
