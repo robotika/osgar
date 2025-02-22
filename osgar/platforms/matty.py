@@ -31,6 +31,8 @@ def add_esc_chars(data):
 class RobotStatus(Enum):
     EMERGENCY_STOP  = 0x01
     VOLTAGE_LOW     = 0x02
+    BUMPER_FRONT    = 0x04
+    BUMPER_BACK     = 0x08
     ERROR_ENCODER   = 0x10
     ERROR_POWER     = 0x20
     RUNNING         = 0x80
@@ -69,12 +71,19 @@ class Matty(Node):
         self.counter = 0
         self.buf = b''
         self.odometry_requested = False
+        self.last_bumpers = None
 
     def parse_odometry(self, data):
         counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_deg = struct.unpack_from('<BBBBHHhh', data)
         enc = struct.unpack_from('<HHHH', data, 12)
         if (status & RobotStatus.ERROR_ENCODER.value) and (status & RobotStatus.ERROR_POWER.value) == 0:
             print(self.time, 'Status ERROR_ENCODER', hex(status))
+        bumpers = status & (RobotStatus.BUMPER_BACK.value | RobotStatus.BUMPER_FRONT.value)
+        if self.last_bumpers != bumpers:
+            print(self.time, 'Bumpers:',
+                  'front' if bumpers & RobotStatus.BUMPER_FRONT.value else '',
+                  'back' if bumpers & RobotStatus.BUMPER_BACK.value else '')
+            self.last_bumpers = bumpers
         if self.verbose:
             print(self.time, counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_deg, enc)
             self.debug_arr.append([self.time.total_seconds(), enc])
