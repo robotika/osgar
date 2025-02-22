@@ -120,7 +120,14 @@ class Matty(Node):
         self.publish('esp_data', bytes([SYNC]) + add_esc_chars(bytes([len(data) + 1, self.counter & 0xFF]) + data + bytes([crc])))
 
     def send_speed(self):
-        data = b'G' + struct.pack('<hh', int(self.desired_speed * 1000), int(self.desired_steering_angle_deg * 100))
+        desired_speed = self.desired_speed
+        # override current desired speed by bumper status
+        if self.last_bumpers is not None:
+            if self.desired_speed > 0 and (self.last_bumpers & RobotStatus.BUMPER_FRONT.value):
+                desired_speed = 0
+            if self.desired_speed < 0 and (self.last_bumpers & RobotStatus.BUMPER_BACK.value):
+                desired_speed = 0
+        data = b'G' + struct.pack('<hh', int(desired_speed * 1000), int(self.desired_steering_angle_deg * 100))
         return self.send_esp(data)
 
     def on_tick(self, data):
@@ -166,11 +173,6 @@ class Matty(Node):
         self.desired_speed = speed_mm_per_sec/1000  # m/s
         if self.max_speed is not None:
             self.desired_speed = min(self.max_speed, max(-self.max_speed, self.desired_speed))
-        if self.last_bumpers is not None:
-            if self.desired_speed > 0 and (self.last_bumpers & RobotStatus.BUMPER_FRONT.value):
-                self.desired_speed = 0
-            if self.desired_speed < 0 and (self.last_bumpers & RobotStatus.BUMPER_BACK.value):
-                self.desired_speed = 0
         self.desired_steering_angle_deg = steering_deg_hundredth/100  # degrees
         if self.max_steering_deg is not None:
             self.desired_steering_angle_deg = min(self.max_steering_deg,
