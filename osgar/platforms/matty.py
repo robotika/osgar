@@ -166,6 +166,11 @@ class Matty(Node):
         self.desired_speed = speed_mm_per_sec/1000  # m/s
         if self.max_speed is not None:
             self.desired_speed = min(self.max_speed, max(-self.max_speed, self.desired_speed))
+        if self.last_bumpers is not None:
+            if self.desired_speed > 0 and (self.last_bumpers & RobotStatus.BUMPER_FRONT.value):
+                self.desired_speed = 0
+            if self.desired_speed < 0 and (self.last_bumpers & RobotStatus.BUMPER_BACK.value):
+                self.desired_speed = 0
         self.desired_steering_angle_deg = steering_deg_hundredth/100  # degrees
         if self.max_steering_deg is not None:
             self.desired_steering_angle_deg = min(self.max_steering_deg,
