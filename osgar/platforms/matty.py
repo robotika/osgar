@@ -59,7 +59,7 @@ class Matty(Node):
 
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('esp_data', 'emergency_stop', 'pose2d', 'bumpers_front', 'bumpers_rear')
+        bus.register('esp_data', 'emergency_stop', 'pose2d', 'bumpers_front', 'bumpers_rear', 'gps_serial')
         self.max_speed = config.get('max_speed', 0.5)
         self.max_steering_deg = config.get('max_steering_deg', 45.0)
         self.pose = 0, 0, 0
@@ -136,6 +136,8 @@ class Matty(Node):
         else:
             self.odometry_requested = True
             self.send_esp(b'T'+ struct.pack('<HH', 100, 150))  # keep watchdog short
+            # request raw GPS data
+            self.send_esp(b'P'+ struct.pack('<B', 1))
 
     def on_esp_data(self, data):
         self.buf += remove_esc_chars(data)
@@ -153,7 +155,9 @@ class Matty(Node):
             return
         packet = self.buf[2:length + 2]
         self.buf = self.buf[length + 3:]
-        if len(packet) == 2:
+        if len(packet) >= 2 and packet[1] == ord('P'):
+            self.publish('gps_serial', packet[2:])
+        elif len(packet) == 2:
             # ACK/NAACK
             if packet[1] != ord('A'):  # packet[0] != self.counter ... ignored for now
                 logging.warning(f'Unexpected message: {(packet, packet.hex(), self.counter)}')
