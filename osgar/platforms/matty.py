@@ -8,6 +8,7 @@ import math
 import struct
 import logging
 import datetime
+from datetime import timedelta
 from enum import Enum
 
 from osgar.node import Node
@@ -72,6 +73,7 @@ class Matty(Node):
         self.buf = b''
         self.odometry_requested = False
         self.last_bumpers = None
+        self.last_collision_time = None
 
     def parse_odometry(self, data):
         counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_deg = struct.unpack_from('<BBBBHHhh', data)
@@ -84,9 +86,15 @@ class Matty(Node):
                   'front' if bumpers & RobotStatus.BUMPER_FRONT.value else '',
                   'back' if bumpers & RobotStatus.BUMPER_BACK.value else '')
             if self.last_bumpers is None or ((self.last_bumpers ^ bumpers) & RobotStatus.BUMPER_FRONT.value):
-                self.publish('bumpers_front', (bumpers & RobotStatus.BUMPER_FRONT.value) != 0)
+                pressed = (bumpers & RobotStatus.BUMPER_FRONT.value) != 0
+                self.publish('bumpers_front', pressed)
+                if pressed:
+                    self.last_collision_time = self.time
             if self.last_bumpers is None or ((self.last_bumpers ^ bumpers) & RobotStatus.BUMPER_BACK.value):
-                self.publish('bumpers_rear', (bumpers & RobotStatus.BUMPER_BACK.value) != 0)
+                pressed = (bumpers & RobotStatus.BUMPER_BACK.value) != 0
+                self.publish('bumpers_rear', pressed)
+                if pressed:
+                    self.last_collision_time = self.time
             self.last_bumpers = bumpers
         if self.verbose:
             print(self.time, counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_deg, enc)
@@ -122,12 +130,19 @@ class Matty(Node):
     def send_speed(self):
         desired_speed = self.desired_speed
         # override current desired speed by bumper status
+        stop = False
         if self.last_bumpers is not None:
             if self.desired_speed > 0 and (self.last_bumpers & RobotStatus.BUMPER_FRONT.value):
-                desired_speed = 0
+                stop = True
             if self.desired_speed < 0 and (self.last_bumpers & RobotStatus.BUMPER_BACK.value):
-                desired_speed = 0
-        data = b'G' + struct.pack('<hh', int(desired_speed * 1000), int(self.desired_steering_angle_deg * 100))
+                stop = True
+            if self.last_collision_time is not None and self.time - self.last_collision_time < timedelta(seconds=1):
+                # ignore commands 1s after collision
+                stop = True
+        if stop:
+            data = b'S'
+        else:
+            data = b'G' + struct.pack('<hh', int(desired_speed * 1000), int(self.desired_steering_angle_deg * 100))
         return self.send_esp(data)
 
     def on_tick(self, data):
