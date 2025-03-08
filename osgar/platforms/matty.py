@@ -203,7 +203,9 @@ class Matty(Node):
         for selection in range(4):
             t = [a[0] for a in self.debug_arr]
             x = [a[1][selection] for a in self.debug_arr]
-            line = plt.plot(t, x, '-o', linewidth=2, label=f'enc {selection + 1}')
+            diff = [(b-a) & 0xFFFF for a, b in zip(x[:-1], x[1:])]
+            diff = [d if d < 0x8000 else d - 0x10000 for d in diff]
+            line = plt.plot(t[1:], diff, '-o', linewidth=2, label=f'enc {selection + 1}')
 
         plt.xlabel('time (s)')
         plt.ylabel('enc')
