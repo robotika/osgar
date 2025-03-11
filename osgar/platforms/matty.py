@@ -149,6 +149,7 @@ class Matty(Node):
         if self.odometry_requested:
             self.send_speed()
         else:
+            self.send_esp(b'V')  # query version
             self.odometry_requested = True
             self.send_esp(b'T'+ struct.pack('<HH', 100, 150))  # keep watchdog short
             # request raw GPS data
@@ -172,6 +173,8 @@ class Matty(Node):
         self.buf = self.buf[length + 3:]
         if len(packet) >= 2 and packet[1] == ord('P'):
             self.publish('gps_serial', packet[2:])
+        elif len(packet) >= 3 and packet[1] == ord('V'):
+            print('FW version:', packet[2])
         elif len(packet) == 2:
             # ACK/NAACK
             if packet[1] != ord('A'):  # packet[0] != self.counter ... ignored for now
