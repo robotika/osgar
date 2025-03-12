@@ -173,8 +173,8 @@ class Matty(Node):
         self.buf = self.buf[length + 3:]
         if len(packet) >= 2 and packet[1] == ord('P'):
             self.publish('gps_serial', packet[2:])
-        elif len(packet) >= 3 and packet[1] == ord('V'):
-            print('FW version:', packet[2])
+        elif len(packet) >= 4 and packet[1] == ord('V'):
+            print(f'FW version: M{packet[2]:02}-{packet[3]}', )
         elif len(packet) == 2:
             # ACK/NAACK
             if packet[1] != ord('A'):  # packet[0] != self.counter ... ignored for now
