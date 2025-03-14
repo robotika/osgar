@@ -96,6 +96,7 @@ class Matty(Node):
                 if pressed:
                     self.last_collision_time = self.time
             self.last_bumpers = bumpers
+            self.send_speed()  # force immediate reaction to change of bumpers state
         if self.verbose:
             print(self.time, counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_deg, enc)
             self.debug_arr.append([self.time.total_seconds(), enc])
@@ -140,7 +141,7 @@ class Matty(Node):
                 # ignore commands 1s after collision
                 stop = True
         if stop:
-            data = b'S'
+            data = b'S' + struct.pack('<B', 2)  # power off
         else:
             data = b'G' + struct.pack('<hh', int(desired_speed * 1000), int(self.desired_steering_angle_deg * 100))
         return self.send_esp(data)
@@ -199,6 +200,7 @@ class Matty(Node):
         if self.max_steering_deg is not None:
             self.desired_steering_angle_deg = min(self.max_steering_deg,
                                                   max(-self.max_steering_deg, self.desired_steering_angle_deg))
+        self.send_speed()  # directly apply new speeds, do not wait for next update cycle
 
     def draw(self):
         import matplotlib.pyplot as plt
