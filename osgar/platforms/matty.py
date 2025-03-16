@@ -68,6 +68,7 @@ class Matty(Node):
         self.desired_speed = 0  # m/s
         self.desired_steering_angle_deg = 0.0  # degrees
         self.debug_arr = []
+        self.debug_array_bumpers = []
         self.verbose = False
         self.counter = 0
         self.buf = b''
@@ -97,6 +98,8 @@ class Matty(Node):
                     self.last_collision_time = self.time
             self.last_bumpers = bumpers
             self.send_speed()  # force immediate reaction to change of bumpers state
+            if self.verbose:
+                self.debug_array_bumpers.append(self.time.total_seconds())
         if self.verbose:
             print(self.time, counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_deg, enc)
             self.debug_arr.append([self.time.total_seconds(), enc])
@@ -211,6 +214,9 @@ class Matty(Node):
             diff = [(b-a) & 0xFFFF for a, b in zip(x[:-1], x[1:])]
             diff = [d if d < 0x8000 else d - 0x10000 for d in diff]
             line = plt.plot(t[1:], diff, '-o', linewidth=2, label=f'enc {selection + 1}')
+
+        for t in self.debug_array_bumpers:
+            plt.axvline(x=t, color='gray')
 
         plt.xlabel('time (s)')
         plt.ylabel('enc')
