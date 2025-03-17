@@ -13,7 +13,8 @@ class MattyTest(unittest.TestCase):
         bus = MagicMock()
         robot = Matty(bus=bus, config={})
         robot.on_tick(None)
-        bus.publish.assert_called_with('esp_data', bytes.fromhex('55 06 01 54 64 00 E8 03 56 A9'))
+        bus.publish.assert_called_with('esp_data', bytes.fromhex('55 03 03 50 01 a9'))  # P - request GPS
+#        bus.publish.assert_called_with('esp_data', bytes.fromhex('55 06 01 54 64 00 E8 03 56 A9'))  # set sending msg
 
     def test_crc(self):
         bus = MagicMock()
