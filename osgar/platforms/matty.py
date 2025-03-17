@@ -140,8 +140,8 @@ class Matty(Node):
                 stop = True
             if self.desired_speed < 0 and (self.last_bumpers & RobotStatus.BUMPER_BACK.value):
                 stop = True
-            if self.last_collision_time is not None and self.time - self.last_collision_time < timedelta(seconds=2):
-                # ignore commands 1s after collision
+            if self.last_collision_time is not None and self.time - self.last_collision_time < timedelta(seconds=0.2):
+                # ignore commands 0.2s after collision
                 stop = True
         if stop:
             data = b'S' + struct.pack('<B', 2)  # power off
