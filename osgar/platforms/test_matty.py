@@ -82,3 +82,12 @@ class MattyTest(unittest.TestCase):
         self.assertAlmostEqual(robot.pose[0], 0.14757839740240863)
         self.assertAlmostEqual(robot.pose[1], 0.015371925729019041)
         self.assertAlmostEqual(robot.pose[2], 2 * 0.5 * 0.1 / (FRONT_REAR_AXIS_DISTANCE/2))
+
+    def test_multiple_messages(self):
+        # bug causing serious delays
+        bus = MagicMock()
+        robot = Matty(bus=bus, config={})
+        robot.process_esp_packet = MagicMock()
+        robot.on_esp_data(b'U\x14EI\x00\x02`/\x00\x00\x00\x00N\x01^\x06W\x05&\x07\x88\x07\x02U\x02\x01A\xbcU\x02\x02A\xbbU\x02\x03A\xba')
+        robot.process_esp_packet.assert_called()
+        self.assertEqual(len(robot.process_esp_packet.mock_calls), 3)

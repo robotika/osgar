@@ -175,18 +175,10 @@ class Matty(Node):
         else:
             assert 0, packet.hex()
 
-    def on_esp_data(self, data):
-        self.buf += data
-        if SYNC not in self.buf:
-            return
-        # process data only if there are two SYNC messages
-        begin = self.buf.index(SYNC)
-        if begin == len(self.buf) -1 or SYNC not in self.buf[begin + 1:]:
-            return
-        end = begin + 1 + self.buf[begin + 1:].index(SYNC)
-        msg = remove_esc_chars(self.buf[begin:end])
-        self.buf = self.buf[end:]
-
+    def process_msg(self, msg):
+        """
+        process intermediate message with SYNC, length and CRC
+        """
         if len(msg) < 4:
             return  # SYNC, len, cmd, crc
         length = msg[1]
@@ -197,7 +189,22 @@ class Matty(Node):
             logging.warning(f'CRC error {(crc, msg, msg.hex())}')
             return
         packet = msg[2:length + 2]
-        return self.process_esp_packet(packet)
+        self.process_esp_packet(packet)
+
+    def on_esp_data(self, data):
+        self.buf += data
+
+        while True:
+            if SYNC not in self.buf:
+                return
+            # process data only if there are two SYNC messages
+            begin = self.buf.index(SYNC)
+            if begin == len(self.buf) -1 or SYNC not in self.buf[begin + 1:]:
+                return
+            end = begin + 1 + self.buf[begin + 1:].index(SYNC)
+            msg = remove_esc_chars(self.buf[begin:end])
+            self.buf = self.buf[end:]
+            self.process_msg(msg)
 
     def on_desired_steering(self, data):
         """
