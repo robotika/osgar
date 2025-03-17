@@ -159,6 +159,22 @@ class Matty(Node):
             # request raw GPS data
             self.send_esp(b'P'+ struct.pack('<B', 1))
 
+    def process_esp_packet(self, packet):
+        if len(packet) >= 2 and packet[1] == ord('P'):
+            self.publish('gps_serial', packet[2:])
+        elif len(packet) >= 4 and packet[1] == ord('V'):
+            print(f'FW version: M{packet[2]:02}-{packet[3]}', )
+        elif len(packet) == 2:
+            # ACK/NAACK
+            if packet[1] != ord('A'):  # packet[0] != self.counter ... ignored for now
+                logging.warning(f'Unexpected message: {(packet, packet.hex(), self.counter)}')
+        elif len(packet) == 20:
+            assert packet[1] == ord('I'), packet[1]
+            speed, joint_angle = self.parse_odometry(packet)
+            self.publish_pose2d(speed, joint_angle)
+        else:
+            assert 0, packet.hex()
+
     def on_esp_data(self, data):
         self.buf += remove_esc_chars(data)
         if SYNC not in self.buf:
@@ -175,20 +191,7 @@ class Matty(Node):
             return
         packet = self.buf[2:length + 2]
         self.buf = self.buf[length + 3:]
-        if len(packet) >= 2 and packet[1] == ord('P'):
-            self.publish('gps_serial', packet[2:])
-        elif len(packet) >= 4 and packet[1] == ord('V'):
-            print(f'FW version: M{packet[2]:02}-{packet[3]}', )
-        elif len(packet) == 2:
-            # ACK/NAACK
-            if packet[1] != ord('A'):  # packet[0] != self.counter ... ignored for now
-                logging.warning(f'Unexpected message: {(packet, packet.hex(), self.counter)}')
-        elif len(packet) == 20:
-            assert packet[1] == ord('I'), packet[1]
-            speed, joint_angle = self.parse_odometry(packet)
-            self.publish_pose2d(speed, joint_angle)
-        else:
-            assert 0, (length, packet.hex())
+        return self.process_esp_packet(packet)
 
     def on_desired_steering(self, data):
         """
