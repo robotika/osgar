@@ -45,7 +45,7 @@ def remove_esc_chars(data):
     esc_i = data.find(ESC)
     while esc_i >= 0:
         ret += data[:esc_i]
-        assert esc_i + 1 < len(data)  # what to do with ESC at the end?!
+        assert esc_i + 1 < len(data), data.hex()  # what to do with ESC at the end?!
         orig = 0xFF & (~data[esc_i + 1])
         if orig not in [ESC, SYNC]:
             logging.warning(f'Esc error {hex(orig)}'),
@@ -176,21 +176,27 @@ class Matty(Node):
             assert 0, packet.hex()
 
     def on_esp_data(self, data):
-        self.buf += remove_esc_chars(data)
+        self.buf += data
         if SYNC not in self.buf:
             return
-        self.buf = self.buf[self.buf.index(SYNC):]
-        if len(self.buf) < 4:
-            return  # SYNC, len, cmd, crc
-        length = self.buf[1]
-        if len(self.buf) < length + 3:  # SYNC, len and CRC are not counted
-            return  # message not completed yet - timeout??
-        crc = sum(self.buf[1:length + 3])
-        if crc & 0xFF != 0:
-            logging.warning(f'CRC error {(crc, self.buf, self.buf.hex())}')
+        # process data only if there are two SYNC messages
+        begin = self.buf.index(SYNC)
+        if begin == len(self.buf) -1 or SYNC not in self.buf[begin + 1:]:
             return
-        packet = self.buf[2:length + 2]
-        self.buf = self.buf[length + 3:]
+        end = begin + 1 + self.buf[begin + 1:].index(SYNC)
+        msg = remove_esc_chars(self.buf[begin:end])
+        self.buf = self.buf[end:]
+
+        if len(msg) < 4:
+            return  # SYNC, len, cmd, crc
+        length = msg[1]
+        if len(msg) < length + 3:  # SYNC, len and CRC are not counted
+            return  # message not completed yet - timeout??
+        crc = sum(msg[1:length + 3])
+        if crc & 0xFF != 0:
+            logging.warning(f'CRC error {(crc, msg, msg.hex())}')
+            return
+        packet = msg[2:length + 2]
         return self.process_esp_packet(packet)
 
     def on_desired_steering(self, data):
