@@ -18,6 +18,12 @@
         "out": ["esp_data"],
         "init": {}
       },
+      "gps": {
+        "driver": "gps",
+        "in": ["raw"],
+        "out": ["nmea_data"],
+        "init": {}
+      },
       "timer": {
         "driver": "timer",
         "in": [],
@@ -38,6 +44,7 @@
       ["platform.pose2d", "app.pose2d"],
       ["serial.raw", "platform.esp_data"],
       ["platform.esp_data", "serial.raw"],
+      ["platform.gps_serial", "gps.raw"],
       ["timer.tick", "platform.tick"]
     ]
   }

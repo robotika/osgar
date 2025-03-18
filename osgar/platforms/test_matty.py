@@ -13,7 +13,8 @@ class MattyTest(unittest.TestCase):
         bus = MagicMock()
         robot = Matty(bus=bus, config={})
         robot.on_tick(None)
-        bus.publish.assert_called_with('esp_data', bytes.fromhex('55 06 01 54 64 00 E8 03 56 A9'))
+        bus.publish.assert_called_with('esp_data', bytes.fromhex('55 03 03 50 01 a9'))  # P - request GPS
+#        bus.publish.assert_called_with('esp_data', bytes.fromhex('55 06 01 54 64 00 E8 03 56 A9'))  # set sending msg
 
     def test_crc(self):
         bus = MagicMock()
@@ -81,3 +82,12 @@ class MattyTest(unittest.TestCase):
         self.assertAlmostEqual(robot.pose[0], 0.14757839740240863)
         self.assertAlmostEqual(robot.pose[1], 0.015371925729019041)
         self.assertAlmostEqual(robot.pose[2], 2 * 0.5 * 0.1 / (FRONT_REAR_AXIS_DISTANCE/2))
+
+    def test_multiple_messages(self):
+        # bug causing serious delays
+        bus = MagicMock()
+        robot = Matty(bus=bus, config={})
+        robot.process_esp_packet = MagicMock()
+        robot.on_esp_data(b'U\x14EI\x00\x02`/\x00\x00\x00\x00N\x01^\x06W\x05&\x07\x88\x07\x02U\x02\x01A\xbcU\x02\x02A\xbbU\x02\x03A\xba')
+        robot.process_esp_packet.assert_called()
+        self.assertEqual(len(robot.process_esp_packet.mock_calls), 3)
