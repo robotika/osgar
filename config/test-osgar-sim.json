@@ -1,0 +1,50 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "osgar.go:Go",
+          "in": ["pose2d", "scan"],
+          "out": ["desired_speed"],
+          "init": {
+            "max_speed": 1.0,
+            "desired_angle": 0,
+            "dist": 1,
+            "timeout": 10
+          }
+      },
+      "timer": {
+        "driver": "timer",
+        "in": [],
+        "out": ["tick"],
+        "init": {
+          "sleep": 0.1
+        }
+
+      },
+      "transmitter": {
+          "driver": "osgar.drivers.push:Push",
+          "init": {
+            "bind": false,
+            "endpoint": "tcp://127.0.0.1:5555"
+          }
+      },
+
+      "from_sim": {
+        "driver": "osgar.drivers.pull:Pull",
+        "init": {
+          "endpoint": "tcp://127.0.0.1:5556",
+          "outputs": [
+            "scan", "pose2d"
+          ]
+        }
+      }
+
+    },
+    "links": [
+      ["app.desired_speed", "transmitter.desired_steering"],
+      ["from_sim.pose2d", "app.pose2d"],
+      ["timer.tick", "transmitter.tick"]
+              ]
+  }
+}
