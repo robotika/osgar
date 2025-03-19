@@ -154,6 +154,12 @@ class LogBusHandler:
         self.max_delay_timestamp = timedelta()
         self.finished = threading.Event()
 
+    def _read_next(self):
+        try:
+            return next(self.reader)
+        except StopIteration:
+            raise SystemExit()
+
     def register(self, *outputs):
         for o in outputs:
             # ignore :gz and :null modifiers
@@ -164,10 +170,7 @@ class LogBusHandler:
             if self.finished.is_set():
                 raise BusShutdownException
             if len(self.buffer_queue) == 0:
-                try:
-                    dt, stream_id, bytes_data = next(self.reader)
-                except StopIteration:
-                    raise SystemExit()
+                dt, stream_id, bytes_data = self._read_next()
             else:
                 dt, stream_id, bytes_data = self.buffer_queue.popleft()
             if stream_id not in self.inputs:
@@ -191,7 +194,7 @@ class LogBusHandler:
                 getattr(self.node, input_name)(dt, data)
             else:
                 self.buffer_queue.append((dt, stream_id, bytes_data))
-            dt, stream_id, bytes_data = next(self.reader)
+            dt, stream_id, bytes_data = self._read_next()
         assert channel == self.outputs[stream_id], (channel, self.outputs[stream_id], dt)  # wrong channel
         if len(self.buffer_queue) > 0:
             delay = dt - self.buffer_queue[0][0]
