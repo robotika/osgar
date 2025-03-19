@@ -164,7 +164,10 @@ class LogBusHandler:
             if self.finished.is_set():
                 raise BusShutdownException
             if len(self.buffer_queue) == 0:
-                dt, stream_id, bytes_data = next(self.reader)
+                try:
+                    dt, stream_id, bytes_data = next(self.reader)
+                except StopIteration:
+                    raise SystemExit()
             else:
                 dt, stream_id, bytes_data = self.buffer_queue.popleft()
             if stream_id not in self.inputs:
@@ -221,7 +224,10 @@ class LogBusHandlerInputsOnly:
         pass
 
     def listen(self):
-        dt, stream_id, bytes_data = next(self.reader)
+        try:
+            dt, stream_id, bytes_data = next(self.reader)
+        except StopIteration:
+            raise SystemExit()
         self.time = dt
         channel = self.inputs[stream_id]
         data = deserialize(bytes_data)
