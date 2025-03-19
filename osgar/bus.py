@@ -186,7 +186,7 @@ class LogBusHandler:
 
     def publish(self, channel, data):
         assert channel in self.outputs.values(), (channel, tuple(self.outputs.values()))
-        dt, stream_id, bytes_data = next(self.reader)
+        dt, stream_id, bytes_data = self._read_next()
         while stream_id not in self.outputs:
             input_name = self.inputs[stream_id]
             if input_name.startswith("slot_"):
