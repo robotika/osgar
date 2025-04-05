@@ -96,6 +96,10 @@ class OakCamera:
         color_resolution_value = config.get("color_resolution", "THE_1080_P")
         self.color_resolution = getattr(dai.ColorCameraProperties.SensorResolution, color_resolution_value)
 
+        color_orientation = config.get("color_orientation", "AUTO")
+        assert color_orientation in ["AUTO", "HORIZONTAL_MIRROR", "NORMAL", "ROTATE_180_DEG", "VERTICAL_FLIP"]
+        self.color_orientation = getattr(dai.CameraImageOrientation, color_orientation)
+
         median_filter_value = config.get("stereo_median_filter", "KERNEL_7x7")
         assert median_filter_value in ["KERNEL_7x7", "KERNEL_5x5", "KERNEL_3x3", "MEDIAN_OFF"], median_filter_value
         self.median_filter = getattr(dai.MedianFilter, median_filter_value)
@@ -185,6 +189,7 @@ class OakCamera:
             queue_names.append("color")
             color_out.setStreamName('color')
 
+            color.setImageOrientation(self.color_orientation)
             color.setResolution(self.color_resolution)
             color.setBoardSocket(dai.CameraBoardSocket.RGB)
             color.setFps(self.fps)
