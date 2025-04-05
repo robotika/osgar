@@ -61,6 +61,7 @@ class OakCamera:
                           # *_seq streams are needed for output sync amd they are published BEFORE payload data
                           'depth_seq', 'color_seq', 'detections_seq', 'left_im_seq', 'right_im_seq')
         self.fps = config.get('fps', 10)
+        self.subsample = config.get('subsample')
         self.is_depth = config.get('is_depth', False)
         self.laser_projector_current = config.get("laser_projector_current", 0)
         assert self.laser_projector_current <= 1200, self.laser_projector_current  # The limit is 1200 mA.
@@ -93,7 +94,6 @@ class OakCamera:
             self.mono_resolution = g_resolution_dic[self.mono_resolution]
 
         color_resolution_value = config.get("color_resolution", "THE_1080_P")
-        assert color_resolution_value in["THE_1080_P", "THE_4_K", "THE_12_MP", "THE_13_MP"], color_resolution_value
         self.color_resolution = getattr(dai.ColorCameraProperties.SensorResolution, color_resolution_value)
 
         median_filter_value = config.get("stereo_median_filter", "KERNEL_7x7")
@@ -317,6 +317,8 @@ class OakCamera:
                     packets = device.getOutputQueue(queue_name).tryGetAll()
                     if len(packets) > 0:
                         seq_num = packets[-1].getSequenceNum()  # for sync of various outputs
+                        if self.subsample and seq_num % self.subsample != 0:
+                            continue
                         dt = packets[-1].getTimestamp()  # datetime.timedelta
                         timestamp_us = ((dt.days * 24 * 3600 + dt.seconds) * 1000000 + dt.microseconds)
                         if queue_name == "depth":
