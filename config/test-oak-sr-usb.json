@@ -5,8 +5,9 @@
       "oak": {
           "driver": "osgar.drivers.oak_camera:OakCamera",
           "init": {
-            "cam_id": "1944301031DE782700",
-            "fps": 10,
+            "cam_id": "1.1",
+            "fps": 30,
+            "subsample": 10,
             "is_depth": true,
             "is_stereo_images": true,
             "is_imu_enabled": true,
