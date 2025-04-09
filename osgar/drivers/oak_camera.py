@@ -97,7 +97,7 @@ class OakCamera:
         self.color_resolution = getattr(dai.ColorCameraProperties.SensorResolution, color_resolution_value)
 
         color_orientation = config.get("color_orientation", "AUTO")
-        assert color_orientation in ["AUTO", "HORIZONTAL_MIRROR", "NORMAL", "ROTATE_180_DEG", "VERTICAL_FLIP"]
+        assert color_orientation in ["AUTO", "HORIZONTAL_MIRROR", "NORMAL", "ROTATE_180_DEG", "VERTICAL_FLIP"], color_orientation
         self.color_orientation = getattr(dai.CameraImageOrientation, color_orientation)
 
         median_filter_value = config.get("stereo_median_filter", "KERNEL_7x7")
