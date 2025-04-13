@@ -218,13 +218,20 @@ class LogBusHandler:
 
 
 class LogBusHandlerInputsOnly:
-    def __init__(self, log, inputs):
+    def __init__(self, log, inputs, writer=None, outputs=None):
         self.reader = log
+        self.writer = writer
         self.inputs = inputs
+        self.outputs = outputs
+        self.new_output_index = {}
         self.time = timedelta(0)
 
     def register(self, *outputs):
-        pass
+        if self.writer is not None:
+            for o in outputs:
+                # ignore :gz and :null modifiers
+                assert o.split(':')[0] in self.outputs.values(), (o, self.outputs)
+                self.new_output_index[o.split(':')[0]] = self.writer.register(o)
 
     def listen(self):
         try:
@@ -239,6 +246,10 @@ class LogBusHandlerInputsOnly:
         return dt, channel, data
 
     def publish(self, channel, data):
+        if self.writer is not None:
+            self.writer.write(stream_id=self.new_output_index[channel],
+                              data=serialize(data),
+                              dt=self.time)
         return self.time
 
     def sleep(self, secs):
