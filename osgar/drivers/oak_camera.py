@@ -108,6 +108,8 @@ class OakCamera:
         assert stereo_mode_value in ["HIGH_DENSITY", "HIGH_ACCURACY"], stereo_mode_value
         self.stereo_mode = getattr(dai.node.StereoDepth.PresetMode, stereo_mode_value)
 
+        self.alignment = config.get("color_depth_alignment", False)
+
         self.oak_config_model = config.get("model")
         self.oak_config_nn_config = config.get("nn_config", {})
         self.labels = config.get("mappings", {}).get("labels", [])
@@ -225,6 +227,11 @@ class OakCamera:
                 stereo.setSubpixel(self.is_subpixel)
                 # https://docs.luxonis.com/en/latest/pages/faq/#left-right-check-depth-mode
                 stereo.setLeftRightCheck(self.is_left_right_check)
+                if self.alignment and self.is_color:
+                    stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
+                    # TODO check camera manual focus
+                    g_logger.info("Alignment of depth to color is enabled."
+                                  " Depth resolution will correspond with color camera.")
 
                 # links
                 left.video.link(stereo.left)
