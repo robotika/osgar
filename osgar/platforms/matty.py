@@ -118,7 +118,7 @@ class Matty(Node):
             # Not needed: heading += angle
         else:
             # Arc
-            radius = (FRONT_REAR_AXIS_DISTANCE/2) / math.tan(joint_angle)
+            radius = (FRONT_REAR_AXIS_DISTANCE/2) / math.tan(joint_angle/2)
             angle = dist / radius
             x += dist * math.cos(heading)
             y += dist * math.sin(heading)
