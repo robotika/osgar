@@ -115,53 +115,76 @@ def slerp(A, B, t):
         Interpolates two quaternions utilizing the Spherical Linear
             intERPolation (SLERP).
 
-        The input quaternions are given as list of four float values.
-        The order of their coordinates is not important, hence, a quaternion
-            "a + bi + cj + dk" can be passed as, e.g., `[a, b, c, d]`
-            or `[b, c, d, a]`.
-        The coordinates of the result will respect the same order.
+        The input quaternions are given as lists of four float values.
+        According to the ROS standard
+            (http://wiki.ros.org/tf2/Tutorials/Quaternions),
+            a quaternion "a + bi + cj + dk" is supposed to be given by the list
+            `[b, c, d, a]` with the real component as the last one.
+
+        The input quaternions are supposed to be unit quaternions, i.e., their
+            norms are supposed to be 1.
 
         Args:
-            A (list of float): quaternion as a list of four values
-            B (list of float): quaternion as a list of four values
+            A (list of float): unit quaternion as a list of four values
+            B (list of float): unit quaternion as a list of four values
             t (float): a value between `0.0` and `1.0`
 
                 * if `t == 0.0` then the function returns `A`
-                * if `t == 1.0` then the function returns `B`
+                * if `t == 1.0` then the function returns `B`, or negated `B`
                 * if `0.0 < t < 1.0` then the corresponding value on the
                     shortest path between `A` and `B` is returned
 
-        Returns (list): interpolated quaternion
+        Returns (list):
+            interpolated unit quaternion
+
+        Note:
+            The rotation around a unit vector (u, v, w) by an angle phi in the
+                positive direction is represented by the quaternion
+                q = [u*sin(phi/2), v*sin(phi/2), w*sin(phi/2), cos(phi/2)].
+            The rotation by the angle phi-2*pi is, however, represented by -q,
+                although the angle is the same.
+            For example, the rotation by 3*pi/2 around the z axis is represented by
+                [0, 0, 1/sqrt(2), -1/sqrt(2)]
+                while the rotation by -pi/2 is represented by
+                [0, 0, -1/sqrt(2), 1/sqrt(2)].
+            The angle is the same, however, the direction of the rotation
+                differs; it can be performed respecting the "longer" or the
+                "shorter" angle.
+            This function prefers the shorter angle.
+            Therefore, calling `slerp(A, B, 1)` sometimes produces `B` and
+                sometimes negated `B`.
+
+        References:
+            https://en.wikipedia.org/wiki/Slerp
     """
-    dotAB = sum(A[i]*B[i] for i in range(4)) # dot product
+    dot_AB = sum(A[i]*B[i] for i in range(4)) # dot product
     # if the dot product is negative, negate one quaternion to get the shortest
     # path
-    if dotAB < 0.0:
-        for i in range(4):
-            B[i] = -B[i]
-        dotAB = -dotAB
-    if dotAB > 0.9995:
+    if dot_AB < 0.0:
+        sgn_B = -1
+        dot_AB = -dot_AB
+    else:
+        sgn_B = 1
+    if dot_AB > 0.9995:
         # linear interpolation (actually, a convex combination)
-        # -----------------------------------------------------
         # (if the dot product is close to 1, the quaternions are very close)
         result = 4 * [0]
-        # normalize the resulting quaternion
         sum_sqr = 0
         for i in range(4):
-            result[i] = (1 - t)*A[i] + t*B[i] # convex combination
+            result[i] = (1 - t)*A[i] + t*sgn_B*B[i] # convex combination
             sum_sqr += result[i]*result[i]
+        # normalize the resulting quaternion
         norm_of_result = math.sqrt(sum_sqr)
         for i in range(4):
             result[i] /= norm_of_result 
         return result
     else:
         # Spherical Linear intERPolation (SLERP)
-        # --------------------------------------
-        alpha = math.acos(dotAB) # the angle between the quaternions
-        beta = alpha * t         # the angle of the result
+        alpha = math.acos(dot_AB) # the angle between the quaternions
+        beta = alpha * t          # the angle of the result
         coef_B = math.sin(beta) / math.sin(alpha)
-        coef_A = math.cos(beta) - dotAB*coef_B
-        return [coef_A*A[i] + coef_B*B[i] for i in range(4)]
+        coef_A = math.cos(beta) - dot_AB*coef_B
+        return [coef_A*A[i] + coef_B*sgn_B*B[i] for i in range(4)]
 
 
 # vim: expandtab sw=4 ts=4

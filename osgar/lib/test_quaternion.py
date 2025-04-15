@@ -1,5 +1,6 @@
 import math
-import random
+import copy
+
 from osgar.lib.unittest import TestCase
 
 from . import quaternion
@@ -82,97 +83,159 @@ class QuaternionTest(TestCase):
         quaternion.angle_between(a, b)
 
     def test_slerp__border_cases(self):
-        A = [random.random() for i in range(4)]
-        B = [random.random() for i in range(4)]
-        norm_A = math.sqrt(sum(value**2 for value in A))
-        norm_B = math.sqrt(sum(value**2 for value in B))
-        for i in range(4):
-            A[i] /= norm_A
-            B[i] /= norm_B
+        # these values of A and B ensure their positive dot product
+        A = [math.sqrt(1/10), math.sqrt(2/10), math.sqrt(3/10), math.sqrt(4/10)]
+        B = [math.sqrt(1/16), math.sqrt(3/16), math.sqrt(5/16), math.sqrt(7/16)]
+        remembered_A = copy.copy(A)
+        remembered_B = copy.copy(B)
         C = quaternion.slerp(A, B, 0.0)
-        D = quaternion.slerp(A, B, 1.0)
+        self.assertIsInstance(C, list)
+        self.assertEqual(len(C), 4)
+        # expected A == C
         for i in range(4):
-            self.assertAlmostEqual(A[i], C[i], 3)
-            self.assertAlmostEqual(B[i], D[i], 3)
+            self.assertAlmostEqual(A[i], C[i])
+            self.assertAlmostEqual(A[i], remembered_A[i])
+            self.assertAlmostEqual(B[i], remembered_B[i])
+        D = quaternion.slerp(A, B, 1.0)
+        self.assertIsInstance(D, list)
+        self.assertEqual(len(D), 4)
+        # expected B == D
+        for i in range(4):
+            self.assertAlmostEqual(B[i], D[i])
+        # these values of A and B ensure their negative dot product
+        A = [math.sqrt(1/10), math.sqrt(2/10), math.sqrt(3/10), math.sqrt(4/10)]
+        B = [-math.sqrt(1/16), -math.sqrt(3/16), -math.sqrt(5/16), -math.sqrt(7/16)]
+        remembered_A = copy.copy(A)
+        remembered_B = copy.copy(B)
+        C = quaternion.slerp(A, B, 0.0)
+        self.assertIsInstance(C, list)
+        self.assertEqual(len(C), 4)
+        # expected A == C
+        for i in range(4):
+            self.assertAlmostEqual(A[i], remembered_A[i])
+            self.assertAlmostEqual(B[i], remembered_B[i])
+            self.assertAlmostEqual(A[i], C[i])
+        D = quaternion.slerp(A, B, 1.0)
+        self.assertIsInstance(D, list)
+        self.assertEqual(len(D), 4)
+        # expected B == -D
+        for i in range(4):
+            self.assertAlmostEqual(B[i], -D[i])
 
-    def test_slerp__various_angles(self):
-        sqrt_3 = math.sqrt(3)
+    def test_slerp__less_than_180(self):
+        # interpolate between quaternions that differ by an angle < 180 deg
+        num_steps_of_angles = 5
+        num_steps_of_t = 5
         sqrt_1_7 = math.sqrt(1/7)
         sqrt_2_7 = math.sqrt(2/7)
         sqrt_4_7 = math.sqrt(4/7)
-        for a in range(40):
-            angle_A = 10*math.pi*(a - 20)/40
-            sin_A_half = math.sin(angle_A/2)
-            cos_A_half = math.cos(angle_A/2)
-            for b in range(10):
-                angle_B = angle_A + math.pi*(b - 5)/10
-                sin_B_half = math.sin(angle_B/2)
-                cos_B_half = math.cos(angle_B/2)
-                # around x
-                A = [sin_A_half, 0.0, 0.0, cos_A_half]
-                B = [sin_B_half, 0.0, 0.0, cos_B_half]
-                for c in range(10):
-                    t = c / 9
-                    result = quaternion.slerp(A, B, t)
+        for a in range(num_steps_of_angles):
+            angle_A = a / (num_steps_of_angles - 1) * 2*math.pi
+            sin_angle_A_half = math.sin(angle_A / 2)
+            cos_angle_A_half = math.cos(angle_A / 2)
+            for b in range(num_steps_of_angles):
+                angle_B = b / (num_steps_of_angles - 1) * math.pi + angle_A
+                sin_angle_B_half = math.sin(angle_B / 2)
+                cos_angle_B_half = math.cos(angle_B / 2)
+                for step in range(num_steps_of_t):
+                    t = step / (num_steps_of_t - 1)
                     expected_angle = (1 - t)*angle_A + t*angle_B
-                    expected = [math.sin(expected_angle/2), 0.0, 0.0, math.cos(expected_angle/2)]
+                    sin_expected = math.sin(expected_angle/2)
+                    cos_expected = math.cos(expected_angle/2)
+                    # around x
+                    A = [sin_angle_A_half, 0.0, 0.0, cos_angle_A_half]
+                    B = [sin_angle_B_half, 0.0, 0.0, cos_angle_B_half]
+                    E = [sin_expected, 0.0, 0.0, cos_expected]
+                    C = quaternion.slerp(A, B, t)
                     for i in range(4):
-                        self.assertAlmostEqual(result[i], expected[i], 3)
-                # around y
-                A = [0.0, sin_A_half, 0.0, cos_A_half]
-                B = [0.0, sin_B_half, 0.0, cos_B_half]
-                for c in range(10):
-                    t = c / 9
-                    result = quaternion.slerp(A, B, t)
-                    expected_angle = (1 - t)*angle_A + t*angle_B
-                    expected = [0.0, math.sin(expected_angle/2), 0.0, math.cos(expected_angle/2)]
+                        self.assertAlmostEqual(C[i], E[i])
+                    # around y
+                    A = [0.0, sin_angle_A_half, 0.0, cos_angle_A_half]
+                    B = [0.0, sin_angle_B_half, 0.0, cos_angle_B_half]
+                    E = [0.0, sin_expected, 0.0, cos_expected]
+                    C = quaternion.slerp(A, B, t)
                     for i in range(4):
-                        self.assertAlmostEqual(result[i], expected[i], 3)
-                # around z
-                A = [0.0, 0.0, sin_A_half, cos_A_half]
-                B = [0.0, 0.0, sin_B_half, cos_B_half]
-                for c in range(10):
-                    t = c / 9
-                    result = quaternion.slerp(A, B, t)
-                    expected_angle = (1 - t)*angle_A + t*angle_B
-                    expected = [0.0, 0.0, math.sin(expected_angle/2), math.cos(expected_angle/2)]
+                        self.assertAlmostEqual(C[i], E[i])
+                    # around z
+                    A = [0.0, 0.0, sin_angle_A_half, cos_angle_A_half]
+                    B = [0.0, 0.0, sin_angle_B_half, cos_angle_B_half]
+                    E = [0.0, 0.0, sin_expected, cos_expected]
+                    C = quaternion.slerp(A, B, t)
                     for i in range(4):
-                        self.assertAlmostEqual(result[i], expected[i], 3)
-                # around (1/sqrt(3), 1/sqrt(3), 1/sqrt(3))
-                A = [sin_A_half/sqrt_3, sin_A_half/sqrt_3, sin_A_half/sqrt_3, cos_A_half]
-                B = [sin_B_half/sqrt_3, sin_B_half/sqrt_3, sin_B_half/sqrt_3, cos_B_half]
-                for c in range(10):
-                    t = c / 9
-                    result = quaternion.slerp(A, B, t)
-                    expected_angle = (1 - t)*angle_A + t*angle_B
-                    exp_crd = math.sin(expected_angle/2) / sqrt_3
-                    expected = [exp_crd, exp_crd, exp_crd, math.cos(expected_angle/2)]
+                        self.assertAlmostEqual(C[i], E[i])
+                    # around vector (sqrt(1/7), sqrt(2/7), sqrt(4/7))
+                    A = [sqrt_1_7*sin_angle_A_half, sqrt_2_7*sin_angle_A_half, sqrt_4_7*sin_angle_A_half, cos_angle_A_half]
+                    B = [sqrt_1_7*sin_angle_B_half, sqrt_2_7*sin_angle_B_half, sqrt_4_7*sin_angle_B_half, cos_angle_B_half]
+                    E = [sqrt_1_7*sin_expected, sqrt_2_7*sin_expected, sqrt_4_7*sin_expected, cos_expected]
+                    C = quaternion.slerp(A, B, t)
                     for i in range(4):
-                        self.assertAlmostEqual(result[i], expected[i], 3)
-                # around (sqrt(1/7), sqrt(2/7), sqrt(4/7))
-                A = [sin_A_half*sqrt_1_7, sin_A_half*sqrt_2_7, sin_A_half*sqrt_4_7, cos_A_half]
-                B = [sin_B_half*sqrt_1_7, sin_B_half*sqrt_2_7, sin_B_half*sqrt_4_7, cos_B_half]
-                for c in range(10):
-                    t = c / 9
-                    result = quaternion.slerp(A, B, t)
-                    expected_angle = (1 - t)*angle_A + t*angle_B
-                    exp_sin = math.sin(expected_angle/2)
-                    exp_cos = math.cos(expected_angle/2)
-                    expected = [exp_sin*sqrt_1_7, exp_sin*sqrt_2_7, exp_sin*sqrt_4_7, exp_cos]
+                        self.assertAlmostEqual(C[i], E[i])
+                    # around vector (-sqrt(1/7), -sqrt(2/7), -sqrt(4/7))
+                    A = [-sqrt_1_7*sin_angle_A_half, -sqrt_2_7*sin_angle_A_half, -sqrt_4_7*sin_angle_A_half, cos_angle_A_half]
+                    B = [-sqrt_1_7*sin_angle_B_half, -sqrt_2_7*sin_angle_B_half, -sqrt_4_7*sin_angle_B_half, cos_angle_B_half]
+                    E = [-sqrt_1_7*sin_expected, -sqrt_2_7*sin_expected, -sqrt_4_7*sin_expected, cos_expected]
+                    C = quaternion.slerp(A, B, t)
                     for i in range(4):
-                        self.assertAlmostEqual(result[i], expected[i], 3)
+                        self.assertAlmostEqual(C[i], E[i])
 
-    def test_slerp__around_z__totally_random(self):
-        for i in range(20):
-            t = random.random()
-            angle_A = 10*math.pi*(random.random() - 0.5)
-            angle_B = angle_A + math.pi*(random.random() - 0.5)
-            expected_angle = (1 - t)*angle_A + t*angle_B
-            A = [0.0, 0.0, math.sin(angle_A/2), math.cos(angle_A/2)]
-            B = [0.0, 0.0, math.sin(angle_B/2), math.cos(angle_B/2)]
-            expected = [0.0, 0.0, math.sin(expected_angle/2), math.cos(expected_angle/2)]
-            result = quaternion.slerp(A, B, t)
-            for i in range(4):
-                self.assertAlmostEqual(result[i], expected[i], 3)
+    def test_slerp__more_than_180(self):
+        # interpolate between quaternions that differ by an angle > 180 deg
+        num_steps_of_angles = 5
+        num_steps_of_t = 5
+        sqrt_1_7 = math.sqrt(1/7)
+        sqrt_2_7 = math.sqrt(2/7)
+        sqrt_4_7 = math.sqrt(4/7)
+        for a in range(num_steps_of_angles):
+            angle_A = a / (num_steps_of_angles - 1) * 2*math.pi
+            sin_angle_A_half = math.sin(angle_A / 2)
+            cos_angle_A_half = math.cos(angle_A / 2)
+            # range from 1 to avoid angle difference of 180 deg
+            for b in range(1, num_steps_of_angles):
+                # add 180 deg to the angle difference
+                angle_B = b / (num_steps_of_angles - 1) * math.pi + angle_A + math.pi
+                sin_angle_B_half = math.sin(angle_B / 2)
+                cos_angle_B_half = math.cos(angle_B / 2)
+                for step in range(num_steps_of_t):
+                    t = step / (num_steps_of_t - 1)
+                    # shorten `angle_B` by 360 deg to obtain `expected_angle`
+                    # in the "shorter" angle between `angle_A` and `angle_B`
+                    expected_angle = (1 - t)*angle_A + t*(angle_B - 2*math.pi)
+                    sin_expected = math.sin(expected_angle/2)
+                    cos_expected = math.cos(expected_angle/2)
+                    # around x
+                    A = [sin_angle_A_half, 0.0, 0.0, cos_angle_A_half]
+                    B = [sin_angle_B_half, 0.0, 0.0, cos_angle_B_half]
+                    E = [sin_expected, 0.0, 0.0, cos_expected]
+                    C = quaternion.slerp(A, B, t)
+                    for i in range(4):
+                        self.assertAlmostEqual(C[i], E[i])
+                    # around y
+                    A = [0.0, sin_angle_A_half, 0.0, cos_angle_A_half]
+                    B = [0.0, sin_angle_B_half, 0.0, cos_angle_B_half]
+                    E = [0.0, sin_expected, 0.0, cos_expected]
+                    C = quaternion.slerp(A, B, t)
+                    for i in range(4):
+                        self.assertAlmostEqual(C[i], E[i])
+                    # around z
+                    A = [0.0, 0.0, sin_angle_A_half, cos_angle_A_half]
+                    B = [0.0, 0.0, sin_angle_B_half, cos_angle_B_half]
+                    E = [0.0, 0.0, sin_expected, cos_expected]
+                    C = quaternion.slerp(A, B, t)
+                    for i in range(4):
+                        self.assertAlmostEqual(C[i], E[i])
+                    # around vector (sqrt(1/7), sqrt(2/7), sqrt(4/7))
+                    A = [sqrt_1_7*sin_angle_A_half, sqrt_2_7*sin_angle_A_half, sqrt_4_7*sin_angle_A_half, cos_angle_A_half]
+                    B = [sqrt_1_7*sin_angle_B_half, sqrt_2_7*sin_angle_B_half, sqrt_4_7*sin_angle_B_half, cos_angle_B_half]
+                    E = [sqrt_1_7*sin_expected, sqrt_2_7*sin_expected, sqrt_4_7*sin_expected, cos_expected]
+                    C = quaternion.slerp(A, B, t)
+                    for i in range(4):
+                        self.assertAlmostEqual(C[i], E[i])
+                    # around vector (-sqrt(1/7), -sqrt(2/7), -sqrt(4/7))
+                    A = [-sqrt_1_7*sin_angle_A_half, -sqrt_2_7*sin_angle_A_half, -sqrt_4_7*sin_angle_A_half, cos_angle_A_half]
+                    B = [-sqrt_1_7*sin_angle_B_half, -sqrt_2_7*sin_angle_B_half, -sqrt_4_7*sin_angle_B_half, cos_angle_B_half]
+                    E = [-sqrt_1_7*sin_expected, -sqrt_2_7*sin_expected, -sqrt_4_7*sin_expected, cos_expected]
+                    C = quaternion.slerp(A, B, t)
+                    for i in range(4):
+                        self.assertAlmostEqual(C[i], E[i])
 
 # vim: expandtab sw=4 ts=4
