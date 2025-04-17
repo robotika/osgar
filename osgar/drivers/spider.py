@@ -77,7 +77,9 @@ class Spider(Node):
                 self.last_diff_time = self.time
                 # skip update due to duplicity CAN messages
                 return False
-        if abs(diff[0]) + abs(diff[1]) >= 40:
+        if abs(diff[0]) + abs(diff[1]) >= 50:
+            if self.verbose:
+                print("TOO HIGH ENC:", diff)
             # max valid observed was 20
             return False
         self.last_diff_time = self.time
