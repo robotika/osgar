@@ -4,6 +4,7 @@
 import math
 import io
 import pathlib
+from ast import literal_eval
 from datetime import timedelta
 from collections import defaultdict
 
@@ -15,7 +16,7 @@ import cv2  # for video output
 import numpy as np  # faster depth data processing
 from importlib import import_module
 
-from osgar.logger import LogIndexedReader, lookup_stream_names
+from osgar.logger import LogIndexedReader, lookup_stream_names, LogReader
 from osgar.lib.serialize import deserialize
 from osgar.lib.config import get_class_by_name
 from osgar.lib import quaternion
@@ -35,6 +36,7 @@ g_lidar_fov_deg = 270  # controlled by --deg (deg)
 # depth data for ROBOTIKA_X2_SENSOR_CONFIG_1 (640 x 360)
 g_depth_params = DepthParams()
 g_prefix = "saveX"
+g_log_config = None  # original log config file
 
 CENTER_AXLE_DISTANCE = 0.348  # K2 distance specific
 
@@ -161,8 +163,11 @@ def draw(foreground, pose, scan, poses=[], image=None, bbox=None, callback=None,
                 #name, x, y, width, height = b[:5]
                 # new (temporary?) format
                 w, h = image.get_size()
-                a, b, c, d = frameNorm(h, h, detection[2]).tolist()
-                name, x, y, width, height = detection[0],  a + (w - h) / 2, b, c - a, d - b
+                # stream name
+                assert g_log_config['robot']['modules']['oak']['init']['nn_config']['input_size'] == '640x352'
+                a, b, c, d = frameNorm(h, w, detection[2]).tolist()
+#                name, x, y, width, height = detection[0],  a + (w - h) / 2, b, c - a, d - b
+                name, x, y, width, height = detection[0],  a, b, c - a, d - b
                 color = (0, 255, 0)
                 rect = pygame.Rect(x, y, width, height)
                 pygame.draw.rect(image, color, rect, 4)
@@ -281,6 +286,16 @@ def pygame_to_numpy_image(pygame_img):
 def numpy_to_pygame_image(np_image):
     np_img = cv2.cvtColor(np_image, cv2.COLOR_BGR2RGB)
     return pygame.image.frombuffer(np_img.tobytes(), np_img.shape[1::-1], "RGB")
+
+
+def get_config(logfile):
+    """
+    Deserialize original config from logfile. Return None if missing
+    """
+    log = LogReader(logfile, only_stream_id=0)
+    print("original args:", next(log)[-1])  # old arguments
+    config_str = next(log)[-1]
+    return literal_eval(config_str.decode('ascii'))
 
 
 class Frame:
@@ -690,7 +705,7 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
 def main(args_in=None, startswith=None):
     import argparse
     import os.path
-    global g_rotation_offset_rad, g_lidar_fov_deg, MAX_SCAN_LIMIT, WINDOW_SIZE, g_prefix
+    global g_rotation_offset_rad, g_lidar_fov_deg, MAX_SCAN_LIMIT, WINDOW_SIZE, g_prefix, g_log_config
 
     parser = argparse.ArgumentParser(description='View lidar scans')
     parser.add_argument('logfile', help='recorded log file')
@@ -749,6 +764,8 @@ def main(args_in=None, startswith=None):
         for stream in lookup_stream_names(args.logfile):
             print("  ", stream)
         return
+
+    g_log_config = get_config(args.logfile)
 
     callback = None
     if args.callback is not None:
