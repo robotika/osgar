@@ -73,12 +73,12 @@ class MattyTest(unittest.TestCase):
         self.assertAlmostEqual(robot.pose[2], 0.00)
 
         # turn
-        robot.publish_pose2d(0.5, math.radians(45))
+        robot.publish_pose2d(0.5, math.radians(90))
         self.assertAlmostEqual(robot.pose[0], 0.1)  # simplified interpolation
         self.assertAlmostEqual(robot.pose[1], 0.00)
         self.assertAlmostEqual(robot.pose[2], 0.5 * 0.1 / (FRONT_REAR_AXIS_DISTANCE/2))
 
-        robot.publish_pose2d(0.5, math.radians(45))
+        robot.publish_pose2d(0.5, math.radians(90))
         self.assertAlmostEqual(robot.pose[0], 0.14757839740240863)
         self.assertAlmostEqual(robot.pose[1], 0.015371925729019041)
         self.assertAlmostEqual(robot.pose[2], 2 * 0.5 * 0.1 / (FRONT_REAR_AXIS_DISTANCE/2))
