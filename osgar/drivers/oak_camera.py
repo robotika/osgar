@@ -61,6 +61,7 @@ class OakCamera:
                           # *_seq streams are needed for output sync amd they are published BEFORE payload data
                           'depth_seq', 'color_seq', 'detections_seq', 'left_im_seq', 'right_im_seq')
         self.fps = config.get('fps', 10)
+        self.subsample = config.get('subsample')
         self.is_depth = config.get('is_depth', False)
         self.laser_projector_current = config.get("laser_projector_current", 0)
         assert self.laser_projector_current <= 1200, self.laser_projector_current  # The limit is 1200 mA.
@@ -93,8 +94,11 @@ class OakCamera:
             self.mono_resolution = g_resolution_dic[self.mono_resolution]
 
         color_resolution_value = config.get("color_resolution", "THE_1080_P")
-        assert color_resolution_value in["THE_1080_P", "THE_4_K", "THE_12_MP", "THE_13_MP"], color_resolution_value
         self.color_resolution = getattr(dai.ColorCameraProperties.SensorResolution, color_resolution_value)
+
+        color_orientation = config.get("color_orientation", "AUTO")
+        assert color_orientation in ["AUTO", "HORIZONTAL_MIRROR", "NORMAL", "ROTATE_180_DEG", "VERTICAL_FLIP"], color_orientation
+        self.color_orientation = getattr(dai.CameraImageOrientation, color_orientation)
 
         median_filter_value = config.get("stereo_median_filter", "KERNEL_7x7")
         assert median_filter_value in ["KERNEL_7x7", "KERNEL_5x5", "KERNEL_3x3", "MEDIAN_OFF"], median_filter_value
@@ -103,6 +107,8 @@ class OakCamera:
         stereo_mode_value = config.get("stereo_mode", "HIGH_DENSITY")
         assert stereo_mode_value in ["HIGH_DENSITY", "HIGH_ACCURACY"], stereo_mode_value
         self.stereo_mode = getattr(dai.node.StereoDepth.PresetMode, stereo_mode_value)
+
+        self.alignment = config.get("color_depth_alignment", False)
 
         self.oak_config_model = config.get("model")
         self.oak_config_nn_config = config.get("nn_config", {})
@@ -185,6 +191,7 @@ class OakCamera:
             queue_names.append("color")
             color_out.setStreamName('color')
 
+            color.setImageOrientation(self.color_orientation)
             color.setResolution(self.color_resolution)
             color.setBoardSocket(dai.CameraBoardSocket.RGB)
             color.setFps(self.fps)
@@ -220,6 +227,11 @@ class OakCamera:
                 stereo.setSubpixel(self.is_subpixel)
                 # https://docs.luxonis.com/en/latest/pages/faq/#left-right-check-depth-mode
                 stereo.setLeftRightCheck(self.is_left_right_check)
+                if self.alignment and self.is_color:
+                    stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
+                    # TODO check camera manual focus
+                    g_logger.info("Alignment of depth to color is enabled."
+                                  " Depth resolution will correspond with color camera.")
 
                 # links
                 left.video.link(stereo.left)
@@ -317,6 +329,8 @@ class OakCamera:
                     packets = device.getOutputQueue(queue_name).tryGetAll()
                     if len(packets) > 0:
                         seq_num = packets[-1].getSequenceNum()  # for sync of various outputs
+                        if self.subsample and seq_num % self.subsample != 0:
+                            continue
                         dt = packets[-1].getTimestamp()  # datetime.timedelta
                         timestamp_us = ((dt.days * 24 * 3600 + dt.seconds) * 1000000 + dt.microseconds)
                         if queue_name == "depth":

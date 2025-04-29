@@ -23,7 +23,8 @@
             "stereo_mode": "HIGH_ACCURACY",
             "stereo_extended_disparity": false,
             "stereo_subpixel": false,
-            "stereo_left_right_check": true
+            "stereo_left_right_check": true,
+            "color_depth_alignment": true
           }
       }
     },
