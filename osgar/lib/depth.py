@@ -326,7 +326,7 @@ def depth_to_rgb_align(depth_ar, depth_intr, rgb_intr, T, rgb_shape):
         Note:
             For oak-d cameras:
                 https://docs.luxonis.com/hardware/platform/depth/calibration
-                https://docs.luxonis.com/hardware/platform/depth/calibration
+                https://docs.luxonis.com/software/depthai/examples/calibration_reader/
                 Use transformation matrix for right mono camera.
     """
     height_d, width_d = depth_ar.shape
