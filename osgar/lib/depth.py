@@ -298,6 +298,37 @@ def compress(depth):
 
 
 def depth_to_rgb_align(depth_ar, depth_intr, rgb_intr, T, rgb_shape):
+    """
+        Aligns the depth to the RGB image. Calculation:
+            Deprojection the depth pixel to 3D poit in depth frame
+            x = (u - cx_d) * z / fx_d
+            y = (v - cy_d) * z / fy_d
+            point_d = [x, y, z, 1]
+
+            Convert to RGB frame
+            point_rgb = T @ point_d
+
+            x_rgb, y_rgb, z_rgb, __ = point_rgb
+
+            Projection to the RGB frame
+            u_rgb = (x_rgb * fx_rgb) / z_rgb + cx_rgb
+            v_rgb = (y_rgb * fy_rgb) / z_rgb + cy_rgb
+
+        Args:
+            depth_ar (np.array): depth in mm
+            depth_intr and rgb_intr (list of lists): matrix = [[fx, 0, cx], [0, fy, cy], [0, 0, 1]]
+            T (np.array): Transformation matrix T = [[r00, r01, r02, tx],
+                                                     [r10, r11, r12, ty],
+                                                     [r20, r21, r22, tz],
+                                                     [0,   0,   0,   1]]
+            rgb_shape (list): desired rgb shape
+
+        Note:
+            For oak-d cameras:
+                https://docs.luxonis.com/hardware/platform/depth/calibration
+                https://docs.luxonis.com/hardware/platform/depth/calibration
+                Use transformation matrix for right mono camera.
+    """
     height_d, width_d = depth_ar.shape
     height_rgb, width_rgb, __ = rgb_shape
     fx_d, fy_d = depth_intr[0][0], depth_intr[1][1]
