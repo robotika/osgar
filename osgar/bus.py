@@ -230,7 +230,8 @@ class LogBusHandlerInputsOnly:
         if self.writer is not None:
             for o in outputs:
                 # ignore :gz and :null modifiers
-                assert o.split(':')[0] in self.outputs.values(), (o, self.outputs)
+                if o.split(':')[0] not in self.outputs.values():
+                    print('Warning - not defined output times for new stream:', (o, self.outputs))
                 self.new_output_index[o.split(':')[0]] = self.writer.register(o)
 
     def listen(self):
