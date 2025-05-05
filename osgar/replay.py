@@ -9,7 +9,7 @@ from ast import literal_eval
 from osgar import logger
 from osgar.logger import LogReader, LogWriter
 from osgar.lib.config import config_load, get_class_by_name
-from osgar.bus import LogBusHandler, LogBusHandlerInputsOnly
+from osgar.bus import LogBusHandler, LogBusHandlerInputsOnly, LogBusHandlerInputsReaderOutputsWriter
 
 g_logger = logging.getLogger(__name__)
 
@@ -52,10 +52,11 @@ def replay(args, application=None):
     duration = args.duration
     if args.force:
         reader = LogReader(args.logfile, only_stream_id=inputs.keys(), clip_end_time_sec=duration)
-        writer=None
-        if args.output is not None:
+        if args.output is None:
+            bus = LogBusHandlerInputsOnly(reader, inputs=inputs)
+        else:
             writer = LogWriter(filename=args.output)
-        bus = LogBusHandlerInputsOnly(reader, inputs=inputs, writer=writer, outputs=outputs)
+            bus = LogBusHandlerInputsReaderOutputsWriter(reader, inputs=inputs, writer=writer, outputs=outputs)
     else:
         streams = list(inputs.keys()) + list(outputs.keys())
         reader = LogReader(args.logfile, only_stream_id=streams, clip_end_time_sec=duration)
