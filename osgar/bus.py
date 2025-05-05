@@ -218,12 +218,9 @@ class LogBusHandler:
 
 
 class LogBusHandlerInputsOnly:
-    def __init__(self, log, inputs, writer=None, outputs=None):
+    def __init__(self, log, inputs):
         self.reader = log
-        self.writer = writer
         self.inputs = inputs
-        self.outputs = outputs
-        self.new_output_index = {}
         self.time = timedelta(0)
 
     def register(self, *outputs):
