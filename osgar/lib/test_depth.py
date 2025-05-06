@@ -31,11 +31,18 @@ class DepthTest(unittest.TestCase):
         intr_M = [[100, 0, 1], [0, 100, 1], [0, 0, 1]]
         depth = np.ones((3,3), dtype=int) * 2000
         depth2 = depth_to_rgb_align(depth, intr_M, intr_M, T, [3,3, 3])
-        print(depth2)
         self.assertTrue(np.array_equal(depth, depth2))
 
-        intr_rgb = [[200, 0, 2.5], [0, 200, 2.5], [0, 0, 1]]
-        depth2 = depth_to_rgb_align(depth, intr_M, intr_rgb, T, [6, 6, 3])
-        print(depth2)
+        f_rgb = 5/3 * 100
+        intr_rgb = [[f_rgb, 0, 2], [0, f_rgb, 2], [0, 0, 1]]
+        depth2 = depth_to_rgb_align(depth, intr_M, intr_rgb, T, [5, 5, 3])
+        expected_res = np.array([
+            [1, 0, 1, 0, 1],
+            [0, 0, 0, 0, 0],
+            [1, 0, 1, 0, 1],
+            [0, 0, 0, 0, 0],
+            [1, 0, 1, 0, 1],
+        ], dtype=int) * 2000
+        self.assertTrue(np.array_equal(expected_res, depth2))
 
 # vim: expandtab sw=4 ts=4
