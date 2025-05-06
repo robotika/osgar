@@ -297,6 +297,105 @@ def compress(depth):
     return cv2.imencode('.png', depth.view(np.uint8))[1].tobytes()
 
 
+def depth_to_rgb_align(depth_ar, depth_intr, rgb_intr, T, rgb_shape):
+    """
+        Aligns the depth to the RGB image. Calculation:
+            Deprojection the depth pixel to 3D poit in depth frame
+            x = (u - cx_d) * z / fx_d
+            y = (v - cy_d) * z / fy_d
+            point_d = [x, y, z, 1]
+
+            Convert to RGB frame
+            point_rgb = T @ point_d
+
+            x_rgb, y_rgb, z_rgb, __ = point_rgb
+
+            Projection to the RGB frame
+            u_rgb = (x_rgb * fx_rgb) / z_rgb + cx_rgb
+            v_rgb = (y_rgb * fy_rgb) / z_rgb + cy_rgb
+
+        Args:
+            depth_ar (np.array): depth in mm
+            depth_intr and rgb_intr (list of lists): matrix = [[fx, 0, cx], [0, fy, cy], [0, 0, 1]]
+            T (np.array): Transformation matrix T = [[r00, r01, r02, tx],
+                                                     [r10, r11, r12, ty],
+                                                     [r20, r21, r22, tz],
+                                                     [0,   0,   0,   1]]
+            rgb_shape (list): desired rgb shape
+
+        Note:
+            For oak-d cameras:
+                https://docs.luxonis.com/hardware/platform/depth/calibration
+                https://docs.luxonis.com/software/depthai/examples/calibration_reader/
+                Use transformation matrix for right mono camera.
+    """
+    height_d, width_d = depth_ar.shape
+    height_rgb, width_rgb, __ = rgb_shape
+    fx_d, fy_d = depth_intr[0][0], depth_intr[1][1]
+    cx_d, cy_d = depth_intr[0][2], depth_intr[1][2]
+
+    fx_rgb, fy_rgb = rgb_intr[0][0], rgb_intr[1][1]
+    cx_rgb, cy_rgb = rgb_intr[0][2], rgb_intr[1][2]
+
+    align_depth = np.zeros((height_rgb, width_rgb), dtype=np.uint16)
+
+    # Creating coordinate grids for depth image
+    u_d, v_d = np.meshgrid(np.arange(width_d), np.arange(height_d))
+
+    # Transfer depth data to meters and set it as z coordinates
+    z = depth_ar[v_d, u_d] / 1000.0
+
+    # Mask for non zero depth
+    valid_depth_mask = z > 0
+
+    # Calculation of 3D points in the depth camera coordinate system for valid depths
+    x_d = (u_d[valid_depth_mask] - cx_d) * z[valid_depth_mask] / fx_d
+    y_d = (v_d[valid_depth_mask] - cy_d) * z[valid_depth_mask] / fy_d
+    z_valid = z[valid_depth_mask]
+    ones = np.ones_like(z_valid)
+    points_d = np.stack([x_d, y_d, z_valid, ones], axis=-1)
+
+    # Transforming 3D points into the RGB camera coordinate system
+    points_rgb = points_d @ T.T  # We use T.T for correct multiplication of matrices with vectors as rows
+
+    x_rgb = points_rgb[:, 0]
+    y_rgb = points_rgb[:, 1]
+    z_rgb = points_rgb[:, 2]
+
+    # Masking points behind an RGB camera
+    valid_rgb_z_mask = z_rgb > 0
+
+    x_rgb_valid = x_rgb[valid_rgb_z_mask]
+    y_rgb_valid = y_rgb[valid_rgb_z_mask]
+    z_rgb_valid = z_rgb[valid_rgb_z_mask]
+
+    # Projection of 3D points into the image plane of an RGB camera
+    u_rgb = np.round((x_rgb_valid * fx_rgb) / z_rgb_valid + cx_rgb).astype(int)
+    v_rgb = np.round((y_rgb_valid * fy_rgb) / z_rgb_valid + cy_rgb).astype(int)
+    z_mm = np.round(z_rgb_valid * 1000).astype(int)
+
+    # Masking points outside the RGB range of an image
+    valid_rgb_coord_mask = (u_rgb >= 0) & (u_rgb < width_rgb) & (v_rgb >= 0) & (v_rgb < height_rgb)
+
+    u_rgb_valid_in_frame = u_rgb[valid_rgb_coord_mask]
+    v_rgb_valid_in_frame = v_rgb[valid_rgb_coord_mask]
+    z_mm_valid_in_frame = z_mm[valid_rgb_coord_mask]
+
+    # Updating align_depth using NumPy indexing
+    align_depth_flat_indices = np.ravel_multi_index((v_rgb_valid_in_frame, u_rgb_valid_in_frame), align_depth.shape)
+
+    # Creating an array for new depths and initializing to zero
+    new_depths = np.zeros(align_depth.size, dtype=align_depth.dtype)
+    np.put(new_depths, align_depth_flat_indices, z_mm_valid_in_frame)
+    new_depths_reshaped = new_depths.reshape(align_depth.shape)
+
+    # Update align_depth only where the new depth is smaller or the original is 0
+    update_mask = (new_depths_reshaped < align_depth) | (align_depth == 0)
+    align_depth[update_mask] = new_depths_reshaped[update_mask]
+
+    return align_depth
+
+
 if __name__ == '__main__':
     import argparse
     import cv2
