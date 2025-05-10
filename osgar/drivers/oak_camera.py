@@ -71,6 +71,7 @@ class OakCamera:
         assert self.flood_light_current <= 1500, self.flood_light_current  # The limit is 1500 mA.
         self.is_color = config.get('is_color', False)
         self.video_encoder = get_video_encoder(config.get('video_encoder', 'mjpeg'))
+        self.video_encoder_h264_bitrate = config.get('h264_bitrate', 0)  # 0 = automatic
         self.is_stereo_images = config.get('is_stereo_images', False)
 
         self.is_imu_enabled = config.get('is_imu_enabled', False)
@@ -218,6 +219,7 @@ class OakCamera:
                 color.initialControl.setManualWhiteBalance(self.color_manual_wb)
 
             color_encoder.setDefaultProfilePreset(self.fps, self.video_encoder)
+            color_encoder.setBitrateKbps(self.video_encoder_h264_bitrate)
 
             color.video.link(color_encoder.input)
             color_encoder.bitstream.link(color_out.input)
@@ -252,10 +254,12 @@ class OakCamera:
             if self.is_stereo_images:
                 left_encoder = pipeline.create(dai.node.VideoEncoder)
                 left_encoder.setDefaultProfilePreset(self.fps, self.video_encoder)
+                left_encoder.setBitrateKbps(self.video_encoder_h264_bitrate)
                 left_out = pipeline.create(dai.node.XLinkOut)
 
                 right_encoder = pipeline.create(dai.node.VideoEncoder)
                 right_encoder.setDefaultProfilePreset(self.fps, self.video_encoder)
+                right_encoder.setBitrateKbps(self.video_encoder_h264_bitrate)
                 right_out = pipeline.create(dai.node.XLinkOut)
 
                 queue_names.append("left")
