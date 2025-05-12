@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "timer": {
+        "driver": "timer",
+        "init": {
+          "sleep": 1.0
+        }
+      },
+      "bluetooth": {
+          "driver": "osgar.drivers.bluetooth:BluetoothScanner",
+          "in": ["trigger"],
+          "out": ["bt_scan"],
+          "init": {}
+      }
+    },
+    "links": [["timer.tick", "bluetooth.trigger"]]
+  }
+}
+
