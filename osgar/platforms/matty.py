@@ -75,12 +75,18 @@ class Matty(Node):
         self.odometry_requested = False
         self.last_bumpers = None
         self.last_collision_time = None
+        self.prev_status = None
 
     def parse_odometry(self, data):
         counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_deg = struct.unpack_from('<BBBBHHhh', data)
         enc = struct.unpack_from('<HHHH', data, 12)
         if (status & RobotStatus.ERROR_ENCODER.value) and (status & RobotStatus.ERROR_POWER.value) == 0:
             print(self.time, 'Status ERROR_ENCODER', hex(status))
+        if self.prev_status != status:
+            if self.prev_status is None or \
+                ((self.prev_status ^ status) &  RobotStatus.EMERGENCY_STOP.value):
+                self.publish('emergency_stop', (status &  RobotStatus.EMERGENCY_STOP.value) != 0)
+            self.prev_status = status
         bumpers = status & (RobotStatus.BUMPER_BACK.value | RobotStatus.BUMPER_FRONT.value)
         if self.last_bumpers != bumpers:
             print(self.time, 'Bumpers:',
