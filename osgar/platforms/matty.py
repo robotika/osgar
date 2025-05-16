@@ -85,7 +85,7 @@ class Matty(Node):
         if self.prev_status != status:
             if self.prev_status is None or \
                 ((self.prev_status ^ status) &  RobotStatus.EMERGENCY_STOP.value):
-                self.publish('emergency_stop', (status &  RobotStatus.EMERGENCY_STOP.value) != 0)
+                self.publish('emergency_stop', (status & RobotStatus.EMERGENCY_STOP.value) != 0)
             self.prev_status = status
         bumpers = status & (RobotStatus.BUMPER_BACK.value | RobotStatus.BUMPER_FRONT.value)
         if self.last_bumpers != bumpers:
