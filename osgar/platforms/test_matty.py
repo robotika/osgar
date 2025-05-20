@@ -91,3 +91,31 @@ class MattyTest(unittest.TestCase):
         robot.on_esp_data(b'U\x14EI\x00\x02`/\x00\x00\x00\x00N\x01^\x06W\x05&\x07\x88\x07\x02U\x02\x01A\xbcU\x02\x02A\xbbU\x02\x03A\xba')
         robot.process_esp_packet.assert_called()
         self.assertEqual(len(robot.process_esp_packet.mock_calls), 3)
+
+    def test_emergency_stop(self):
+        # make sure that "emergency_stop" is correctly published
+        bus = MagicMock()
+        robot = Matty(bus=bus, config={})
+        data = b'\x8bI\xb1\x02\x94\x03\xff\xff\x00\x00\x00\x00\x81\x1a\x81\x1a\x81\x1a\x81\x1a'
+        bus.reset_mock()
+        robot.parse_odometry(data)
+        bus.publish.assert_called()
+        self.assertEqual(len(bus.publish.mock_calls), 4)  # 2x bumpers, speed command, emergensy_stop status
+        bus.publish.assert_called_with('esp_data', b'U\x06\x01G\x00\x00\x00\x00\xb2')
+        bus.reset_mock()
+        robot.parse_odometry(data)
+        bus.publish.assert_not_called()  # same data, no change
+
+        data = b'|I\xb0\x02\\0\xff\xff\x00\x00Y\xff\x00\x00\x00\x00\x00\x00\x00\x00'
+        bus.reset_mock()
+        robot.parse_odometry(data)
+        bus.publish.assert_called()
+        self.assertEqual(len(bus.publish.mock_calls), 1)  # only emergensy_stop status change
+        bus.publish.assert_called_with('emergency_stop', False)
+
+        data = b'\x00I1\x02\x0c\x00\xff\xff\x00\x00\xab\x04\x00\x00\x00\x00\x00\x00\x00\x00'
+        bus.reset_mock()
+        robot.parse_odometry(data)
+        bus.publish.assert_called()
+        self.assertEqual(len(bus.publish.mock_calls), 1)  # only emergensy_stop status change
+        bus.publish.assert_called_with('emergency_stop', True)
