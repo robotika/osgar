@@ -132,13 +132,11 @@ class OakCamera:
         if "input_size" in nnConfig:
             W, H = tuple(map(int, nnConfig.get("input_size").split('x')))
 
-        nn_family = nnConfig.get("NN_family", "YOLO")
-
         # get model path
         nnPath = self.oak_config_model.get("blob")  # "model" section
         assert Path(nnPath).exists(), "No blob found at '{}'!".format(nnPath)
 
-        if nn_family == 'YOLO':
+        if self.oak_config_nn_family == 'YOLO':
             # extract metadata
             metadata = nnConfig.get("NN_specific_metadata", {})
             classes = metadata.get("classes", {})
@@ -152,7 +150,7 @@ class OakCamera:
 
 
         # Define sources and outputs
-        if nn_family == 'YOLO':
+        if self.oak_config_nn_family == 'YOLO':
             detectionNetwork = pipeline.create(dai.node.YoloDetectionNetwork)
         else:
             detectionNetwork = pipeline.create(dai.node.NeuralNetwork)
@@ -170,7 +168,7 @@ class OakCamera:
 
         # Network specific settings
         detectionNetwork.setBlobPath(nnPath)
-        if nn_family == 'YOLO':
+        if self.oak_config_nn_family == 'YOLO':
             detectionNetwork.setConfidenceThreshold(confidenceThreshold)
             detectionNetwork.setNumClasses(classes)
             detectionNetwork.setCoordinateSize(coordinates)
