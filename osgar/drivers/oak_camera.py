@@ -116,6 +116,10 @@ class OakCamera:
         self.oak_config_model = config.get("model")
         self.oak_config_nn_config = config.get("nn_config", {})
         self.oak_config_nn_family = self.oak_config_nn_config.get("NN_family", "YOLO")
+        self.oak_config_nn_image_size = None
+        if "input_size" in self.oak_config_nn_config:
+            self.oak_config_nn_image_size = tuple(map(int, self.oak_config_nn_config.get("input_size").split('x')))
+
         self.labels = config.get("mappings", {}).get("labels", [])
 
         self.is_debug_mode = config.get('debug', False)  # run with debug output level
@@ -129,8 +133,8 @@ class OakCamera:
         nnConfig = self.oak_config_nn_config  # "nn_config" section
 
         # parse input shape
-        if "input_size" in nnConfig:
-            W, H = tuple(map(int, nnConfig.get("input_size").split('x')))
+        if self.oak_config_nn_image_size is not None:
+            W, H = self.oak_config_nn_image_size
 
         # get model path
         nnPath = self.oak_config_model.get("blob")  # "model" section
@@ -388,8 +392,7 @@ class OakCamera:
                                 self.bus.publish('detections', bbox_list)
                             else:
                                 nn_output = packets[-1].getLayerFp16('output')
-                                WIDTH = 160
-                                HEIGHT = 120
+                                WIDTH, HEIGHT = self.oak_config_nn_image_size
                                 mask = np.array(nn_output).reshape((2, HEIGHT, WIDTH))
                                 mask = mask.argmax(0).astype(np.uint8)
                                 self.bus.publish('nn_mask', mask)
