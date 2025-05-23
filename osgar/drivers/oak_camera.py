@@ -7,6 +7,7 @@ from pathlib import Path
 import logging
 
 import depthai as dai
+import numpy as np
 
 g_logger = logging.getLogger(__name__)
 
@@ -59,7 +60,8 @@ class OakCamera:
         self.bus.register('depth:gz' if compress_depth_stream else 'depth',
                           'color', 'orientation_list', 'detections', 'left_im', 'right_im',
                           # *_seq streams are needed for output sync amd they are published BEFORE payload data
-                          'depth_seq', 'color_seq', 'detections_seq', 'left_im_seq', 'right_im_seq')
+                          'depth_seq', 'color_seq', 'detections_seq', 'left_im_seq', 'right_im_seq',
+                          'nn_mask:gz')
         self.fps = config.get('fps', 10)
         self.subsample = config.get('subsample')
         self.is_depth = config.get('is_depth', False)
@@ -69,6 +71,7 @@ class OakCamera:
         assert self.flood_light_current <= 1500, self.flood_light_current  # The limit is 1500 mA.
         self.is_color = config.get('is_color', False)
         self.video_encoder = get_video_encoder(config.get('video_encoder', 'mjpeg'))
+        self.video_encoder_h264_bitrate = config.get('h264_bitrate', 0)  # 0 = automatic
         self.is_stereo_images = config.get('is_stereo_images', False)
 
         self.is_imu_enabled = config.get('is_imu_enabled', False)
@@ -112,6 +115,11 @@ class OakCamera:
 
         self.oak_config_model = config.get("model")
         self.oak_config_nn_config = config.get("nn_config", {})
+        self.oak_config_nn_family = self.oak_config_nn_config.get("NN_family", "YOLO")
+        self.oak_config_nn_image_size = None
+        if "input_size" in self.oak_config_nn_config:
+            self.oak_config_nn_image_size = tuple(map(int, self.oak_config_nn_config.get("input_size").split('x')))
+
         self.labels = config.get("mappings", {}).get("labels", [])
 
         self.is_debug_mode = config.get('debug', False)  # run with debug output level
@@ -125,26 +133,31 @@ class OakCamera:
         nnConfig = self.oak_config_nn_config  # "nn_config" section
 
         # parse input shape
-        if "input_size" in nnConfig:
-            W, H = tuple(map(int, nnConfig.get("input_size").split('x')))
-
-        # extract metadata
-        metadata = nnConfig.get("NN_specific_metadata", {})
-        classes = metadata.get("classes", {})
-        coordinates = metadata.get("coordinates", {})
-        anchors = metadata.get("anchors", {})
-        anchorMasks = metadata.get("anchor_masks", {})
-        iouThreshold = metadata.get("iou_threshold", {})
-        confidenceThreshold = metadata.get("confidence_threshold", {})
-
-        print(metadata)
+        if self.oak_config_nn_image_size is not None:
+            W, H = self.oak_config_nn_image_size
 
         # get model path
         nnPath = self.oak_config_model.get("blob")  # "model" section
         assert Path(nnPath).exists(), "No blob found at '{}'!".format(nnPath)
 
+        if self.oak_config_nn_family == 'YOLO':
+            # extract metadata
+            metadata = nnConfig.get("NN_specific_metadata", {})
+            classes = metadata.get("classes", {})
+            coordinates = metadata.get("coordinates", {})
+            anchors = metadata.get("anchors", {})
+            anchorMasks = metadata.get("anchor_masks", {})
+            iouThreshold = metadata.get("iou_threshold", {})
+            confidenceThreshold = metadata.get("confidence_threshold", {})
+
+            print(metadata)
+
+
         # Define sources and outputs
-        detectionNetwork = pipeline.create(dai.node.YoloDetectionNetwork)
+        if self.oak_config_nn_family == 'YOLO':
+            detectionNetwork = pipeline.create(dai.node.YoloDetectionNetwork)
+        else:
+            detectionNetwork = pipeline.create(dai.node.NeuralNetwork)
         nnOut = pipeline.create(dai.node.XLinkOut)
 
         nnOut.setStreamName("nn")
@@ -158,15 +171,16 @@ class OakCamera:
         camRgb.setFps(self.fps)
 
         # Network specific settings
-        detectionNetwork.setConfidenceThreshold(confidenceThreshold)
-        detectionNetwork.setNumClasses(classes)
-        detectionNetwork.setCoordinateSize(coordinates)
-        detectionNetwork.setAnchors(anchors)
-        detectionNetwork.setAnchorMasks(anchorMasks)
-        detectionNetwork.setIouThreshold(iouThreshold)
         detectionNetwork.setBlobPath(nnPath)
-        detectionNetwork.setNumInferenceThreads(2)
-        detectionNetwork.input.setBlocking(False)
+        if self.oak_config_nn_family == 'YOLO':
+            detectionNetwork.setConfidenceThreshold(confidenceThreshold)
+            detectionNetwork.setNumClasses(classes)
+            detectionNetwork.setCoordinateSize(coordinates)
+            detectionNetwork.setAnchors(anchors)
+            detectionNetwork.setAnchorMasks(anchorMasks)
+            detectionNetwork.setIouThreshold(iouThreshold)
+            detectionNetwork.setNumInferenceThreads(2)
+            detectionNetwork.input.setBlocking(False)
 
         # Linking
         camRgb.preview.link(detectionNetwork.input)
@@ -207,6 +221,7 @@ class OakCamera:
                 color.initialControl.setManualWhiteBalance(self.color_manual_wb)
 
             color_encoder.setDefaultProfilePreset(self.fps, self.video_encoder)
+            color_encoder.setBitrateKbps(self.video_encoder_h264_bitrate)
 
             color.video.link(color_encoder.input)
             color_encoder.bitstream.link(color_out.input)
@@ -241,10 +256,12 @@ class OakCamera:
             if self.is_stereo_images:
                 left_encoder = pipeline.create(dai.node.VideoEncoder)
                 left_encoder.setDefaultProfilePreset(self.fps, self.video_encoder)
+                left_encoder.setBitrateKbps(self.video_encoder_h264_bitrate)
                 left_out = pipeline.create(dai.node.XLinkOut)
 
                 right_encoder = pipeline.create(dai.node.VideoEncoder)
                 right_encoder.setDefaultProfilePreset(self.fps, self.video_encoder)
+                right_encoder.setBitrateKbps(self.video_encoder_h264_bitrate)
                 right_out = pipeline.create(dai.node.XLinkOut)
 
                 queue_names.append("left")
@@ -364,14 +381,21 @@ class OakCamera:
                                 self.bus.publish("orientation_list", quaternions)
 
                         if queue_name == "nn":
-                            detections = packets[-1].detections
-                            bbox_list = []
-                            for detection in detections:
-                                bbox = (detection.xmin, detection.ymin, detection.xmax, detection.ymax)
-                                print(self.labels[detection.label], detection.confidence, bbox)
-                                bbox_list.append([self.labels[detection.label], detection.confidence, list(bbox)])
-                            self.bus.publish("detections_seq", [seq_num, timestamp_us])
-                            self.bus.publish('detections', bbox_list)
+                            if self.oak_config_nn_family == 'YOLO':
+                                detections = packets[-1].detections
+                                bbox_list = []
+                                for detection in detections:
+                                    bbox = (detection.xmin, detection.ymin, detection.xmax, detection.ymax)
+                                    print(self.labels[detection.label], detection.confidence, bbox)
+                                    bbox_list.append([self.labels[detection.label], detection.confidence, list(bbox)])
+                                self.bus.publish("detections_seq", [seq_num, timestamp_us])
+                                self.bus.publish('detections', bbox_list)
+                            else:
+                                nn_output = packets[-1].getLayerFp16('output')
+                                WIDTH, HEIGHT = self.oak_config_nn_image_size
+                                mask = np.array(nn_output).reshape((2, HEIGHT, WIDTH))
+                                mask = mask.argmax(0).astype(np.uint8)
+                                self.bus.publish('nn_mask', mask)
 
     def request_stop(self):
         self.bus.shutdown()
