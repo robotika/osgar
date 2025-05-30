@@ -8,15 +8,11 @@
             "fps": 10,
             "is_color": true,
             "is_depth": true,
-            "laser_projector_current": 1200,
-            "is_imu_enabled": true,
-            "number_imu_records": 10,
-            "disable_magnetometer_fusion": false,
             "cam_id": "192.168.1.54",
 
             "mono_resolution": "THE_400_P",
             "color_resolution": "THE_800_P",
-            "color_isp": false,
+            "color_isp": true,
             "color_manual_focus": 130,
             "color_manual_exposure": null,
 
@@ -24,8 +20,7 @@
             "stereo_mode": "HIGH_ACCURACY",
             "stereo_extended_disparity": false,
             "stereo_subpixel": false,
-            "stereo_left_right_check": true,
-            "color_depth_alignment": true
+            "stereo_left_right_check": true
           }
       }
     },

@@ -374,7 +374,9 @@ class OakCamera:
                         if queue_name == "color":
                             if self.is_isp_color:
                                 cv_frame = packets[-1].getCvFrame()
-                                __, color_frame = cv2.imencode('*.jpeg', cv_frame)
+                                success, encoded_image = cv2.imencode('*.jpeg', cv_frame)
+                                if success:
+                                    color_frame = encoded_image.tobytes()
                             else:
                                 color_frame = packets[-1].getData().tobytes()  # use latest packet
                             self.bus.publish("color_seq", [seq_num, timestamp_us])
