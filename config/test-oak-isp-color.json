@@ -1,0 +1,34 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "osgar.drivers.oak_camera:OakCamera",
+          "init": {
+            "fps": 10,
+            "is_color": true,
+            "is_depth": true,
+            "laser_projector_current": 1200,
+            "is_imu_enabled": true,
+            "number_imu_records": 10,
+            "disable_magnetometer_fusion": false,
+            "cam_id": "192.168.1.54",
+
+            "mono_resolution": "THE_400_P",
+            "color_resolution": "THE_800_P",
+            "color_isp": false,
+            "color_manual_focus": 130,
+            "color_manual_exposure": null,
+
+            "stereo_median_filter": "KERNEL_3x3",
+            "stereo_mode": "HIGH_ACCURACY",
+            "stereo_extended_disparity": false,
+            "stereo_subpixel": false,
+            "stereo_left_right_check": true,
+            "color_depth_alignment": true
+          }
+      }
+    },
+    "links": []
+  }
+}
