@@ -74,6 +74,7 @@ class OakCamera:
         self.video_encoder = get_video_encoder(config.get('video_encoder', 'mjpeg'))
         self.video_encoder_h264_bitrate = config.get('h264_bitrate', 0)  # 0 = automatic
         self.is_isp_color = config.get("color_isp", False)
+        self.isp_scale = config.get("color_isp_scale")
         self.is_stereo_images = config.get('is_stereo_images', False)
 
         self.is_imu_enabled = config.get('is_imu_enabled', False)
@@ -226,7 +227,8 @@ class OakCamera:
             color_encoder.setBitrateKbps(self.video_encoder_h264_bitrate)
 
             if self.is_isp_color:
-                #color.setIspScale(1, 3)
+                if self.isp_scale:
+                    color.setIspScale(*self.isp_scale)
                 color.isp.link(color_out.input)
             else:
                 color.video.link(color_encoder.input)

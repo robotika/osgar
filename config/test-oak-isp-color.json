@@ -13,6 +13,7 @@
             "mono_resolution": "THE_400_P",
             "color_resolution": "THE_800_P",
             "color_isp": true,
+            "color_isp_scale": [2,3],
             "color_manual_focus": 130,
             "color_manual_exposure": null,
 
