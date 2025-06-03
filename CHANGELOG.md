@@ -1,6 +1,67 @@
 # Changelog
 
-[Full Changelog](https://github.com/robotika/osgar/compare/v0.3.0...master)
+[Full Changelog](https://github.com/robotika/osgar/compare/v0.4.0...master)
+
+## [v0.4.0](https://github.com/robotika/osgar/tree/v0.4.0) (2025-06-03)
+[Full Changelog](https://github.com/robotika/osgar/compare/v0.3.0...v0.4.0)
+
+**osgar:**
+- Base for SubT Finals and FRE2025
+- Enforced `Node.on_MSG` callbacks
+- Drivers for robots: Yuhesen FR-07, Matty, Skiddy, Deedee
+- New sensor drivers:
+   - Luxonis OAK cameras
+   - VanJee lidar
+   - Pozyx
+   - system monitor (CPU, temperature, RAM)
+   - RealSense D455 and L515
+- 
+- osgar.lib.config: allow overrides in dict merging (#612) 
+- osgar.lib.unittest: add custom TestCase (#562) 
+- Upgrade rosmsg to provide multiple devices (#545) 
+- logzeromq 
+   - provide Request/Response option for ROS services (#514)
+   - add conditional log saving based on config['save_data']
+- osgar.bus: track max delay during recording
+- osgar.logger
+   - add walltime to format string
+   - make --times default behavior and --raw change to dump raw data
+   - make --stat default behavior and use --all to dump all streams  
+- osgar.replay: show modules available for replay
+- serialize
+   - add option to store packed data
+   - serialize numpy arrays
+- canserial.py - transition from raw bytes to PCAN triplets [addr, payload, flags]
+- osgar.lib.quaternion support
+- Lazyload drivers
+- Implement ReplayDriver for reprocessing of logfiles
+- Add pyusb into requirements
+- Add opencv to requirements
+- (over 400 master commits related to OSGAR)
+
+**osgar-tools:**
+- Upgrade lidarview
+  - window resizable (#575)
+  - display multiple fields in the title bar (#572)
+  - add --bbox option to draw object bounding box (#464)
+  - add options for lidar limit and window size
+  - fix visual overflow in depth images
+  - save image based on selected camera
+  - draw K3 robot with two joints 
+  - integrated 2nd lidar for Kloubak robots
+  - add parameter --jump to given time
+  - add parameter for optional --title
+  - use numpy and colormap
+  - allow keyframes stream for faster search
+  - support lidar FOV controlled by command line --deg
+  - add Framer (LogIndexedReader based) for faster replay
+- log2video
+  - create mp4 next to source logfile 
+  - add --camera2 option for dual camera setup
+  - add option for horizontal flip (upside down mounted camera)
+  - add option --end-time-sec for video cut
+- strip - added tool logfile size reduction
+
 
 ## [v0.3.0](https://github.com/robotika/osgar/tree/v0.3.0) (2020-11-30)
 [Full Changelog](https://github.com/robotika/osgar/compare/v0.2.0...v0.3.0)
