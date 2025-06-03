@@ -258,12 +258,14 @@ def get_image(data):
             image = pygame.image.load(io.BytesIO(data), 'JPG').convert()
         except pygame.error:
             # try H264 via OpenCV
-            assert data.startswith(bytes.fromhex('00000001 0950')) or data.startswith(bytes.fromhex('00000001 0930')), data[:20].hex()
-            if data.startswith(bytes.fromhex('00000001 0950')):
+            is_h264 = data.startswith(bytes.fromhex('00000001 0950')) or data.startswith(bytes.fromhex('00000001 0930'))
+            is_h265 = data.startswith(bytes.fromhex('00000001 460150')) or data.startswith(bytes.fromhex('00000001 460130'))
+            assert is_h264 or is_h265, data[:20].hex()
+            if data.startswith(bytes.fromhex('00000001 0950')) or data.startswith(bytes.fromhex('00000001 460150')):
                 # I - key frame
                 with open('tmp.h264', 'wb') as f:
                     f.write(data)
-            elif data.startswith(bytes.fromhex('00000001 0930')):
+            elif data.startswith(bytes.fromhex('00000001 0930')) or data.startswith(bytes.fromhex('00000001 460130')):
                 # P-frame}
                 with open('tmp.h264', 'ab') as f:
                     f.write(data)
