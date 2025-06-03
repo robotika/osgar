@@ -7,9 +7,9 @@ import logging
 from ast import literal_eval
 
 from osgar import logger
-from osgar.logger import LogReader
+from osgar.logger import LogReader, LogWriter
 from osgar.lib.config import config_load, get_class_by_name
-from osgar.bus import LogBusHandler, LogBusHandlerInputsOnly
+from osgar.bus import LogBusHandler, LogBusHandlerInputsOnly, LogBusHandlerInputsReaderOutputsWriter
 
 g_logger = logging.getLogger(__name__)
 
@@ -52,7 +52,11 @@ def replay(args, application=None):
     duration = args.duration
     if args.force:
         reader = LogReader(args.logfile, only_stream_id=inputs.keys(), clip_end_time_sec=duration)
-        bus = LogBusHandlerInputsOnly(reader, inputs=inputs)
+        if args.output is None:
+            bus = LogBusHandlerInputsOnly(reader, inputs=inputs)
+        else:
+            writer = LogWriter(filename=args.output)
+            bus = LogBusHandlerInputsReaderOutputsWriter(reader, inputs=inputs, writer=writer, outputs=outputs)
     else:
         streams = list(inputs.keys()) + list(outputs.keys())
         reader = LogReader(args.logfile, only_stream_id=streams, clip_end_time_sec=duration)
@@ -83,6 +87,7 @@ def main():
     parser.add_argument('--draw', help="draw debug results", action='store_true')
     parser.add_argument('--debug', help="print debug info about I/O streams", action='store_true')
     parser.add_argument('--duration', help="limit replay to given time", type=float)
+    parser.add_argument('--output', help="optional output for force replay")
     args = parser.parse_args()
 
     if args.module is None:
