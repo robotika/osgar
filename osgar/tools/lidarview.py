@@ -164,10 +164,16 @@ def draw(foreground, pose, scan, poses=[], image=None, bbox=None, callback=None,
                 # new (temporary?) format
                 w, h = image.get_size()
                 # stream name
-                assert g_log_config['robot']['modules']['oak']['init']['nn_config']['input_size'] == '640x352'
-                a, b, c, d = frameNorm(h, w, detection[2]).tolist()
-#                name, x, y, width, height = detection[0],  a + (w - h) / 2, b, c - a, d - b
-                name, x, y, width, height = detection[0],  a, b, c - a, d - b
+                image_size = g_log_config['robot']['modules']['oak']['init']['nn_config']['input_size']
+                assert image_size in ['640x352', '640x640'], image_size
+                nn_w, nn_h = [int(v) for v in image_size.split('x')]
+                if nn_h == nn_w:
+                    # squared model
+                    a, b, c, d = frameNorm(h, h, detection[2]).tolist()
+                    name, x, y, width, height = detection[0], a + (w - h) / 2, b, c - a, d - b
+                else:
+                    a, b, c, d = frameNorm(h, w, detection[2]).tolist()
+                    name, x, y, width, height = detection[0],  a, b, c - a, d - b
                 color = (0, 255, 0)
                 rect = pygame.Rect(x, y, width, height)
                 pygame.draw.rect(image, color, rect, 4)
