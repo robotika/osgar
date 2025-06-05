@@ -6,7 +6,7 @@
 [Full Changelog](https://github.com/robotika/osgar/compare/v0.3.0...v0.4.0)
 
 **osgar:**
-- Base for SubT Finals and FRE2025
+- Base for SubT Finals (#894) and FRE2025
 - Enforced `Node.on_MSG` callbacks
 - Drivers for robots: Yuhesen FR-07, Matty, Skiddy, Deedee
 - New sensor drivers:
