@@ -8,6 +8,7 @@ import logging
 
 import depthai as dai
 import numpy as np
+import cv2
 
 g_logger = logging.getLogger(__name__)
 
@@ -72,6 +73,8 @@ class OakCamera:
         self.is_color = config.get('is_color', False)
         self.video_encoder = get_video_encoder(config.get('video_encoder', 'mjpeg'))
         self.video_encoder_h264_bitrate = config.get('h264_bitrate', 0)  # 0 = automatic
+        self.is_isp_color = config.get("color_isp", False)
+        self.isp_scale = config.get("color_isp_scale")
         self.is_stereo_images = config.get('is_stereo_images', False)
 
         self.is_imu_enabled = config.get('is_imu_enabled', False)
@@ -223,8 +226,13 @@ class OakCamera:
             color_encoder.setDefaultProfilePreset(self.fps, self.video_encoder)
             color_encoder.setBitrateKbps(self.video_encoder_h264_bitrate)
 
-            color.video.link(color_encoder.input)
-            color_encoder.bitstream.link(color_out.input)
+            if self.is_isp_color:
+                if self.isp_scale:
+                    color.setIspScale(*self.isp_scale)
+                color.isp.link(color_out.input)
+            else:
+                color.video.link(color_encoder.input)
+                color_encoder.bitstream.link(color_out.input)
 
         if self.is_depth or self.is_stereo_images:
             left = pipeline.create(dai.node.Camera)
@@ -366,7 +374,13 @@ class OakCamera:
                             self.bus.publish("right_im", right_frame)
 
                         if queue_name == "color":
-                            color_frame = packets[-1].getData().tobytes()  # use latest packet
+                            if self.is_isp_color:
+                                cv_frame = packets[-1].getCvFrame()
+                                success, encoded_image = cv2.imencode('*.jpeg', cv_frame)
+                                if success:
+                                    color_frame = encoded_image.tobytes()
+                            else:
+                                color_frame = packets[-1].getData().tobytes()  # use latest packet
                             self.bus.publish("color_seq", [seq_num, timestamp_us])
                             self.bus.publish("color", color_frame)
 
