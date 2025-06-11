@@ -177,6 +177,11 @@ def draw(foreground, pose, scan, poses=[], image=None, bbox=None, callback=None,
                 color = (0, 255, 0)
                 rect = pygame.Rect(x, y, width, height)
                 pygame.draw.rect(image, color, rect, 4)
+                font = pygame.font.SysFont("arial", 60)
+                text_surface = font.render(name[:3], True, color)
+                text_rect = text_surface.get_rect()
+                text_rect.center = rect.center
+                image.blit(text_surface, text_rect)
 
     if callback is not None:
         debug_poly = []
@@ -500,6 +505,7 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
                                  (width, height))
 
     pygame.display.init()
+    pygame.font.init()
     screen = pygame.display.set_mode(WINDOW_SIZE, pygame.RESIZABLE)
 
     # create backgroud
