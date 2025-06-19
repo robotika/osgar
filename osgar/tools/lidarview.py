@@ -165,7 +165,7 @@ def draw(foreground, pose, scan, poses=[], image=None, bbox=None, callback=None,
                 w, h = image.get_size()
                 # stream name
                 image_size = g_log_config['robot']['modules']['oak']['init']['nn_config']['input_size']
-                assert image_size in ['640x352', '640x640'], image_size
+                assert image_size in ['640x352', '640x640', '416x416'], image_size
                 nn_w, nn_h = [int(v) for v in image_size.split('x')]
                 if nn_h == nn_w:
                     # squared model
