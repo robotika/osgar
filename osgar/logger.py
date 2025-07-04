@@ -44,7 +44,8 @@ g_logger = logging.getLogger(__name__)
 MAGIC = b'Pyr\x00'
 
 INFO_STREAM_ID = 0
-ENV_OSGAR_LOGS = 'OSGAR_LOGS'
+ENV_OSGAR_LOGS = 'OSGAR_LOGS'  # default output folder for log files
+ENV_OSGAR_LOGS_PREFIX = 'OSGAR_LOGS_PREFIX'  # default extra prefix of filename
 
 TIMESTAMP_OVERFLOW_STEP = (1 << 32)  # in microseconds resolution
 TIMESTAMP_MASK = TIMESTAMP_OVERFLOW_STEP - 1
@@ -107,7 +108,8 @@ class LogWriter:
         else:
             self.start_time = start_time
         if filename is None:
-            self.filename = prefix + self.start_time.strftime("%y%m%d_%H%M%S.log")
+            env_prefix = os.environ.get(ENV_OSGAR_LOGS_PREFIX, '')
+            self.filename = env_prefix + prefix + self.start_time.strftime("%y%m%d_%H%M%S.log")
         else:
             self.filename = filename
 

@@ -43,6 +43,8 @@ class LoggerStreamingTest(unittest.TestCase):
         ref = os.environ.get('OSGAR_LOGS')
         if ref is None:
             os.environ['OSGAR_LOGS'] = "."
+        if os.environ.get('OSGAR_LOGS_PREFIX'):
+            del os.environ['OSGAR_LOGS_PREFIX']
 
     def test_timedelta_sequence(self):
         parse_timedelta = osgar.logger.timedelta_parser()
@@ -197,6 +199,12 @@ class LoggerStreamingTest(unittest.TestCase):
         with self.assertLogs(level=logging.WARNING):
             with LogWriter(prefix='tmp7', note='test_filename_after2') as log:
                 self.assertTrue(Path(log.filename).name.startswith('tmp7'))
+        os.remove(log.filename)
+
+    def test_environ_prefix(self):
+        os.environ['OSGAR_LOGS_PREFIX'] = 'm03-'
+        with LogWriter(prefix='tmp8', note='test env prefix') as log:
+            self.assertTrue(Path(log.filename).name.startswith('m03-tmp8'))
         os.remove(log.filename)
 
     def test_time_overflow(self):
