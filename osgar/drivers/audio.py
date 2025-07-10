@@ -43,7 +43,7 @@ class Audio(Node):
     """
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('audio_data')
+        bus.register('audio_data:gz')
 
         # --- Configuration with Defaults ---
         self.rate = config.get('rate', 44100)
@@ -86,6 +86,7 @@ class Audio(Node):
         # We run the main loop in a separate thread to avoid blocking
         # the main OSGAR execution thread.
         self.thread = threading.Thread(target=self.run_capture_loop)
+        super().start()  # trigger Node/Thread default start()
         self.thread.start()
 
     def run_capture_loop(self):
