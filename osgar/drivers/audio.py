@@ -1,4 +1,7 @@
 # Gemini 2.5 Pro
+# installation dependencies:
+#  sudo apt-get install portaudio19-dev
+#  pip install pyaudio
 
 # audio.py
 # An OSGAR driver for capturing audio using PyAudio.
