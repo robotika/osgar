@@ -3,7 +3,7 @@
   "robot": {
     "modules": {
       "app": {
-          "driver": "robotem-rovne.terminator:Terminator",
+          "driver": "osgar.terminator:Terminator",
           "in": ["emergency_stop"],
           "out": [],
           "init": {}
