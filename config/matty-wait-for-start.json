@@ -1,0 +1,39 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "robotem-rovne.terminator:Terminator",
+          "in": ["emergency_stop"],
+          "out": [],
+          "init": {}
+      },
+      "platform": {
+        "driver": "osgar.platforms.matty:Matty",
+        "in": ["esp_data"],
+        "out": ["esp_data"],
+        "init": {}
+      },
+      "timer": {
+        "driver": "timer",
+        "in": [],
+        "out": ["tick"],
+        "init": {
+          "sleep": 0.1
+        }
+      },
+      "serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyUSB0", "speed": 115200}
+      }
+    },
+    "links": [
+      ["timer.tick", "platform.tick"],
+      ["platform.esp_data", "serial.raw"],
+      ["serial.raw", "platform.esp_data"],
+      ["platform.emergency_stop", "app.terminate_if_false"]
+    ]
+  }
+}
