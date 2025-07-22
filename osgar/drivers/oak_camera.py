@@ -127,7 +127,7 @@ class OakCamera:
 
         self.is_debug_mode = config.get('debug', False)  # run with debug output level
 
-    def config_oak_nn(self, pipeline, camRgb):
+    def config_oak_nn(self, pipeline, cam, night=False):
         """
         Configure OAK pipeline for processing neural network
         """
@@ -165,13 +165,21 @@ class OakCamera:
 
         nnOut.setStreamName("nn")
 
-        # Properties - NOTE - overwriting defaults from config!
-        camRgb.setPreviewSize(W, H)
+        if night:
+            # for night mono image add extra manipulation node
+            manip = pipeline.create(dai.node.ImageManip)
+            # Set output format to BGR (3 channels)
+            manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
+            manip.initialConfig.setResize(W, H)  # Resize to NN input size
+            cam.preview.link(manip.inputImage)
+        else:
+            # Properties - NOTE - overwriting defaults from config!
+            cam.setPreviewSize(W, H)
 
-        camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-        camRgb.setInterleaved(False)
-        camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-        camRgb.setFps(self.fps)
+            cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+            cam.setInterleaved(False)
+            cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+            cam.setFps(self.fps)
 
         # Network specific settings
         detectionNetwork.setBlobPath(nnPath)
@@ -186,7 +194,10 @@ class OakCamera:
             detectionNetwork.input.setBlocking(False)
 
         # Linking
-        camRgb.preview.link(detectionNetwork.input)
+        if night:
+            manip.out.link(detectionNetwork.input)
+        else:
+            cam.preview.link(detectionNetwork.input)
         detectionNetwork.out.link(nnOut.input)
 
     def start(self):
@@ -318,8 +329,11 @@ class OakCamera:
 
         if self.oak_config_model is not None:
             # configure OAK neural network
-            assert self.is_color, "RGC camera must be enabled!"
-            self.config_oak_nn(pipeline, color)  # note, that "color" is RGB camera
+            if self.is_color:
+                self.config_oak_nn(pipeline, color)  # note, that "color" is RGB camera
+            else:
+                assert self.is_stereo_images, 'If oak.color is not defined then stereo images have to be enabled'
+                self.config_oak_nn(pipeline, left, night=True)  # use left image for detections by default now
             queue_names.append("nn")
 
         if not queue_names:
