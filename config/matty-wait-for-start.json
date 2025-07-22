@@ -6,7 +6,9 @@
           "driver": "osgar.terminator:Terminator",
           "in": ["emergency_stop"],
           "out": [],
-          "init": {}
+          "init": {
+            "change_required": true
+          }
       },
       "platform": {
         "driver": "osgar.platforms.matty:Matty",
