@@ -60,7 +60,8 @@ class Matty(Node):
 
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('esp_data', 'emergency_stop', 'pose2d', 'bumpers_front', 'bumpers_rear', 'gps_serial')
+        bus.register('esp_data', 'emergency_stop', 'pose2d', 'bumpers_front', 'bumpers_rear', 'gps_serial',
+                     'joint_angle')
         self.max_speed = config.get('max_speed', 0.5)
         self.max_steering_deg = config.get('max_steering_deg', 45.0)
         self.pose = 0, 0, 0
@@ -78,7 +79,7 @@ class Matty(Node):
         self.prev_status = None
 
     def parse_odometry(self, data):
-        counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_deg = struct.unpack_from('<BBBBHHhh', data)
+        counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_mdeg = struct.unpack_from('<BBBBHHhh', data)
         enc = struct.unpack_from('<HHHH', data, 12)
         if (status & RobotStatus.ERROR_ENCODER.value) and (status & RobotStatus.ERROR_POWER.value) == 0:
             print(self.time, 'Status ERROR_ENCODER', hex(status))
@@ -106,10 +107,13 @@ class Matty(Node):
             self.send_speed()  # force immediate reaction to change of bumpers state
             if self.verbose:
                 self.debug_array_bumpers.append(self.time.total_seconds())
+
+        # publish joint angle for visualization and full 8D Matty pose computation
+        self.publish('joint_angle', [angle_mdeg])  # array to be compatible with K2 and K3
         if self.verbose:
-            print(self.time, counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_deg, enc)
+            print(self.time, counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_mdeg, enc)
             self.debug_arr.append([self.time.total_seconds(), enc])
-        return speed_mms/1000, math.radians(angle_deg/100)
+        return speed_mms/1000, math.radians(angle_mdeg/100)
 
     def publish_pose2d(self, speed, joint_angle):
         dt = 0.1  # 10Hz - maybe use real-time
