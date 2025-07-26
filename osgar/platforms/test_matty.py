@@ -1,6 +1,6 @@
 import datetime
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 import math
 from datetime import timedelta
 
@@ -100,22 +100,25 @@ class MattyTest(unittest.TestCase):
         bus.reset_mock()
         robot.parse_odometry(data)
         bus.publish.assert_called()
-        self.assertEqual(len(bus.publish.mock_calls), 4)  # 2x bumpers, speed command, emergensy_stop status
-        bus.publish.assert_called_with('esp_data', b'U\x06\x01G\x00\x00\x00\x00\xb2')
+        self.assertEqual(len(bus.publish.mock_calls), 5)  # 2x bumpers, speed command, emergency_stop status, joint_angle
+        bus.publish.assert_called_with('joint_angle', [0])
+        self.assertEqual(bus.publish.mock_calls[-2], call('esp_data', b'U\x06\x01G\x00\x00\x00\x00\xb2'))
         bus.reset_mock()
         robot.parse_odometry(data)
-        bus.publish.assert_not_called()  # same data, no change
+        # same data, no change - only 'joint_angle'
+        bus.publish.assert_called()
+        bus.publish.assert_called_with('joint_angle', [0])
 
         data = b'|I\xb0\x02\\0\xff\xff\x00\x00Y\xff\x00\x00\x00\x00\x00\x00\x00\x00'
         bus.reset_mock()
         robot.parse_odometry(data)
         bus.publish.assert_called()
-        self.assertEqual(len(bus.publish.mock_calls), 1)  # only emergensy_stop status change
-        bus.publish.assert_called_with('emergency_stop', False)
+        self.assertEqual(len(bus.publish.mock_calls), 2)  # only emergency_stop status change + joint_angle
+        self.assertEqual(bus.publish.mock_calls[0], call('emergency_stop', False))
 
         data = b'\x00I1\x02\x0c\x00\xff\xff\x00\x00\xab\x04\x00\x00\x00\x00\x00\x00\x00\x00'
         bus.reset_mock()
         robot.parse_odometry(data)
         bus.publish.assert_called()
-        self.assertEqual(len(bus.publish.mock_calls), 1)  # only emergensy_stop status change
-        bus.publish.assert_called_with('emergency_stop', True)
+        self.assertEqual(len(bus.publish.mock_calls), 2)  # only emergency_stop status change
+        self.assertEqual(bus.publish.mock_calls[0], call('emergency_stop', True))
