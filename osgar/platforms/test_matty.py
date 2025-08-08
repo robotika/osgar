@@ -122,3 +122,14 @@ class MattyTest(unittest.TestCase):
         bus.publish.assert_called()
         self.assertEqual(len(bus.publish.mock_calls), 2)  # only emergency_stop status change
         self.assertEqual(bus.publish.mock_calls[0], call('emergency_stop', True))
+
+    def test_ver8_with_imu(self):
+        bus = MagicMock()
+        robot = Matty(bus=bus, config={})
+        bus.reset_mock()
+        robot.process_esp_packet(bytes.fromhex('01490002982b0000fcff9e00cbff47ff65ff4fff94fe3d00a3d5'))
+        self.assertAlmostEqual(math.degrees(robot.roll), -3.64)
+        self.assertAlmostEqual(math.degrees(robot.pitch), 0.61)
+        self.assertAlmostEqual(math.degrees(robot.yaw), -108.45)
+        bus.publish.assert_called()
+        self.assertEqual(bus.publish.mock_calls[0], call('rpy', [-364, 61, -10845]))

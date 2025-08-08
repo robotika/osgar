@@ -61,10 +61,11 @@ class Matty(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('esp_data', 'emergency_stop', 'pose2d', 'bumpers_front', 'bumpers_rear', 'gps_serial',
-                     'joint_angle')
+                     'joint_angle', 'rpy')
         self.max_speed = config.get('max_speed', 0.5)
         self.max_steering_deg = config.get('max_steering_deg', 45.0)
         self.pose = 0, 0, 0
+        self.roll, self.pitch, self.yaw = None, None, None  # available since ver8
 
         self.desired_speed = 0  # m/s
         self.desired_steering_angle_deg = 0.0  # degrees
@@ -81,6 +82,11 @@ class Matty(Node):
     def parse_odometry(self, data):
         counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_cdeg = struct.unpack_from('<BBBBHHhh', data)
         enc = struct.unpack_from('<HHHH', data, 12)
+        if len(data) >= 26:
+            # angles in 1/100th
+            roll, pitch, yaw = struct.unpack_from('<hhh', data, 20)
+            self.publish('rpy', [roll, pitch, yaw])
+            self.roll, self.pitch, self.yaw = [math.radians(x/100) for x in [roll, pitch, yaw]]
         if (status & RobotStatus.ERROR_ENCODER.value) and (status & RobotStatus.ERROR_POWER.value) == 0:
             print(self.time, 'Status ERROR_ENCODER', hex(status))
         if self.prev_status != status:
@@ -178,7 +184,7 @@ class Matty(Node):
             # ACK/NAACK
             if packet[1] != ord('A'):  # packet[0] != self.counter ... ignored for now
                 logging.warning(f'Unexpected message: {(packet, packet.hex(), self.counter)}')
-        elif len(packet) == 20:
+        elif len(packet) in [20, 26]:  # legacy version and version 8
             assert packet[1] == ord('I'), packet[1]
             speed, joint_angle = self.parse_odometry(packet)
             self.publish_pose2d(speed, joint_angle)
