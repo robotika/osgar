@@ -6,5 +6,5 @@ requests==2.28.2
 pyzmq==25.0.2
 pyrealsense2==2.53.1.4623
 numpy==1.22.0
-protobuf==3.20.0
+protobuf==3.20.2
 Shapely==2.0.1
