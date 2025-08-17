@@ -12,6 +12,7 @@ from datetime import timedelta
 from enum import Enum
 
 from osgar.node import Node
+from osgar.lib import quaternion
 
 
 FRONT_REAR_AXIS_DISTANCE = 0.32  # meters, distance for straight motion
@@ -61,11 +62,14 @@ class Matty(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('esp_data', 'emergency_stop', 'pose2d', 'bumpers_front', 'bumpers_rear', 'gps_serial',
-                     'joint_angle', 'rpy')
+                     'joint_angle',  # list of single element - joint angle in 1/100th degrees
+                     'rpy',  # Roll, Pitch, Yaw - debug output 1:1 to ESP32 (0=north, clockwise)
+                     'rotation',  # OSGAR Yaw, Pitch, Roll (0=east, anticlockwise)
+                     'orientation',  # Quaternion
+                     )
         self.max_speed = config.get('max_speed', 0.5)
         self.max_steering_deg = config.get('max_steering_deg', 45.0)
         self.pose = 0, 0, 0
-        self.roll, self.pitch, self.yaw = None, None, None  # available since ver8
 
         self.desired_speed = 0  # m/s
         self.desired_steering_angle_deg = 0.0  # degrees
@@ -87,7 +91,11 @@ class Matty(Node):
             # angles in 1/100th
             roll, pitch, yaw = struct.unpack_from('<hhh', data, 20)
             self.publish('rpy', [roll, pitch, yaw])
-            self.roll, self.pitch, self.yaw = [math.radians(x/100) for x in [roll, pitch, yaw]]
+            self.publish('rotation', [9000 - yaw, -pitch, roll])  # TODO review rotation matrix
+            yaw_rad, pitch_rad, roll_rad = [math.radians(x/100) for x in [9000 - yaw, -pitch, roll]]
+            quat = quaternion.euler_to_quaternion(yaw_rad, pitch_rad, roll_rad)
+            self.publish('orientation', quat)
+
         if (status & RobotStatus.ERROR_ENCODER.value) and (status & RobotStatus.ERROR_POWER.value) == 0:
             print(self.time, 'Status ERROR_ENCODER', hex(status))
         if self.prev_status != status:

@@ -128,8 +128,18 @@ class MattyTest(unittest.TestCase):
         robot = Matty(bus=bus, config={})
         bus.reset_mock()
         robot.process_esp_packet(bytes.fromhex('01490002982b0000fcff9e00cbff47ff65ff4fff94fe3d00a3d5'))
-        self.assertAlmostEqual(math.degrees(robot.roll), -3.64)
-        self.assertAlmostEqual(math.degrees(robot.pitch), 0.61)
-        self.assertAlmostEqual(math.degrees(robot.yaw), -108.45)
         bus.publish.assert_called()
         self.assertEqual(bus.publish.mock_calls[0], call('rpy', [-364, 61, -10845]))
+
+    def test_east_direction(self):
+        # well, almost east
+        data = bytes.fromhex('d4498002e02f0a0000004600cb2f7e30842fac2ed0007d01581c')
+        bus = MagicMock()
+        robot = Matty(bus=bus, config={})
+        bus.reset_mock()
+        robot.parse_odometry(data)
+        bus.publish.assert_called()
+        self.assertEqual(bus.publish.mock_calls[0], call('rpy', [208, 381, 7256]))
+        self.assertEqual(bus.publish.mock_calls[1], call('rotation', [9000-7256, -381, 208]))
+        self.assertEqual(bus.publish.mock_calls[2], call('orientation',
+                [0.022969623697164748, -0.030102545599598646, 0.1520934996010254, 0.9876405219080208]))
