@@ -12,6 +12,7 @@ from datetime import timedelta
 from enum import Enum
 
 from osgar.node import Node
+from osgar.lib import quaternion
 
 
 FRONT_REAR_AXIS_DISTANCE = 0.32  # meters, distance for straight motion
@@ -61,7 +62,11 @@ class Matty(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('esp_data', 'emergency_stop', 'pose2d', 'bumpers_front', 'bumpers_rear', 'gps_serial',
-                     'joint_angle')
+                     'joint_angle',  # list of single element - joint angle in 1/100th degrees
+                     'rpy',  # Roll, Pitch, Yaw - debug output 1:1 to ESP32 (0=north, clockwise)
+                     'rotation',  # OSGAR Yaw, Pitch, Roll (0=east, anticlockwise)
+                     'orientation',  # Quaternion
+                     )
         self.max_speed = config.get('max_speed', 0.5)
         self.max_steering_deg = config.get('max_steering_deg', 45.0)
         self.pose = 0, 0, 0
@@ -81,6 +86,16 @@ class Matty(Node):
     def parse_odometry(self, data):
         counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_cdeg = struct.unpack_from('<BBBBHHhh', data)
         enc = struct.unpack_from('<HHHH', data, 12)
+        roll, pitch, yaw = None, None, None
+        if len(data) >= 26:
+            # angles in 1/100th
+            roll, pitch, yaw = struct.unpack_from('<hhh', data, 20)
+            self.publish('rpy', [roll, pitch, yaw])
+            self.publish('rotation', [9000 - yaw, -pitch, roll])  # TODO review rotation matrix
+            yaw_rad, pitch_rad, roll_rad = [math.radians(x/100) for x in [9000 - yaw, -pitch, roll]]
+            quat = quaternion.euler_to_quaternion(yaw_rad, pitch_rad, roll_rad)
+            self.publish('orientation', quat)
+
         if (status & RobotStatus.ERROR_ENCODER.value) and (status & RobotStatus.ERROR_POWER.value) == 0:
             print(self.time, 'Status ERROR_ENCODER', hex(status))
         if self.prev_status != status:
@@ -112,7 +127,7 @@ class Matty(Node):
         self.publish('joint_angle', [angle_cdeg])  # array to be compatible with K2 and K3
         if self.verbose:
             print(self.time, counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_cdeg, enc)
-            self.debug_arr.append([self.time.total_seconds(), enc])
+            self.debug_arr.append([self.time.total_seconds(), enc, (roll, pitch, yaw)])
         return speed_mms/1000, math.radians(angle_cdeg/100)
 
     def publish_pose2d(self, speed, joint_angle):
@@ -178,7 +193,7 @@ class Matty(Node):
             # ACK/NAACK
             if packet[1] != ord('A'):  # packet[0] != self.counter ... ignored for now
                 logging.warning(f'Unexpected message: {(packet, packet.hex(), self.counter)}')
-        elif len(packet) == 20:
+        elif len(packet) in [20, 26]:  # legacy version and version 8
             assert packet[1] == ord('I'), packet[1]
             speed, joint_angle = self.parse_odometry(packet)
             self.publish_pose2d(speed, joint_angle)
@@ -231,7 +246,7 @@ class Matty(Node):
                                                   max(-self.max_steering_deg, self.desired_steering_angle_deg))
         self.send_speed()  # directly apply new speeds, do not wait for next update cycle
 
-    def draw(self):
+    def draw_enc(self):
         import matplotlib.pyplot as plt
 
         for selection in range(4):
@@ -248,3 +263,19 @@ class Matty(Node):
         plt.ylabel('enc')
         plt.legend()
         plt.show()
+
+    def draw_imu(self):
+        import matplotlib.pyplot as plt
+
+        for selection, label in enumerate(['roll', 'pitch', 'yaw']):
+            t = [a[0] for a in self.debug_arr]
+            x = [a[2][selection] for a in self.debug_arr]
+            line = plt.plot(t, x, '-o', linewidth=2, label=label)
+
+        plt.xlabel('time (s)')
+        plt.ylabel('IMU 100*deg')
+        plt.legend()
+        plt.show()
+
+    def draw(self):
+        self.draw_imu()  # TODO port optional draw param to OSGAR
