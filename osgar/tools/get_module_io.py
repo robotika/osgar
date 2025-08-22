@@ -11,13 +11,23 @@ def get_module_io(module_name):
     inputs = [o[3:] for o in dir(klass) if o.startswith('on_')]
 
     bus = MagicMock()
-    inst = klass(bus=bus, config={})
+    config = MagicMock()
+    try:
+        klass(bus=bus, config={})
+    except KeyError:
+        pass  # due to missing required config parameters
 
     outputs = [c.args[0] for c in bus.mock_calls]
     return inputs, outputs
 
 
 if __name__ == '__main__':
-    import sys
-    name = sys.argv[1]
-    print(name, get_module_io(name))
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--name', help='name of the Node class like "doctor:Doctor"', required=True)
+    args = parser.parse_args()
+
+    print('Module:', args.name)
+    i,o = get_module_io(args.name)
+    print('Inputs:', i)
+    print('Outputs:', o)
