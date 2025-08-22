@@ -2,6 +2,7 @@
 Get OSGAR Node module I/O names
 """
 from unittest.mock import MagicMock
+import itertools
 
 from osgar.lib.config import get_class_by_name
 
@@ -17,7 +18,7 @@ def get_module_io(module_name):
     except KeyError:
         pass  # due to missing required config parameters
 
-    outputs = [c.args[0] for c in bus.mock_calls]
+    outputs = list(itertools.chain.from_iterable([c.args for c in bus.mock_calls]))
     return inputs, outputs
 
 
