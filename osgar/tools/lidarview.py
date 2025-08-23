@@ -250,9 +250,9 @@ def get_image(data):
         image = pygame.image.frombuffer(im_color.tobytes(), im_color.shape[1::-1], "RGB")
         g_depth = data
     elif isinstance(data, tuple):
-        img_data, depth_data = data
+        img_data, depth_data, dist_scale = data
         image = pygame.image.load(io.BytesIO(img_data), 'JPG').convert()
-        g_depth = decompress_depth(depth_data)
+        g_depth = decompress_depth(depth_data)*dist_scale
     elif isinstance(data, list):
         # image stereo artefact localization
         # expects localized pair of images [camera_name, [robot_pose, camera_pose, image], [robot_pose, camera_pose, image]]
@@ -461,8 +461,14 @@ class Framer:
             elif stream_id == self.camera2_id:
                 self.image2, _ = get_image(deserialize(data))
             elif stream_id == self.rgbd_id:
-                _, _, img_data, depth_data = deserialize(data)
-                self.image, self.image2 = get_image((img_data, depth_data))
+                rgbd_data = deserialize(data)
+                if isinstance(rgbd_data, dict):
+                    img_data, depth_data = rgbd_data["data"]
+                    dist_scale = 0.001  # TODO read from bundle stream ?
+                    self.image, self.image2 = get_image((img_data, depth_data, dist_scale))
+                else:
+                    _, _, img_data, depth_data = rgbd_data
+                    self.image, self.image2 = get_image((img_data, depth_data, 1))
                 if self.lidar_id is None:
                     keyframe = self.keyframe
                     self.keyframe = False
