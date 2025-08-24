@@ -146,8 +146,10 @@ class LogWriter:
         return dt
 
     def close(self):
-        self.f.close()
-        self.f = None
+        if self.f is not None:
+            # allow closing multiple times (standard run or suicidal termination)
+            self.f.close()
+            self.f = None
 
 
     # context manager functions

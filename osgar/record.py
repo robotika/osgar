@@ -48,6 +48,7 @@ class Recorder:
                 g_logger.error(f'thread {repr(t.name)} still running!')
                 g_logger.error(f'    class: {t.__class__.__module__}.{t.__class__.__name__}')
                 g_logger.error(f'    target: {t._target}')
+        self.bus.logger.close()  # save not flushed data
         if self.sigint_received:
             g_logger.info("committing suicide by SIGINT")
             signal.signal(signal.SIGINT, signal.SIG_DFL)
