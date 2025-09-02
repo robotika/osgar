@@ -26,7 +26,7 @@ manip.initialConfig.setFrameType(dai.ImgFrame.Type.RGB888p)
 
 # Neural Network
 nn = pipeline.create(dai.node.NeuralNetwork)
-nn.setBlobPath("yolo11n-pose.blob")
+nn.setBlobPath("yolo11s-pose.blob")
 
 # Outputs
 nn_out = pipeline.create(dai.node.XLinkOut)
