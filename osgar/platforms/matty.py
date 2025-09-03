@@ -246,6 +246,10 @@ class Matty(Node):
                                                   max(-self.max_steering_deg, self.desired_steering_angle_deg))
         self.send_speed()  # directly apply new speeds, do not wait for next update cycle
 
+    def on_set_leds(self, data):
+        assert len(data) == 4, data  # index, red, green, blue
+        self.send_esp(b'D' + bytes(data))
+
     def draw_enc(self):
         import matplotlib.pyplot as plt
 

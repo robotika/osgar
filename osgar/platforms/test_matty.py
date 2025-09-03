@@ -143,3 +143,11 @@ class MattyTest(unittest.TestCase):
         self.assertEqual(bus.publish.mock_calls[1], call('rotation', [9000-7256, -381, 208]))
         self.assertEqual(bus.publish.mock_calls[2], call('orientation',
                 [0.022969623697164748, -0.030102545599598646, 0.1520934996010254, 0.9876405219080208]))
+
+    def test_set_leds(self):
+        bus = MagicMock()
+        robot = Matty(bus=bus, config={})
+        bus.reset_mock()
+        robot.on_set_leds([1, 255, 0, 0])
+        bus.publish.assert_called()
+        self.assertEqual(bus.publish.mock_calls[0], call('esp_data', b'U\x06\x01D\x01\xff\x00\x00\xb5'))
