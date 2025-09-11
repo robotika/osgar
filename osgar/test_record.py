@@ -159,7 +159,7 @@ class RecorderTest(unittest.TestCase):
             'version': 2,
             'robot': {
                 'env': {
-                    'OSGAR_LOG_PREFIX': None
+                    'OSGAR_LOGS_PREFIX': None
                 },
                 'modules': {
                     "app": {
