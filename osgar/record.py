@@ -22,9 +22,14 @@ class Recorder:
         self.modules = {}
 
         self.bus = Bus(logger)
+        env = config.get('env')
         for module_name, module_config in config['modules'].items():
             klass = get_class_by_name(module_config['driver'])
-            self.modules[module_name] = klass(module_config.get('init', {}), bus=self.bus.handle(module_name))
+            module_config_init = module_config.get('init', {})
+            if env is not None:
+                assert 'env' not in module_config_init, module_config_init
+                module_config_init['env'] = env.copy()
+            self.modules[module_name] = klass(module_config_init, bus=self.bus.handle(module_name))
 
         for sender, receiver in config['links']:
             self.bus.connect(sender, receiver, self.modules)
@@ -66,6 +71,10 @@ class Recorder:
 
 def record(config, log_prefix, log_filename=None, duration_sec=None):
     with LogWriter(prefix=log_prefix, filename=log_filename, note=str(sys.argv)) as log:
+        # fill system variables
+        if 'env' in config['robot']:
+            for k in list(config['robot']['env'].keys()):
+                config['robot']['env'][k] = os.getenv(k)
         log.write(0, bytes(str(config), 'ascii'))
         g_logger.info(log.filename)
         with Recorder(config=config['robot'], logger=log) as recorder:
