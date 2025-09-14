@@ -9,12 +9,15 @@ import subprocess
 import tempfile
 import sys
 
-from osgar.record import Recorder
+from osgar.record import Recorder, record
 
 
 class Sleeper:
 
     def __init__(self, cfg, bus):
+        # dedicated part for test of environment variables
+        if cfg.get('assert_env'):
+            assert 'env' in cfg, cfg
         self.e = threading.Event()
 
     def start(self):
@@ -131,6 +134,48 @@ class RecorderTest(unittest.TestCase):
                 self.assertEqual(len(stdout), 0, stdout)
                 self.assertEqual(len(stderr.splitlines()), 1, stderr)
             os.unlink(log_filename)
+
+    def test_config_env(self):
+        config = {
+            'version': 2,
+            'robot': {
+                'env': {
+                    'OSGAR_LOG_PREFIX': None
+                },
+                'modules': {
+                    "app": {
+                        "driver": "osgar.test_record:Sleeper",
+                        "init": {
+                            'assert_env': True
+                        }
+                    },
+                }, 'links':[]
+            }
+        }
+        record(config, 'log-env-', duration_sec=0.1)
+
+    def test_config_env_assert(self):
+        config = {
+            'version': 2,
+            'robot': {
+                'env': {
+                    'OSGAR_LOGS_PREFIX': None
+                },
+                'modules': {
+                    "app": {
+                        "driver": "osgar.test_record:Sleeper",
+                        "init": {
+                            'assert_env': True,
+                            'env': 'This will collide -> intentionally assert'
+                        }
+                    },
+                }, 'links':[]
+            }
+        }
+        with self.assertRaises(AssertionError) as err:
+            record(config, 'log-env2-', duration_sec=0.1)
+        self.assertEqual(str(err.exception),
+                         "{'assert_env': True, 'env': 'This will collide -> intentionally assert'}")
 
 
 # vim: expandtab sw=4 ts=4
