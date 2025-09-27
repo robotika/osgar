@@ -204,7 +204,9 @@ class OakCamera:
 
     def start(self):
         if self.sleep_on_start_sec is not None:
+            print(f'sleeping for {self.sleep_on_start_sec}s')
             self.bus.sleep(self.sleep_on_start_sec)
+            print(f'END of sleep, starting ...')
         self.input_thread.start()
 
     def join(self, timeout=None):
