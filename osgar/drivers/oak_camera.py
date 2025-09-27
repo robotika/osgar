@@ -126,6 +126,8 @@ class OakCamera:
         self.labels = config.get("mappings", {}).get("labels", [])
 
         self.is_debug_mode = config.get('debug', False)  # run with debug output level
+        self.sleep_on_start_sec = config.get('sleep_on_start_sec')
+        self.verbose_detections = config.get('verbose_detections', True)
 
     def config_oak_nn(self, pipeline, cam, night=False):
         """
@@ -201,6 +203,8 @@ class OakCamera:
         detectionNetwork.out.link(nnOut.input)
 
     def start(self):
+        if self.sleep_on_start_sec is not None:
+            self.bus.sleep(self.sleep_on_start_sec)
         self.input_thread.start()
 
     def join(self, timeout=None):
@@ -414,7 +418,8 @@ class OakCamera:
                                 bbox_list = []
                                 for detection in detections:
                                     bbox = (detection.xmin, detection.ymin, detection.xmax, detection.ymax)
-                                    print(self.labels[detection.label], detection.confidence, bbox)
+                                    if self.verbose_detections:
+                                        print(self.labels[detection.label], detection.confidence, bbox)
                                     bbox_list.append([self.labels[detection.label], detection.confidence, list(bbox)])
                                 self.bus.publish("detections_seq", [seq_num, timestamp_us])
                                 self.bus.publish('detections', bbox_list)
