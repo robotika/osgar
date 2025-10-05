@@ -11,7 +11,7 @@ nn_input_w, nn_input_h = 640, 640
 
 # Color Camera
 cam_rgb = pipeline.create(dai.node.ColorCamera)
-cam_rgb.setPreviewSize(cam_preview_w, cam_preview_h)
+cam_rgb.setPreviewSize(cam_preview_w, cam_preview_h)  # vis. window size (cut the black bars at the top and the bottom)
 cam_rgb.setInterleaved(False)
 cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
 cam_rgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
@@ -60,6 +60,7 @@ with dai.Device(pipeline) as device:
         NMS_THRESH = 0.5
         NUM_KEYPOINTS = 17
 
+        # Post-processing of detections
         try:
             detections = detections_flat.reshape((56, 8400)).T
 
@@ -120,9 +121,9 @@ with dai.Device(pipeline) as device:
                     px_display = (kp_x_nn[conf_mask]).astype(int)
                     py_display = (kp_y_nn[conf_mask] - pad_y).astype(int)
 
-                    # 5. This loop is now only for drawing the filtered keypoints
+                    # 5. Loop only for drawing the filtered keypoints
                     for x, y in zip(px_display, py_display):
-                        # Optional: A final check to ensure points are within frame bounds
+                        # A final check to ensure points are within frame bounds
                         if 0 <= x < cam_preview_w and 0 <= y < cam_preview_h:
                             cv2.circle(frame, (x, y), 5, (0, 0, 255), -1)
 
