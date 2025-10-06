@@ -49,6 +49,10 @@ def replay(args, application=None):
         for i, name in sorted(outputs.items()):
             print(f" {i:2d} {name}")
 
+    if args.ignore is not None:
+        for name in args.ignore:
+            assert name in outputs.values(), (name, outputs)
+
     duration = args.duration
     if args.force:
         reader = LogReader(args.logfile, only_stream_id=inputs.keys(), clip_end_time_sec=duration)
