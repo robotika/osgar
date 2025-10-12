@@ -225,13 +225,14 @@ g_depth = None
 g_danger_binary_image = False
 
 def depth_map(depth):
+    mask = depth == 0
     MAX_RANGE = 10.0
     depth = (255 * depth / MAX_RANGE).astype(np.uint8)
-    return pygame.image.frombuffer(
-            cv2.cvtColor(
+    img = cv2.cvtColor(
                 cv2.applyColorMap(depth, cv2.COLORMAP_JET),
-                cv2.COLOR_BGR2RGB).tobytes(),
-            depth.shape[1::-1], "RGB")
+                cv2.COLOR_BGR2RGB)
+    img[mask, :] = 0
+    return pygame.image.frombuffer(img.tobytes(), depth.shape[1::-1], "RGB")
 
 def get_image(data):
     """Extract JPEG or RGBD depth image"""
@@ -243,8 +244,10 @@ def get_image(data):
             img = np.array(depth2danger(data / 1000, g_depth_params) * 255, dtype=np.uint8)
             im_color = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
         else:
+            mask = data == 0
             img = np.array(np.minimum(255*40, data)/40, dtype=np.uint8)
             im_color = cv2.applyColorMap(img, cv2.COLORMAP_JET)
+            im_color[mask] = 0
 
         # https://stackoverflow.com/questions/19306211/opencv-cv2-image-to-pygame-image
         image = pygame.image.frombuffer(im_color.tobytes(), im_color.shape[1::-1], "RGB")

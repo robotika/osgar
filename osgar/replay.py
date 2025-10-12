@@ -49,6 +49,10 @@ def replay(args, application=None):
         for i, name in sorted(outputs.items()):
             print(f" {i:2d} {name}")
 
+    if args.ignore is not None:
+        for name in args.ignore:
+            assert name in outputs.values(), (name, outputs)
+
     duration = args.duration
     if args.force:
         reader = LogReader(args.logfile, only_stream_id=inputs.keys(), clip_end_time_sec=duration)
@@ -60,7 +64,7 @@ def replay(args, application=None):
     else:
         streams = list(inputs.keys()) + list(outputs.keys())
         reader = LogReader(args.logfile, only_stream_id=streams, clip_end_time_sec=duration)
-        bus = LogBusHandler(reader, inputs, outputs)
+        bus = LogBusHandler(reader, inputs, outputs, ignore_streams=args.ignore)
 
     driver_name = module_config['driver']
     module_class = get_class_by_name(driver_name)
@@ -91,6 +95,7 @@ def main():
     parser.add_argument('--debug', help="print debug info about I/O streams", action='store_true')
     parser.add_argument('--duration', help="limit replay to given time", type=float)
     parser.add_argument('--output', help="optional output for force replay")
+    parser.add_argument('--ignore', nargs='+', help="do not assert particular stream(s) output")
     args = parser.parse_args()
 
     if args.module is None:

@@ -145,10 +145,11 @@ class _BusHandler:
 
 
 class LogBusHandler:
-    def __init__(self, log, inputs, outputs):
+    def __init__(self, log, inputs, outputs, ignore_streams=None):
         self.reader = log
         self.inputs = inputs
         self.outputs = outputs
+        self.ignore_streams = ignore_streams
         self.buffer_queue = deque()
         self.max_delay = timedelta()
         self.max_delay_timestamp = timedelta()
@@ -204,7 +205,8 @@ class LogBusHandler:
             if delay > ASSERT_QUEUE_DELAY:
                 print(dt, "maximum delay overshot:", delay)
         ref_data = deserialize(bytes_data)
-        assert almost_equal(data, ref_data), (data, ref_data, dt)
+        if self.ignore_streams is None or channel not in self.ignore_streams:
+            assert almost_equal(data, ref_data), (data, ref_data, dt)
         return dt
 
     def sleep(self, secs):
