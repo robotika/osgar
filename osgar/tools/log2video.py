@@ -69,7 +69,7 @@ def create_video(logfile, stream, outfile, add_time=False,
         dual_cam_id = None
     if audio is not None:
         assert start_time_sec == 0 and end_time_sec is None, (start_time_sec, end_time_sec)  # clipping is not supported
-        assert fps is None  # FPS is currently supported with audio
+        assert fps is None  # FPS is currently not supported with audio
         return ffmpeg_video_processing(logfile, stream, audio, outfile)
     with LogReader(logfile, only_stream_id=only_stream) as log:
         writer = None
