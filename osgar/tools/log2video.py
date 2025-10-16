@@ -55,7 +55,7 @@ def ffmpeg_video_processing(logfile, stream, audio, outfile):
 
 
 def create_video(logfile, stream, outfile, add_time=False,
-                 start_time_sec=0, end_time_sec=None, fps=25,
+                 start_time_sec=0, end_time_sec=None, fps=None,
                  flip=False, camera2=None, audio=None):
     if outfile is None:
         outfile = str(pathlib.Path(logfile).with_suffix(".mp4"))
@@ -68,6 +68,8 @@ def create_video(logfile, stream, outfile, add_time=False,
     else:
         dual_cam_id = None
     if audio is not None:
+        assert start_time_sec == 0 and end_time_sec is None, (start_time_sec, end_time_sec)  # clipping is not supported
+        assert fps is None  # FPS is currently supported with audio
         return ffmpeg_video_processing(logfile, stream, audio, outfile)
     with LogReader(logfile, only_stream_id=only_stream) as log:
         writer = None
@@ -130,7 +132,7 @@ def main():
                         type=float, default=0.0)
     parser.add_argument('--end-time-sec', '-e', help='cut video at given time (sec)',
                         type=float, default=None)
-    parser.add_argument('--fps', help='frames per second', type=int, default=25)
+    parser.add_argument('--fps', help='frames per second', type=int)
     parser.add_argument('--flip', help='horizontal flip', action='store_true')
     args = parser.parse_args()
 
