@@ -110,8 +110,13 @@ class OakCamera:
         assert median_filter_value in ["KERNEL_7x7", "KERNEL_5x5", "KERNEL_3x3", "MEDIAN_OFF"], median_filter_value
         self.median_filter = getattr(dai.MedianFilter, median_filter_value)
 
-        stereo_mode_value = config.get("stereo_mode", "HIGH_DENSITY")
-        assert stereo_mode_value in ["HIGH_DENSITY", "HIGH_ACCURACY"], stereo_mode_value
+        stereo_mode_value = config.get("stereo_mode", 'DEFAULT')
+        # backward compatibility with v2
+        if stereo_mode_value == 'HIGH_DENSITY':
+            stereo_mode_value = 'FAST_DENSITY'
+        elif stereo_mode_value == 'HIGH_ACCURACY':
+            stereo_mode_value = 'FAST_ACCURACY'
+        assert stereo_mode_value in ['DEFAULT', 'FACE', 'FAST_ACCURACY', 'FAST_DENSITY', 'HIGH_DETAIL', 'ROBOTICS'], stereo_mode_value
         self.stereo_mode = getattr(dai.node.StereoDepth.PresetMode, stereo_mode_value)
 
         self.alignment = config.get("color_depth_alignment", False)
