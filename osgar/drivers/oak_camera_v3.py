@@ -49,9 +49,15 @@ class OakCamera:
 
         color_resolution_value = config.get("color_resolution", "THE_1080_P")
         self.color_resolution = g_resolution_dic[color_resolution_value]
+        self.mono_resolution = config.get("mono_resolution", (640, 400))
+        if isinstance(self.mono_resolution, str):
+            assert self.mono_resolution in g_resolution_dic, self.mono_resolution
+            self.mono_resolution = g_resolution_dic[self.mono_resolution]
 
         self.video_encoder = get_video_encoder(config.get('video_encoder', 'mjpeg'))
         self.video_encoder_h264_bitrate = config.get('h264_bitrate', 0)  # 0 = automatic
+
+        self.is_depth = config.get('is_depth', False)
 
         self.sleep_on_start_sec = config.get('sleep_on_start_sec')
         self.verbose_detections = config.get('verbose_detections', True)
@@ -97,10 +103,29 @@ class OakCamera:
             saver = pipeline.create(VideoPublisher).build(encoded.out)
             saver.bus = self.bus
 
+            if self.is_depth:
+                mono_left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
+                mono_right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
+                stereo = pipeline.create(dai.node.StereoDepth)
+                mono_left_out = mono_left.requestOutput(self.mono_resolution, fps=self.fps)
+                mono_right_out = mono_right.requestOutput(self.mono_resolution, fps=self.fps)
+                mono_left_out.link(stereo.left)
+                mono_right_out.link(stereo.right)
+                depth_queue = stereo.depth.createOutputQueue()
+
             # Connect to device and start pipeline
             pipeline.start()
             while pipeline.isRunning() and self.bus.is_alive():
-                self.bus.sleep(0.1)
+                if self.is_depth:
+                    depth_frame = depth_queue.get()
+                    # TODO refactor, as this bit is the same as for "color_seq"
+                    seq_num = depth_frame.getSequenceNum()  # for sync of various outputs
+                    dt = depth_frame.getTimestamp()  # datetime.timedelta
+                    timestamp_us = ((dt.days * 24 * 3600 + dt.seconds) * 1000000 + dt.microseconds)
+                    self.bus.publish("depth_seq", [seq_num, timestamp_us])
+                    self.bus.publish("depth", depth_frame.getCvFrame())
+                else:
+                    self.bus.sleep(0.1)
 
     def request_stop(self):
         self.bus.shutdown()
