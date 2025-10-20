@@ -64,6 +64,10 @@ class OakCamera:
                 return self
 
             def process(self, frame):
+                seq_num = frame.getSequenceNum()  # for sync of various outputs
+                dt = frame.getTimestamp()  # datetime.timedelta
+                timestamp_us = ((dt.days * 24 * 3600 + dt.seconds) * 1000000 + dt.microseconds)
+                self.bus.publish("color_seq", [seq_num, timestamp_us])
                 self.bus.publish("color", frame.getData().tobytes())
 
 
