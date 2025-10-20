@@ -10,7 +10,18 @@ import depthai as dai
 import numpy as np
 import cv2
 
-# this function is 1:1 to ver2
+# ----------- oak_camera_v2.py copy & paste ----------------
+g_resolution_dic = {
+    "THE_400_P": (640, 400),
+    "THE_480_P": (640, 480),
+    "THE_720_P": (1280, 720),
+    "THE_800_P": (1280, 800),
+    "THE_1080_P": (1920, 1080),
+    "THE_4_K": (3840, 2160),
+    "THE_12_MP": (4000, 3000),
+    "THE_13_MP": (4160, 3120)
+}
+
 def get_video_encoder(name):
     # https://docs.luxonis.com/projects/api/en/latest/components/nodes/video_encoder/
     if name == 'h264':
@@ -21,7 +32,7 @@ def get_video_encoder(name):
         return dai.VideoEncoderProperties.Profile.MJPEG
     else:
         assert 0, f'"{name}" is not supported'
-
+# ----------- END OF oak_camera_v2.py copy & paste ----------------
 
 class OakCamera:
     def __init__(self, config, bus):
@@ -35,6 +46,9 @@ class OakCamera:
                           'depth_seq', 'color_seq', 'detections_seq', 'left_im_seq', 'right_im_seq',
                           'nn_mask:gz')
         self.fps = config.get('fps', 10)
+
+        color_resolution_value = config.get("color_resolution", "THE_1080_P")
+        self.color_resolution = g_resolution_dic[color_resolution_value]
 
         self.video_encoder = get_video_encoder(config.get('video_encoder', 'mjpeg'))
         self.video_encoder_h264_bitrate = config.get('h264_bitrate', 0)  # 0 = automatic
@@ -76,7 +90,7 @@ class OakCamera:
             cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
 
             # should frameRate = fps?? should this be limited on input?
-            output = cam_rgb.requestOutput((1920, 1440), type=dai.ImgFrame.Type.NV12, fps=self.fps)
+            output = cam_rgb.requestOutput(self.color_resolution, type=dai.ImgFrame.Type.NV12, fps=self.fps)
             encoded = pipeline.create(dai.node.VideoEncoder).build(output,
                                                                    frameRate=self.fps,
                                                                    profile=self.video_encoder)
