@@ -44,7 +44,8 @@ class OakCamera:
                           'color', 'orientation_list', 'detections', 'left_im', 'right_im',
                           # *_seq streams are needed for output sync amd they are published BEFORE payload data
                           'depth_seq', 'color_seq', 'detections_seq', 'left_im_seq', 'right_im_seq',
-                          'nn_mask:gz')
+                          'nn_mask:gz',
+                          'pose3d')
         self.fps = config.get('fps', 10)
 
         color_resolution_value = config.get("color_resolution", "THE_1080_P")
@@ -113,6 +114,19 @@ class OakCamera:
                 mono_right_out.link(stereo.right)
                 depth_queue = stereo.depth.createOutputQueue()
 
+            # copy from basalt_vio.py
+            imu = pipeline.create(dai.node.IMU)
+            odom = pipeline.create(dai.node.BasaltVIO)
+
+            imu.enableIMUSensor([dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW], 200)
+            imu.setBatchReportThreshold(1)
+            imu.setMaxBatchReports(10)
+
+            mono_left_out.link(odom.left)
+            mono_right_out.link(odom.right)
+            imu.out.link(odom.imu)
+            odom_queue = odom.transform.createOutputQueue()
+
             # Connect to device and start pipeline
             pipeline.start()
             while pipeline.isRunning() and self.bus.is_alive():
@@ -124,6 +138,11 @@ class OakCamera:
                     timestamp_us = ((dt.days * 24 * 3600 + dt.seconds) * 1000000 + dt.microseconds)
                     self.bus.publish("depth_seq", [seq_num, timestamp_us])
                     self.bus.publish("depth", depth_frame.getCvFrame())
+
+                    odom_frame = odom_queue.get()
+                    t = odom_frame.getTranslation()
+                    q = odom_frame.getQuaternion()
+                    self.bus.publish("pose3d", [[t.x, t.y, t.z], [q.qx, q.qy, q.qz, q.qw]])
                 else:
                     self.bus.sleep(0.1)
 
