@@ -112,7 +112,7 @@ class OakCamera:
                 mono_right_out = mono_right.requestOutput(self.mono_resolution, fps=self.fps)
                 mono_left_out.link(stereo.left)
                 mono_right_out.link(stereo.right)
-                depth_queue = stereo.depth.createOutputQueue()
+                depth_queue = stereo.depth.createOutputQueue(blocking=False)
 
             # copy from basalt_vio.py
             imu = pipeline.create(dai.node.IMU)
@@ -153,11 +153,12 @@ class OakCamera:
                 if self.is_depth:
                     depth_frame = depth_queue.get()
                     # TODO refactor, as this bit is the same as for "color_seq"
-                    seq_num = depth_frame.getSequenceNum()  # for sync of various outputs
-                    dt = depth_frame.getTimestamp()  # datetime.timedelta
-                    timestamp_us = ((dt.days * 24 * 3600 + dt.seconds) * 1000000 + dt.microseconds)
-                    self.bus.publish("depth_seq", [seq_num, timestamp_us])
-                    self.bus.publish("depth", depth_frame.getCvFrame())
+                    if depth_frame is not None:
+                        seq_num = depth_frame.getSequenceNum()  # for sync of various outputs
+                        dt = depth_frame.getTimestamp()  # datetime.timedelta
+                        timestamp_us = ((dt.days * 24 * 3600 + dt.seconds) * 1000000 + dt.microseconds)
+                        self.bus.publish("depth_seq", [seq_num, timestamp_us])
+                        self.bus.publish("depth", depth_frame.getCvFrame())
 
                     odom_frame = odom_queue.get()
                     if odom_frame is not None:
