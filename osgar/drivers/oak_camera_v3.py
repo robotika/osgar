@@ -45,7 +45,7 @@ class OakCamera:
                           # *_seq streams are needed for output sync amd they are published BEFORE payload data
                           'depth_seq', 'color_seq', 'detections_seq', 'left_im_seq', 'right_im_seq',
                           'nn_mask:gz',
-                          'pose3d')
+                          'pose3d', 'gridmap')
         self.fps = config.get('fps', 10)
 
         color_resolution_value = config.get("color_resolution", "THE_1080_P")
@@ -127,6 +127,27 @@ class OakCamera:
             imu.out.link(odom.imu)
             odom_queue = odom.transform.createOutputQueue()
 
+            slam = pipeline.create(dai.node.RTABMapSLAM)
+            params = {"RGBD/CreateOccupancyGrid": "true",
+                      "Grid/3D": "true",
+                      "Rtabmap/SaveWMState": "true"}
+            slam.setParams(params)
+
+            stereo.setExtendedDisparity(False)
+            stereo.setLeftRightCheck(True)
+            stereo.setRectifyEdgeFillColor(0)
+            stereo.enableDistortionCorrection(True)
+            stereo.initialConfig.setLeftRightCheckThreshold(10)
+            stereo.setDepthAlign(dai.CameraBoardSocket.CAM_B)
+
+            stereo.syncedLeft.link(odom.left)
+            stereo.syncedRight.link(odom.right)
+            stereo.depth.link(slam.depth)
+            stereo.rectifiedLeft.link(slam.rect)
+
+            odom.transform.link(slam.odom)
+            gridmap_queue = slam.occupancyGridMap.createOutputQueue()
+
             # Connect to device and start pipeline
             pipeline.start()
             while pipeline.isRunning() and self.bus.is_alive():
@@ -143,6 +164,9 @@ class OakCamera:
                     t = odom_frame.getTranslation()
                     q = odom_frame.getQuaternion()
                     self.bus.publish("pose3d", [[t.x, t.y, t.z], [q.qx, q.qy, q.qz, q.qw]])
+
+                    gridmap = gridmap_queue.get()
+                    self.bus.publish('gridmap', gridmap.getFrame())
                 else:
                     self.bus.sleep(0.1)
 
