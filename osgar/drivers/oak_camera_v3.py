@@ -122,10 +122,8 @@ class OakCamera:
             imu.setBatchReportThreshold(1)
             imu.setMaxBatchReports(10)
 
-            mono_left_out.link(odom.left)
-            mono_right_out.link(odom.right)
             imu.out.link(odom.imu)
-            odom_queue = odom.transform.createOutputQueue()
+            odom_queue = odom.transform.createOutputQueue(blocking=False)
 
             slam = pipeline.create(dai.node.RTABMapSLAM)
             params = {"RGBD/CreateOccupancyGrid": "true",
@@ -135,6 +133,7 @@ class OakCamera:
 
             stereo.setExtendedDisparity(False)
             stereo.setLeftRightCheck(True)
+            stereo.setSubpixel(True)
             stereo.setRectifyEdgeFillColor(0)
             stereo.enableDistortionCorrection(True)
             stereo.initialConfig.setLeftRightCheckThreshold(10)
@@ -146,7 +145,7 @@ class OakCamera:
             stereo.rectifiedLeft.link(slam.rect)
 
             odom.transform.link(slam.odom)
-            gridmap_queue = slam.occupancyGridMap.createOutputQueue()
+            gridmap_queue = slam.occupancyGridMap.createOutputQueue(blocking=False)
 
             # Connect to device and start pipeline
             pipeline.start()
@@ -161,12 +160,14 @@ class OakCamera:
                     self.bus.publish("depth", depth_frame.getCvFrame())
 
                     odom_frame = odom_queue.get()
-                    t = odom_frame.getTranslation()
-                    q = odom_frame.getQuaternion()
-                    self.bus.publish("pose3d", [[t.x, t.y, t.z], [q.qx, q.qy, q.qz, q.qw]])
+                    if odom_frame is not None:
+                        t = odom_frame.getTranslation()
+                        q = odom_frame.getQuaternion()
+                        self.bus.publish("pose3d", [[t.x, t.y, t.z], [q.qx, q.qy, q.qz, q.qw]])
 
                     gridmap = gridmap_queue.get()
-                    self.bus.publish('gridmap', gridmap.getFrame())
+                    if gridmap is not None:
+                        self.bus.publish('gridmap', gridmap.getFrame())
                 else:
                     self.bus.sleep(0.1)
 
