@@ -59,6 +59,7 @@ class OakCamera:
         self.video_encoder_h264_bitrate = config.get('h264_bitrate', 0)  # 0 = automatic
 
         self.is_depth = config.get('is_depth', False)
+        self.is_slam = config.get('is_slam', False)
 
         self.sleep_on_start_sec = config.get('sleep_on_start_sec')
         self.verbose_detections = config.get('verbose_detections', True)
@@ -125,11 +126,12 @@ class OakCamera:
             imu.out.link(odom.imu)
             odom_queue = odom.transform.createOutputQueue(blocking=False)
 
-            slam = pipeline.create(dai.node.RTABMapSLAM)
-            params = {"RGBD/CreateOccupancyGrid": "true",
-                      "Grid/3D": "true",
-                      "Rtabmap/SaveWMState": "true"}
-            slam.setParams(params)
+            if self.is_slam:
+                slam = pipeline.create(dai.node.RTABMapSLAM)
+                params = {"RGBD/CreateOccupancyGrid": "true",
+                          "Grid/3D": "true",
+                          "Rtabmap/SaveWMState": "true"}
+                slam.setParams(params)
 
             stereo.setExtendedDisparity(False)
             stereo.setLeftRightCheck(True)
@@ -141,11 +143,12 @@ class OakCamera:
 
             stereo.syncedLeft.link(odom.left)
             stereo.syncedRight.link(odom.right)
-            stereo.depth.link(slam.depth)
-            stereo.rectifiedLeft.link(slam.rect)
 
-            odom.transform.link(slam.odom)
-            gridmap_queue = slam.occupancyGridMap.createOutputQueue(blocking=False)
+            if self.is_slam:
+                stereo.depth.link(slam.depth)
+                stereo.rectifiedLeft.link(slam.rect)
+                odom.transform.link(slam.odom)
+                gridmap_queue = slam.occupancyGridMap.createOutputQueue(blocking=False)
 
             # Connect to device and start pipeline
             pipeline.start()
@@ -166,9 +169,10 @@ class OakCamera:
                         q = odom_frame.getQuaternion()
                         self.bus.publish("pose3d", [[t.x, t.y, t.z], [q.qx, q.qy, q.qz, q.qw]])
 
-                    gridmap = gridmap_queue.get()
-                    if gridmap is not None:
-                        self.bus.publish('gridmap', gridmap.getFrame())
+                    if self.is_slam:
+                        gridmap = gridmap_queue.get()
+                        if gridmap is not None:
+                            self.bus.publish('gridmap', gridmap.getFrame())
                 else:
                     self.bus.sleep(0.1)
 
