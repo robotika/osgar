@@ -33,4 +33,13 @@ class QorvoTest(unittest.TestCase):
         uwb.on_raw(data)
         self.assertEqual(handler.publish.call_args, call('range', [[19767, 732]]))
 
+    def test_anchor_range_decoding(self):
+        config = {}
+        handler = MagicMock()
+        uwb = Qorvo(config, bus=handler)
+        handler.reset_mock()
+        data = b'@\x01\x00A\r\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00H\x01\x00'
+        uwb.on_raw(data)
+        self.assertEqual(handler.publish.call_args, call('range', []))
+
 # vim: expandtab sw=4 ts=4

@@ -37,8 +37,8 @@ class Qorvo(Node):
                 assert len(packet) == 2 + 13, packet
                 # X, Y, Z + quality
                 assert packet[-1] == 0, packet[-1]  # i.e. invalid position
-            elif cmd == 0x49:
-                # range distance
+            elif cmd in [0x48, 0x49]:
+                # range distance - 0x48 Anchor node, 0x49 Tag node
                 num_distances = packet[2]
                 dist_arr = []
                 if num_distances > 0:
@@ -47,6 +47,8 @@ class Qorvo(Node):
                             '<HIBiiiB',packet, 3 + i*20)
                         dist_arr.append([uwb_addr, dist])
                 self.publish('range', dist_arr)
+            else:
+                assert 0, packet.hex()
 
     def on_timer(self, data):
         self.publish('raw', bytes([0x0C, 0x00]))  # request range reading
