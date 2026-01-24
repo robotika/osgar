@@ -435,6 +435,7 @@ class OakCamera:
                                 self.bus.publish('nn_mask', mask)
                             elif self.oak_config_nn_family == 'robotourist':
                                 nn_output = packets[-1].getLayerFp16('redroad_output')
+                                nn_robotourist_output = packets[-1].getLayerFp16('robotourist_output')
                                 WIDTH, HEIGHT = self.oak_config_nn_image_size
                                 # Note, that input image is 224x224 while output layer is 112x112
                                 redroad = np.array(nn_output).reshape((HEIGHT//2, WIDTH//2))
@@ -442,6 +443,9 @@ class OakCamera:
                                 mask = (redroad > 0).astype(np.uint8)  # TODO threshold
                                 mask = np.array(mask).reshape((HEIGHT//2, WIDTH//2))
                                 self.bus.publish('nn_mask', mask)
+                                # TODO add some explanation for the magic output vector
+                                robotourist = np.array(nn_robotourist_output).reshape((1280, 7, 7))
+                                self.bus.publish('robotourist', robotourist)
                             else:
                                 assert 0, f'Unsupported "{self.oak_config_nn_family}"'
 
