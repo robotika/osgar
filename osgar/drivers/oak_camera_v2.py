@@ -62,7 +62,9 @@ class OakCamera:
                           'color', 'orientation_list', 'detections', 'left_im', 'right_im',
                           # *_seq streams are needed for output sync amd they are published BEFORE payload data
                           'depth_seq', 'color_seq', 'detections_seq', 'left_im_seq', 'right_im_seq',
-                          'nn_mask:gz')
+                          'nn_mask:gz',
+                          # Robotourists specific outputs - maybe they should really be conditional?
+                          'redroad:gz', 'robotourist:gz')
         self.fps = config.get('fps', 10)
         self.subsample = config.get('subsample')
         self.is_depth = config.get('is_depth', False)
@@ -425,12 +427,23 @@ class OakCamera:
                                     bbox_list.append([self.labels[detection.label], detection.confidence, list(bbox)])
                                 self.bus.publish("detections_seq", [seq_num, timestamp_us])
                                 self.bus.publish('detections', bbox_list)
-                            else:
+                            elif self.oak_config_nn_family == 'resnet':
                                 nn_output = packets[-1].getLayerFp16('output')
                                 WIDTH, HEIGHT = self.oak_config_nn_image_size
                                 mask = np.array(nn_output).reshape((2, HEIGHT, WIDTH))
                                 mask = mask.argmax(0).astype(np.uint8)
                                 self.bus.publish('nn_mask', mask)
+                            elif self.oak_config_nn_family == 'robotourist':
+                                nn_output = packets[-1].getLayerFp16('redroad_output')
+                                WIDTH, HEIGHT = self.oak_config_nn_image_size
+                                # Note, that input image is 224x224 while output layer is 112x112
+                                redroad = np.array(nn_output).reshape((HEIGHT//2, WIDTH//2))
+                                self.bus.publish('redroad', redroad)
+                                mask = (redroad > 0).astype(np.uint8)  # TODO threshold
+                                mask = np.array(mask).reshape((HEIGHT//2, WIDTH//2))
+                                self.bus.publish('nn_mask', mask)
+                            else:
+                                assert 0, f'Unsupported "{self.oak_config_nn_family}"'
 
     def request_stop(self):
         self.bus.shutdown()
