@@ -13,6 +13,7 @@ class Push:
     def __init__(self, config, bus):
         bus.register()
         self.is_bind_set = config.get("bind", False)
+        self.use_pubsub_mode = config.get("pubsub", False)  # use Publisher instead of Push
         self.endpoint = config.get('endpoint', 'tcp://127.0.0.1:5566')
         self.timeout = config.get('timeout', 1) # default send timeout 1s, effective on full queue only
         self.thread = Thread(target=self.run)
@@ -27,7 +28,10 @@ class Push:
 
     def run(self):
         context = zmq.Context.instance()
-        socket = context.socket(zmq.PUSH)
+        if self.use_pubsub_mode:
+            socket = context.socket(zmq.PUB)
+        else:
+            socket = context.socket(zmq.PUSH)
 
         if self.is_bind_set:
             socket.setsockopt(zmq.LINGER, 100)  # milliseconds
