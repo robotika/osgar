@@ -60,6 +60,7 @@ class OakCamera:
 
         self.is_depth = config.get('is_depth', False)
         self.is_slam = config.get('is_slam', False)
+        self.is_visual_odom = config.get('is_visual_odom', False)
 
         self.sleep_on_start_sec = config.get('sleep_on_start_sec')
         self.verbose_detections = config.get('verbose_detections', True)
@@ -117,14 +118,16 @@ class OakCamera:
 
             # copy from basalt_vio.py
             imu = pipeline.create(dai.node.IMU)
-            odom = pipeline.create(dai.node.BasaltVIO)
+            if self.is_visual_odom:
+                odom = pipeline.create(dai.node.BasaltVIO)
 
             imu.enableIMUSensor([dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW], 200)
             imu.setBatchReportThreshold(1)
             imu.setMaxBatchReports(10)
 
-            imu.out.link(odom.imu)
-            odom_queue = odom.transform.createOutputQueue(blocking=False)
+            if self.is_visual_odom:
+                imu.out.link(odom.imu)
+                odom_queue = odom.transform.createOutputQueue(blocking=False)
 
             if self.is_slam:
                 slam = pipeline.create(dai.node.RTABMapSLAM)
@@ -133,16 +136,17 @@ class OakCamera:
                           "Rtabmap/SaveWMState": "true"}
                 slam.setParams(params)
 
-            stereo.setExtendedDisparity(False)
-            stereo.setLeftRightCheck(True)
-            stereo.setSubpixel(True)
-            stereo.setRectifyEdgeFillColor(0)
-            stereo.enableDistortionCorrection(True)
-            stereo.initialConfig.setLeftRightCheckThreshold(10)
-            stereo.setDepthAlign(dai.CameraBoardSocket.CAM_B)
+            if self.is_depth:
+                stereo.setExtendedDisparity(False)
+                stereo.setLeftRightCheck(True)
+                stereo.setSubpixel(True)
+                stereo.setRectifyEdgeFillColor(0)
+                stereo.enableDistortionCorrection(True)
+                stereo.initialConfig.setLeftRightCheckThreshold(10)
+                stereo.setDepthAlign(dai.CameraBoardSocket.CAM_B)
 
-            stereo.syncedLeft.link(odom.left)
-            stereo.syncedRight.link(odom.right)
+                stereo.syncedLeft.link(odom.left)
+                stereo.syncedRight.link(odom.right)
 
             if self.is_slam:
                 stereo.depth.link(slam.depth)
