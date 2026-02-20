@@ -236,8 +236,9 @@ class OakCamera:
                             self.bus.publish('nn_mask', mask)
 
                         elif self.oak_config_nn_family == 'robotourist':
-                            nn_output = packet.getLayerFp16('redroad_output')
-                            nn_robotourist_output = packet.getLayerFp16('robotourist_output')
+                            # v3: getTensor automatically returns a NumPy array
+                            nn_output = packet.getTensor('redroad_output')
+                            nn_robotourist_output = packet.getTensor('robotourist_output')
                             WIDTH, HEIGHT = self.oak_config_nn_image_size
 
                             redroad = np.array(nn_output).reshape((HEIGHT//2, WIDTH//2))
