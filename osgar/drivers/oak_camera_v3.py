@@ -155,8 +155,9 @@ class OakCamera:
                 stereo.initialConfig.setLeftRightCheckThreshold(10)
                 stereo.setDepthAlign(dai.CameraBoardSocket.CAM_B)
 
-                stereo.syncedLeft.link(odom.left)
-                stereo.syncedRight.link(odom.right)
+                if self.is_visual_odom:
+                    stereo.syncedLeft.link(odom.left)
+                    stereo.syncedRight.link(odom.right)
 
             if self.is_slam:
                 stereo.depth.link(slam.depth)
