@@ -3,7 +3,9 @@ from unittest.mock import MagicMock, patch
 from datetime import timedelta
 
 # depthai package is not necessarily available and it is not needed for this unittest
-with patch.dict('sys.modules', {'depthai': MagicMock()}):
+dai_mock = MagicMock()
+dai_mock.__version__ = '2.29.0.0'  # fake older version
+with patch.dict('sys.modules', {'depthai': dai_mock}):
     from osgar.drivers.oak_camera import OakCamera
 
 class OakCameraTest(unittest.TestCase):
