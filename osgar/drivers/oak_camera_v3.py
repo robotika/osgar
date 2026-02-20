@@ -45,7 +45,8 @@ class OakCamera:
                           # *_seq streams are needed for output sync amd they are published BEFORE payload data
                           'depth_seq', 'color_seq', 'detections_seq', 'left_im_seq', 'right_im_seq',
                           'nn_mask:gz',
-                          'pose3d', 'gridmap')
+                          'pose3d', 'gridmap',
+                          'redroad:gz', 'robotourist:gz')
         self.fps = config.get('fps', 10)
 
         color_resolution_value = config.get("color_resolution", "THE_1080_P")
@@ -64,6 +65,15 @@ class OakCamera:
 
         self.sleep_on_start_sec = config.get('sleep_on_start_sec')
         self.verbose_detections = config.get('verbose_detections', True)
+
+        # NN setup variables
+        self.oak_config_model = config.get("model")
+        self.oak_config_nn_config = config.get("nn_config", {})
+        self.oak_config_nn_family = self.oak_config_nn_config.get("NN_family", "YOLO")
+        self.oak_config_nn_image_size = None
+        if "input_size" in self.oak_config_nn_config:
+            self.oak_config_nn_image_size = tuple(map(int, self.oak_config_nn_config.get("input_size").split('x')))
+        self.labels = config.get("mappings", {}).get("labels", [])
 
     def start(self):
         if self.sleep_on_start_sec is not None:
@@ -154,31 +164,124 @@ class OakCamera:
                 odom.transform.link(slam.odom)
                 gridmap_queue = slam.occupancyGridMap.createOutputQueue(blocking=False)
 
+            # Configure Neural Network processing block
+            if self.oak_config_model is not None:
+                nnPath = self.oak_config_model.get("blob")
+                assert Path(nnPath).exists(), "No blob found at '{}'!".format(nnPath)
+                W, H = self.oak_config_nn_image_size
+
+                nn = pipeline.create(dai.node.NeuralNetwork)
+                nn.setBlobPath(nnPath)
+                nn.setNumInferenceThreads(2)
+                nn.input.setBlocking(False)
+
+                # In DepthAI v3, YoloDetectionNetwork is replaced by NeuralNetwork + DetectionParser
+                if self.oak_config_nn_family == 'YOLO':
+                    metadata = self.oak_config_nn_config.get("NN_specific_metadata", {})
+                    parser = pipeline.create(dai.node.DetectionParser)
+                    if "confidence_threshold" in metadata:
+                        parser.setConfidenceThreshold(metadata["confidence_threshold"])
+                    if "classes" in metadata:
+                        parser.setNumClasses(metadata["classes"])
+                    if "coordinates" in metadata:
+                        parser.setCoordinateSize(metadata["coordinates"])
+                    if "anchors" in metadata:
+                        parser.setAnchors(metadata["anchors"])
+                    if "anchor_masks" in metadata:
+                        parser.setAnchorMasks(metadata["anchor_masks"])
+                    if "iou_threshold" in metadata:
+                        parser.setIouThreshold(metadata["iou_threshold"])
+
+                    nn.out.link(parser.input)
+                    nn_queue = parser.out.createOutputQueue(blocking=False)
+                else:
+                    nn_queue = nn.out.createOutputQueue(blocking=False)
+
+                # Feed from color camera via specific requested output resolution
+                nn_cam_out = cam_rgb.requestOutput((W, H), type=dai.ImgFrame.Type.BGR888p)
+                nn_cam_out.link(nn.input)
+
             # Connect to device and start pipeline
             pipeline.start()
+
             while pipeline.isRunning() and self.bus.is_alive():
+                processed_any = False
+
+                # 1. Check Neural Networks
+                if self.oak_config_model is not None:
+                    nn_packets = nn_queue.tryGetAll()
+                    if nn_packets and len(nn_packets) > 0:
+                        processed_any = True
+                        packet = nn_packets[-1]  # use latest packet
+                        seq_num = packet.getSequenceNum()
+                        dt = packet.getTimestamp()
+                        timestamp_us = ((dt.days * 24 * 3600 + dt.seconds) * 1000000 + dt.microseconds)
+
+                        if self.oak_config_nn_family == 'YOLO':
+                            detections = packet.detections
+                            bbox_list = []
+                            for detection in detections:
+                                bbox = (detection.xmin, detection.ymin, detection.xmax, detection.ymax)
+                                if self.verbose_detections:
+                                    print(self.labels[detection.label], detection.confidence, bbox)
+                                bbox_list.append([self.labels[detection.label], detection.confidence, list(bbox)])
+                            self.bus.publish("detections_seq", [seq_num, timestamp_us])
+                            self.bus.publish('detections', bbox_list)
+
+                        elif self.oak_config_nn_family == 'resnet':
+                            nn_output = packet.getLayerFp16('output')
+                            WIDTH, HEIGHT = self.oak_config_nn_image_size
+                            mask = np.array(nn_output).reshape((2, HEIGHT, WIDTH))
+                            mask = mask.argmax(0).astype(np.uint8)
+                            self.bus.publish('nn_mask', mask)
+
+                        elif self.oak_config_nn_family == 'robotourist':
+                            nn_output = packet.getLayerFp16('redroad_output')
+                            nn_robotourist_output = packet.getLayerFp16('robotourist_output')
+                            WIDTH, HEIGHT = self.oak_config_nn_image_size
+
+                            redroad = np.array(nn_output).reshape((HEIGHT//2, WIDTH//2))
+                            self.bus.publish('redroad', redroad)
+                            mask = (redroad > 0).astype(np.uint8)
+                            mask = np.array(mask).reshape((HEIGHT//2, WIDTH//2))
+                            self.bus.publish('nn_mask', mask)
+
+                            robotourist = np.array(nn_robotourist_output).reshape((1280, 7, 7))
+                            self.bus.publish('robotourist', robotourist)
+
+                # 2. Check Depth
                 if self.is_depth:
-                    depth_frame = depth_queue.get()
-                    # TODO refactor, as this bit is the same as for "color_seq"
-                    if depth_frame is not None:
-                        seq_num = depth_frame.getSequenceNum()  # for sync of various outputs
-                        dt = depth_frame.getTimestamp()  # datetime.timedelta
+                    depth_frames = depth_queue.tryGetAll()
+                    if depth_frames and len(depth_frames) > 0:
+                        processed_any = True
+                        depth_frame = depth_frames[-1]
+                        seq_num = depth_frame.getSequenceNum()
+                        dt = depth_frame.getTimestamp()
                         timestamp_us = ((dt.days * 24 * 3600 + dt.seconds) * 1000000 + dt.microseconds)
                         self.bus.publish("depth_seq", [seq_num, timestamp_us])
                         self.bus.publish("depth", depth_frame.getCvFrame())
 
-                    odom_frame = odom_queue.get()
-                    if odom_frame is not None:
+                # 3. Check Visual Odom
+                if self.is_visual_odom:
+                    odom_frames = odom_queue.tryGetAll()
+                    if odom_frames and len(odom_frames) > 0:
+                        processed_any = True
+                        odom_frame = odom_frames[-1]
                         t = odom_frame.getTranslation()
                         q = odom_frame.getQuaternion()
                         self.bus.publish("pose3d", [[t.x, t.y, t.z], [q.qx, q.qy, q.qz, q.qw]])
 
-                    if self.is_slam:
-                        gridmap = gridmap_queue.get()
-                        if gridmap is not None:
-                            self.bus.publish('gridmap', gridmap.getFrame())
-                else:
-                    self.bus.sleep(0.1)
+                # 4. Check SLAM
+                if self.is_slam:
+                    gridmaps = gridmap_queue.tryGetAll()
+                    if gridmaps and len(gridmaps) > 0:
+                        processed_any = True
+                        gridmap = gridmaps[-1]
+                        self.bus.publish('gridmap', gridmap.getFrame())
+
+                # Only rest the CPU if no frames were pulled in this tick loop
+                if not processed_any:
+                    self.bus.sleep(0.01)
 
     def request_stop(self):
         self.bus.shutdown()
