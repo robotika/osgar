@@ -66,14 +66,16 @@ class OakCamera:
         self.sleep_on_start_sec = config.get('sleep_on_start_sec')
         self.verbose_detections = config.get('verbose_detections', True)
 
-        # NN setup variables
-        self.oak_config_model = config.get("model")
-        self.oak_config_nn_config = config.get("nn_config", {})
-        self.oak_config_nn_family = self.oak_config_nn_config.get("NN_family", "YOLO")
-        self.oak_config_nn_image_size = None
-        if "input_size" in self.oak_config_nn_config:
-            self.oak_config_nn_image_size = tuple(map(int, self.oak_config_nn_config.get("input_size").split('x')))
-        self.labels = config.get("mappings", {}).get("labels", [])
+        # NN setup variables - support for multiple models
+        self.models = config.get("models", [])
+
+        # Backwards compatibility for single-model configs
+        if "model" in config and len(self.models) == 0:
+            self.models.append({
+                "model": config.get("model"),
+                "nn_config": config.get("nn_config", {}),
+                "mappings": config.get("mappings", {})
+            })
 
     def start(self):
         if self.sleep_on_start_sec is not None:
@@ -165,20 +167,30 @@ class OakCamera:
                 odom.transform.link(slam.odom)
                 gridmap_queue = slam.occupancyGridMap.createOutputQueue(blocking=False)
 
-            # Configure Neural Network processing block
-            if self.oak_config_model is not None:
-                nnPath = self.oak_config_model.get("blob")
-                assert Path(nnPath).exists(), "No blob found at '{}'!".format(nnPath)
-                W, H = self.oak_config_nn_image_size
+            # Configure Neural Network processing blocks dynamically
+            nn_queues = []
+            for model_cfg in self.models:
+                nn_path = model_cfg.get("model", {}).get("blob")
+                if not nn_path:
+                    continue
+                assert Path(nn_path).exists(), "No blob found at '{}'!".format(nn_path)
+
+                nn_config = model_cfg.get("nn_config", {})
+                nn_family = nn_config.get("NN_family", "YOLO")
+
+                input_size_str = nn_config.get("input_size")
+                if input_size_str:
+                    W, H = tuple(map(int, input_size_str.split('x')))
+                else:
+                    W, H = 416, 416  # default fallback
 
                 nn = pipeline.create(dai.node.NeuralNetwork)
-                nn.setBlobPath(nnPath)
+                nn.setBlobPath(nn_path)
                 nn.setNumInferenceThreads(2)
                 nn.input.setBlocking(False)
 
-                # In DepthAI v3, YoloDetectionNetwork is replaced by NeuralNetwork + DetectionParser
-                if self.oak_config_nn_family == 'YOLO':
-                    metadata = self.oak_config_nn_config.get("NN_specific_metadata", {})
+                if nn_family == 'YOLO':
+                    metadata = nn_config.get("NN_specific_metadata", {})
                     parser = pipeline.create(dai.node.DetectionParser)
                     if "confidence_threshold" in metadata:
                         parser.setConfidenceThreshold(metadata["confidence_threshold"])
@@ -194,13 +206,21 @@ class OakCamera:
                         parser.setIouThreshold(metadata["iou_threshold"])
 
                     nn.out.link(parser.input)
-                    nn_queue = parser.out.createOutputQueue(blocking=False)
+                    queue = parser.out.createOutputQueue(blocking=False)
                 else:
-                    nn_queue = nn.out.createOutputQueue(blocking=False)
+                    queue = nn.out.createOutputQueue(blocking=False)
 
-                # Feed from color camera via specific requested output resolution
+                # Feed from color camera via specific requested output resolution per model
                 nn_cam_out = cam_rgb.requestOutput((W, H), type=dai.ImgFrame.Type.BGR888p)
                 nn_cam_out.link(nn.input)
+
+                nn_queues.append({
+                    "queue": queue,
+                    "family": nn_family,
+                    "image_size": (W, H),
+                    "labels": model_cfg.get("mappings", {}).get("labels", [])
+                })
+
 
             # Connect to device and start pipeline
             pipeline.start()
@@ -209,8 +229,13 @@ class OakCamera:
                 processed_any = False
 
                 # 1. Check Neural Networks
-                if self.oak_config_model is not None:
-                    nn_packets = nn_queue.tryGetAll()
+                for nn_setup in nn_queues:
+                    queue = nn_setup["queue"]
+                    nn_family = nn_setup["family"]
+                    W, H = nn_setup["image_size"]
+                    labels = nn_setup["labels"]
+
+                    nn_packets = queue.tryGetAll()
                     if nn_packets and len(nn_packets) > 0:
                         processed_any = True
                         packet = nn_packets[-1]  # use latest packet
@@ -218,38 +243,37 @@ class OakCamera:
                         dt = packet.getTimestamp()
                         timestamp_us = ((dt.days * 24 * 3600 + dt.seconds) * 1000000 + dt.microseconds)
 
-                        if self.oak_config_nn_family == 'YOLO':
+                        if nn_family == 'YOLO':
                             detections = packet.detections
                             bbox_list = []
                             for detection in detections:
                                 bbox = (detection.xmin, detection.ymin, detection.xmax, detection.ymax)
                                 if self.verbose_detections:
-                                    print(self.labels[detection.label], detection.confidence, bbox)
-                                bbox_list.append([self.labels[detection.label], detection.confidence, list(bbox)])
+                                    print(labels[detection.label], detection.confidence, bbox)
+                                bbox_list.append([labels[detection.label], detection.confidence, list(bbox)])
                             self.bus.publish("detections_seq", [seq_num, timestamp_us])
                             self.bus.publish('detections', bbox_list)
 
-                        elif self.oak_config_nn_family == 'resnet':
+                        elif nn_family == 'resnet':
                             nn_output = packet.getLayerFp16('output')
-                            WIDTH, HEIGHT = self.oak_config_nn_image_size
-                            mask = np.array(nn_output).reshape((2, HEIGHT, WIDTH))
+                            mask = np.array(nn_output).reshape((2, H, W))
                             mask = mask.argmax(0).astype(np.uint8)
                             self.bus.publish('nn_mask', mask)
 
-                        elif self.oak_config_nn_family == 'robotourist':
+                        elif nn_family == 'robotourist' or nn_family == 'redroad':
                             # v3: getTensor automatically returns a NumPy array
                             nn_output = packet.getTensor('redroad_output')
                             nn_robotourist_output = packet.getTensor('robotourist_output')
-                            WIDTH, HEIGHT = self.oak_config_nn_image_size
 
-                            redroad = np.array(nn_output).reshape((HEIGHT//2, WIDTH//2))
+                            redroad = np.array(nn_output).reshape((H//2, W//2))
                             self.bus.publish('redroad', redroad)
                             mask = (redroad > 0).astype(np.uint8)
-                            mask = np.array(mask).reshape((HEIGHT//2, WIDTH//2))
+                            mask = np.array(mask).reshape((H//2, W//2))
                             self.bus.publish('nn_mask', mask)
 
                             robotourist = np.array(nn_robotourist_output).reshape((1280, 7, 7))
                             self.bus.publish('robotourist', robotourist)
+
 
                 # 2. Check Depth
                 if self.is_depth:
