@@ -47,6 +47,10 @@ class OakCamera:
                           'nn_mask:gz',
                           'pose3d', 'gridmap',
                           'redroad:gz', 'robotourist:gz')
+
+        self.is_color = config.get('is_color', False)
+        self.is_depth = config.get('is_depth', False)
+        self.is_stereo_images = config.get('is_stereo_images', False)
         self.fps = config.get('fps', 10)
 
         color_resolution_value = config.get("color_resolution", "THE_1080_P")
@@ -59,7 +63,6 @@ class OakCamera:
         self.video_encoder = get_video_encoder(config.get('video_encoder', 'mjpeg'))
         self.video_encoder_h264_bitrate = config.get('h264_bitrate', 0)  # 0 = automatic
 
-        self.is_depth = config.get('is_depth', False)
         self.is_slam = config.get('is_slam', False)
         self.is_visual_odom = config.get('is_visual_odom', False)
 
@@ -108,15 +111,16 @@ class OakCamera:
 
         with dai.Pipeline() as pipeline:
             # Define source and output
-            cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+            if self.is_color:
+                cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
 
-            # should frameRate = fps?? should this be limited on input?
-            output = cam_rgb.requestOutput(self.color_resolution, type=dai.ImgFrame.Type.NV12, fps=self.fps)
-            encoded = pipeline.create(dai.node.VideoEncoder).build(output,
-                                                                   frameRate=self.fps,
-                                                                   profile=self.video_encoder)
-            saver = pipeline.create(VideoPublisher).build(encoded.out)
-            saver.bus = self.bus
+                # should frameRate = fps?? should this be limited on input?
+                output = cam_rgb.requestOutput(self.color_resolution, type=dai.ImgFrame.Type.NV12, fps=self.fps)
+                encoded = pipeline.create(dai.node.VideoEncoder).build(output,
+                                                                       frameRate=self.fps,
+                                                                       profile=self.video_encoder)
+                saver = pipeline.create(VideoPublisher).build(encoded.out)
+                saver.bus = self.bus
 
             if self.is_depth:
                 mono_left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
