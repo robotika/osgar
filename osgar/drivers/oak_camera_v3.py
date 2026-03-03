@@ -47,6 +47,10 @@ class OakCamera:
                           'nn_mask:gz',
                           'pose3d', 'gridmap',
                           'redroad:gz', 'robotourist:gz')
+
+        self.is_color = config.get('is_color', False)
+        self.is_depth = config.get('is_depth', False)
+        self.is_stereo_images = config.get('is_stereo_images', False)
         self.fps = config.get('fps', 10)
 
         color_resolution_value = config.get("color_resolution", "THE_1080_P")
@@ -59,7 +63,6 @@ class OakCamera:
         self.video_encoder = get_video_encoder(config.get('video_encoder', 'mjpeg'))
         self.video_encoder_h264_bitrate = config.get('h264_bitrate', 0)  # 0 = automatic
 
-        self.is_depth = config.get('is_depth', False)
         self.is_slam = config.get('is_slam', False)
         self.is_visual_odom = config.get('is_visual_odom', False)
 
@@ -93,6 +96,7 @@ class OakCamera:
             def __init__(self, *args, **kwargs):
                 dai.node.HostNode.__init__(self, *args, **kwargs)
                 self.bus = None
+                self.stream_type = None
 
             def build(self, *args):
                 self.link_args(*args)
@@ -102,31 +106,46 @@ class OakCamera:
                 seq_num = frame.getSequenceNum()  # for sync of various outputs
                 dt = frame.getTimestamp()  # datetime.timedelta
                 timestamp_us = ((dt.days * 24 * 3600 + dt.seconds) * 1000000 + dt.microseconds)
-                self.bus.publish("color_seq", [seq_num, timestamp_us])
-                self.bus.publish("color", frame.getData().tobytes())
+                self.bus.publish(f"{self.stream_type}_seq", [seq_num, timestamp_us])
+                self.bus.publish(self.stream_type, frame.getData().tobytes())
 
 
         with dai.Pipeline() as pipeline:
             # Define source and output
-            cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+            if self.is_color:
+                cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
 
-            # should frameRate = fps?? should this be limited on input?
-            output = cam_rgb.requestOutput(self.color_resolution, type=dai.ImgFrame.Type.NV12, fps=self.fps)
-            encoded = pipeline.create(dai.node.VideoEncoder).build(output,
-                                                                   frameRate=self.fps,
-                                                                   profile=self.video_encoder)
-            saver = pipeline.create(VideoPublisher).build(encoded.out)
-            saver.bus = self.bus
+                # should frameRate = fps?? should this be limited on input?
+                output = cam_rgb.requestOutput(self.color_resolution, type=dai.ImgFrame.Type.NV12, fps=self.fps)
+                encoded = pipeline.create(dai.node.VideoEncoder).build(output,
+                                                                       frameRate=self.fps,
+                                                                       profile=self.video_encoder)
+                saver = pipeline.create(VideoPublisher).build(encoded.out)
+                saver.bus = self.bus
+                saver.stream_type = "color"
 
-            if self.is_depth:
+
+            if self.is_depth or self.is_stereo_images:
                 mono_left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
                 mono_right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
-                stereo = pipeline.create(dai.node.StereoDepth)
-                mono_left_out = mono_left.requestOutput(self.mono_resolution, fps=self.fps)
-                mono_right_out = mono_right.requestOutput(self.mono_resolution, fps=self.fps)
-                mono_left_out.link(stereo.left)
-                mono_right_out.link(stereo.right)
-                depth_queue = stereo.depth.createOutputQueue(blocking=False)
+
+                # type=dai.ImgFrame.Type.NV12 ??
+                mono_left_out = mono_left.requestOutput(self.mono_resolution, type=dai.ImgFrame.Type.NV12, fps=self.fps)
+                mono_right_out = mono_right.requestOutput(self.mono_resolution, type=dai.ImgFrame.Type.NV12, fps=self.fps)
+                if self.is_depth:
+                    stereo = pipeline.create(dai.node.StereoDepth)
+                    mono_left_out.link(stereo.left)
+                    mono_right_out.link(stereo.right)
+                    depth_queue = stereo.depth.createOutputQueue(blocking=False)
+
+                if self.is_stereo_images:
+                    for mono_out, stream_type in zip([mono_left_out, mono_right_out], ['left_im', 'right_im']):
+                        mono_encoded = pipeline.create(dai.node.VideoEncoder).build(mono_out,
+                                                                                    frameRate=self.fps,
+                                                                                    profile=self.video_encoder)
+                        mono_saver = pipeline.create(VideoPublisher).build(mono_encoded.out)
+                        mono_saver.bus = self.bus
+                        mono_saver.stream_type = stream_type
 
             # copy from basalt_vio.py
             imu = pipeline.create(dai.node.IMU)
