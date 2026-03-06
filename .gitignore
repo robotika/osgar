@@ -22,3 +22,4 @@ ign-logs/
 auto-save-list
 tramp
 .\#*
+doc/sphinx/_build/
