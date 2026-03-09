@@ -34,23 +34,6 @@ Here is the code for ``myrobot.py``:
   import math
 
   from osgar.node import Node
-  from osgar.bus import BusShutdownException
-
-
-  class MyTimer(Node):
-      def __init__(self, config, bus):
-          super().__init__(config, bus)
-          bus.register('tick')
-          self.sleep_time = config['sleep']
-
-      def run(self):
-          try:
-              while self.is_bus_alive():
-                  self.publish('tick', None)
-                  self.sleep(self.sleep_time)
-
-          except BusShutdownException:
-              pass
 
 
   class MyRobot(Node):
@@ -199,7 +182,7 @@ The Configuration - ``myrobot.json``
 ------------------------------------
 
 The ``myrobot.json`` file defines the modules (the robot and the application)
-and the connections between them.
+and the connections between them. We use the built-in ``timer`` driver.
 
 Here is the content of ``myrobot.json``:
 
@@ -210,7 +193,7 @@ Here is the content of ``myrobot.json``:
     "robot": {
       "modules": {
         "app": {
-            "driver": "application",
+            "driver": "myapp:MyApp",
             "in": ["emergency_stop", "pose2d"],
             "out": ["desired_speed"],
             "init": {
@@ -224,7 +207,7 @@ Here is the content of ``myrobot.json``:
             "init": {}
         },
         "timer": {
-            "driver": "myrobot:MyTimer",
+            "driver": "timer",
             "in": [],
             "out": ["tick"],
             "init": {
@@ -247,11 +230,8 @@ To run the example, you need to execute the ``osgar.record`` module with the
 and the ``examples/myrobot`` directory to your ``PYTHONPATH`` so that OSGAR
 can find the modules.
 
-The ``--application`` parameter is used to specify which class should be used
-for the module with the ``application`` driver.
-
 .. code-block:: bash
 
-  PYTHONPATH=.:examples/myrobot python3 -m osgar.record examples/myrobot/myrobot.json --application myapp:MyApp --duration 10
+  PYTHONPATH=.:examples/myrobot python3 -m osgar.record examples/myrobot/myrobot.json --duration 10
 
 This will create a log file with the recorded data from the simulation.

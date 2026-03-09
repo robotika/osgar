@@ -3,7 +3,7 @@
   "robot": {
     "modules": {
       "app": {
-          "driver": "application",
+          "driver": "myapp:MyApp",
           "in": ["emergency_stop", "pose2d"],
           "out": ["desired_speed"],
           "init": {
@@ -17,7 +17,7 @@
           "init": {}
       },
       "timer": {
-          "driver": "myrobot:MyTimer",
+          "driver": "timer",
           "in": [],
           "out": ["tick"],
           "init": {

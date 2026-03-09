@@ -5,23 +5,6 @@
 import math
 
 from osgar.node import Node
-from osgar.bus import BusShutdownException
-
-
-class MyTimer(Node):
-    def __init__(self, config, bus):
-        super().__init__(config, bus)
-        bus.register('tick')
-        self.sleep_time = config['sleep']
-
-    def run(self):
-        try:
-            while self.is_bus_alive():
-                self.publish('tick', None)
-                self.sleep(self.sleep_time)
-
-        except BusShutdownException:
-            pass
 
 
 class MyRobot(Node):
