@@ -18,13 +18,18 @@ The ``myrobot.py`` file defines a simple simulated robot with differential
 drive. It receives speed commands and simulates the robot's movement,
 publishing its new pose (position and orientation).
 
+The driver inherits from ``osgar.node.Node`` and implements ``on_desired_speed``
+and ``on_tick`` methods to handle incoming messages. The ``update()`` method
+is provided by the base class and automatically dispatches messages to the
+corresponding ``on_<channel>`` handlers.
+
 Here is the code for ``myrobot.py``:
 
 .. code-block:: python
 
   """
-  Example of robot diver outside OSGAR package
-    - simulation of differential robot
+    Example of robot diver outside OSGAR package
+      - simulation of differential robot
   """
   import math
 
@@ -51,7 +56,7 @@ Here is the code for ``myrobot.py``:
   class MyRobot(Node):
       def __init__(self, config, bus):
           super().__init__(config, bus)
-          bus.register('pose2d')
+          bus.register('pose2d', 'emergency_stop')
           self.pose = (0, 0, 0)
           self.speed, self.angular_speed = 0, 0
           self.desired_speed, self.desired_angular_speed = 0, 0
@@ -62,30 +67,26 @@ Here is the code for ``myrobot.py``:
           self.publish('pose2d', [round(x*1000), round(y*1000),
                                   round(math.degrees(heading)*100)])
 
-      def update_pose(self, diff_time):
-          self.speed = self.desired_speed  # TODO motion model
-          self.angular_speed = self.desired_angular_speed
-          t = diff_time
-
-          x, y, heading = self.pose
-          x += math.cos(heading) * self.speed * t
-          y += math.sin(heading) * self.speed * t
-          heading += self.angular_speed * t
-          self.pose = (x, y, heading)
-
-      def slot_desired_speed(self, data):
-          self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
-
-      def update(self):
-          dt, channel, data = self.listen()
+      def update_pose(self):
           if self.last_update is not None:
-              t = (dt - self.last_update).total_seconds()
-              self.update_pose(t)
-          self.last_update = dt
+              t = (self.time - self.last_update).total_seconds()
+              self.speed = self.desired_speed  # TODO motion model
+              self.angular_speed = self.desired_angular_speed
 
-          if channel == 'desired_speed':
-              self.slot_desired_speed(data)
+              x, y, heading = self.pose
+              x += math.cos(heading) * self.speed * t
+              y += math.sin(heading) * self.speed * t
+              heading += self.angular_speed * t
+              self.pose = (x, y, heading)
+          self.last_update = self.time
 
+      def on_desired_speed(self, data):
+          self.update_pose()
+          self.desired_speed, self.desired_angular_speed = data[0]/1000.0, math.radians(data[1]/100.0)
+          self.send_pose()
+
+      def on_tick(self, data):
+          self.update_pose()
           self.send_pose()
 
   # vim: expandtab sw=4 ts=4
@@ -95,19 +96,20 @@ The Application - ``myapp.py``
 ------------------------------
 
 The ``myapp.py`` file defines an application that controls the robot. It sends
-speed commands to make the robot move in a square.
+speed commands to make the robot move in a figure eight.
 
 Here is the code for ``myapp.py``:
 
 .. code-block:: python
 
   """
-  Example of a simple application controling robot to move in figure 8
+    Example of a simple application controling robot to move in figure 8
   """
   import math
   from datetime import timedelta
 
   from osgar.node import Node
+  from osgar.bus import BusShutdownException
 
 
   def distance(pose1, pose2):
@@ -168,19 +170,22 @@ Here is the code for ``myapp.py``:
           self.is_moving = (prev != self.pose2d)
 
       def run(self):
-          print("MyApp example - figure 8!")
-          step_size = 0.5  # meters
-          deg90 = math.radians(90)
+          try:
+              print("MyApp example - figure 8!")
+              step_size = 0.5  # meters
+              deg90 = math.radians(90)
 
-          for i in range(4):
-              self.go_straight(step_size)
-              self.turn(deg90)
+              for i in range(4):
+                  self.go_straight(step_size)
+                  self.turn(deg90)
 
-          for i in range(4):
-              self.go_straight(step_size)
-              self.turn(-deg90)
+              for i in range(4):
+                  self.go_straight(step_size)
+                  self.turn(-deg90)
 
-          print("END")
+              print("END")
+          except BusShutdownException:
+              pass
 
 
   if __name__ == "__main__":
@@ -214,7 +219,7 @@ Here is the content of ``myrobot.json``:
         },
         "myrobot": {
             "driver": "myrobot:MyRobot",
-            "in": ["desired_speed"],
+            "in": ["desired_speed", "tick"],
             "out": ["emergency_stop", "pose2d"],
             "init": {}
         },
@@ -238,11 +243,15 @@ Running the Example
 -------------------
 
 To run the example, you need to execute the ``osgar.record`` module with the
-``myrobot.json`` configuration file. You also need to add the ``examples``
-directory to your ``PYTHONPATH`` so that OSGAR can find the ``myrobot`` module.
+``myrobot.json`` configuration file. You also need to add the current directory
+and the ``examples/myrobot`` directory to your ``PYTHONPATH`` so that OSGAR
+can find the modules.
+
+The ``--application`` parameter is used to specify which class should be used
+for the module with the ``application`` driver.
 
 .. code-block:: bash
 
-  PYTHONPATH=examples python -m osgar.record examples/myrobot/myrobot.json
+  PYTHONPATH=.:examples/myrobot python3 -m osgar.record examples/myrobot/myrobot.json --application myapp:MyApp --duration 10
 
 This will create a log file with the recorded data from the simulation.
