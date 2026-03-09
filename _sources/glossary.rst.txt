@@ -1,17 +1,12 @@
 Glossary
 ========
 
-Ref :py:class::`osgar.bus.BusHandler`
-
 .. glossary::
 
    bus
       The communication backbone, providing `publish` and `listen` operations.
       The bus takes care of sequencing all messages within the sysem and
       serialization via logging facility.
-
-   driver
-      Implementation of common nodes like TCP communication with outer world.
 
    link
       Directed connection of two nodes. The source node generates messages by
@@ -21,7 +16,8 @@ Ref :py:class::`osgar.bus.BusHandler`
       Binary file containing message data with their source and timestamp.
 
    node
-      The basic unit attached to `bus`. It has fixed set of inputs and outputs.
+      The basic processing unit attached to `bus`. It has fixed set of inputs
+      and outputs. Some nodes implement communication with outer world like TCP.
 
    OSGAR
       Open Source Garden/Generic Autonomous Robot (Python library)
@@ -36,3 +32,4 @@ Ref :py:class::`osgar.bus.BusHandler`
    timestamp
       Python `datetime.timedelta` with microsecond precision starting from zero
       with the beginning of the program.
+

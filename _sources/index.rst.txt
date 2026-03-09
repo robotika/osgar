@@ -10,10 +10,11 @@ Welcome to osgar's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   tutorial
    logging
-   howto
    eduro
    drivers
+   rosproxy
    can
    msgtypes
    glossary

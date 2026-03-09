@@ -1,19 +1,17 @@
+<!DOCTYPE html>
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html lang="en" data-content_root="./">
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Message Types &#8212; osgar 0.0.1 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Message Types &#8212; osgar 0.2.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=938c9ccc"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Glossary" href="glossary.html" />
@@ -21,8 +19,9 @@
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
+
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  
 
   </head><body>
   
@@ -34,39 +33,44 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="message-types">
-<h1>Message Types<a class="headerlink" href="#message-types" title="Permalink to this headline">¶</a></h1>
-<dl class="glossary docutils">
-<dt id="term-emergency-stop">emergency_stop</dt>
-<dd>Boolean if Emergency STOP was pressed. Should be reported on system start
-and on change.</dd>
-<dt id="term-encoders">encoders</dt>
-<dd>List of differences of all available encoders since the last update. For two
+  <section id="message-types">
+<h1>Message Types<a class="headerlink" href="#message-types" title="Link to this heading">¶</a></h1>
+<dl class="simple glossary">
+<dt id="term-emergency_stop">emergency_stop<a class="headerlink" href="#term-emergency_stop" title="Link to this term">¶</a></dt><dd><p>Boolean if Emergency STOP was pressed. Should be reported on system start
+and on change.</p>
+</dd>
+<dt id="term-encoders">encoders<a class="headerlink" href="#term-encoders" title="Link to this term">¶</a></dt><dd><p>List of differences of all available encoders since the last update. For two
 wheeled robot they shell be ordered [left, right]. Positive difference
 corresponds to forward motion. The scaling factor is specific to robot
 and can change over time (preasure in tires, payload). The main purpose
-of this message type is an advanced position estimation.</dd>
-<dt id="term-gps-position">gps_position</dt>
-<dd>[longitude_ms, latitude_ms] - GPS coordinates in WGS84 system. Scaled
-3600000 (i.e. in milliseconds)</dd>
-<dt id="term-pose2d">pose2d</dt>
-<dd>[x, y, heading] - position in meters with heading in radians
-(anticlockwise). Scale 1000x (i.e. x, y are send in millimeters)
-and angle in 1/100th of degree.</dd>
-<dt id="term-desired-speed">desired_speed</dt>
-<dd>[speed, angular_speed] - command used for differentially driven robots.
-Speed is in meters per second scalled 1000x (i.e. millimeters per second)
-and angular_speed in radians per second, scaled to 1/100th degree per
-second.</dd>
+of this message type is an advanced position estimation.</p>
+</dd>
+<dt id="term-gps_position">gps_position<a class="headerlink" href="#term-gps_position" title="Link to this term">¶</a></dt><dd><p>[longitude_ms, latitude_ms] - GPS coordinates in WGS84 system.</p>
+</dd>
+<dt id="term-pose2d">pose2d<a class="headerlink" href="#term-pose2d" title="Link to this term">¶</a></dt><dd><p>[x, y, heading] - position in meters with heading in radians
+(anticlockwise).</p>
+</dd>
+<dt id="term-desired_speed">desired_speed<a class="headerlink" href="#term-desired_speed" title="Link to this term">¶</a></dt><dd><p>[speed, angular_speed] - command used for differentially driven robots.
+Speed is in meters per second and angular_speed in radians per second.</p>
+</dd>
 </dl>
-</div>
+<section id="note-about-scaling">
+<h2>Note about scaling<a class="headerlink" href="#note-about-scaling" title="Link to this heading">¶</a></h2>
+<p>Integer values are preferred to float numbers, so fractional numbers are used.
+The scaling has to be performed manually at the moment but future
+implementation should hide it. Float meters are scaled by factor 1000 and
+rounded, i.e. sent as millimeters. Angles in radians are scaled by 5729
+(exactly math.degrees(1)*100), i.e. it corresponds to 1/100th of degree).
+The same holds for speed and angular speed.</p>
+</section>
+</section>
 
 
           </div>
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <h1 class="logo"><a href="index.html">osgar</a></h1>
 
@@ -78,14 +82,18 @@ second.</dd>
 
 
 <h3>Navigation</h3>
-<p class="caption"><span class="caption-text">Contents:</span></p>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">MyRobot Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="logging.html">Logging</a></li>
-<li class="toctree-l1"><a class="reference internal" href="howto.html">How to control my robot with OSGAR?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="eduro.html">Robot Eduro</a></li>
 <li class="toctree-l1"><a class="reference internal" href="drivers.html">Drivers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rosproxy.html">ROS Proxy</a></li>
 <li class="toctree-l1"><a class="reference internal" href="can.html">CAN Bus Bridge</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Message Types</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Message Types</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#note-about-scaling">Note about scaling</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
 </ul>
 
@@ -98,18 +106,16 @@ second.</dd>
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
     </form>
     </div>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
 
 
 
@@ -123,11 +129,11 @@ second.</dd>
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2018, robotika.cz.
+      &#169;2018, robotika.cz.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
       <a href="_sources/msgtypes.rst.txt"

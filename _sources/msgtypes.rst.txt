@@ -15,17 +15,25 @@ Message Types
       of this message type is an advanced position estimation.
 
    gps_position
-      [longitude_ms, latitude_ms] - GPS coordinates in WGS84 system. Scaled
-      3600000 (i.e. in milliseconds)
+      [longitude_ms, latitude_ms] - GPS coordinates in WGS84 system.
 
    pose2d
       [x, y, heading] - position in meters with heading in radians
-      (anticlockwise). Scale 1000x (i.e. x, y are send in millimeters)
-      and angle in 1/100th of degree.
+      (anticlockwise).
 
    desired_speed
       [speed, angular_speed] - command used for differentially driven robots.
-      Speed is in meters per second scalled 1000x (i.e. millimeters per second)
-      and angular_speed in radians per second, scaled to 1/100th degree per
-      second.
+      Speed is in meters per second and angular_speed in radians per second.
+
+
+
+Note about scaling
+------------------
+
+Integer values are preferred to float numbers, so fractional numbers are used.
+The scaling has to be performed manually at the moment but future
+implementation should hide it. Float meters are scaled by factor 1000 and
+rounded, i.e. sent as millimeters. Angles in radians are scaled by 5729
+(exactly math.degrees(1)*100), i.e. it corresponds to 1/100th of degree).
+The same holds for speed and angular speed.
 

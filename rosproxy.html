@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Drivers &#8212; osgar 0.2.0 documentation</title>
+    <title>ROS Proxy &#8212; osgar 0.2.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
@@ -14,8 +14,8 @@
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="ROS Proxy" href="rosproxy.html" />
-    <link rel="prev" title="Robot Eduro" href="eduro.html" />
+    <link rel="next" title="CAN Bus Bridge" href="can.html" />
+    <link rel="prev" title="Drivers" href="drivers.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -33,29 +33,29 @@
 
           <div class="body" role="main">
             
-  <section id="drivers">
-<h1>Drivers<a class="headerlink" href="#drivers" title="Link to this heading">¶</a></h1>
-<p>The “drivers” directory contains implementation of all drivers for various
-devices. Sensors, effectors as well as the mobile platforms are included.
-The driver takes care of a single device, or better to say a single
-communication stream (serial.Serial for example). The data are collected,
-logged and parsed for further processing.</p>
-<section id="logging">
-<h2>Logging<a class="headerlink" href="#logging" title="Link to this heading">¶</a></h2>
-<p>There is at least one stream logged per driver - the input for sensors and
-the output for effectors. If bidirectional communication is required then
-both streams are logged. The “stream ID” is part of the driver configuration.</p>
-</section>
-<section id="use-cases">
-<h2>Use cases<a class="headerlink" href="#use-cases" title="Link to this heading">¶</a></h2>
-<p>There are two basic use cases: real run and replay. In real run real port
-is opened and dedicated Thread::run() takes care of reading data with timeout
-and the processing.</p>
-<p>In the “replay” mode the run is single-threaded and the processing is
-simulated from logged data. This mode is mainly designed for debugging,
-development of parsers and also verification of identical outputs on
-different platforms (robot PC vs. notebook for example).</p>
-</section>
+  <section id="ros-proxy">
+<h1>ROS Proxy<a class="headerlink" href="#ros-proxy" title="Link to this heading">¶</a></h1>
+<p>The node <cite>rosproxy</cite> is an interface to <a class="reference external" href="http://wiki.ros.org/">ROS</a> (Robot
+Operating System). The implementation is based on <a class="reference external" href="https://robotika.cz/robots/husky/en#140820">experiments with robot Husky</a> back in 2014. The technical info
+is taken from <a class="reference external" href="http://wiki.ros.org/ROS/Technical%20Overview">ROS Technical Overview</a>. <a class="reference external" href="https://robohub.org/ros-101-intro-to-the-robot-operating-system/">Hello World</a> and <a class="reference external" href="https://robohub.org/ros-101-a-practical-example/">ROS
+Practical Example</a> are good
+starting points to get familiar with the basic ROS concept.</p>
+<p>Note, that OSGAR ROS Proxy implementation does not require compilation and
+specific operating system (typically Ubuntu linux). The price is then limited
+set of available messages (compatible with OSGAR), but they can be extended in
+the future.</p>
+<p>OSGAR ROS Proxy is a node both in OSGAR as well as ROS sense. It connects to
+ROS master, provides XMLRPC server for topic registration and finally it
+communicates over TCP in order to send and receive messages. In some sense it
+is actually bridge between these two worlds.</p>
+<dl class="simple">
+<dt>Every OSGAR ROS Proxy node configuration needs:</dt><dd><ul class="simple">
+<li><p>ROS Master URI</p></li>
+<li><p>ROS Client URI, i.e. configuration for XMLRPC server</p></li>
+<li><p>topic and if it should be published or subscribed</p></li>
+</ul>
+</dd>
+</dl>
 </section>
 
 
@@ -80,12 +80,8 @@ different platforms (robot PC vs. notebook for example).</p>
 <li class="toctree-l1"><a class="reference internal" href="tutorial.html">MyRobot Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="logging.html">Logging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="eduro.html">Robot Eduro</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Drivers</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#logging">Logging</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#use-cases">Use cases</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="rosproxy.html">ROS Proxy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="drivers.html">Drivers</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">ROS Proxy</a></li>
 <li class="toctree-l1"><a class="reference internal" href="can.html">CAN Bus Bridge</a></li>
 <li class="toctree-l1"><a class="reference internal" href="msgtypes.html">Message Types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
@@ -95,8 +91,8 @@ different platforms (robot PC vs. notebook for example).</p>
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="eduro.html" title="previous chapter">Robot Eduro</a></li>
-      <li>Next: <a href="rosproxy.html" title="next chapter">ROS Proxy</a></li>
+      <li>Previous: <a href="drivers.html" title="previous chapter">Drivers</a></li>
+      <li>Next: <a href="can.html" title="next chapter">CAN Bus Bridge</a></li>
   </ul></li>
 </ul>
 </div>
@@ -130,7 +126,7 @@ different platforms (robot PC vs. notebook for example).</p>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
-      <a href="_sources/drivers.rst.txt"
+      <a href="_sources/rosproxy.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 
