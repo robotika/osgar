@@ -5,6 +5,7 @@ import math
 from datetime import timedelta
 
 from osgar.node import Node
+from osgar.bus import BusShutdownException
 
 
 def distance(pose1, pose2):
@@ -65,19 +66,22 @@ class MyApp(Node):
         self.is_moving = (prev != self.pose2d)
 
     def run(self):
-        print("MyApp example - figure 8!")
-        step_size = 0.5  # meters
-        deg90 = math.radians(90)
+        try:
+            print("MyApp example - figure 8!")
+            step_size = 0.5  # meters
+            deg90 = math.radians(90)
 
-        for i in range(4):
-            self.go_straight(step_size)
-            self.turn(deg90)
+            for i in range(4):
+                self.go_straight(step_size)
+                self.turn(deg90)
 
-        for i in range(4):
-            self.go_straight(step_size)
-            self.turn(-deg90)
+            for i in range(4):
+                self.go_straight(step_size)
+                self.turn(-deg90)
 
-        print("END")
+            print("END")
+        except BusShutdownException:
+            pass
 
 
 if __name__ == "__main__":

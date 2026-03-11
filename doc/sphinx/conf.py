@@ -47,7 +47,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'osgar'
-copyright = '2018, robotika.cz'
+copyright = '2018-2026, robotika.cz'
 author = 'robotika.cz'
 
 # The version info for the project you're documenting, acts as replacement for
