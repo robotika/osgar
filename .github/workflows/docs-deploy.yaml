@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - feature/tutorial
+      - feature/tutorial-rev2
 
 jobs:
   build-and-deploy:
