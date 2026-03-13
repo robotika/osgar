@@ -25,12 +25,8 @@ Team Robotika used OSGAR to coordinate a heterogeneous fleet of robots (wheeled,
 ![DARPA SubT](https://robotika.cz/competitions/subtchallenge/tunnel-circuit/day3-0742-kloubak.jpg)
 
 ### DARPA Triage Challenge (DTC)
-OSGAR powers robots equipped with non-contact sensors to detect physiological signs in casualties during mass-casualty incidents.
-![DARPA Triage Challenge](https://robotika.cz/competitions/darpa-triage/darpa-triage.jpg)
-
-### Pat & Matty
-**Pat** (Yuhesen FR-07 platform) and **Matty** (versatile terrain robots M01-M05) are used for testing advanced vision sensors (like OAK-D) and competing in outdoor challenges like Robotour.
-![Pat](https://robotika.cz/robots/pat-a-mat/pat.jpg) ![Matty](https://robotika.cz/robots/pat-a-mat/matty.jpg)
+OSGAR powers a fleet of **Matty** robots (M01-M05) equipped with non-contact sensors to detect physiological signs in casualties during mass-casualty incidents.
+![Matty robots for DTC](https://robotika.cz/competitions/dtc/phase2/matty-all-hw-completed.jpg)
 
 # Documentation
 
