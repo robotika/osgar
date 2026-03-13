@@ -33,7 +33,6 @@ OSGAR powers a fleet of **Matty** robots (M01-M05) equipped with non-contact sen
 For more detailed information, please refer to:
 *   [Technical Guide (English)](https://robotika.github.io/osgar/index.html)
 *   [Czech Guide (Průvodce OSGARem)](https://robotika.cz/guide/osgar/cs)
-*   [Reference at robotika.cz](http://robotika.cz/robots/osgar/)
 
 # Architecture
 
