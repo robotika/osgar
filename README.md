@@ -22,7 +22,7 @@ OSGAR has been the core software framework for a variety of robotic platforms an
 
 ### DARPA Subterranean Challenge (SubT)
 Team Robotika used OSGAR to coordinate a heterogeneous fleet of robots (wheeled, tracked, and flying) to map and search complex underground environments.
-![DARPA SubT](https://robotika.cz/competitions/darpa-subt/darpa-subt.jpg)
+![DARPA SubT](https://robotika.cz/competitions/subtchallenge/tunnel-circuit/day3-0742-kloubak.jpg)
 
 ### DARPA Triage Challenge (DTC)
 OSGAR powers robots equipped with non-contact sensors to detect physiological signs in casualties during mass-casualty incidents.
