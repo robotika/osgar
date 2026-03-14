@@ -1,46 +1,35 @@
 # Changelog
 
-[Full Changelog](https://github.com/robotika/osgar/compare/v0.4.0...master)
+[Full Changelog](https://github.com/robotika/osgar/compare/v0.3.0...master)
 
-## [v0.4.0](https://github.com/robotika/osgar/tree/v0.4.0) (2025-06-03)
-[Full Changelog](https://github.com/robotika/osgar/compare/v0.3.0...v0.4.0)
+## [v1.0.0](https://github.com/robotika/osgar/tree/v1.0.0) (2026-03-14)
+[Full Changelog](https://github.com/robotika/osgar/compare/v0.3.0...v1.0.0)
 
 **osgar:**
 - Base for SubT Finals (#894) and FRE2025
 - Enforced `Node.on_MSG` callbacks
 - Drivers for robots: Yuhesen FR-07, Matty, Skiddy, Deedee
 - New sensor drivers:
-   - Luxonis OAK cameras
+   - Luxonis OAK cameras (added DepthAI v3 support, stereo images, visual odometry)
+   - Support multiple neural networks at once on OAK cameras
    - VanJee lidar
    - Pozyx
    - system monitor (CPU, temperature, RAM)
    - RealSense D455 and L515
-- 
-- osgar.lib.config: allow overrides in dict merging (#612) 
-- osgar.lib.unittest: add custom TestCase (#562) 
-- Upgrade rosmsg to provide multiple devices (#545) 
-- logzeromq 
-   - provide Request/Response option for ROS services (#514)
-   - add conditional log saving based on config['save_data']
-- osgar.bus: track max delay during recording
-- osgar.logger
-   - add walltime to format string
-   - make --times default behavior and --raw change to dump raw data
-   - make --stat default behavior and use --all to dump all streams  
-- osgar.replay: show modules available for replay
-- serialize
-   - add option to store packed data
-   - serialize numpy arrays
-- canserial.py - transition from raw bytes to PCAN triplets [addr, payload, flags]
-- osgar.lib.quaternion support
-- Lazyload drivers
-- Implement ReplayDriver for reprocessing of logfiles
-- Add pyusb into requirements
-- Add opencv to requirements
-- (over 400 master commits related to OSGAR)
+   - New Audio driver
+- Support ZeroMQ PUB/SUB endpoints
+- Support environment variables in configuration files
+- Improved program termination on STOP with `osgar.terminator`
+- Flush log file properly on Ctrl+C
+- Provide `joint_angle` for Matty platform (compatible with Kloubak)
+- Integrate Matty protocol version 8 (IMU data)
+- Add color LED functionality to Matty platform
+- Add tool for listing inputs and outputs of OSGAR modules
+- (over 600 master commits since v0.3.0)
 
 **osgar-tools:**
 - Upgrade lidarview
+  - use black color for undefined depth pixels
   - window resizable (#575)
   - display multiple fields in the title bar (#572)
   - add --bbox option to draw object bounding box (#464)
@@ -56,12 +45,19 @@
   - support lidar FOV controlled by command line --deg
   - add Framer (LogIndexedReader based) for faster replay
 - log2video
+  - add option to mix video with audio
   - create mp4 next to source logfile 
   - add --camera2 option for dual camera setup
   - add option for horizontal flip (upside down mounted camera)
   - add option --end-time-sec for video cut
+- replay: optionally ignore selected stream for output assert
 - strip - added tool logfile size reduction
 
+**other:**
+- Improved documentation (intro, key features, application examples)
+- Added MyRobot tutorial
+- Provide `uv` environment support (`uv.lock`)
+- Automated Sphinx documentation deployment
 
 ## [v0.3.0](https://github.com/robotika/osgar/tree/v0.3.0) (2020-11-30)
 [Full Changelog](https://github.com/robotika/osgar/compare/v0.2.0...v0.3.0)
@@ -182,4 +178,3 @@
 - Support protocols (I/O drivers): serial, CAN, UDP, TCP, HTTP
 - Support sensors: GPS (NMEA), dGPS(uBlox 8), SICK TiM 571, IMU (NMEA $VNYMR)
 - Support robots: Spider3 (with simple simulator)
-
