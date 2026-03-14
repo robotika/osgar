@@ -2,10 +2,8 @@
 all_drivers = dict(
     gps="osgar.drivers.gps:GPS",
     imu="osgar.drivers.imu:IMU",
-    spider="osgar.drivers.spider:Spider",
     serial="osgar.drivers.logserial:LogSerial",
     can="osgar.drivers.canserial:CANSerial",
-    simulator="osgar.drivers.simulator:SpiderSimulator",
     tcp="osgar.drivers.logsocket:LogTCPStaticIP",
     tcpdynamic="osgar.drivers.logsocket:LogTCPDynamicIP",
     tcpserver="osgar.drivers.logsocket:LogTCPServer",

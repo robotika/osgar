@@ -9,7 +9,7 @@
           "init": {}
       },
       "spider": {
-          "driver": "simulator",
+          "driver": "osgar.drivers.simulator:SpiderSimulator",
           "in": ["move"],
           "out": ["position", "orientation", "status"],
           "init": {
