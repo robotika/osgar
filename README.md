@@ -16,7 +16,7 @@ OSGAR was originally developed by [robotika.cz](https://robotika.cz) and has bee
 
 # Applications & Robots
 
-OSGAR has been the core software framework for a variety of robotic platforms and prestigious competitions:
+OSGAR has been the core software framework for a variety of robotic platforms and prestigious competitions. See [OSGAR Platforms](osgar/platforms/README.md) for more details.
 
 <img src="http://robotika.cz/competitions/roboorienteering/2016/jd-nav2.jpg" alt="John Deere X300R" width="600">
 
