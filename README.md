@@ -28,6 +28,10 @@ Team Robotika used OSGAR to coordinate a heterogeneous fleet of robots (wheeled,
 OSGAR powers a fleet of **Matty** robots (M01-M05) equipped with non-contact sensors to detect physiological signs in casualties during mass-casualty incidents.
 ![Matty robots for DTC](https://robotika.cz/competitions/dtc/phase2/matty-all-hw-completed.jpg)
 
+### Field Robot Event
+OSGAR-based robots, including the "Matty twins," have successfully competed in the Field Robot Event, an international competition for autonomous robots in agriculture.
+![Field Robot Event](https://robotika.cz/competitions/fieldrobot/2025/matty-twins-prizes.jpg)
+
 # Documentation
 
 For more detailed information, please refer to:

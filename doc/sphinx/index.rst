@@ -25,6 +25,7 @@ OSGAR has been the core software framework for several prestigious competitions:
 
 *   **DARPA Subterranean Challenge (SubT):** Coordinating heterogeneous robot fleets in underground environments.
 *   **DARPA Triage Challenge (DTC):** Autonomous medical assessment using a fleet of **Matty** robots.
+*   **Field Robot Event:** Autonomous agricultural robots in challenging outdoor environments.
 
 .. image:: https://robotika.cz/competitions/roboorienteering/2016/jd-nav2.jpg
    :alt: John Deere X300R
