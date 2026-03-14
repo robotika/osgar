@@ -22,14 +22,17 @@ OSGAR has been the core software framework for a variety of robotic platforms an
 
 ### DARPA Subterranean Challenge (SubT)
 Team Robotika used OSGAR to coordinate a heterogeneous fleet of robots (wheeled, tracked, and flying) to map and search complex underground environments.
+
 <img src="https://robotika.cz/competitions/subtchallenge/tunnel-circuit/day3-0742-kloubak.jpg" alt="DARPA SubT" width="600">
 
 ### DARPA Triage Challenge (DTC)
 OSGAR powers a fleet of **Matty** robots (M01-M05) equipped with non-contact sensors to detect physiological signs in casualties during mass-casualty incidents.
+
 <img src="https://robotika.cz/competitions/dtc/phase2/matty-all-hw-completed.jpg" alt="Matty robots for DTC" width="600">
 
 ### Field Robot Event
 OSGAR-based robots, including the "Matty twins," have successfully competed in the Field Robot Event, an international competition for autonomous robots in agriculture.
+
 <img src="https://robotika.cz/competitions/fieldrobot/2025/matty-twins-prizes.jpg" alt="Field Robot Event" width="600">
 
 # Documentation
