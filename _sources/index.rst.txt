@@ -29,7 +29,7 @@ OSGAR has been the core software framework for several prestigious competitions:
 
 .. image:: https://robotika.cz/competitions/roboorienteering/2016/jd-nav2.jpg
    :alt: John Deere X300R
-   :width: 600px
+   :width: 400px
 
 .. toctree::
    :maxdepth: 2
