@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 from datetime import timedelta
 
-from osgar.drivers.cortexpilot import Cortexpilot
+from osgar.platforms.cortexpilot import Cortexpilot
 from osgar.bus import Bus
 
 # data for old Robik

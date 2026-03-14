@@ -10,7 +10,6 @@ all_drivers = dict(
     udp="osgar.drivers.logsocket:LogUDP",
     http="osgar.drivers.logsocket:LogHTTP",
     lidar="osgar.drivers.sicklidar:SICKLidar",
-    cortexpilot="osgar.drivers.cortexpilot:Cortexpilot",
     usb="osgar.drivers.logusb:LogUSB",
     replay="osgar.drivers.replay:ReplayDriver",
     lordimu="osgar.drivers.lord_imu:LordIMU",
