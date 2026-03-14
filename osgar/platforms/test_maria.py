@@ -2,7 +2,7 @@ import unittest
 import datetime
 from unittest.mock import MagicMock
 
-from osgar.drivers.maria import RobotMaria, SpeedControl, MAX_PWM
+from osgar.platforms.maria import RobotMaria, SpeedControl, MAX_PWM
 
 
 class RobotTankMariaTest(unittest.TestCase):
