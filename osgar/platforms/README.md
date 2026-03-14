@@ -10,8 +10,9 @@ This directory contains drivers and configuration for various robotic platforms 
 *   **Links:** [Technical details](https://robotika.vosrk.cz/robots/matty/), [Matty Twins](https://robotika.cz/robots/matty-twins/)
 
 ### Eduro
-*   **Description:** Rugged 4-wheel drive robot used in various outdoor competitions.
+*   **Description:** Rugged tricycle robot used in various outdoor competitions.
 *   **Driver:** `osgar.platforms.eduro:Eduro`
+*   **Link:** [Robotika.cz Eduro](https://robotika.cz/robots/eduro/)
 
 ### Kloubak
 *   **Description:** Articulated robot developed at CZU (Czech University of Life Sciences Prague).
@@ -27,7 +28,7 @@ This directory contains drivers and configuration for various robotic platforms 
 *   **Driver:** `osgar.platforms.maria:RobotMaria`
 
 ### Cortexpilot (Robik, Skiddy)
-*   **Description:** Driver for robots from cortexpilot.com, including Robik and Skiddy.
+*   **Description:** Driver for robots from [cortexpilot.com](https://cortexpilot.com), including Robik and Skiddy.
 *   **Driver:** `osgar.platforms.cortexpilot:Cortexpilot`
 
 ### Deedee
