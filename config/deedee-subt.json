@@ -32,13 +32,13 @@
         }
       },
       "deedee": {
-        "driver": "osgar.drivers.deedee:Deedee",
+        "driver": "osgar.platforms.deedee:Deedee",
         "in": ["desired_speed", "info", "tick"],
         "out": ["cmd", "pose2d", "emergency_stop", "stdout"],
         "init": {}
       },
       "slip": {
-        "driver": "osgar.drivers.deedee:Slip",
+        "driver": "osgar.platforms.deedee:Slip",
         "in": ["packet", "raw"],
         "out": ["packet", "raw"],
         "init": {}
