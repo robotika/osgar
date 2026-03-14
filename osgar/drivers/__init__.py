@@ -17,7 +17,6 @@ all_drivers = dict(
     replay="osgar.drivers.replay:ReplayDriver",
     lordimu="osgar.drivers.lord_imu:LordIMU",
     pcan="osgar.drivers.pcan:PeakCAN",
-    kloubak="osgar.drivers.kloubak:RobotKloubak",
     usbcam="osgar.drivers.usbcam:UsbCam",
     rosmsg="osgar.drivers.rosmsg:ROSMsgParser",
     lora="osgar.drivers.lora:LoRa",
