@@ -3,7 +3,7 @@
   "robot": {
     "modules": {
       "spider": {
-          "driver": "spider",
+          "driver": "osgar.platforms.spider:Spider",
           "in": ["can"],
           "out": ["can"],
           "init": {}

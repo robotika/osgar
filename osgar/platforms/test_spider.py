@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 from datetime import timedelta
 
-from osgar.drivers.spider import Spider, CAN_triplet, sint8_diff
+from osgar.platforms.spider import Spider, CAN_triplet, sint8_diff
 from osgar.bus import Bus
 
 

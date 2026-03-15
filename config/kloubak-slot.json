@@ -11,7 +11,7 @@
           }
       },
       "kloubak": {
-          "driver": "kloubak",
+          "driver": "osgar.platforms.kloubak:RobotKloubak",
           "in": ["slot_can", "slot_desired_speed"],
           "out": ["can", "encoders", "emergency_stop", "pose2d"],
           "init": {}

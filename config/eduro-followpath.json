@@ -13,7 +13,7 @@
           }
       },
       "eduro": {
-          "driver": "eduro",
+          "driver": "osgar.platforms.eduro:Eduro",
           "in": ["can", "desired_speed"],
           "out": ["can", "encoders", "emergency_stop", "pose2d", "buttons"],
           "init": {}

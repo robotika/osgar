@@ -33,7 +33,7 @@
           "init": {"port": "/dev/ttyUSB0", "speed": 115200}
       },
       "spider": {
-          "driver": "spider",
+          "driver": "osgar.platforms.spider:Spider",
           "in": ["raw"],
           "out": ["can", "status"],
           "init": {}

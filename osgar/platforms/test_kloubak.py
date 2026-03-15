@@ -2,7 +2,7 @@ import unittest
 import math
 from unittest.mock import MagicMock
 
-from osgar.drivers.kloubak import (compute_desired_erpm, compute_desired_angle,
+from osgar.platforms.kloubak import (compute_desired_erpm, compute_desired_angle,
         WHEEL_DISTANCE, compute_rear, CENTER_AXLE_DISTANCE, RobotKloubak,
         get_downdrop_bumpers, MAX_JOINT_ANGLE, CAN_ID_ENCODERS, ENC_SCALE)
 
