@@ -2,6 +2,63 @@
 
 [Full Changelog](https://github.com/robotika/osgar/compare/v0.3.0...master)
 
+## [v1.0.0](https://github.com/robotika/osgar/tree/v1.0.0) (2026-03-14)
+[Full Changelog](https://github.com/robotika/osgar/compare/v0.3.0...v1.0.0)
+
+**osgar:**
+- Base for SubT Finals (#894) and FRE2025
+- Enforced `Node.on_MSG` callbacks
+- Drivers for robots: Yuhesen FR-07, Matty, Skiddy, Deedee
+- New sensor drivers:
+   - Luxonis OAK cameras (added DepthAI v3 support, stereo images, visual odometry)
+   - Support multiple neural networks at once on OAK cameras
+   - VanJee lidar
+   - Pozyx
+   - system monitor (CPU, temperature, RAM)
+   - RealSense D455 and L515
+   - New Audio driver
+- Support ZeroMQ PUB/SUB endpoints
+- Support environment variables in configuration files
+- Improved program termination on STOP with `osgar.terminator`
+- Flush log file properly on Ctrl+C
+- Provide `joint_angle` for Matty platform (compatible with Kloubak)
+- Integrate Matty protocol version 8 (IMU data)
+- Add color LED functionality to Matty platform
+- Add tool for listing inputs and outputs of OSGAR modules
+- (over 600 master commits since v0.3.0)
+
+**osgar-tools:**
+- Upgrade lidarview
+  - use black color for undefined depth pixels
+  - window resizable (#575)
+  - display multiple fields in the title bar (#572)
+  - add --bbox option to draw object bounding box (#464)
+  - add options for lidar limit and window size
+  - fix visual overflow in depth images
+  - save image based on selected camera
+  - draw K3 robot with two joints 
+  - integrated 2nd lidar for Kloubak robots
+  - add parameter --jump to given time
+  - add parameter for optional --title
+  - use numpy and colormap
+  - allow keyframes stream for faster search
+  - support lidar FOV controlled by command line --deg
+  - add Framer (LogIndexedReader based) for faster replay
+- log2video
+  - add option to mix video with audio
+  - create mp4 next to source logfile 
+  - add --camera2 option for dual camera setup
+  - add option for horizontal flip (upside down mounted camera)
+  - add option --end-time-sec for video cut
+- replay: optionally ignore selected stream for output assert
+- strip - added tool logfile size reduction
+
+**other:**
+- Improved documentation (intro, key features, application examples)
+- Added MyRobot tutorial
+- Provide `uv` environment support (`uv.lock`)
+- Automated Sphinx documentation deployment
+
 ## [v0.3.0](https://github.com/robotika/osgar/tree/v0.3.0) (2020-11-30)
 [Full Changelog](https://github.com/robotika/osgar/compare/v0.2.0...v0.3.0)
 
@@ -121,4 +178,3 @@
 - Support protocols (I/O drivers): serial, CAN, UDP, TCP, HTTP
 - Support sensors: GPS (NMEA), dGPS(uBlox 8), SICK TiM 571, IMU (NMEA $VNYMR)
 - Support robots: Spider3 (with simple simulator)
-
