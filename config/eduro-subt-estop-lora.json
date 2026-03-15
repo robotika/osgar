@@ -30,7 +30,7 @@
           }
       },
       "eduro": {
-          "driver": "eduro",
+          "driver": "osgar.platforms.eduro:Eduro",
           "in": ["slot_can", "slot_desired_speed"],
           "out": ["can", "encoders", "emergency_stop", "pose2d", "buttons", "voltage"],
           "init": {}

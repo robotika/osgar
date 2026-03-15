@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 from datetime import timedelta
 
-from osgar.drivers.eduro import Eduro, sint32_diff, CAN_triplet
+from osgar.platforms.eduro import Eduro, sint32_diff, CAN_triplet
 from osgar.bus import Bus
 
 

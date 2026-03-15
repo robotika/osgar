@@ -11,7 +11,7 @@
           }
       },
       "maria": {
-          "driver": "maria",
+          "driver": "osgar.platforms.maria:RobotMaria",
           "in": ["desired_speed", "raw"],
           "out": ["emergency_stop", "pose2d", "raw", "encoders"],
           "init": {}
