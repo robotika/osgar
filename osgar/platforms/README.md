@@ -20,7 +20,7 @@ This directory contains drivers and configuration for various robotic platforms 
 *   **Repository:** [tf-czu/kloubak](https://github.com/tf-czu/kloubak)
 
 ### Spider
-*   **Description:** Spider3 Rider platform, often used with Velodyne and GPS for autonomous navigation.
+*   **Description:** Spider3 Rider platform, often used with Ouster lidar and GPS for autonomous navigation.
 *   **Driver:** `osgar.platforms.spider:Spider`
 
 ### Maria
