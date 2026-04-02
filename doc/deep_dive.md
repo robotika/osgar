@@ -25,15 +25,24 @@ The configuration file defines the structure of the OSGAR application. Each modu
 Example:
 ```json
 "modules": {
+  "serial": {
+    "driver": "osgar.drivers.logserial:LogSerial",
+    "init": {
+      "port": "/dev/ttyUSB0",
+      "speed": 4800
+    }
+  },
   "gps": {
     "driver": "osgar.drivers.gps:GPS",
-    "init": {
-      "port": "COM3",
-      "baudrate": 4800
-    }
+    "init": {}
   }
-}
+},
+"links": [
+  ["serial.raw", "gps.raw"],
+  ["gps.position", "app.position"]
+]
 ```
+In this typical setup, the `serial` module handles the physical communication (opening the port, reading/writing bytes), while the `gps` module listens to the `raw` data stream from `serial` and parses it into high-level coordinates.
 
 ## 3. Python Threads and Communication
 
