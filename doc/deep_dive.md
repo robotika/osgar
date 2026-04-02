@@ -2,6 +2,37 @@
 
 This document explains the internal workings of the OSGAR system, specifically focusing on how modules are initialized, how they communicate, and how data is recorded.
 
+## Architecture Overview
+
+OSGAR uses a log-centric, hub-and-spoke architecture where all communication passes through a central Bus and is immediately recorded.
+
+```mermaid
+graph TD
+    subgraph "OSGAR Runtime"
+        BUS(Central Bus / LogWriter)
+        IO[I/O Driver<br/>e.g. LogSerial]
+        PROC[Processing Module<br/>e.g. GPS]
+        APP[Application Logic]
+    end
+
+    HW((Hardware)) <-->|Raw Bytes| IO
+    IO -->|publish 'raw'| BUS
+    BUS -.->|listen 'raw'| PROC
+    PROC -->|publish 'position'| BUS
+    BUS -.->|listen 'position'| APP
+    APP -->|publish 'desired_speed'| BUS
+    BUS -.->|listen| IO
+    
+    BUS ===> LOG[(.log file)]
+    
+    classDef module fill:#f9f,stroke:#333,stroke-width:1px;
+    class IO,PROC,APP module;
+    style BUS fill:#bbf,stroke:#333,stroke-width:2px;
+    style LOG fill:#fff,stroke:#333,stroke-dasharray: 5 5;
+```
+
+This architecture ensures that the state of the entire system is captured in the log file, enabling perfect replay and deterministic simulation.
+
 ## 1. System Starting Modules (`osgar.record`)
 
 The entry point for recording data in OSGAR is `osgar.record`. When you run `python -m osgar.record config.json`, the following sequence occurs:
