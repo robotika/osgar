@@ -42,7 +42,54 @@ OSGAR's standard implementation uses Python's `threading.Thread`. Each module ru
 -   **Standard Version**: Modules inherit from `osgar.node.Node`, which is a `threading.Thread`. They spend most of their time in a `listen()` loop, waiting for data on their input queue.
 -   **ZMQ Option**: While threads are the default, OSGAR also supports an alternative architecture using processes and communication via a **ZMQ router** (`osgar/zmqrouter.py`). This is useful for multi-language support or better process isolation, but the core principles of the bus remain the same.
 
-## 4. Module Linking and I/O Names
+### Mandatory Stream Registration
+Every module MUST register its output channels in its `__init__` method using `self.bus.register()`.
+```python
+def __init__(self, config, bus):
+    super().__init__(config, bus)
+    bus.register('raw', 'status')
+```
+Failure to register a stream will result in an error when attempting to `publish()` to it, as the `LogWriter` needs to assign a unique stream ID for the log file at startup.
+
+## 4. Time Handling in OSGAR
+
+A critical rule in OSGAR is: **Never use system time (`time.time()`, `datetime.now()`) inside a module.**
+
+### Why Not System Time?
+1.  **Replayability**: OSGAR is designed so that a log file can be replayed exactly as it happened. If a module uses system time, the replay will use the "current" time during replay, breaking deterministic behavior.
+2.  **Simulation**: When running in a simulator, time might run faster or slower than real-time. Modules must stay synchronized with the simulator's clock.
+
+### Using the Bus Time
+Modules receive a timestamp with every message they `listen()` to. This timestamp should be stored in `self.time` and used for all time-based logic (e.g., timeouts, integration).
+```python
+def update(self):
+    timestamp, channel, data = self.bus.listen()
+    self.time = timestamp  # Update internal clock
+```
+
+### Estimating Delay
+By comparing the timestamp of an incoming message with the current `self.time` (the timestamp of the *last* message received), you can monitor the "freshness" of data. Furthermore, the `_BusHandler` tracks `max_delay`, which is the difference between the timestamp of data being published and the timestamp of the last data received by that module. A large delay often indicates that a module is performing heavy computation and cannot keep up with the data rate.
+
+## 5. Serialization with Msgpack
+
+OSGAR uses `msgpack` for efficient binary serialization of messages.
+
+-   **Msgpack Extension**: OSGAR extends msgpack to support `numpy` arrays and transparent `zlib` compression for large data packets (like camera frames or lidar scans).
+-   **Lists vs. Tuples**: In Python, `list` and `tuple` are distinct types. However, `msgpack` serializes both into the same "array" structure. To avoid ambiguity and ensure consistency during replay, the convention in OSGAR is to **always use lists** for message payloads.
+
+## 6. External I/O Nodes (Hardware Interfacing)
+
+Nodes that interact with the real world (via Serial, Ethernet, CAN, etc.) are special because they often need to bridge the synchronous world of OSGAR with the asynchronous nature of hardware I/O.
+
+### The Two-Thread Pattern
+While standard `Node`s have one thread for the `listen()`/`update()` loop, complex I/O drivers like `LogSerial` or `LogSocket` often use **two threads**:
+
+1.  **Input Thread**: Constantly reads from the hardware (e.g., `com.read()`) and publishes `raw` data to the OSGAR bus as soon as it arrives.
+2.  **Output Thread**: Listens to the OSGAR bus for outgoing commands and writes them to the hardware (e.g., `com.write()`).
+
+This separation ensures that receiving data from a sensor is not blocked by waiting for a command to be published, and vice-versa.
+
+## 7. Module Linking and I/O Names
 
 Links in the configuration define how data flows between modules:
 
@@ -57,7 +104,7 @@ Links in the configuration define how data flows between modules:
 -   The second part (e.g., `app.position`) is `receiver.input_channel`.
 -   When a module calls `self.publish('position', data)`, the `_BusHandler` identifies all connected receivers and puts the data into their respective input queues.
 
-## 5. Storage in the Logfile
+## 8. Storage in the Logfile
 
 Everything that passes through the bus is recorded in the logfile via `LogWriter`.
 
@@ -68,7 +115,7 @@ Everything that passes through the bus is recorded in the logfile via `LogWriter
     -   `data`: Serialized (and optionally compressed) payload.
 -   **Replayability**: Because the configuration and all bus messages are logged, the exact state and behavior of the system can be reproduced by "replaying" the log.
 
-## 6. Input Queue Implementation
+## 9. Input Queue Implementation
 
 Each module's `_BusHandler` contains a `queue.Queue()` (a thread-safe FIFO queue).
 
