@@ -73,7 +73,15 @@ The "no system time" rule is what makes OSGAR powerful for both simulation and d
 -   **In Simulation**: A simulator driver (e.g., `subt/simulation.py`) can publish a dedicated `sim_time_sec` channel. Other modules then synchronize their internal state to this published simulation time rather than the wall clock. This allows the simulation to run at any speed (or even pause) without affecting the robot's control logic.
 
 ### Estimating Delay
-By comparing the timestamp of an incoming message with the current `self.time` (the timestamp of the *last* message received), you can monitor the "freshness" of data. Furthermore, the `_BusHandler` tracks `max_delay`, which is the difference between the timestamp of data being published and the timestamp of the last data received by that module. A large delay often indicates that a module is performing heavy computation and cannot keep up with the data rate.
+There are two ways to monitor delay in OSGAR:
+1.  **Module Processing Delay**: The `publish(channel, data)` function returns the timestamp assigned to the message by the logger. By comparing this returned timestamp with `self.time` (the timestamp of the triggering input message), a module can measure its own internal processing time.
+    ```python
+    def on_scan(self, data):
+        # ... heavy computation ...
+        publish_time = self.publish('processed_data', result)
+        delay = publish_time - self.time
+    ```
+2.  **Bus Queue Delay**: The `_BusHandler` internally tracks `max_delay`, which is the difference between the timestamp of data being published and the timestamp of the last data received by that module's `listen()` loop. A large delay here indicates that the module's input queue is backing up because it cannot process incoming messages fast enough.
 
 ## 5. Serialization with Msgpack
 
