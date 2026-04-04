@@ -393,34 +393,67 @@ def run_pose_and_vitals_inference(args):
                 status = person.liveness_status
                 if "Static" in status: status = "Static Object"
                 liveness_score = person.successful_readings / (
-                            person.successful_readings + person.failed_readings + 1e-6)
+                        person.successful_readings + person.failed_readings + 1e-6)
 
                 text_lines = [f"ID {track_id} (Conf: {liveness_score:.2f})", f"Status: {status}", ]
                 if person.alive_duration_str: text_lines.append(person.alive_duration_str)
                 text_lines.append(f"Breathing: {person.vitals['breathing']}")
                 if not args.no_hr: text_lines.append(f"Heart Rate: {person.vitals['hr_bpm']}")
 
-                (line_w, line_h), _ = cv2.getTextSize(text_lines[0], Config.FONT, Config.FONT_SCALE,
-                                                      Config.FONT_THICKNESS)
-                panel_h = (line_h + 10) * len(text_lines) + 10
-                rect_y1 = y1 - panel_h - 10 if y1 - panel_h - 10 > 0 else y1 + 10
+                # 1. Dynamically calculate panel size based on the longest text line
+                max_text_width = 0
+                line_h = 0
+                for line in text_lines:
+                    (w, h), _ = cv2.getTextSize(line, Config.FONT, Config.FONT_SCALE, Config.FONT_THICKNESS)
+                    max_text_width = max(max_text_width, w)
+                    line_h = h  # Line height is consistent
 
-                cv2.rectangle(annotated_frame, (x1, rect_y1), (x1 + 300, rect_y1 + panel_h), (0, 0, 0), -1)
+                panel_w = max_text_width + 20  # Add 10px padding on each side
+                panel_h = (line_h + 10) * len(text_lines) + 10
+
+                # 2. Position panel to the right of the bounding box. If it goes off-screen, place it on the left.
+                frame_h, frame_w = annotated_frame.shape[:2]
+
+                # Try positioning on the right side first
+                rect_x1 = x2 + 10
+                rect_y1 = y1
+
+                # If it doesn't fit on the right, move it to the left
+                if rect_x1 + panel_w > frame_w:
+                    rect_x1 = x1 - panel_w - 10
+
+                # Final safety checks to keep the panel on screen
+                if rect_x1 < 0: rect_x1 = 5  # Prevent going off left edge
+                if rect_y1 + panel_h > frame_h: rect_y1 = frame_h - panel_h - 5  # Prevent going off bottom edge
+
+                # 3. Draw the background panel
+                cv2.rectangle(annotated_frame, (rect_x1, rect_y1), (rect_x1 + panel_w, rect_y1 + panel_h), (0, 0, 0),
+                              -1)
+
+                # 4. Draw the text lines with improved color coding
                 for i, line in enumerate(text_lines):
+                    # Default color is white
                     color = (255, 255, 255)
+
+                    # Determine text color based on content (most specific first)
                     if "Alive for:" in line:
-                        color = (150, 255, 150)
+                        color = (150, 255, 150)  # Light green for duration
+                    elif "Alive (Low HR)" in line:
+                        color = (0, 165, 255)  # Orange for low HR
                     elif "Alive" in line:
-                        color = (0, 255, 0)
-                    elif "Low Heart Rate" in line:
-                        color = (0, 165, 255)
+                        color = (0, 255, 0)  # Green for alive
                     elif "No Vitals" in line or "Static" in line:
-                        color = (0, 0, 255)
+                        color = (0, 0, 255)  # Red for no vitals/static
                     elif "Determining" in line:
-                        color = (0, 255, 255)
+                        color = (0, 255, 255)  # Yellow for determining
                     elif "BPM" in line or "BrPM" in line:
-                        if "Low" not in line and "Calculating" not in line: color = (0, 255, 0)
-                    cv2.putText(annotated_frame, line, (x1 + 10, rect_y1 + (i + 1) * (line_h + 10)), Config.FONT,
+                        # Check for non-successful readings
+                        if "Low" in line or "Calculating" in line or "Unrealistic" in line:
+                            color = (0, 255, 255)  # Yellow for processing states
+                        else:
+                            color = (0, 255, 0)  # Green for successful reading
+
+                    cv2.putText(annotated_frame, line, (rect_x1 + 10, rect_y1 + (i + 1) * (line_h + 10)), Config.FONT,
                                 Config.FONT_SCALE, color, Config.FONT_THICKNESS)
 
             out.write(annotated_frame)
@@ -437,16 +470,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run Pose Estimation and Vital Signs Detection on a video.')
     parser.add_argument('-i', '--input_file', type=str, required=True, help='Path to the input video file.')
     parser.add_argument('-o', '--output_file', type=str, required=True, help='Path to save the output video file.')
-    parser.add_argument('-m', '--model_file', type=str, default="yolo11s-pose.pt",
+    parser.add_argument('-m', '--model_file', type=str, default="yolo11x-pose.pt",
                         help='Path to the YOLO pose model file. Use yolo11n-pose.pt for max speed.')
-    parser.add_argument('-c', '--conf', type=float, default=0.7, help='Object detection confidence threshold.')
+    parser.add_argument('-c', '--conf', type=float, default=0.3, help='Object detection confidence threshold.')
     parser.add_argument('--motion_thresh', type=float, default=0.02, help='Motion detection threshold.')
 
     ## --- OPTIMIZATION ARGUMENTS ---
     parser.add_argument('--no-hr', action='store_true', help='Disable heart rate calculation to speed up processing.')
     parser.add_argument('--skip-frames', type=int, default=1,
                         help='Process vitals on every N-th frame (e.g., 2 means 50% less processing).')
-    parser.add_argument('--resize-factor', type=float, default=0.5,
+    parser.add_argument('--resize-factor', type=float, default=0.7,
                         help='Resize video by this factor (e.g., 0.5 for half resolution) before processing.')
 
     args = parser.parse_args()
