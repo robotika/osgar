@@ -51,7 +51,10 @@ The configuration file defines the structure of the OSGAR application. Each modu
 
 -   `driver`: The Python class name or alias (e.g., `osgar.drivers.gps:GPS`).
 -   `init`: A dictionary of parameters passed to the module's `__init__` method.
--   `bus`: (Implicitly handled) Mapping of inputs and outputs.
+-   `in`: (Optional) List of input channel names.
+-   `out`: (Optional) List of output channel names.
+
+**Note on `in` and `out`**: While these keys are present in many OSGAR configurations, they are primarily used for documentation and by visualizers to represent the module's I/O interface. The actual communication paths are defined in the `links` section.
 
 Example:
 ```json
