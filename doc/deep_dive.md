@@ -114,7 +114,7 @@ def update(self):
 ### Simulation and Replay Mode
 The "no system time" rule is what makes OSGAR powerful for both simulation and debugging:
 -   **In Replay**: `LogReader` reads the original timestamps from the log file. When a module calls `listen()`, it receives the exact same `timedelta` that was recorded during the real run. The module "thinks" it is running in real-time, even if the replay is running much faster.
--   **In Simulation**: A simulator driver (e.g., `subt/simulation.py`) can publish a dedicated `sim_time_sec` channel. Other modules then synchronize their internal state to this published simulation time rather than the wall clock. This allows the simulation to run at any speed (or even pause) without affecting the robot's control logic.
+-   **In Simulation**: A simulator driver can publish its own time (e.g., via a `sim_time_sec` channel). Other modules then synchronize their internal state to this published simulation time rather than the wall clock. This allows the simulation to run at any speed (or even pause) without affecting the robot's control logic.
 
 ### Estimating Delay
 There are two ways to monitor delay in OSGAR:
