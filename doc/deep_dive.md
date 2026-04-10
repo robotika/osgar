@@ -193,4 +193,41 @@ Each module's `_BusHandler` contains a `queue.Queue()` (a thread-safe FIFO queue
     -   It calls `self.queue.get()`, which blocks until data is available.
     -   The module then processes the message, typically by calling a handler method (e.g., `on_position`).
 
-This architecture ensures that modules are decoupled and that data is processed in the order it was received, with the system log serving as a perfect record of all interactions.
+## 10. Reading OSGAR Logfiles
+
+There are two primary ways to interact with OSGAR logfiles: programmatically using the Python API or via the command-line utility.
+
+### Programmatic Reading (Python API)
+You can use `osgar.logger.LogReader` to iterate over all messages in a log file. To handle the data correctly, you should use `osgar.lib.serialize.deserialize`.
+
+```python
+from osgar.logger import LogReader, lookup_stream_names
+from osgar.lib.serialize import deserialize
+
+logfile = 'myrobot-260310_123456.log'
+names = lookup_stream_names(logfile)
+
+with LogReader(logfile) as log:
+    for timestamp, stream_id, raw_data in log:
+        if stream_id == 0:
+            # Stream 0 contains system info/metadata
+            continue
+        
+        channel_name = names[stream_id - 1]
+        data = deserialize(raw_data)
+        print(f"{timestamp} | {channel_name} | {data}")
+```
+
+### Command-Line Utility (`osgar.logger`)
+The `osgar.logger` module can be executed directly to inspect logfiles. It is particularly useful for extracting specific streams or generating formatted text output.
+
+-   **List Streams**: `python -m osgar.logger --list-names <logfile>`
+-   **Extract Data**: `python -m osgar.logger --stream gps.position <logfile>`
+-   **Formatted Output**: Use the `--format` flag to create custom text representations. Available fields include `sec`, `timestamp`, `stream_id`, and `data`.
+
+```bash
+# Example: Print time and position in a CSV-like format
+python -m osgar.logger --stream gps.position --format "{sec}, {data[0]}, {data[1]}" my_run.log
+```
+
+This utility is invaluable for quick data verification and for exporting data to other tools (like Excel or MATLAB) for further analysis.
