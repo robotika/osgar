@@ -193,6 +193,8 @@ Each module's `_BusHandler` contains a `queue.Queue()` (a thread-safe FIFO queue
     -   It calls `self.queue.get()`, which blocks until data is available.
     -   The module then processes the message, typically by calling a handler method (e.g., `on_position`).
 
+This architecture ensures that modules are decoupled and that data is processed in the order it was received, with the system log serving as a perfect record of all interactions.
+
 ## 10. Reading OSGAR Logfiles
 
 There are two primary ways to interact with OSGAR logfiles: programmatically using the Python API or via the command-line utility.
