@@ -152,14 +152,24 @@ Links in the configuration define how data flows between modules:
 
 ```json
 "links": [
-  ["gps.position", "app.position"],
-  ["app.desired_speed", "base.speed"]
+  ["encoders.pose2d", "app.encoder_pose"],
+  ["lidar.pose2d", "app.lidar_pose"]
 ]
 ```
 
--   The first part (e.g., `gps.position`) is `sender.output_channel`.
--   The second part (e.g., `app.position`) is `receiver.input_channel`.
--   When a module calls `self.publish('position', data)`, the `_BusHandler` identifies all connected receivers and puts the data into their respective input queues.
+Each link is a pair of `[sender.output_channel, receiver.input_channel]`. When a module calls `self.publish('channel', data)`, the `_BusHandler` identifies all connected receivers and puts the data into their respective input queues using the mapped input channel name.
+
+### Disambiguation and Handlers
+A key feature of OSGAR is that **output names and input names do not have to match**. This is essential for disambiguation when a module receives the same type of data from multiple sources.
+
+For example, an application might receive `pose2d` from both wheel encoders and a SLAM algorithm. By mapping these to unique input names (`encoder_pose` and `lidar_pose`), the receiving `Node` can trigger different handlers:
+
+-   **Output**: The sender uses its generic internal output name, e.g., `self.publish('pose2d', data)`.
+-   **Input**: The receiver (e.g., `Node`-based) uses the mapped input name to trigger the correct handler:
+    -   `on_encoder_pose(self, data)`
+    -   `on_lidar_pose(self, data)`
+
+Without this mapping, the `app` module would receive both streams on the same channel and would be unable to distinguish the source of the data.
 
 ## 8. Storage in the Logfile
 
