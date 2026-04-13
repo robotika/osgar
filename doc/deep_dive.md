@@ -220,6 +220,28 @@ with LogReader(logfile) as log:
         print(f"{timestamp} | {channel_name} | {data}")
 ```
 
+### Advanced Log Reading
+The `LogReader` class supports several parameters for fine-grained control over how data is extracted:
+
+-   **`only_stream_id`**: Can be a single integer or a list of IDs. If provided, the reader will only yield messages from these specific streams.
+-   **`clip_start_time_sec`**: Skips all messages before this relative timestamp (in seconds).
+-   **`clip_end_time_sec`**: Stops reading after this relative timestamp (in seconds).
+-   **`follow`**: If set to `True`, the reader will not stop at the end of the file. Instead, it will wait (block) for new data to be written, behaving similarly to the `tail -f` command. This is useful for real-time monitoring of a running OSGAR process.
+
+To convert a human-readable stream name (like `gps.position`) into its numeric ID, use the `lookup_stream_id` utility:
+
+```python
+from osgar.logger import LogReader, lookup_stream_id
+
+logfile = 'my_run.log'
+gps_id = lookup_stream_id(logfile, 'gps.position')
+
+with LogReader(logfile, only_stream_id=gps_id, clip_start_time_sec=10.0) as log:
+    for timestamp, stream_id, raw_data in log:
+        # Processes only GPS data starting from 10s into the log
+        pass
+```
+
 ### Command-Line Utility (`osgar.logger`)
 The `osgar.logger` module can be executed directly to inspect logfiles. It is particularly useful for extracting specific streams or generating formatted text output.
 
