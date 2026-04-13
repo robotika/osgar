@@ -290,7 +290,8 @@ class OakCamera:
                             mask = np.array(mask).reshape((H//2, W//2))
                             self.bus.publish('nn_mask', mask)
 
-                            robotourist = np.array(nn_robotourist_output).reshape((1280, 7, 7))
+                            # ver0 (1280, 7, 7), ver1 (160, 7, 7)
+                            robotourist = np.array(nn_robotourist_output).reshape((len(nn_robotourist_output), 7, 7))
                             self.bus.publish('robotourist', robotourist)
 
 
