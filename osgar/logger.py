@@ -39,6 +39,8 @@ from ast import literal_eval
 import mmap
 import pathlib
 
+import json
+
 g_logger = logging.getLogger(__name__)
 
 MAGIC = b'Pyr\x00'
@@ -374,6 +376,20 @@ def lookup_stream_id(filename, stream_name):
     return names.index(stream_name) + 1
 
 
+def lookup_config(filename):
+    with LogReader(filename) as log:
+        for __, channel, line in log:
+            if channel != 0:
+                break
+            try:
+                d = literal_eval(line.decode('ascii'))
+            except Exception:
+                continue
+            if isinstance(d, dict) and 'names' not in d:
+                return d
+    return None
+
+
 def calculate_stat(filename):
     names = ['sys'] + lookup_stream_names(filename)
     sizes = [0] * len(names)
@@ -403,10 +419,17 @@ def main():
                         type=float, default=0.0)
     parser.add_argument('--end-time-sec', '-e', help='cut end at given time (sec)',
                         type=float, default=None)
+    parser.add_argument('--config', help='extract configuration JSON', action='store_true')
     args = parser.parse_args()
 
     if args.list_names:
         print(lookup_stream_names(args.logfile))
+        sys.exit()
+
+    if args.config:
+        cfg = lookup_config(args.logfile)
+        if cfg:
+            print(json.dumps(cfg, indent=4))
         sys.exit()
 
     if args.stream is None and not args.all:
