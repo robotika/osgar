@@ -10,6 +10,9 @@ import depthai as dai
 import numpy as np
 import cv2
 
+
+g_logger = logging.getLogger(__name__)
+
 # ----------- oak_camera_v2.py copy & paste ----------------
 g_resolution_dic = {
     "THE_400_P": (640, 400),
@@ -34,6 +37,24 @@ def get_video_encoder(name):
         assert 0, f'"{name}" is not supported'
 # ----------- END OF oak_camera_v2.py copy & paste ----------------
 
+
+def cam_is_available(cam_id):
+    devices = dai.Device.getAllAvailableDevices()
+    available_devices_names = []
+    available_devices_MxId = []
+    for dev in devices:
+        if cam_id == dev.name or cam_id == dev.getDeviceId():
+            return True
+        available_devices_names.append(dev.name)
+        available_devices_MxId.append(dev.getDeviceId())
+
+    g_logger.error(f"{cam_id} was not found!")
+    g_logger.info(f'Found device names: {", ".join(available_devices_names)}')
+    g_logger.info(f'Found device MxIds: {", ".join(available_devices_MxId)}')
+
+    return False
+
+
 class OakCamera:
     def __init__(self, config, bus):
         self.input_thread = Thread(target=self.run_input, daemon=True)
@@ -53,6 +74,7 @@ class OakCamera:
         self.is_stereo_images = config.get('is_stereo_images', False)
         self.fps = config.get('fps', 10)
         self.subsample = config.get('subsample')
+        self.cam_id = config.get('cam_id')
 
         color_resolution_value = config.get("color_resolution", "THE_1080_P")
         self.color_resolution = g_resolution_dic[color_resolution_value]
@@ -120,8 +142,18 @@ class OakCamera:
                 self.bus.publish(f"{self.stream_type}_seq", [seq_num, timestamp_us])
                 self.bus.publish(self.stream_type, frame.getData().tobytes())
 
+        if self.cam_id:
+            if cam_is_available(self.cam_id):
+                device_info = dai.DeviceInfo(self.cam_id)
+                target_device = dai.Device(device_info)
+                pipeline_ctx = dai.Pipeline(target_device)
+            else:
+                self.request_stop()
+                return
+        else:
+            pipeline_ctx = dai.Pipeline()
 
-        with dai.Pipeline() as pipeline:
+        with pipeline_ctx as pipeline:
             # Define source and output
             if self.is_color:
                 cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
