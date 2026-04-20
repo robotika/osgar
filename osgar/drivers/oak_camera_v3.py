@@ -52,6 +52,7 @@ class OakCamera:
         self.is_depth = config.get('is_depth', False)
         self.is_stereo_images = config.get('is_stereo_images', False)
         self.fps = config.get('fps', 10)
+        self.subsample = config.get('subsample')
 
         color_resolution_value = config.get("color_resolution", "THE_1080_P")
         self.color_resolution = g_resolution_dic[color_resolution_value]
@@ -97,6 +98,7 @@ class OakCamera:
                 dai.node.HostNode.__init__(self, *args, **kwargs)
                 self.bus = None
                 self.stream_type = None
+                self.subsample = None
 
             def build(self, *args):
                 self.link_args(*args)
@@ -104,6 +106,8 @@ class OakCamera:
 
             def process(self, frame):
                 seq_num = frame.getSequenceNum()  # for sync of various outputs
+                if self.subsample and seq_num % self.subsample != 0:
+                    return
                 dt = frame.getTimestamp()  # datetime.timedelta
                 timestamp_us = ((dt.days * 24 * 3600 + dt.seconds) * 1000000 + dt.microseconds)
                 self.bus.publish(f"{self.stream_type}_seq", [seq_num, timestamp_us])
@@ -123,6 +127,7 @@ class OakCamera:
                 saver = pipeline.create(VideoPublisher).build(encoded.out)
                 saver.bus = self.bus
                 saver.stream_type = "color"
+                saver.subsample = self.subsample
 
 
             if self.is_depth or self.is_stereo_images:
@@ -146,6 +151,7 @@ class OakCamera:
                         mono_saver = pipeline.create(VideoPublisher).build(mono_encoded.out)
                         mono_saver.bus = self.bus
                         mono_saver.stream_type = stream_type
+                        saver.subsample = self.subsample
 
             # copy from basalt_vio.py
             imu = pipeline.create(dai.node.IMU)
@@ -302,6 +308,8 @@ class OakCamera:
                         processed_any = True
                         depth_frame = depth_frames[-1]
                         seq_num = depth_frame.getSequenceNum()
+                        if self.subsample and seq_num % self.subsample != 0:
+                            continue
                         dt = depth_frame.getTimestamp()
                         timestamp_us = ((dt.days * 24 * 3600 + dt.seconds) * 1000000 + dt.microseconds)
                         self.bus.publish("depth_seq", [seq_num, timestamp_us])
