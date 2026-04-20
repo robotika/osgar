@@ -61,6 +61,13 @@ class OakCamera:
             assert self.mono_resolution in g_resolution_dic, self.mono_resolution
             self.mono_resolution = g_resolution_dic[self.mono_resolution]
 
+        self.laser_projector_current = config.get("laser_projector_current")
+        if self.laser_projector_current is not None:
+            assert self.laser_projector_current <= 1200, self.laser_projector_current  # The limit is 1200 mA.
+        self.flood_light_current = config.get("flood_light_current")
+        if self.flood_light_current is not None:
+            assert self.flood_light_current <= 1500, self.flood_light_current  # The limit is 1500 mA.
+
         self.video_encoder = get_video_encoder(config.get('video_encoder', 'mjpeg'))
         self.video_encoder_h264_bitrate = config.get('h264_bitrate', 0)  # 0 = automatic
 
@@ -151,7 +158,7 @@ class OakCamera:
                         mono_saver = pipeline.create(VideoPublisher).build(mono_encoded.out)
                         mono_saver.bus = self.bus
                         mono_saver.stream_type = stream_type
-                        saver.subsample = self.subsample
+                        mono_saver.subsample = self.subsample
 
             # copy from basalt_vio.py
             imu = pipeline.create(dai.node.IMU)
@@ -246,9 +253,12 @@ class OakCamera:
                     "labels": model_cfg.get("mappings", {}).get("labels", [])
                 })
 
-
             # Connect to device and start pipeline
             pipeline.start()
+            if self.laser_projector_current:
+                pipeline.getDefaultDevice().setIrLaserDotProjectorIntensity(self.laser_projector_current)
+            if self.flood_light_current:
+                pipeline.getDefaultDevice().setIrFloodLightIntensity(self.flood_light_current)
 
             while pipeline.isRunning() and self.bus.is_alive():
                 processed_any = False
