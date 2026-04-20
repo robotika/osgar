@@ -93,6 +93,13 @@ class OakCamera:
         self.video_encoder = get_video_encoder(config.get('video_encoder', 'mjpeg'))
         self.video_encoder_h264_bitrate = config.get('h264_bitrate', 0)  # 0 = automatic
 
+        self.color_manual_focus = config.get("color_manual_focus")  # 0..255 [far..near]
+        self.color_manual_exposure = config.get("color_manual_exposure")  # [exposure, iso] 1..33000 [us] and 100..1600
+        self.color_manual_wb = config.get("color_manual_wb")  # 1000..12000 K
+        self.stereo_manual_exposure = config.get(
+            "stereo_manual_exposure")  # [exposure, iso] 1..33000 [us] and 100..1600
+        self.stereo_manual_wb = config.get("stereo_manual_wb")  # 1000..12000 K
+
         depth_profile_value = config.get("depth_profile", "ROBOTICS")
         # Available profiles: FAST_ACCURACY, FAST_DENSITY, DEFAULT, FACE, HIGH_DETAIL, ROBOTICS, DENSITY, ACCURACY.
         # https://docs.luxonis.com/hardware/platform/depth/configuring-stereo-depth/#Configuring%20Stereo%20Depth
@@ -169,6 +176,13 @@ class OakCamera:
             # Define source and output
             if self.is_color:
                 cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+                if self.color_manual_focus is not None:
+                    cam_rgb.initialControl.setManualFocus(self.color_manual_focus)
+                if self.color_manual_exposure is not None:
+                    exposure, iso = self.color_manual_exposure
+                    cam_rgb.initialControl.setManualExposure(exposure, iso)
+                if self.color_manual_wb is not None:
+                    cam_rgb.initialControl.setManualWhiteBalance(self.color_manual_wb)
 
                 # should frameRate = fps?? should this be limited on input?
                 output = cam_rgb.requestOutput(self.color_resolution, type=dai.ImgFrame.Type.NV12, fps=self.fps)
@@ -184,6 +198,15 @@ class OakCamera:
             if self.is_depth or self.is_stereo_images:
                 mono_left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
                 mono_right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
+
+                if self.stereo_manual_exposure is not None:
+                    exposure, iso = self.stereo_manual_exposure
+                    mono_left.initialControl.setManualExposure(exposure, iso)  # exposure time and ISO
+                    mono_right.initialControl.setManualExposure(exposure, iso)  # exposure time and ISO
+
+                if self.stereo_manual_wb is not None:
+                    mono_left.initialControl.setManualWhiteBalance(self.stereo_manual_wb)
+                    mono_right.initialControl.setManualWhiteBalance(self.stereo_manual_wb)
 
                 # type=dai.ImgFrame.Type.NV12 ??
                 mono_left_out = mono_left.requestOutput(self.mono_resolution, type=dai.ImgFrame.Type.NV12, fps=self.fps)

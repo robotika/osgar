@@ -20,7 +20,10 @@
             "mono_resolution": "THE_400_P",
             "color_resolution": "THE_800_P",
             "color_manual_focus": null,
-            "color_manual_exposure": null,
+            "color_manual_exposure": [8000, 100],
+            "color_manual_wb": null,
+
+            "stereo_manual_exposure": [1000, 100],
 
             "stereo_median_filter": "KERNEL_3x3",
             "depth_profile": "ROBOTICS",
