@@ -93,6 +93,18 @@ class OakCamera:
         self.video_encoder = get_video_encoder(config.get('video_encoder', 'mjpeg'))
         self.video_encoder_h264_bitrate = config.get('h264_bitrate', 0)  # 0 = automatic
 
+        depth_profile_value = config.get("depth_profile", "ROBOTICS")
+        # Available profiles: FAST_ACCURACY, FAST_DENSITY, DEFAULT, FACE, HIGH_DETAIL, ROBOTICS, DENSITY, ACCURACY.
+        # https://docs.luxonis.com/hardware/platform/depth/configuring-stereo-depth/#Configuring%20Stereo%20Depth
+        self.depth_profile = getattr(dai.node.StereoDepth.PresetMode, depth_profile_value)
+        self.is_extended_disparity = config.get("stereo_extended_disparity", False)
+        self.is_subpixel = config.get("stereo_subpixel", False)
+        self.is_left_right_check = config.get("stereo_left_right_check", True)
+        median_filter_value = config.get("stereo_median_filter", "MEDIAN_OFF")
+        assert median_filter_value in ["KERNEL_7x7", "KERNEL_5x5", "KERNEL_3x3", "MEDIAN_OFF"], median_filter_value
+        self.median_filter = getattr(dai.MedianFilter, median_filter_value)
+        self.alignment = config.get("color_depth_alignment", True)
+
         self.is_slam = config.get('is_slam', False)
         self.is_visual_odom = config.get('is_visual_odom', False)
 
@@ -213,13 +225,16 @@ class OakCamera:
                 slam.setParams(params)
 
             if self.is_depth:
-                stereo.setExtendedDisparity(False)
-                stereo.setLeftRightCheck(True)
-                stereo.setSubpixel(True)
-                stereo.setRectifyEdgeFillColor(0)
-                stereo.enableDistortionCorrection(True)
-                stereo.initialConfig.setLeftRightCheckThreshold(10)
-                stereo.setDepthAlign(dai.CameraBoardSocket.CAM_B)
+                stereo.setDefaultProfilePreset(self.depth_profile)
+                stereo.setExtendedDisparity(self.is_extended_disparity)
+                stereo.setLeftRightCheck(self.is_left_right_check)
+                stereo.setSubpixel(self.is_subpixel)
+                stereo.initialConfig.setMedianFilter(self.median_filter)
+                stereo.setRectifyEdgeFillColor(0)  # TODO
+                stereo.enableDistortionCorrection(True)  # TODO
+                stereo.initialConfig.setLeftRightCheckThreshold(10)  # TODO
+                if self.alignment:
+                    stereo.setDepthAlign(dai.CameraBoardSocket.CAM_B)  # TODO
 
                 if self.is_visual_odom:
                     stereo.syncedLeft.link(odom.left)
