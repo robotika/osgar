@@ -3,6 +3,11 @@
 """
 
 import json
+from threading import Thread
+import logging
+
+from ouster.sdk import open_source, core
+from ouster.sdk.sensor import ClientTimeout
 
 from osgar.node import Node
 
@@ -47,3 +52,53 @@ class OusterLidarUDP(Node):
             print(data)
         self.publish("lidar_config", data)
         self.configuration_saved = True
+
+
+class OusterLidar:
+    def __init__(self, config, bus):
+        self.input_thread = Thread(target=self.run_input, daemon=True)
+        self.bus = bus
+        self.bus.register("metadata", "scan3d", "reflectivity")
+        self.lidar_ip = config["lidar_ip"]
+
+    def start(self):
+        self.input_thread.start()
+
+    def join(self, timeout=None):
+        self.input_thread.join(timeout=timeout)
+
+    def run_input(self):
+        source = open_source(self.lidar_ip, sensor_idx=0, collate=False)
+        info = source.sensor_info[0]
+        print(info)  # TODO
+
+        scan_iterator = iter(source)
+
+        while self.bus.is_alive():
+            try:
+                scan_set = next(scan_iterator)
+                scan = scan_set[0]
+
+                if scan is not None:
+                    if not scan.complete(info.format.column_window):
+                        logging.warning(f"Scan is incompleted!")
+                    range_data = scan.field(core.ChanField.RANGE)
+                    self.bus.publish("scan3d", range_data)
+                    reflectivity_data = scan.field(core.ChanField.REFLECTIVITY)
+                    self.bus.publish("reflectivity", reflectivity_data)
+
+            except StopIteration:
+                # Log reading completed
+                break
+
+            except ClientTimeout as e:
+                logging.error(f"Timeout, NO DATA: {e}")
+                continue
+
+            except Exception as e:
+                logging.error(f"Unexpected error: {e}")
+                break
+
+
+    def request_stop(self):
+        self.bus.shutdown()
