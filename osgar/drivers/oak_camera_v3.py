@@ -93,6 +93,11 @@ class OakCamera:
         self.video_encoder = get_video_encoder(config.get('video_encoder', 'mjpeg'))
         self.video_encoder_h264_bitrate = config.get('h264_bitrate', 0)  # 0 = automatic
 
+        color_orientation = config.get("color_orientation", "AUTO")
+        assert color_orientation in ["AUTO", "HORIZONTAL_MIRROR", "NORMAL", "ROTATE_180_DEG",
+                                     "VERTICAL_FLIP"], color_orientation
+        self.color_orientation = getattr(dai.CameraImageOrientation, color_orientation)
+
         self.color_manual_focus = config.get("color_manual_focus")  # 0..255 [far..near]
         self.color_manual_exposure = config.get("color_manual_exposure")  # [exposure, iso] 1..33000 [us] and 100..1600
         self.color_manual_wb = config.get("color_manual_wb")  # 1000..12000 K
@@ -176,6 +181,7 @@ class OakCamera:
             # Define source and output
             if self.is_color:
                 cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+                cam_rgb.setImageOrientation(self.color_orientation)
                 if self.color_manual_focus is not None:
                     cam_rgb.initialControl.setManualFocus(self.color_manual_focus)
                 if self.color_manual_exposure is not None:
