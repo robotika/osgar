@@ -117,8 +117,15 @@ class OakCamera:
         self.median_filter = getattr(dai.MedianFilter, median_filter_value)
         self.alignment = config.get("color_depth_alignment", True)
 
-        self.is_slam = config.get('is_slam', False)
+        self.is_imu_enabled = config.get('is_imu_enabled', False)
         self.is_visual_odom = config.get('is_visual_odom', False)
+        self.is_slam = config.get('is_slam', False)
+        if self.is_slam:
+            assert self.is_visual_odom, "Visual odometry is not allowed."
+
+        if self.is_slam or self.is_visual_odom:
+            assert self.is_imu_enabled, "IMU is required for SLAM and visual odometry."
+            assert self.is_depth, "Depth is required for SLAM and visual odometry."
 
         self.sleep_on_start_sec = config.get('sleep_on_start_sec')
         self.verbose_detections = config.get('verbose_detections', True)
@@ -233,14 +240,16 @@ class OakCamera:
                         mono_saver.stream_type = stream_type
                         mono_saver.subsample = self.subsample
 
-            # copy from basalt_vio.py
-            imu = pipeline.create(dai.node.IMU)
-            if self.is_visual_odom:
-                odom = pipeline.create(dai.node.BasaltVIO)
+            if self.is_imu_enabled:
+                # copy from basalt_vio.py
+                imu = pipeline.create(dai.node.IMU)
 
-            imu.enableIMUSensor([dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW], 200)
-            imu.setBatchReportThreshold(1)
-            imu.setMaxBatchReports(10)
+                if self.is_visual_odom:
+                    odom = pipeline.create(dai.node.BasaltVIO)
+
+                imu.enableIMUSensor([dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW], 200)
+                imu.setBatchReportThreshold(1)
+                imu.setMaxBatchReports(10)
 
             if self.is_visual_odom:
                 imu.out.link(odom.imu)
