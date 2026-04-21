@@ -29,7 +29,10 @@
             "stereo_extended_disparity": false,
             "stereo_subpixel": false,
             "stereo_left_right_check": true,
-            "color_depth_alignment": true
+            "color_depth_alignment": false,
+
+            "is_visual_odom": false,
+            "is_slam": false
           }
       }
     },
