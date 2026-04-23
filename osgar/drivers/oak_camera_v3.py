@@ -340,9 +340,9 @@ class OakCamera:
 
             # Connect to device and start pipeline
             pipeline.start()
-            if self.laser_projector_current:
+            if self.laser_projector_current is not None:
                 pipeline.getDefaultDevice().setIrLaserDotProjectorIntensity(self.laser_projector_current)
-            if self.flood_light_current:
+            if self.flood_light_current is not None:
                 pipeline.getDefaultDevice().setIrFloodLightIntensity(self.flood_light_current)
 
             while pipeline.isRunning() and self.bus.is_alive():
