@@ -115,7 +115,7 @@ class OakCamera:
         median_filter_value = config.get("stereo_median_filter", "MEDIAN_OFF")
         assert median_filter_value in ["KERNEL_7x7", "KERNEL_5x5", "KERNEL_3x3", "MEDIAN_OFF"], median_filter_value
         self.median_filter = getattr(dai.MedianFilter, median_filter_value)
-        self.alignment = config.get("color_depth_alignment", True)
+        self.alignment = config.get("color_depth_alignment", False)
 
         self.is_imu_enabled = config.get('is_imu_enabled', False)
         self.is_visual_odom = config.get('is_visual_odom', False)
