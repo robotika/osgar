@@ -105,10 +105,13 @@ class OakCamera:
             "stereo_manual_exposure")  # [exposure, iso] 1..33000 [us] and 100..1600
         self.stereo_manual_wb = config.get("stereo_manual_wb")  # 1000..12000 K
 
-        depth_profile_value = config.get("depth_profile", "ROBOTICS")
+        depth_profile_value = config.get("depth_profile")  # PR-#1049 had "ROBOTICS"
         # Available profiles: FAST_ACCURACY, FAST_DENSITY, DEFAULT, FACE, HIGH_DETAIL, ROBOTICS, DENSITY, ACCURACY.
         # https://docs.luxonis.com/hardware/platform/depth/configuring-stereo-depth/#Configuring%20Stereo%20Depth
-        self.depth_profile = getattr(dai.node.StereoDepth.PresetMode, depth_profile_value)
+        if depth_profile_value is not None:
+            self.depth_profile = getattr(dai.node.StereoDepth.PresetMode, depth_profile_value)
+        else:
+            self.depth_profile = None
         self.is_extended_disparity = config.get("stereo_extended_disparity", False)
         self.is_subpixel = config.get("stereo_subpixel", False)
         self.is_left_right_check = config.get("stereo_left_right_check", True)
@@ -263,7 +266,8 @@ class OakCamera:
                 slam.setParams(params)
 
             if self.is_depth:
-                stereo.setDefaultProfilePreset(self.depth_profile)
+                if self.depth_profile is not None:
+                    stereo.setDefaultProfilePreset(self.depth_profile)
                 stereo.setExtendedDisparity(self.is_extended_disparity)
                 stereo.setLeftRightCheck(self.is_left_right_check)
                 stereo.setSubpixel(self.is_subpixel)
