@@ -381,7 +381,21 @@ def lookup_stream_id(filename, stream_name):
 
 
 class LogReaderEx(LogReader):
+    """
+    Extended log reader which provides deserialized data and stream names.
+
+    This reader is more user-friendly than the basic LogReader. It automatically
+    looks up stream names and deserializes the data using the default OSGAR
+    deserializer.
+    """
     def __init__(self, filename, names=None):
+        """
+        Initialize the extended log reader.
+
+        :param filename: path to the log file
+        :param names: optional list of stream names to extract. If None, all
+                      streams are extracted.
+        """
         self.stream_names = lookup_stream_names(filename)
         only_stream_id = None
         if names is not None:
@@ -389,6 +403,11 @@ class LogReaderEx(LogReader):
         super().__init__(filename, only_stream_id=only_stream_id)
 
     def _read_gen(self, only_stream_id=None):
+        """
+        Generator yielding (timestamp, stream_name, data).
+
+        The data is already deserialized.
+        """
         for dt, stream_id, data in super()._read_gen(only_stream_id):
             if stream_id != 0:
                 yield dt, self.stream_names[stream_id - 1], deserialize(data)

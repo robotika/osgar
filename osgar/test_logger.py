@@ -342,7 +342,9 @@ class LoggerStreamingTest(unittest.TestCase):
             filename = log.filename
             log.register('raw')
             log.register('gps')
+            time.sleep(0.001)
             t1 = log.write(1, serialize(b'\x01\x02'))
+            time.sleep(0.001)
             t2 = log.write(2, serialize([1, 2, 3]))
 
         with LogReaderEx(filename, names=['raw', 'gps']) as log:
