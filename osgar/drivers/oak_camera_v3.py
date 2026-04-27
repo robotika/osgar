@@ -118,7 +118,7 @@ class OakCamera:
         median_filter_value = config.get("stereo_median_filter", "MEDIAN_OFF")
         assert median_filter_value in ["KERNEL_7x7", "KERNEL_5x5", "KERNEL_3x3", "MEDIAN_OFF"], median_filter_value
         self.median_filter = getattr(dai.MedianFilter, median_filter_value)
-        self.alignment = config.get("color_depth_alignment", False)
+        self.color_depth_alignment = config.get("color_depth_alignment", False)
 
         self.is_imu_enabled = config.get('is_imu_enabled', False)
         self.is_visual_odom = config.get('is_visual_odom', False)
@@ -275,8 +275,10 @@ class OakCamera:
                 stereo.setRectifyEdgeFillColor(0)  # TODO
                 stereo.enableDistortionCorrection(True)  # TODO
                 stereo.initialConfig.setLeftRightCheckThreshold(10)  # TODO
-                if self.alignment:
-                    stereo.setDepthAlign(dai.CameraBoardSocket.CAM_B)  # TODO
+                if self.color_depth_alignment:
+                    stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)  # RGB camera
+                else:
+                    stereo.setDepthAlign(dai.CameraBoardSocket.CAM_B)  # Left camera, default v3.x
 
                 if self.is_visual_odom:
                     stereo.syncedLeft.link(odom.left)
