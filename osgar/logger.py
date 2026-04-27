@@ -360,8 +360,11 @@ def lookup_stream_names(filename):
                 break
             if b'Errno' in line:
                 continue
-            d = literal_eval(line.decode('ascii'))
-            if 'names' in d:
+            try:
+                d = literal_eval(line.decode('ascii'))
+            except (ValueError, SyntaxError):
+                continue
+            if isinstance(d, dict) and 'names' in d:
                 names = d['names']
     return names
 
