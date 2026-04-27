@@ -40,6 +40,7 @@ import mmap
 import pathlib
 
 import json
+from osgar.lib.serialize import deserialize
 
 g_logger = logging.getLogger(__name__)
 
@@ -374,6 +375,20 @@ def lookup_stream_id(filename, stream_name):
         pass
     names = lookup_stream_names(filename)
     return names.index(stream_name) + 1
+
+
+class LogReaderEx(LogReader):
+    def __init__(self, filename, names=None):
+        self.stream_names = lookup_stream_names(filename)
+        only_stream_id = None
+        if names is not None:
+            only_stream_id = [self.stream_names.index(name) + 1 for name in names]
+        super().__init__(filename, only_stream_id=only_stream_id)
+
+    def _read_gen(self, only_stream_id=None):
+        for dt, stream_id, data in super()._read_gen(only_stream_id):
+            if stream_id != 0:
+                yield dt, self.stream_names[stream_id - 1], deserialize(data)
 
 
 def lookup_config(filename):
