@@ -112,12 +112,18 @@ class OakCamera:
             self.depth_profile = getattr(dai.node.StereoDepth.PresetMode, depth_profile_value)
         else:
             self.depth_profile = None
-        self.is_extended_disparity = config.get("stereo_extended_disparity", False)
-        self.is_subpixel = config.get("stereo_subpixel", False)
-        self.is_left_right_check = config.get("stereo_left_right_check", True)
-        median_filter_value = config.get("stereo_median_filter", "MEDIAN_OFF")
-        assert median_filter_value in ["KERNEL_7x7", "KERNEL_5x5", "KERNEL_3x3", "MEDIAN_OFF"], median_filter_value
-        self.median_filter = getattr(dai.MedianFilter, median_filter_value)
+        self.is_extended_disparity = config.get("stereo_extended_disparity")
+        self.is_subpixel = config.get("stereo_subpixel")
+        self.is_left_right_check = config.get("stereo_left_right_check")
+        median_filter_value = config.get("stereo_median_filter")
+        if median_filter_value is not None:
+            assert median_filter_value in ["KERNEL_7x7", "KERNEL_5x5", "KERNEL_3x3", "MEDIAN_OFF"], median_filter_value
+            self.median_filter = getattr(dai.MedianFilter, median_filter_value)
+        else:
+            self.median_filter = None
+        self.set_rectify_edge_fill_color = config.get("set_rectify_edge_fill_color")  # 0 for black color
+        self.enable_distortion_correction = config.get("enable_distortion_correction")  # True or False
+        self.set_left_right_check_threshold = config.get("set_left_right_check_threshold")
         self.color_depth_alignment = config.get("color_depth_alignment", False)
 
         self.is_imu_enabled = config.get('is_imu_enabled', False)
@@ -268,13 +274,20 @@ class OakCamera:
             if self.is_depth:
                 if self.depth_profile is not None:
                     stereo.setDefaultProfilePreset(self.depth_profile)
-                stereo.setExtendedDisparity(self.is_extended_disparity)
-                stereo.setLeftRightCheck(self.is_left_right_check)
-                stereo.setSubpixel(self.is_subpixel)
-                stereo.initialConfig.setMedianFilter(self.median_filter)
-                stereo.setRectifyEdgeFillColor(0)  # TODO
-                stereo.enableDistortionCorrection(True)  # TODO
-                stereo.initialConfig.setLeftRightCheckThreshold(10)  # TODO
+                if self.is_extended_disparity is not None:
+                    stereo.setExtendedDisparity(self.is_extended_disparity)
+                if self.is_left_right_check is not None:
+                    stereo.setLeftRightCheck(self.is_left_right_check)
+                if self.is_subpixel is not None:
+                    stereo.setSubpixel(self.is_subpixel)
+                if self.median_filter is not None:
+                    stereo.initialConfig.setMedianFilter(self.median_filter)
+                if self.set_rectify_edge_fill_color is not None:
+                    stereo.setRectifyEdgeFillColor(self.set_rectify_edge_fill_color)  # was 0
+                if self.enable_distortion_correction is not None:
+                    stereo.enableDistortionCorrection(self.enable_distortion_correction)  # was True
+                if self.set_left_right_check_threshold is not None:
+                    stereo.initialConfig.setLeftRightCheckThreshold(self.set_left_right_check_threshold)  # was 10
                 if self.color_depth_alignment:
                     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)  # RGB camera
                 else:
