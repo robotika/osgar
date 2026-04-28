@@ -11,7 +11,7 @@ try:
     from ouster.sdk import open_source, core, sensor
     from ouster.sdk.sensor import ClientTimeout
 except ImportError as e:
-    logging.warning(f"Ouster lidar drivers not installed: {e}")
+    g_logger.warning(f"Ouster lidar drivers not installed: {e}")
 
 from osgar.node import Node
 
@@ -84,7 +84,7 @@ class OusterLidar:
         try:
             sensor.set_config(self.lidar_ip, config, persist=False, udp_dest_auto=True)
         except Exception as e:
-            logging.error(f"Configuration failed: {e}")
+            g_logger.error(f"Configuration failed: {e}")
             return
 
         source = open_source(self.lidar_ip, sensor_idx=0, collate=False)
@@ -99,7 +99,7 @@ class OusterLidar:
 
                 if scan is not None:
                     if not scan.complete(info.format.column_window):
-                        logging.warning(f"Scan is incompleted!")
+                        g_logger.warning(f"Scan is incompleted!")
                     range_data = scan.field(core.ChanField.RANGE)
                     self.bus.publish("scan3d", range_data.copy())
                     reflectivity_data = scan.field(core.ChanField.REFLECTIVITY)
@@ -110,11 +110,11 @@ class OusterLidar:
                 break
 
             except ClientTimeout as e:
-                logging.error(f"Timeout, NO DATA: {e}")
+                g_logger.error(f"Timeout, NO DATA: {e}")
                 continue
 
             except Exception as e:
-                logging.error(f"Unexpected error: {e}")
+                g_logger.error(f"Unexpected error: {e}")
                 break
 
     def request_stop(self):
