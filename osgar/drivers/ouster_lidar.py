@@ -5,9 +5,13 @@
 import json
 from threading import Thread
 import logging
+g_logger = logging.getLogger(__name__)
 
-from ouster.sdk import open_source, core, sensor
-from ouster.sdk.sensor import ClientTimeout
+try:
+    from ouster.sdk import open_source, core, sensor
+    from ouster.sdk.sensor import ClientTimeout
+except ImportError as e:
+    logging.warning(f"Ouster lidar drivers not installed: {e}")
 
 from osgar.node import Node
 
@@ -112,7 +116,6 @@ class OusterLidar:
             except Exception as e:
                 logging.error(f"Unexpected error: {e}")
                 break
-
 
     def request_stop(self):
         self.bus.shutdown()
