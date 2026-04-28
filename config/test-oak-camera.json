@@ -6,25 +6,33 @@
           "driver": "osgar.drivers.oak_camera:OakCamera",
           "init": {
             "fps": 10,
+            "subsample": 5,
             "is_color": true,
             "is_depth": true,
-            "laser_projector_current": 1200,
+            "is_stereo_images": false,
             "is_imu_enabled": true,
-            "number_imu_records": 10,
-            "disable_magnetometer_fusion": false,
-            "cam_id": "169.254.1.222",
+            "laser_projector_current": 600,
+            "flood_light_current": null,
+            "cam_id": "192.168.1.55",
+            "color_orientation": "AUTO",
 
             "mono_resolution": "THE_400_P",
-            "color_resolution": "THE_1080_P",
-            "color_manual_focus": 130,
-            "color_manual_exposure": null,
+            "color_resolution": "THE_800_P",
+            "color_manual_focus": null,
+            "color_manual_exposure": [12000, 100],
+            "color_manual_wb": null,
+
+            "stereo_manual_exposure": null,
 
             "stereo_median_filter": "KERNEL_3x3",
-            "stereo_mode": "HIGH_ACCURACY",
+            "depth_profile": "ROBOTICS",
             "stereo_extended_disparity": false,
             "stereo_subpixel": false,
             "stereo_left_right_check": true,
-            "color_depth_alignment": true
+            "color_depth_alignment": false,
+
+            "is_visual_odom": false,
+            "is_slam": false
           }
       }
     },
