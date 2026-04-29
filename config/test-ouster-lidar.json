@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "osgar.drivers.ouster_lidar:OusterLidar",
+          "init": {
+            "lidar_ip": "192.168.1.92",
+            "lidar_mode": "MODE_512x10",
+            "azimuth_window": null
+          }
+      }
+    },
+    "links": []
+  }
+}
