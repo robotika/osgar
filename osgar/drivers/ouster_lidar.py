@@ -67,7 +67,9 @@ class OusterLidar:
         lidar_mode = config.get("lidar_mode", "MODE_1024x10")
         assert lidar_mode in ["MODE_512x10", "MODE_1024x10", "MODE_2048x10", "MODE_512x20", "MODE_1024x20"], lidar_mode
         self.lidar_mode = getattr(core.LidarMode, lidar_mode)
-        self.azimut_win = config.get("azimuth_window", [0, 360_000])
+        # Azimuth_window: it allows to set the window in the horizontal FOV (mdeg).
+        # The origin is at the back of the lidar and continues clockwise.
+        self.azimuth_window = config.get("azimuth_window", [0, 360_000])
 
     def start(self):
         self.input_thread.start()
@@ -79,7 +81,7 @@ class OusterLidar:
         # If we change the parameters, the configuration will take about 10 seconds.
         config = core.SensorConfig()
         config.lidar_mode = self.lidar_mode
-        config.azimuth_window = self.azimut_win
+        config.azimuth_window = self.azimuth_window
 
         try:
             sensor.set_config(self.lidar_ip, config, persist=False, udp_dest_auto=True)
