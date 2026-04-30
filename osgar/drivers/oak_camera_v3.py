@@ -10,6 +10,9 @@ import depthai as dai
 import numpy as np
 import cv2
 
+
+g_logger = logging.getLogger(__name__)
+
 # ----------- oak_camera_v2.py copy & paste ----------------
 g_resolution_dic = {
     "THE_400_P": (640, 400),
@@ -34,6 +37,24 @@ def get_video_encoder(name):
         assert 0, f'"{name}" is not supported'
 # ----------- END OF oak_camera_v2.py copy & paste ----------------
 
+
+def cam_is_available(cam_id):
+    devices = dai.Device.getAllAvailableDevices()
+    available_devices_names = []
+    available_devices_MxId = []
+    for dev in devices:
+        if cam_id == dev.name or cam_id == dev.getDeviceId():
+            return True
+        available_devices_names.append(dev.name)
+        available_devices_MxId.append(dev.getDeviceId())
+
+    g_logger.error(f"{cam_id} was not found!")
+    g_logger.info(f'Found device names: {", ".join(available_devices_names)}')
+    g_logger.info(f'Found device MxIds: {", ".join(available_devices_MxId)}')
+
+    return False
+
+
 class OakCamera:
     def __init__(self, config, bus):
         self.input_thread = Thread(target=self.run_input, daemon=True)
@@ -52,6 +73,8 @@ class OakCamera:
         self.is_depth = config.get('is_depth', False)
         self.is_stereo_images = config.get('is_stereo_images', False)
         self.fps = config.get('fps', 10)
+        self.subsample = config.get('subsample')
+        self.cam_id = config.get('cam_id')
 
         color_resolution_value = config.get("color_resolution", "THE_1080_P")
         self.color_resolution = g_resolution_dic[color_resolution_value]
@@ -60,11 +83,58 @@ class OakCamera:
             assert self.mono_resolution in g_resolution_dic, self.mono_resolution
             self.mono_resolution = g_resolution_dic[self.mono_resolution]
 
+        self.laser_projector_current = config.get("laser_projector_current")
+        if self.laser_projector_current is not None:
+            assert self.laser_projector_current <= 1200, self.laser_projector_current  # The limit is 1200 mA.
+        self.flood_light_current = config.get("flood_light_current")
+        if self.flood_light_current is not None:
+            assert self.flood_light_current <= 1500, self.flood_light_current  # The limit is 1500 mA.
+
         self.video_encoder = get_video_encoder(config.get('video_encoder', 'mjpeg'))
         self.video_encoder_h264_bitrate = config.get('h264_bitrate', 0)  # 0 = automatic
 
-        self.is_slam = config.get('is_slam', False)
+        color_orientation = config.get("color_orientation", "AUTO")
+        assert color_orientation in ["AUTO", "HORIZONTAL_MIRROR", "NORMAL", "ROTATE_180_DEG",
+                                     "VERTICAL_FLIP"], color_orientation
+        self.color_orientation = getattr(dai.CameraImageOrientation, color_orientation)
+
+        self.color_manual_focus = config.get("color_manual_focus")  # 0..255 [far..near]
+        self.color_manual_exposure = config.get("color_manual_exposure")  # [exposure, iso] 1..33000 [us] and 100..1600
+        self.color_manual_wb = config.get("color_manual_wb")  # 1000..12000 K
+        self.stereo_manual_exposure = config.get(
+            "stereo_manual_exposure")  # [exposure, iso] 1..33000 [us] and 100..1600
+        self.stereo_manual_wb = config.get("stereo_manual_wb")  # 1000..12000 K
+
+        depth_profile_value = config.get("depth_profile")  # PR-#1049 had "ROBOTICS"
+        # Available profiles: FAST_ACCURACY, FAST_DENSITY, DEFAULT, FACE, HIGH_DETAIL, ROBOTICS, DENSITY, ACCURACY.
+        # https://docs.luxonis.com/hardware/platform/depth/configuring-stereo-depth/#Configuring%20Stereo%20Depth
+        if depth_profile_value is not None:
+            self.depth_profile = getattr(dai.node.StereoDepth.PresetMode, depth_profile_value)
+        else:
+            self.depth_profile = None
+        self.is_extended_disparity = config.get("stereo_extended_disparity")
+        self.is_subpixel = config.get("stereo_subpixel")
+        self.is_left_right_check = config.get("stereo_left_right_check")
+        median_filter_value = config.get("stereo_median_filter")
+        if median_filter_value is not None:
+            assert median_filter_value in ["KERNEL_7x7", "KERNEL_5x5", "KERNEL_3x3", "MEDIAN_OFF"], median_filter_value
+            self.median_filter = getattr(dai.MedianFilter, median_filter_value)
+        else:
+            self.median_filter = None
+        self.set_rectify_edge_fill_color = config.get("set_rectify_edge_fill_color")  # 0 for black color
+        self.enable_distortion_correction = config.get("enable_distortion_correction")  # True or False
+        self.set_left_right_check_threshold = config.get("set_left_right_check_threshold")
+        self.color_depth_alignment = config.get("color_depth_alignment", False)
+
+        self.is_imu_enabled = config.get('is_imu_enabled', False)
         self.is_visual_odom = config.get('is_visual_odom', False)
+        self.is_slam = config.get('is_slam', False)
+        if self.is_slam:
+            assert self.is_visual_odom, "Visual odometry is not allowed."
+
+        if self.is_slam or self.is_visual_odom:
+            assert self.is_imu_enabled, "IMU is required for SLAM and visual odometry."
+            assert self.is_depth, "Depth is required for SLAM and visual odometry."
 
         self.sleep_on_start_sec = config.get('sleep_on_start_sec')
         self.verbose_detections = config.get('verbose_detections', True)
@@ -97,6 +167,7 @@ class OakCamera:
                 dai.node.HostNode.__init__(self, *args, **kwargs)
                 self.bus = None
                 self.stream_type = None
+                self.subsample = None
 
             def build(self, *args):
                 self.link_args(*args)
@@ -104,16 +175,36 @@ class OakCamera:
 
             def process(self, frame):
                 seq_num = frame.getSequenceNum()  # for sync of various outputs
+                if self.subsample and seq_num % self.subsample != 0:
+                    return
                 dt = frame.getTimestamp()  # datetime.timedelta
                 timestamp_us = ((dt.days * 24 * 3600 + dt.seconds) * 1000000 + dt.microseconds)
                 self.bus.publish(f"{self.stream_type}_seq", [seq_num, timestamp_us])
                 self.bus.publish(self.stream_type, frame.getData().tobytes())
 
+        if self.cam_id:
+            if cam_is_available(self.cam_id):
+                device_info = dai.DeviceInfo(self.cam_id)
+                target_device = dai.Device(device_info)
+                pipeline_ctx = dai.Pipeline(target_device)
+            else:
+                self.request_stop()
+                return
+        else:
+            pipeline_ctx = dai.Pipeline()
 
-        with dai.Pipeline() as pipeline:
+        with pipeline_ctx as pipeline:
             # Define source and output
             if self.is_color:
                 cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+                cam_rgb.setImageOrientation(self.color_orientation)
+                if self.color_manual_focus is not None:
+                    cam_rgb.initialControl.setManualFocus(self.color_manual_focus)
+                if self.color_manual_exposure is not None:
+                    exposure, iso = self.color_manual_exposure
+                    cam_rgb.initialControl.setManualExposure(exposure, iso)
+                if self.color_manual_wb is not None:
+                    cam_rgb.initialControl.setManualWhiteBalance(self.color_manual_wb)
 
                 # should frameRate = fps?? should this be limited on input?
                 output = cam_rgb.requestOutput(self.color_resolution, type=dai.ImgFrame.Type.NV12, fps=self.fps)
@@ -123,11 +214,21 @@ class OakCamera:
                 saver = pipeline.create(VideoPublisher).build(encoded.out)
                 saver.bus = self.bus
                 saver.stream_type = "color"
+                saver.subsample = self.subsample
 
 
             if self.is_depth or self.is_stereo_images:
                 mono_left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
                 mono_right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
+
+                if self.stereo_manual_exposure is not None:
+                    exposure, iso = self.stereo_manual_exposure
+                    mono_left.initialControl.setManualExposure(exposure, iso)  # exposure time and ISO
+                    mono_right.initialControl.setManualExposure(exposure, iso)  # exposure time and ISO
+
+                if self.stereo_manual_wb is not None:
+                    mono_left.initialControl.setManualWhiteBalance(self.stereo_manual_wb)
+                    mono_right.initialControl.setManualWhiteBalance(self.stereo_manual_wb)
 
                 # type=dai.ImgFrame.Type.NV12 ??
                 mono_left_out = mono_left.requestOutput(self.mono_resolution, type=dai.ImgFrame.Type.NV12, fps=self.fps)
@@ -146,15 +247,18 @@ class OakCamera:
                         mono_saver = pipeline.create(VideoPublisher).build(mono_encoded.out)
                         mono_saver.bus = self.bus
                         mono_saver.stream_type = stream_type
+                        mono_saver.subsample = self.subsample
 
-            # copy from basalt_vio.py
-            imu = pipeline.create(dai.node.IMU)
-            if self.is_visual_odom:
-                odom = pipeline.create(dai.node.BasaltVIO)
+            if self.is_imu_enabled:
+                # copy from basalt_vio.py
+                imu = pipeline.create(dai.node.IMU)
 
-            imu.enableIMUSensor([dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW], 200)
-            imu.setBatchReportThreshold(1)
-            imu.setMaxBatchReports(10)
+                if self.is_visual_odom:
+                    odom = pipeline.create(dai.node.BasaltVIO)
+
+                imu.enableIMUSensor([dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW], 200)
+                imu.setBatchReportThreshold(1)
+                imu.setMaxBatchReports(10)
 
             if self.is_visual_odom:
                 imu.out.link(odom.imu)
@@ -168,13 +272,26 @@ class OakCamera:
                 slam.setParams(params)
 
             if self.is_depth:
-                stereo.setExtendedDisparity(False)
-                stereo.setLeftRightCheck(True)
-                stereo.setSubpixel(True)
-                stereo.setRectifyEdgeFillColor(0)
-                stereo.enableDistortionCorrection(True)
-                stereo.initialConfig.setLeftRightCheckThreshold(10)
-                stereo.setDepthAlign(dai.CameraBoardSocket.CAM_B)
+                if self.depth_profile is not None:
+                    stereo.setDefaultProfilePreset(self.depth_profile)
+                if self.is_extended_disparity is not None:
+                    stereo.setExtendedDisparity(self.is_extended_disparity)
+                if self.is_left_right_check is not None:
+                    stereo.setLeftRightCheck(self.is_left_right_check)
+                if self.is_subpixel is not None:
+                    stereo.setSubpixel(self.is_subpixel)
+                if self.median_filter is not None:
+                    stereo.initialConfig.setMedianFilter(self.median_filter)
+                if self.set_rectify_edge_fill_color is not None:
+                    stereo.setRectifyEdgeFillColor(self.set_rectify_edge_fill_color)  # was 0
+                if self.enable_distortion_correction is not None:
+                    stereo.enableDistortionCorrection(self.enable_distortion_correction)  # was True
+                if self.set_left_right_check_threshold is not None:
+                    stereo.initialConfig.setLeftRightCheckThreshold(self.set_left_right_check_threshold)  # was 10
+                if self.color_depth_alignment:
+                    stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)  # RGB camera
+                else:
+                    stereo.setDepthAlign(dai.CameraBoardSocket.CAM_B)  # Left camera, default v3.x
 
                 if self.is_visual_odom:
                     stereo.syncedLeft.link(odom.left)
@@ -240,9 +357,12 @@ class OakCamera:
                     "labels": model_cfg.get("mappings", {}).get("labels", [])
                 })
 
-
             # Connect to device and start pipeline
             pipeline.start()
+            if self.laser_projector_current is not None:
+                pipeline.getDefaultDevice().setIrLaserDotProjectorIntensity(self.laser_projector_current)
+            if self.flood_light_current is not None:
+                pipeline.getDefaultDevice().setIrFloodLightIntensity(self.flood_light_current)
 
             while pipeline.isRunning() and self.bus.is_alive():
                 processed_any = False
@@ -302,6 +422,8 @@ class OakCamera:
                         processed_any = True
                         depth_frame = depth_frames[-1]
                         seq_num = depth_frame.getSequenceNum()
+                        if self.subsample and seq_num % self.subsample != 0:
+                            continue
                         dt = depth_frame.getTimestamp()
                         timestamp_us = ((dt.days * 24 * 3600 + dt.seconds) * 1000000 + dt.microseconds)
                         self.bus.publish("depth_seq", [seq_num, timestamp_us])
