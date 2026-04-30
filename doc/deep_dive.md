@@ -200,44 +200,39 @@ This architecture ensures that modules are decoupled and that data is processed 
 There are two primary ways to interact with OSGAR logfiles: programmatically using the Python API or via the command-line utility.
 
 ### Programmatic Reading (Python API)
-You can use `osgar.logger.LogReader` to iterate over all messages in a log file. To handle the data correctly, you should use `osgar.lib.serialize.deserialize`.
+The most convenient way to read OSGAR logfiles is using `osgar.logger.LogReaderEx`. This class handles stream name lookup and data deserialization automatically.
 
 ```python
-from osgar.logger import LogReader, lookup_stream_names
-from osgar.lib.serialize import deserialize
+from osgar.logger import LogReaderEx
 
 logfile = 'myrobot-260310_123456.log'
-names = lookup_stream_names(logfile)
 
-with LogReader(logfile) as log:
-    for timestamp, stream_id, raw_data in log:
-        if stream_id == 0:
-            # Stream 0 contains system info/metadata
-            continue
-        
-        channel_name = names[stream_id - 1]
-        data = deserialize(raw_data)
+# Extract all streams
+with LogReaderEx(logfile) as log:
+    for timestamp, channel_name, data in log:
+        print(f"{timestamp} | {channel_name} | {data}")
+
+# Extract only specific streams by name
+with LogReaderEx(logfile, names=['gps.position', 'encoders.pose2d']) as log:
+    for timestamp, channel_name, data in log:
+        # data is already deserialized (e.g., a list of coordinates)
         print(f"{timestamp} | {channel_name} | {data}")
 ```
 
-### Advanced Log Reading
-The `LogReader` class supports several parameters for fine-grained control over how data is extracted:
-
--   **`only_stream_id`**: Can be a single integer or a list of IDs. If provided, the reader will only yield messages from these specific streams.
--   **`clip_start_time_sec`**: Skips all messages before this relative timestamp (in seconds).
--   **`clip_end_time_sec`**: Stops reading after this relative timestamp (in seconds).
--   **`follow`**: If set to `True`, the reader will not stop at the end of the file. Instead, it will wait (block) for new data to be written, behaving similarly to the `tail -f` command. This is useful for real-time monitoring of a running OSGAR process.
-
-To convert a human-readable stream name (like `gps.position`) into its numeric ID, use the `lookup_stream_id` utility:
+### Advanced Log Reading (LogReader)
+For more granular control (e.g., clipping by time or following a growing log), you can use the base `osgar.logger.LogReader`. Note that it returns raw bytes and numeric stream IDs, which must be handled manually.
 
 ```python
 from osgar.logger import LogReader, lookup_stream_id
+from osgar.lib.serialize import deserialize
 
 logfile = 'my_run.log'
 gps_id = lookup_stream_id(logfile, 'gps.position')
 
+# Parameters: only_stream_id, clip_start_time_sec, clip_end_time_sec, follow
 with LogReader(logfile, only_stream_id=gps_id, clip_start_time_sec=10.0) as log:
     for timestamp, stream_id, raw_data in log:
+        data = deserialize(raw_data)
         # Processes only GPS data starting from 10s into the log
         pass
 ```

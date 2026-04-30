@@ -40,6 +40,7 @@ import mmap
 import pathlib
 
 import json
+from osgar.lib.serialize import deserialize
 
 g_logger = logging.getLogger(__name__)
 
@@ -359,8 +360,11 @@ def lookup_stream_names(filename):
                 break
             if b'Errno' in line:
                 continue
-            d = literal_eval(line.decode('ascii'))
-            if 'names' in d:
+            try:
+                d = literal_eval(line.decode('ascii'))
+            except (ValueError, SyntaxError):
+                continue
+            if isinstance(d, dict) and 'names' in d:
                 names = d['names']
     return names
 
@@ -374,6 +378,39 @@ def lookup_stream_id(filename, stream_name):
         pass
     names = lookup_stream_names(filename)
     return names.index(stream_name) + 1
+
+
+class LogReaderEx(LogReader):
+    """
+    Extended log reader which provides deserialized data and stream names.
+
+    This reader is more user-friendly than the basic LogReader. It automatically
+    looks up stream names and deserializes the data using the default OSGAR
+    deserializer.
+    """
+    def __init__(self, filename, names=None):
+        """
+        Initialize the extended log reader.
+
+        :param filename: path to the log file
+        :param names: optional list of stream names to extract. If None, all
+                      streams are extracted.
+        """
+        self.stream_names = lookup_stream_names(filename)
+        only_stream_id = None
+        if names is not None:
+            only_stream_id = [self.stream_names.index(name) + 1 for name in names]
+        super().__init__(filename, only_stream_id=only_stream_id)
+
+    def _read_gen(self, only_stream_id=None):
+        """
+        Generator yielding (timestamp, stream_name, data).
+
+        The data is already deserialized.
+        """
+        for dt, stream_id, data in super()._read_gen(only_stream_id):
+            if stream_id != 0:
+                yield dt, self.stream_names[stream_id - 1], deserialize(data)
 
 
 def lookup_config(filename):
