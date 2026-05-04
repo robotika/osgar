@@ -62,8 +62,7 @@ class Collision(Exception):
     pass
 
 
-class EmergencyStopException(Exception):
-    pass
+from osgar.exceptions import EmergencyStopException
 
 
 class NewWaypointsException(Exception):

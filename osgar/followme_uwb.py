@@ -6,7 +6,8 @@ from datetime import timedelta
 from statistics import median
 
 from osgar.node import Node
-from osgar.followme import EmergencyStopException, min_dist
+from osgar.exceptions import EmergencyStopException
+from osgar.followme import min_dist
 
 # Notes:
 # Expects 3 anchors mounted on Eduro robot

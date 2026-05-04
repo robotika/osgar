@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 
 from osgar.terminator import Terminator
-from osgar.followme import EmergencyStopException
+from osgar.exceptions import EmergencyStopException
 
 class TerminatorTest(unittest.TestCase):
 

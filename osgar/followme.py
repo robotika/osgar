@@ -10,9 +10,10 @@ from osgar.node import Node
 # Expects SICK laser scan with 270 degrees field of view mounted in front.
 
 
+from osgar.exceptions import EmergencyStopException
+
+
 # TODO shared place for multiple applications
-class EmergencyStopException(Exception):
-    pass
 
 
 def min_dist(laser_data):

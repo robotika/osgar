@@ -8,7 +8,7 @@ from osgar.lib.line import Line
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.node import Node
 from osgar.bus import BusShutdownException
-from osgar.followme import EmergencyStopException
+from osgar.exceptions import EmergencyStopException
 
 
 class Route(GPSRoute):

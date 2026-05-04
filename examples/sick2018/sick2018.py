@@ -25,13 +25,12 @@ from datetime import timedelta
 from osgar.lib.config import config_load
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.record import record
+from osgar.exceptions import EmergencyStopException
 
 from .scan_feature import detect_box, detect_transporter
 
 
 # TODO shared place for multiple applications
-class EmergencyStopException(Exception):
-    pass
 
 
 def min_dist(laser_data):
