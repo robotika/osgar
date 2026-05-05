@@ -1,7 +1,8 @@
 import unittest
 from unittest.mock import MagicMock
 
-from osgar.followme import FollowMe, EmergencyStopException
+from osgar.followme import FollowMe
+from osgar.exceptions import EmergencyStopException
 from osgar.bus import Bus
 
 

@@ -9,6 +9,7 @@ from datetime import timedelta
 from osgar.lib.mathex import normalizeAnglePIPI
 from osgar.node import Node
 from osgar.drivers.gps import INVALID_COORDINATES
+from osgar.exceptions import EmergencyStopException
 
 
 def geo_length(pos1, pos2):
@@ -27,10 +28,6 @@ def geo_angle(pos1, pos2):
 
 def latlon2xy(lat, lon):
     return int(round(lon*3600000)), int(round(lat*3600000))
-
-
-class EmergencyStopException(Exception):
-    pass
 
 
 class EmergencyStopMonitor:

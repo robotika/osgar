@@ -2,7 +2,7 @@
   Universal Terminator - minimal logging and wait for end of STOP
 """
 from osgar.node import Node
-from osgar.followme import EmergencyStopException
+from osgar.exceptions import EmergencyStopException
 
 
 class Terminator(Node):
