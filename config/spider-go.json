@@ -2,17 +2,21 @@
   "version": 2,
   "robot": {
     "modules": {
+
       "app": {
-          "driver": "application",
-          "in": [],
+          "driver": "osgar.go:Go",
+          "in": ["pose2d"],
           "out": ["desired_speed"],
           "init": {
-            "max_speed": 0.5
+            "max_speed": 0.3,
+            "dist": 1.0,
+            "timeout": 60
           }
       },
+
       "spider": {
           "driver": "osgar.platforms.spider:Spider",
-          "in": ["can", "move"],
+          "in": ["can", "desired_speed"],
           "out": ["can"],
           "init": {}
       },
@@ -28,24 +32,17 @@
           "out": ["raw"],
           "init": {"port": "/dev/ttyS0", "speed": 115200,
                    "rtscts":true, "reset":true}
-      },
-      "camera": {
-          "driver": "http",
-          "in": [],
-          "out": ["raw"],
-          "init": {
-              "url": "http://192.168.1.36/img.jpg",
-              "sleep": 0.2,
-              "timeout": 1.0
-          }
       }
+
     },
-    "links": [["app.desired_speed", "spider.move"],
-              ["spider.status", "app.status"],
+    "links": [
+              ["app.desired_speed", "spider.desired_speed"],
               ["spider.pose2d", "app.pose2d"],
+
               ["spider.can", "can.can"],
               ["can.can", "spider.can"],
-              ["serial.raw", "can.raw"], 
-              ["can.raw", "serial.raw"]]
+              ["serial.raw", "can.raw"],
+              ["can.raw", "serial.raw"]
+    ]
   }
 }
