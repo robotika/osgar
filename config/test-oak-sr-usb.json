@@ -2,26 +2,20 @@
   "version": 2,
   "robot": {
     "modules": {
-      "oak": {
+      "app": {
           "driver": "osgar.drivers.oak_camera:OakCamera",
           "init": {
             "cam_id": "1.1",
-            "fps": 30,
-            "subsample": 10,
+            "fps": 10,
             "is_depth": true,
             "is_stereo_images": true,
             "is_imu_enabled": true,
-            "number_imu_records": 15,
-            "disable_magnetometer_fusion": false,
             "mono_resolution": [1280, 800],
             "stereo_manual_exposure": [5000, 400],
             "stereo_manual_wb": 3000,
 
-            "stereo_median_filter": "KERNEL_7x7",
-            "stereo_mode": "HIGH_ACCURACY",
-            "stereo_extended_disparity": false,
-            "stereo_subpixel": false,
-            "stereo_left_right_check": true
+            "depth_profile": "ROBOTICS",
+            "is_visual_odom": true
           }
       }
     },

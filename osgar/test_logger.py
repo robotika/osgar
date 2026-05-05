@@ -12,7 +12,8 @@ from pathlib import Path
 
 import osgar.logger  # needed for patching the osgar.logger.datetime.datetime
 from osgar.logger import (LogWriter, LogReader, LogAsserter, INFO_STREAM_ID,
-                          lookup_stream_id, LogIndexedReader)
+                          lookup_stream_id, LogIndexedReader, LogReaderEx)
+from osgar.lib.serialize import serialize
 
 
 
@@ -334,6 +335,23 @@ class LoggerStreamingTest(unittest.TestCase):
             self.assertEqual(data, b'\x01')
             dt, channel, data = next(log)
             self.assertEqual(data, b'\x02')
+        os.remove(filename)
+
+    def test_log_reader_ex(self):
+        with LogWriter(prefix='tmp7', note='test_log_reader_ex') as log:
+            filename = log.filename
+            log.register('raw')
+            log.register('gps')
+            time.sleep(0.001)
+            t1 = log.write(1, serialize(b'\x01\x02'))
+            time.sleep(0.001)
+            t2 = log.write(2, serialize([1, 2, 3]))
+
+        with LogReaderEx(filename, names=['raw', 'gps']) as log:
+            arr = []
+            for t, name, data in log:
+                arr.append((name, data))
+            self.assertEqual(arr, [('raw', b'\x01\x02'), ('gps', [1, 2, 3])])
         os.remove(filename)
 
     def test_large_invalid(self):
