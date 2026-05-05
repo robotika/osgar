@@ -15,7 +15,7 @@
       },
 
       "spider": {
-          "driver": "spider",
+          "driver": "osgar.platforms.spider:Spider",
           "in": ["can", "desired_speed"],
           "out": ["can"],
           "init": {}
