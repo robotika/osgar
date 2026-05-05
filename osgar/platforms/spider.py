@@ -45,7 +45,7 @@ def sint8_diff(a, b):
 class Spider(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('can', 'status', 'encoders', 'pose2d')
+        bus.register('can', 'status', 'encoders', 'pose2d', 'bumpers')
 
         self.bus = bus
         self.status_word = None  # not defined yet
@@ -70,6 +70,7 @@ class Spider(Node):
         self.err_sum = 0.0  # accumulated error for speed controller
         self.err_steering_sum = 0.0  # accumulated error for steering controller
         self.debug_speed = 0
+        self.bumpers = None
 
     def update_speed(self, diff):
         if self.last_diff_time is not None:
@@ -151,7 +152,8 @@ class Spider(Node):
                     ret = [self.status_word, None]
 
                 # handle steering
-                if self.desired_speed is not None and self.desired_angle is not None and not self.paused:
+                if (self.desired_speed is not None and self.desired_angle is not None and not self.paused
+                        and not self.bumpers):
                     self.send_speed((self.desired_speed, self.desired_angle))
                 else:
                     self.send_speed((0, 0))
@@ -201,6 +203,20 @@ class Spider(Node):
                     if self.valve is not None:
                         self.debug_arr.append([self.time.total_seconds(), *diff] + list(self.valve) + [self.speed, self.debug_speed])
 
+            elif msg_id == 0x190:  # bumpers
+                assert len(packet) == 2 + 1, packet
+                status_byte = packet[2]
+                right_bumper = (status_byte >> 0) & 1
+                left_bumper = (status_byte >> 1) & 1
+                if right_bumper or left_bumper:
+                    self.bumpers  = True
+                else:
+                    self.bumpers = False
+                self.publish("bumpers", [left_bumper, right_bumper])
+                if self.verbose:
+                    print("Bumpers:", self.time, left_bumper, right_bumper)
+
+
     def process_gen(self, data, verbose=False):
         self.buf, packet = self.split_buffer(self.buf + data)
         while len(packet) > 0:
@@ -215,15 +231,15 @@ class Spider(Node):
             self.publish('status', status)
 
     def on_move(self, data):
-        speed_mm, desired_angle_mdeg = data
+        speed_mm, desired_angle_cdeg = data
         self.desired_speed = speed_mm / 1000.0
-        self.desired_angle = math.radians(desired_angle_mdeg / 100.0)
+        self.desired_angle = math.radians(desired_angle_cdeg / 100.0)  # one hundredth of rad
 
     def on_desired_speed(self, data):
         # This take sense for CAR mode only! TODO assert?
-        speed_mm, angular_speed_mrad = data
+        speed_mm, angular_speed_crad = data
         self.desired_speed = speed_mm / 1000.0
-        angular_speed = math.radians(angular_speed_mrad / 100.0)
+        angular_speed = math.radians(angular_speed_crad / 100.0)  # one hundredth of rad
         self.desired_angle = get_desired_angle(self.desired_speed, angular_speed)
 
     def send_speed(self, data):
