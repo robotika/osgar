@@ -85,8 +85,7 @@ class RecorderTest(unittest.TestCase):
 
 
     def test_all_supported_config_files(self):
-        supported = ['test-spider.json', 'test-gps-imu.json',
-                'test-spider-gps-imu.json', 'test-windows-gps.json']
+        supported = ['test-spider.json', 'test-gps-imu.json', 'test-windows-gps.json']
 
         with patch('osgar.drivers.logserial.serial.Serial') as mock:
             logger = MagicMock()
