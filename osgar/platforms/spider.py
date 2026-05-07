@@ -242,6 +242,11 @@ class Spider(Node):
         angular_speed = math.radians(angular_speed_crad / 100.0)  # one hundredth of rad
         self.desired_angle = get_desired_angle(self.desired_speed, angular_speed)
 
+    def on_reset(self, data):
+        # Return some parameters to default settings. It allows multiple starts.
+        self.pose2d = (0.0, 0.0, 0.0)
+        self.already_moved = False
+
     def send_speed(self, data):
         # set PI controller
         speed_p = 200
