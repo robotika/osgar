@@ -17,6 +17,7 @@ class Go(Node):
         self.speed = config['max_speed']
         self.dist = config['dist']
         self.timeout = timedelta(seconds=config['timeout'])
+        self.stop_timeout = timedelta(seconds=config.get('timeout', 1))
 
         self.desired_steering_angle = None  # not defined, do not publish by default
         self.desired_angular_speed = None
@@ -75,7 +76,7 @@ class Go(Node):
                 break
         print(self.time, "STOP")
         self.send_speed_cmd(0.0, angular_speed=0.0, steering_angle=self.desired_steering_angle)
-        self.wait(timedelta(seconds=1))
+        self.wait(self.stop_timeout)
         print(self.time, "distance:", self.traveled_dist, "time:", (self.time - start_time).total_seconds())
 
     def run(self):
