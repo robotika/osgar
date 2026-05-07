@@ -17,7 +17,7 @@ class Go(Node):
         self.speed = config['max_speed']
         self.dist = config['dist']
         self.timeout = timedelta(seconds=config['timeout'])
-        self.stop_timeout = timedelta(seconds=config.get('timeout', 1))
+        self.stop_timeout = timedelta(seconds=config.get('stop_timeout', 1))
 
         self.desired_steering_angle = None  # not defined, do not publish by default
         self.desired_angular_speed = None
