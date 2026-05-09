@@ -127,7 +127,7 @@ class Matty(Node):
         self.publish('joint_angle', [angle_cdeg])  # array to be compatible with K2 and K3
         if self.verbose:
             print(self.time, counter, cmd, status, mode, voltage_mV, current_mA, speed_mms, angle_cdeg, enc)
-            self.debug_arr.append([self.time.total_seconds(), enc, (roll, pitch, yaw)])
+            self.debug_arr.append([self.time.total_seconds(), enc, (roll, pitch, yaw), (speed_mms, angle_cdeg)])
         return speed_mms/1000, math.radians(angle_cdeg/100)
 
     def publish_pose2d(self, speed, joint_angle):
@@ -281,5 +281,21 @@ class Matty(Node):
         plt.legend()
         plt.show()
 
+    def draw_joint_angle(self):
+        """ Draw joint angle (and speed)"""
+        import matplotlib.pyplot as plt
+
+        for selection, label in enumerate(['speed', 'angle']):
+            t = [a[0] for a in self.debug_arr]
+            x = [a[3][selection] for a in self.debug_arr]
+            line = plt.plot(t, x, '-o', linewidth=2, label=label)
+
+        plt.xlabel('time (s)')
+        plt.ylabel('speed_mms, joint_angle_cdeg')
+        plt.legend()
+        plt.show()
+
     def draw(self):
-        self.draw_imu()  # TODO port optional draw param to OSGAR
+#        self.draw_enc()
+#        self.draw_imu()  # TODO port optional draw param to OSGAR
+        self.draw_joint_angle()
