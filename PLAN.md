@@ -56,3 +56,22 @@ Document the `osgar.replay` tool and the `--draw` functionality.
 - Run `python -m osgar.replay --module matty --draw enc` to verify encoder graph.
 - Run `python -m osgar.replay --module matty --draw imu` to verify IMU graph.
 - Test with a module without `draw()` (e.g. `osgar.Node`) to ensure it logs a warning instead of crashing.
+
+---
+
+## Proposed PR Description
+
+### Summary
+This PR extends the `osgar.replay` tool to support selecting specific graph outputs via the `--draw` flag and implements this feature for the `Matty` platform. It also introduces a convention for listing available graph options using `--draw help`.
+
+### Key Changes
+- **`osgar.replay`**: 
+    - Updated `--draw` to accept an optional argument (`nargs='?'`).
+    - Added an early-exit feature: if `--draw help` is used, the module's available graph options are printed and the replay process is skipped.
+    - Improved robustness by safely checking for the `draw()` method and handling `TypeError` for modules without argument support.
+- **`Matty` Platform**:
+    - Updated `draw()` to support `enc`, `imu`, and `joint_angle` (default) selections.
+    - Implemented a `help` option to list available selections.
+- **Documentation**:
+    - Added a new section to `doc/deep_dive.md` documenting `osgar.replay` and the extended `--draw` functionality.
+
