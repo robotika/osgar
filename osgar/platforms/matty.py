@@ -295,7 +295,19 @@ class Matty(Node):
         plt.legend()
         plt.show()
 
-    def draw(self):
-#        self.draw_enc()
-#        self.draw_imu()  # TODO port optional draw param to OSGAR
-        self.draw_joint_angle()
+    def draw(self, selection=None):
+        if selection == 'help':
+            print("Available selections for --draw:")
+            print("  enc          - draw encoder data")
+            print("  imu          - draw IMU data (roll, pitch, yaw)")
+            print("  joint_angle  - draw speed and joint angle")
+            return
+
+        if selection == 'enc':
+            self.draw_enc()
+        elif selection == 'imu':
+            self.draw_imu()
+        elif selection in [None, True, 'joint_angle']:
+            self.draw_joint_angle()
+        else:
+            print(f"Unknown selection '{selection}'. Use '--draw help' for options.")

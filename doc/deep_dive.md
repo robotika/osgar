@@ -250,3 +250,23 @@ python -m osgar.logger --stream gps.position --format "{sec}, {data[0]}, {data[1
 ```
 
 This utility is invaluable for quick data verification and for exporting data to other tools (like Excel or MATLAB) for further analysis.
+
+## 11. Replay and Visualization (`osgar.replay`)
+
+The `osgar.replay` tool is used to rerun a specific module from a log file. This is useful for debugging driver logic or testing changes to processing modules without needing the physical robot.
+
+```bash
+python -m osgar.replay --module <module_name> <logfile>
+```
+
+### Debug Visualization (`--draw`)
+
+Many modules support visual debugging using the `--draw` flag. This typically opens a `matplotlib` window showing internal state (e.g., sensor data, odometry, or filter status).
+
+Starting with recent versions, you can select specific graphs if a module supports multiple visualizations:
+
+-   **Default Draw**: `python -m osgar.replay --module matty --draw <logfile>`
+-   **Specific Selection**: `python -m osgar.replay --module matty --draw enc <logfile>`
+-   **List Options**: `python -m osgar.replay --module matty --draw help <logfile>`
+
+If a module supports multiple graphs, it is a convention to implement a `draw(selection)` method where `selection='help'` prints the available options to the console.
