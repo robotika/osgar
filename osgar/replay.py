@@ -110,6 +110,17 @@ def main():
     module_instance = replay(args)
     module_instance.verbose = args.verbose
 
+    if args.draw == 'help':
+        draw_func = getattr(module_instance, 'draw', None)
+        if draw_func:
+            try:
+                draw_func('help')
+            except TypeError:
+                g_logger.warning(f"Module {args.module} does not support draw arguments.")
+        else:
+            g_logger.warning(f"Module {args.module} does not have a draw() method.")
+        return
+
     signal.signal(signal.SIGINT, lambda signum, frame: module_instance.request_stop())
     module_instance.start()
     # now wait until the module is alive

@@ -13,22 +13,8 @@ Extend the `--draw` command line argument to accept an optional selection string
   parser.add_argument('--draw', help="draw debug results", nargs='?', const=True)
   ```
 - Update the call to `module_instance.draw()` to be safe and pass the selection:
-  ```python
-  if args.draw:
-      draw_func = getattr(module_instance, 'draw', None)
-      if draw_func:
-          if args.draw is True:
-              draw_func()
-          else:
-              try:
-                  draw_func(args.draw)
-              except TypeError:
-                  # Fallback for modules that don't support arguments yet
-                  g_logger.warning(f"Module {args.module} does not support draw arguments.")
-                  draw_func()
-      else:
-          g_logger.warning(f"Module {args.module} does not have a draw() method.")
-  ```
+  - If `args.draw == 'help'`, call `draw('help')` and exit immediately (skipping replay).
+  - Otherwise, proceed with replay and call `draw(selection)` at the end.
 
 ## 2. Update `osgar/platforms/matty.py`
 
