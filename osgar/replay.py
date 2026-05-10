@@ -91,7 +91,7 @@ def main():
     parser.add_argument('--config', nargs='+', help='force alternative configuration file')
     parser.add_argument('--module', help='module name for analysis')  # TODO default "all"
     parser.add_argument('--verbose', '-v', help="verbose mode", action='store_true')
-    parser.add_argument('--draw', help="draw debug results", action='store_true')
+    parser.add_argument('--draw', help="draw debug results", nargs='?', const=True)
     parser.add_argument('--debug', help="print debug info about I/O streams", action='store_true')
     parser.add_argument('--duration', help="limit replay to given time", type=float)
     parser.add_argument('--output', help="optional output for force replay")
@@ -120,7 +120,19 @@ def main():
         print("maximum delay:", module_instance.bus.max_delay)
 
     if args.draw:
-        module_instance.draw()
+        draw_func = getattr(module_instance, 'draw', None)
+        if draw_func:
+            if args.draw is True:
+                draw_func()
+            else:
+                try:
+                    draw_func(args.draw)
+                except TypeError:
+                    # Fallback for modules that don't support arguments yet
+                    g_logger.warning(f"Module {args.module} does not support draw arguments.")
+                    draw_func()
+        else:
+            g_logger.warning(f"Module {args.module} does not have a draw() method.")
 
 
 if __name__ == "__main__":
