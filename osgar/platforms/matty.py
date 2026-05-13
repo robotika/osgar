@@ -296,13 +296,12 @@ class Matty(Node):
         plt.show()
 
     def draw(self, selection=None):
-        if selection == 'help':
-            print("Available selections for --draw:")
-            print("  enc          - draw encoder data")
-            print("  imu          - draw IMU data (roll, pitch, yaw)")
-            print("  joint_angle  - draw speed and joint angle")
-            return
-
+        """
+        Available selections for --draw:
+          enc          - draw encoder data
+          imu          - draw IMU data (roll, pitch, yaw)
+          joint_angle  - draw speed and joint angle (default)
+        """
         if selection == 'enc':
             self.draw_enc()
         elif selection == 'imu':

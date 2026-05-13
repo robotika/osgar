@@ -5,73 +5,57 @@ This plan outlines the changes needed to allow selecting specific graph outputs 
 ## 1. Modify `osgar/replay.py`
 
 ### Goal
-Extend the `--draw` command line argument to accept an optional selection string and ensure robust execution.
+Extend the `--draw` command line argument to accept an optional selection string and provide help via docstrings.
 
 ### Changes
 - Change the definition of `--draw` in `argparse`:
   ```python
   parser.add_argument('--draw', help="draw debug results", nargs='?', const=True)
   ```
-- Update the call to `module_instance.draw()` to be safe and pass the selection:
-  - If `args.draw == 'help'`, call `draw('help')` and exit immediately (skipping replay).
-  - Otherwise, proceed with replay and call `draw(selection)` at the end.
+- **Docstring-based Help**: 
+  - If `args.draw == 'help'`, look for the `module_instance.draw` method.
+  - If it exists, print its docstring (`__doc__`) using `inspect.cleandoc` to ensure clean formatting.
+  - Exit immediately without replaying the log.
+- **Robust Execution**:
+  - Proceed with replay for other selections.
+  - Call `draw(selection)` at the end, handling cases where the method doesn't support arguments or is missing.
 
 ## 2. Update `osgar/platforms/matty.py`
 
 ### Goal
-Implement the `draw` method to handle selections and provide help.
+Update the `draw` method to use docstrings for documentation and handle selections.
 
 ### Changes
-- Modify the `draw` method signature: `def draw(self, selection=None):`.
-- Implement selection logic:
-  - If `selection` is `'enc'`, call `self.draw_enc()`.
-  - If `selection` is `'imu'`, call `self.draw_imu()`.
-  - If `selection` is `'joint_angle'` (or default `None`/`True`), call `self.draw_joint_angle()`.
-  - If `selection` is `'help'`, list available options: `enc`, `imu`, `joint_angle`.
+- Update the `draw` method docstring to list available options: `enc`, `imu`, `joint_angle`.
+- Implement selection logic (without the internal `help` check):
+  - `enc`: calls `self.draw_enc()`
+  - `imu`: calls `self.draw_imu()`
+  - `joint_angle` (or default): calls `self.draw_joint_angle()`
 
-## 3. Proposal for Listing Options
-
-### Goal
-Provide a user-friendly way to discover available graph options for a module.
-
-### Proposal
-1. **`help` selection**: Conventionally support `--draw help` for any module that has multiple graphs.
-   - When `module.draw('help')` is called, it should print the available options to the console.
-2. **Standardized Attribute**: Consider adding a `draw_options` attribute to modules to allow automated listing in the future.
-
-## 4. Documentation Update (`doc/deep_dive.md`)
-
-### Goal
-Document the `osgar.replay` tool and the `--draw` functionality.
+## 3. Documentation Update (`doc/deep_dive.md`)
 
 ### Changes
-- Add a new section "11. Replay and Visualization (`osgar.replay`)" to `doc/deep_dive.md`.
-- Explain how to use `--module` and `--draw`.
-- Describe the new graph selection syntax and the `--draw help` convention.
+- Update the description of the `--draw help` convention to explain that it now uses Python docstrings from the `draw()` method.
 
-## 5. Verification Plan
+## 4. Verification Plan
 
-- Run `python -m osgar.replay --module matty --draw` to verify default behavior (joint angle).
-- Run `python -m osgar.replay --module matty --draw help` to verify option listing.
-- Run `python -m osgar.replay --module matty --draw enc` to verify encoder graph.
-- Run `python -m osgar.replay --module matty --draw imu` to verify IMU graph.
-- Test with a module without `draw()` (e.g. `osgar.Node`) to ensure it logs a warning instead of crashing.
+- Run `python -m osgar.replay --module matty --draw help` and verify the docstring is printed correctly.
+- Verify specific selections (`enc`, `imu`) still work as expected.
 
 ---
 
 ## Proposed PR Description
 
 ### Summary
-This PR extends the `osgar.replay` tool to support selecting specific graph outputs via the `--draw` flag and implements this feature for the `Matty` platform. It also introduces a convention for listing available graph options using `--draw help`.
+This PR extends `osgar.replay` to support selecting specific graph outputs via the `--draw` flag. It introduces a convention where available graph options are documented in the `draw()` method's docstring and displayed to the user via `--draw help`.
 
 ### Key Changes
 - **`osgar.replay`**: 
-    - Updated `--draw` to accept an optional argument (`nargs='?'`).
-    - Added an early-exit feature: if `--draw help` is used, the module's available graph options are printed and the replay process is skipped.
-    - Improved robustness by safely checking for the `draw()` method and handling `TypeError` for modules without argument support.
+    - Updated `--draw` to accept an optional argument.
+    - Added a help mechanism that prints the `draw()` method's docstring and exits early.
+    - Added robust handling for calling `draw()` across different module types.
 - **`Matty` Platform**:
-    - Updated `draw()` to support `enc`, `imu`, and `joint_angle` (default) selections.
-    - Implemented a `help` option to list available selections.
+    - Documented available graphs (`enc`, `imu`, `joint_angle`) in the `draw()` docstring.
+    - Updated the method to switch between these graphs based on the provided selection.
 - **Documentation**:
-    - Added a new section to `doc/deep_dive.md` documenting `osgar.replay` and the extended `--draw` functionality.
-
+    - Updated `doc/deep_dive.md` to reflect the new `--draw` selection and docstring-based help convention.

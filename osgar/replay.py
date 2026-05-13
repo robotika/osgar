@@ -4,6 +4,7 @@
 
 import argparse
 import logging
+import inspect
 from ast import literal_eval
 
 from osgar import logger
@@ -113,10 +114,11 @@ def main():
     if args.draw == 'help':
         draw_func = getattr(module_instance, 'draw', None)
         if draw_func:
-            try:
-                draw_func('help')
-            except TypeError:
-                g_logger.warning(f"Module {args.module} does not support draw arguments.")
+            doc = inspect.getdoc(draw_func)
+            if doc:
+                print(doc)
+            else:
+                print(f"No help available for {args.module}.draw()")
         else:
             g_logger.warning(f"Module {args.module} does not have a draw() method.")
         return
