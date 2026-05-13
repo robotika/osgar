@@ -269,4 +269,4 @@ Starting with recent versions, you can select specific graphs if a module suppor
 -   **Specific Selection**: `python -m osgar.replay --module matty --draw enc <logfile>`
 -   **List Options**: `python -m osgar.replay --module matty --draw help <logfile>`
 
-If a module supports multiple graphs, it is a convention to implement a `draw(selection)` method where `selection='help'` prints the available options to the console.
+If a module supports multiple graphs, it is a convention to implement a `draw(selection)` method and document the available options in its Python docstring. The `osgar.replay` tool will automatically display this docstring when `--draw help` is used.
