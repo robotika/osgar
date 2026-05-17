@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "oak": {
+          "driver": "osgar.drivers.oak_camera_v3:OakCamera",
+          "init": {
+            "fps": 10,
+            "is_color": true,
+            "video_encoder": "mjpeg",
+            "is_depth": false,
+            "is_imu_enabled": true,
+            "number_imu_records": 10,
+            "disable_magnetometer_fusion": false,
+
+            "color_resolution": "THE_1080_P"
+          }
+      },
+      "rotator": {
+          "driver": "osgar.drivers.image_rotator:ImageRotator",
+          "init": {
+            "roll_multiplier": -1.0
+          }
+      }
+    },
+    "links": [
+      ["oak.color", "rotator.image"],
+      ["oak.orientation_list", "rotator.orientation_list"]
+    ]
+  }
+}
