@@ -127,6 +127,9 @@ class OakCamera:
         self.color_depth_alignment = config.get("color_depth_alignment", False)
 
         self.is_imu_enabled = config.get('is_imu_enabled', False)
+        # Preferred number of IMU records in one packet
+        self.number_imu_records = config.get('number_imu_records', 20)
+        self.disable_magnetometer_fusion = config.get('disable_magnetometer_fusion', False)
         self.is_visual_odom = config.get('is_visual_odom', False)
         self.is_slam = config.get('is_slam', False)
         if self.is_slam:
@@ -255,14 +258,22 @@ class OakCamera:
 
                 if self.is_visual_odom:
                     odom = pipeline.create(dai.node.BasaltVIO)
-
-                imu.enableIMUSensor([dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW], 200)
-                imu.setBatchReportThreshold(1)
-                imu.setMaxBatchReports(10)
+                    imu.enableIMUSensor([dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW], 200)
+                    imu.setBatchReportThreshold(1)
+                    imu.setMaxBatchReports(10)
+                else:
+                    if self.disable_magnetometer_fusion:
+                        imu.enableIMUSensor(dai.IMUSensor.GAME_ROTATION_VECTOR, 100)  # without magnetometer
+                    else:
+                        imu.enableIMUSensor(dai.IMUSensor.ROTATION_VECTOR, 100)
+                    imu.setBatchReportThreshold(self.number_imu_records)
+                    imu.setMaxBatchReports(20)
 
             if self.is_visual_odom:
                 imu.out.link(odom.imu)
                 odom_queue = odom.transform.createOutputQueue(blocking=False)
+            elif self.is_imu_enabled:
+                imu_queue = imu.out.createOutputQueue(blocking=False)
 
             if self.is_slam:
                 slam = pipeline.create(dai.node.RTABMapSLAM)
@@ -446,6 +457,19 @@ class OakCamera:
                         processed_any = True
                         gridmap = gridmaps[-1]
                         self.bus.publish('gridmap', gridmap.getFrame())
+
+                # 5. Check IMU
+                if self.is_imu_enabled and not self.is_visual_odom:
+                    imu_packets = imu_queue.tryGetAll()
+                    if imu_packets and len(imu_packets) > 0:
+                        processed_any = True
+                        for packet in imu_packets:
+                            quaternions = [[data.rotationVector.getTimestampDevice().total_seconds(),
+                                            data.rotationVector.rotationVectorAccuracy,
+                                            data.rotationVector.i, data.rotationVector.j,
+                                            data.rotationVector.k, data.rotationVector.real]
+                                           for data in packet.packets]
+                            self.bus.publish("orientation_list", quaternions)
 
                 # Only rest the CPU if no frames were pulled in this tick loop
                 if not processed_any:
