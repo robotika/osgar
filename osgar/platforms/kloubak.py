@@ -279,7 +279,6 @@ class RobotKloubak(Node):
         self.epoch = None  # unknown
         self.partial_encoders = [None, None,] * self.num_axis
 
-        self.verbose = False  # should be in Node
         self.enc_debug_arr = []
         self.joint_debug_arr = []
         self.speed_debug_arr = []

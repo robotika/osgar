@@ -59,7 +59,6 @@ class Spider(Node):
         self.speed_history_left = []
         self.speed_history_right = []
         self.speed = 0.0  # suppose we start from standstill
-        self.verbose = False  # TODO node
         self.debug_arr = []
         self.pose2d = (0.0, 0.0, 0.0)  # x, y in meters, heading in radians (not corrected to 2PI)
         self.prev_enc = None  # not defined

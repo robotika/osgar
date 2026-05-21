@@ -40,7 +40,6 @@ class FR07(Node):
         self.desired_speed = 0.0  # m/s
         self.desired_steering_angle_deg = 0.0  # degrees
         self.debug_arr = []
-        self.verbose = False
 
     def publish_pose2d(self, left, right):
         dt = 0.04  # 25Hz

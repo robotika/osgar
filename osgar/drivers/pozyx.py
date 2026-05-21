@@ -23,7 +23,6 @@ class Pozyx(Node):
         self.devices.append(None)  # extra range to the base (must be last, 2nd param)
         self.pozyx = pypozyx.PozyxSerial(serial_port)
         self.my_id = None  # unknown
-        self.verbose = False
 
     def get_settings(self):
         settings = pypozyx.UWBSettings()

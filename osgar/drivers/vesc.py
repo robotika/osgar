@@ -51,7 +51,6 @@ class MotorDriverVESC(Node):
         bus.register('can')
         self.debug_arr = []
         self.prev = {}
-        self.verbose = False  # TODO move into Node
         self.packet = [[], [], [], []]
         self.tachometer = [None, None, None, None]  # for motors #1, #2, #3 and #4
 

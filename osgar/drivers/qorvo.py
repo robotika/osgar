@@ -9,7 +9,6 @@ class Qorvo(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('range', 'raw')
-        self.verbose = False
         self.initialized = False
 
     def on_raw(self, data):

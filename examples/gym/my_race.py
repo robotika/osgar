@@ -17,7 +17,6 @@ class MyRace(Node):
         self.max_speed = config.get("max_speed", 0.8)
         use_local_planner = config.get("local_planner", False)
         self.scan = None
-        self.verbose = False
         if use_local_planner:
             self.local_planner = LocalPlanner(
                 direction_adherence=math.radians(45),

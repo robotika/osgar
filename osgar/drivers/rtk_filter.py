@@ -9,7 +9,6 @@ class RTKFilter(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('filtered')
-        self.verbose = False
         self.trigger_time = None  # not defined
         self.buf = b''
 

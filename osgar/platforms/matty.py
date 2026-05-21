@@ -75,7 +75,6 @@ class Matty(Node):
         self.desired_steering_angle_deg = 0.0  # degrees
         self.debug_arr = []
         self.debug_array_bumpers = []
-        self.verbose = False
         self.counter = 0
         self.buf = b''
         self.odometry_requested = False

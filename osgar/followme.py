@@ -30,7 +30,6 @@ class FollowMe(Node):
         bus.register('desired_speed')
         self.last_position = [0, 0, 0]  # proper should be None, but we really start from zero
         self.raise_exception_on_stop = False
-        self.verbose = False
         self.last_scan = None
         self.scan_size = config.get('scan_size', 271)
         self.scan_fov_deg = config.get('scan_fov_deg', 270)

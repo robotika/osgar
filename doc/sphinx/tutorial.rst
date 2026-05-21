@@ -105,7 +105,6 @@ Here is the code for ``myapp.py``:
           bus.register('desired_speed')
           self.max_speed = config.get('max_speed', 0.1)
           self.max_angular_speed = math.radians(50)  # TODO config
-          self.verbose = False
           self.last_position = (0, 0, 0)
           self.is_moving = False
           self.pose2d = None  # TODO should be defined by super().__init__()
