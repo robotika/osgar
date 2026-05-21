@@ -15,7 +15,6 @@ class VanJeeLidar(Node):
         self.last_frame = None  # not defined
         self.points = []
         self.debug_arr = []
-        self.verbose = False
 
     def on_raw(self, data):
         assert len(data) in [34, 1384], len(data)

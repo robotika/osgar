@@ -13,7 +13,6 @@ class Go(Node):
         bus.register('desired_speed', 'desired_steering')
         self.start_pose = None
         self.traveled_dist = 0.0
-        self.verbose = False
         self.speed = config['max_speed']
         self.dist = config['dist']
         self.timeout = timedelta(seconds=config['timeout'])

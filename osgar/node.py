@@ -15,6 +15,7 @@ class Node(Thread):
         self.setDaemon(True)
         self.bus = bus
         self.time = None
+        self.verbose = False  # set externally via "osgar.replay --verbose ..."
 
     def publish(self, channel, data):
         return self.bus.publish(channel, data)
