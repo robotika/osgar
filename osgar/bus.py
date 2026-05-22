@@ -257,10 +257,11 @@ class LogBusHandlerInputsReaderOutputsWriter(LogBusHandlerInputsOnly):
     """
     Integrated reprocessing of given module and writing outputs into new log file
     """
-    def __init__(self, log, inputs, writer, outputs):
+    def __init__(self, log, inputs, writer, outputs, module_name):
         super().__init__(log, inputs)
         self.writer = writer
         self.outputs = outputs
+        self.module_name = module_name
         self.new_output_index = {}
 
     def register(self, *outputs):
@@ -268,7 +269,7 @@ class LogBusHandlerInputsReaderOutputsWriter(LogBusHandlerInputsOnly):
             # ignore :gz and :null modifiers
             if o.split(':')[0] not in self.outputs.values():
                 print('Warning - not defined output times for new stream:', (o, self.outputs))
-            self.new_output_index[o.split(':')[0]] = self.writer.register(o)
+            self.new_output_index[o.split(':')[0]] = self.writer.register(f'{self.module_name}.{o}')
 
     def publish(self, channel, data):
         self.writer.write(stream_id=self.new_output_index[channel],
