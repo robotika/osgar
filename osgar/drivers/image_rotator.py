@@ -11,6 +11,7 @@ class ImageRotator(Node):
         bus.register('image', 'rotation_angle')
         self.method = config.get('method', 'imu') # 'imu' or 'optical_flow'
         self.roll_multiplier = config.get('roll_multiplier', -1.0)
+        self.verbose = False  # TO be removed after master merge
         
         # IMU state
         self.last_orientation = None
@@ -72,6 +73,8 @@ class ImageRotator(Node):
                 self.publish('image', data)
                 return
             yaw, pitch, roll = euler_zyx(self.last_orientation)
+            if self.verbose:
+                print(f'yaw = {math.degrees(yaw)}, pitch = {math.degrees(pitch)}, roll = {math.degrees(roll)}')
             angle_rad = roll * self.roll_multiplier
         elif self.method == 'optical_flow':
             angle_rad = self._get_optical_flow_angle(img) * self.roll_multiplier
