@@ -29,7 +29,6 @@ class FollowPath(Node):
         self.obstacle_stop_dist = config.get('obstacle_stop_dist', None)  # default no restriction
         self.last_obstacle = None  # no info available
         self.raise_exception_on_stop = False
-        self.verbose = False
         self.finished = False
 
     def control(self, pose):

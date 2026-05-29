@@ -154,7 +154,6 @@ class LordIMU(Node):
         bus.register('orientation', 'rotation', 'gps_position')
         self._buf = b''
         self.raw = None  # not automatically defined yet
-        self.verbose = False
 
     def on_raw(self, data):
         self.raw = data
