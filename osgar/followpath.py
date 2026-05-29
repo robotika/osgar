@@ -6,6 +6,7 @@ import math
 from osgar.lib.route import Route as GPSRoute, DummyConvertor
 from osgar.lib.line import Line
 from osgar.lib.mathex import normalizeAnglePIPI
+from osgar.lib import quaternion
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 from osgar.exceptions import EmergencyStopException
@@ -71,13 +72,22 @@ class FollowPath(Node):
                 return 0, 0  # maybe different steering angle?
         return self.max_speed, normalizeAnglePIPI(angle - pose[2])
 
-    def on_pose2d(self, data):
-        x, y, heading = data
-        self.last_position = [x / 1000.0, y / 1000.0, math.radians(heading / 100.0)]
+    def drive_robot(self):
         speed, angular_speed = self.control(self.last_position)
         if self.verbose:
             print(speed, angular_speed)
         self.send_speed_cmd(speed, angular_speed)
+
+    def on_pose2d(self, data):
+        x, y, heading = data
+        self.last_position = [x / 1000.0, y / 1000.0, math.radians(heading / 100.0)]
+        self.drive_robot()
+
+    def on_pose3d(self, data):
+        [x, y, z], quat = data
+        heading = quaternion.heading(quat)
+        self.last_position = [x, y, heading]
+        self.drive_robot()
 
     def on_emergency_stop(self, data):
         if self.raise_exception_on_stop and data:
