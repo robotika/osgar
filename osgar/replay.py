@@ -3,6 +3,7 @@
 """
 
 import argparse
+import sys
 import logging
 import inspect
 from ast import literal_eval
@@ -60,8 +61,10 @@ def replay(args, application=None):
         if args.output is None:
             bus = LogBusHandlerInputsOnly(reader, inputs=inputs)
         else:
-            writer = LogWriter(filename=args.output)
-            bus = LogBusHandlerInputsReaderOutputsWriter(reader, inputs=inputs, writer=writer, outputs=outputs)
+            writer = LogWriter(filename=args.output, note=str(sys.argv))  # new command line
+            writer.write(0, bytes(str(config), 'ascii'))  # original config
+            bus = LogBusHandlerInputsReaderOutputsWriter(reader, inputs=inputs, writer=writer,
+                                                         outputs=outputs, module_name=module)
     else:
         streams = list(inputs.keys()) + list(outputs.keys())
         reader = LogReader(args.logfile, only_stream_id=streams, clip_end_time_sec=duration)
