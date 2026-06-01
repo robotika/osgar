@@ -10,6 +10,7 @@
 from enum import Enum
 
 import cv2
+import av
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
@@ -55,7 +56,8 @@ def save_h264_img(payload):
 class TelloDrone(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('cmd')
+        bus.register('cmd', 'jpeg')
+        self.codec = av.CodecContext.create('h264', 'r')
         self.battery = None
         self.buf = b''
         self.debug_arr = []
@@ -97,17 +99,17 @@ class TelloDrone(Node):
                     print(self.time, item)
 
     def on_video(self, data):
-        return  # hack
-        assert len(data) <= 1460, len(data)
-        self.buf += data
-        print(len(data))
-        if len(data) < 1460:
-            print(len(self.buf))
-            with open('out/frame%04d.bin' % self.frame_index, 'wb') as f:
-                f.write(self.buf)
-            self.frame_index += 1
-            # save_h264_img(self.buf)
-            self.buf = b''
+        try:
+            packets = self.codec.parse(data)
+            for packet in packets:
+                frames = self.codec.decode(packet)
+                for frame in frames:
+                    img = frame.to_ndarray(format='bgr24')
+                    retval, jpeg_data = cv2.imencode('.jpg', img)
+                    if retval:
+                        self.publish('jpeg', jpeg_data.tobytes())
+        except Exception as e:
+            print(f"Error decoding video frame: {e}")
 
     def run(self):
         self.publish('cmd', b'command')

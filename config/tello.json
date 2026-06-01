@@ -5,7 +5,7 @@
       "tello": {
           "driver": "osgar.platforms.tello:TelloDrone",
           "in": ["status", "video"],
-          "out": ["cmd"],
+          "out": ["cmd", "jpeg"],
           "init": {
               "tasks": [
                   [1, "streamon"],
