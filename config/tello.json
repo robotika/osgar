@@ -3,7 +3,7 @@
   "robot": {
     "modules": {
       "tello": {
-          "driver": "tello",
+          "driver": "osgar.platforms.tello:TelloDrone",
           "in": ["status", "video"],
           "out": ["cmd"],
           "init": {}

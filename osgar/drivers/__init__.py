@@ -29,7 +29,6 @@ all_drivers = dict(
     pozyx="osgar.drivers.pozyx:Pozyx",
     rtk_filter="osgar.drivers.rtk_filter:RTKFilter",
     vanjee="osgar.drivers.vanjee:VanJeeLidar",
-    tello="osgar.drivers.tello:TelloDrone",
 )
 
 
