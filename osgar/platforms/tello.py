@@ -60,7 +60,7 @@ class TelloDrone(Node):
         self.buf = b''
         self.debug_arr = []
         self.frame_index = 1  # save as "frame0001.bin"
-        self.tasks = [
+        default_tasks = [
             [1, b'streamon'],
             [2, b'takeoff'],
             [11, b'up 300'],
@@ -73,6 +73,12 @@ class TelloDrone(Node):
             [20, b'land'],
             [22, b'streamoff']
         ]
+        tasks = config.get('tasks', default_tasks)
+        self.tasks = []
+        for time_sec, cmd in tasks:
+            if isinstance(cmd, str):
+                cmd = cmd.encode('utf-8')
+            self.tasks.append([time_sec, cmd])
         self.last_cmd = None
 
     def on_cmd_ack(self, data):

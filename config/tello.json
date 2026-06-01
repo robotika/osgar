@@ -6,7 +6,21 @@
           "driver": "osgar.platforms.tello:TelloDrone",
           "in": ["status", "video"],
           "out": ["cmd"],
-          "init": {}
+          "init": {
+              "tasks": [
+                  [1, "streamon"],
+                  [2, "takeoff"],
+                  [11, "up 300"],
+                  [12, "cw 360"],
+                  [12, "go 200 0 0 50"],
+                  [12, "go 0 200 0 50"],
+                  [12, "go -200 -200 0 50"],
+                  [12, "go 0 0 100 50"],
+                  [12, "go 0 0 -200 50"],
+                  [20, "land"],
+                  [22, "streamoff"]
+              ]
+          }
       },
       "udp_cmd": {
           "driver": "udp",
