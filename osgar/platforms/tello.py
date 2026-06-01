@@ -59,7 +59,6 @@ class TelloDrone(Node):
         self.battery = None
         self.buf = b''
         self.debug_arr = []
-        self.verbose = False
         self.frame_index = 1  # save as "frame0001.bin"
         self.tasks = [
             [1, b'streamon'],
@@ -108,14 +107,6 @@ class TelloDrone(Node):
             self.frame_index += 1
             # save_h264_img(self.buf)
             self.buf = b''
-
-    def update(self):
-        channel = super().update()  # define self.time
-        handler = getattr(self, "on_" + channel, None)
-        if handler is not None:
-            handler(getattr(self, channel))
-        else:
-            assert False, channel  # unknown
 
     def run(self):
         self.publish('cmd', b'command')
