@@ -42,27 +42,13 @@ class TelloCmd(Enum):
             # c: up/down (-100~100), d: yaw (-100~100)
 
 
-def save_h264_img(payload):
-    tmpFile = open("tmp.bin", "wb")
-    tmpFile.write(payload)
-    tmpFile.flush()
-    tmpFile.close()
-    cap = cv2.VideoCapture("tmp.bin")
-    ret, frame = cap.read()
-    if ret:
-        cv2.imwrite("test.jpg", frame)  # dirty solution how to get image from OpenCV to Pygame :(
-        assert 0
-
-
 class TelloDrone(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
         bus.register('cmd', 'jpeg')
         self.codec = av.CodecContext.create('h264', 'r')
         self.battery = None
-        self.buf = b''
         self.debug_arr = []
-        self.frame_index = 1  # save as "frame0001.bin"
         default_tasks = [
             [1, b'streamon'],
             [2, b'takeoff'],
