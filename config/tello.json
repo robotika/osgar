@@ -1,0 +1,44 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "tello": {
+          "driver": "osgar.platforms.tello:TelloDrone",
+          "in": ["status", "video"],
+          "out": ["cmd", "jpeg"],
+          "init": {
+              "tasks": [
+                  [1, "streamon"],
+                  [2, "takeoff"],
+                  [11, "up 100"],
+                  [12, "cw 180"],
+                  [20, "land"],
+                  [22, "streamoff"]
+              ]
+          }
+      },
+      "udp_cmd": {
+          "driver": "udp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"host": "192.168.10.1", "port": 8889, "timeout": 3.0}
+      },
+      "udp_status": {
+          "driver": "udp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"host": "", "port": 8890, "timeout": 3.0}
+      },
+      "udp_video": {
+          "driver": "udp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"host": "", "port": 11111, "timeout": 3.0, "bufsize": 4096}
+      }
+    },
+    "links": [["tello.cmd", "udp_cmd.raw"],
+              ["udp_cmd.raw", "tello.cmd_ack"],
+              ["udp_status.raw", "tello.status"],
+              ["udp_video.raw", "tello.video"]]
+  }
+}
