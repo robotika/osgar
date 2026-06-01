@@ -50,6 +50,24 @@ Devices like the OAK-D Pro (used in OSGAR configurations like Matty) run neural 
 
 ---
 
+## Future Directions & Platform-Specific Challenges
+Building a true closed-loop re-simulator that handles heavy divergence in complex environments is a massive undertaking. Future development should prioritize these platform-specific challenges:
+
+### 1. Platform: Matty (Outdoor Terrain & OAK-D Pro)
+- **Environment Dynamics:** Matty operates in heavy outdoor terrain where controls often fail or behave unpredictably (e.g., wheel slip, sliding). A pure kinematic differential-drive model is insufficient. Future iterations will need a physics/slip model or stochastic noise integration to simulate realistic traction based on the environment.
+- **Sensor Fusion:** Beyond simple 2D pose, the simulator must generate aligned GPS and IMU outputs that match the diverging trajectory. IMU synthesis is particularly complex as it requires calculating second-order derivatives (acceleration) from the dynamically simulated path, factoring in terrain bumps.
+- **Vision:** Re-projecting OAK-D Pro detections or synthesizing depth in uneven outdoor terrain requires projecting onto a pseudo-3D elevation map, not just a flat 2D floor plane.
+
+### 2. Platform: Yuhensen / Pat (Car-like Robot & 3D LIDAR)
+- **Kinematics:** Requires an Ackermann steering model rather than standard differential drive.
+- **3D LIDAR (Vanjee 4-layer):** Synthesizing multi-layer 3D LIDAR scans from logged data is highly complex due to occlusion and ray-tracing. If the robot diverges from the logged path, simply re-projecting the 3D point cloud will leave "shadows" or holes where the physical LIDAR never saw. 
+- **Volumetric Mapping:** Future solutions for 3D LIDAR might involve building a local voxel map (or Octomap) from the log data in real-time, and ray-casting against it from the simulated robot's new pose.
+
+### General Architectural Outlook
+For heavy terrain and 3D sensors, pure python-based kinematic re-simulation might eventually hit a ceiling. A long-term direction could involve building a bridge to a true 3D physics engine (like Gazebo/Ignition), where the logged data is used to procedurally generate the environment geometry in the engine, and the engine handles the physics of slip and sensor ray-casting natively.
+
+---
+
 ## Implementation Plan
 
 ### Phase 1: Create `LogSimulator` Node
