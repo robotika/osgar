@@ -102,14 +102,18 @@ class TelloDrone(Node):
         try:
             packets = self.codec.parse(data)
             for packet in packets:
-                frames = self.codec.decode(packet)
-                for frame in frames:
-                    img = frame.to_ndarray(format='bgr24')
-                    retval, jpeg_data = cv2.imencode('.jpg', img)
-                    if retval:
-                        self.publish('jpeg', jpeg_data.tobytes())
+                try:
+                    frames = self.codec.decode(packet)
+                    for frame in frames:
+                        img = frame.to_ndarray(format='bgr24')
+                        retval, jpeg_data = cv2.imencode('.jpg', img)
+                        if retval:
+                            self.publish('jpeg', jpeg_data.tobytes())
+                except av.AVError:
+                    # Ignore decoding errors from incomplete packets/keyframes at startup
+                    pass
         except Exception as e:
-            print(f"Error decoding video frame: {e}")
+            pass
 
     def run(self):
         self.publish('cmd', b'command')
