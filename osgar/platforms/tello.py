@@ -11,6 +11,7 @@ from enum import Enum
 
 import cv2
 import av
+import av.error
 
 from osgar.node import Node
 from osgar.bus import BusShutdownException
@@ -109,10 +110,11 @@ class TelloDrone(Node):
                         retval, jpeg_data = cv2.imencode('.jpg', img)
                         if retval:
                             self.publish('jpeg', jpeg_data.tobytes())
-                except av.AVError:
+                except av.error.FFmpegError:
                     # Ignore decoding errors from incomplete packets/keyframes at startup
                     pass
-        except Exception as e:
+        except av.error.FFmpegError:
+            # Ignore parsing errors from incomplete streams
             pass
 
     def run(self):
