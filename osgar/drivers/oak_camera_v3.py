@@ -100,6 +100,7 @@ class OakCamera:
 
         self.color_manual_focus = config.get("color_manual_focus")  # 0..255 [far..near]
         self.color_manual_exposure = config.get("color_manual_exposure")  # [exposure, iso] 1..33000 [us] and 100..1600
+        self.color_exposure_compensation = config.get("color_exposure_compensation")  # auto exposure compensation (-9..9)
         self.color_manual_wb = config.get("color_manual_wb")  # 1000..12000 K
         self.stereo_manual_exposure = config.get(
             "stereo_manual_exposure")  # [exposure, iso] 1..33000 [us] and 100..1600
@@ -206,6 +207,8 @@ class OakCamera:
                 if self.color_manual_exposure is not None:
                     exposure, iso = self.color_manual_exposure
                     cam_rgb.initialControl.setManualExposure(exposure, iso)
+                if self.color_exposure_compensation is not None:
+                    cam_rgb.initialControl.setAutoExposureCompensation(self.color_exposure_compensation)
                 if self.color_manual_wb is not None:
                     cam_rgb.initialControl.setManualWhiteBalance(self.color_manual_wb)
 
