@@ -63,13 +63,8 @@ class TelloDrone(Node):
         default_tasks = [
             [1, b'streamon'],
             [2, b'takeoff'],
-            [11, b'up 300'],
+            [11, b'up 100'],
             [12, b'cw 360'],
-            [12, b'go 200 0 0 50'],
-            [12, b'go 0 200 0 50'],
-            [12, b'go -200 -200 0 50'],
-            [12, b'go 0 0 100 50'],
-            [12, b'go 0 0 -200 50'],
             [20, b'land'],
             [22, b'streamoff']
         ]
