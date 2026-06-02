@@ -54,9 +54,27 @@ The previous raw UDP packet accumulation hack has been replaced with a robust, z
 
 To expand beyond sequential scheduled script flight tasks, the following integrations are recommended:
 
-### Option A: DJITelloPy Integration
-* **Paradigms:** For robust closed-loop flight paths and swarm setups.
-* **Benefits:** It incorporates auto-keepalive pings (preventing Tello's 15-second idle auto-land safety shutdown) and blocks command execution loops synchronously until `"ok"` ACKs are returned, removing the need for manual timetables.
+### Option A: DJITelloPy Integration & Command Paradigms
+For robust closed-loop flight paths and swarm setups, DJITelloPy provides a mix of two powerful control paradigms matching different robotics workloads:
+
+#### 1. Discrete/Step-by-Step Commands (Synchronous & Blocking)
+* **How it works:** Discrete textual commands like `"takeoff"`, `"land"`, or `"forward 50"` are inherently synchronous on the drone's firmware. The drone will *not* return the `"ok"` response until it has fully completed the action (e.g. hovered steadily after takeoff, or completed the 50cm flight).
+* **Library wrapping:** DJITelloPy wraps these as blocking methods (`tello.takeoff()`, `tello.move_left(50)`). The calling thread blocks and waits for the `"ok"` or `"error"` ACK (with built-in socket timeouts), which delivers safe, sequential, closed-loop behavior out-of-the-box.
+
+#### 2. Real-Time/Fluid Piloting Commands (Asynchronous & Non-Blocking)
+* **How it works:** For high-frequency, dynamic piloting (e.g., keyboard flight, gamepad inputs, or computer-vision target-tracking via PID loops), the Tello SDK provides a special asynchronous command format: `rc a b c d` (where `a`: roll / left-right, `b`: pitch / forward-backward, `c`: throttle / up-down, and `d`: yaw / rotation, with values from `-100` to `100`).
+* **No ACK congestion:** Crucially, **the drone does NOT reply with `"ok"` to `rc` commands** to keep the control channel latency-free.
+* **Control Loop Pattern:** In DJITelloPy, `tello.send_rc_control(la, fb, ud, yaw)` transmits the values instantly without blocking. This allows you to implement high-speed continuous tracking loops (typically operating at 20Hz - 50Hz) directly integrated with OSGAR's standard closed-loop platform control loops (similar to `subt/drone.py`):
+  ```python
+  # Periodically compute errors and update speeds at 20Hz:
+  while running:
+      error_x, error_y = detect_target(camera_frame)
+      ud_speed = pid_altitude(error_y)
+      yaw_speed = pid_yaw(error_x)
+      # Transmit raw RC control asynchronously:
+      tello.send_rc_control(0, 0, ud_speed, yaw_speed)
+      time.sleep(0.05)
+  ```
 
 ### Option B: ROS / ROS 2 `tello_driver`
 * **Paradigms:** For full 3D odometry and standard twist/control layout.
