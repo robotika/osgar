@@ -334,12 +334,19 @@ class OakCamera:
                 else:
                     W, H = 416, 416  # default fallback
 
-                nn = pipeline.create(dai.node.NeuralNetwork)
-                nn.setBlobPath(nn_path)
-                nn.setNumInferenceThreads(2)
+
+                if nn_path.endswith(".tar.xz"):
+                    # superblob with config
+                    # detectionNetwork - NN_ARCHIVE_PATH
+                    nn = pipeline.create(dai.node.DetectionNetwork)
+                    nn.setNNArchive(dai.NNArchive(nn_path))
+                else:
+                    nn = pipeline.create(dai.node.NeuralNetwork)
+                    nn.setBlobPath(nn_path)
+                    nn.setNumInferenceThreads(2)
                 nn.input.setBlocking(False)
 
-                if nn_family == 'YOLO':
+                if nn_family == 'YOLO' and not nn_path.endswith(".tar.xz"):  # hack not to use parser for superblob
                     metadata = nn_config.get("NN_specific_metadata", {})
                     parser = pipeline.create(dai.node.DetectionParser)
                     if "confidence_threshold" in metadata:
