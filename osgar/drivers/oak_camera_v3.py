@@ -324,6 +324,8 @@ class OakCamera:
                 if not nn_path:
                     continue
                 assert Path(nn_path).exists(), "No blob found at '{}'!".format(nn_path)
+                # optionally limit number of shaves for "superblob NN archives"
+                num_shaves = model_cfg.get("model", {}).get("num_shaves")
 
                 nn_config = model_cfg.get("nn_config", {})
                 nn_family = nn_config.get("NN_family", "YOLO")
@@ -334,19 +336,23 @@ class OakCamera:
                 else:
                     W, H = 416, 416  # default fallback
 
-
-                if nn_path.endswith(".tar.xz"):
+                is_nn_archive = nn_path.endswith(".tar.xz")
+                if is_nn_archive:
                     # superblob with config
                     # detectionNetwork - NN_ARCHIVE_PATH
                     nn = pipeline.create(dai.node.DetectionNetwork)
-                    nn.setNNArchive(dai.NNArchive(nn_path))
+                    if num_shaves is None:
+                        # unfortunately the DepthAI API does not support numShaves=None
+                        nn.setNNArchive(dai.NNArchive(nn_path))
+                    else:
+                        nn.setNNArchive(dai.NNArchive(nn_path), numShaves=num_shaves)
                 else:
                     nn = pipeline.create(dai.node.NeuralNetwork)
                     nn.setBlobPath(nn_path)
                     nn.setNumInferenceThreads(2)
                 nn.input.setBlocking(False)
 
-                if nn_family == 'YOLO' and not nn_path.endswith(".tar.xz"):  # hack not to use parser for superblob
+                if nn_family == 'YOLO' and not nn_path.endswith(".tar.xz"):  # no overload for NN archives (yet)
                     metadata = nn_config.get("NN_specific_metadata", {})
                     parser = pipeline.create(dai.node.DetectionParser)
                     if "confidence_threshold" in metadata:
