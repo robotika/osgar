@@ -17,12 +17,20 @@ g_logger = logging.getLogger(__name__)
 
 
 def replay(args, application=None):
-    log = LogReader(args.logfile, only_stream_id=0)
-    print("original args:", next(log)[-1])  # old arguments
-    config_str = next(log)[-1]
-    config = literal_eval(config_str.decode('ascii'))
+    with LogReader(args.logfile, only_stream_id=0) as log:
+        print("original args:", next(log)[-1])  # old arguments
+        config_str = next(log)[-1]
+        config = literal_eval(config_str.decode('ascii'))
     if args.config is not None:
         config = config_load(*args.config, application=application)
+
+    if getattr(args, 'params', None) is not None:
+        for param in args.params:
+            assert '=' in param, param
+            key_path, str_value = param.split('=')
+            key = key_path.split('.')
+            assert len(key) == 2, key
+            config['robot']['modules'][key[0]].setdefault('init', {})[key[1]] = literal_eval(str_value)
 
     names = logger.lookup_stream_names(args.logfile)
     if args.debug:
@@ -93,6 +101,9 @@ def main():
     parser.add_argument('logfile', help='recorded log file')
     parser.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
     parser.add_argument('--config', nargs='+', help='force alternative configuration file')
+    parser.add_argument('--params', nargs='+',
+                        help='optional list of configuration parameters like app.max_speed=0.1 app.dist=-2.0. '
+                             'For string parameters use double quotes e.g.: app.logfile=\'"name.log"\'')
     parser.add_argument('--module', help='module name for analysis')  # TODO default "all"
     parser.add_argument('--verbose', '-v', help="verbose mode", action='store_true')
     parser.add_argument('--draw', help="draw debug results", nargs='?', const=True)
