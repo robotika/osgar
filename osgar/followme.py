@@ -36,6 +36,7 @@ class FollowMe(Node):
         self.max_speed = config.get('max_speed', 0.5)  # m/s
         self.max_dist_limit = config.get('max_dist_limit', 1.3)  # m
         self.desired_dist = config.get('desired_dist', 0.4)  # m
+        self.track_front_deg = config.get('track_front_deg', None)
         self.debug_arr = []
 
     def on_pose2d(self, data):
@@ -67,9 +68,15 @@ class FollowMe(Node):
         SCAN_SIZE = self.scan_size
         SCANS_PER_DEG = abs(SCAN_SIZE//self.scan_fov_deg)  # FOV can be negative for flipped lidar
 
-        # limit tracking to front 180deg only due to mounting (back laser is blocked by robot body)
-        LIMIT_LOW = 0  # SCAN_SIZE//6
-        LIMIT_HIGH = SCAN_SIZE  # 5*SCAN_SIZE//6
+        # limit tracking to front tracking cone if specified
+        if self.track_front_deg is not None:
+            fraction = min(1.0, float(self.track_front_deg) / abs(self.scan_fov_deg))
+            remove_side_fraction = (1.0 - fraction) / 2.0
+            LIMIT_LOW = int(remove_side_fraction * SCAN_SIZE)
+            LIMIT_HIGH = SCAN_SIZE - LIMIT_LOW
+        else:
+            LIMIT_LOW = 0
+            LIMIT_HIGH = SCAN_SIZE
         CLOSE_REFLECTIONS = 10  # ignore readings closer than 10mm, where 0 = infinite (no response)
 
         thresholds = []
