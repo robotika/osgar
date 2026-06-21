@@ -1,0 +1,78 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+          "driver": "osgar.followme:FollowMe",
+          "in": ["encoders", "scan", "emergency_stop", "pose2d"],
+          "out": ["desired_speed"],
+          "init": {
+            "max_speed": 0.7,
+            "max_dist_limit": 3.0,
+            "desired_dist": 1.5,
+            "laser_pose2d": [0.13, 0.055, 0],
+            "scan_size": 1800,
+            "scan_fov_deg": -360,
+            "track_front_deg": 90
+          }
+      },
+      "platform": {
+        "driver": "osgar.platforms.yuhesen:FR07",
+        "in": ["can"],
+        "out": ["can"],
+        "init": {
+            "max_speed": 0.7
+        }
+      },
+      "can": {
+        "driver": "pcan",
+        "in": ["can"],
+        "out": ["can"],
+        "init": {}
+      },
+      "gps": {
+          "driver": "gps",
+          "in": ["raw"],
+          "out": ["position"],
+          "init": {}
+      },
+      "gps_serial": {
+          "driver": "serial",
+          "in": [],
+          "out": ["raw"],
+          "init": {"port": "/dev/ttyUSB0", "speed": 4800}
+      },
+      "vanjee": {
+          "driver": "vanjee",
+          "in": ["raw"],
+          "out": ["raw", "xyz"],
+          "init": {}
+      },
+      "vanjee_udp": {
+          "driver": "udp",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {"host": "192.168.0.2", "port": 6050, "timeout": 3.0, "bufsize": 100000}
+      },
+      "obstdet3d": {
+          "driver": "osgar.obstdet3d:ObstacleDetector3D",
+          "in": ["depth"],
+          "out": ["obstacle"],
+          "init": {}
+      }
+    },
+    "links": [
+      ["can.can", "platform.can"],
+      ["platform.can", "can.can"],
+      ["app.desired_speed", "platform.desired_steering"],
+      ["platform.emergency_stop", "app.emergency_stop"],
+      ["platform.pose2d", "app.pose2d"],
+
+      ["gps_serial.raw", "gps.raw"],
+
+      ["vanjee_udp.raw", "vanjee.raw"],
+      ["vanjee.raw", "vanjee_udp.raw"],
+      ["vanjee.scan10", "app.scan"]
+    ]
+  }
+}
