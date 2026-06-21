@@ -10,7 +10,7 @@ from osgar.bus import BusShutdownException
 
 class VanJeeLidar(Node):
     def __init__(self, config, bus):
-        bus.register('raw', 'xyz', 'scan', 'scan10', 'scanup')
+        bus.register('raw', 'xyz', 'scan', 'scan5', 'scan10', 'scanup')
         super().__init__(config, bus)
         self.last_frame = None  # not defined
         self.points = []
@@ -44,6 +44,8 @@ class VanJeeLidar(Node):
             if len(self.points) == 2*7200:
                 scan = self.points[5::8]  # -10, -5, 0, 0.3
                 self.publish('scan', scan)
+                scan5 = self.points[3::8]  # -10, -5, 0, 0.3
+                self.publish('scan5', scan5)
                 scan10 = self.points[1::8]  # -10, -5, 0, 0.3
                 self.publish('scan10', scan10)
                 scanup = self.points[7::8]  # -10, -5, 0, 0.3
