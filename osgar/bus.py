@@ -247,7 +247,7 @@ class LogBusHandlerInputsOnly:
         pass
 
     def shutdown(self):
-        pass
+        raise SystemExit()
 
     def report_error(self, err):
         print(self.time, err)
