@@ -32,11 +32,12 @@ class VanJeeLidarTest(unittest.TestCase):
             footer = b'\xee\xee'
             packet = header + data + padding + footer
             lidar.on_raw(packet)
-        # Verify that all scans, including scan5, are published
+        # Verify that all scans, including scan5 and scan10_reflectivity, are published
         published_channels = [call[0][0] for call in handler.publish.call_args_list]
         self.assertIn('scan', published_channels)
         self.assertIn('scan5', published_channels)
         self.assertIn('scan10', published_channels)
+        self.assertIn('scan10_reflectivity', published_channels)
         self.assertIn('scanup', published_channels)
 
 # vim: expandtab sw=4 ts=4
