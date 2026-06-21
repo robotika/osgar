@@ -36,6 +36,7 @@ class FollowMe(Node):
         self.max_speed = config.get('max_speed', 0.5)  # m/s
         self.max_dist_limit = config.get('max_dist_limit', 1.3)  # m
         self.desired_dist = config.get('desired_dist', 0.4)  # m
+        # optionally limit tracking to the smaller field of view (say due to internal obstruction of lidar)
         self.track_front_deg = config.get('track_front_deg', None)
         self.debug_arr = []
 
