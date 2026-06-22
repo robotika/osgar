@@ -205,4 +205,35 @@ class BusHandlerTest(unittest.TestCase):
         t.join(0.01)
         self.assertFalse(t.is_alive())
 
+    def test_config_overrides(self):
+        logger = MagicMock()
+        logger.register = MagicMock(side_effect=[10, 11, 12, 13])
+        bus = Bus(logger)
+        handle = bus.handle('test')
+        handle.config_out = ["raw:gz", "status:null", "preserved", "depth:"]
+        
+        handle.register("raw", "status", "preserved:gz", "depth:gz")
+        
+        self.assertIn("raw", handle.stream_id)
+        self.assertIn("status", handle.stream_id)
+        self.assertIn("preserved", handle.stream_id)
+        self.assertIn("depth", handle.stream_id)
+        
+        raw_idx = handle.stream_id["raw"]
+        status_idx = handle.stream_id["status"]
+        preserved_idx = handle.stream_id["preserved"]
+        depth_idx = handle.stream_id["depth"]
+        
+        self.assertIn(raw_idx, handle.compressed_output)
+        self.assertNotIn(raw_idx, handle.no_output)
+        
+        self.assertIn(status_idx, handle.no_output)
+        self.assertNotIn(status_idx, handle.compressed_output)
+        
+        self.assertIn(preserved_idx, handle.compressed_output)
+        self.assertNotIn(preserved_idx, handle.no_output)
+        
+        self.assertNotIn(depth_idx, handle.compressed_output)
+        self.assertNotIn(depth_idx, handle.no_output)
+
 # vim: expandtab sw=4 ts=4

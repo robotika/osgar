@@ -75,10 +75,26 @@ class _BusHandler:
                 continue
             idx = self.logger.register(f'{self.name}.{o}')
             self.stream_id[o] = idx
-            if name_and_type.endswith(':null'):
+            
+            # Resolve configuration overrides if provided
+            config_name_and_type = name_and_type
+            if hasattr(self, 'config_out') and self.config_out:
+                for item in self.config_out:
+                    if item == o or item.startswith(o + ':'):
+                        # ONLY override if the item in config explicitly specifies a modifier/suffix (contains a colon)
+                        if ':' in item:
+                            config_name_and_type = item
+                        break
+
+            if config_name_and_type.endswith(':null'):
                 self.no_output.add(idx)
-            if name_and_type.endswith(':gz'):
+                self.compressed_output.discard(idx)
+            elif config_name_and_type.endswith(':gz'):
                 self.compressed_output.add(idx)
+                self.no_output.discard(idx)
+            else:
+                self.no_output.discard(idx)
+                self.compressed_output.discard(idx)
             self.out[o] = []
             self.slots[o] = []
 
