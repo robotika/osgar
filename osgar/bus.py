@@ -269,7 +269,7 @@ class LogBusHandlerInputsReaderOutputsWriter(LogBusHandlerInputsOnly):
             # ignore :gz and :null modifiers
             if o.split(':')[0] not in self.outputs.values():
                 print('Warning - not defined output times for new stream:', (o, self.outputs))
-            self.new_output_index[o.split(':')[0]] = self.writer.register(f'{self.module_name}.{o}')
+            self.new_output_index[o.split(':')[0]] = self.writer.register(f'{self.module_name}.{o}', dt=self.time)
 
     def publish(self, channel, data):
         self.writer.write(stream_id=self.new_output_index[channel],
