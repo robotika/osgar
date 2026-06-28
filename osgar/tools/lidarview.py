@@ -164,8 +164,15 @@ def draw(foreground, pose, scan, poses=[], image=None, bbox=None, callback=None,
                 # new (temporary?) format
                 w, h = image.get_size()
                 # stream name
-                image_size = g_log_config['robot']['modules']['oak']['init']['nn_config']['input_size']
-                assert image_size in ['640x352', '640x640', '416x416'], image_size
+                try:
+                    image_size = g_log_config['robot']['modules']['oak']['init']['nn_config']['input_size']
+                except KeyError:
+                    image_size = None
+                    for model in g_log_config['robot']['modules']['oak']['init']['models']:
+                        if model['nn_config']['NN_family'] == 'YOLO':
+                            assert image_size == None, image_size  # multiple YOLO models?!
+                            image_size = model['nn_config']['input_size']
+                assert image_size in ['640x352', '640x640', '416x416', '512x384'], image_size
                 nn_w, nn_h = [int(v) for v in image_size.split('x')]
                 if nn_h == nn_w:
                     # squared model
