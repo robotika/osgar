@@ -37,6 +37,7 @@ g_lidar_fov_deg = 270  # controlled by --deg (deg)
 g_depth_params = DepthParams()
 g_prefix = "saveX"
 g_log_config = None  # original log config file
+g_bbox_name = None  # stream ID for detection bounding box
 
 CENTER_AXLE_DISTANCE = 0.348  # K2 distance specific
 
@@ -164,11 +165,15 @@ def draw(foreground, pose, scan, poses=[], image=None, bbox=None, callback=None,
                 # new (temporary?) format
                 w, h = image.get_size()
                 # stream name
+                module_name = 'oak'  # fallback / default
+                if g_bbox_name is not None:
+                    module_name = g_bbox_name.split('.')[0]
                 try:
-                    image_size = g_log_config['robot']['modules']['oak']['init']['nn_config']['input_size']
-                except KeyError:
+                    image_size = g_log_config['robot']['modules'][module_name]['init']['nn_config']['input_size']
+                except (KeyError, TypeError):
                     image_size = None
-                    for model in g_log_config['robot']['modules']['oak']['init']['models']:
+                    modules = g_log_config['robot']['modules'] if g_log_config else {}
+                    for model in modules.get(module_name, {}).get('init', {}).get('models', []):
                         if model['nn_config']['NN_family'] == 'YOLO':
                             assert image_size == None, image_size  # multiple YOLO models?!
                             image_size = model['nn_config']['input_size']
@@ -729,7 +734,7 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
 def main(args_in=None, startswith=None):
     import argparse
     import os.path
-    global g_rotation_offset_rad, g_lidar_fov_deg, MAX_SCAN_LIMIT, WINDOW_SIZE, g_prefix, g_log_config
+    global g_rotation_offset_rad, g_lidar_fov_deg, MAX_SCAN_LIMIT, WINDOW_SIZE, g_prefix, g_log_config, g_bbox_name
 
     parser = argparse.ArgumentParser(description='View lidar scans')
     parser.add_argument('logfile', help='recorded log file')
@@ -790,6 +795,7 @@ def main(args_in=None, startswith=None):
         return
 
     g_log_config = get_config(args.logfile)
+    g_bbox_name = args.bbox
 
     callback = None
     if args.callback is not None:
