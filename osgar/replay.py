@@ -7,6 +7,7 @@ import sys
 import logging
 import inspect
 from ast import literal_eval
+from datetime import timedelta
 
 from osgar import logger
 from osgar.logger import LogReader, LogWriter
@@ -69,8 +70,8 @@ def replay(args, application=None):
         if args.output is None:
             bus = LogBusHandlerInputsOnly(reader, inputs=inputs)
         else:
-            writer = LogWriter(filename=args.output, note=str(sys.argv))  # new command line
-            writer.write(0, bytes(str(config), 'ascii'))  # original config
+            writer = LogWriter(filename=args.output, note=str(sys.argv), dt=timedelta(0))  # new command line
+            writer.write(0, bytes(str(config), 'ascii'), dt=timedelta(0))  # original config
             bus = LogBusHandlerInputsReaderOutputsWriter(reader, inputs=inputs, writer=writer,
                                                          outputs=outputs, module_name=module)
     else:
