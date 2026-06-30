@@ -104,7 +104,7 @@ def timedelta_parser(start_time=datetime.timedelta()):
 
 
 class LogWriter:
-    def __init__(self, prefix='', note='', filename=None, start_time=None):
+    def __init__(self, prefix='', note='', filename=None, start_time=None, dt=None):
         self.lock = RLock()
         if start_time is None:
             self.start_time = datetime.datetime.now(datetime.timezone.utc)
@@ -129,14 +129,14 @@ class LogWriter:
         self.f.write(b"".join(format_header(self.start_time)))
         self.f.flush()
         if len(note) > 0:
-            self.write(stream_id=INFO_STREAM_ID, data=bytes(note, encoding='utf-8'))
+            self.write(stream_id=INFO_STREAM_ID, data=bytes(note, encoding='utf-8'), dt=dt)
         self.names = []
 
-    def register(self, name):
+    def register(self, name, dt=None):
         with self.lock:
             assert name not in self.names, (name, self.names)
             self.names.append(name)
-            self.write(stream_id=INFO_STREAM_ID, data=bytes(str({'names': self.names}), encoding='ascii'))
+            self.write(stream_id=INFO_STREAM_ID, data=bytes(str({'names': self.names}), encoding='ascii'), dt=dt)
             return len(self.names)
 
     def write(self, stream_id, data, dt=None):
