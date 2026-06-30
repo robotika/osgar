@@ -215,6 +215,35 @@ class Test(unittest.TestCase):
         }
         record(config, log_filename='compressed-publisher.log')
 
+    def test_config_overrides(self):
+        config = { 'version': 2, 'robot': { 'modules': {}, 'links': [] } }
+        config['robot']['modules']['publisher'] = {
+            "driver": "osgar.test_zmqrouter:Publisher",
+            "init": { "output": "count" },
+            "out": ["count:gz"]
+        }
+        record(config, log_filename='overridden-publisher.log')
+        
+        import msgpack
+        from osgar.lib.serialize import deserialize
+        
+        with osgar.logger.LogReader(self.tempdir/"overridden-publisher.log", only_stream_id=1) as log:
+            last_dt = datetime.timedelta()
+            count = 0
+            for dt, channel, data in log:
+                self.assertGreater(dt, last_dt)
+                
+                # Verify that the raw data in the log is indeed compressed (it should be an ExtType with code 42)
+                unpacked = msgpack.unpackb(data, raw=False)
+                self.assertIsInstance(unpacked, msgpack.ExtType)
+                self.assertEqual(unpacked.code, 42)
+                
+                # Verify that we can successfully deserialize it back to the original count
+                self.assertEqual(deserialize(data), count)
+                
+                last_dt = dt
+                count += 1
+
     def test_null(self):
         config = { 'version': 2, 'robot': { 'modules': {}, 'links': [] } }
         config['robot']['modules']['publisher'] = {

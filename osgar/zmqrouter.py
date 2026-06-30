@@ -49,7 +49,7 @@ def record(config, log_prefix=None, log_filename=None, duration_sec=None):
     with osgar.logger.LogWriter(prefix=log_prefix, filename=log_filename, note=str(sys.argv)) as log:
         log.write(0, bytes(str(config), 'ascii'))
         g_logger.info(log.filename)
-        with _Router(log) as router:
+        with _Router(log, config=config['robot']['modules']) as router:
             modules = {}
             s = sys.modules[__name__].__spec__
             for module_name, module_config in config['robot']['modules'].items():
@@ -83,8 +83,9 @@ def record(config, log_prefix=None, log_filename=None, duration_sec=None):
 
 
 class _Router:
-    def __init__(self, logger):
+    def __init__(self, logger, config=None):
         self.logger = logger
+        self.config = config
         self.start_time = self.logger.start_time
         self._context = zmq.Context()
         self.socket = self._context.socket(zmq.ROUTER)
@@ -125,16 +126,41 @@ class _Router:
             assert sender in nodes, (sender, nodes)     # it is one of the nodes we expect
             self.nodes[sender] = collections.deque()    # receiving queue
             self.delays[sender] = datetime.timedelta()
+            
+            node_name = str(sender, 'ascii')
+            module_config = self.config.get(node_name, {}) if self.config else {}
+            config_out = module_config.get('out', [])
+
             for name_and_type in args:
                 o, *suffix = name_and_type.split(b':')
                 suffix = suffix[0] if suffix else b''
+                
+                # Resolve overrides from configuration
+                o_str = str(o, 'ascii')
+                config_suffix = None
+                for item in config_out:
+                    if item == o_str:
+                        # Plain name (no colon modifier) - preserve driver default suffix
+                        break
+                    elif item.startswith(o_str + ':'):
+                        # Overridden with a specific suffix or a trailing empty colon (e.g. 'depth:')
+                        config_suffix = bytes(item.split(':', 1)[1], 'ascii')
+                        break
+                if config_suffix is not None:
+                    suffix = config_suffix
+
                 link_from = sender + b"." + o
                 idx = self.logger.register(str(link_from, 'ascii'))
                 self.stream_id[link_from] = idx
                 if suffix == b'null':
                     self.no_output.add(idx)
+                    self.compressed_output.discard(idx)
                 elif suffix == b'gz':
                     self.compressed_output.add(idx)
+                    self.no_output.discard(idx)
+                else:
+                    self.no_output.discard(idx)
+                    self.compressed_output.discard(idx)
             if self.nodes.keys() == nodes:
                 return
         raise RuntimeError("unexpected stop")
