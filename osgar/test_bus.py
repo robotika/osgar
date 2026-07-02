@@ -129,6 +129,8 @@ class BusHandlerTest(unittest.TestCase):
         self.assertEqual(bus.listen(), (timedelta(microseconds=10), 'raw', [1, 2]))
         bus.publish('new_channel', b'some data')
         self.assertEqual(bus.listen(), (timedelta(microseconds=11), 'raw', [3, 4, 5]))
+        with self.assertRaises(SystemExit):
+            bus.shutdown()
 
     def test_report_error(self):
         log = MagicMock()
