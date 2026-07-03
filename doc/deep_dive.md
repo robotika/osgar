@@ -51,10 +51,20 @@ The configuration file defines the structure of the OSGAR application. Each modu
 
 -   `driver`: The Python class name or alias (e.g., `osgar.drivers.gps:GPS`).
 -   `init`: A dictionary of parameters passed to the module's `__init__` method.
--   `in`: (Optional) List of input channel names.
--   `out`: (Optional) List of output channel names.
+-   `in`: (Optional) List of input channel names (primarily used for documentation and by visualizers).
+-   `out`: (Optional) List of output channel names, which also supports **functional channel overrides** (see below).
 
-**Note on `in` and `out`**: While these keys are present in many OSGAR configurations, they are primarily used for documentation and by visualizers to represent the module's I/O interface. The actual communication paths are defined in the `links` section.
+### Config-Driven Channel Overrides
+While `in` and plain names in `out` are used primarily for documentation and visualization mapping, the `"out"` configuration list also supports functional suffix modifiers to dynamically override how channels log or handle data. These modifiers apply to both standard single-process runs (via `_BusHandler`) and multi-process runs (via `_Router` under ZMQ).
+
+Supported channel modifiers:
+-   `:gz` (Gzip Compression): Compresses the output data stream to save log space (e.g., `"depth:gz"`).
+-   `:null` (Silence Output): Silences the output channel entirely. Data published on this stream is discarded and never written to the log (e.g., `"status:null"`).
+-   `:` (Cancel Modifiers): An empty colon suffix cancels any hardcoded default modifier implemented inside the driver's Python code, reverting the channel to standard, uncompressed output (e.g., `"depth:"` overrides and disables a default `"depth:gz"` modifier).
+
+If an output channel is specified in the `"out"` configuration list without a colon suffix (e.g., `"depth"`), any hardcoded driver default modifier is preserved.
+
+**Note on `in` and `links`**: The actual communication paths and connections between modules are defined in the `links` section.
 
 Example:
 ```json
