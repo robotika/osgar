@@ -519,216 +519,221 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
                                  fps,
                                  (width, height))
 
-    pygame.display.init()
-    pygame.font.init()
-    screen = pygame.display.set_mode(WINDOW_SIZE, pygame.RESIZABLE)
+    try:
+        pygame.display.init()
+        pygame.font.init()
+        screen = pygame.display.set_mode(WINDOW_SIZE, pygame.RESIZABLE)
 
-    # create backgroud
-    background = pygame.Surface(screen.get_size())
-#    background.set_colorkey((0,0,0))
+        # create backgroud
+        background = pygame.Surface(screen.get_size())
+    #    background.set_colorkey((0,0,0))
 
-    # create foreground
-    foreground = pygame.Surface(screen.get_size())
-#    foreground.set_colorkey((0,0,0))
+        # create foreground
+        foreground = pygame.Surface(screen.get_size())
+    #    foreground.set_colorkey((0,0,0))
 
-    # display everything
-    screen.blit(background, (0, 0))
-    screen.blit(foreground, (0, 0))
-    pygame.display.flip()
+        # display everything
+        screen.blit(background, (0, 0))
+        screen.blit(foreground, (0, 0))
+        pygame.display.flip()
 
-    pygame.key.set_repeat(200, 60)
+        pygame.key.set_repeat(200, 60)
 
-    paused = False
-    camera_on = True
-    use_image2 = False
-    map_on = False
-    poses = []
-    acc_pts = []
-    grid = defaultdict(int)
-    skip_frames = 0
-    frames_step = 0
-    save_counter = 0
-    was_resized = False
+        paused = False
+        camera_on = True
+        use_image2 = False
+        map_on = False
+        poses = []
+        acc_pts = []
+        grid = defaultdict(int)
+        skip_frames = 0
+        frames_step = 0
+        save_counter = 0
+        was_resized = False
 
-    history = gen
-    max_timestamp = None
-    wait_for_keyframe = False
-
-    if jump is not None:
-        gen.seek(timedelta(seconds=jump))
-
-    while True:
-        timestamp, frame, pose, pose3d, scan, scan2, image, image2, bbox, joint, keyframe, title, eof = history.next()
-
-        if max_timestamp is None or max_timestamp < timestamp:
-            # build map only for new data
-            max_timestamp = timestamp
-
-            # remove potential duplicity of poses (i.e. when not moving)
-            if len(poses) == 0 or math.hypot(poses[-1][0] - pose[0], poses[-1][1] - pose[1]) >= TAIL_MIN_STEP:
-                poses.append(pose)
-
-            xy_scan = scan2xy(pose, scan)
-            xy_scan_filtred = filter_pts(grid, xy_scan)
-            acc_pts.extend(xy_scan_filtred)
-
-        if wait_for_keyframe and not keyframe and not eof:
-            paused = True
-            caption = caption_filename + ": %s" % timestamp
-            caption += ' searching fwd ...'
-            pygame.display.set_caption(caption)
-            event = pygame.event.poll()
-            if event.type != KEYDOWN:
-                continue
+        history = gen
+        max_timestamp = None
         wait_for_keyframe = False
 
-        if skip_frames > 0 and not eof:
-            skip_frames -= 1
-            continue
-        skip_frames = frames_step
+        if jump is not None:
+            gen.seek(timedelta(seconds=jump))
 
         while True:
-            caption = caption_filename + ": %s" % timestamp
-            for t in title:
-                caption += ' (' + str(t) + ')'
-            if paused:
-                caption += ' (PAUSED)'
-            if frames_step > 0:
-                caption += ' step=' + str(frames_step)
-            if eof:
-                caption += ' [END]'
-            if keyframe:
-                caption += ' [KEYFRAME]'
-            pygame.display.set_caption(caption)
+            timestamp, frame, pose, pose3d, scan, scan2, image, image2, bbox, joint, keyframe, title, eof = history.next()
 
-            foreground.fill((0, 0, 0))
-            img = image2 if use_image2 else image
-            if callback_img:
-                if last_timestamp != timestamp:
-                    img = numpy_to_pygame_image(callback_img(pygame_to_numpy_image(img)))
-                    last_timestamp = timestamp
-                    last_image = img
-                else:
-                    img = last_image
-            draw_robot(foreground, pose, joint)
-            draw_scan(foreground, pose, scan2, color=(128, 128, 0), joint=joint)
-            draw_scan_up_down(foreground, pose, frame.lidar_up, frame.lidar_down, color=(255, 0, 0))
-            draw(foreground, pose, scan, poses=poses,
-                 image=img if camera_on else None, bbox=bbox,
-                 acc_pts=acc_pts if map_on else None,
-                 callback=callback)
-            screen.blit(background, (0, 0))
-            screen.blit(foreground, (0, 0))
-            pygame.display.flip()
+            if max_timestamp is None or max_timestamp < timestamp:
+                # build map only for new data
+                max_timestamp = timestamp
 
-            if out_video is not None:
-                # https://stackoverflow.com/questions/53101698/how-to-convert-a-pygame-image-to-open-cv-image/53108946#53108946
-                #  create a copy of the surface
-                view = pygame.surfarray.array3d(screen)
-                #  convert from (width, height, channel) to (height, width, channel)
-                view = view.transpose([1, 0, 2])
-                #  convert from rgb to bgr
-                img_bgr = cv2.cvtColor(view, cv2.COLOR_RGB2BGR)
-                writer.write(img_bgr)
+                # remove potential duplicity of poses (i.e. when not moving)
+                if len(poses) == 0 or math.hypot(poses[-1][0] - pose[0], poses[-1][1] - pose[1]) >= TAIL_MIN_STEP:
+                    poses.append(pose)
 
-            if paused or eof:
-                event = pygame.event.wait()
-            else:
+                xy_scan = scan2xy(pose, scan)
+                xy_scan_filtred = filter_pts(grid, xy_scan)
+                acc_pts.extend(xy_scan_filtred)
+
+            if wait_for_keyframe and not keyframe and not eof:
+                paused = True
+                caption = caption_filename + ": %s" % timestamp
+                caption += ' searching fwd ...'
+                pygame.display.set_caption(caption)
                 event = pygame.event.poll()
-            if event.type == QUIT:
-                return
-            if event.type == pygame.VIDEORESIZE:
-                was_resized = True
-                updated_size = event.size
-            if event.type is pygame.ACTIVEEVENT and was_resized:
-                was_resized = False
-                screen = pygame.display.set_mode(updated_size, pygame.RESIZABLE)
-                WINDOW_SIZE = updated_size
-                background = pygame.Surface(screen.get_size())
-                foreground = pygame.Surface(screen.get_size())
-            if event.type == KEYDOWN:
-                if event.key in [K_ESCAPE, K_q]:
-                    return
-                if event.key == K_SPACE:
-                    paused = not paused
-                if event.key in [K_PLUS, K_KP_PLUS, K_EQUALS]:
-                    # K_EQUALS is for convenience: on notebook keyboard is '+' as Shift+'='
-                    g_scale *= 2.0
-                if event.key in [K_MINUS, K_KP_MINUS]:
-                    g_scale /= 2.0
-                if event.key == K_c:
-                    if pygame.key.get_mods() & pygame.KMOD_LSHIFT:
-                        use_image2 = not use_image2
-                    else:
-                        camera_on = not camera_on
-                if event.key == K_m:
-                    map_on = not map_on
-                if event.key == K_0:
-                    frames_step = 0
-                if event.key == K_1:
-                    frames_step = 10
-                if event.key == K_2:
-                    frames_step = 20
-                if event.key == K_3:
-                    frames_step = 30
-                if event.key == K_4:
-                    frames_step = 40
-                if event.key == K_9:
-                    frames_step = 90
-                if event.key == K_s:
-                    save_image = image2 if use_image2 else image
-                    pygame.image.save(save_image, g_prefix + "-{:04}.jpg".format(save_counter))
-                    save_counter += 1
-                if event.key == K_b:  # swap binary danger image on/off
-                    global g_danger_binary_image
-                    g_danger_binary_image = not g_danger_binary_image
-                    history.prev()
-                if event.key == K_d:  # dump scan
-                    print(scan)
-                    np.savez_compressed('depth.npz', depth=g_depth, pose_xyz=pose3d[0], pose_quat = pose3d[1],
-                                        img=pygame_to_numpy_image(image), scan=scan)
-                if event.key == K_p:  # print position
-                    print(pose)
-                    x, y, heading = pose
-                    if math.hypot(x, y) > 0.1:
-                        print('rotation (deg) =', math.degrees(heading), 'dist =', math.hypot(x, y))
-                    else:
-                        print('rotation not available')
-                if event.key == K_n:  # next keyframe
-                    aborted = False
-                    if pygame.key.get_mods() & pygame.KMOD_LSHIFT:  # previous keyframe
-                        if keyframe:
-                            history.prev()  # search for the previous one
-                        data = history.prev()
-                        while not data[-2] and not data[-1]:
-                            # EOF is at the beginning as well as at the end
-                            data = history.prev()
-                            caption = caption_filename + ": %s" % data[0]
-                            caption += ' searching bwd ...'
-                            pygame.display.set_caption(caption)
-                            tmp_event = pygame.event.poll()
-                            if tmp_event.type == KEYDOWN:
-                                aborted = True
-                                timestamp = data[0]
-                                break
-                        history.prev()
-                    if aborted:
-                        paused = True
-                    else:
-                        wait_for_keyframe = True
-                        paused = False  # let it search for next keyframe
+                if event.type != KEYDOWN:
+                    continue
+            wait_for_keyframe = False
 
-                if event.key == K_RIGHT:
+            if skip_frames > 0 and not eof:
+                skip_frames -= 1
+                continue
+            skip_frames = frames_step
+
+            while True:
+                caption = caption_filename + ": %s" % timestamp
+                for t in title:
+                    caption += ' (' + str(t) + ')'
+                if paused:
+                    caption += ' (PAUSED)'
+                if frames_step > 0:
+                    caption += ' step=' + str(frames_step)
+                if eof:
+                    caption += ' [END]'
+                if keyframe:
+                    caption += ' [KEYFRAME]'
+                pygame.display.set_caption(caption)
+
+                foreground.fill((0, 0, 0))
+                img = image2 if use_image2 else image
+                if callback_img:
+                    if last_timestamp != timestamp:
+                        img = numpy_to_pygame_image(callback_img(pygame_to_numpy_image(img)))
+                        last_timestamp = timestamp
+                        last_image = img
+                    else:
+                        img = last_image
+                draw_robot(foreground, pose, joint)
+                draw_scan(foreground, pose, scan2, color=(128, 128, 0), joint=joint)
+                draw_scan_up_down(foreground, pose, frame.lidar_up, frame.lidar_down, color=(255, 0, 0))
+                draw(foreground, pose, scan, poses=poses,
+                     image=img if camera_on else None, bbox=bbox,
+                     acc_pts=acc_pts if map_on else None,
+                     callback=callback)
+                screen.blit(background, (0, 0))
+                screen.blit(foreground, (0, 0))
+                pygame.display.flip()
+
+                if out_video is not None:
+                    # https://stackoverflow.com/questions/53101698/how-to-convert-a-pygame-image-to-open-cv-image/53108946#53108946
+                    #  create a copy of the surface
+                    view = pygame.surfarray.array3d(screen)
+                    #  convert from (width, height, channel) to (height, width, channel)
+                    view = view.transpose([1, 0, 2])
+                    #  convert from rgb to bgr
+                    img_bgr = cv2.cvtColor(view, cv2.COLOR_RGB2BGR)
+                    assert img_bgr.shape[0:2] == (height, width), \
+                        f"Video frame size {img_bgr.shape[0:2]} does not match video writer size {(height, width)}. " \
+                        f"Please use the --window-size parameter to set matching resolution."
+                    writer.write(img_bgr)
+
+                if paused or eof:
+                    event = pygame.event.wait()
+                else:
+                    event = pygame.event.poll()
+                if event.type == QUIT:
+                    return
+                if event.type == pygame.VIDEORESIZE:
+                    was_resized = True
+                    updated_size = event.size
+                if event.type is pygame.ACTIVEEVENT and was_resized:
+                    was_resized = False
+                    screen = pygame.display.set_mode(updated_size, pygame.RESIZABLE)
+                    WINDOW_SIZE = updated_size
+                    background = pygame.Surface(screen.get_size())
+                    foreground = pygame.Surface(screen.get_size())
+                if event.type == KEYDOWN:
+                    if event.key in [K_ESCAPE, K_q]:
+                        return
+                    if event.key == K_SPACE:
+                        paused = not paused
+                    if event.key in [K_PLUS, K_KP_PLUS, K_EQUALS]:
+                        # K_EQUALS is for convenience: on notebook keyboard is '+' as Shift+'='
+                        g_scale *= 2.0
+                    if event.key in [K_MINUS, K_KP_MINUS]:
+                        g_scale /= 2.0
+                    if event.key == K_c:
+                        if pygame.key.get_mods() & pygame.KMOD_LSHIFT:
+                            use_image2 = not use_image2
+                        else:
+                            camera_on = not camera_on
+                    if event.key == K_m:
+                        map_on = not map_on
+                    if event.key == K_0:
+                        frames_step = 0
+                    if event.key == K_1:
+                        frames_step = 10
+                    if event.key == K_2:
+                        frames_step = 20
+                    if event.key == K_3:
+                        frames_step = 30
+                    if event.key == K_4:
+                        frames_step = 40
+                    if event.key == K_9:
+                        frames_step = 90
+                    if event.key == K_s:
+                        save_image = image2 if use_image2 else image
+                        pygame.image.save(save_image, g_prefix + "-{:04}.jpg".format(save_counter))
+                        save_counter += 1
+                    if event.key == K_b:  # swap binary danger image on/off
+                        global g_danger_binary_image
+                        g_danger_binary_image = not g_danger_binary_image
+                        history.prev()
+                    if event.key == K_d:  # dump scan
+                        print(scan)
+                        np.savez_compressed('depth.npz', depth=g_depth, pose_xyz=pose3d[0], pose_quat = pose3d[1],
+                                            img=pygame_to_numpy_image(image), scan=scan)
+                    if event.key == K_p:  # print position
+                        print(pose)
+                        x, y, heading = pose
+                        if math.hypot(x, y) > 0.1:
+                            print('rotation (deg) =', math.degrees(heading), 'dist =', math.hypot(x, y))
+                        else:
+                            print('rotation not available')
+                    if event.key == K_n:  # next keyframe
+                        aborted = False
+                        if pygame.key.get_mods() & pygame.KMOD_LSHIFT:  # previous keyframe
+                            if keyframe:
+                                history.prev()  # search for the previous one
+                            data = history.prev()
+                            while not data[-2] and not data[-1]:
+                                # EOF is at the beginning as well as at the end
+                                data = history.prev()
+                                caption = caption_filename + ": %s" % data[0]
+                                caption += ' searching bwd ...'
+                                pygame.display.set_caption(caption)
+                                tmp_event = pygame.event.poll()
+                                if tmp_event.type == KEYDOWN:
+                                    aborted = True
+                                    timestamp = data[0]
+                                    break
+                            history.prev()
+                        if aborted:
+                            paused = True
+                        else:
+                            wait_for_keyframe = True
+                            paused = False  # let it search for next keyframe
+
+                    if event.key == K_RIGHT:
+                        break
+                    if event.key == K_LEFT:
+                        paused = True
+                        history.prev()
+                        history.prev()
+                        break
+                if event.type == pygame.NOEVENT and not paused and not eof:
                     break
-                if event.key == K_LEFT:
-                    paused = True
-                    history.prev()
-                    history.prev()
-                    break
-            if event.type == pygame.NOEVENT and not paused and not eof:
-                break
-    if out_video is not None:
-        writer.release()
+    finally:
+        if out_video is not None:
+            writer.release()
 
 
 def main(args_in=None, startswith=None):
