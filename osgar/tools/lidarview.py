@@ -630,11 +630,9 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
                 view = view.transpose([1, 0, 2])
                 #  convert from rgb to bgr
                 img_bgr = cv2.cvtColor(view, cv2.COLOR_RGB2BGR)
-                if img_bgr.shape[0:2] != (height, width):
-                    writer.release()
-                    assert False, \
-                        f"Video frame size {img_bgr.shape[0:2]} does not match video writer size {(height, width)}. " \
-                        f"Please use --window-size parameter to set matching resolution."
+                assert img_bgr.shape[0:2] == (height, width), \
+                    f"Video frame size {img_bgr.shape[0:2]} does not match video writer size {(height, width)}. " \
+                    f"Please use --window-size parameter to set matching resolution."
                 writer.write(img_bgr)
 
             if paused or eof:
