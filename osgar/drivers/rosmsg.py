@@ -11,7 +11,7 @@ import numpy as np
 from osgar.bus import BusShutdownException
 from osgar.lib.quaternion import euler_zyx
 
-from subt import ign_pb2
+# from subt import ign_pb2  # deprecated
 
 MAX_TOPIC_NAME_LENGTH = 256
 
