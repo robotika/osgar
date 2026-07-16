@@ -557,7 +557,8 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
     if jump is not None:
         gen.seek(timedelta(seconds=jump))
 
-    while True:
+    running = True
+    while running:
         timestamp, frame, pose, pose3d, scan, scan2, image, image2, bbox, joint, keyframe, title, eof = history.next()
 
         if max_timestamp is None or max_timestamp < timestamp:
@@ -587,7 +588,7 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
             continue
         skip_frames = frames_step
 
-        while True:
+        while running:
             caption = caption_filename + ": %s" % timestamp
             for t in title:
                 caption += ' (' + str(t) + ')'
@@ -629,6 +630,9 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
                 view = view.transpose([1, 0, 2])
                 #  convert from rgb to bgr
                 img_bgr = cv2.cvtColor(view, cv2.COLOR_RGB2BGR)
+                assert img_bgr.shape[0:2] == (height, width), \
+                    f"Video frame size {img_bgr.shape[0:2]} does not match video writer size {(height, width)}. " \
+                    f"Please use --window-size parameter to set matching resolution."
                 writer.write(img_bgr)
 
             if paused or eof:
@@ -636,7 +640,8 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
             else:
                 event = pygame.event.poll()
             if event.type == QUIT:
-                return
+                running = False
+                break
             if event.type == pygame.VIDEORESIZE:
                 was_resized = True
                 updated_size = event.size
@@ -648,7 +653,8 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
                 foreground = pygame.Surface(screen.get_size())
             if event.type == KEYDOWN:
                 if event.key in [K_ESCAPE, K_q]:
-                    return
+                    running = False
+                    break
                 if event.key == K_SPACE:
                     paused = not paused
                 if event.key in [K_PLUS, K_KP_PLUS, K_EQUALS]:
