@@ -1,6 +1,45 @@
 # Changelog
 
-[Full Changelog](https://github.com/robotika/osgar/compare/v0.3.0...master)
+[Full Changelog](https://github.com/robotika/osgar/compare/v1.1.0...master)
+
+## [v1.1.0](https://github.com/robotika/osgar/tree/v1.1.0) (2026-07-17)
+[Full Changelog](https://github.com/robotika/osgar/compare/v1.0.0...v1.1.0)
+
+**osgar:**
+- New drivers & platform support:
+  - Added Ouster LiDAR SDK driver (#1050)
+  - Added simple DJI Tello mini-drone driver (#1061)
+  - Added scan5 stream support to VanJee Lidar driver (#1068)
+  - Added bumper support for Spider platform (#1054) and updated Spider configuration (#1053)
+  - Support both Robotourist v0 and v1 formats (#1048)
+- Luxonis OAK Camera (DepthAI v3) driver enhancements:
+  - Added support for neural network grayscale input (#1072)
+  - Added support for superblobs (#1062)
+  - Added support for IMU orientation output (#1057)
+  - Added parameter for auto exposure compensation (#1060)
+  - Added additional driver configuration parameters (#1049)
+- Core & API improvements:
+  - Added package-level `__version__` attribute to `osgar` (#1073)
+  - Moved `self.verbose` attribute to common `Node` (#1058)
+  - Consolidated `EmergencyStopException` into `osgar.exceptions` (#1052)
+  - Added `LogReaderEx` utility (#1051)
+  - Added option to restrict full laser/LiDAR scans to a narrow cone (#1065)
+  - Added `--config` parameter to `osgar.logger` (#1047)
+- Replay improvements:
+  - Fixed initial timestamps in `osgar.replay` (#1070)
+  - Extended replay functionality with `--params` option (#1063)
+  - Improved `osgar.replay --output` to match the original recording (#1059)
+  - Extended `osgar.replay --draw` with custom parameters and added Matty joint angle drawing (#1055)
+  - Allowed interrupting forced replay on Ctrl+C (#1066)
+- Deprecations & general updates:
+  - Deprecated SubT (#1074)
+  - Updated GitHub deployment workflows (#1076)
+  - Configured sphinx-build to separate doctrees cache from output HTML (#1067)
+  - Added "Deep Dive for OSGAR Developers" documentation (#1046)
+
+**osgar-tools:**
+- Added support for multiple neural network models in LidarView (#1071)
+- Assert video creation with non-compatible image resolution in LidarView (#1075)
 
 ## [v1.0.0](https://github.com/robotika/osgar/tree/v1.0.0) (2026-03-14)
 [Full Changelog](https://github.com/robotika/osgar/compare/v0.3.0...v1.0.0)
