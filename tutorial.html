@@ -242,6 +242,16 @@ and the connections between them. We use the built-in <code class="docutils lite
 <span class="p">}</span>
 </pre></div>
 </div>
+<section id="config-driven-channel-overrides">
+<h3>Config-Driven Channel Overrides<a class="headerlink" href="#config-driven-channel-overrides" title="Link to this heading">¶</a></h3>
+<p>By default, the list of output channel names in the <code class="docutils literal notranslate"><span class="pre">&quot;out&quot;</span></code> parameter under a module’s configuration represents the I/O interface. However, OSGAR also supports functional suffix modifiers within <code class="docutils literal notranslate"><span class="pre">&quot;out&quot;</span></code> to dynamically override channel behavior without modifying the driver code:</p>
+<ul class="simple">
+<li><p><strong>Gzip Compression (``:gz``)</strong>: Compresses the output data stream to reduce log size on disk. Useful for high-volume streams like camera depth frames (e.g., <code class="docutils literal notranslate"><span class="pre">&quot;depth:gz&quot;</span></code>).</p></li>
+<li><p><strong>Silence/Drop Output (``:null``)</strong>: Silences the output channel entirely. Data published on this channel is discarded and is not written to the log (e.g., <code class="docutils literal notranslate"><span class="pre">&quot;status:null&quot;</span></code>).</p></li>
+<li><p><strong>Cancel Default Suffixes (``:``)</strong>: An empty colon suffix cancels any hardcoded default modifier in the driver code, reverting the channel to standard, uncompressed logging (e.g., <code class="docutils literal notranslate"><span class="pre">&quot;depth:&quot;</span></code> to disable a default <code class="docutils literal notranslate"><span class="pre">:gz</span></code> modifier).</p></li>
+</ul>
+<p>If an output channel is specified as a plain name without a colon (e.g., <code class="docutils literal notranslate"><span class="pre">&quot;depth&quot;</span></code>), any default hardcoded driver modifier (such as <code class="docutils literal notranslate"><span class="pre">&quot;depth:gz&quot;</span></code>) is preserved.</p>
+</section>
 </section>
 <section id="running-the-example">
 <h2>Running the Example<a class="headerlink" href="#running-the-example" title="Link to this heading">¶</a></h2>
