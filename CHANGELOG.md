@@ -19,6 +19,7 @@
   - Added parameter for auto exposure compensation (#1060)
   - Added additional driver configuration parameters (#1049)
 - Core & API improvements:
+  - Added support for config-driven channel overrides `:gz` and `:null` (#1069)
   - Added package-level `__version__` attribute to `osgar` (#1073)
   - Moved `self.verbose` attribute to common `Node` (#1058)
   - Consolidated `EmergencyStopException` into `osgar.exceptions` (#1052)
@@ -32,6 +33,7 @@
   - Extended `osgar.replay --draw` with custom parameters and added Matty joint angle drawing (#1055)
   - Allowed interrupting forced replay on Ctrl+C (#1066)
 - Deprecations & general updates:
+  - Removed `subt` from setup packages (#1078)
   - Deprecated SubT (#1074)
   - Updated GitHub deployment workflows (#1076)
   - Configured sphinx-build to separate doctrees cache from output HTML (#1067)
