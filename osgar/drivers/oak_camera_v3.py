@@ -60,8 +60,7 @@ class OakCamera:
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.bus = bus
 
-        compress_depth_stream = config.get('compress_depth_stream', True)
-        self.bus.register('depth:gz' if compress_depth_stream else 'depth',
+        self.bus.register('depth:gz',
                           'color', 'orientation_list', 'detections', 'left_im', 'right_im',
                           # *_seq streams are needed for output sync amd they are published BEFORE payload data
                           'depth_seq', 'color_seq', 'detections_seq', 'left_im_seq', 'right_im_seq',
