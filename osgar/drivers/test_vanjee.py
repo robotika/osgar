@@ -19,4 +19,24 @@ class VanJeeLidarTest(unittest.TestCase):
         lidar.last_frame = 0xFFFF
         lidar.on_raw(packet)  # should not raise AssertionError: (65535, 0)
 
+    def test_scan5_publishing(self):
+        import struct
+        config = {}
+        handler = MagicMock()
+        lidar = VanJeeLidar(config, bus=handler)
+        # Create consecutive bank packets from 1 to 16
+        for bank in range(1, 17):
+            header = bytes.fromhex('ffaa0564') + struct.pack('>H', bank) + bytes(12) + struct.pack('>BH', bank, 38000)
+            data = bytes(1350)
+            padding = bytes(11)
+            footer = b'\xee\xee'
+            packet = header + data + padding + footer
+            lidar.on_raw(packet)
+        # Verify that all scans, including scan5, are published
+        published_channels = [call[0][0] for call in handler.publish.call_args_list]
+        self.assertIn('scan', published_channels)
+        self.assertIn('scan5', published_channels)
+        self.assertIn('scan10', published_channels)
+        self.assertIn('scanup', published_channels)
+
 # vim: expandtab sw=4 ts=4

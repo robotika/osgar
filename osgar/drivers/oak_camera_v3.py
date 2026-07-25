@@ -374,7 +374,14 @@ class OakCamera:
                     queue = nn.out.createOutputQueue(blocking=False)
 
                 # Feed from color camera via specific requested output resolution per model
-                nn_cam_out = cam_rgb.requestOutput((W, H), type=dai.ImgFrame.Type.BGR888p)
+                if self.is_color:
+                    nn_cam_out = cam_rgb.requestOutput((W, H), type=dai.ImgFrame.Type.BGR888p)
+                else:
+                    assert self.is_stereo_images
+                    nn_cam_out = mono_left.requestOutput((W, H), type=dai.ImgFrame.Type.BGR888p)
+                # make sure that there is no delay and only the latest image is processed
+                nn.input.setMaxSize(1)
+                nn.input.setBlocking(False)
                 nn_cam_out.link(nn.input)
 
                 nn_queues.append({

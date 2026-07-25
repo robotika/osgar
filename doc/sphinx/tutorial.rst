@@ -221,6 +221,17 @@ Here is the content of ``myrobot.json``:
     }
   }
 
+Config-Driven Channel Overrides
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default, the list of output channel names in the ``"out"`` parameter under a module's configuration represents the I/O interface. However, OSGAR also supports functional suffix modifiers within ``"out"`` to dynamically override channel behavior without modifying the driver code:
+
+* **Gzip Compression (``:gz``)**: Compresses the output data stream to reduce log size on disk. Useful for high-volume streams like camera depth frames (e.g., ``"depth:gz"``).
+* **Silence/Drop Output (``:null``)**: Silences the output channel entirely. Data published on this channel is discarded and is not written to the log (e.g., ``"status:null"``).
+* **Cancel Default Suffixes (``:``)**: An empty colon suffix cancels any hardcoded default modifier in the driver code, reverting the channel to standard, uncompressed logging (e.g., ``"depth:"`` to disable a default ``:gz`` modifier).
+
+If an output channel is specified as a plain name without a colon (e.g., ``"depth"``), any default hardcoded driver modifier (such as ``"depth:gz"``) is preserved.
+
 Running the Example
 -------------------
 

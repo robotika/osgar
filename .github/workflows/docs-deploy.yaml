@@ -12,15 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v8.3.2
 
       - name: Install dependencies
         run: |
@@ -30,7 +30,7 @@ jobs:
 
       - name: Build documentation
         run: |
-          uv run sphinx-build -b html doc/sphinx doc/sphinx/_build/html
+          uv run sphinx-build -d doc/sphinx/_build/doctrees -b html doc/sphinx doc/sphinx/_build/html
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
