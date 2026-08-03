@@ -58,3 +58,36 @@ class FR07Test(unittest.TestCase):
         robot.on_can([0x18c4d2ef, bytes.fromhex('0100700000202071'), 1])
         for call in bus.publish.call_args_list:
             self.assertNotEqual(call[0][0], 'manual')
+
+    def test_bumpers(self):
+        bus = MagicMock()
+        robot = FR07(bus=bus, config={})
+
+        # Initially, both bumpers are None. On first msg with 0x00, they both change to False
+        # payload: 0000010000001011 (last byte 0x11 is checksum)
+        robot.on_can([0x18c4daef, bytes.fromhex('0000010000001011'), 1])
+        bus.publish.assert_any_call('bumpers_front', False)
+        bus.publish.assert_any_call('bumpers_rear', False)
+        bus.publish.reset_mock()
+
+        # Front bumper active: 0x02.
+        # payload: 0000010200001013 (last byte 0x13 is checksum)
+        robot.on_can([0x18c4daef, bytes.fromhex('0000010200001013'), 1])
+        bus.publish.assert_any_call('bumpers_front', True)
+        # bumpers_rear should not be published as it remains False
+        for call in bus.publish.call_args_list:
+            self.assertNotEqual(call[0][0], 'bumpers_rear')
+        bus.publish.reset_mock()
+
+        # Rear bumper active, front inactive: 0x10.
+        # payload: 0000011000001001 (last byte 0x01 is checksum)
+        robot.on_can([0x18c4daef, bytes.fromhex('0000011000001001'), 1])
+        bus.publish.assert_any_call('bumpers_front', False)
+        bus.publish.assert_any_call('bumpers_rear', True)
+        bus.publish.reset_mock()
+
+        # Same state again: no change, nothing should be published
+        robot.on_can([0x18c4daef, bytes.fromhex('0000011000001001'), 1])
+        for call in bus.publish.call_args_list:
+            self.assertIn(call[0][0], ['can'])  # only command response can is published
+        bus.publish.reset_mock()

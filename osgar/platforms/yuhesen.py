@@ -21,7 +21,7 @@ class FR07(Node):
 
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('can', 'emergency_stop', 'pose2d', 'manual')
+        bus.register('can', 'emergency_stop', 'pose2d', 'manual', 'bumpers_front', 'bumpers_rear')
         self.max_speed = config.get('max_speed', 0.5)
         self.max_steering_deg = config.get('max_steering_deg', 45.0)
         self.last_steering = None
@@ -31,6 +31,8 @@ class FR07(Node):
         self.last_manual = None
         self.last_error_status = None
         self.last_bumpers = None
+        self.last_bumpers_front = None
+        self.last_bumpers_rear = None
         self.last_left_speed = None
         self.last_right_speed = None
         self.pose = 0, 0, 0
@@ -150,6 +152,17 @@ class FR07(Node):
             if self.last_bumpers != payload[3]:
                 print(self.time, 'Bumpers', payload[3])
                 self.last_bumpers = payload[3]
+
+            bumpers_front = bool(payload[3] & 0x02)
+            if self.last_bumpers_front != bumpers_front:
+                self.publish('bumpers_front', bumpers_front)
+                self.last_bumpers_front = bumpers_front
+
+            bumpers_rear = bool(payload[3] & 0x10)
+            if self.last_bumpers_rear != bumpers_rear:
+                self.publish('bumpers_rear', bumpers_rear)
+                self.last_bumpers_rear = bumpers_rear
+
             assert payload[5] == 0, payload.hex()  # enforced charging
 
             cmd = [
