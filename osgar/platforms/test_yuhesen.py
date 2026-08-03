@@ -19,7 +19,7 @@ class FR07Test(unittest.TestCase):
         robot = FR07(bus=bus, config={})
         robot.desired_speed = 5.0  # m/s (from user manual)
         robot.on_can([0x18c4d2ef, bytes.fromhex('0100700000102041'), 1])
-        bus.publish.assert_called_with('can', [0x18C4D2D0, bytes.fromhex('843801000000209d'), 1])
+        bus.publish.assert_any_call('can', [0x18C4D2D0, bytes.fromhex('843801000000209d'), 1])
 
         robot.on_can([0x18c4d2ef, bytes.fromhex('843801000000209d'), 1])
         self.assertEqual(robot.last_speed, 5000)
@@ -29,7 +29,32 @@ class FR07Test(unittest.TestCase):
         robot = FR07(bus=bus, config={})
         robot.desired_steering_angle_deg = -25.0  # deg (from user manual)
         robot.on_can([0x18c4d2ef, bytes.fromhex('0100700000102041'), 1])
-        bus.publish.assert_called_with('can', [0x18C4D2D0, bytes.fromhex('0400c0630f002088'), 1])
+        bus.publish.assert_any_call('can', [0x18C4D2D0, bytes.fromhex('0400c0630f002088'), 1])
 
         robot.on_can([0x18c4d2ef, bytes.fromhex('0400c0630f002088'), 1])
         self.assertEqual(robot.last_steering, -2500)
+
+    def test_manual_mode(self):
+        bus = MagicMock()
+        robot = FR07(bus=bus, config={})
+
+        # Vehicle mode 1 (remote/manual) -> publish True
+        robot.on_can([0x18c4d2ef, bytes.fromhex('0100700000102041'), 1])
+        bus.publish.assert_any_call('manual', True)
+        bus.publish.reset_mock()
+
+        # Vehicle mode 1 again -> no change, do not publish
+        robot.on_can([0x18c4d2ef, bytes.fromhex('0100700000102041'), 1])
+        for call in bus.publish.call_args_list:
+            self.assertNotEqual(call[0][0], 'manual')
+        bus.publish.reset_mock()
+
+        # Vehicle mode 0 (auto) -> manual is False -> publish False
+        robot.on_can([0x18c4d2ef, bytes.fromhex('0100700000002051'), 1])
+        bus.publish.assert_any_call('manual', False)
+        bus.publish.reset_mock()
+
+        # Vehicle mode 2 (stop) -> manual is False -> no change, do not publish
+        robot.on_can([0x18c4d2ef, bytes.fromhex('0100700000202071'), 1])
+        for call in bus.publish.call_args_list:
+            self.assertNotEqual(call[0][0], 'manual')

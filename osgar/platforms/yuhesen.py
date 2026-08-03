@@ -21,13 +21,14 @@ class FR07(Node):
 
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('can', 'emergency_stop', 'pose2d')
+        bus.register('can', 'emergency_stop', 'pose2d', 'manual')
         self.max_speed = config.get('max_speed', 0.5)
         self.max_steering_deg = config.get('max_steering_deg', 45.0)
         self.last_steering = None
         self.last_speed = None
         self.last_emergency_stop = None
         self.last_vehicle_mode = None
+        self.last_manual = None
         self.last_error_status = None
         self.last_bumpers = None
         self.last_left_speed = None
@@ -123,6 +124,10 @@ class FR07(Node):
             if self.last_vehicle_mode != vehicle_mode:
                 print(self.time, f'Vehicle mode: {vehicle_mode}')
                 self.last_vehicle_mode = vehicle_mode
+            manual = (vehicle_mode == 1)
+            if self.last_manual != manual:
+                self.publish('manual', manual)
+                self.last_manual = manual
         elif msg_id == 0x18c4d7ef:  # Left rear wheel information feedback
             left_speed, left_pulse_count = struct.unpack('<hi', payload[:6])
             self.last_left_speed = left_speed/1000.0
