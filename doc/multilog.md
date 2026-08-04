@@ -18,16 +18,9 @@ To analyze these systems holistically, we need a unified time domain where strea
 
 ## 2. Configuration Schema
 
-A Multi-Log session is defined via a JSON configuration. The simplest form maps a nickname to a log file path:
+A Multi-Log session is defined via a JSON configuration. Each nickname maps to an object specifying the file path and an optional time offset (in seconds) to align log timelines. 
 
-```json
-{
-  "m03": "m03-matty-on-pat-redroad-260801_105050.log",
-  "pat": "pat-dh26-260801_105022.log"
-}
-```
-
-To support advanced options (like manual clock synchronization offsets), the configuration also supports a detailed object-based structure per nickname:
+If `offset_sec` is omitted, it defaults to `0.0`, which is ideal for systems that are already temporally synchronized (e.g., when multiple sensors or robots record on the same machine/network using synchronized clocks).
 
 ```json
 {
@@ -36,8 +29,7 @@ To support advanced options (like manual clock synchronization offsets), the con
     "offset_sec": -1.23
   },
   "pat": {
-    "file": "pat-dh26-260801_105022.log",
-    "offset_sec": 0.0
+    "file": "pat-dh26-260801_105022.log"
   }
 }
 ```
