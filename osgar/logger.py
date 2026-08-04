@@ -447,6 +447,8 @@ def main():
     parser = argparse.ArgumentParser(description='Extract data from log')
     parser.add_argument('logfile', help='filename of stored file')
     parser.add_argument('--stream', help='stream ID or name', default=None, nargs='*')
+    parser.add_argument('--stream-format', help='stream output format',
+                        choices=['index', 'name', 'full'], default='index')
     parser.add_argument('--list-names', '-l', help='list stream names', action='store_true')
     parser.add_argument('--sec', help='display timestamps in seconds', action='store_true')
     parser.add_argument('--format', help='use python format - available fields sec, timestamp, stream_id, data')
@@ -493,24 +495,37 @@ def main():
         for name in args.stream:
             only_stream.append(lookup_stream_id(args.logfile, name))
 
+    names = None
+    if args.stream_format in ('name', 'full'):
+        names = ['sys'] + lookup_stream_names(args.logfile)
+
     with LogReader(args.logfile, only_stream_id=only_stream, clip_start_time_sec=args.start_time_sec, clip_end_time_sec=args.end_time_sec) as log:
         for timestamp, stream_id, data in log:
             if stream_id != 0:
                 data = deserialize(data)
+
+            if names is not None and stream_id < len(names):
+                if args.stream_format == 'name':
+                    stream_identifier = names[stream_id].split('.')[-1]
+                else:
+                    stream_identifier = names[stream_id]
+            else:
+                stream_identifier = stream_id
+
             if args.sec:
-                print(timestamp.total_seconds(), stream_id, data)
+                print(timestamp.total_seconds(), stream_identifier, data)
             elif args.format:
                 kw = dict(sec=timestamp.total_seconds(),
                           timestamp=timestamp,
                           walltime=log.start_time+timestamp,
-                          stream_id=stream_id,
+                          stream_id=stream_identifier,
                           data=data,
                           )
                 print(eval(f"f'{args.format}'", kw))
             elif args.raw:
                 sys.stdout.buffer.write(data)
             else:
-                print(timestamp, stream_id, data)
+                print(timestamp, stream_identifier, data)
 
 if __name__ == "__main__":
     main()
