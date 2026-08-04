@@ -351,7 +351,37 @@ class LogIndexedReader:
         return len(self.index)-1
 
 
+def _load_multi_log_config(filename):
+    if isinstance(filename, dict):
+        return filename
+    filename_str = str(filename)
+    with open(filename_str, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+    if os.path.dirname(filename_str):
+        base_dir = os.path.dirname(filename_str)
+        for nickname, info in config.items():
+            sub_file = info["file"]
+            if not os.path.isabs(sub_file):
+                cand = os.path.join(base_dir, sub_file)
+                if os.path.exists(cand):
+                    info["file"] = cand
+    return config
+
+
 def lookup_stream_names(filename):
+    is_json = False
+    if isinstance(filename, (str, pathlib.Path)):
+        if str(filename).endswith('.json'):
+            is_json = True
+    if isinstance(filename, dict) or is_json:
+        config = _load_multi_log_config(filename)
+        names = []
+        for nickname, info in config.items():
+            local_names = lookup_stream_names(info["file"])
+            for local_name in local_names:
+                names.append(f"{nickname}.{local_name}")
+        return names
+
     names = []
     with LogReader(filename) as log:
         for __, channel, line in log:
@@ -380,6 +410,112 @@ def lookup_stream_id(filename, stream_name):
     return names.index(stream_name) + 1
 
 
+import heapq
+
+class MultiLogReader:
+    def __init__(self, filename, follow=False, only_stream_id=None, clip_start_time_sec=0.0, clip_end_time_sec=None):
+        self.filename = filename
+        self.follow = follow
+        self.clip_start_time_sec = clip_start_time_sec
+        self.clip_end_time_sec = clip_end_time_sec
+        
+        if only_stream_id is None:
+            self.only_stream_id = None
+        else:
+            try:
+                self.only_stream_id = set(only_stream_id)
+            except TypeError:
+                self.only_stream_id = set([only_stream_id])
+                
+        self.config = _load_multi_log_config(filename)
+        self.stream_names = lookup_stream_names(self.config)
+        
+        # Build maps for each nickname: local stream ID -> virtual stream ID
+        name_to_virtual = {name: idx + 1 for idx, name in enumerate(self.stream_names)}
+        self.local_to_virtual = {}
+        for nickname, info in self.config.items():
+            local_names = lookup_stream_names(info["file"])
+            self.local_to_virtual[nickname] = {}
+            for idx, local_name in enumerate(local_names):
+                local_id = idx + 1
+                prefixed_name = f"{nickname}.{local_name}"
+                if prefixed_name in name_to_virtual:
+                    self.local_to_virtual[nickname][local_id] = name_to_virtual[prefixed_name]
+                    
+        self.readers = {}
+        actual_start_times = {}
+        for nickname, info in self.config.items():
+            offset_sec = info.get("offset_sec", 0.0)
+            
+            # Determine which stream IDs to read from this file
+            if self.only_stream_id is not None:
+                local_only = [
+                    local_id for local_id, virtual_id in self.local_to_virtual[nickname].items()
+                    if virtual_id in self.only_stream_id
+                ]
+                if not local_only:
+                    local_only = [-1]
+            else:
+                local_only = None
+                
+            reader = LogReader(info["file"], follow=self.follow, only_stream_id=local_only)
+            self.readers[nickname] = reader
+            
+            actual_start_time = reader.start_time + datetime.timedelta(seconds=offset_sec)
+            actual_start_times[nickname] = actual_start_time
+            
+        if actual_start_times:
+            self.start_time = min(actual_start_times.values())
+        else:
+            self.start_time = datetime.datetime.now(datetime.timezone.utc)
+            
+        self.delta_offsets = {}
+        for nickname, actual_start in actual_start_times.items():
+            self.delta_offsets[nickname] = actual_start - self.start_time
+            
+        self.gen = self._read_gen()
+        
+    def _sub_generator(self, nickname):
+        reader = self.readers[nickname]
+        delta = self.delta_offsets[nickname]
+        local_to_virtual_map = self.local_to_virtual[nickname]
+        for dt, local_id, data in reader._read_gen():
+            if local_id == 0:
+                continue
+            global_dt = dt + delta
+            virtual_id = local_to_virtual_map.get(local_id)
+            if virtual_id is not None:
+                yield global_dt, virtual_id, data
+                
+    def _read_gen(self):
+        generators = [self._sub_generator(nickname) for nickname in self.readers]
+        merged = heapq.merge(*generators, key=lambda packet: packet[0])
+        for dt, virtual_id, data in merged:
+            dt_sec = dt.total_seconds()
+            if dt_sec < self.clip_start_time_sec:
+                continue
+            if self.clip_end_time_sec is not None and dt_sec > self.clip_end_time_sec:
+                break
+            yield dt, virtual_id, data
+            
+    def close(self):
+        for reader in self.readers.values():
+            reader.close()
+        self.readers = {}
+        
+    def __enter__(self):
+        return self
+        
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        
+    def __next__(self):
+        return next(self.gen)
+        
+    def __iter__(self):
+        return self
+
+
 class LogReaderEx(LogReader):
     """
     Extended log reader which provides deserialized data and stream names.
@@ -396,11 +532,23 @@ class LogReaderEx(LogReader):
         :param names: optional list of stream names to extract. If None, all
                       streams are extracted.
         """
+        is_json = False
+        if isinstance(filename, (str, pathlib.Path)):
+            if str(filename).endswith('.json'):
+                is_json = True
+        self.is_multi_log = isinstance(filename, dict) or is_json
+        self.filename = filename
         self.stream_names = lookup_stream_names(filename)
         only_stream_id = None
         if names is not None:
             only_stream_id = [self.stream_names.index(name) + 1 for name in names]
-        super().__init__(filename, only_stream_id=only_stream_id)
+
+        if self.is_multi_log:
+            self.reader = MultiLogReader(filename, only_stream_id=only_stream_id)
+            self.start_time = self.reader.start_time
+            self.gen = self._read_gen()
+        else:
+            super().__init__(filename, only_stream_id=only_stream_id)
 
     def _read_gen(self, only_stream_id=None):
         """
@@ -408,12 +556,31 @@ class LogReaderEx(LogReader):
 
         The data is already deserialized.
         """
-        for dt, stream_id, data in super()._read_gen(only_stream_id):
-            if stream_id != 0:
-                yield dt, self.stream_names[stream_id - 1], deserialize(data)
+        if self.is_multi_log:
+            for dt, virtual_id, data in self.reader:
+                stream_name = self.stream_names[virtual_id - 1]
+                yield dt, stream_name, deserialize(data)
+        else:
+            for dt, stream_id, data in super()._read_gen(only_stream_id):
+                if stream_id != 0:
+                    yield dt, self.stream_names[stream_id - 1], deserialize(data)
+
+    def close(self):
+        if self.is_multi_log:
+            self.reader.close()
+        else:
+            super().close()
 
 
 def lookup_config(filename):
+    is_json = False
+    if isinstance(filename, (str, pathlib.Path)):
+        if str(filename).endswith('.json'):
+            is_json = True
+    if isinstance(filename, dict) or is_json:
+        config = _load_multi_log_config(filename)
+        return {nickname: lookup_config(info["file"]) for nickname, info in config.items()}
+
     with LogReader(filename) as log:
         for __, channel, line in log:
             if channel != 0:
