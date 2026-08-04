@@ -91,3 +91,32 @@ class FR07Test(unittest.TestCase):
         for call in bus.publish.call_args_list:
             self.assertIn(call[0][0], ['can'])  # only command response can is published
         bus.publish.reset_mock()
+
+    def test_brakes(self):
+        bus = MagicMock()
+        robot = FR07(bus=bus, config={})
+
+        # Initially, brakes is None. On first msg with 0x00, it changes to False
+        # payload: 0000010000001011 (last byte 0x11 is checksum)
+        robot.on_can([0x18c4daef, bytes.fromhex('0000010000001011'), 1])
+        bus.publish.assert_any_call('brakes', False)
+        bus.publish.reset_mock()
+
+        # Brakes active (bit 4 of byte 1 is set -> 0x10):
+        # payload: 0010010000002031 (counter 0x20, checksum 0x31)
+        robot.on_can([0x18c4daef, bytes.fromhex('0010010000002031'), 1])
+        bus.publish.assert_any_call('brakes', True)
+        bus.publish.reset_mock()
+
+        # Same state again (brakes still active):
+        # payload: 0010010000003021 (counter 0x30, checksum 0x21)
+        robot.on_can([0x18c4daef, bytes.fromhex('0010010000003021'), 1])
+        for call in bus.publish.call_args_list:
+            self.assertNotEqual(call[0][0], 'brakes')
+        bus.publish.reset_mock()
+
+        # Brakes inactive:
+        # payload: 0000010000004041 (counter 0x40, checksum 0x41)
+        robot.on_can([0x18c4daef, bytes.fromhex('0000010000004041'), 1])
+        bus.publish.assert_any_call('brakes', False)
+
