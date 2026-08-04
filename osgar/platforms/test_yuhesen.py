@@ -120,3 +120,32 @@ class FR07Test(unittest.TestCase):
         robot.on_can([0x18c4daef, bytes.fromhex('0000010000004041'), 1])
         bus.publish.assert_any_call('brakes', False)
 
+    def test_gear(self):
+        bus = MagicMock()
+        robot = FR07(bus=bus, config={})
+
+        # Initially, gear is None. On first msg with 0x01 (P), it changes to 1 (GearP)
+        # payload: 0100700000102041 (counter 0x20, checksum 0x41)
+        robot.on_can([0x18c4d2ef, bytes.fromhex('0100700000102041'), 1])
+        bus.publish.assert_any_call('gear', 1)
+        bus.publish.reset_mock()
+
+        # Same state again (gear still 1):
+        # payload: 0100700000103051 (counter 0x30, checksum 0x51)
+        robot.on_can([0x18c4d2ef, bytes.fromhex('0100700000103051'), 1])
+        for call in bus.publish.call_args_list:
+            self.assertNotEqual(call[0][0], 'gear')
+        bus.publish.reset_mock()
+
+        # Gear active with value 4 (D):
+        # payload: 0400700000104024 (counter 0x40, checksum 0x24)
+        robot.on_can([0x18c4d2ef, bytes.fromhex('0400700000104024'), 1])
+        bus.publish.assert_any_call('gear', 4)
+        bus.publish.reset_mock()
+
+        # Gear active with value 0 (disable):
+        # payload: 0000700000105030 (counter 0x50, checksum 0x30)
+        robot.on_can([0x18c4d2ef, bytes.fromhex('0000700000105030'), 1])
+        bus.publish.assert_any_call('gear', 0)
+
+

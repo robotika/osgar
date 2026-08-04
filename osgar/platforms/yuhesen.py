@@ -21,7 +21,7 @@ class FR07(Node):
 
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('can', 'emergency_stop', 'pose2d', 'manual', 'bumpers_front', 'bumpers_rear', 'brakes')
+        bus.register('can', 'emergency_stop', 'pose2d', 'manual', 'bumpers_front', 'bumpers_rear', 'brakes', 'gear')
         self.max_speed = config.get('max_speed', 0.5)
         self.max_steering_deg = config.get('max_steering_deg', 45.0)
         self.last_steering = None
@@ -34,6 +34,7 @@ class FR07(Node):
         self.last_bumpers_front = None
         self.last_bumpers_rear = None
         self.last_brakes = None
+        self.last_gear = None
         self.last_left_speed = None
         self.last_right_speed = None
         self.pose = 0, 0, 0
@@ -97,7 +98,10 @@ class FR07(Node):
         if msg_id == 0x18c4d2ef:  # Chassis control feedback command
             # 0100e0ff0f20 d0e1
             target_gear = payload[0] & 0xF
-            assert target_gear in [1, 2, 3, 4], target_gear  # P, R, N, D
+            assert target_gear in [0, 1, 2, 3, 4], target_gear  # 0=disable, 1=P, 2=R, 3=N, 4=D
+            if self.last_gear != target_gear:
+                self.publish('gear', target_gear)
+                self.last_gear = target_gear
             speed = ((payload[0] & 0xF0) >> 4) + (payload[1] << 4) + ((payload[2] & 0x0F) << 12)  # 0.001 m/s
             if self.last_speed != speed:
 #                print(self.time, f'speed = {speed}')
