@@ -34,6 +34,10 @@ For each log $i$ under nickname $nick_i$:
 - Virtual stream IDs are assigned sequentially starting from `1` matching the index $+ 1$ of the stream in the combined flat list.
 - Keep a bidirectional map or structured lookup for nickname + local stream ID $\longleftrightarrow$ Virtual Stream ID.
 
+### D. Handling of Stream 0 (System Stream)
+- Stream ID `0` contains local metadata (configurations and registered stream names).
+- Since metadata is parsed upfront during initialization, the Multi-Log reader generator **MUST explicitly filter out and skip all local stream ID 0 packets** during the merging step. This prevents multiple competing system packets from polluting the merged data stream.
+
 ---
 
 ## 2. Implementation Plan

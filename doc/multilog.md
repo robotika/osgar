@@ -64,6 +64,13 @@ The reader maps them as follows:
 Calling `lookup_stream_names()` on a Multi-Log configuration returns:
 `['pat.platform.raw', 'pat.platform.pose2d', 'm03.oak.raw', 'm03.oak.color']`.
 
+### C. Handling of Stream 0 (System/Info Stream)
+Stream ID `0` in standard OSGAR logs is a special system stream containing metadata such as stream names and driver configurations. 
+
+When merging multiple logs:
+1. **Upfront Metadata Retrieval**: The global configuration, stream names, and local settings are retrieved during the initialization of `MultiLogReader` (or via extended helper functions like `lookup_stream_names` and `lookup_config`).
+2. **Filtering During Stream Iteration**: During chronological packet merging, `MultiLogReader` **explicitly filters out and skips all local stream ID `0` packets**. This avoids polluting the unified stream with multiple conflicting system configuration packets, which could break tools expecting a single metadata block.
+
 ---
 
 ## 4. Time Synchronization & Merging
