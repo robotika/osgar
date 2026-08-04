@@ -54,20 +54,22 @@ To prevent name collisions between overlapping streams (e.g., both logs having a
 ### B. Virtual Stream IDs
 To maintain strict compatibility with OSGAR's internal mechanics and existing post-processing scripts, the Multi-Log reader assigns sequential **Virtual Stream IDs** starting from `1` across all logs.
 
+Since individual logs contain streams structured as `module.stream` (e.g., `platform.pose2d` or `oak.color`), prefixing them with the log nickname results in names with two dots (e.g., `pat.platform.pose2d` or `m03.oak.color`).
+
 Suppose:
-- `pat` has 2 streams: `["raw", "pose2d"]`
-- `m03` has 2 streams: `["raw", "color"]`
+- `pat` has 2 streams: `["platform.raw", "platform.pose2d"]`
+- `m03` has 2 streams: `["oak.raw", "oak.color"]`
 
 The reader maps them to virtual stream IDs as follows:
 
-| Virtual ID | Full Prefixed Name | Source Log | Source Local Stream ID |
-|------------|--------------------|------------|------------------------|
-| `1`        | `pat.raw`          | `pat`      | `1`                    |
-| `2`        | `pat.pose2d`       | `pat`      | `2`                    |
-| `3`        | `m03.raw`          | `m03`      | `1`                    |
-| `4`        | `m03.color`        | `m03`      | `2`                    |
+| Virtual ID | Full Prefixed Name (with two dots) | Source Log | Source Local Stream ID |
+|------------|------------------------------------|------------|------------------------|
+| `1`        | `pat.platform.raw`                 | `pat`      | `1`                    |
+| `2`        | `pat.platform.pose2d`              | `pat`      | `2`                    |
+| `3`        | `m03.oak.raw`                      | `m03`      | `1`                    |
+| `4`        | `m03.oak.color`                    | `m03`      | `2`                    |
 
-Calling `lookup_stream_names()` on a Multi-Log configuration returns `['pat.raw', 'pat.pose2d', 'm03.raw', 'm03.color']`.
+Calling `lookup_stream_names()` on a Multi-Log configuration returns `['pat.platform.raw', 'pat.platform.pose2d', 'm03.oak.raw', 'm03.oak.color']`.
 
 ---
 
