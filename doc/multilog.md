@@ -43,16 +43,16 @@ To prevent name collisions between overlapping streams (e.g., both logs having a
 - Stream `platform.pose2d` from `pat` becomes `pat.platform.pose2d`.
 - Stream `oak.color` from `m03` becomes `m03.oak.color`.
 
-### B. Virtual Stream IDs
-To maintain strict compatibility with OSGAR's internal mechanics and existing post-processing scripts, the Multi-Log reader assigns sequential **Virtual Stream IDs** starting from `1` across all logs.
+### B. String-Based Stream Names (Primary User-Facing Interface)
+While integer stream IDs are used internally for backwards compatibility, the primary and recommended way for users and post-processing tools to identify and consume streams is via their **string-based names** (e.g., `"pat.platform.pose2d"`, `"m03.oak.color"`). String names are far more obvious and intuitive when combining multiple log sources.
 
-Since individual logs contain streams structured as `module.stream` (e.g., `platform.pose2d` or `oak.color`), prefixing them with the log nickname results in names with two dots (e.g., `pat.platform.pose2d` or `m03.oak.color`).
+For internal mapping and compatibility with low-level readers, the Multi-Log reader assigns sequential **Virtual Stream IDs** starting from `1` across all logs.
 
 Suppose:
 - `pat` has 2 streams: `["platform.raw", "platform.pose2d"]`
 - `m03` has 2 streams: `["oak.raw", "oak.color"]`
 
-The reader maps them to virtual stream IDs as follows:
+The reader maps them as follows:
 
 | Virtual ID | Full Prefixed Name (with two dots) | Source Log | Source Local Stream ID |
 |------------|------------------------------------|------------|------------------------|
@@ -61,7 +61,8 @@ The reader maps them to virtual stream IDs as follows:
 | `3`        | `m03.oak.raw`                      | `m03`      | `1`                    |
 | `4`        | `m03.oak.color`                    | `m03`      | `2`                    |
 
-Calling `lookup_stream_names()` on a Multi-Log configuration returns `['pat.platform.raw', 'pat.platform.pose2d', 'm03.oak.raw', 'm03.oak.color']`.
+Calling `lookup_stream_names()` on a Multi-Log configuration returns:
+`['pat.platform.raw', 'pat.platform.pose2d', 'm03.oak.raw', 'm03.oak.color']`.
 
 ---
 
@@ -91,22 +92,43 @@ def merged_generator(readers):
     generators = []
     for nick, reader in readers.items():
         generators.append(
-            (global_time(dt, nick), nick, stream_id, data)
-            for dt, stream_id, data in reader
+            (global_time(dt, nick), nick, stream_name, deserialized_data)
+            for dt, stream_name, deserialized_data in reader
         )
-    for dt_g, nick, local_id, data in heapq.merge(*generators, key=lambda x: x[0]):
-        virtual_id = to_virtual_id(nick, local_id)
-        yield dt_g, virtual_id, data
+    for dt_g, nick, stream_name, deserialized_data in heapq.merge(*generators, key=lambda x: x[0]):
+        # Yield absolute timeline packet
+        yield dt_g, f"{nick}.{stream_name}", deserialized_data
 ```
 
 ---
 
 ## 5. API Design & Proposed Classes
 
-We introduce a new module/classes to handle Multi-Log reading transparently.
+We introduce and support two main levels of log reading, with a strong focus on `LogReaderEx`.
 
-### A. `MultiLogReader` (Subclass or drop-in wrapper of `LogReader`)
-This class provides the exact same iterator interface as `LogReader`, making it seamless for existing tools.
+### A. `LogReaderEx` (Primary User-Facing Interface)
+`LogReaderEx` is the primary utility we support. It is the most user-friendly reader because it automatically resolves stream names and deserializes the payload.
+
+In the first round, `LogReaderEx` will be extended to transparently handle Multi-Log configurations. When initialized with a Multi-Log JSON file, it will instantiate a multi-log session and yield fully deserialized stream data identified by their intuitive string-based names:
+
+```python
+# Usage Example:
+with LogReaderEx("multi_config.json") as log:
+    for dt, stream_name, data in log:
+        # stream_name will be e.g. "pat.platform.pose2d"
+        # data will be fully deserialized
+        print(dt, stream_name, data)
+```
+
+We can also filter streams by name during initialization:
+```python
+with LogReaderEx("multi_config.json", names=["pat.platform.pose2d", "m03.oak.color"]) as log:
+    for dt, stream_name, data in log:
+        ...
+```
+
+### B. `MultiLogReader` (Underlying Low-Level Reader)
+A subclass or drop-in wrapper of `LogReader`. It works with raw bytes and Virtual Stream IDs for low-level compatibility.
 
 ```python
 class MultiLogReader:
@@ -114,21 +136,21 @@ class MultiLogReader:
         # 1. Load configuration (dictionary or JSON path)
         # 2. Open LogReader instances for each file
         # 3. Calculate T_ref and construct virtual stream map
-        # 4. If only_stream_id is provided, map virtual IDs back to local IDs and filter local readers
+        # 4. Filter local readers if only_stream_id is provided
         pass
 
     def __iter__(self):
-        # Yields (global_dt, virtual_stream_id, data)
+        # Yields (global_dt, virtual_stream_id, data_bytes)
         pass
 ```
 
-### B. Transparent Helper Functions
-We will extend existing functions in `osgar/logger.py` to seamlessly detect Multi-Log configurations (e.g., if the passed path ends with `.json` or is recognized as a JSON file):
+### C. Transparent Helper Functions
+We will extend existing functions in `osgar/logger.py` to seamlessly detect Multi-Log configurations:
 
 - **`lookup_stream_names(filename)`**:
   If `filename` is a Multi-Log JSON, it loads the config, fetches names for each log, prefixes them with nicknames, and returns the flat combined list of prefixed names.
 - **`lookup_stream_id(filename, stream_name)`**:
-  If the target is a Multi-Log, it translates a prefixed name (e.g. `pat.platform.pose2d`) to its **Virtual Stream ID**.
+  If the target is a Multi-Log, it translates a prefixed name (e.g., `pat.platform.pose2d`) to its **Virtual Stream ID**.
 - **`lookup_config(filename)`**:
   Returns a merged dictionary of configurations nested by nicknames (e.g., `{"pat": pat_config, "m03": m03_config}`).
 
@@ -137,16 +159,10 @@ We will extend existing functions in `osgar/logger.py` to seamlessly detect Mult
 ## 6. Open Points & Future Enhancements
 
 1. **How should we handle non-overlapping logs?**
-   - *Current thought*: Raise a warning during initialization if the logs have absolutely no overlap, but still allow processing if the user explicitly wants to stitch consecutive logs.
+   - *Current thought*: Because we do not know the end of a logfile in advance (especially with growing logfiles read with `follow=True`), we cannot reliably determine time span overlap at startup. For the initial version, we will ignore time-span overlap checking and simply merge whatever packets are available sequentially. Complex stitching and alignment of disjoint log spans will be deferred to future releases.
 
 2. **LogIndexedReader Compatibility**
-   - For rapid indexing and random access via `__getitem__`, `LogIndexedReader` uses `mmap` and building an index.
-   - For Multi-Log, we could build a combined virtual index: a list of `(pos_in_sub_log, global_dt, nickname, local_stream_id)`.
-   - Should we implement `MultiLogIndexedReader` if random access is required by UI/analysis tools?
+   - *Current thought*: `LogIndexedReader` is highly useful for visualization and analysis (e.g., in `osgar.tools.lidarview`). However, there is already an inherent challenge in handling backward steps with H.264 or H.265 encoded video streams due to keyframe/inter-frame dependencies. For the Multi-Log feature, we will focus on simplified forward-only stepping. If building a unified merged index and supporting general random-access becomes too complex, the implementation of `MultiLogIndexedReader` will be postponed to a subsequent iteration.
 
 3. **Time Synchronization Calibration**
-   - Hand-tuning `offset_sec` is tedious.
-   - We could support an automatic time calibration tool or a configuration property that aligns logs based on matching events or cross-correlation of signals (e.g. aligning GPS logs, or detecting a physical flash/bump visible in multiple logs).
-
-4. **Integration with `LogReaderEx`**
-   - `LogReaderEx` is highly used as it automatically deserializes data. `MultiLogReader` should be fully compatible with `LogReaderEx` so that calling `LogReaderEx` on a multi-log JSON yields `(global_dt, "nickname.stream_name", deserialized_data)`.
+   - *Current thought*: Hand-tuning `offset_sec` is tedious. While we could eventually support an automatic time calibration tool or a configuration property that aligns logs based on matching events or cross-correlation of signals (such as aligning GPS logs, or detecting a physical flash/bump visible in multiple logs), we will postpone any automatic alignment tools to a future iteration. The first version will rely strictly on manual `offset_sec` definitions in the configuration.
