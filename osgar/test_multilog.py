@@ -129,5 +129,46 @@ class MultiLogTest(unittest.TestCase):
             self.assertEqual(filtered_packets[0], (datetime.timedelta(seconds=8.0), "pat.speed", 10))
             self.assertEqual(filtered_packets[1], (datetime.timedelta(seconds=10.0), "pat.speed", 20))
 
+        # 7. Test calculate_stat with Multi-Log config file
+        from osgar.logger import calculate_stat
+        stat_names, stat_sizes, stat_counts, stat_timestamp = calculate_stat(config_file_path)
+        self.assertEqual(stat_names, ["sys", "m03.pose", "pat.speed"])
+        self.assertEqual(stat_counts[0], 0)  # sys has 0 packets
+        self.assertEqual(stat_counts[1], 2)  # m03.pose has 2 packets
+        self.assertEqual(stat_counts[2], 2)  # pat.speed has 2 packets
+        self.assertEqual(stat_timestamp, datetime.timedelta(seconds=10.0))
+
+    def test_cli_main(self):
+        import sys
+        from unittest.mock import patch
+        from io import StringIO
+        from osgar.logger import main
+
+        # Create two sub-logs and a json config file
+        start_m03 = datetime.datetime(2026, 8, 1, 10, 50, 0, tzinfo=datetime.timezone.utc)
+        file_m03 = os.path.join(self.dir_path, "cli_m03.log")
+        with LogWriter(filename=file_m03, start_time=start_m03) as writer:
+            writer.register("pose", dt=datetime.timedelta())
+            writer.write(1, serialize("pos1"), dt=datetime.timedelta(seconds=1.0))
+
+        config_dict = {
+            "m03": {
+                "file": "cli_m03.log"
+            }
+        }
+        config_file_path = os.path.join(self.dir_path, "cli_multilog_config.json")
+        with open(config_file_path, "w", encoding="utf-8") as f:
+            json.dump(config_dict, f)
+
+        test_args = ["logger", config_file_path]
+        with patch.object(sys, 'argv', test_args):
+            with patch('sys.stdout', new=StringIO()) as fake_out:
+                with self.assertRaises(SystemExit) as cm:
+                    main()
+                self.assertTrue(cm.exception.code in (0, None))
+                output = fake_out.getvalue()
+                self.assertIn("m03.pose", output)
+                self.assertIn("Total time", output)
+
 if __name__ == "__main__":
     unittest.main()

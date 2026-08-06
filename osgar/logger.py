@@ -598,7 +598,10 @@ def calculate_stat(filename):
     names = ['sys'] + lookup_stream_names(filename)
     sizes = [0] * len(names)
     counts = [0] * len(names)
-    with LogReader(filename) as log:
+    is_json = isinstance(filename, (str, pathlib.Path)) and str(filename).endswith('.json')
+    log_reader = MultiLogReader(filename) if is_json else LogReader(filename)
+    with log_reader as log:
+        timestamp = datetime.timedelta()
         for timestamp, stream_id, data in log:
             sizes[stream_id] += len(data)
             counts[stream_id] += 1
@@ -666,7 +669,9 @@ def main():
     if args.stream_format in ('name', 'full'):
         names = ['sys'] + lookup_stream_names(args.logfile)
 
-    with LogReader(args.logfile, only_stream_id=only_stream, clip_start_time_sec=args.start_time_sec, clip_end_time_sec=args.end_time_sec) as log:
+    is_json = isinstance(args.logfile, (str, pathlib.Path)) and str(args.logfile).endswith('.json')
+    log_reader = MultiLogReader(args.logfile, only_stream_id=only_stream, clip_start_time_sec=args.start_time_sec, clip_end_time_sec=args.end_time_sec) if is_json else LogReader(args.logfile, only_stream_id=only_stream, clip_start_time_sec=args.start_time_sec, clip_end_time_sec=args.end_time_sec)
+    with log_reader as log:
         for timestamp, stream_id, data in log:
             if stream_id != 0:
                 data = deserialize(data)
