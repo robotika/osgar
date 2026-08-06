@@ -313,7 +313,7 @@ class LogIndexedReader:
         self.fd = os.open(self.filepath, os.O_RDONLY)
         self.data = mmap.mmap(self.fd, 0, access=mmap.ACCESS_READ)
         assert self.data[0:4] == b'Pyr\x00', self.data[0:4]
-        start_time = datetime.datetime(*struct.unpack('HBBBBBI', self.data[4:4+12]))
+        self.start_time = datetime.datetime(*struct.unpack('HBBBBBI', self.data[4:4+12]), datetime.timezone.utc)
         self.index = _create_index(self.data, 4+12)
         assert self.index[-1][0] <= len(self.data), (self.index[-1][0], len(self.data))
         return self
@@ -349,6 +349,83 @@ class LogIndexedReader:
 
     def __len__(self):
         return len(self.index)-1
+
+
+class LogIndexedMultiReader:
+    def __init__(self, filepath):
+        self.filepath = filepath
+        self.config = _load_multi_log_config(filepath)
+        self.stream_names = lookup_stream_names(self.config)
+        
+        # Build maps for each nickname: local stream ID -> virtual stream ID
+        name_to_virtual = {name: idx + 1 for idx, name in enumerate(self.stream_names)}
+        self.local_to_virtual = {}
+        for nickname, info in self.config.items():
+            local_names = lookup_stream_names(info["file"])
+            self.local_to_virtual[nickname] = {}
+            for idx, local_name in enumerate(local_names):
+                local_id = idx + 1
+                prefixed_name = f"{nickname}.{local_name}"
+                if prefixed_name in name_to_virtual:
+                    self.local_to_virtual[nickname][local_id] = name_to_virtual[prefixed_name]
+                    
+        self.readers = {nickname: LogIndexedReader(info["file"]) for nickname, info in self.config.items()}
+        self.global_index = []
+
+    def __enter__(self):
+        for reader in self.readers.values():
+            reader.__enter__()
+            
+        actual_start_times = {}
+        for nickname, reader in self.readers.items():
+            offset_sec = self.config[nickname].get("offset_sec", 0.0)
+            actual_start_times[nickname] = reader.start_time + datetime.timedelta(seconds=offset_sec)
+            
+        self.start_time = min(actual_start_times.values()) if actual_start_times else datetime.datetime.now(datetime.timezone.utc)
+        self.delta_offsets = {nickname: actual_start - self.start_time for nickname, actual_start in actual_start_times.items()}
+        
+        self._build_global_index()
+        return self
+
+    def _build_global_index(self):
+        all_packets = []
+        for nickname, reader in self.readers.items():
+            delta = self.delta_offsets[nickname]
+            for idx in range(len(reader)):
+                local_dt = reader.index[idx][1]
+                global_dt = local_dt + delta
+                all_packets.append((global_dt, nickname, idx))
+                
+        self.global_index = sorted(all_packets, key=lambda x: x[0])
+
+    def __exit__(self, *args):
+        for reader in self.readers.values():
+            reader.__exit__(*args)
+
+    def __len__(self):
+        return len(self.global_index)
+
+    def __getitem__(self, index):
+        if abs(index) >= len(self):
+            raise IndexError("log index {} out of range".format(index))
+        if index < 0:
+            index = len(self) + index
+            
+        global_dt, nickname, idx = self.global_index[index]
+        _, local_channel, data = self.readers[nickname][idx]
+        virtual_id = self.local_to_virtual[nickname].get(local_channel, 0)
+        return global_dt, virtual_id, data
+
+    def grow(self):
+        grown = False
+        for reader in self.readers.values():
+            old_len = len(reader)
+            reader.grow()
+            if len(reader) > old_len:
+                grown = True
+        if grown:
+            self._build_global_index()
+        return len(self)
 
 
 def _load_multi_log_config(filename):
