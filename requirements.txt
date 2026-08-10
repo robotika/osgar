@@ -8,3 +8,4 @@ pyrealsense2==2.53.1.4623
 numpy==1.22.0
 protobuf==3.20.0
 Shapely==2.0.1
+av==15.1.0

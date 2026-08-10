@@ -385,6 +385,45 @@ class LoggerStreamingTest(unittest.TestCase):
                     with self.assertRaises(StopIteration):
                         next(l)
 
+    def test_logger_main_stream_format(self):
+        import io
+        from contextlib import redirect_stdout
+        with LogWriter(prefix='tmp_main_test', note='test_logger_main_stream_format') as log:
+            filename = log.filename
+            log.register('platform.gear')   # ID 1
+            log.register('platform.brakes') # ID 2
+            log.write(1, serialize(4))
+            log.write(2, serialize(False))
+
+        # Test name choice
+        with patch('sys.argv', ['logger.py', filename, '--stream', 'platform.gear', 'platform.brakes', '--stream-format', 'name']):
+            f = io.StringIO()
+            with redirect_stdout(f):
+                osgar.logger.main()
+            output = f.getvalue()
+            self.assertIn('gear 4', output)
+            self.assertIn('brakes False', output)
+
+        # Test full choice
+        with patch('sys.argv', ['logger.py', filename, '--stream', 'platform.gear', 'platform.brakes', '--stream-format', 'full']):
+            f = io.StringIO()
+            with redirect_stdout(f):
+                osgar.logger.main()
+            output = f.getvalue()
+            self.assertIn('platform.gear 4', output)
+            self.assertIn('platform.brakes False', output)
+
+        # Test index choice (default)
+        with patch('sys.argv', ['logger.py', filename, '--stream', 'platform.gear', 'platform.brakes', '--stream-format', 'index']):
+            f = io.StringIO()
+            with redirect_stdout(f):
+                osgar.logger.main()
+            output = f.getvalue()
+            self.assertIn('1 4', output)
+            self.assertIn('2 False', output)
+
+        os.remove(filename)
+
 
 class LoggerIndexedTest(unittest.TestCase):
 

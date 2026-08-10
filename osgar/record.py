@@ -29,7 +29,10 @@ class Recorder:
             if env is not None:
                 assert 'env' not in module_config_init, module_config_init
                 module_config_init['env'] = env.copy()
-            self.modules[module_name] = klass(module_config_init, bus=self.bus.handle(module_name))
+            bus_handle = self.bus.handle(module_name)
+            if 'out' in module_config:
+                bus_handle.config_out = module_config['out']
+            self.modules[module_name] = klass(module_config_init, bus=bus_handle)
 
         for sender, receiver in config['links']:
             self.bus.connect(sender, receiver, self.modules)

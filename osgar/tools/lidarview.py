@@ -37,6 +37,7 @@ g_lidar_fov_deg = 270  # controlled by --deg (deg)
 g_depth_params = DepthParams()
 g_prefix = "saveX"
 g_log_config = None  # original log config file
+g_bbox_name = None  # stream ID for detection bounding box
 
 CENTER_AXLE_DISTANCE = 0.348  # K2 distance specific
 
@@ -164,8 +165,19 @@ def draw(foreground, pose, scan, poses=[], image=None, bbox=None, callback=None,
                 # new (temporary?) format
                 w, h = image.get_size()
                 # stream name
-                image_size = g_log_config['robot']['modules']['oak']['init']['nn_config']['input_size']
-                assert image_size in ['640x352', '640x640', '416x416'], image_size
+                module_name = 'oak'  # fallback / default
+                if g_bbox_name is not None:
+                    module_name = g_bbox_name.split('.')[0]
+                try:
+                    image_size = g_log_config['robot']['modules'][module_name]['init']['nn_config']['input_size']
+                except (KeyError, TypeError):
+                    image_size = None
+                    modules = g_log_config['robot']['modules'] if g_log_config else {}
+                    for model in modules.get(module_name, {}).get('init', {}).get('models', []):
+                        if model['nn_config']['NN_family'] == 'YOLO':
+                            assert image_size == None, image_size  # multiple YOLO models?!
+                            image_size = model['nn_config']['input_size']
+                assert image_size in ['640x352', '640x640', '416x416', '512x384'], image_size
                 nn_w, nn_h = [int(v) for v in image_size.split('x')]
                 if nn_h == nn_w:
                     # squared model
@@ -545,7 +557,8 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
     if jump is not None:
         gen.seek(timedelta(seconds=jump))
 
-    while True:
+    running = True
+    while running:
         timestamp, frame, pose, pose3d, scan, scan2, image, image2, bbox, joint, keyframe, title, eof = history.next()
 
         if max_timestamp is None or max_timestamp < timestamp:
@@ -575,7 +588,7 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
             continue
         skip_frames = frames_step
 
-        while True:
+        while running:
             caption = caption_filename + ": %s" % timestamp
             for t in title:
                 caption += ' (' + str(t) + ')'
@@ -617,6 +630,9 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
                 view = view.transpose([1, 0, 2])
                 #  convert from rgb to bgr
                 img_bgr = cv2.cvtColor(view, cv2.COLOR_RGB2BGR)
+                assert img_bgr.shape[0:2] == (height, width), \
+                    f"Video frame size {img_bgr.shape[0:2]} does not match video writer size {(height, width)}. " \
+                    f"Please use --window-size parameter to set matching resolution."
                 writer.write(img_bgr)
 
             if paused or eof:
@@ -624,7 +640,8 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
             else:
                 event = pygame.event.poll()
             if event.type == QUIT:
-                return
+                running = False
+                break
             if event.type == pygame.VIDEORESIZE:
                 was_resized = True
                 updated_size = event.size
@@ -636,7 +653,8 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
                 foreground = pygame.Surface(screen.get_size())
             if event.type == KEYDOWN:
                 if event.key in [K_ESCAPE, K_q]:
-                    return
+                    running = False
+                    break
                 if event.key == K_SPACE:
                     paused = not paused
                 if event.key in [K_PLUS, K_KP_PLUS, K_EQUALS]:
@@ -722,7 +740,7 @@ def lidarview(gen, caption_filename, callback=False, callback_img=False, out_vid
 def main(args_in=None, startswith=None):
     import argparse
     import os.path
-    global g_rotation_offset_rad, g_lidar_fov_deg, MAX_SCAN_LIMIT, WINDOW_SIZE, g_prefix, g_log_config
+    global g_rotation_offset_rad, g_lidar_fov_deg, MAX_SCAN_LIMIT, WINDOW_SIZE, g_prefix, g_log_config, g_bbox_name
 
     parser = argparse.ArgumentParser(description='View lidar scans')
     parser.add_argument('logfile', help='recorded log file')
@@ -783,6 +801,7 @@ def main(args_in=None, startswith=None):
         return
 
     g_log_config = get_config(args.logfile)
+    g_bbox_name = args.bbox
 
     callback = None
     if args.callback is not None:

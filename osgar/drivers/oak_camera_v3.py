@@ -100,6 +100,7 @@ class OakCamera:
 
         self.color_manual_focus = config.get("color_manual_focus")  # 0..255 [far..near]
         self.color_manual_exposure = config.get("color_manual_exposure")  # [exposure, iso] 1..33000 [us] and 100..1600
+        self.color_exposure_compensation = config.get("color_exposure_compensation")  # auto exposure compensation (-9..9)
         self.color_manual_wb = config.get("color_manual_wb")  # 1000..12000 K
         self.stereo_manual_exposure = config.get(
             "stereo_manual_exposure")  # [exposure, iso] 1..33000 [us] and 100..1600
@@ -127,6 +128,9 @@ class OakCamera:
         self.color_depth_alignment = config.get("color_depth_alignment", False)
 
         self.is_imu_enabled = config.get('is_imu_enabled', False)
+        # Preferred number of IMU records in one packet
+        self.number_imu_records = config.get('number_imu_records', 20)
+        self.disable_magnetometer_fusion = config.get('disable_magnetometer_fusion', False)
         self.is_visual_odom = config.get('is_visual_odom', False)
         self.is_slam = config.get('is_slam', False)
         if self.is_slam:
@@ -203,6 +207,8 @@ class OakCamera:
                 if self.color_manual_exposure is not None:
                     exposure, iso = self.color_manual_exposure
                     cam_rgb.initialControl.setManualExposure(exposure, iso)
+                if self.color_exposure_compensation is not None:
+                    cam_rgb.initialControl.setAutoExposureCompensation(self.color_exposure_compensation)
                 if self.color_manual_wb is not None:
                     cam_rgb.initialControl.setManualWhiteBalance(self.color_manual_wb)
 
@@ -255,14 +261,22 @@ class OakCamera:
 
                 if self.is_visual_odom:
                     odom = pipeline.create(dai.node.BasaltVIO)
-
-                imu.enableIMUSensor([dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW], 200)
-                imu.setBatchReportThreshold(1)
-                imu.setMaxBatchReports(10)
+                    imu.enableIMUSensor([dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW], 200)
+                    imu.setBatchReportThreshold(1)
+                    imu.setMaxBatchReports(10)
+                else:
+                    if self.disable_magnetometer_fusion:
+                        imu.enableIMUSensor(dai.IMUSensor.GAME_ROTATION_VECTOR, 100)  # without magnetometer
+                    else:
+                        imu.enableIMUSensor(dai.IMUSensor.ROTATION_VECTOR, 100)
+                    imu.setBatchReportThreshold(self.number_imu_records)
+                    imu.setMaxBatchReports(20)
 
             if self.is_visual_odom:
                 imu.out.link(odom.imu)
                 odom_queue = odom.transform.createOutputQueue(blocking=False)
+            elif self.is_imu_enabled:
+                imu_queue = imu.out.createOutputQueue(blocking=False)
 
             if self.is_slam:
                 slam = pipeline.create(dai.node.RTABMapSLAM)
@@ -310,6 +324,8 @@ class OakCamera:
                 if not nn_path:
                     continue
                 assert Path(nn_path).exists(), "No blob found at '{}'!".format(nn_path)
+                # optionally limit number of shaves for "superblob NN archives"
+                num_shaves = model_cfg.get("model", {}).get("num_shaves")
 
                 nn_config = model_cfg.get("nn_config", {})
                 nn_family = nn_config.get("NN_family", "YOLO")
@@ -320,12 +336,23 @@ class OakCamera:
                 else:
                     W, H = 416, 416  # default fallback
 
-                nn = pipeline.create(dai.node.NeuralNetwork)
-                nn.setBlobPath(nn_path)
-                nn.setNumInferenceThreads(2)
+                is_nn_archive = nn_path.endswith(".tar.xz")
+                if is_nn_archive:
+                    # superblob with config
+                    # detectionNetwork - NN_ARCHIVE_PATH
+                    nn = pipeline.create(dai.node.DetectionNetwork)
+                    if num_shaves is None:
+                        # unfortunately the DepthAI API does not support numShaves=None
+                        nn.setNNArchive(dai.NNArchive(nn_path))
+                    else:
+                        nn.setNNArchive(dai.NNArchive(nn_path), numShaves=num_shaves)
+                else:
+                    nn = pipeline.create(dai.node.NeuralNetwork)
+                    nn.setBlobPath(nn_path)
+                    nn.setNumInferenceThreads(2)
                 nn.input.setBlocking(False)
 
-                if nn_family == 'YOLO':
+                if nn_family == 'YOLO' and not nn_path.endswith(".tar.xz"):  # no overload for NN archives (yet)
                     metadata = nn_config.get("NN_specific_metadata", {})
                     parser = pipeline.create(dai.node.DetectionParser)
                     if "confidence_threshold" in metadata:
@@ -347,7 +374,14 @@ class OakCamera:
                     queue = nn.out.createOutputQueue(blocking=False)
 
                 # Feed from color camera via specific requested output resolution per model
-                nn_cam_out = cam_rgb.requestOutput((W, H), type=dai.ImgFrame.Type.BGR888p)
+                if self.is_color:
+                    nn_cam_out = cam_rgb.requestOutput((W, H), type=dai.ImgFrame.Type.BGR888p)
+                else:
+                    assert self.is_stereo_images
+                    nn_cam_out = mono_left.requestOutput((W, H), type=dai.ImgFrame.Type.BGR888p)
+                # make sure that there is no delay and only the latest image is processed
+                nn.input.setMaxSize(1)
+                nn.input.setBlocking(False)
                 nn_cam_out.link(nn.input)
 
                 nn_queues.append({
@@ -446,6 +480,19 @@ class OakCamera:
                         processed_any = True
                         gridmap = gridmaps[-1]
                         self.bus.publish('gridmap', gridmap.getFrame())
+
+                # 5. Check IMU
+                if self.is_imu_enabled and not self.is_visual_odom:
+                    imu_packets = imu_queue.tryGetAll()
+                    if imu_packets and len(imu_packets) > 0:
+                        processed_any = True
+                        for packet in imu_packets:
+                            quaternions = [[data.rotationVector.getTimestampDevice().total_seconds(),
+                                            data.rotationVector.rotationVectorAccuracy,
+                                            data.rotationVector.i, data.rotationVector.j,
+                                            data.rotationVector.k, data.rotationVector.real]
+                                           for data in packet.packets]
+                            self.bus.publish("orientation_list", quaternions)
 
                 # Only rest the CPU if no frames were pulled in this tick loop
                 if not processed_any:

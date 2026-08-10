@@ -21,15 +21,20 @@ class FR07(Node):
 
     def __init__(self, config, bus):
         super().__init__(config, bus)
-        bus.register('can', 'emergency_stop', 'pose2d')
+        bus.register('can', 'emergency_stop', 'pose2d', 'manual', 'bumpers_front', 'bumpers_rear', 'brakes', 'gear')
         self.max_speed = config.get('max_speed', 0.5)
         self.max_steering_deg = config.get('max_steering_deg', 45.0)
         self.last_steering = None
         self.last_speed = None
         self.last_emergency_stop = None
         self.last_vehicle_mode = None
+        self.last_manual = None
         self.last_error_status = None
         self.last_bumpers = None
+        self.last_bumpers_front = None
+        self.last_bumpers_rear = None
+        self.last_brakes = None
+        self.last_gear = None
         self.last_left_speed = None
         self.last_right_speed = None
         self.pose = 0, 0, 0
@@ -40,7 +45,6 @@ class FR07(Node):
         self.desired_speed = 0.0  # m/s
         self.desired_steering_angle_deg = 0.0  # degrees
         self.debug_arr = []
-        self.verbose = False
 
     def publish_pose2d(self, left, right):
         dt = 0.04  # 25Hz
@@ -94,7 +98,10 @@ class FR07(Node):
         if msg_id == 0x18c4d2ef:  # Chassis control feedback command
             # 0100e0ff0f20 d0e1
             target_gear = payload[0] & 0xF
-            assert target_gear in [1, 2, 3, 4], target_gear  # P, R, N, D
+            assert target_gear in [0, 1, 2, 3, 4], target_gear  # 0=disable, 1=P, 2=R, 3=N, 4=D
+            if self.last_gear != target_gear:
+                self.publish('gear', target_gear)
+                self.last_gear = target_gear
             speed = ((payload[0] & 0xF0) >> 4) + (payload[1] << 4) + ((payload[2] & 0x0F) << 12)  # 0.001 m/s
             if self.last_speed != speed:
 #                print(self.time, f'speed = {speed}')
@@ -124,6 +131,10 @@ class FR07(Node):
             if self.last_vehicle_mode != vehicle_mode:
                 print(self.time, f'Vehicle mode: {vehicle_mode}')
                 self.last_vehicle_mode = vehicle_mode
+            manual = (vehicle_mode == 1)
+            if self.last_manual != manual:
+                self.publish('manual', manual)
+                self.last_manual = manual
         elif msg_id == 0x18c4d7ef:  # Left rear wheel information feedback
             left_speed, left_pulse_count = struct.unpack('<hi', payload[:6])
             self.last_left_speed = left_speed/1000.0
@@ -146,6 +157,22 @@ class FR07(Node):
             if self.last_bumpers != payload[3]:
                 print(self.time, 'Bumpers', payload[3])
                 self.last_bumpers = payload[3]
+
+            brakes = bool(payload[1] & 0x10)
+            if self.last_brakes != brakes:
+                self.publish('brakes', brakes)
+                self.last_brakes = brakes
+
+            bumpers_front = bool(payload[3] & 0x02)
+            if self.last_bumpers_front != bumpers_front:
+                self.publish('bumpers_front', bumpers_front)
+                self.last_bumpers_front = bumpers_front
+
+            bumpers_rear = bool(payload[3] & 0x10)
+            if self.last_bumpers_rear != bumpers_rear:
+                self.publish('bumpers_rear', bumpers_rear)
+                self.last_bumpers_rear = bumpers_rear
+
             assert payload[5] == 0, payload.hex()  # enforced charging
 
             cmd = [

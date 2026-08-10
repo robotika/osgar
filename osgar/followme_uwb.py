@@ -21,7 +21,6 @@ class FollowMeUWB(Node):
         bus.register('desired_speed')
         self.last_position = [0, 0, 0]  # proper should be None, but we really start from zero
         self.raise_exception_on_stop = False
-        self.verbose = False
         self.last_min_dist = None  # unknown
         self.follow_enabled = None  # unknown
 
