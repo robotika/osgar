@@ -3,8 +3,11 @@
 """
 
 import argparse
+import sys
 import logging
+import inspect
 from ast import literal_eval
+from datetime import timedelta
 
 from osgar import logger
 from osgar.logger import LogReader, LogWriter
@@ -15,12 +18,20 @@ g_logger = logging.getLogger(__name__)
 
 
 def replay(args, application=None):
-    log = LogReader(args.logfile, only_stream_id=0)
-    print("original args:", next(log)[-1])  # old arguments
-    config_str = next(log)[-1]
-    config = literal_eval(config_str.decode('ascii'))
+    with LogReader(args.logfile, only_stream_id=0) as log:
+        print("original args:", next(log)[-1])  # old arguments
+        config_str = next(log)[-1]
+        config = literal_eval(config_str.decode('ascii'))
     if args.config is not None:
         config = config_load(*args.config, application=application)
+
+    if getattr(args, 'params', None) is not None:
+        for param in args.params:
+            assert '=' in param, param
+            key_path, str_value = param.split('=')
+            key = key_path.split('.')
+            assert len(key) == 2, key
+            config['robot']['modules'][key[0]].setdefault('init', {})[key[1]] = literal_eval(str_value)
 
     names = logger.lookup_stream_names(args.logfile)
     if args.debug:
@@ -59,8 +70,10 @@ def replay(args, application=None):
         if args.output is None:
             bus = LogBusHandlerInputsOnly(reader, inputs=inputs)
         else:
-            writer = LogWriter(filename=args.output)
-            bus = LogBusHandlerInputsReaderOutputsWriter(reader, inputs=inputs, writer=writer, outputs=outputs)
+            writer = LogWriter(filename=args.output, note=str(sys.argv), dt=timedelta(0))  # new command line
+            writer.write(0, bytes(str(config), 'ascii'), dt=timedelta(0))  # original config
+            bus = LogBusHandlerInputsReaderOutputsWriter(reader, inputs=inputs, writer=writer,
+                                                         outputs=outputs, module_name=module)
     else:
         streams = list(inputs.keys()) + list(outputs.keys())
         reader = LogReader(args.logfile, only_stream_id=streams, clip_end_time_sec=duration)
@@ -89,9 +102,12 @@ def main():
     parser.add_argument('logfile', help='recorded log file')
     parser.add_argument('--force', '-F', dest='force', action='store_true', help='force replay even for failing output asserts')
     parser.add_argument('--config', nargs='+', help='force alternative configuration file')
+    parser.add_argument('--params', nargs='+',
+                        help='optional list of configuration parameters like app.max_speed=0.1 app.dist=-2.0. '
+                             'For string parameters use double quotes e.g.: app.logfile=\'"name.log"\'')
     parser.add_argument('--module', help='module name for analysis')  # TODO default "all"
     parser.add_argument('--verbose', '-v', help="verbose mode", action='store_true')
-    parser.add_argument('--draw', help="draw debug results", action='store_true')
+    parser.add_argument('--draw', help="draw debug results", nargs='?', const=True)
     parser.add_argument('--debug', help="print debug info about I/O streams", action='store_true')
     parser.add_argument('--duration', help="limit replay to given time", type=float)
     parser.add_argument('--output', help="optional output for force replay")
@@ -110,6 +126,18 @@ def main():
     module_instance = replay(args)
     module_instance.verbose = args.verbose
 
+    if args.draw == 'help':
+        draw_func = getattr(module_instance, 'draw', None)
+        if draw_func:
+            doc = inspect.getdoc(draw_func)
+            if doc:
+                print(doc)
+            else:
+                print(f"No help available for {args.module}.draw()")
+        else:
+            g_logger.warning(f"Module {args.module} does not have a draw() method.")
+        return
+
     signal.signal(signal.SIGINT, lambda signum, frame: module_instance.request_stop())
     module_instance.start()
     # now wait until the module is alive
@@ -120,7 +148,19 @@ def main():
         print("maximum delay:", module_instance.bus.max_delay)
 
     if args.draw:
-        module_instance.draw()
+        draw_func = getattr(module_instance, 'draw', None)
+        if draw_func:
+            if args.draw is True:
+                draw_func()
+            else:
+                try:
+                    draw_func(args.draw)
+                except TypeError:
+                    # Fallback for modules that don't support arguments yet
+                    g_logger.warning(f"Module {args.module} does not support draw arguments.")
+                    draw_func()
+        else:
+            g_logger.warning(f"Module {args.module} does not have a draw() method.")
 
 
 if __name__ == "__main__":

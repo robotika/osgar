@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="osgar",
-    version="1.0.0",
+    version="1.1.0",
     install_requires=[
           'msgpack>=1.0.0',
       ],
@@ -19,7 +19,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/robotika/osgar",
     python_requires=">=3.6",
-    packages=['osgar', 'osgar.drivers', 'osgar.lib', 'osgar.tools', 'subt'],
+    packages=['osgar', 'osgar.drivers', 'osgar.lib', 'osgar.tools', 'osgar.platforms'],
     package_data={
         '': ['config/*.json'],
     },
@@ -31,8 +31,6 @@ setuptools.setup(
             'logger = osgar.logger:main',
             'record = osgar.record:main',
             'replay = osgar.replay:main',
-            'subt = subt.main:main',
-            'allsync = subt.tools.allsync:main',
         ],
     },
     classifiers=[

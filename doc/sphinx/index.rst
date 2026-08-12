@@ -8,7 +8,7 @@ OSGAR Documentation
 
 **Open Source Garden/Generic Autonomous Robot (Python library)**
 
-OSGAR is a lightweight, multi-platform library for recording and replaying data from multiple `nodes` (modules such as sensors, robots, and applications) logged into a single file.
+OSGAR is a lightweight, multi-platform Python library for recording and replaying data from multiple `nodes` (modules such as sensors, robots, and applications) logged into a single file.
 
 Key Features
 ------------

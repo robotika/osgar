@@ -90,7 +90,6 @@ class RobotMaria(Node):
         self.pose2d = (0.0, 0.0, 0.0)  # x, y in meters, heading in radians (not corrected to 2PI)
         self.buttons = None
 
-        self.verbose = False  # should be in Node
         self.buf = b''
         self.encoder = None
         self.led = GREEN_LED

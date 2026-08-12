@@ -58,7 +58,6 @@ class Cortexpilot(Node):
         self.lidar_valid = False
         self.lidar_timestamp = 0
         self.uptime = None
-        self.verbose = False
         self.last_cmd = (0, 0, None)  # motors + timestamp
         self.last_processed_cmd = None  # i.e. already accepted by cortexpilot
         self.watchdog_count = 0  # how many times was watchdog triggered?

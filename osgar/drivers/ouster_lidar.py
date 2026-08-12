@@ -25,7 +25,6 @@ class OusterLidarUDP(Node):
         self.headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
         self.configuration_done = False
         self.configuration_saved = False
-        self.verbose = False
 
     def send_conf_params(self):
         data = json.dumps(self.config_params).encode('utf-8')
