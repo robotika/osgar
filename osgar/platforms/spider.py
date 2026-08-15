@@ -16,7 +16,7 @@ AXLE_DISTANCE = 1.24
 MAX_WHEEL_ANGLE = math.radians(80)
 
 
-def get_desired_angle(speed, angular_speed):
+def get_desired_angle(speed, angular_speed):  # TODO to handle the calculation
     if speed == 0:
         return 0
     # The formula is similar to Kloubak but not the same because the steering geometry is different.
@@ -229,7 +229,7 @@ class Spider(Node):
         if status is not None:
             self.publish('status', status)
 
-    def on_move(self, data):
+    def on_desired_steering(self, data):
         speed_mm, desired_angle_cdeg = data
         self.desired_speed = speed_mm / 1000.0
         self.desired_angle = math.radians(desired_angle_cdeg / 100.0)  # one hundredth of rad
@@ -240,6 +240,11 @@ class Spider(Node):
         self.desired_speed = speed_mm / 1000.0
         angular_speed = math.radians(angular_speed_crad / 100.0)  # one hundredth of rad
         self.desired_angle = get_desired_angle(self.desired_speed, angular_speed)
+
+    def on_reset(self, data):
+        # Return some parameters to default settings. It allows multiple starts.
+        self.pose2d = (0.0, 0.0, 0.0)
+        self.already_moved = False
 
     def send_speed(self, data):
         # set PI controller

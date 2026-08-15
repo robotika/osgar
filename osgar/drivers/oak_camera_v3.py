@@ -8,7 +8,6 @@ import logging
 
 import depthai as dai
 import numpy as np
-import cv2
 
 
 g_logger = logging.getLogger(__name__)
