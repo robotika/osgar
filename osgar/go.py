@@ -16,6 +16,7 @@ class Go(Node):
         self.speed = config['max_speed']
         self.dist = config['dist']
         self.timeout = timedelta(seconds=config['timeout'])
+        # stop_timeout: it keeps the application running even after a stop command has been sent.
         self.stop_timeout = timedelta(seconds=config.get('stop_timeout', 1))
 
         self.desired_steering_angle = None  # not defined, do not publish by default
