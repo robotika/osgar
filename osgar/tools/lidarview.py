@@ -16,7 +16,7 @@ import cv2  # for video output
 import numpy as np  # faster depth data processing
 from importlib import import_module
 
-from osgar.logger import LogIndexedReader, lookup_stream_names, LogReader
+from osgar.logger import LogIndexedReader, lookup_stream_names, LogReader, LogIndexedMultiReader, _load_multi_log_config
 from osgar.lib.serialize import deserialize
 from osgar.lib.config import get_class_by_name
 from osgar.lib import quaternion
@@ -320,6 +320,13 @@ def get_config(logfile):
     """
     Deserialize original config from logfile. Return None if missing
     """
+    is_json = isinstance(logfile, (str, pathlib.Path)) and str(logfile).endswith('.json')
+    if is_json:
+        config = _load_multi_log_config(logfile)
+        # Get the file path of the first sub-log configuration
+        first_sub_file = next(iter(config.values()))["file"]
+        return get_config(first_sub_file)
+
     log = LogReader(logfile, only_stream_id=0)
     print("original args:", next(log)[-1])  # old arguments
     config_str = next(log)[-1]
@@ -338,7 +345,8 @@ class Framer:
     def __init__(self, filepath, lidar_name=None, lidar2_name=None, pose2d_name=None, pose3d_name=None, camera_name=None,
                  camera2_name=None, bbox_name=None, rgbd_name=None, joint_name=None, keyframes_name=None, title_name=None,
                  lidar_up_name=None, lidar_down_name=None):
-        self.log = LogIndexedReader(filepath)
+        is_json = isinstance(filepath, (str, pathlib.Path)) and str(filepath).endswith('.json')
+        self.log = LogIndexedMultiReader(filepath) if is_json else LogIndexedReader(filepath)
         self.current = 0
         self.frame = Frame()
         self.pose = [0, 0, 0]
