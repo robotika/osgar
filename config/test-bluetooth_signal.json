@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "wifi": {
+          "driver": "subt.bluetooth_signal:Bluetooth_signal",
+          "in": [],
+          "out": ["signalStrength"]
+      }
+    },
+    "links": []
+  }
+}
