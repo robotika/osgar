@@ -435,8 +435,9 @@ class OakCamera:
 
                         elif nn_family == 'robotourist' or nn_family == 'redroad':
                             # v3: getTensor automatically returns a NumPy array
-                            nn_output = packet.getTensor('redroad_output')
-                            nn_robotourist_output = packet.getTensor('robotourist_output')
+#                            nn_output = packet.getTensor('redroad_output')
+                            nn_output = packet.getTensor('logits')
+#                            nn_robotourist_output = packet.getTensor('robotourist_output')
 
                             redroad = np.array(nn_output).reshape((H//2, W//2))
                             self.bus.publish('redroad', redroad)
@@ -445,8 +446,8 @@ class OakCamera:
                             self.bus.publish('nn_mask', mask)
 
                             # ver0 (1280, 7, 7), ver1 (160, 7, 7)
-                            robotourist = np.array(nn_robotourist_output).reshape((len(nn_robotourist_output), 7, 7))
-                            self.bus.publish('robotourist', robotourist)
+ #                           robotourist = np.array(nn_robotourist_output).reshape((len(nn_robotourist_output), 7, 7))
+ #                           self.bus.publish('robotourist', robotourist)
 
 
                 # 2. Check Depth
