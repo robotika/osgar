@@ -43,4 +43,13 @@ class LogSerialTest(unittest.TestCase):
             instance.setRTS.assert_called_once_with()
             instance.setDTR.assert_called_once_with(0)
 
+    def test_config_dtr(self):
+        with patch('osgar.drivers.logserial.serial.Serial', autospec=True) as mock:
+            instance = mock.return_value
+            bus = MagicMock()
+            config = {'port':'COM10:', 'speed':115200, 'dtr':False}
+            device = LogSerial(config=config, bus=bus)
+            mock.assert_called_once_with('COM10:', 115200)
+            self.assertFalse(instance.dtr)
+
 # vim: expandtab sw=4 ts=4

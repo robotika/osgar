@@ -24,6 +24,8 @@ class LogSerial:
             self.com.timeout = config.get('timeout', 0.01)  # default expects updates < 100Hz
             if config.get('reset'):
                 self.com.setDTR(0)
+            if 'dtr' in config:
+                self.com.dtr = config['dtr']
         else:
             self.com = None
         self.bus = bus
