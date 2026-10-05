@@ -54,10 +54,10 @@ and <code class="docutils literal notranslate"><span class="pre">on_tick</span><
 is provided by the base class and automatically dispatches messages to the
 corresponding <code class="docutils literal notranslate"><span class="pre">on_&lt;channel&gt;</span></code> handlers.</p>
 <p>Here is the code for <code class="docutils literal notranslate"><span class="pre">myrobot.py</span></code>:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">"""</span>
 <span class="sd">  Example of robot diver outside OSGAR package</span>
 <span class="sd">    - simulation of differential robot</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">osgar.node</span><span class="w"> </span><span class="kn">import</span> <span class="n">Node</span>
@@ -66,7 +66,7 @@ corresponding <code class="docutils literal notranslate"><span class="pre">on_&l
 <span class="k">class</span><span class="w"> </span><span class="nc">MyRobot</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">bus</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">bus</span><span class="p">)</span>
-        <span class="n">bus</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s1">&#39;pose2d&#39;</span><span class="p">,</span> <span class="s1">&#39;emergency_stop&#39;</span><span class="p">)</span>
+        <span class="n">bus</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s1">'pose2d'</span><span class="p">,</span> <span class="s1">'emergency_stop'</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pose</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">speed</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">angular_speed</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">desired_speed</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">desired_angular_speed</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
@@ -74,7 +74,7 @@ corresponding <code class="docutils literal notranslate"><span class="pre">on_&l
 
     <span class="k">def</span><span class="w"> </span><span class="nf">send_pose</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">heading</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pose</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s1">&#39;pose2d&#39;</span><span class="p">,</span> <span class="p">[</span><span class="nb">round</span><span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="mi">1000</span><span class="p">),</span> <span class="nb">round</span><span class="p">(</span><span class="n">y</span><span class="o">*</span><span class="mi">1000</span><span class="p">),</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s1">'pose2d'</span><span class="p">,</span> <span class="p">[</span><span class="nb">round</span><span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="mi">1000</span><span class="p">),</span> <span class="nb">round</span><span class="p">(</span><span class="n">y</span><span class="o">*</span><span class="mi">1000</span><span class="p">),</span>
                                 <span class="nb">round</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">heading</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span><span class="p">)])</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">update_pose</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -108,9 +108,9 @@ corresponding <code class="docutils literal notranslate"><span class="pre">on_&l
 <p>The <code class="docutils literal notranslate"><span class="pre">myapp.py</span></code> file defines an application that controls the robot. It sends
 speed commands to make the robot move in a figure eight.</p>
 <p>Here is the code for <code class="docutils literal notranslate"><span class="pre">myapp.py</span></code>:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">"""</span>
 <span class="sd">  Example of a simple application controling robot to move in figure 8</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">timedelta</span>
 
@@ -125,20 +125,20 @@ speed commands to make the robot move in a figure eight.</p>
 <span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">bus</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">bus</span><span class="p">)</span>
-        <span class="n">bus</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s1">&#39;desired_speed&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">max_speed</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;max_speed&#39;</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>
+        <span class="n">bus</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s1">'desired_speed'</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_speed</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'max_speed'</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">max_angular_speed</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>  <span class="c1"># TODO config</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">last_position</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">is_moving</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pose2d</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># TODO should be defined by super().__init__()</span>
 
-    <span class="c1"># TODO refactor to common &quot;serializer&quot;</span>
+    <span class="c1"># TODO refactor to common "serializer"</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">send_speed_cmd</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">speed</span><span class="p">,</span> <span class="n">angular_speed</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s1">&#39;desired_speed&#39;</span><span class="p">,</span> <span class="p">[</span><span class="nb">round</span><span class="p">(</span><span class="n">speed</span><span class="o">*</span><span class="mi">1000</span><span class="p">),</span> <span class="nb">round</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">angular_speed</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s1">'desired_speed'</span><span class="p">,</span> <span class="p">[</span><span class="nb">round</span><span class="p">(</span><span class="n">speed</span><span class="o">*</span><span class="mi">1000</span><span class="p">),</span> <span class="nb">round</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">angular_speed</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span><span class="p">)])</span>
 
     <span class="c1"># TODO refactor to common driver (used from sick2018 example)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">go_straight</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">how_far</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="s2">&quot;go_straight </span><span class="si">%.1f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">how_far</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_position</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="s2">"go_straight </span><span class="si">%.1f</span><span class="s2">"</span> <span class="o">%</span> <span class="n">how_far</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_position</span><span class="p">)</span>
         <span class="n">start_pose</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_position</span>
         <span class="k">if</span> <span class="n">how_far</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">send_speed_cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_speed</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
@@ -149,7 +149,7 @@ speed commands to make the robot move in a figure eight.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">send_speed_cmd</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">turn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">angle</span><span class="p">,</span> <span class="n">with_stop</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="s2">&quot;turn </span><span class="si">%.1f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">angle</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="s2">"turn </span><span class="si">%.1f</span><span class="s2">"</span> <span class="o">%</span> <span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">angle</span><span class="p">))</span>
         <span class="n">start_pose</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_position</span>
         <span class="k">if</span> <span class="n">angle</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">send_speed_cmd</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_angular_speed</span><span class="p">)</span>
@@ -164,7 +164,7 @@ speed commands to make the robot move in a figure eight.</p>
                 <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_moving</span><span class="p">:</span>
                     <span class="k">break</span>
-            <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="s1">&#39;stop at&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="s1">'stop at'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">on_pose2d</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="n">prev</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pose2d</span>
@@ -176,7 +176,7 @@ speed commands to make the robot move in a figure eight.</p>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;MyApp example - figure 8!&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"MyApp example - figure 8!"</span><span class="p">)</span>
             <span class="n">step_size</span> <span class="o">=</span> <span class="mf">0.5</span>  <span class="c1"># meters</span>
             <span class="n">deg90</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="mi">90</span><span class="p">)</span>
 
@@ -188,15 +188,15 @@ speed commands to make the robot move in a figure eight.</p>
                 <span class="bp">self</span><span class="o">.</span><span class="n">go_straight</span><span class="p">(</span><span class="n">step_size</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">turn</span><span class="p">(</span><span class="o">-</span><span class="n">deg90</span><span class="p">)</span>
 
-            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;END&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"END"</span><span class="p">)</span>
         <span class="k">except</span> <span class="n">BusShutdownException</span><span class="p">:</span>
             <span class="k">pass</span>
 
 
-<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">osgar.launcher</span><span class="w"> </span><span class="kn">import</span> <span class="n">launch</span>
 
-    <span class="n">launch</span><span class="p">(</span><span class="n">app</span><span class="o">=</span><span class="n">MyApp</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;Navigate figure eight&#39;</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;myapp-&#39;</span><span class="p">)</span>
+    <span class="n">launch</span><span class="p">(</span><span class="n">app</span><span class="o">=</span><span class="n">MyApp</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">'Navigate figure eight'</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s1">'myapp-'</span><span class="p">)</span>
 
 <span class="c1"># vim: expandtab sw=4 ts=4</span>
 </pre></div>
@@ -208,36 +208,36 @@ speed commands to make the robot move in a figure eight.</p>
 and the connections between them. We use the built-in <code class="docutils literal notranslate"><span class="pre">timer</span></code> driver.</p>
 <p>Here is the content of <code class="docutils literal notranslate"><span class="pre">myrobot.json</span></code>:</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;robot&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;modules&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;app&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">          </span><span class="nt">&quot;driver&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;myapp:MyApp&quot;</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;in&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;emergency_stop&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;pose2d&quot;</span><span class="p">],</span>
-<span class="w">          </span><span class="nt">&quot;out&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;desired_speed&quot;</span><span class="p">],</span>
-<span class="w">          </span><span class="nt">&quot;init&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;max_speed&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span>
+<span class="w">  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"robot"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"modules"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"app"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">"driver"</span><span class="p">:</span><span class="w"> </span><span class="s2">"myapp:MyApp"</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"in"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"emergency_stop"</span><span class="p">,</span><span class="w"> </span><span class="s2">"pose2d"</span><span class="p">],</span>
+<span class="w">          </span><span class="nt">"out"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"desired_speed"</span><span class="p">],</span>
+<span class="w">          </span><span class="nt">"init"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">"max_speed"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span>
 <span class="w">          </span><span class="p">}</span>
 <span class="w">      </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">&quot;myrobot&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">          </span><span class="nt">&quot;driver&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;myrobot:MyRobot&quot;</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;in&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;desired_speed&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;tick&quot;</span><span class="p">],</span>
-<span class="w">          </span><span class="nt">&quot;out&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;emergency_stop&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;pose2d&quot;</span><span class="p">],</span>
-<span class="w">          </span><span class="nt">&quot;init&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span>
+<span class="w">      </span><span class="nt">"myrobot"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">"driver"</span><span class="p">:</span><span class="w"> </span><span class="s2">"myrobot:MyRobot"</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"in"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"desired_speed"</span><span class="p">,</span><span class="w"> </span><span class="s2">"tick"</span><span class="p">],</span>
+<span class="w">          </span><span class="nt">"out"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"emergency_stop"</span><span class="p">,</span><span class="w"> </span><span class="s2">"pose2d"</span><span class="p">],</span>
+<span class="w">          </span><span class="nt">"init"</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span>
 <span class="w">      </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">&quot;timer&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">          </span><span class="nt">&quot;driver&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;timer&quot;</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;in&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
-<span class="w">          </span><span class="nt">&quot;out&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;tick&quot;</span><span class="p">],</span>
-<span class="w">          </span><span class="nt">&quot;init&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;sleep&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span>
+<span class="w">      </span><span class="nt">"timer"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">"driver"</span><span class="p">:</span><span class="w"> </span><span class="s2">"timer"</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"in"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">          </span><span class="nt">"out"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"tick"</span><span class="p">],</span>
+<span class="w">          </span><span class="nt">"init"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">"sleep"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span>
 <span class="w">          </span><span class="p">}</span>
 <span class="w">      </span><span class="p">}</span>
 <span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[[</span><span class="s2">&quot;app.desired_speed&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;myrobot.desired_speed&quot;</span><span class="p">],</span>
-<span class="w">              </span><span class="p">[</span><span class="s2">&quot;myrobot.emergency_stop&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;app.emergency_stop&quot;</span><span class="p">],</span>
-<span class="w">              </span><span class="p">[</span><span class="s2">&quot;myrobot.pose2d&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;app.pose2d&quot;</span><span class="p">],</span>
-<span class="w">              </span><span class="p">[</span><span class="s2">&quot;timer.tick&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;myrobot.tick&quot;</span><span class="p">]]</span>
+<span class="w">    </span><span class="nt">"links"</span><span class="p">:</span><span class="w"> </span><span class="p">[[</span><span class="s2">"app.desired_speed"</span><span class="p">,</span><span class="w"> </span><span class="s2">"myrobot.desired_speed"</span><span class="p">],</span>
+<span class="w">              </span><span class="p">[</span><span class="s2">"myrobot.emergency_stop"</span><span class="p">,</span><span class="w"> </span><span class="s2">"app.emergency_stop"</span><span class="p">],</span>
+<span class="w">              </span><span class="p">[</span><span class="s2">"myrobot.pose2d"</span><span class="p">,</span><span class="w"> </span><span class="s2">"app.pose2d"</span><span class="p">],</span>
+<span class="w">              </span><span class="p">[</span><span class="s2">"timer.tick"</span><span class="p">,</span><span class="w"> </span><span class="s2">"myrobot.tick"</span><span class="p">]]</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </pre></div>
