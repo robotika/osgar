@@ -16,7 +16,8 @@
           "out": ["raw"],
           "init": {
             "port": "/dev/ttyUSB0",
-            "speed": 115200
+            "speed": 115200,
+            "reset": true
           }
       }
     },
