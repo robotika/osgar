@@ -26,7 +26,10 @@ class PeakCAN:
     def __init__(self, config, bus):
         self.bus = bus
         bus.register('can')
-        self.canbus = can.interface.Bus(bustype='pcan', channel='PCAN_USBBUS1', bitrate=500000)
+        bustype = config.get('bustype', 'pcan')
+        channel = config.get('channel', 'PCAN_USBBUS1')
+        bitrate = config.get('bitrate', 500000)
+        self.canbus = can.interface.Bus(bustype=bustype, channel=channel, bitrate=bitrate)
         can.util.set_logging_level(config.get('logging_level', 'info'))
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.output_thread = Thread(target=self.run_output, daemon=True)

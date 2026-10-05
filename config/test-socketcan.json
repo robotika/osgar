@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "can": {
+          "driver": "pcan",
+          "in": ["can"],
+          "out": ["can"],
+          "init": {
+            "bustype": "socketcan",
+            "channel": "can0",
+            "bitrate": 250000
+          }
+      }
+    },
+    "links": []
+  }
+}
