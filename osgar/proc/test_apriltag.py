@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import MagicMock, call
+from pathlib import Path
 
 import cv2
 
@@ -12,7 +13,7 @@ class AprilTagTest(unittest.TestCase):
         bus = MagicMock()
         node = AprilTag(config, bus)
 
-        image = cv2.imread("april-tags.jpg", 0)
+        image = cv2.imread(str(Path(__file__).parent / "april-tags.jpg"), 0)
         tags = node.detect_april_tags(image)
         self.assertEqual(tags[0], [3, 4, 1, 2])
         self.assertEqual(len(tags[1][0]), 4)
