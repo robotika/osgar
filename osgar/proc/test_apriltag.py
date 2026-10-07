@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, call
 
 import cv2
 
-from follow_apriltag import AprilTag
+from osgar.proc.apriltag import AprilTag
 
 
 class AprilTagTest(unittest.TestCase):
