@@ -14,11 +14,16 @@ from osgar.node import Node
 class AprilTag(Node):
     def __init__(self, config, bus):
         super().__init__(config, bus)
+        apriltag_type = config.get('type', '25h9')
+        self.dict_apriltag = {
+            '16h5': cv2.aruco.DICT_APRILTAG_16h5,
+            '25h9': cv2.aruco.DICT_APRILTAG_25h9,
+        }[apriltag_type]
         bus.register('apriltags', 'targets')
         self.codec = av.CodecContext.create('hevc', 'r')  # h265
 
     def detect_april_tags(self, image):
-        dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_25h9)
+        dictionary = cv2.aruco.getPredefinedDictionary(self.dict_apriltag)
         parameters = cv2.aruco.DetectorParameters()
         detector = cv2.aruco.ArucoDetector(dictionary, parameters)
         markerCorners, markerIds, rejectedCandidates = detector.detectMarkers(image)
