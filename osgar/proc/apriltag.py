@@ -6,6 +6,7 @@ import math
 
 import av
 import cv2
+import numpy as np
 
 from osgar.node import Node
 
@@ -38,6 +39,19 @@ class AprilTag(Node):
         width = 1920
         return math.radians(69/2)*(width/2 - center_x)/(width/2)
 
+    def process_and_publish(self, img):
+        tags = self.detect_april_tags(img)
+        if len(tags[0]) > 0:
+            print(self.time, tags, [self.corners_to_dist(c) for c in tags[1]])
+        self.publish('apriltags', tags)
+        targets = [[self.corners_to_dist(c), self.corners_to_angle(c)] for c in tags[1]]
+        self.publish('targets', targets)
+
+    def on_jpeg(self, data):
+        nparr = np.frombuffer(data, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        self.process_and_publish(img)
+
     def on_video(self, data):
         try:
             packets = self.codec.parse(data)
@@ -47,12 +61,7 @@ class AprilTag(Node):
                     for frame in frames:
                         img = frame.to_ndarray(format='bgr24')
                         if img is not None:
-                            tags = self.detect_april_tags(img)
-                            if len(tags[0]) > 0:
-                                print(self.time, tags, [self.corners_to_dist(c) for c in tags[1]])
-                            self.publish('apriltags', tags)
-                            targets = [[self.corners_to_dist(c), self.corners_to_angle(c)] for c in tags[1]]
-                            self.publish('targets', targets)
+                            self.process_and_publish(img)
                 except av.error.FFmpegError:
                     # Ignore decoding errors from incomplete packets/keyframes at startup
                     pass
