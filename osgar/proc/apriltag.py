@@ -18,6 +18,7 @@ class AprilTag(Node):
         self.dict_apriltag = {
             '16h5': cv2.aruco.DICT_APRILTAG_16h5,
             '25h9': cv2.aruco.DICT_APRILTAG_25h9,
+            '36h11': cv2.aruco.DICT_APRILTAG_36h11,
         }[apriltag_type]
         bus.register('apriltags', 'targets')
         self.codec = av.CodecContext.create('hevc', 'r')  # h265
