@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "lidar": {
+          "driver": "rplidar",
+          "in": ["raw"],
+          "out": ["raw", "scan"],
+          "init": {
+            "scan_size": 360
+          }
+      },
+      "serial": {
+          "driver": "serial",
+          "in": ["raw"],
+          "out": ["raw"],
+          "init": {
+            "port": "/dev/ttyUSB0",
+            "speed": 115200,
+            "reset": true
+          }
+      }
+    },
+    "links": [["serial.raw", "lidar.raw"],
+              ["lidar.raw", "serial.raw"]]
+  }
+}
