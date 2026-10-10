@@ -6,4 +6,4 @@ This directory contains OSGAR Nodes for general processing
 
 ### AprilTag
 *   **Description:** Detection of AprilTags from video stream and/or JPEG images
-*   **Driver:** `apriltag.AprilTag`
+*   **Driver:** `osgar.proc.apriltag.AprilTag`
