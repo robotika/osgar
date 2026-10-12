@@ -5,7 +5,7 @@ from datetime import timedelta
 from unittest.mock import MagicMock
 
 from osgar.bus import Bus
-from osgar.node import AsyncNode
+from osgar.asyncnode import AsyncNode
 
 
 def create_mock_logger():

@@ -1,7 +1,7 @@
 """
   Simple application demonstrating AsyncNode receiving and replying to messages.
 """
-from osgar.node import AsyncNode
+from osgar.asyncnode import AsyncNode
 
 
 class EchoApp(AsyncNode):

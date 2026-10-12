@@ -3,7 +3,7 @@
 """
 import asyncio
 import threading
-from osgar.node import AsyncNode
+from osgar.asyncnode import AsyncNode
 
 
 class AsyncEcho(AsyncNode):
