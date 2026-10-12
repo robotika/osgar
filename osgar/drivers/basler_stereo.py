@@ -58,13 +58,21 @@ class STMCamera:
         #                              depth: 16-248, color: 16-128
         #   <stream>_ae_max_exposure   upper limit of exposure time in us for auto exposure
         #                              depth: 1-166000, color: 1-1665
+        #   <stream>_ae_priority       auto exposure priority, 0 or 1 (default 0), only effective in auto exposure,
+        #                              1 gives a darker image than 0 in a bright scene
         #   depth_ae_mean_intensity    target mean image intensity for auto exposure, 0-255, depth only
         self.exposure = {}
         for stream in EXPOSURE_SOURCES:
             self.exposure[stream] = {key: config.get(f"{stream}_{key}")
                                      for key in ("exposure", "gain", "ae_max_exposure", "ae_mean_intensity")}
+            self.exposure[stream]["ae_priority"] = config.get(f"{stream}_ae_priority", 0)
         if self.exposure["color"]["ae_mean_intensity"] is not None:
             raise ValueError("color_ae_mean_intensity is not supported by the camera")
+        # color image settings
+        #   color_gamma                gamma, 100-500 (default 300), higher value gives a brighter image
+        #   color_white_balance        "auto" (default) or color temperature in K, 2800-6500
+        self.gamma = config.get("color_gamma", 300)
+        self.white_balance = config.get("color_white_balance", "auto")
         self.fps = config.get("fps")  # 6-60, None = camera default (30)
         self.timeout_ms = config.get("timeout_ms", 1000)
         self.bus.register('color', 'depth')
@@ -75,6 +83,7 @@ class STMCamera:
         self.camera.SourceSelector.SetValue(EXPOSURE_SOURCES[stream])
         # the mode is always set explicitly, the camera keeps it between runs
         self.camera.ExposureAuto.SetValue("Continuous")
+        self.camera.BslAutoExposurePriority.SetValue(int(settings["ae_priority"]))
         if settings["ae_max_exposure"] is not None:
             self.camera.BslAEMaxExposure.SetValue(float(settings["ae_max_exposure"]))
         if settings["ae_mean_intensity"] is not None:
@@ -88,6 +97,17 @@ class STMCamera:
         g_logger.info("%s: %s exposure, exposure time %.0f us, gain %.1f", stream,
                       self.camera.ExposureAuto.GetValue(), self.camera.ExposureTime.GetValue(),
                       self.camera.Gain.GetValue())
+
+    def set_color_image(self):
+        self.camera.SourceSelector.SetValue(EXPOSURE_SOURCES["color"])
+        self.camera.Gamma.SetValue(float(self.gamma))
+        if self.white_balance == "auto":
+            self.camera.BalanceWhiteAuto.SetValue("Continuous")
+        else:
+            self.camera.BalanceWhiteAuto.SetValue("Off")
+            self.camera.BalanceRatio.SetValue(float(self.white_balance))
+        g_logger.info("color: gamma %.0f, white balance %s (%.0f K)", self.camera.Gamma.GetValue(),
+                      self.camera.BalanceWhiteAuto.GetValue(), self.camera.BalanceRatio.GetValue())
 
     def start(self):
         self.input_thread.start()
@@ -112,6 +132,7 @@ class STMCamera:
             self.camera.Open()
             for stream in EXPOSURE_SOURCES:
                 self.set_exposure(stream)
+            self.set_color_image()
             if self.fps is not None:
                 self.camera.AcquisitionFrameRate.SetValue(float(self.fps))
             g_logger.info("Frame rate: %.1f fps", self.camera.AcquisitionFrameRate.GetValue())
