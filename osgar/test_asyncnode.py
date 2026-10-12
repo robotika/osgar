@@ -1,16 +1,24 @@
 import asyncio
+import time
 import unittest
+from datetime import timedelta
 from unittest.mock import MagicMock
 
 from osgar.bus import Bus
 from osgar.node import AsyncNode
 
 
+def create_mock_logger():
+    logger = MagicMock()
+    logger.write = MagicMock(return_value=timedelta(seconds=1))
+    return logger
+
+
 class TestAsyncNode(unittest.TestCase):
 
     def test_usage(self):
         empty_config = {}
-        bus = Bus(logger=MagicMock())
+        bus = Bus(logger=create_mock_logger())
         node = AsyncNode(config=empty_config, bus=bus.handle('mynode'))
         node.start()
         node.request_stop()
@@ -27,7 +35,7 @@ class TestAsyncNode(unittest.TestCase):
                 await asyncio.sleep(0.01)
                 self.received = data
 
-        bus = Bus(logger=MagicMock())
+        bus = Bus(logger=create_mock_logger())
         node = AsyncReceiverNode(config={}, bus=bus.handle('receiver'))
         tester = bus.handle('tester')
         tester.register('data')
@@ -35,11 +43,10 @@ class TestAsyncNode(unittest.TestCase):
 
         node.start()
         tester.publish('data', 42)
-        # Give node time to process message
         for _ in range(50):
             if node.received == 42:
                 break
-            bus.sleep(0.01)
+            time.sleep(0.01)
         self.assertEqual(node.received, 42)
         node.request_stop()
         node.join(timeout=1.0)
@@ -54,7 +61,7 @@ class TestAsyncNode(unittest.TestCase):
             def on_data(self, data):
                 self.received = data
 
-        bus = Bus(logger=MagicMock())
+        bus = Bus(logger=create_mock_logger())
         node = SyncReceiverNode(config={}, bus=bus.handle('receiver'))
         tester = bus.handle('tester')
         tester.register('data')
@@ -65,7 +72,7 @@ class TestAsyncNode(unittest.TestCase):
         for _ in range(50):
             if node.received == 'hello':
                 break
-            bus.sleep(0.01)
+            time.sleep(0.01)
         self.assertEqual(node.received, 'hello')
         node.request_stop()
         node.join(timeout=1.0)
@@ -80,7 +87,7 @@ class TestAsyncNode(unittest.TestCase):
             async def on_val(self, data):
                 self.received = data * 2
 
-        bus = Bus(logger=MagicMock())
+        bus = Bus(logger=create_mock_logger())
         node = MyNode(config={}, bus=bus.handle('mynode'))
         tester = bus.handle('tester')
         tester.register('val')
@@ -102,7 +109,7 @@ class TestAsyncNode(unittest.TestCase):
                 await asyncio.sleep(0.01)
                 self.publish('out', data + 10)
 
-        bus = Bus(logger=MagicMock())
+        bus = Bus(logger=create_mock_logger())
         sender = AsyncSenderNode(config={}, bus=bus.handle('sender'))
         receiver = bus.handle('receiver')
         tester = bus.handle('tester')
