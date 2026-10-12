@@ -6,7 +6,7 @@
         "driver": "osgar.drivers.basler_stereo:STMCamera",
         "out": ["color", "depth"],
         "init": {
-          "jpeg_quality": 85,
+          "fps": 10,
           "timeout_ms": 1000
         }
       }

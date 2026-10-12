@@ -46,6 +46,7 @@ class STMCamera:
     def __init__(self, config, bus):
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.bus = bus
+        self.fps = config.get("fps")  # None = camera default (30 fps, supported range 6-60)
         self.timeout_ms = config.get("timeout_ms", 1000)
         self.bus.register('color', 'depth')
         self.camera = None
@@ -71,6 +72,9 @@ class STMCamera:
         self.camera = pylon.InstantCamera(factory.CreateDevice(devices[0]))
         try:
             self.camera.Open()
+            if self.fps is not None:
+                self.camera.AcquisitionFrameRate.SetValue(float(self.fps))
+            g_logger.info("Frame rate: %.1f fps", self.camera.AcquisitionFrameRate.GetValue())
             self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
             while self.bus.is_alive() and self.camera.IsGrabbing():
                 grab = self.camera.RetrieveResult(self.timeout_ms, pylon.TimeoutHandling_Return)
