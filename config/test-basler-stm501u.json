@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+        "driver": "osgar.drivers.basler_stereo:STMCamera",
+        "out": ["color", "depth"],
+        "init": {
+          "jpeg_quality": 85,
+          "timeout_ms": 1000
+        }
+      }
+    },
+    "links": []
+  }
+}
