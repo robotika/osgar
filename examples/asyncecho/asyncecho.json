@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "echo": {
+        "driver": "asyncecho",
+        "in": ["raw"],
+        "out": ["raw"],
+        "init": {
+          "host": "127.0.0.1",
+          "port": 8888
+        }
+      },
+      "app": {
+        "driver": "examples.asyncecho.asyncecho_app:EchoApp",
+        "in": ["raw"],
+        "out": ["raw"],
+        "init": {}
+      }
+    },
+    "links": [
+      ["echo.raw", "app.raw"],
+      ["app.raw", "echo.raw"]
+    ]
+  }
+}
