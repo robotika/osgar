@@ -42,14 +42,52 @@ def range_to_depth(component):
     return np.where(valid, np.clip(z, 0, 65535), 0).astype(np.uint16)
 
 
+# Exposure is configured per source: Source1 and Source2 are the stereo pair (depth), Source3 is the color sensor.
+# The two stereo sources are linked, setting Source1 applies to both.
+EXPOSURE_SOURCES = {"depth": "Source1", "color": "Source3"}
+
+
 class STMCamera:
     def __init__(self, config, bus):
         self.input_thread = Thread(target=self.run_input, daemon=True)
         self.bus = bus
-        self.fps = config.get("fps")  # None = camera default (30 fps, supported range 6-60)
+        # per stream (depth_, color_) exposure settings, None = auto exposure
+        #   <stream>_exposure          manual exposure time in us (disables auto exposure)
+        #                              depth: 1-165000, color: 1-1665
+        #   <stream>_gain              manual gain (disables auto exposure)
+        #                              depth: 16-248, color: 16-128
+        #   <stream>_ae_max_exposure   upper limit of exposure time in us for auto exposure
+        #                              depth: 1-166000, color: 1-1665
+        #   depth_ae_mean_intensity    target mean image intensity for auto exposure, 0-255, depth only
+        self.exposure = {}
+        for stream in EXPOSURE_SOURCES:
+            self.exposure[stream] = {key: config.get(f"{stream}_{key}")
+                                     for key in ("exposure", "gain", "ae_max_exposure", "ae_mean_intensity")}
+        if self.exposure["color"]["ae_mean_intensity"] is not None:
+            raise ValueError("color_ae_mean_intensity is not supported by the camera")
+        self.fps = config.get("fps")  # 6-60, None = camera default (30)
         self.timeout_ms = config.get("timeout_ms", 1000)
         self.bus.register('color', 'depth')
         self.camera = None
+
+    def set_exposure(self, stream):
+        settings = self.exposure[stream]
+        self.camera.SourceSelector.SetValue(EXPOSURE_SOURCES[stream])
+        # the mode is always set explicitly, the camera keeps it between runs
+        self.camera.ExposureAuto.SetValue("Continuous")
+        if settings["ae_max_exposure"] is not None:
+            self.camera.BslAEMaxExposure.SetValue(float(settings["ae_max_exposure"]))
+        if settings["ae_mean_intensity"] is not None:
+            self.camera.BslMeanIntensity.SetValue(float(settings["ae_mean_intensity"]))
+        if settings["exposure"] is not None or settings["gain"] is not None:
+            self.camera.ExposureAuto.SetValue("Off")
+            if settings["exposure"] is not None:
+                self.camera.ExposureTime.SetValue(float(settings["exposure"]))
+            if settings["gain"] is not None:
+                self.camera.Gain.SetValue(float(settings["gain"]))
+        g_logger.info("%s: %s exposure, exposure time %.0f us, gain %.1f", stream,
+                      self.camera.ExposureAuto.GetValue(), self.camera.ExposureTime.GetValue(),
+                      self.camera.Gain.GetValue())
 
     def start(self):
         self.input_thread.start()
@@ -72,6 +110,8 @@ class STMCamera:
         self.camera = pylon.InstantCamera(factory.CreateDevice(devices[0]))
         try:
             self.camera.Open()
+            for stream in EXPOSURE_SOURCES:
+                self.set_exposure(stream)
             if self.fps is not None:
                 self.camera.AcquisitionFrameRate.SetValue(float(self.fps))
             g_logger.info("Frame rate: %.1f fps", self.camera.AcquisitionFrameRate.GetValue())
