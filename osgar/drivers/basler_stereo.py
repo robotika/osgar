@@ -3,7 +3,7 @@
     Implemented via Basler sdk and pypylon. The first detected camera is used with default settings.
     Logged outputs:
       - color: JPEG bytes (from the Intensity component)
-      - depth: uint16 numpy array, distance in millimeters (Z of the Range component, 0 = invalid)
+      - depth: uint16 numpy array, distance in millimeters (Range component as Coord3D_C16, 0 = invalid)
 """
 
 from threading import Thread
@@ -33,13 +33,6 @@ def intensity_to_bgr(component):
     rgba = np.frombuffer(component.GetMemoryView(), dtype=np.uint8)
     rgba = rgba.reshape(component.Height, component.Width, 4)
     return cv2.cvtColor(rgba, cv2.COLOR_RGBA2BGR)
-
-
-def range_to_depth(component):
-    # Range is Coord3D_ABC32f, Z (third channel) is the distance in millimeters
-    z = component.Array[:, :, 2]
-    valid = np.isfinite(z) & (z > 0)
-    return np.where(valid, np.clip(z, 0, 65535), 0).astype(np.uint16)
 
 
 # Exposure is configured per source: Source1 and Source2 are the stereo pair (depth), Source3 is the color sensor.
@@ -98,6 +91,16 @@ class STMCamera:
                       self.camera.ExposureAuto.GetValue(), self.camera.ExposureTime.GetValue(),
                       self.camera.Gain.GetValue())
 
+    def set_components(self):
+        # Range and Confidence belong to the stereo source, they can not be selected with the color source selected
+        self.camera.SourceSelector.SetValue(EXPOSURE_SOURCES["depth"])
+        # Range as Coord3D_C16 is directly the uint16 depth in millimeters (0 = invalid)
+        self.camera.ComponentSelector.SetValue("Range")
+        self.camera.PixelFormat.SetValue("Coord3D_C16")
+        # Confidence is only a mask of valid depth (255 = valid, 0 = invalid), depth > 0 gives the same information
+        self.camera.ComponentSelector.SetValue("Confidence")
+        self.camera.ComponentEnable.SetValue(False)
+
     def set_color_image(self):
         self.camera.SourceSelector.SetValue(EXPOSURE_SOURCES["color"])
         self.camera.Gamma.SetValue(float(self.gamma))
@@ -133,6 +136,7 @@ class STMCamera:
             for stream in EXPOSURE_SOURCES:
                 self.set_exposure(stream)
             self.set_color_image()
+            self.set_components()
             if self.fps is not None:
                 self.camera.AcquisitionFrameRate.SetValue(float(self.fps))
             g_logger.info("Frame rate: %.1f fps", self.camera.AcquisitionFrameRate.GetValue())
@@ -150,7 +154,7 @@ class STMCamera:
                         if ok:
                             self.bus.publish("color", data.tobytes())
                     if range_data is not None:
-                        self.bus.publish("depth", range_to_depth(range_data))
+                        self.bus.publish("depth", range_data.Array)
                 finally:
                     grab.Release()
         finally:

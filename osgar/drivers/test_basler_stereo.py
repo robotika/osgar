@@ -4,8 +4,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import cv2
 
-from osgar.drivers.basler_stereo import (STMCamera, component_by_type, intensity_to_bgr, range_to_depth,
-                                         EXPOSURE_SOURCES)
+from osgar.drivers.basler_stereo import STMCamera, component_by_type, intensity_to_bgr, EXPOSURE_SOURCES
 
 INTENSITY = 1
 RANGE = 4
@@ -47,15 +46,6 @@ class ConversionTest(unittest.TestCase):
         bgr = intensity_to_bgr(make_component(INTENSITY, width=3, height=2, rgba=rgba))
         self.assertEqual(bgr.shape, (2, 3, 3))
         self.assertEqual(list(bgr[0, 0]), [30, 20, 10])
-
-    def test_range_to_depth(self):
-        xyz = np.zeros((1, 6, 3), dtype=np.float32)
-        xyz[0, :, 2] = [1000.4, 0, -5, np.nan, np.inf, 70000]
-        depth = range_to_depth(make_component(RANGE, width=6, height=1, array=xyz))
-        self.assertEqual(depth.dtype, np.uint16)
-        self.assertEqual(depth.shape, (1, 6))
-        # invalid (zero, negative, nan, inf) values are 0, too far values are clipped
-        self.assertEqual(list(depth[0]), [1000, 0, 0, 0, 0, 65535])
 
 
 class ConfigTest(unittest.TestCase):
@@ -143,12 +133,21 @@ class SettingsTest(unittest.TestCase):
         self.camera.BalanceRatio.SetValue.assert_called_once_with(2800.0)
 
 
+    def test_components(self):
+        cam = self.create({})
+        cam.set_components()
+        self.camera.SourceSelector.SetValue.assert_called_once_with("Source1")
+        self.assertEqual([c.args for c in self.camera.ComponentSelector.SetValue.call_args_list],
+                         [("Range",), ("Confidence",)])
+        self.camera.PixelFormat.SetValue.assert_called_once_with("Coord3D_C16")
+        self.camera.ComponentEnable.SetValue.assert_called_once_with(False)
+
+
 class RunInputTest(unittest.TestCase):
     def make_grab(self, valid=True, succeeded=True):
         rgba = np.full((2, 4, 4), 128, dtype=np.uint8)
-        xyz = np.zeros((2, 4, 3), dtype=np.float32)
-        xyz[:, :, 2] = 1500
-        container = make_container(make_component(RANGE, array=xyz),
+        depth = np.full((2, 4), 1500, dtype=np.uint16)
+        container = make_container(make_component(RANGE, array=depth),
                                    make_component(INTENSITY, rgba=rgba))
         grab = MagicMock()
         grab.IsValid.return_value = valid
@@ -202,6 +201,17 @@ class RunInputTest(unittest.TestCase):
         self.assertEqual(depth.dtype, np.uint16)
         self.assertTrue((depth == 1500).all())
         grab.Release.assert_called_once()
+
+    def test_components_set_before_grabbing(self):
+        bus = self.make_bus(0)
+        pylon, camera = self.make_pylon([])
+        order = []
+        camera.PixelFormat.SetValue.side_effect = lambda *a: order.append("pixel_format")
+        camera.ComponentEnable.SetValue.side_effect = lambda *a: order.append("component_enable")
+        camera.StartGrabbing.side_effect = lambda *a: order.append("start")
+        with patch('osgar.drivers.basler_stereo.pylon', pylon):
+            STMCamera({}, bus).run_input()
+        self.assertEqual(order, ["pixel_format", "component_enable", "start"])
 
     def test_first_device_and_fps(self):
         bus = self.make_bus(0)
