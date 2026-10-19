@@ -182,6 +182,9 @@ class LogBusHandler:
             # ignore :gz and :null modifiers
             assert o.split(':')[0] in self.outputs.values(), (o, self.outputs)
 
+    def is_alive(self):
+        return not self.finished.is_set()
+
     def listen(self):
         while True:
             if self.finished.is_set():
