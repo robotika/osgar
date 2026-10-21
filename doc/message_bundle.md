@@ -401,7 +401,65 @@ For multi-process execution via ZMQ:
 
 ---
 
-## 7. Recommended Next Steps
+## 7. Open Points & Discussion Topics
+
+### 7.1 Producer-Consumer Decoupling vs. Dictionary Key Naming
+In traditional single-channel OSGAR links:
+```json
+["camera.color", "app.image"]
+```
+The link handles renaming: the producer calls its output `color`, but the consumer expects `image` and defines `on_image(data)`. The consumer is completely agnostic to how the producer named the stream.
+
+With bundles, if the payload is passed as a raw dictionary `data = {'color': img, 'depth': d}`, a consumer accessing `data['color']` becomes tightly coupled to the producer's chosen dictionary keys. If another driver names its output `{'image': img, 'depth': d}` or `{'rgb': img, 'depth': d}`, the consumer breaks with a `KeyError`.
+
+#### Candidate Solutions for Community / User Discussion:
+
+1. **Option A: Positional Unpacking via `Bundle` Container (Pythonic & Decoupled)**
+   The bus delivers a lightweight `Bundle` object that inherits from `tuple` (ordered according to the bundle's registration order) while still allowing dictionary/attribute access:
+   ```python
+   # Producer registers order: ['color', 'depth']
+   self.bus.register_bundle('rgbd', ['color', 'depth'])
+   ```
+   The consumer can unpack positionally without caring about key names:
+   ```python
+   def on_rgbd(self, data):
+       img, depth = data  # 100% decoupled from key names
+   ```
+   *Pros:* Extremely clean, backward compatible with tuple-style APIs, requires zero configuration changes.
+   *Cons:* Depends on consistent element ordering across different drivers.
+
+2. **Option B: Link-Level Key Remapping in `config.json`**
+   The configuration link syntax is extended to optionally define key translations:
+   ```json
+   ["camera.rgbd", "app.rgbd", {"color": "image", "depth": "depth_map"}]
+   ```
+   When delivering to `app`, the bus remaps the dictionary keys so `app` receives `{'image': ..., 'depth_map': ...}`.
+   *Pros:* Explicit, declarative, keeps consumer logic strictly isolated from driver variations.
+   *Cons:* Modifies link syntax from 2-element tuples to optional 3-element tuples.
+
+3. **Option C: Sub-Channel Link Mapping**
+   Instead of linking the bundle name directly, links connect individual producer outputs into sub-keys of the consumer's input channel:
+   ```json
+   "links": [
+     ["camera.color", "app.rgbd.image"],
+     ["camera.depth", "app.rgbd.depth"]
+   ]
+   ```
+   The bus handler groups incoming bundled channels into `app.rgbd` with the mapped keys `{'image': ..., 'depth': ...}`.
+   *Pros:* Reuses the familiar channel naming pattern; supports combining outputs into customized target bundles.
+   *Cons:* More verbose configuration files; bus handler must manage multi-link grouping.
+
+4. **Option D: Standardized Core Schemas (Conventions)**
+   Establish strict OSGAR naming conventions for canonical bundles:
+   * `rgbd`: keys must always be `{'color', 'depth'}`
+   * `imu`: keys must always be `{'acc', 'gyro'}`
+   * `cam_pose`: keys must always be `{'image', 'pose'}`
+   *Pros:* Zero runtime overhead, predictable across drivers.
+   *Cons:* Less flexible for custom multi-sensor combinations.
+
+---
+
+## 8. Recommended Next Steps
 
 With this analysis and architecture agreed upon, the implementation can proceed cleanly in incremental pull requests:
 1. **PR 1: Core Bus & Logger**: Implement `register_bundle`, `publish_bundle`, and unit tests in `bus.py` and `logger.py`.
