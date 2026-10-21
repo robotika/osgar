@@ -1,5 +1,21 @@
 # OSGAR Message Bundle: Architectural Overview, Analysis & Implementation Handover
 
+> **TL;DR (Too Long; Didn't Read)**
+>
+> * **The Problem**: Sensors produce correlated data simultaneously (e.g. RGB + Depth, Image + Camera Orientation, IMU Acc + Gyro). Currently, publishing them as separate channels forces downstream nodes to guess if frames belong together using fragile timestamp windows or custom buffer logic. But bundling them into custom monolithic payloads breaks existing single-stream tools (`osgar.logger --stream`) and single-stream listeners (e.g. video streamers).
+> * **The Solution**: Native **Message Bundles** in the OSGAR Bus:
+>   * **Producers**: Register a bundle and emit atomically:
+>     ```python
+>     self.bus.register('color', 'depth:gz', bundles={'rgbd': ['color', 'depth']})
+>     self.publish_bundle('rgbd', {'color': img, 'depth': depth})
+>     ```
+>   * **Subscribers**: Choose what they want in `config.json`:
+>     * Standard/legacy nodes link to single channels: `["camera.color", "viewer.image"]` $\rightarrow$ receives only `img`.
+>     * Bundle-aware nodes link to the bundle: `["camera.rgbd", "detector.rgbd"]` $\rightarrow$ receives atomic `{'color': img, 'depth': depth}`.
+>   * **Zero Log Redundancy**: Data is logged once under individual streams with identical microsecond timestamps; bundle manifest is saved in Stream 0. Existing log tools work 100% untouched.
+>   * **Camera Pose Example**: For fixed cameras, publish constant `mount_pose` per frame in the bundle. Overhead is negligible (<0.05% of frame size), but guarantees all vision nodes (fixed or steered PTZ) use the exact same `img, pose = data` interface without code changes.
+>   * **Decoupling Open Point**: To prevent consumer code from hardcoding producer dict keys (`data['color']`), support positional unpacking (`img, depth = data`) or link-level key remapping in config.
+
 ## 1. Executive Summary & Problem Analysis
 
 ### 1.1 The Synchronized Multi-Stream Dilemma
