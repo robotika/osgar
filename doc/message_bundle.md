@@ -283,7 +283,90 @@ For multi-process execution via ZMQ:
 
 ---
 
-## 5. Detailed Implementation Handover Specification
+## 5. Case Study: Camera with Pose (Fixed vs. Steered / Servo Cameras)
+
+A primary use case for message bundling is associating an image with the spatial orientation or 6-DOF pose of the camera at the moment of exposure.
+
+### 5.1 The Dilemma: Fixed vs. Steered Cameras
+1. **Fixed Camera**: Rigidly mounted to the robot chassis (e.g. front camera, rear camera, multi-camera surround). The orientation and translation relative to the robot base are static.
+2. **Steered Camera**: Mounted on a pan-tilt servo, gimbal, or rotating mast (like surveillance PTZ cameras). The orientation changes continuously as the camera scans or tracks targets.
+
+### 5.2 Architectural Decision: Publishing Constant Pose with Every Frame
+For fixed cameras, should the driver publish a constant orientation/pose with every frame? **Yes, absolutely.**
+
+#### Technical Rationale:
+1. **Uniform Consumer Interface (Zero Branching)**:
+   Downstream nodes (e.g. 3D object detectors, semantic segmentation, point cloud reprojectors) consume the bundle uniformly:
+   ```python
+   def on_camera(self, data):
+       img, camera_pose = data  # Uniform across ALL camera types
+   ```
+   Consumer modules do not need conditional logic or configuration flags to check whether the robot has a fixed camera (reading a static parameter) or a steered camera (listening to a servo stream).
+2. **Negligible Storage & Bus Overhead (< 0.05%)**:
+   - A 3D pose `[[x, y, z], [qx, qy, qz, qw]]` serializes to **~35 bytes** in msgpack.
+   - A single JPEG frame is **50,000 to 200,000 bytes**; a depth frame is **500,000+ bytes**.
+   - Repeatedly publishing the static pose adds under **0.05%** to log file size and takes negligible CPU time.
+3. **Single Source of Truth for Calibration**:
+   In legacy configurations, because raw cameras did not emit their pose, the camera mount pose had to be duplicated into every consumer's `init` parameters (e.g. duplicated across `detector`, `obstacle_detector`, etc.). If physical calibration shifted, multiple configuration entries had to be maintained. Emitting `pose` in the camera bundle centralizes calibration into the camera driver.
+
+### 5.3 Implementation Patterns
+
+#### Pattern A: Fixed Camera (Static Mount Pose)
+The camera driver accepts `mount_pose` in its `init` parameters and emits it alongside each captured frame:
+```json
+"camera_front": {
+  "driver": "osgar.drivers.opencv:OpenCVCamera",
+  "init": {
+    "device": 0,
+    "mount_pose": [[0.25, 0.0, 0.15], [0, 0, 0, 1]]
+  }
+}
+```
+Driver implementation:
+```python
+class OpenCVCamera(Node):
+    def __init__(self, config, bus):
+        super().__init__(config, bus)
+        self.mount_pose = config.get('mount_pose', [[0, 0, 0], [0, 0, 0, 1]])
+        self.bus.register('image', 'pose', bundles={'camera': ['image', 'pose']})
+
+    def process_frame(self, frame):
+        self.publish_bundle('camera', {
+            'image': frame,
+            'pose': self.mount_pose
+        })
+```
+
+#### Pattern B: Integrated Steered Camera (PTZ / Gimbal / Servo Feedback)
+When the camera and pan-tilt mechanism are handled by the same hardware/SDK, the driver queries the current angle and computes the dynamic transform for each frame:
+```python
+def on_frame_received(self, frame):
+    current_angle = self.read_servo_angle()
+    current_pose = self.compute_camera_pose(current_angle)
+    self.publish_bundle('camera', {
+        'image': frame,
+        'pose': current_pose
+    })
+```
+
+#### Pattern C: Decoupled Steered Camera (Separate Camera & Servo Drivers)
+When the camera is a standard USB camera (Driver A) and the servo is driven via CAN/Serial (Driver B):
+* An intermediate **`CameraRig`** node subscribes to `camera.image` and `servo.angle`. Upon receiving each image, it pairs it with the latest interpolated servo angle and outputs the unified bundle `camera_rig.camera`.
+* Both fixed and steered cameras present the exact same `['image', 'pose']` bundle interface downstream.
+
+### 5.4 Coordinate Frame Conventions
+It is critical to distinguish between coordinate frames:
+1. **`camera_to_robot` (Camera Extrinsic Pose)**:
+   * **Included in the camera bundle**: Represents the position and orientation of the optical frame relative to the robot's base body center.
+   * Constant for fixed cameras; dynamic for steered cameras.
+   * Enables consumers to project camera detections directly into the robot's body coordinates.
+2. **`robot_to_world` (Global Odometry / SLAM Pose)**:
+   * **NOT included in the camera bundle**: Originates from platform odometry/wheel encoders/IMU at its own update rate.
+   * Consumers requiring global coordinates (e.g. artifact mapping) subscribe to both `camera.camera` (for `camera_to_robot`) and `platform.pose3d` (for `robot_to_world`).
+
+---
+
+## 6. Detailed Implementation Handover Specification
 
 ### Phase 1: Core Bus & Logger (`osgar/bus.py`, `osgar/logger.py`)
 
@@ -385,7 +468,7 @@ For multi-process execution via ZMQ:
 
 ---
 
-## 6. Verification & Test Plan
+## 7. Verification & Test Plan
 
 1. **Unit Tests (`osgar/test_bus.py`)**:
    - `test_publish_bundle_individual_subscribers`: Verify that subscribing to `camera.color` receives individual payloads when `publish_bundle` is called.
@@ -401,9 +484,9 @@ For multi-process execution via ZMQ:
 
 ---
 
-## 7. Open Points & Discussion Topics
+## 8. Open Points & Discussion Topics
 
-### 7.1 Producer-Consumer Decoupling vs. Dictionary Key Naming
+### 8.1 Producer-Consumer Decoupling vs. Dictionary Key Naming
 In traditional single-channel OSGAR links:
 ```json
 ["camera.color", "app.image"]
@@ -459,7 +542,7 @@ With bundles, if the payload is passed as a raw dictionary `data = {'color': img
 
 ---
 
-## 8. Recommended Next Steps
+## 9. Recommended Next Steps
 
 With this analysis and architecture agreed upon, the implementation can proceed cleanly in incremental pull requests:
 1. **PR 1: Core Bus & Logger**: Implement `register_bundle`, `publish_bundle`, and unit tests in `bus.py` and `logger.py`.
