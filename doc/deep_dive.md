@@ -205,6 +205,8 @@ Each module's `_BusHandler` contains a `queue.Queue()` (a thread-safe FIFO queue
 
 This architecture ensures that modules are decoupled and that data is processed in the order it was received, with the system log serving as a perfect record of all interactions.
 
+> **Note on High-Rate Streams and Stale Messages:** For handling high-framerate sensor streams with slower perception nodes (e.g. dropping older images to always process the newest frame), see the design specification in [Processing Latest Messages & Dropping Stale Data](dropping_older_messages.md).
+
 ## 10. Reading OSGAR Logfiles
 
 There are two primary ways to interact with OSGAR logfiles: programmatically using the Python API or via the command-line utility.
