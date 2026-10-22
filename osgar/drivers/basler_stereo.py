@@ -67,7 +67,6 @@ class STMCamera:
         self.gamma = config.get("color_gamma", 300)
         self.white_balance = config.get("color_white_balance", "auto")
         self.fps = config.get("fps")  # 6-60, None = camera default (30)
-        self.timeout_ms = config.get("timeout_ms", 1000)
         self.bus.register('color', 'depth')
         self.camera = None
 
@@ -142,7 +141,7 @@ class STMCamera:
             g_logger.info("Frame rate: %.1f fps", self.camera.AcquisitionFrameRate.GetValue())
             self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
             while self.bus.is_alive() and self.camera.IsGrabbing():
-                grab = self.camera.RetrieveResult(self.timeout_ms, pylon.TimeoutHandling_Return)
+                grab = self.camera.RetrieveResult(500, pylon.TimeoutHandling_Return)  # timeout in ms
                 try:
                     if not grab.IsValid() or not grab.GrabSucceeded():
                         continue
