@@ -247,6 +247,9 @@ class LogBusHandlerInputsOnly:
     def register(self, *outputs):
         pass
 
+    def is_alive(self):
+        return True
+
     def listen(self):
         try:
             dt, stream_id, bytes_data = next(self.reader)
