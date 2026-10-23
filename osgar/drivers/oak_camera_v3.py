@@ -67,6 +67,10 @@ class OakCamera:
                           'nn_mask:gz',
                           'pose3d', 'gridmap',
                           'redroad:gz', 'robotourist:gz')
+        self.imu_raw_data = config.get('imu_raw_data', False)
+        if self.imu_raw_data:
+            self.bus.register('acc_raw_list', 'gyro_raw_list')
+
 
         self.is_color = config.get('is_color', False)
         self.is_depth = config.get('is_depth', False)
@@ -267,7 +271,11 @@ class OakCamera:
                     if self.disable_magnetometer_fusion:
                         imu.enableIMUSensor(dai.IMUSensor.GAME_ROTATION_VECTOR, 100)  # without magnetometer
                     else:
-                        imu.enableIMUSensor(dai.IMUSensor.ROTATION_VECTOR, 100)
+                        if self.imu_raw_data:
+                            # OAK-D Lite crashes on opening ROTATION_VECTOR
+                            imu.enableIMUSensor([dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW], 100)
+                        else:
+                            imu.enableIMUSensor(dai.IMUSensor.ROTATION_VECTOR, 100)
                     imu.setBatchReportThreshold(self.number_imu_records)
                     imu.setMaxBatchReports(20)
 
@@ -486,12 +494,22 @@ class OakCamera:
                     if imu_packets and len(imu_packets) > 0:
                         processed_any = True
                         for packet in imu_packets:
-                            quaternions = [[data.rotationVector.getTimestampDevice().total_seconds(),
-                                            data.rotationVector.rotationVectorAccuracy,
-                                            data.rotationVector.i, data.rotationVector.j,
-                                            data.rotationVector.k, data.rotationVector.real]
-                                           for data in packet.packets]
-                            self.bus.publish("orientation_list", quaternions)
+                            if self.imu_raw_data:
+                                acc_raw_list = [[data.acceleroMeter.getTimestampDevice().total_seconds(),
+                                                 data.acceleroMeter.x, data.acceleroMeter.y, data.acceleroMeter.z]
+                                                for data in packet.packets]
+                                self.bus.publish("acc_raw_list", acc_raw_list)
+                                gyro_raw_list = [[data.gyroscope.getTimestampDevice().total_seconds(),
+                                                  data.gyroscope.x, data.gyroscope.y, data.gyroscope.z]
+                                                 for data in packet.packets]
+                                self.bus.publish("gyro_raw_list", gyro_raw_list)
+                            else:
+                                quaternions = [[data.rotationVector.getTimestampDevice().total_seconds(),
+                                                data.rotationVector.rotationVectorAccuracy,
+                                                data.rotationVector.i, data.rotationVector.j,
+                                                data.rotationVector.k, data.rotationVector.real]
+                                               for data in packet.packets]
+                                self.bus.publish("orientation_list", quaternions)
 
                 # Only rest the CPU if no frames were pulled in this tick loop
                 if not processed_any:
