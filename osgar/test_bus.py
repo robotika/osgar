@@ -14,6 +14,45 @@ from osgar.lib.serialize import serialize
 
 class BusHandlerTest(unittest.TestCase):
 
+    def test_close_rejects_late_publications(self):
+        logger = MagicMock()
+        bus = Bus(logger)
+        handle = bus.handle('late')
+        handle.register('raw')
+        bus.close()
+        with self.assertRaises(BusShutdownException):
+            handle.publish('raw', b'late data')
+        handle.report_error(message='late error')
+        logger.write.assert_not_called()
+
+    def test_shutdown_drains_queued_messages(self):
+        bus = Bus(MagicMock())
+        sender = bus.handle('sender')
+        receiver = bus.handle('receiver')
+        sender.register('raw')
+        bus.connect('sender.raw', 'receiver.raw')
+        sender.publish('raw', b'STOP')
+        receiver.shutdown()
+        self.assertEqual(receiver.listen()[2], b'STOP')
+        with self.assertRaises(BusShutdownException):
+            receiver.listen()
+
+    def test_global_stop_request_keeps_handles_alive(self):
+        bus = Bus(MagicMock())
+        sender = bus.handle('sender')
+        receiver = bus.handle('receiver')
+        sender.shutdown()
+        self.assertFalse(bus.stop_requested.is_set())
+        receiver.request_stop()
+        receiver.request_stop()  # repeated requests are harmless
+        self.assertTrue(bus.stop_requested.is_set())
+        self.assertTrue(receiver.is_alive())
+
+    def test_replay_stop_request(self):
+        for handler in (LogBusHandler(iter([]), {}, {}), LogBusHandlerInputsOnly(iter([]), {})):
+            with self.assertRaises(SystemExit):
+                handler.request_stop()
+
     def test_publish(self):
         logger = MagicMock()
         bus = Bus(logger)

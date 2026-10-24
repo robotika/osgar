@@ -45,6 +45,12 @@ class Node(Thread):
                 self.update()
         except BusShutdownException:
             pass
+        finally:
+            self.on_shutdown()
+
+    def on_shutdown(self):
+        """Send final commands before this node finishes; transports remain available."""
+        pass
 
     def request_stop(self):
         self.bus.shutdown()

@@ -38,9 +38,10 @@ class Bus:
     def __init__(self, logger):
         self.logger = logger
         self.handles = {}
+        self.stop_requested = threading.Event()
 
     def handle(self, name):
-        return self.handles.setdefault(name, _BusHandler(self.logger, name))
+        return self.handles.setdefault(name, _BusHandler(self.logger, name, self.stop_requested))
 
     def connect(self, sender, receiver, modules=None):
         sender, output = sender.split('.')
@@ -52,9 +53,16 @@ class Bus:
             if handle.max_delay > ASSERT_QUEUE_DELAY:
                 yield name, handle.max_delay, handle.max_delay_timestamp
 
+    def close(self):
+        """Prevent late publishers from writing to a closed log after a timeout."""
+        with self.logger.lock:
+            for handle in self.handles.values():
+                handle.closed = True
+                handle.shutdown()
+
 
 class _BusHandler:
-    def __init__(self, logger, name):
+    def __init__(self, logger, name, stop_requested=None):
         self.logger = logger
         self.queue = Queue()
         self.name = name
@@ -62,6 +70,8 @@ class _BusHandler:
         self.slots = {}
         self.stream_id = {}
         self.finished = threading.Event()
+        self.closed = False
+        self.stop_requested = stop_requested if stop_requested is not None else threading.Event()
         self.no_output = set()
         self.compressed_output = set()
         self._time = None
@@ -120,6 +130,8 @@ class _BusHandler:
                 to_write = compress(to_write)
 
         with self.logger.lock:
+            if self.closed:
+                raise BusShutdownException()
             timestamp = self.logger.write(stream_id, to_write)
             if self._time is not None:
                 delay = timestamp - self._time
@@ -153,11 +165,17 @@ class _BusHandler:
         self.finished.set()
         self.queue.put(None)
 
+    def request_stop(self):
+        """Ask the recorder to stop the run; keep this handle available for cleanup."""
+        self.stop_requested.set()
+
     def report_error(self, **err):
         data = dict(name=self.name)
         err.pop('name', None)
         data.update(err)
-        self.logger.write(0, bytes(str(data), encoding='ascii'))
+        with self.logger.lock:
+            if not self.closed:
+                self.logger.write(0, bytes(str(data), encoding='ascii'))
 
 
 class LogBusHandler:
@@ -231,6 +249,9 @@ class LogBusHandler:
     def shutdown(self):
         raise SystemExit()
 
+    def request_stop(self):
+        self.shutdown()
+
     def report_error(self, err):
         print(self.time, err)
 
@@ -264,6 +285,9 @@ class LogBusHandlerInputsOnly:
 
     def shutdown(self):
         raise SystemExit()
+
+    def request_stop(self):
+        self.shutdown()
 
     def report_error(self, err):
         print(self.time, err)
