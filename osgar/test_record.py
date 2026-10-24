@@ -8,9 +8,14 @@ import signal
 import subprocess
 import tempfile
 import sys
+import socket
+import time
 
 from osgar.record import Recorder, record
 from osgar.node import Node
+from osgar.logger import LogWriter, LogReader
+from osgar.lib.serialize import deserialize
+from osgar.drivers.logsocket import LogSocket, LogTCPBase
 
 
 class StopRequester(Node):
@@ -21,6 +26,24 @@ class StopRequester(Node):
 class FinishedApp(Node):
     def run(self):
         pass
+
+
+class FinalCommandNode(Node):
+    def __init__(self, config, bus):
+        super().__init__(config, bus)
+        bus.register('raw')
+
+    def on_shutdown(self):
+        self.publish('raw', b'STOP')
+
+
+class ShutdownTransport(LogSocket):
+    """Exercise the socket transport loops against a simulated device."""
+    def __init__(self, config, bus):
+        connection, self.device = socket.socketpair()
+        super().__init__(connection, {'timeout': 0.01}, bus)
+
+    _send = LogTCPBase._send
 
 
 class Sleeper:
@@ -69,7 +92,100 @@ class RecorderTest(unittest.TestCase):
         recorder.request_stop()
         self.assertTrue(recorder.bus.stop_requested.is_set())
         for module in recorder.modules.values():
+            module.request_stop.assert_not_called()
+        recorder.__exit__(None, None, None)
+        for module in recorder.modules.values():
             module.request_stop.assert_called_once_with()
+
+    def test_final_command_precedes_transport_shutdown(self):
+        config = {'modules': {
+            # Deliberately put the transport first: configuration order must not matter.
+            'tcp': {'driver': 'osgar.test_record:ShutdownTransport', 'shutdown_group': 'transport'},
+            'controller': {'driver': 'osgar.test_record:FinalCommandNode'},
+        }, 'links': [['controller.raw', 'tcp.raw']]}
+        with tempfile.TemporaryDirectory() as directory:
+            filename = os.path.join(directory, 'shutdown.log')
+            with LogWriter(filename=filename) as logger:
+                with Recorder(config, logger) as recorder:
+                    transport = recorder.modules['tcp']
+                    recorder.request_stop()
+                try:
+                    transport.device.settimeout(1)
+                    self.assertEqual(transport.device.recv(4), b'STOP')
+                    self.assertFalse(transport.output_thread.is_alive())
+                    self.assertFalse(transport.input_thread.is_alive())
+                    self.assertEqual(recorder.state, 'CLOSED')
+                finally:
+                    transport.socket.close()
+                    transport.device.close()
+            with LogReader(filename) as reader:
+                commands = [deserialize(data) for _, stream, data in reader if stream == 2]
+            self.assertEqual(commands, [b'STOP'])
+
+    def test_stalled_stop_does_not_block_other_modules(self):
+        release = threading.Event()
+        entered = threading.Event()
+        finished = threading.Event()
+        recorder = Recorder({'modules': {}, 'links': [], 'shutdown_timeout': 0.05}, MagicMock())
+        stalled = MagicMock()
+        def wait_forever():
+            entered.set()
+            release.wait()
+        stalled.request_stop.side_effect = wait_forever
+        stalled.join.side_effect = finished.set
+        transport = MagicMock()
+        recorder.modules = {'stalled': stalled, 'tcp': transport}
+        recorder.shutdown_groups = {'tcp': 'transport'}
+        start = time.monotonic()
+        try:
+            with self.assertLogs('osgar.record', level='ERROR') as logs:
+                recorder.__exit__(None, None, None)
+            self.assertTrue(entered.is_set())
+            self.assertLess(time.monotonic() - start, 1)
+            self.assertIn('Shutdown timeout in STOPPING: stalled', '\n'.join(logs.output))
+            transport.request_stop.assert_called_once_with()
+            self.assertEqual(recorder.state, 'CLOSED')
+        finally:
+            release.set()
+            self.assertTrue(finished.wait(1))
+
+    def test_shutdown_configuration_validation(self):
+        for timeout in (0, -1, float('inf'), float('nan'), '5'):
+            with self.subTest(timeout=timeout), self.assertRaises(ValueError):
+                Recorder({'modules': {}, 'shutdown_timeout': timeout}, MagicMock())
+        with self.assertRaises(ValueError):
+            Recorder({'modules': {'bad': {'shutdown_group': 'unknown'}}}, MagicMock())
+
+    def test_failed_controller_cleanup_still_stops_transport(self):
+        recorder = Recorder({'modules': {}, 'links': []}, MagicMock())
+        controller, transport = MagicMock(), MagicMock()
+        controller.request_stop.side_effect = RuntimeError('cleanup failed')
+        recorder.modules = {'controller': controller, 'tcp': transport}
+        recorder.shutdown_groups = {'tcp': 'transport'}
+        with self.assertLogs('osgar.record', level='ERROR') as logs:
+            recorder.__exit__(None, None, None)
+        self.assertIn('Shutdown failed in STOPPING: controller: cleanup failed', '\n'.join(logs.output))
+        transport.request_stop.assert_called_once_with()
+        self.assertEqual(recorder.state, 'CLOSED')
+
+    def test_transport_drain_timeout(self):
+        release, finished = threading.Event(), threading.Event()
+        recorder = Recorder({'modules': {}, 'links': [], 'shutdown_timeout': 0.05}, MagicMock())
+        transport = MagicMock()
+        def stalled_join():
+            release.wait()
+            finished.set()
+        transport.join.side_effect = stalled_join
+        recorder.modules = {'tcp': transport}
+        recorder.shutdown_groups = {'tcp': 'transport'}
+        try:
+            with self.assertLogs('osgar.record', level='ERROR') as logs:
+                recorder.__exit__(None, None, None)
+            self.assertIn('Shutdown timeout in DRAINING: tcp', '\n'.join(logs.output))
+            self.assertEqual(recorder.state, 'CLOSED')
+        finally:
+            release.set()
+            self.assertTrue(finished.wait(1))
 
     def test_app_completion_and_duration(self):
         cases = [({'app': {'driver': 'osgar.test_record:FinishedApp'}}, 10), ({}, 0.01)]
@@ -176,7 +292,8 @@ class RecorderTest(unittest.TestCase):
                 stdout, stderr = proc.communicate()
                 self.assertIn(b"committing suicide by SIGINT", stderr)
                 self.assertEqual(len(stdout), 0, stdout)
-                self.assertEqual(len(stderr.splitlines()), 1, stderr)
+                self.assertIn(b'Shutdown phase: STOPPING', stderr)
+                self.assertIn(b'Shutdown phase: DRAINING', stderr)
             os.unlink(log_filename)
 
     def test_config_env(self):
