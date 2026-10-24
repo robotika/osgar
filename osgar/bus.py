@@ -38,9 +38,10 @@ class Bus:
     def __init__(self, logger):
         self.logger = logger
         self.handles = {}
+        self.stop_requested = threading.Event()
 
     def handle(self, name):
-        return self.handles.setdefault(name, _BusHandler(self.logger, name))
+        return self.handles.setdefault(name, _BusHandler(self.logger, name, self.stop_requested))
 
     def connect(self, sender, receiver, modules=None):
         sender, output = sender.split('.')
@@ -54,7 +55,7 @@ class Bus:
 
 
 class _BusHandler:
-    def __init__(self, logger, name):
+    def __init__(self, logger, name, stop_requested=None):
         self.logger = logger
         self.queue = Queue()
         self.name = name
@@ -62,6 +63,7 @@ class _BusHandler:
         self.slots = {}
         self.stream_id = {}
         self.finished = threading.Event()
+        self.stop_requested = stop_requested if stop_requested is not None else threading.Event()
         self.no_output = set()
         self.compressed_output = set()
         self._time = None
@@ -153,6 +155,10 @@ class _BusHandler:
         self.finished.set()
         self.queue.put(None)
 
+    def request_stop(self):
+        """Ask the recorder to stop the run; keep this handle available for cleanup."""
+        self.stop_requested.set()
+
     def report_error(self, **err):
         data = dict(name=self.name)
         err.pop('name', None)
@@ -231,6 +237,9 @@ class LogBusHandler:
     def shutdown(self):
         raise SystemExit()
 
+    def request_stop(self):
+        self.shutdown()
+
     def report_error(self, err):
         print(self.time, err)
 
@@ -264,6 +273,9 @@ class LogBusHandlerInputsOnly:
 
     def shutdown(self):
         raise SystemExit()
+
+    def request_stop(self):
+        self.shutdown()
 
     def report_error(self, err):
         print(self.time, err)

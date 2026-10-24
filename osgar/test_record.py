@@ -10,6 +10,17 @@ import tempfile
 import sys
 
 from osgar.record import Recorder, record
+from osgar.node import Node
+
+
+class StopRequester(Node):
+    def run(self):
+        self.bus.request_stop()
+
+
+class FinishedApp(Node):
+    def run(self):
+        pass
 
 
 class Sleeper:
@@ -32,6 +43,40 @@ class Sleeper:
 
 
 class RecorderTest(unittest.TestCase):
+
+    def test_node_requests_global_stop(self):
+        for with_app in (False, True):
+            with self.subTest(with_app=with_app), tempfile.TemporaryDirectory() as directory:
+                modules = {'requester': {'driver': 'osgar.test_record:StopRequester'}}
+                if with_app:
+                    modules['app'] = {'driver': 'osgar.test_record:Sleeper'}
+                config = {'version': 2, 'robot': {'modules': modules, 'links': []}}
+                filename = os.path.join(directory, 'config.json')
+                with open(filename, 'w') as stream:
+                    json.dump(config, stream)
+                result = subprocess.run(
+                    [sys.executable, '-m', 'osgar.record', filename, '--duration', '10',
+                     '--log', os.path.join(directory, 'run.log')],
+                    capture_output=True, timeout=3,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr.decode())
+                self.assertNotIn(b'still running', result.stderr)
+
+    def test_stop_calls_every_module_once(self):
+        recorder = Recorder({'modules': {}, 'links': []}, MagicMock())
+        recorder.modules = {'one': MagicMock(), 'two': MagicMock()}
+        recorder.request_stop()
+        recorder.request_stop()
+        self.assertTrue(recorder.bus.stop_requested.is_set())
+        for module in recorder.modules.values():
+            module.request_stop.assert_called_once_with()
+
+    def test_app_completion_and_duration(self):
+        cases = [({'app': {'driver': 'osgar.test_record:FinishedApp'}}, 10), ({}, 0.01)]
+        for modules, duration in cases:
+            with self.subTest(modules=modules), tempfile.TemporaryDirectory() as directory:
+                config = {'version': 2, 'robot': {'modules': modules, 'links': []}}
+                record(config, 'test-', log_filename=os.path.join(directory, 'run.log'), duration_sec=duration)
 
     def test_dummy_usage(self):
         empty_config = {'modules': {}, 'links':[]}

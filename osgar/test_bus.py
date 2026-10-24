@@ -14,6 +14,22 @@ from osgar.lib.serialize import serialize
 
 class BusHandlerTest(unittest.TestCase):
 
+    def test_global_stop_request_keeps_handles_alive(self):
+        bus = Bus(MagicMock())
+        sender = bus.handle('sender')
+        receiver = bus.handle('receiver')
+        sender.shutdown()
+        self.assertFalse(bus.stop_requested.is_set())
+        receiver.request_stop()
+        receiver.request_stop()  # repeated requests are harmless
+        self.assertTrue(bus.stop_requested.is_set())
+        self.assertTrue(receiver.is_alive())
+
+    def test_replay_stop_request(self):
+        for handler in (LogBusHandler(iter([]), {}, {}), LogBusHandlerInputsOnly(iter([]), {})):
+            with self.assertRaises(SystemExit):
+                handler.request_stop()
+
     def test_publish(self):
         logger = MagicMock()
         bus = Bus(logger)

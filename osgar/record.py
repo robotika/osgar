@@ -67,9 +67,10 @@ class Recorder:
             self.sigint_received = True
         if self.stop_requested.is_set():
             return
+        self.stop_requested.set()
+        self.bus.stop_requested.set()
         for module in self.modules.values():
             module.request_stop()
-        self.stop_requested.set()
 
 
 def record(config, log_prefix, log_filename=None, duration_sec=None):
@@ -83,10 +84,15 @@ def record(config, log_prefix, log_filename=None, duration_sec=None):
         with Recorder(config=config['robot'], logger=log) as recorder:
             if 'app' in recorder.modules:
                 app = recorder.modules['app']
-                app.join(duration_sec)
-            else:
-                recorder.stop_requested.wait(duration_sec)
+                def wait_for_app():
+                    app.join()
+                    recorder.bus.stop_requested.set()
+                app_waiter = threading.Thread(target=wait_for_app, name='app-waiter', daemon=True)
+                app_waiter.start()
+            recorder.bus.stop_requested.wait(duration_sec)
             recorder.request_stop()
+            if 'app' in recorder.modules:
+                app_waiter.join(1)
 
 
 def main(record=record):
