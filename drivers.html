@@ -51,10 +51,55 @@ both streams are logged. The “stream ID” is part of the driver configuration
 <p>There are two basic use cases: real run and replay. In real run real port
 is opened and dedicated Thread::run() takes care of reading data with timeout
 and the processing.</p>
-<p>In the “replay” mode the run is single-threaded and the processing is
-simulated from logged data. This mode is mainly designed for debugging,
+<p>In the “replay” mode the module receives bus data from a log file.
+This mode is mainly designed for debugging,
 development of parsers and also verification of identical outputs on
 different platforms (robot PC vs. notebook for example).</p>
+<p>Replay does not automatically replace device connections opened by a driver.
+A driver that connects to an external server in its startup code still needs
+that server, or an explicit mock or replay implementation.</p>
+</section>
+<section id="drivers-using-async-libraries">
+<h2>Drivers using async libraries<a class="headerlink" href="#drivers-using-async-libraries" title="Link to this heading">¶</a></h2>
+<p>Inherit from <code class="docutils literal notranslate"><span class="pre">osgar.asyncnode.AsyncNode</span></code> when using a device library with an
+<code class="docutils literal notranslate"><span class="pre">asyncio</span></code> API. Each instance runs an event loop in its own node thread.
+Override <code class="docutils literal notranslate"><span class="pre">main()</span></code> to open the connection, then await <code class="docutils literal notranslate"><span class="pre">listen_loop()</span></code> to
+process bus messages. For example, a TCP client can use:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">osgar.asyncnode</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsyncNode</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">AsyncTCPWriter</span><span class="p">(</span><span class="n">AsyncNode</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">bus</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">bus</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">'host'</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">'port'</span><span class="p">]</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">reader</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">writer</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">open_connection</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">listen_loop</span><span class="p">()</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">wait_closed</span><span class="p">()</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">on_raw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">drain</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Handlers can be synchronous or async. The listen loop finishes each handler
+before dispatching the next message; awaiting I/O allows other event-loop
+tasks to run but does not dispatch another bus message. Avoid blocking calls
+inside handlers. Use <code class="docutils literal notranslate"><span class="pre">await</span> <span class="pre">self.sleep_async(seconds)</span></code> for an elapsed real-time
+delay, and <code class="docutils literal notranslate"><span class="pre">self.time</span></code> for the timestamp of the current bus message.</p>
+<p>Register outputs in <code class="docutils literal notranslate"><span class="pre">__init__</span></code> as usual and call <code class="docutils literal notranslate"><span class="pre">self.publish()</span></code> without
+<code class="docutils literal notranslate"><span class="pre">await</span></code>. Configuration and links use the same format as synchronous drivers.
+During a live run, <code class="docutils literal notranslate"><span class="pre">request_stop()</span></code> shuts down the bus handle and requests
+cancellation of <code class="docutils literal notranslate"><span class="pre">main()</span></code>. Use context managers or <code class="docutils literal notranslate"><span class="pre">finally</span></code> blocks for
+connection cleanup and allow cancellation to propagate.</p>
+<p>The <a class="reference external" href="https://github.com/robotika/osgar/tree/master/examples/asyncecho">AsyncEcho example</a>
+demonstrates a TCP server and an async application communicating over the bus.</p>
 </section>
 </section>
 
@@ -83,6 +128,7 @@ different platforms (robot PC vs. notebook for example).</p>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Drivers</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#logging">Logging</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#use-cases">Use cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#drivers-using-async-libraries">Drivers using async libraries</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="rosproxy.html">ROS Proxy</a></li>
