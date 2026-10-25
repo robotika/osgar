@@ -109,6 +109,17 @@ class Recorder:
         deadline = time.monotonic() + self.shutdown_timeout
         workers = {}
         failures = {}
+        force_workers = []
+
+        def force_stop(name):
+            module = self.modules[name]
+            force = getattr(module, 'force_stop', None)
+            if callable(force):
+                try:
+                    force()
+                    module.join()
+                except Exception:
+                    g_logger.exception('Forced shutdown failed: %s', name)
 
         def stop_and_join(name, module):
             try:
@@ -140,9 +151,21 @@ class Recorder:
             if worker.is_alive():
                 g_logger.error('Shutdown timeout in %s: %s', state, name)
                 self.bus.handle(name).shutdown()
+                force_workers.append(threading.Thread(target=force_stop, args=(name,),
+                                                      name=f'force-stop-{name}', daemon=True))
             elif name in failures:
                 g_logger.error('Shutdown failed in %s: %s: %s', state, name, failures[name])
                 self.bus.handle(name).shutdown()
+                force_workers.append(threading.Thread(target=force_stop, args=(name,),
+                                                      name=f'force-stop-{name}', daemon=True))
+        # One shared cancellation allowance, never one second per module.
+        force_deadline = time.monotonic() + 1.0
+        for worker in force_workers:
+            worker.start()
+        for worker in force_workers:
+            worker.join(max(0, force_deadline - time.monotonic()))
+            if worker.is_alive():
+                g_logger.error('Forced shutdown timeout: %s', worker.name)
 
 
 def record(config, log_prefix, log_filename=None, duration_sec=None):

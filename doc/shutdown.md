@@ -53,13 +53,21 @@ transports that must remain available during controller cleanup explicitly:
 
 `shutdown_timeout` is a positive number of seconds, defaulting to 5, for each
 group as a whole. `--duration 10` begins graceful shutdown after 10 seconds;
-cleanup may take up to two additional group timeouts. A global request can
+cleanup may take up to two additional group timeouts, plus a shared one-second
+forced-cancellation allowance for each group that fails or times out. A global request can
 begin shutdown earlier. Timeout or cleanup failure is logged, and teardown
 continues to the next group. This bounds waiting for stop methods and joins;
 Python cannot forcibly terminate a stuck thread or interrupt arbitrary device
 I/O. Drivers still need finite I/O timeouts. A surviving non-daemon thread can
 keep the process alive. Synchronous slot handlers must also return promptly:
 they execute while the logger lock is held and can delay final log closure.
+
+After a timeout or cleanup failure, the recorder shuts down the local handle
+and calls the module's optional `force_stop()` in a bounded daemon worker.
+`AsyncNode.force_stop()` cancels blocked async work. The cancellation allowance
+is shared by all failed modules in the group. Modules must allow cancellation
+to propagate; a coroutine that suppresses it indefinitely still cannot be
+forcibly terminated by Python.
 
 ## Lifecycle messages and final commands
 
@@ -99,6 +107,15 @@ and calls local `request_stop()` on `close`. During prepare the processing loop,
 idempotent, and does not close the handle. The subsequent close message ends
 the node normally. Do not block inside the handler waiting for a response:
 return so that ordinary input handlers can process it.
+
+`AsyncNode` dispatches both ordinary and async `on_shutdown(self, data)` handlers.
+Its normal `request_stop()` queues the local shutdown sentinel without cancelling
+`main()`. The bus loop drains earlier messages, then returns so async context
+managers and `finally` blocks can finish. Only `force_stop()` requests task
+cancellation. Custom `main()` implementations must finish when `listen_loop()`
+returns, rather than wait forever for an unrelated background task. Await or
+cancel those background tasks during cleanup. Place low-level async transports
+in the transport shutdown group, just as for synchronous TCP or serial drivers.
 
 This replaces the earlier zero-argument `on_shutdown()` cleanup hook. Local
 shutdown or an unexpected thread exit does not call the handler automatically.

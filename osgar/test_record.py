@@ -10,6 +10,7 @@ import tempfile
 import sys
 import socket
 import time
+import asyncio
 
 from osgar.record import Recorder, record
 from osgar.node import Node
@@ -18,6 +19,7 @@ from osgar.lib.serialize import deserialize
 from osgar.drivers.logsocket import LogSocket, LogTCPBase
 from osgar.replay import replay
 from types import SimpleNamespace
+from osgar.asyncnode import AsyncNode
 
 
 class StopRequester(Node):
@@ -69,6 +71,43 @@ class AcknowledgedStopNode(FinalCommandNode):
             self.bus.shutdown_ready()
 
 
+class AsyncShutdownTransport(AsyncNode):
+    def __init__(self, config, bus):
+        super().__init__(config, bus)
+        self.sent = []
+        self.cleaned = False
+
+    async def on_raw(self, data):
+        await asyncio.sleep(0.01)
+        self.sent.append(data)
+
+    async def main(self):
+        try:
+            await self.listen_loop()
+        finally:
+            await asyncio.sleep(0.01)
+            self.cleaned = True
+
+
+class StalledAsyncShutdown(AsyncNode):
+    def __init__(self, config, bus):
+        super().__init__(config, bus)
+        self.cleaned = False
+
+    async def on_shutdown(self, data):
+        if data['phase'] == 'prepare':
+            await asyncio.Event().wait()
+        else:
+            super().on_shutdown(data)
+
+    async def main(self):
+        try:
+            await self.listen_loop()
+        finally:
+            await asyncio.sleep(0.01)
+            self.cleaned = True
+
+
 class Sleeper:
 
     def __init__(self, cfg, bus):
@@ -89,6 +128,36 @@ class Sleeper:
 
 
 class RecorderTest(unittest.TestCase):
+
+    def test_async_transport_drains_and_finishes_cleanup(self):
+        for protocol in ('legacy', 'messages'):
+            with self.subTest(protocol=protocol), tempfile.TemporaryDirectory() as directory:
+                config = {'modules': {
+                    'transport': {'driver': 'osgar.test_record:AsyncShutdownTransport',
+                                  'shutdown_group': 'transport', 'shutdown_protocol': protocol},
+                    'controller': {'driver': 'osgar.test_record:FinalCommandNode', 'shutdown_protocol': 'messages'},
+                }, 'links': [['controller.raw', 'transport.raw']]}
+                with LogWriter(filename=os.path.join(directory, 'async.log')) as logger:
+                    with Recorder(config, logger) as recorder:
+                        pass
+                    transport = recorder.modules['transport']
+                    self.assertEqual(transport.sent, [b'STOP'])
+                    self.assertTrue(transport.cleaned)
+                    self.assertFalse(transport.is_alive())
+
+    def test_async_timeout_cancels_blocked_handler(self):
+        config = {'shutdown_timeout': 0.05, 'modules': {
+            'controller': {'driver': 'osgar.test_record:StalledAsyncShutdown', 'shutdown_protocol': 'messages'},
+        }, 'links': []}
+        with tempfile.TemporaryDirectory() as directory:
+            with LogWriter(filename=os.path.join(directory, 'timeout.log')) as logger:
+                with self.assertLogs('osgar.record', level='ERROR') as logs:
+                    with Recorder(config, logger) as recorder:
+                        pass
+                node = recorder.modules['controller']
+                self.assertIn('STOPPING', '\n'.join(logs.output))
+                self.assertTrue(node.cleaned)
+                self.assertFalse(node.is_alive())
 
     def test_device_acknowledgement_and_replay(self):
         config = {'modules': {

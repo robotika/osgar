@@ -1,5 +1,3 @@
-import socket
-import time
 import unittest
 from datetime import timedelta
 from unittest.mock import MagicMock
@@ -7,6 +5,7 @@ from unittest.mock import MagicMock
 from osgar.bus import Bus
 from osgar.drivers.asyncecho import AsyncEcho
 from examples.asyncecho.asyncecho_app import EchoApp
+from osgar.drivers.test_asyncecho import connect_socketpair
 
 
 def create_mock_logger():
@@ -19,9 +18,15 @@ class ExampleAsyncEchoTest(unittest.TestCase):
 
     def test_echo_app_end_to_end(self):
         bus = Bus(logger=create_mock_logger())
-        config_echo = {'host': '127.0.0.1', 'port': 0}
+        client = connect_socketpair(self)
+        config_echo = {}
         echo_driver = AsyncEcho(config=config_echo, bus=bus.handle('echo'))
         app = EchoApp(config={}, bus=bus.handle('app'))
+        def stop():
+            for node in (echo_driver, app):
+                node.force_stop()
+                node.join(2)
+        self.addCleanup(stop)
 
         bus.connect('echo.raw', 'app.raw')
         bus.connect('app.raw', 'echo.raw')
@@ -30,13 +35,6 @@ class ExampleAsyncEchoTest(unittest.TestCase):
         app.start()
 
         self.assertTrue(echo_driver.ready.wait(timeout=2.0))
-
-        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect(('127.0.0.1', echo_driver.port))
-        client.settimeout(2.0)
-
-        # Allow TCP handshake to complete
-        time.sleep(0.05)
 
         client.sendall(b'world\n')
         reply = client.recv(1024)
