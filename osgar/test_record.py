@@ -16,6 +16,8 @@ from osgar.node import Node
 from osgar.logger import LogWriter, LogReader
 from osgar.lib.serialize import deserialize
 from osgar.drivers.logsocket import LogSocket, LogTCPBase
+from osgar.replay import replay
+from types import SimpleNamespace
 
 
 class StopRequester(Node):
@@ -33,8 +35,10 @@ class FinalCommandNode(Node):
         super().__init__(config, bus)
         bus.register('raw')
 
-    def on_shutdown(self):
-        self.publish('raw', b'STOP')
+    def on_shutdown(self, data):
+        if data['phase'] == 'prepare':
+            self.publish('raw', b'STOP')
+        super().on_shutdown(data)
 
 
 class ShutdownTransport(LogSocket):
@@ -44,6 +48,25 @@ class ShutdownTransport(LogSocket):
         super().__init__(connection, {'timeout': 0.01}, bus)
 
     _send = LogTCPBase._send
+
+
+class AcknowledgedStopNode(FinalCommandNode):
+    def __init__(self, config, bus):
+        super().__init__(config, bus)
+        self.phases = []
+        self.response = b''
+
+    def on_shutdown(self, data):
+        self.phases.append(data['phase'])
+        if data['phase'] == 'prepare':
+            self.publish('raw', b'STOP')
+        else:
+            super().on_shutdown(data)
+
+    def on_raw(self, data):
+        self.response += data
+        if self.phases == ['prepare'] and self.response == b'ACK':
+            self.bus.shutdown_ready()
 
 
 class Sleeper:
@@ -66,6 +89,61 @@ class Sleeper:
 
 
 class RecorderTest(unittest.TestCase):
+
+    def test_device_acknowledgement_and_replay(self):
+        config = {'modules': {
+            'tcp': {'driver': 'osgar.test_record:ShutdownTransport', 'shutdown_group': 'transport'},
+            'controller': {'driver': 'osgar.test_record:AcknowledgedStopNode', 'shutdown_protocol': 'messages'},
+        }, 'links': [['controller.raw', 'tcp.raw'], ['tcp.raw', 'controller.raw']]}
+        with tempfile.TemporaryDirectory() as directory:
+            filename = os.path.join(directory, 'ack.log')
+            with LogWriter(filename=filename, note='ack-test') as logger:
+                logger.write(0, str({'version': 2, 'robot': config}).encode('ascii'))
+                with Recorder(config, logger) as recorder:
+                    transport = recorder.modules['tcp']
+                    observations = []
+                    def device():
+                        transport.device.settimeout(1)
+                        command = transport.device.recv(4)
+                        observations.append((command, transport.bus.is_alive(),
+                                             recorder.bus.handle('controller').shutdown_ready_event.is_set()))
+                        transport.device.sendall(b'ACK')
+                    responder = threading.Thread(target=device, daemon=True)
+                    responder.start()
+                responder.join(1)
+                self.assertEqual(observations, [(b'STOP', True, False)])
+                self.assertEqual(recorder.modules['controller'].phases, ['prepare', 'close'])
+                transport.socket.close()
+                transport.device.close()
+            for force in (False, True):
+                args = SimpleNamespace(logfile=filename, config=None, params=None, module='controller',
+                                       debug=False, ignore=None, force=force, duration=None, output=None)
+                node = replay(args)
+                try:
+                    with self.assertRaises(SystemExit):
+                        node.run()
+                    self.assertEqual(node.phases, ['prepare', 'close'])
+                    self.assertEqual(node.response, b'ACK')
+                finally:
+                    node.bus.reader.close()
+
+    def test_missing_acknowledgement_times_out(self):
+        config = {'shutdown_timeout': 0.1, 'modules': {
+            'tcp': {'driver': 'osgar.test_record:ShutdownTransport', 'shutdown_group': 'transport'},
+            'controller': {'driver': 'osgar.test_record:AcknowledgedStopNode', 'shutdown_protocol': 'messages'},
+        }, 'links': [['controller.raw', 'tcp.raw'], ['tcp.raw', 'controller.raw']]}
+        with tempfile.TemporaryDirectory() as directory:
+            with LogWriter(filename=os.path.join(directory, 'timeout.log')) as logger:
+                with self.assertLogs('osgar.record', level='ERROR') as logs:
+                    with Recorder(config, logger) as recorder:
+                        pass
+                self.assertIn('STOPPING', '\n'.join(logs.output))
+                self.assertFalse(recorder.bus.handle('controller').shutdown_ready_event.is_set())
+                recorder.modules['controller'].join(1)
+                transport = recorder.modules['tcp']
+                self.assertFalse(transport.output_thread.is_alive())
+                transport.socket.close()
+                transport.device.close()
 
     def test_node_requests_global_stop(self):
         for with_app in (False, True):
@@ -101,7 +179,7 @@ class RecorderTest(unittest.TestCase):
         config = {'modules': {
             # Deliberately put the transport first: configuration order must not matter.
             'tcp': {'driver': 'osgar.test_record:ShutdownTransport', 'shutdown_group': 'transport'},
-            'controller': {'driver': 'osgar.test_record:FinalCommandNode'},
+            'controller': {'driver': 'osgar.test_record:FinalCommandNode', 'shutdown_protocol': 'messages'},
         }, 'links': [['controller.raw', 'tcp.raw']]}
         with tempfile.TemporaryDirectory() as directory:
             filename = os.path.join(directory, 'shutdown.log')
@@ -155,6 +233,10 @@ class RecorderTest(unittest.TestCase):
                 Recorder({'modules': {}, 'shutdown_timeout': timeout}, MagicMock())
         with self.assertRaises(ValueError):
             Recorder({'modules': {'bad': {'shutdown_group': 'unknown'}}}, MagicMock())
+        with self.assertRaises(ValueError):
+            Recorder({'modules': {'bad': {'shutdown_protocol': 'unknown'}}}, MagicMock())
+        with self.assertRaises(ValueError):
+            Recorder({'modules': {'_system': {}}}, MagicMock())
 
     def test_failed_controller_cleanup_still_stops_transport(self):
         recorder = Recorder({'modules': {}, 'links': []}, MagicMock())

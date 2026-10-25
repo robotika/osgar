@@ -9,7 +9,8 @@
         }
       },
       "dummy": {
-        "driver": "osgar.shutdown:ShutdownTester"
+        "driver": "osgar.shutdown:ShutdownTester",
+        "shutdown_protocol": "messages"
       }
     },
     "links": [

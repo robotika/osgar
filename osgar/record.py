@@ -24,12 +24,20 @@ class Recorder:
         self.modules = {}
         self.app_waiter = None
         self.state = 'RUNNING'
+        self.shutdown_reason = 'requested'
+        self.shutdown_protocols = {}
         self.shutdown_timeout = config.get('shutdown_timeout', 5.0)
         if (not isinstance(self.shutdown_timeout, (int, float))
                 or not math.isfinite(self.shutdown_timeout) or self.shutdown_timeout <= 0):
             raise ValueError('shutdown_timeout must be a positive finite number of seconds')
         self.shutdown_groups = {}
         for name, module_config in config['modules'].items():
+            if name == '_system':
+                raise ValueError('_system is reserved for lifecycle messages')
+            protocol = module_config.get('shutdown_protocol', 'legacy')
+            if protocol not in ('legacy', 'messages'):
+                raise ValueError(f'Unknown shutdown_protocol for {name}: {protocol!r}')
+            self.shutdown_protocols[name] = protocol
             group = module_config.get('shutdown_group', 'controller')
             if group not in ('controller', 'transport'):
                 raise ValueError(f'Unknown shutdown_group for {name}: {group!r}')
@@ -49,7 +57,14 @@ class Recorder:
             self.modules[module_name] = klass(module_config_init, bus=bus_handle)
 
         for sender, receiver in config['links']:
+            if (receiver.endswith('.shutdown')
+                    and self.shutdown_protocols.get(receiver.split('.')[0]) == 'messages'):
+                raise ValueError('shutdown is a reserved system input')
             self.bus.connect(sender, receiver, self.modules)
+
+        for name, protocol in self.shutdown_protocols.items():
+            if protocol == 'messages':
+                self.bus.enable_shutdown(name)
 
         signal.signal(signal.SIGINT, self.request_stop)
         g_logger.info("SIGINT handler installed")
@@ -60,6 +75,8 @@ class Recorder:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            self.shutdown_reason = 'exception'
         self.request_stop()
         self._stop_group('controller', 'STOPPING')
         self._stop_group('transport', 'DRAINING')
@@ -82,6 +99,7 @@ class Recorder:
         """Wake the recorder; teardown runs outside the signal handler."""
         if signum == signal.SIGINT:
             self.sigint_received = True
+            self.shutdown_reason = 'sigint'
         self.stop_requested.set()
         self.bus.stop_requested.set()
 
@@ -94,7 +112,17 @@ class Recorder:
 
         def stop_and_join(name, module):
             try:
-                module.request_stop()
+                if self.shutdown_protocols.get(name) == 'messages':
+                    remaining = max(0, deadline - time.monotonic())
+                    self.bus.send_shutdown(name, {'phase': 'prepare', 'reason': self.shutdown_reason,
+                                                  'timeout': remaining, 'deadline': time.time() + remaining})
+                    if not self.bus.handle(name).shutdown_ready_event.wait(max(0, deadline - time.monotonic())):
+                        raise TimeoutError('shutdown readiness not received')
+                    self.bus.send_shutdown(name, {'phase': 'close', 'reason': self.shutdown_reason,
+                                                  'timeout': max(0, deadline - time.monotonic()),
+                                                  'deadline': time.time() + max(0, deadline - time.monotonic())})
+                else:
+                    module.request_stop()
                 module.join()
                 if name == 'app' and self.app_waiter is not None:
                     self.app_waiter.join()
@@ -134,7 +162,8 @@ def record(config, log_prefix, log_filename=None, duration_sec=None):
                 app_waiter = threading.Thread(target=wait_for_app, name='app-waiter', daemon=True)
                 recorder.app_waiter = app_waiter
                 app_waiter.start()
-            recorder.bus.stop_requested.wait(duration_sec)
+            if not recorder.bus.stop_requested.wait(duration_sec):
+                recorder.shutdown_reason = 'duration'
 
 
 def main(record=record):
