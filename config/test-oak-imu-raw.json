@@ -10,6 +10,7 @@
             "is_depth": false,
             "is_imu_enabled": true,
             "imu_raw_data": true,
+            "imu_orientation": false,
             "number_imu_records": 10,
             "disable_magnetometer_fusion": false
           }
