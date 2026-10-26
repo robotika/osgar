@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "app": {
+        "driver": "osgar.drivers.basler_stereo:STMCamera",
+        "out": ["color", "depth"],
+        "init": {
+          "fps": 10
+        }
+      }
+    },
+    "links": []
+  }
+}
