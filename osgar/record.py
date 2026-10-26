@@ -10,6 +10,7 @@ import threading
 import logging
 import math
 import time
+from datetime import datetime, timezone
 
 from osgar.logger import LogWriter
 from osgar.lib.config import config_load, get_class_by_name
@@ -107,6 +108,7 @@ class Recorder:
         self.state = state
         g_logger.info('Shutdown phase: %s', state)
         deadline = time.monotonic() + self.shutdown_timeout
+        log_deadline = (datetime.now(timezone.utc) - self.bus.logger.start_time).total_seconds() + self.shutdown_timeout
         workers = {}
         failures = {}
         force_workers = []
@@ -126,12 +128,12 @@ class Recorder:
                 if self.shutdown_protocols.get(name) == 'messages':
                     remaining = max(0, deadline - time.monotonic())
                     self.bus.send_shutdown(name, {'phase': 'prepare', 'reason': self.shutdown_reason,
-                                                  'timeout': remaining, 'deadline': time.time() + remaining})
+                                                  'timeout': remaining, 'deadline': log_deadline})
                     if not self.bus.handle(name).shutdown_ready_event.wait(max(0, deadline - time.monotonic())):
                         raise TimeoutError('shutdown readiness not received')
                     self.bus.send_shutdown(name, {'phase': 'close', 'reason': self.shutdown_reason,
                                                   'timeout': max(0, deadline - time.monotonic()),
-                                                  'deadline': time.time() + max(0, deadline - time.monotonic())})
+                                                  'deadline': log_deadline})
                 else:
                     module.request_stop()
                 module.join()

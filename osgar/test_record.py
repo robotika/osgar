@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 import json
 import os
 import threading
@@ -252,9 +252,11 @@ class RecorderTest(unittest.TestCase):
         }, 'links': [['controller.raw', 'tcp.raw']]}
         with tempfile.TemporaryDirectory() as directory:
             filename = os.path.join(directory, 'shutdown.log')
-            with LogWriter(filename=filename) as logger:
+            start_time = datetime.now(timezone.utc) - timedelta(seconds=100)
+            with LogWriter(filename=filename, start_time=start_time) as logger:
                 with Recorder(config, logger) as recorder:
                     transport = recorder.modules['tcp']
+                    lifecycle_stream = recorder.bus.handle('_system').stream_id['shutdown_controller']
                     recorder.request_stop()
                 try:
                     transport.device.settimeout(1)
@@ -268,6 +270,14 @@ class RecorderTest(unittest.TestCase):
             with LogReader(filename) as reader:
                 commands = [deserialize(data) for _, stream, data in reader if stream == 2]
             self.assertEqual(commands, [b'STOP'])
+            with LogReader(filename) as reader:
+                lifecycle = [(timestamp, deserialize(data)) for timestamp, stream, data in reader
+                             if stream == lifecycle_stream]
+            self.assertEqual([data['phase'] for _, data in lifecycle], ['prepare', 'close'])
+            self.assertEqual(lifecycle[0][1]['deadline'], lifecycle[1][1]['deadline'])
+            for timestamp, data in lifecycle:
+                self.assertGreaterEqual(data['deadline'], 100)
+                self.assertAlmostEqual(data['deadline'] - timestamp.total_seconds(), data['timeout'], delta=0.1)
 
     def test_stalled_stop_does_not_block_other_modules(self):
         release = threading.Event()

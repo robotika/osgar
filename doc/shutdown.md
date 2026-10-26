@@ -80,13 +80,15 @@ module name.
 Messages contain:
 
 ```python
-{'phase': 'prepare', 'reason': 'duration', 'timeout': 5.0, 'deadline': 1792920000.0}
+{'phase': 'prepare', 'reason': 'duration', 'timeout': 5.0, 'deadline': 15.0}
 ```
 
-`deadline` is a Unix wall-clock timestamp; `timeout` is the remaining group
-budget at publication. The recorder enforces its deadline using a monotonic
-clock. Reasons are `requested`, `duration`, `sigint`, or `exception`. Recorded
-wall-clock deadlines describe the original run; do not wait on them in replay.
+`deadline` is in seconds relative to the log's start, on the same timeline as
+`self.time.total_seconds()`. Both phases share the group's deadline; `timeout`
+is the remaining group budget at publication. The recorder enforces its timeout
+using a monotonic clock. Reasons are `requested`, `duration`, `sigint`, or
+`exception`. In replay, compare deadlines against recorded bus time rather than
+the current wall clock.
 
 For a controller without device acknowledgements:
 
