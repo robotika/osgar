@@ -277,7 +277,8 @@ class LogBusHandler:
         raise SystemExit()
 
     def request_stop(self):
-        self.shutdown()
+        """Keep replaying until recorded shutdown messages or end of log."""
+        pass
 
     def shutdown_ready(self):
         if not self.shutdown_ready_event.is_set():
@@ -323,7 +324,8 @@ class LogBusHandlerInputsOnly:
         raise SystemExit()
 
     def request_stop(self):
-        self.shutdown()
+        """Keep replaying until recorded shutdown messages or end of log."""
+        pass
 
     def shutdown_ready(self):
         if not self.shutdown_ready_event.is_set():

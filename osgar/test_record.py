@@ -15,11 +15,12 @@ import asyncio
 from osgar.record import Recorder, record
 from osgar.node import Node
 from osgar.logger import LogWriter, LogReader
-from osgar.lib.serialize import deserialize
+from osgar.lib.serialize import deserialize, serialize
 from osgar.drivers.logsocket import LogSocket, LogTCPBase
 from osgar.replay import replay
 from types import SimpleNamespace
 from osgar.asyncnode import AsyncNode
+from osgar.shutdown import ShutdownTester
 
 
 class StopRequester(Node):
@@ -128,6 +129,38 @@ class Sleeper:
 
 
 class RecorderTest(unittest.TestCase):
+
+    def test_replay_stop_request_preserves_lifecycle_messages(self):
+        config = {'version': 2, 'robot': {'modules': {
+            'dummy': {'driver': 'osgar.shutdown:ShutdownTester', 'shutdown_protocol': 'messages'},
+        }, 'links': [['timer.tick', 'dummy.tick']]}}
+        with tempfile.TemporaryDirectory() as directory:
+            filename = os.path.join(directory, 'shutdown.log')
+            with LogWriter(filename=filename, note='shutdown-replay-test') as logger:
+                logger.write(0, str(config).encode('ascii'), dt=timedelta())
+                tick = logger.register('timer.tick')
+                lifecycle = logger.register('_system.shutdown_dummy')
+                ready = logger.register('dummy._shutdown_ready')
+                logger.write(tick, serialize(3.1), dt=timedelta(seconds=3.1))
+                logger.write(lifecycle, serialize({'phase': 'prepare'}), dt=timedelta(seconds=3.2))
+                logger.write(ready, serialize(True), dt=timedelta(seconds=3.3))
+                logger.write(lifecycle, serialize({'phase': 'close'}), dt=timedelta(seconds=3.4))
+            for force in (False, True):
+                with self.subTest(force=force):
+                    phases = []
+                    def on_shutdown(node, data):
+                        phases.append(data['phase'])
+                        Node.on_shutdown(node, data)
+                    args = SimpleNamespace(logfile=filename, config=None, params=None, module='dummy',
+                                           debug=False, ignore=None, force=force, duration=None, output=None)
+                    node = replay(args)
+                    try:
+                        with patch.object(ShutdownTester, 'on_shutdown', on_shutdown):
+                            with self.assertRaises(SystemExit):
+                                node.run()
+                        self.assertEqual(phases, ['prepare', 'close'])
+                    finally:
+                        node.bus.reader.close()
 
     def test_async_transport_drains_and_finishes_cleanup(self):
         for protocol in ('legacy', 'messages'):

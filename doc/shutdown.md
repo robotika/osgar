@@ -129,6 +129,10 @@ The system logs messages as `_system.shutdown_<module>` and readiness as
 `<module>._shutdown_ready`. These stream names are reserved. Replay automatically
 maps the system stream to the module's `shutdown` input, and strict replay checks
 readiness along with other outputs. Forced replay also supports the protocol.
+During replay, `bus.request_stop()` does not terminate the node: it continues
+through the recorded lifecycle inputs. Local `bus.shutdown()` still exits
+immediately. Logs predating the lifecycle protocol contain no shutdown inputs
+to replay.
 
 ## Waiting for device acknowledgements
 

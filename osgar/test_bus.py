@@ -50,8 +50,9 @@ class BusHandlerTest(unittest.TestCase):
 
     def test_replay_stop_request(self):
         for handler in (LogBusHandler(iter([]), {}, {}), LogBusHandlerInputsOnly(iter([]), {})):
+            handler.request_stop()
             with self.assertRaises(SystemExit):
-                handler.request_stop()
+                handler.shutdown()
 
     def test_publish(self):
         logger = MagicMock()
