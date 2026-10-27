@@ -71,11 +71,18 @@ Use async I/O inside coroutines. Blocking calls such as `self.listen()`,
 `await self.sleep_async(seconds)`; this waits for elapsed real time.
 `self.time` instead holds the bus timestamp of the message being dispatched.
 
-During a live run, `request_stop()` shuts down the node's bus handle and
-requests cancellation of `main()`. Let cancellation propagate and release
-connections in context managers or `finally` blocks. In this example,
-`AsyncEcho` closes the server and client connections, and the base class cancels
-remaining tasks before closing the event loop.
+During a live run, `request_stop()` queues a shutdown sentinel without cancelling
+`main()`. The bus loop drains queued commands before returning, then `main()`
+finishes its awaited connection cleanup. In this example, `AsyncEcho` closes the
+server and client connections, and the base class cancels remaining tasks before
+closing the event loop. The example marks the echo driver as a transport so it
+stays available while the application stops. If cleanup exceeds the recorder's
+deadline, `force_stop()` requests cancellation; allow it to propagate.
+
+The automated echo tests use `socket.socketpair()` and a mocked server factory.
+They exercise real asyncio streams and bus communication without binding a TCP
+listener or selecting a localhost port. This avoids listener restrictions and
+port conflicts in CI. The interactive example still uses TCP as shown above.
 
 Replay replaces bus input and output handling, but it does not mock network
 connections. Replaying `EchoApp` consumes recorded bus messages without a TCP

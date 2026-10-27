@@ -38,9 +38,10 @@ class Bus:
     def __init__(self, logger):
         self.logger = logger
         self.handles = {}
+        self.stop_requested = threading.Event()
 
     def handle(self, name):
-        return self.handles.setdefault(name, _BusHandler(self.logger, name))
+        return self.handles.setdefault(name, _BusHandler(self.logger, name, self.stop_requested))
 
     def connect(self, sender, receiver, modules=None):
         sender, output = sender.split('.')
@@ -52,9 +53,29 @@ class Bus:
             if handle.max_delay > ASSERT_QUEUE_DELAY:
                 yield name, handle.max_delay, handle.max_delay_timestamp
 
+    def enable_shutdown(self, name):
+        """Install a logged system input without requiring configuration links."""
+        system = self.handle('_system')
+        system.register('shutdown_' + name)
+        self.connect('_system.shutdown_' + name, name + '.shutdown')
+        self.handle(name).register('_shutdown_ready')
+
+    def send_shutdown(self, name, data):
+        handle = self.handle(name)
+        if data['phase'] == 'prepare':
+            handle.preparing_shutdown = True
+        self.handle('_system').publish('shutdown_' + name, data)
+
+    def close(self):
+        """Prevent late publishers from writing to a closed log after a timeout."""
+        with self.logger.lock:
+            for handle in self.handles.values():
+                handle.closed = True
+                handle.shutdown()
+
 
 class _BusHandler:
-    def __init__(self, logger, name):
+    def __init__(self, logger, name, stop_requested=None):
         self.logger = logger
         self.queue = Queue()
         self.name = name
@@ -62,6 +83,10 @@ class _BusHandler:
         self.slots = {}
         self.stream_id = {}
         self.finished = threading.Event()
+        self.closed = False
+        self.shutdown_ready_event = threading.Event()
+        self.preparing_shutdown = False
+        self.stop_requested = stop_requested if stop_requested is not None else threading.Event()
         self.no_output = set()
         self.compressed_output = set()
         self._time = None
@@ -120,6 +145,8 @@ class _BusHandler:
                 to_write = compress(to_write)
 
         with self.logger.lock:
+            if self.closed:
+                raise BusShutdownException()
             timestamp = self.logger.write(stream_id, to_write)
             if self._time is not None:
                 delay = timestamp - self._time
@@ -153,11 +180,25 @@ class _BusHandler:
         self.finished.set()
         self.queue.put(None)
 
+    def request_stop(self):
+        """Ask the recorder to stop the run; keep this handle available for cleanup."""
+        self.stop_requested.set()
+
+    def shutdown_ready(self):
+        """Report completed cleanup while keeping communication available until close."""
+        if not self.preparing_shutdown:
+            raise RuntimeError('shutdown_ready() requires a prepare message')
+        if not self.shutdown_ready_event.is_set():
+            self.publish('_shutdown_ready', True)
+            self.shutdown_ready_event.set()
+
     def report_error(self, **err):
         data = dict(name=self.name)
         err.pop('name', None)
         data.update(err)
-        self.logger.write(0, bytes(str(data), encoding='ascii'))
+        with self.logger.lock:
+            if not self.closed:
+                self.logger.write(0, bytes(str(data), encoding='ascii'))
 
 
 class LogBusHandler:
@@ -170,6 +211,7 @@ class LogBusHandler:
         self.max_delay = timedelta()
         self.max_delay_timestamp = timedelta()
         self.finished = threading.Event()
+        self.shutdown_ready_event = threading.Event()
 
     def _read_next(self):
         try:
@@ -234,6 +276,15 @@ class LogBusHandler:
     def shutdown(self):
         raise SystemExit()
 
+    def request_stop(self):
+        """Keep replaying until recorded shutdown messages or end of log."""
+        pass
+
+    def shutdown_ready(self):
+        if not self.shutdown_ready_event.is_set():
+            self.publish('_shutdown_ready', True)
+            self.shutdown_ready_event.set()
+
     def report_error(self, err):
         print(self.time, err)
 
@@ -243,6 +294,7 @@ class LogBusHandlerInputsOnly:
         self.reader = log
         self.inputs = inputs
         self.time = timedelta(0)
+        self.shutdown_ready_event = threading.Event()
 
     def register(self, *outputs):
         pass
@@ -270,6 +322,15 @@ class LogBusHandlerInputsOnly:
 
     def shutdown(self):
         raise SystemExit()
+
+    def request_stop(self):
+        """Keep replaying until recorded shutdown messages or end of log."""
+        pass
+
+    def shutdown_ready(self):
+        if not self.shutdown_ready_event.is_set():
+            self.publish('_shutdown_ready', True)
+            self.shutdown_ready_event.set()
 
     def report_error(self, err):
         print(self.time, err)

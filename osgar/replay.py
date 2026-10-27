@@ -52,6 +52,9 @@ def replay(args, application=None):
             inputs[1 + names.index(edge_from)] = edge_to.split('.')[1]
 
     outputs = {i + 1: out.split('.')[1] for i, out in enumerate(names) if out.startswith(f"{module}.")}
+    lifecycle_stream = '_system.shutdown_' + module
+    if module_config.get('shutdown_protocol') == 'messages' and lifecycle_stream in names:
+        inputs[1 + names.index(lifecycle_stream)] = 'shutdown'
     if args.debug:
         print("inputs:")
         for i, name in sorted(inputs.items()):

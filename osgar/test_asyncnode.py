@@ -16,6 +16,51 @@ def create_mock_logger():
 
 class TestAsyncNode(unittest.TestCase):
 
+    def test_stop_drains_queue_and_awaits_cleanup(self):
+        class Transport(AsyncNode):
+            def __init__(self, config, bus):
+                super().__init__(config, bus)
+                self.sent = []
+                self.cleaned = False
+
+            async def on_raw(self, data):
+                await asyncio.sleep(0.01)
+                self.sent.append(data)
+
+            async def main(self):
+                try:
+                    await self.listen_loop()
+                finally:
+                    await asyncio.sleep(0.01)
+                    self.cleaned = True
+
+        bus = Bus(create_mock_logger())
+        node = Transport({}, bus.handle('transport'))
+        sender = bus.handle('sender')
+        sender.register('raw')
+        bus.connect('sender.raw', 'transport.raw')
+        sender.publish('raw', b'STOP')
+        node.request_stop()  # Queue the sentinel before the event loop starts.
+        node.start()
+        try:
+            node.join(2)
+            self.assertFalse(node.is_alive())
+            self.assertEqual(node.sent, [b'STOP'])
+            self.assertTrue(node.cleaned)
+        finally:
+            node.force_stop()
+            node.join(2)
+
+    def test_force_stop_before_start(self):
+        class SleepingNode(AsyncNode):
+            async def main(self):
+                await asyncio.Event().wait()
+        node = SleepingNode({}, Bus(create_mock_logger()).handle('node'))
+        node.force_stop()
+        node.start()
+        node.join(2)
+        self.assertFalse(node.is_alive())
+
     def test_usage(self):
         empty_config = {}
         bus = Bus(logger=create_mock_logger())
