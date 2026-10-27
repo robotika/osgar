@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "oak": {
+          "driver": "osgar.drivers.oak_camera:OakCamera",
+          "init": {
+            "fps": 10,
+            "is_color": false,
+            "is_depth": false,
+            "is_imu_enabled": true,
+            "imu_raw_data": true,
+            "imu_orientation": false,
+            "number_imu_records": 10
+          }
+      }
+    },
+    "links": []
+  }
+}
