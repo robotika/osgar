@@ -2,9 +2,10 @@ import datetime
 import unittest
 from unittest.mock import MagicMock, call
 import math
+import struct
 from datetime import timedelta
 
-from osgar.platforms.matty import Matty, add_esc_chars, SYNC, ESC, remove_esc_chars, FRONT_REAR_AXIS_DISTANCE
+from osgar.platforms.matty import Matty, add_esc_chars, SYNC, ESC, remove_esc_chars, FRONT_REAR_AXIS_DISTANCE, RobotStatus
 
 
 class MattyTest(unittest.TestCase):
@@ -63,6 +64,37 @@ class MattyTest(unittest.TestCase):
         speed, steering = robot.parse_odometry(bytes.fromhex('104901025c1c7b000000000065001700dd05ea00'))
         self.assertAlmostEqual(speed, 0.0)
         self.assertAlmostEqual(steering, math.radians(0))
+        bus.publish.assert_any_call('odometry', [1, 0, 0, [101, 23, 1501, 234]])
+
+    def test_odometry_encoder_unsigned_values_and_wrap(self):
+        for attitude in [b'', struct.pack('<hhh', 0, 0, 0)]:
+            with self.subTest(payload_size=20 + len(attitude)):
+                bus = MagicMock()
+                robot = Matty(bus=bus, config={})
+                robot.time = timedelta(0)
+                self.assertIn('odometry', bus.register.call_args.args)
+                self.assertNotIn('encoders', bus.register.call_args.args)
+                for values in [(0, 32767, 32768, 65535), (65535, 32768, 32767, 0)]:
+                    data = struct.pack('<BBBBHHhh4H', 1, ord('I'), 0, 0, 12000, 0, 100, 0, *values)
+                    robot.parse_odometry(data + attitude)
+                    bus.publish.assert_any_call('odometry', [0, 100, 0, list(values)])
+
+    def test_odometry_packet_bundle_includes_error_status(self):
+        for attitude in [b'', struct.pack('<hhh', -100, 200, 300)]:
+            for status in [0x80, 0x80 | RobotStatus.ERROR_ENCODER.value,
+                           0x80 | RobotStatus.ERROR_ENCODER.value | RobotStatus.ERROR_POWER.value]:
+                with self.subTest(payload_size=20 + len(attitude), status=status):
+                    bus = MagicMock()
+                    robot = Matty(bus=bus, config={})
+                    robot.time = timedelta(0)
+                    self.assertIn('odometry', bus.register.call_args.args)
+                    for values in [(65535, 0, 32768, 12), (0, 65535, 32767, 13)]:
+                        data = struct.pack('<BBBBHHhh4H', 1, ord('I'), status, 2,
+                                           12000, 0, -123, -2345, *values)
+                        robot.parse_odometry(data + attitude)
+                        self.assertEqual(bus.publish.call_args_list[-2:], [
+                            call('odometry', [status, -123, -2345, list(values)]),
+                            call('joint_angle', [-2345])])
 
     def test_pose2d(self):
         bus = MagicMock()
@@ -100,12 +132,12 @@ class MattyTest(unittest.TestCase):
         bus.reset_mock()
         robot.parse_odometry(data)
         bus.publish.assert_called()
-        self.assertEqual(len(bus.publish.mock_calls), 5)  # 2x bumpers, speed command, emergency_stop status, joint_angle
+        self.assertEqual(len(bus.publish.mock_calls), 6)  # includes odometry and joint angle
         bus.publish.assert_called_with('joint_angle', [0])
-        self.assertEqual(bus.publish.mock_calls[-2], call('esp_data', b'U\x06\x01G\x00\x00\x00\x00\xb2'))
+        self.assertEqual(bus.publish.mock_calls[-3], call('esp_data', b'U\x06\x01G\x00\x00\x00\x00\xb2'))
         bus.reset_mock()
         robot.parse_odometry(data)
-        # same data, no change - only 'joint_angle'
+        # Same data still publishes odometry and joint angle.
         bus.publish.assert_called()
         bus.publish.assert_called_with('joint_angle', [0])
 
@@ -113,14 +145,14 @@ class MattyTest(unittest.TestCase):
         bus.reset_mock()
         robot.parse_odometry(data)
         bus.publish.assert_called()
-        self.assertEqual(len(bus.publish.mock_calls), 2)  # only emergency_stop status change + joint_angle
+        self.assertEqual(len(bus.publish.mock_calls), 3)  # stop status, odometry, joint angle
         self.assertEqual(bus.publish.mock_calls[0], call('emergency_stop', False))
 
         data = b'\x00I1\x02\x0c\x00\xff\xff\x00\x00\xab\x04\x00\x00\x00\x00\x00\x00\x00\x00'
         bus.reset_mock()
         robot.parse_odometry(data)
         bus.publish.assert_called()
-        self.assertEqual(len(bus.publish.mock_calls), 2)  # only emergency_stop status change
+        self.assertEqual(len(bus.publish.mock_calls), 3)  # stop status, odometry, joint angle
         self.assertEqual(bus.publish.mock_calls[0], call('emergency_stop', True))
 
     def test_ver8_with_imu(self):

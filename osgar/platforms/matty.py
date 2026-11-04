@@ -66,6 +66,7 @@ class Matty(Node):
                      'rpy',  # Roll, Pitch, Yaw - debug output 1:1 to ESP32 (0=north, clockwise)
                      'rotation',  # OSGAR Yaw, Pitch, Roll (0=east, anticlockwise)
                      'orientation',  # Quaternion
+                     'odometry',  # [status bits, speed mm/s, joint angle cdeg, [four encoders mm]]
                      )
         self.max_speed = config.get('max_speed', 0.5)
         self.max_steering_deg = config.get('max_steering_deg', 45.0)
@@ -121,6 +122,8 @@ class Matty(Node):
             self.send_speed()  # force immediate reaction to change of bumpers state
             if self.verbose:
                 self.debug_array_bumpers.append(self.time.total_seconds())
+
+        self.publish('odometry', [status, speed_mms, angle_cdeg, list(enc)])
 
         # publish joint angle for visualization and full 8D Matty pose computation
         self.publish('joint_angle', [angle_cdeg])  # array to be compatible with K2 and K3
