@@ -11,6 +11,15 @@ specific robot. Here only simple simulation is used so it should run without
 need to have any extra hardware.
 
 
+Async I/O with AsyncNode (asyncecho)
+----------------------------------
+
+The [AsyncEcho example](asyncecho/README.md) connects an asynchronous TCP server
+to an application through the OSGAR bus. It demonstrates async message handlers,
+event-loop startup, and connection cleanup using `osgar.asyncnode.AsyncNode`.
+It runs locally without extra hardware or an external server.
+
+
 SICK Robot Day 2018 (sick2018)
 ------------------------------
 

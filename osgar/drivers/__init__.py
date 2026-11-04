@@ -30,6 +30,7 @@ all_drivers = dict(
     rtk_filter="osgar.drivers.rtk_filter:RTKFilter",
     vanjee="osgar.drivers.vanjee:VanJeeLidar",
     rplidar="osgar.drivers.rplidar:RPLidar",
+    asyncecho="osgar.drivers.asyncecho:AsyncEcho",
 )
 
 

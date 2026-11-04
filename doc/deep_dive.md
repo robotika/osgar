@@ -94,6 +94,7 @@ In this setup, the `serial` module handles physical I/O, the `gps` module parses
 OSGAR's standard implementation uses Python's `threading.Thread`. Each module runs in its own thread, allowing for concurrent execution.
 
 -   **Standard Version**: Modules inherit from `osgar.node.Node`, which is a `threading.Thread`. They spend most of their time in a `listen()` loop, waiting for data on their input queue.
+-   **Async Libraries**: Modules can inherit from `osgar.asyncnode.AsyncNode` to use libraries with an `asyncio` API, such as an OPC UA client. Each node still runs in its own thread, with its own event loop. See [AsyncNode and async I/O](#asyncnode-and-async-io).
 -   **ZMQ Option**: While threads are the default, OSGAR also supports an alternative architecture using processes and communication via a **ZMQ router** (`osgar/zmqrouter.py`). This is useful for multi-language support or better process isolation, but the core principles of the bus remain the same.
 
 ### Mandatory Stream Registration
@@ -155,6 +156,46 @@ While standard `Node`s have one thread for the `listen()`/`update()` loop, compl
 2.  **Output Thread**: Listens to the OSGAR bus for outgoing commands and writes them to the hardware (e.g., `com.write()`).
 
 This separation ensures that receiving data from a sensor is not blocked by waiting for a command to be published, and vice-versa.
+
+### AsyncNode and async I/O
+
+Use `osgar.asyncnode.AsyncNode` when a device library provides coroutines for connecting, reading, or writing. For example, an OPC UA client can keep its connection open while bus handlers await writes to PLC variables. Ordinary synchronous processing can continue to use `Node`.
+
+`AsyncNode.run()` creates an event loop in the node's thread and executes `main()`. The default `main()` awaits `listen_loop()`, which receives bus messages through `listen_async()` and dispatches them with `update_async()`. The blocking bus read runs in an executor worker so it does not block the event loop.
+
+Handlers may be `async def on_<channel>(self, data)` or ordinary synchronous methods. Before dispatch, `self.time` is set to the input message's bus timestamp. The listen loop awaits each async handler before receiving the next message, preserving sequential processing. An `await` lets other event-loop tasks run; it does not make bus handlers run concurrently. A slow network operation can therefore cause bus messages to queue up.
+
+Override `main()` to establish a connection before processing messages. Keep connection setup and use on the same event loop, and use an async context manager or `try`/`finally` for cleanup. For example, with the optional `asyncua` library:
+
+```python
+from asyncua import Client
+from osgar.asyncnode import AsyncNode
+
+
+class PLCWriter(AsyncNode):
+    def __init__(self, config, bus):
+        super().__init__(config, bus)
+        bus.register('written')
+        self.server_url = config['server_url']
+        self.node_id = config['node_id']
+
+    async def main(self):
+        async with Client(url=self.server_url) as client:
+            self.target = client.get_node(self.node_id)
+            await self.listen_loop()
+
+    async def on_value(self, data):
+        await self.target.write_value(data)
+        self.publish('written', data)
+```
+
+Output registration, channel names, and JSON links work as for `Node`. `publish()` remains synchronous and is called without `await`. No special configuration flag enables async execution; choosing an `AsyncNode` subclass is sufficient.
+
+Inside coroutines, use async I/O and `await self.sleep_async(seconds)` rather than blocking calls such as `self.listen()`, `self.sleep()`, or `time.sleep()`. `sleep_async()` uses `asyncio.sleep()`, so it waits for elapsed real time; it does not advance or wait on the recorded bus time in `self.time`. Use bus timestamps for application logic that must follow recorded time.
+
+During a live run, `request_stop()` shuts down the bus handle and requests cancellation of `main()`. Allow cancellation to propagate through handlers so context managers and `finally` blocks can release resources. The base class then cancels remaining tasks and closes the event loop. Subclasses that start additional tasks must also arrange for them to finish when the main operation ends.
+
+See the runnable [AsyncEcho example](../examples/asyncecho/README.md) for a TCP server and an application connected through the bus. Replay considerations are described in [Replay and Visualization](#11-replay-and-visualization-osgarreplay).
 
 ## 7. Module Linking and I/O Names
 
@@ -264,6 +305,8 @@ This utility is invaluable for quick data verification and for exporting data to
 ## 11. Replay and Visualization (`osgar.replay`)
 
 The `osgar.replay` tool is used to rerun a specific module from a log file. This is useful for debugging driver logic or testing changes to processing modules without needing the physical robot.
+
+Replay replaces the module's bus with a log-backed handler; it does not replace external connections created by the module. An `AsyncNode` whose `main()` connects to an OPC UA server still needs that server, or an explicit mock or replay implementation. For offline processing, keep logic that consumes recorded bus data separate from live I/O where practical. Inheriting from `AsyncNode` alone does not make network interactions replayable.
 
 ```bash
 python -m osgar.replay --module <module_name> <logfile>
