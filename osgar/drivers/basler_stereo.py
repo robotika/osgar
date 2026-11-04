@@ -153,7 +153,7 @@ class STMCamera:
                         if ok:
                             self.bus.publish("color", data.tobytes())
                     if range_data is not None:
-                        self.bus.publish("depth", range_data.Array)
+                        self.bus.publish("depth", range_data.Array.copy())
                 finally:
                     grab.Release()
         finally:
