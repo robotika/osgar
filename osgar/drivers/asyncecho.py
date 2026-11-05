@@ -30,10 +30,9 @@ class AsyncEcho(AsyncNode):
                 self.port = sockets[0].getsockname()[1]
             self.ready.set()
             async with self.server:
-                await asyncio.gather(
-                    self.server.serve_forever(),
-                    self.listen_loop(),
-                )
+                # start_server already accepts clients. The bus loop owns the
+                # lifetime so graceful close can finish without cancelling main.
+                await self.listen_loop()
         except asyncio.CancelledError:
             pass
         except Exception:
@@ -43,6 +42,7 @@ class AsyncEcho(AsyncNode):
             for writer in list(self.clients):
                 try:
                     writer.close()
+                    await writer.wait_closed()
                 except Exception:
                     pass
             self.clients.clear()

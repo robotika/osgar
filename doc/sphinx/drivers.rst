@@ -70,9 +70,13 @@ delay, and ``self.time`` for the timestamp of the current bus message.
 
 Register outputs in ``__init__`` as usual and call ``self.publish()`` without
 ``await``. Configuration and links use the same format as synchronous drivers.
-During a live run, ``request_stop()`` shuts down the bus handle and requests
-cancellation of ``main()``. Use context managers or ``finally`` blocks for
-connection cleanup and allow cancellation to propagate.
+During a live run, ``request_stop()`` queues a shutdown sentinel without
+cancelling ``main()``. The bus loop drains earlier messages and returns;
+``main()`` must then finish its connection cleanup, including awaited context
+managers or ``finally`` blocks. Background tasks must also finish or be cancelled
+by the driver. After a shutdown timeout, ``force_stop()`` cancels blocked async
+work; allow that cancellation to propagate. Low-level async communication drivers
+should use the ``transport`` shutdown group so controllers can send final commands.
 
 The `AsyncEcho example <https://github.com/robotika/osgar/tree/master/examples/asyncecho>`_
 demonstrates a TCP server and an async application communicating over the bus.

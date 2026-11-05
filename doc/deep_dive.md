@@ -193,7 +193,7 @@ Output registration, channel names, and JSON links work as for `Node`. `publish(
 
 Inside coroutines, use async I/O and `await self.sleep_async(seconds)` rather than blocking calls such as `self.listen()`, `self.sleep()`, or `time.sleep()`. `sleep_async()` uses `asyncio.sleep()`, so it waits for elapsed real time; it does not advance or wait on the recorded bus time in `self.time`. Use bus timestamps for application logic that must follow recorded time.
 
-During a live run, `request_stop()` shuts down the bus handle and requests cancellation of `main()`. Allow cancellation to propagate through handlers so context managers and `finally` blocks can release resources. The base class then cancels remaining tasks and closes the event loop. Subclasses that start additional tasks must also arrange for them to finish when the main operation ends.
+During a live run, `request_stop()` queues a shutdown sentinel without cancelling `main()`. The bus loop drains earlier messages, then returns so context managers and awaited `finally` blocks can release resources. Custom `main()` implementations must finish when `listen_loop()` returns and arrange for their background tasks to finish. The base class cancels remaining tasks and closes the event loop after `main()` completes. If graceful shutdown exceeds its deadline, the recorder calls `force_stop()` to cancel blocked async work; allow that cancellation to propagate. See [Graceful Shutdown](shutdown.md) for lifecycle messages, transport ordering, and timeouts.
 
 See the runnable [AsyncEcho example](../examples/asyncecho/README.md) for a TCP server and an application connected through the bus. Replay considerations are described in [Replay and Visualization](#11-replay-and-visualization-osgarreplay).
 

@@ -2,6 +2,7 @@
   AsyncNode - processing unit executing an asyncio event loop
 """
 import asyncio
+import threading
 from osgar.node import Node
 from osgar.bus import BusShutdownException
 
@@ -14,6 +15,8 @@ class AsyncNode(Node):
         super().__init__(config, bus)
         self.loop = None
         self._main_task = None
+        self._force_stop_requested = threading.Event()
+        self._cancel_sent = False
 
     def publish(self, channel, data):
         return self.bus.publish(channel, data)
@@ -58,7 +61,7 @@ class AsyncNode(Node):
     async def listen_loop(self):
         """Continuous async loop listening to the bus and dispatching messages."""
         try:
-            while self.is_bus_alive():
+            while True:
                 await self.update_async()
         except BusShutdownException:
             pass
@@ -73,6 +76,8 @@ class AsyncNode(Node):
         asyncio.set_event_loop(self.loop)
         try:
             self._main_task = self.loop.create_task(self.main())
+            if self._force_stop_requested.is_set():
+                self._cancel_main_task()
             self.loop.run_until_complete(self._main_task)
         except (asyncio.CancelledError, BusShutdownException):
             pass
@@ -90,13 +95,24 @@ class AsyncNode(Node):
                 self.loop = None
 
     def request_stop(self):
-        """Request stop of the node and graceful shutdown of event loop."""
+        """Drain queued input, then let main() finish its async cleanup."""
         self.bus.shutdown()
-        if self.loop is not None and self.loop.is_running():
-            self.loop.call_soon_threadsafe(self._cancel_main_task)
+
+    def force_stop(self):
+        """Cancel blocked async work after the graceful shutdown deadline."""
+        self.bus.shutdown()
+        self._force_stop_requested.set()
+        loop = self.loop
+        if loop is not None:
+            try:
+                loop.call_soon_threadsafe(self._cancel_main_task)
+            except RuntimeError:
+                if not loop.is_closed():
+                    raise
 
     def _cancel_main_task(self):
-        if self._main_task is not None and not self._main_task.done():
+        if self._main_task is not None and not self._main_task.done() and not self._cancel_sent:
+            self._cancel_sent = True
             self._main_task.cancel()
 
 # vim: expandtab sw=4 ts=4

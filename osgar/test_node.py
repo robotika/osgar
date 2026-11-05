@@ -2,11 +2,28 @@ import unittest
 from unittest.mock import MagicMock
 from datetime import timedelta
 
-from osgar.bus import Bus
+from osgar.bus import Bus, BusShutdownException
 from osgar.node import Node
 
 
 class NodeTest(unittest.TestCase):
+
+    def test_shutdown_messages_keep_node_alive_until_close(self):
+        bus = Bus(MagicMock(write=MagicMock(return_value=timedelta())))
+        node = Node({}, bus.handle('controller'))
+        bus.enable_shutdown('controller')
+        with self.assertRaises(RuntimeError):
+            node.bus.shutdown_ready()
+        bus.send_shutdown('controller', {'phase': 'prepare'})
+        self.assertEqual(node.update(), 'shutdown')
+        self.assertTrue(node.bus.shutdown_ready_event.is_set())
+        self.assertTrue(node.bus.is_alive())
+        node.bus.shutdown_ready()  # repeated readiness is harmless
+        bus.send_shutdown('controller', {'phase': 'close'})
+        self.assertEqual(node.update(), 'shutdown')
+        self.assertFalse(node.bus.is_alive())
+        with self.assertRaises(BusShutdownException):
+            node.update()
 
     def test_usage(self):
         empty_config = {}

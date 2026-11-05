@@ -4,6 +4,7 @@
     "modules": {
       "echo": {
         "driver": "asyncecho",
+        "shutdown_group": "transport",
         "in": ["raw"],
         "out": ["raw"],
         "init": {

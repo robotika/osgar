@@ -40,6 +40,7 @@ OSGAR-based robots, including the "Matty twins," have successfully competed in t
 For more detailed information, please refer to:
 *   [Technical Guide (English)](https://robotika.github.io/osgar/index.html)
 *   [Deep Dive for OSGAR Developers](doc/deep_dive.md)
+*   [Graceful Shutdown](doc/shutdown.md)
 *   [Czech Guide (Průvodce OSGARem)](https://robotika.cz/guide/osgar/cs)
 
 # Architecture

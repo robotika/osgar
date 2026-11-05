@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "timer": {
+        "driver": "timer",
+        "init": {
+          "sleep": 0.1
+        }
+      },
+      "dummy": {
+        "driver": "osgar.shutdown:ShutdownTester",
+        "shutdown_protocol": "messages"
+      }
+    },
+    "links": [
+      ["timer.tick", "dummy.tick"]
+    ]
+  }
+}

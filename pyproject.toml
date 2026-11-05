@@ -1,3 +1,14 @@
+[project]
+name = "osgar"
+version = "1.1.0"
+# Metadata still supplied by setup.py.
+dynamic = ["description", "readme", "authors", "urls", "classifiers", "scripts", "optional-dependencies"]
+requires-python = ">=3.9"
+dependencies = [
+    "msgpack>=1.0.0",
+    "pyserial>=3.5",
+]
+
 [tool.black]
 line-length = 120
 skip-string-normalization = true
