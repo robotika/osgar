@@ -79,3 +79,20 @@ To replay existing log use:
 ```
 python -m osgar.replay --module <module name> <log file name>
 ```
+
+### Record and play MIDI on Linux
+
+The sample configuration uses the Yamaha UX16. For another adapter, set
+`card` in [test-midi.json](config/test-midi.json) to the ALSA card ID shown
+in `/proc/asound/cards` and pass the same ID to playback with `--card`.
+Connect the adapter's MIDI IN to the piano's MIDI OUT for recording, and
+its MIDI OUT to the piano's MIDI IN for playback.
+
+```sh
+python -m osgar.record config/test-midi.json --log piano.log
+# Play a phrase, release the keys and pedals, then press Ctrl+C.
+python -m osgar.drivers.midi piano.log
+```
+
+The logger timestamps each chunk of raw MIDI bytes on `midi.midi_data`.
+Playback starts at the first recorded chunk and keeps the gaps between chunks.

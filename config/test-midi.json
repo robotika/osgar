@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "robot": {
+    "modules": {
+      "midi": {
+        "driver": "osgar.drivers.midi:Midi",
+        "init": {
+          "card": "UX16"
+        }
+      }
+    },
+    "links": []
+  }
+}
