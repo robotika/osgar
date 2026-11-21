@@ -101,6 +101,23 @@ connection cleanup and allow cancellation to propagate.</p>
 <p>The <a class="reference external" href="https://github.com/robotika/osgar/tree/master/examples/asyncecho">AsyncEcho example</a>
 demonstrates a TCP server and an async application communicating over the bus.</p>
 </section>
+<section id="record-and-play-midi-on-linux">
+<h2>Record and play MIDI on Linux<a class="headerlink" href="#record-and-play-midi-on-linux" title="Link to this heading">¶</a></h2>
+<p>The <a class="reference download internal" download="" href="_downloads/f2bbd31a9aa84894b6d3bbe0596d9472/test-midi.json"><code class="xref download docutils literal notranslate"><span class="pre">sample</span> <span class="pre">configuration</span></code></a> uses the
+Yamaha UX16. For another adapter, set <code class="docutils literal notranslate"><span class="pre">card</span></code> in the configuration to the ALSA
+card ID shown in <code class="docutils literal notranslate"><span class="pre">/proc/asound/cards</span></code> and pass the same ID to playback with
+<code class="docutils literal notranslate"><span class="pre">--card</span></code>.</p>
+<p>Connect the adapter’s MIDI IN to the piano’s MIDI OUT for recording, and its
+MIDI OUT to the piano’s MIDI IN for playback. Run these commands from the
+repository root:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>osgar.record<span class="w"> </span>config/test-midi.json<span class="w"> </span>--log<span class="w"> </span>piano.log
+<span class="c1"># Play a phrase, release the keys and pedals, then press Ctrl+C.</span>
+python<span class="w"> </span>-m<span class="w"> </span>osgar.drivers.midi<span class="w"> </span>piano.log
+</pre></div>
+</div>
+<p>The logger timestamps each chunk of raw MIDI bytes on <code class="docutils literal notranslate"><span class="pre">midi.midi_data</span></code>.
+Playback starts at the first recorded chunk and keeps the gaps between chunks.</p>
+</section>
 </section>
 
 
@@ -129,6 +146,7 @@ demonstrates a TCP server and an async application communicating over the bus.</
 <li class="toctree-l2"><a class="reference internal" href="#logging">Logging</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#use-cases">Use cases</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#drivers-using-async-libraries">Drivers using async libraries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#record-and-play-midi-on-linux">Record and play MIDI on Linux</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="rosproxy.html">ROS Proxy</a></li>
