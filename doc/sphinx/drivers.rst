@@ -77,3 +77,23 @@ connection cleanup and allow cancellation to propagate.
 The `AsyncEcho example <https://github.com/robotika/osgar/tree/master/examples/asyncecho>`_
 demonstrates a TCP server and an async application communicating over the bus.
 
+Record and play MIDI on Linux
+----------------------------
+
+The :download:`sample configuration <../../config/test-midi.json>` uses the
+Yamaha UX16. For another adapter, set ``card`` in the configuration to the ALSA
+card ID shown in ``/proc/asound/cards`` and pass the same ID to playback with
+``--card``.
+
+Connect the adapter's MIDI IN to the piano's MIDI OUT for recording, and its
+MIDI OUT to the piano's MIDI IN for playback. Run these commands from the
+repository root:
+
+.. code-block:: sh
+
+   python -m osgar.record config/test-midi.json --log piano.log
+   # Play a phrase, release the keys and pedals, then press Ctrl+C.
+   python -m osgar.drivers.midi piano.log
+
+The logger timestamps each chunk of raw MIDI bytes on ``midi.midi_data``.
+Playback starts at the first recorded chunk and keeps the gaps between chunks.
